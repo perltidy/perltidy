@@ -56,8 +56,9 @@
   (this is an option in build.pl after making a new .tar.gz)
 - Do test installs on several systems 
 - Review the suggestions in Release::Checklist
-
      https://metacpan.org/pod/Release::Checklist
+   and the Berlin concensus
+     https://github.com/Perl-Toolchain-Gang/toolchain-site/blob/master/berlin-consensus.md
 
 - Upload Release to CPAN
 - Update CPAN tickets

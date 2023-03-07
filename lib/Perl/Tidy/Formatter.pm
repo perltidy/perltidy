@@ -18682,9 +18682,9 @@ EOM
                 $rhash->{_optimization_on} = 1;
                 if (DEBUG_RECOMBINE) {
                     my $num_compares = $rhash->{_num_compares};
-                    my $num_joints   = @ix_list;
+                    my $pair_count   = @ix_list;
                     print STDERR
-"Entering optimization phase at $num_compares compares, remaining joints = $num_joints\n";
+"Entering optimization phase at $num_compares compares, pair count = $pair_count\n";
                 }
             }
         }

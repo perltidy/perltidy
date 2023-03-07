@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2022 11 12.05
+## 2023 03 09
 
     - No significant bugs have been found since the last release to CPAN.
       Several minor issues have been fixed, and some new parameters have been
@@ -11,7 +11,7 @@
       into one-line blocks.  This implements the issue raised in PR #111.
       The list s may include any of the words 'sort map grep eval', or
       it may be '*' to indicate all of these.  So for example to prevent
-      multi-line 'eval' blocks from becomming one-line blocks, the command
+      multi-line 'eval' blocks from becoming one-line blocks, the command
       would be -olbxl='eval'.
 
     - For the -b (--backup-and-modify-in-place) option, the file timestamps
@@ -129,9 +129,8 @@
       input parameters. No failures to converge, internal fault checks,
       undefined variable references or other irregularities were seen.
 
-    - This version runs about 4 percent faster than the previous
-      release on large files due to optimizations made with the help of
-      Devel::NYTProf.
+    - This version runs a few percent faster than the previous release on
+      large files due to optimizations made with the help of Devel::NYTProf.
 
 ## 2022 11 12
 

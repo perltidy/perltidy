@@ -1,5 +1,138 @@
 <h1>Perltidy Change Log</h1>
 
+<h2>2023 03 09</h2>
+
+<pre><code>- No significant bugs have been found since the last release to CPAN.
+  Several minor issues have been fixed, and some new parameters have been
+  added, as follows:
+
+- Added parameter --one-line-block-exclusion-list=s, or -olbxl=s, where
+  s is a list of block types which should not automatically be turned
+  into one-line blocks.  This implements the issue raised in PR #111.
+  The list s may include any of the words 'sort map grep eval', or
+  it may be '*' to indicate all of these.  So for example to prevent
+  multi-line 'eval' blocks from becomming one-line blocks, the command
+  would be -olbxl='eval'.
+
+- For the -b (--backup-and-modify-in-place) option, the file timestamps
+  are changing (git #113, rt#145999).  First, if there are no formatting
+  changes to an input file, it will keep its original modification time.
+  Second, any backup file will keep its original modification time.  This
+  was previously true for --backup-method=move but not for the default
+  --backup-method=copy.  The purpose of these changes is to avoid
+  triggering Makefile operations when there are no actual file changes.
+  If this causes a problem please open an issue for discussion on github.
+
+- A change was made to the way line breaks are made at the '.'
+  operator when the user sets -wba='.' to requests breaks after a '.'
+  ( this setting is not recommended because it can be hard to read ).
+  The goal of the change is to make switching from breaks before '.'s
+  to breaks after '.'s just move the dots from the end of
+  lines to the beginning of lines.  For example:
+
+        # default and recommended (--want-break-before='.'):
+        $output_rules .=
+          (     'class'
+              . $dir
+              . '.stamp: $('
+              . $dir
+              . '_JAVA)' . "\n" . "\t"
+              . '$(CLASSPATH_ENV) $(JAVAC) -d $(JAVAROOT) '
+              . '$(JAVACFLAGS) $?' . "\n" . "\t"
+              . 'echo timestamp &gt; class'
+              . $dir
+              . '.stamp'
+              . "\n" );
+
+        # perltidy --want-break-after='.'
+        $output_rules .=
+          ( 'class' .
+              $dir .
+              '.stamp: $(' .
+              $dir .
+              '_JAVA)' . "\n" . "\t" .
+              '$(CLASSPATH_ENV) $(JAVAC) -d $(JAVAROOT) ' .
+              '$(JAVACFLAGS) $?' . "\n" . "\t" .
+              'echo timestamp &gt; class' .
+              $dir .
+              '.stamp' .
+              "\n" );
+
+  For existing code formatted with -wba='.', this may cause some
+  changes in the formatting of code with long concatenation chains.
+
+- Added option --use-feature=class, or -uf=class, for issue rt #145706.
+  This adds keywords 'class', 'method', 'field', and 'ADJUST' in support of
+  this feature which is being tested for future inclusion in Perl.
+  An effort has been made to avoid conflicts with past uses of these
+  words, especially 'method' and 'class'. The default setting
+  is --use-feature=class. If this causes a conflict, this option can
+  be turned off by entering -uf=' '.
+
+  In other words, perltidy should work for both old and new uses of
+  these keywords with the default settings, but this flag is available
+  if a conflict arises.
+
+- Added option -bfvt=n, or --brace-follower-vertical-tightness=n,
+  for part of issue git #110.  For n=2, this option looks for lines
+  which would otherwise be, by default,
+
+  }
+    or ..
+
+  and joins them into a single line
+
+  } or ..
+
+  where the or can be one of a number of logical operators or if unless.
+  The default is not to do this and can be indicated with n=1.
+
+- Added option -cpb, or --cuddled-paren-brace, for issue git #110.
+  This option will cause perltidy to join two lines which
+  otherwise would be, by default,
+
+    )
+  {
+
+  into a single line
+
+  ) {
+
+- Some minor changes to existing formatted output may occur as a result
+  of fixing minor formatting issues with edge cases.  This is especially
+  true for code which uses the -lp or -xlp styles.
+
+- Added option -dbs, or --dump-block-summary, to dump summary
+  information about code blocks in a file to standard output.
+  The basic command is:
+
+      perltidy -dbs somefile.pl &gt;blocks.csv
+
+  Instead of formatting ``somefile.pl``, this dumps the following
+  comma-separated items describing its blocks to the standard output:
+
+   filename     - the name of the file
+   line         - the line number of the opening brace of this block
+   line_count   - the number of lines between opening and closing braces
+   code_lines   - the number of lines excluding blanks, comments, and pod
+   type         - the block type (sub, for, foreach, ...)
+   name         - the block name if applicable (sub name, label, asub name)
+   depth        - the nesting depth of the opening block brace
+   max_change   - the change in depth to the most deeply nested code block
+   block_count  - the total number of code blocks nested in this block
+   mccabe_count - the McCabe complexity measure of this code block
+
+  This can be useful for code restructuring. The man page for perltidy
+  has more information and describes controls for selecting block types.
+
+- This version was stress-tested for over 100 cpu hours with random
+  input parameters. No failures to converge, internal fault checks,
+  undefined variable references or other irregularities were seen.
+
+- This version runs a few percent faster than the previous release on
+  large files due to optimizations made with the help of Devel::NYTProf.
+</code></pre>
+
 <h2>2022 11 12</h2>
 
 <pre><code>- Fix rt #145095, undef warning in Perl before 5.12. Version 20221112 is

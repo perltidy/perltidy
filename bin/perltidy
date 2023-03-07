@@ -2720,7 +2720,7 @@ must either (1) be adjacent as in the above example, or (2) have an anonymous
 sub declaration following an outer opening container symbol which is not a
 code block brace, or (3) have an outer opening paren separated from the inner
 opening symbol by any single non-container symbol or something that looks like
-a function evaluation, as illustrated in the next examples. An additonal
+a function evaluation, as illustrated in the next examples. An additional
 option (4) which can be turned on with the flag B<--weld-fat-comma> is when the opening container symbols are separated by a hash key and fat comma (=>).
 
 Any container symbol may serve as both the inner container of one pair and as
@@ -2835,7 +2835,7 @@ last represents a quoted list.  For example the string
 
   -wnxl='[ { q'
 
-means do B<NOT> include square-bracets, braces, or quotes in any welds.  The only unspecified
+means do B<NOT> include square-brackets, braces, or quotes in any welds.  The only unspecified
 container is '(', so this string means that only welds involving parens will be made.
 
 To illustrate, following welded snippet consists of a chain of three welded
@@ -3616,7 +3616,7 @@ can be useful on a temporary basis for reformatting a script.
 If the closing tokens of two nested containers are separated by a comma, then
 welding requested with B<--weld-nested-containers> cannot occur.  Any commas in
 this situation are optional trailing commas and can be removed with B<-dwic>.
-For example, a comma in this scipt prevents welding:
+For example, a comma in this script prevents welding:
 
     # perltidy -wn
     skip_symbols(
@@ -4411,7 +4411,7 @@ blocks for certain block types.  This flag allows the user to prevent this behav
 include any of the words C<sort>, C<map>, C<grep>, C<eval>,  or it may be C<*>
 to indicate all of these.
 
-So for example to prevent multi-line B<eval> blocks from becomming one-line
+So for example to prevent multi-line B<eval> blocks from becoming one-line
 blocks, the command would be B<-olbxl='eval'>.  In this case, existing one-line B<eval> blocks will remain on one-line if possible, and existing multi-line
 B<eval> blocks will remain multi-line blocks.
 
@@ -5090,7 +5090,8 @@ a few symbols for special block types, as follows:
    closure - any nameless block
 
 In addition, specific block loop types which are nested in other loops can be
-selected by adding a B<+> after the block name.
+selected by adding a B<+> after the block name. (Nested loops are sometimes
+good candidates for restructuring).
 
 The default is B<-dbt='sub'>.
 
@@ -5117,7 +5118,7 @@ are inner loops.
     perltidy -dbs -dbl=2 -dbt='sub +' somefile.pl >blocks.csv
 
 =item *
-This selectes every block and package.
+This selects every block and package.
 
     perltidy -dbs -dbl=1 -dbt='* closure' somefile.pl >blocks.csv
 
@@ -5557,7 +5558,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20221112.05
+This man page documents perltidy version 20230309
 
 =head1 BUG REPORTS
 

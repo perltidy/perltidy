@@ -113,7 +113,7 @@ BEGIN {
     # then the Release version must be bumped, and it is probably past time for
     # a release anyway.
 
-    $VERSION = '20221112.05';
+    $VERSION = '20230309';
 } ## end BEGIN
 
 sub DESTROY {
@@ -2996,19 +2996,6 @@ sub make_logfile_header {
     return $msg;
 } ## end sub make_logfile_header
 
-sub write_logfile_header {
-    my (
-        $rOpts,        $logger_object, $config_file,
-        $rraw_options, $Windows_type,  $readable_options
-    ) = @_;
-
-    my $msg = make_logfile_header( $rOpts, $config_file,
-        $rraw_options, $Windows_type, $readable_options );
-
-    $logger_object->write_logfile_entry($msg);
-    return;
-} ## end sub write_logfile_header
-
 sub generate_options {
 
     ######################################################################
@@ -4786,14 +4773,6 @@ EOS
     # so we have to handle an outside case.
     return ( $os eq "2000" && $major != 5 ) ? "NT4" : $os;
 } ## end sub Win_OS_Type
-
-sub is_unix {
-    return
-         ( $OSNAME !~ /win32|dos/i )
-      && ( $OSNAME ne 'VMS' )
-      && ( $OSNAME ne 'OS2' )
-      && ( $OSNAME ne 'MacOS' );
-} ## end sub is_unix
 
 sub look_for_Windows {
 
