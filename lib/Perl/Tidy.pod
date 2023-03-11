@@ -277,12 +277,6 @@ Parameters which control formatting may be passed in several ways: in a
 F<.perltidyrc> configuration file, in the B<perltidyrc> parameter, and in the
 B<argv> parameter.
 
-The B<-syn> (B<--check-syntax>) flag may be used with all source and
-destination streams except for standard input and output.  However
-data streams which are not associated with a filename will
-be copied to a temporary file before being passed to Perl.  This
-use of temporary files can cause somewhat confusing output from Perl.
-
 If the B<-pbp> style is used it will typically be necessary to also
 specify a B<-nst> flag.  This is necessary to turn off the B<-st> flag
 contained in the B<-pbp> parameter set which otherwise would direct
