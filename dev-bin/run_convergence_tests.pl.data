@@ -11514,6 +11514,52 @@ my %distance_pref =
 --indent-columns=8
 --want-trailing-commas='m'
 
+==> b1453.in <==
+my $foo =decode_json ( {
+      foo => 'bar' } );
+
+my $foo
+          =decode_json ( {
+               foo => 'bar'
+               } );
+
+==> b1453.par <==
+--variable-maximum-line-length
+--weld-nested-containers
+--continuation-indentation=10
+--maximum-line-length=24
+--indent-columns=3
+--stack-opening-hash-brace
+--vertical-tightness-closing=1
+--vertical-tightness=0
+--extended-line-up-parentheses
+# These cancel each other:
+#--nowant-right-space='='
+#--space-function-paren
+
+==> b1454.in <==
+my $red_color =
+      $widget->window->get_colormap->color_alloc(
+                                                  {
+                                                    red   => 65000,
+                                                    green => 0,
+                                                    blue  => 0
+                                                  }
+      );
+
+my $red_color = $widget->window->get_colormap->color_alloc( {
+                                                         red => 65000,
+                                                         green => 0,
+                                                         blue  => 0
+} );
+
+==> b1454.par <==
+--continuation-indentation=6
+--extended-line-up-parentheses
+--maximum-line-length=66
+--variable-maximum-line-length
+--weld-nested-containers
+
 ==> b146.in <==
 # State 1
 

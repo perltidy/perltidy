@@ -10626,8 +10626,16 @@ sub weld_nested_containers {
 
     # OLD: $single_line_tol added to fix cases b1180 b1181
     #       = $rOpts_continuation_indentation > $rOpts_indent_columns ? 1 : 0;
-    # NEW: $single_line_tol=0;  fixes b1212 and b1180-1181 work now
-    my $single_line_tol = 0;
+    # NEW: $single_line_tol=0  fixes b1212; and b1180-1181 work ok now
+    #                      =1  for -vmll and -lp; fixes b1452, b1453, b1454
+    # NOTE: the combination -vmll and -lp can be unstable, especially when
+    # also combined with -wn. It may eventually be necessary to turn off -vmll
+    # if -lp is set. For now, this works. The value '1' is a minimum which
+    # works but can be increased if necessary.
+    my $single_line_tol =
+      $rOpts_variable_maximum_line_length && $rOpts_line_up_parentheses
+      ? 1
+      : 0;
 
     my $multiline_tol = $single_line_tol + 1 +
       max( $rOpts_indent_columns, $rOpts_continuation_indentation );
@@ -18289,7 +18297,7 @@ EOM
         # pass even if optimization is turned off for testing.
 
         # The OPTIMIZE_OK flag should be true except for testing.
-        use constant MAX_COMPARE_RATIO => 20;
+        use constant MAX_COMPARE_RATIO => DEVEL_MODE ? 3 : 20;
         use constant OPTIMIZE_OK       => 1;
 
         my $num_pairs    = $nend - $nbeg + 1;

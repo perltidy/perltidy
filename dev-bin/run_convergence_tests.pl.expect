@@ -7812,6 +7812,28 @@ my %distance_pref =
         );
 
 
+==> b1453 <==
+my $foo = decode_json( {
+      foo => 'bar' } );
+
+my $foo = decode_json( {
+      foo => 'bar' } );
+
+==> b1454 <==
+my $red_color =
+      $widget->window->get_colormap->color_alloc( {
+                                                    red   => 65000,
+                                                    green => 0,
+                                                    blue  => 0
+      } );
+
+my $red_color =
+      $widget->window->get_colormap->color_alloc( {
+                                                    red   => 65000,
+                                                    green => 0,
+                                                    blue  => 0
+      } );
+
 ==> b146 <==
 # State 1
 
