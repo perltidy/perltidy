@@ -2372,7 +2372,6 @@ blocks.
 
 The option B<cbo=2> produces maximal cuddling but will not allow any short blocks.
 
-
 =item B<-bl>, B<--opening-brace-on-new-line>, or B<--brace-left>
 
 Use the flag B<-bl> to place an opening block brace on a new line:
@@ -2522,6 +2521,37 @@ flag.  In this case, the above example becomes
         }
 
 A conflict occurs if both B<-bl> and B<-bar> are specified.
+
+=item B<-cpb>, B<--cuddled-paren-brace>
+
+A related parameter, B<--cuddled-paren-brace>, causes perltidy to join
+two lines which otherwise would be
+
+      )
+    {
+
+to be
+
+    ) {
+
+For example:
+
+    # default
+    foreach my $dir (
+        '05_lexer', '07_token', '08_regression', '11_util',
+        '13_data',  '15_transform'
+      )
+    {
+        ...
+    }
+
+    # perltidy -cpb
+    foreach my $dir (
+        '05_lexer', '07_token', '08_regression', '11_util',
+        '13_data',  '15_transform'
+    ) {
+        ...;
+    }
 
 =item B<-otr>,  B<--opening-token-right> and related flags
 
@@ -2678,12 +2708,70 @@ This flag is similar to B<-bbhb=n>, described above, except it applies to lists 
 
 =item B<-bbpi=n>,  B<--break-before-paren-and-indent=n>
 
-This flag is a companion to B<-bbp=n> for controlling the indentation of an opening paren
-which is placed on a new line by that parameter.  The indentation is as follows:
+This flag is a companion to B<-bbp=n> for controlling the indentation of an
+opening paren which is placed on a new line by that parameter.  The indentation
+is as follows:
 
   -bbpi=0 one continuation level [default]
   -bbpi=1 outdent by one continuation level
   -bbpi=2 indent one full indentation level
+
+=item B<-bfvt=n>,  B<--brace-follower-vertical-tightness=n>
+
+Some types of closing block braces, such as B<eval>, may be followed by
+additional code.  A line break may be inserted between such a closing
+brace and the following code depending on the parameter B<n> and
+the length of the trailing code, as follows:
+
+If the trailing code fits on a single line, then
+
+  -bfvt=0 Follow the input style regarding break/no-break
+  -bfvt=1 Follow the input style regarding break/no-break [Default]
+  -bfvt=2 Do not insert a line break
+
+If the trailing code requires multiple lines, then
+
+  -bfvt=0 Insert a line break
+  -bfvt=1 Insert a line break except for a cuddled block chain [Default]
+  -bfvt=2 Do not insert a line break
+
+So the most compact code is achieved with B<-bfvt=2>.
+
+Example (non-cuddled, multiple lines ):
+
+    # -bfvt=0 or -bvft=1 [DEFAULT]
+    eval {
+        ( $line, $cond ) = $self->_normalize_if_elif($line);
+        1;
+    }
+      or die sprintf "Error at line %d\nLine %d: %s\n%s",
+      ( $line_info->start_line_num() ) x 2, $line, $@;
+
+    # -bfvt=2
+    eval {
+        ( $line, $cond ) = $self->_normalize_if_elif($line);
+        1;
+    } or die sprintf "Error at line %d\nLine %d: %s\n%s",
+      ( $line_info->start_line_num() ) x 2, $line, $@;
+
+Example (cuddled, multiple lines):
+
+    # -bfvt=0
+    eval {
+        #STUFF;
+        1;    # return true
+    }
+      or do {
+        ##handle error
+      };
+
+    # -bfvt=1 [DEFAULT] or -bfvt=2
+    eval {
+        #STUFF;
+        1;    # return true
+    } or do {
+        ##handle error
+    };
 
 =back
 
