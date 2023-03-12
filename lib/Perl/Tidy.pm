@@ -3,7 +3,7 @@
 #
 #    perltidy - a perl script indenter and formatter
 #
-#    Copyright (c) 2000-2022 by Steve Hancock
+#    Copyright (c) 2000-2023 by Steve Hancock
 #    Distributed under the GPL license agreement; see file COPYING
 #
 #    This program is free software; you can redistribute it and/or modify
@@ -985,6 +985,7 @@ EOM
         \@Arg_files,
 
         # filename stuff...
+        $source_stream,
         $output_extension,
         $forbidden_file_extensions,
         $in_place_modify,
@@ -1707,6 +1708,7 @@ sub process_all_files {
         $rinput_hash,
         $rfiles,
 
+        $source_stream,
         $output_extension,
         $forbidden_file_extensions,
         $in_place_modify,
@@ -1737,7 +1739,6 @@ sub process_all_files {
     my $logfile_stream     = $rinput_hash->{'logfile'};
     my $teefile_stream     = $rinput_hash->{'teefile'};
     my $debugfile_stream   = $rinput_hash->{'debugfile'};
-    my $source_stream      = $rinput_hash->{'source'};
     my $stderr_stream      = $rinput_hash->{'stderr'};
 
     my $number_of_files = @{$rfiles};
@@ -5308,7 +5309,7 @@ sub show_version {
     print STDOUT <<"EOM";
 This is perltidy, v$VERSION 
 
-Copyright 2000-2022, Steve Hancock
+Copyright 2000-2023, Steve Hancock
 
 Perltidy is free software and may be copied under the terms of the GNU
 General Public License, which is included in the distribution files.
