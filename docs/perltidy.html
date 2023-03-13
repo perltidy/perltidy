@@ -1968,6 +1968,38 @@
 <p>A conflict occurs if both <b>-bl</b> and <b>-bar</b> are specified.</p>
 
 </dd>
+<dt id="cpb---cuddled-paren-brace"><b>-cpb</b>, <b>--cuddled-paren-brace</b></dt>
+<dd>
+
+<p>A related parameter, <b>--cuddled-paren-brace</b>, causes perltidy to join two lines which otherwise would be</p>
+
+<pre><code>      )
+    {</code></pre>
+
+<p>to be</p>
+
+<pre><code>    ) {</code></pre>
+
+<p>For example:</p>
+
+<pre><code>    # default
+    foreach my $dir (
+        &#39;05_lexer&#39;, &#39;07_token&#39;, &#39;08_regression&#39;, &#39;11_util&#39;,
+        &#39;13_data&#39;,  &#39;15_transform&#39;
+      )
+    {
+        ...
+    }
+
+    # perltidy -cpb
+    foreach my $dir (
+        &#39;05_lexer&#39;, &#39;07_token&#39;, &#39;08_regression&#39;, &#39;11_util&#39;,
+        &#39;13_data&#39;,  &#39;15_transform&#39;
+    ) {
+        ...;
+    }</code></pre>
+
+</dd>
 <dt id="otr---opening-token-right-and-related-flags"><b>-otr</b>, <b>--opening-token-right</b> and related flags</dt>
 <dd>
 
@@ -2120,6 +2152,62 @@
 <pre><code>  -bbpi=0 one continuation level [default]
   -bbpi=1 outdent by one continuation level
   -bbpi=2 indent one full indentation level</code></pre>
+
+</dd>
+<dt id="bfvt-n---brace-follower-vertical-tightness-n"><b>-bfvt=n</b>, <b>--brace-follower-vertical-tightness=n</b></dt>
+<dd>
+
+<p>Some types of closing block braces, such as <b>eval</b>, may be followed by additional code. A line break may be inserted between such a closing brace and the following code depending on the parameter <b>n</b> and the length of the trailing code, as follows:</p>
+
+<p>If the trailing code fits on a single line, then</p>
+
+<pre><code>  -bfvt=0 Follow the input style regarding break/no-break
+  -bfvt=1 Follow the input style regarding break/no-break [Default]
+  -bfvt=2 Do not insert a line break</code></pre>
+
+<p>If the trailing code requires multiple lines, then</p>
+
+<pre><code>  -bfvt=0 Insert a line break
+  -bfvt=1 Insert a line break except for a cuddled block chain [Default]
+  -bfvt=2 Do not insert a line break</code></pre>
+
+<p>So the most compact code is achieved with <b>-bfvt=2</b>.</p>
+
+<p>Example (non-cuddled, multiple lines ):</p>
+
+<pre><code>    # -bfvt=0 or -bvft=1 [DEFAULT]
+    eval {
+        ( $line, $cond ) = $self-&gt;_normalize_if_elif($line);
+        1;
+    }
+      or die sprintf &quot;Error at line %d\nLine %d: %s\n%s&quot;,
+      ( $line_info-&gt;start_line_num() ) x 2, $line, $@;
+
+    # -bfvt=2
+    eval {
+        ( $line, $cond ) = $self-&gt;_normalize_if_elif($line);
+        1;
+    } or die sprintf &quot;Error at line %d\nLine %d: %s\n%s&quot;,
+      ( $line_info-&gt;start_line_num() ) x 2, $line, $@;</code></pre>
+
+<p>Example (cuddled, multiple lines):</p>
+
+<pre><code>    # -bfvt=0
+    eval {
+        #STUFF;
+        1;    # return true
+    }
+      or do {
+        ##handle error
+      };
+
+    # -bfvt=1 [DEFAULT] or -bfvt=2
+    eval {
+        #STUFF;
+        1;    # return true
+    } or do {
+        ##handle error
+    };</code></pre>
 
 </dd>
 </dl>
@@ -4317,7 +4405,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20230309</p>
+<p>This man page documents perltidy version 20230309.01</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

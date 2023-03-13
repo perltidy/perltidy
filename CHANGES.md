@@ -1,5 +1,17 @@
 # Perltidy Change Log
 
+## 2023 03 09.01
+
+    - Fixed git #115. In the two most recent CPAN releases, when the
+      Perl::Tidy module was called with the source pointing to a file,
+      but no destination specified, the output went to the standard
+      output instead of to a file with extension ``.tdy``, as it should
+      have.  This has been fixed.
+
+    - Fixed git #110, add missing documentation for new options
+      -cpb and -bfvt=n. These work in version 20230309 but the pod
+      documentation was missing and has been added.
+
 ## 2023 03 09
 
     - No significant bugs have been found since the last release to CPAN.
