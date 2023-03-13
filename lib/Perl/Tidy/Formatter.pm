@@ -11619,24 +11619,24 @@ sub special_indentation_adjustments {
 
     my ($self) = @_;
 
-    # Called once per file to do special indentation adjustments.
-    # These routines adjust levels either by changing _CI_LEVEL_ directly or
+    # Called once per file to define the levels to be used for computing
+    # actual indentation. These levels are initialized to be the structural
+    # levels and then are adjusted if necessary for special purposes.
+    # The adjustments are made either by changing _CI_LEVEL_ directly or
     # by setting modified levels in the array $self->[_radjusted_levels_].
 
-    # Initialize the adjusted levels. These will be the levels actually used
-    # for computing indentation.
-
     # NOTE: This routine is called after the weld routines, which may have
-    # already adjusted _LEVEL_, so we are making adjustments on top of those
-    # levels.  It would be much nicer to have the weld routines also use this
-    # adjustment, but that gets complicated when we combine -gnu -wn and have
-    # some welded quotes.
+    # already adjusted the initial values of _LEVEL_, so we are making
+    # adjustments on top of those levels.  It would be nicer to have the
+    # weld routines also use this adjustment, but that gets complicated
+    # when we combine -gnu -wn and also have some welded quotes.
     my $Klimit           = $self->[_Klimit_];
     my $rLL              = $self->[_rLL_];
     my $radjusted_levels = $self->[_radjusted_levels_];
 
     return unless ( defined($Klimit) );
 
+    # Initialize the adjusted levels to be the structural levels
     foreach my $KK ( 0 .. $Klimit ) {
         $radjusted_levels->[$KK] = $rLL->[$KK]->[_LEVEL_];
     }
