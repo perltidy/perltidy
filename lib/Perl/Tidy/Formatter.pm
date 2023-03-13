@@ -829,7 +829,6 @@ BEGIN {
 
     # methods to count instances
     my $_count = 0;
-    sub get_count        { return $_count; }
     sub _increment_count { return ++$_count }
     sub _decrement_count { return --$_count }
 } ## end closure to count instances
@@ -6671,6 +6670,7 @@ sub set_CODE_type {
     my $In_format_skipping_section = 0;
     my $Saw_VERSION_in_this_file   = 0;
     my $has_side_comment           = 0;
+    my $last_line_had_side_comment = 0;
     my ( $Kfirst, $Klast );
     my $CODE_type;
 
@@ -6694,12 +6694,6 @@ sub set_CODE_type {
         $ix_line++;
         my $line_type = $line_of_tokens->{_line_type};
 
-        my $Last_line_had_side_comment = $has_side_comment;
-        if ($has_side_comment) {
-            push @ix_side_comments, $ix_line - 1;
-            $has_side_comment = 0;
-        }
-
         my $last_CODE_type = $CODE_type;
         $CODE_type = EMPTY_STRING;
 
@@ -6707,15 +6701,13 @@ sub set_CODE_type {
             next;
         }
 
-        my $Klast_prev = $Klast;
-
-        my $rK_range = $line_of_tokens->{_rK_range};
-        ( $Kfirst, $Klast ) = @{$rK_range};
-
         my $input_line = $line_of_tokens->{_line_text};
-        my $jmax       = defined($Kfirst) ? $Klast - $Kfirst : -1;
 
-        my $is_block_comment = 0;
+        my $Klast_prev = $Klast;
+        ( $Kfirst, $Klast ) = @{ $line_of_tokens->{_rK_range} };
+        my $jmax = defined($Kfirst) ? $Klast - $Kfirst : -1;
+
+        my $is_block_comment;
         if ( $jmax >= 0 && $rLL->[$Klast]->[_TYPE_] eq '#' ) {
             if   ( $jmax == 0 ) { $is_block_comment = 1; }
             else                { $has_side_comment = 1 }
@@ -6830,10 +6822,9 @@ sub set_CODE_type {
 
             # look for hanging side comment ...
             if (
-                $Last_line_had_side_comment    # last line had side comment
-                && !$no_leading_space          # there is some leading space
-                && !
-                $is_static_block_comment    # do not make static comment hanging
+                $last_line_had_side_comment     # this follows as side comment
+                && !$no_leading_space           # with some leading space, and
+                && !$is_static_block_comment    # this is not a static comment
               )
             {
 
@@ -6884,7 +6875,7 @@ sub set_CODE_type {
                 $CODE_type = $no_leading_space ? 'SBCX' : 'SBC';
                 next;
             }
-            elsif ($Last_line_had_side_comment
+            elsif ($last_line_had_side_comment
                 && !$rOpts_maximum_consecutive_blank_lines
                 && $rLL->[$Kfirst]->[_LEVEL_] > 0 )
             {
@@ -6949,10 +6940,12 @@ sub set_CODE_type {
     }
     continue {
         $line_of_tokens->{_code_type} = $CODE_type;
-    }
 
-    if ($has_side_comment) {
-        push @ix_side_comments, $ix_line;
+        $last_line_had_side_comment = $has_side_comment;
+        if ($has_side_comment) {
+            push @ix_side_comments, $ix_line;
+            $has_side_comment = 0;
+        }
     }
 
     return \@ix_side_comments;
@@ -18243,6 +18236,36 @@ EOM
 
         # };
 
+        #-------------
+        # How it works
+        #-------------
+
+        # We are working with a sequence of output lines and looking at
+        # each pair. We must decide if it is better to join each of
+        # these line pairs.
+
+        # The brute force method is to loop through all line pairs and
+        # join the best possible pair, as determined by either some
+        # logical criterion or by the maximum 'bond strength' assigned
+        # to the joining token.  Then keep doing this until there are
+        # no remaining line pairs to join.
+
+        # This works, but a problem is that it can theoretically take
+        # on the order of N^2 comparisons in some pathological cases.
+        # This can require an excessive amount of run time.
+
+        # We can avoid excessive run time by conceptually dividing the
+        # work into two phases. In the first phase we make any joints
+        # required by user settings or logic other than the strength of
+        # joints.  In the second phase we make any remaining joints
+        # based on strengths.  To do this optimally, we do a preliminary
+        # sort on joint strengths and always loop in that order.  That
+        # way, we can stop a search on the first joint strength because
+        # it will be the maximum.
+
+        # This method is very fast, requiring no more than 3*N line
+        # comparisons, where N is the number of lines (see below).
+
         my $ri_beg = $rhash->{_ri_beg};
         my $ri_end = $rhash->{_ri_end};
 
@@ -18279,10 +18302,9 @@ EOM
         # Iteration limit
         #----------------
 
-        # This was originally an O(n-squared) loop which required a check on
-        # the maximum number of iterations for safety. It is now a very fast
-        # loop which runs in O(n) time, but a check on total number of
-        # iterations is retained to guard against future programming errors.
+        # This is now a very fast loop which runs in O(n) time, but a
+        # check on total number of iterations is retained to guard
+        # against future programming errors.
 
         # Most cases require roughly 1 comparison per line pair (1 full pass).
         # The upper bound is estimated to be about 3 comparisons per line pair
@@ -18295,10 +18317,7 @@ EOM
         # So a value of MAX_COMPARE_RATIO = 3 looks like an upper bound as
         # long as optimization is used.  A value of 20 should allow all code to
         # pass even if optimization is turned off for testing.
-
-        # The OPTIMIZE_OK flag should be true except for testing.
         use constant MAX_COMPARE_RATIO => DEVEL_MODE ? 3 : 20;
-        use constant OPTIMIZE_OK       => 1;
 
         my $num_pairs    = $nend - $nbeg + 1;
         my $max_compares = MAX_COMPARE_RATIO * $num_pairs;
@@ -18682,11 +18701,11 @@ EOM
                 # we have seen a good break on strength, and
                 && $num_bs
 
-                # we are allowed to optimize
-                && OPTIMIZE_OK
-
               )
             {
+
+                # To deactivate optimization for testing purposes, the next
+                # line can be commented out. This will increase run time.
                 $rhash->{_optimization_on} = 1;
                 if (DEBUG_RECOMBINE) {
                     my $num_compares = $rhash->{_num_compares};
