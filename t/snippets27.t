@@ -925,9 +925,12 @@ foreach my $dir (
             expect => <<'#17...........',
 # some tests for default setting --use-feature=class, rt145706
 class Example::Subclass1 : isa(Example::Base) { ... }
+
 class Example::Subclass2 : isa(Example::Base 2.345) { ... }
+
 class Example::Subclass3 : isa(Example::Base) 1.345 { ... }
 field $y : param(the_y_value);
+
 class Pointer 2.0 {
     field $x : param;
     field $y : param;

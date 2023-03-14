@@ -7695,7 +7695,7 @@ sub respace_tokens_inner_loop {
             }
 
             # Trim certain spaces in identifiers
-            if ( $type eq 'i' ) {
+            if ( $type eq 'i' && $token =~ /\s/ ) {
 
                 if ( $token =~ /$SUB_PATTERN/ ) {
 
@@ -7724,15 +7724,12 @@ sub respace_tokens_inner_loop {
 
                 # clean up spaces in package identifiers, like
                 #   "package        Bob::Dog;"
-                elsif ( substr( $token, 0, 7 ) eq 'package'
-                    && $token =~ /^package\s/ )
-                {
+                elsif ( $token =~ /^(package|class)\s/ ) {
                     $token =~ s/\s+/ /g;
                     $rtoken_vars->[_TOKEN_] = $token;
 
                     $self->[_ris_special_identifier_token_]->{$token} =
                       'package';
-
                 }
 
                 # trim identifiers of trailing blanks which can occur
