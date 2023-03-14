@@ -7500,7 +7500,7 @@ sub respace_tokens {
                 )
               )
             {
-                $self->store_space();
+                $self->store_token();
             }
         }
 
@@ -7849,7 +7849,7 @@ EOM
                 && $rLL_new->[-1]->[_TYPE_] ne 'b'
                 && $rOpts_add_whitespace )
             {
-                $self->store_space();
+                $self->store_token();
             }
             $self->store_token($rtoken_vars);
             next;
@@ -7896,7 +7896,7 @@ EOM
             && $rLL_new->[-1]->[_TYPE_] ne 'b'
             && $rOpts_add_whitespace )
         {
-            $self->store_space();
+            $self->store_token();
         }
         $self->store_token($rtoken_vars);
 
@@ -8143,9 +8143,32 @@ sub store_token {
     #------------------------------------------
 
     # Input parameter:
-    #  $item = ref to a token
+    #  if defined => reference to a token
+    #  if undef   => make and store a blank space
 
-    # NOTE: this sub is called once per token so coding efficiency is critical.
+    # NOTE: called once per token so coding efficiency is critical.
+
+    # If no arg, then make and store a blank space
+    if ( !$item ) {
+
+        #  - Never start the array with a space, and
+        #  - Never store two consecutive spaces
+        if ( @{$rLL_new} && $rLL_new->[-1]->[_TYPE_] ne 'b' ) {
+
+            # Note that the level and ci_level of newly created spaces should
+            # be the same as the previous token.  Otherwise the coding for the
+            # -lp option can create a blinking state in some rare cases.
+            # (see b1109, b1110).
+            $item                    = [];
+            $item->[_TYPE_]          = 'b';
+            $item->[_TOKEN_]         = SPACE;
+            $item->[_TYPE_SEQUENCE_] = EMPTY_STRING;
+            $item->[_LINE_INDEX_]    = $rLL_new->[-1]->[_LINE_INDEX_];
+            $item->[_LEVEL_]         = $rLL_new->[-1]->[_LEVEL_];
+            $item->[_CI_LEVEL_]      = $rLL_new->[-1]->[_CI_LEVEL_];
+        }
+        else { return }
+    }
 
     # The next multiple assignment statements are significantly faster than
     # doing them one-by-one.
@@ -8362,37 +8385,6 @@ sub store_token {
     push @{$rLL_new}, $item;
     return;
 } ## end sub store_token
-
-sub store_space {
-    my ($self) = @_;
-
-    # Store a blank space in the new array
-    #  - but never start the array with a space
-    #  - and never store two consecutive spaces
-    if ( @{$rLL_new}
-        && $rLL_new->[-1]->[_TYPE_] ne 'b' )
-    {
-        my $ritem = [];
-        $ritem->[_TYPE_]          = 'b';
-        $ritem->[_TOKEN_]         = SPACE;
-        $ritem->[_TYPE_SEQUENCE_] = EMPTY_STRING;
-
-        $ritem->[_LINE_INDEX_] =
-          $rLL_new->[-1]->[_LINE_INDEX_];
-
-        # The level and ci_level of newly created spaces should be the same
-        # as the previous token.  Otherwise the coding for the -lp option
-        # can create a blinking state in some rare cases (see b1109, b1110).
-        $ritem->[_LEVEL_] =
-          $rLL_new->[-1]->[_LEVEL_];
-        $ritem->[_CI_LEVEL_] =
-          $rLL_new->[-1]->[_CI_LEVEL_];
-
-        $self->store_token($ritem);
-    }
-
-    return;
-} ## end sub store_space
 
 sub add_phantom_semicolon {
 
