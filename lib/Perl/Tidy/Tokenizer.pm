@@ -163,6 +163,7 @@ BEGIN {
         _in_end_                             => $i++,
         _in_format_                          => $i++,
         _in_error_                           => $i++,
+        _in_trouble_                         => $i++,
         _in_pod_                             => $i++,
         _in_skipped_                         => $i++,
         _in_attribute_list_                  => $i++,
@@ -436,6 +437,7 @@ sub new {
     # _in_pod_               flag set if we are in pod documentation
     # _in_skipped_           flag set if we are in a skipped section
     # _in_error_             flag set if we saw severe error (binary in script)
+    # _in_trouble_           set if we saw a troublesome lexical like 'my sub s'
     # _in_data_              flag set if we are in __DATA__ section
     # _in_end_               flag set if we are in __END__ section
     # _in_format_            flag set if we are in a format description
@@ -457,6 +459,7 @@ sub new {
     $self->[_in_end_]                   = 0;
     $self->[_in_format_]                = 0;
     $self->[_in_error_]                 = 0;
+    $self->[_in_trouble_]               = 0;
     $self->[_in_pod_]                   = 0;
     $self->[_in_skipped_]               = 0;
     $self->[_in_attribute_list_]        = 0;
@@ -647,7 +650,12 @@ sub report_tokenization_errors {
 
     # set severe error flag if tokenizer has encountered file reading problems
     # (i.e. unexpected binary characters)
-    my $severe_error = $self->[_in_error_];
+    # or code which may not be formatted correctly (such as 'my sub q')
+    # The difference between _in_error_ and _in_trouble_ is that
+    # _in_error_ stops the tokenizer immediately whereas
+    # _in_trouble_ lets the tokenizer finish so that all errors are seen
+    # Both block formatting and cause the input stream to be output verbatim.
+    my $severe_error = $self->[_in_error_] || $self->[_in_trouble_];
 
     my $maxle = $self->[_rOpts_maximum_level_errors_];
     my $maxue = $self->[_rOpts_maximum_unexpected_errors_];
@@ -8591,6 +8599,10 @@ EOM
                     warning(
 "'my' sub '$subname' matches a builtin name and may not be handled correctly in this perltidy version.\n"
                     );
+
+                    # This may end badly, it is safest to block formatting
+                    # For an example, see perl527/lexsub.t (issue c203)
+                    $tokenizer_self->[_in_trouble_] = 1;
                 }
             }
             else {
