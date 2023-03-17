@@ -27703,11 +27703,12 @@ sub xlp_tweak {
             return [ $rtokens, $rfields, $rpatterns, $rfield_lengths ];
         }
 
-        my $i_start        = $ibeg;
-        my $depth          = 0;
-        my $i_depth_prev   = $i_start;
-        my $depth_prev     = $depth;
-        my %container_name = ( 0 => EMPTY_STRING );
+        my $i_start              = $ibeg;
+        my $depth                = 0;
+        my $i_depth_prev         = $i_start;
+        my $depth_prev           = $depth;
+        my %container_name       = ( 0 => EMPTY_STRING );
+        my $saw_exclamation_mark = 0;
 
         my @tokens        = ();
         my @fields        = ();
@@ -27824,7 +27825,26 @@ sub xlp_tweak {
                         # if we are not aligning on this paren...
                         if ( !$ralignment_type_to_go->[$i] ) {
 
-                            my $len = length_tag( $i, $ibeg, $i_start );
+                            # Add the length to the name ...
+                            my $len = $summed_lengths_to_go[$i] -
+                              $summed_lengths_to_go[$i_start];
+
+                            # Do not include the length of any '!'. Otherwise,
+                            # commas in the following line will not match:
+                            #  ok( 20, tapprox( ( pdl 2,  3 ), ( pdl 2, 3 ) ) );
+                            #  ok( 21, !tapprox( ( pdl 2, 3 ), ( pdl 2, 4 ) ) );
+                            if ($saw_exclamation_mark) { $len -= 1 }
+
+                            # For first token, use distance from start of line
+                            # but subtract off the indentation due to level.
+                            # Otherwise, results could vary with indentation.
+                            if ( $i_start == $ibeg ) {
+                                $len +=
+                                  leading_spaces_to_go($ibeg) -
+                                  $levels_to_go[$i_start] *
+                                  $rOpts_indent_columns;
+                            }
+                            if ( $len < 0 ) { $len = 0 }
 
                             # tack this length onto the container name to try
                             # to make a unique token name
@@ -27942,7 +27962,8 @@ sub xlp_tweak {
                 push( @tokens, $tok );
 
                 # get ready for the next batch
-                $i_start = $i;
+                $i_start              = $i;
+                $saw_exclamation_mark = 0;
                 $j++;
                 $patterns[$j] = EMPTY_STRING;
             } ## end if ( new synchronization token
@@ -28015,7 +28036,9 @@ sub xlp_tweak {
             } ## end elsif ( $is_w_n_C{$type} )
 
             # ignore any ! in patterns
-            elsif ( $type eq '!' ) { }
+            elsif ( $type eq '!' ) {
+                $saw_exclamation_mark = 1;
+            }
 
             # everything else
             else {
@@ -28106,41 +28129,6 @@ sub xlp_tweak {
         }
         return $name;
     } ## end sub make_uncontained_comma_name
-
-    sub length_tag {
-
-        my ( $i, $ibeg, $i_start ) = @_;
-
-        # Generate a line length to be used as a tag for rejecting bad
-        # alignments.  The tag is the length of the line from the previous
-        # matching token, or beginning of line, to the function name.  This
-        # will allow the vertical aligner to reject undesirable matches.
-
-        # The basic method: sum length from previous alignment
-        my $len = token_sequence_length( $i_start, $i - 1 );
-
-        # Minor patch: do not include the length of any '!'.
-        # Otherwise, commas in the following line will not
-        # match
-        #  ok( 20, tapprox( ( pdl 2,  3 ), ( pdl 2, 3 ) ) );
-        #  ok( 21, !tapprox( ( pdl 2, 3 ), ( pdl 2, 4 ) ) );
-        if ( grep { $_ eq '!' } @types_to_go[ $i_start .. $i - 1 ] ) {
-            $len -= 1;
-        }
-
-        if ( $i_start == $ibeg ) {
-
-            # For first token, use distance from start of
-            # line but subtract off the indentation due to
-            # level.  Otherwise, results could vary with
-            # indentation.
-            $len +=
-              leading_spaces_to_go($ibeg) -
-              $levels_to_go[$i_start] * $rOpts_indent_columns;
-        }
-        if ( $len < 0 ) { $len = 0 }
-        return $len;
-    } ## end sub length_tag
 
 } ## end closure make_alignment_patterns
 
