@@ -7673,83 +7673,89 @@ sub respace_tokens_inner_loop {
         #     ( $type =~ /^[wit]$/ )
         elsif ( $is_wit{$type} ) {
 
-            # change '$  var'  to '$var' etc
-            # change '@    '   to '@'
-            # Examples: <<snippets/space1.in>>
-            my $ord = ord( substr( $token, 1, 1 ) );
-            if (
+            # index() is several times faster than a regex test with \s here
+            ##   $token =~ /\s/
+            if ( index( $token, SPACE ) > 0 || index( $token, "\t" ) > 0 ) {
 
-                # quick test for possible blank at second char
-                $ord > 0 && ( $ord < ORD_PRINTABLE_MIN
-                    || $ord > ORD_PRINTABLE_MAX )
-              )
-            {
-                my ( $sigil, $word ) = split /\s+/, $token, 2;
-
-                # $sigil =~ /^[\$\&\%\*\@]$/ )
-                if ( $is_sigil{$sigil} ) {
-                    $token = $sigil;
-                    $token .= $word if ( defined($word) );    # fix c104
-                    $rtoken_vars->[_TOKEN_] = $token;
-                }
-            }
-
-            # Trim certain spaces in identifiers
-            if ( $type eq 'i' && $token =~ /\s/ ) {
-
-                if ( $token =~ /$SUB_PATTERN/ ) {
-
-                    # -spp = 0 : no space before opening prototype paren
-                    # -spp = 1 : stable (follow input spacing)
-                    # -spp = 2 : always space before opening prototype paren
-                    if ( !defined($rOpts_space_prototype_paren)
-                        || $rOpts_space_prototype_paren == 1 )
-                    {
-                        ## default: stable
-                    }
-                    elsif ( $rOpts_space_prototype_paren == 0 ) {
-                        $token =~ s/\s+\(/\(/;
-                    }
-                    elsif ( $rOpts_space_prototype_paren == 2 ) {
-                        $token =~ s/\(/ (/;
-                    }
-
-                    # one space max, and no tabs
-                    $token =~ s/\s+/ /g;
-                    $rtoken_vars->[_TOKEN_] = $token;
-
-                    $self->[_ris_special_identifier_token_]->{$token} = 'sub';
-
-                }
-
-                # clean up spaces in package identifiers, like
-                #   "package        Bob::Dog;"
-                elsif ( $token =~ /^(package|class)\s/ ) {
-                    $token =~ s/\s+/ /g;
-                    $rtoken_vars->[_TOKEN_] = $token;
-
-                    $self->[_ris_special_identifier_token_]->{$token} =
-                      'package';
-                }
-
-                # trim identifiers of trailing blanks which can occur
-                # under some unusual circumstances, such as if the
-                # identifier 'witch' has trailing blanks on input here:
-                #
-                # sub
-                # witch
-                # ()   # prototype may be on new line ...
-                # ...
-                my $ord_ch = ord( substr( $token, -1, 1 ) );
+                # change '$  var'  to '$var' etc
+                # change '@    '   to '@'
+                # Examples: <<snippets/space1.in>>
+                my $ord = ord( substr( $token, 1, 1 ) );
                 if (
 
-                    # quick check for possible ending space
-                    $ord_ch > 0 && ( $ord_ch < ORD_PRINTABLE_MIN
-                        || $ord_ch > ORD_PRINTABLE_MAX )
+                    # quick test for possible blank at second char
+                    $ord > 0 && ( $ord < ORD_PRINTABLE_MIN
+                        || $ord > ORD_PRINTABLE_MAX )
                   )
                 {
-                    $token =~ s/\s+$//g;
-                    $rtoken_vars->[_TOKEN_] = $token;
+                    my ( $sigil, $word ) = split /\s+/, $token, 2;
+
+                    # $sigil =~ /^[\$\&\%\*\@]$/ )
+                    if ( $is_sigil{$sigil} ) {
+                        $token = $sigil;
+                        $token .= $word if ( defined($word) );    # fix c104
+                        $rtoken_vars->[_TOKEN_] = $token;
+                    }
+                }
+
+                # Trim certain spaces in identifiers
+                if ( $type eq 'i' ) {
+
+                    if ( $token =~ /$SUB_PATTERN/ ) {
+
+                        # -spp = 0 : no space before opening prototype paren
+                        # -spp = 1 : stable (follow input spacing)
+                        # -spp = 2 : always space before opening prototype paren
+                        if ( !defined($rOpts_space_prototype_paren)
+                            || $rOpts_space_prototype_paren == 1 )
+                        {
+                            ## default: stable
+                        }
+                        elsif ( $rOpts_space_prototype_paren == 0 ) {
+                            $token =~ s/\s+\(/\(/;
+                        }
+                        elsif ( $rOpts_space_prototype_paren == 2 ) {
+                            $token =~ s/\(/ (/;
+                        }
+
+                        # one space max, and no tabs
+                        $token =~ s/\s+/ /g;
+                        $rtoken_vars->[_TOKEN_] = $token;
+
+                        $self->[_ris_special_identifier_token_]->{$token} =
+                          'sub';
+
+                    }
+
+                    # clean up spaces in package identifiers, like
+                    #   "package        Bob::Dog;"
+                    elsif ( $token =~ /^(package|class)\s/ ) {
+                        $token =~ s/\s+/ /g;
+                        $rtoken_vars->[_TOKEN_] = $token;
+
+                        $self->[_ris_special_identifier_token_]->{$token} =
+                          'package';
+                    }
+
+                    # trim identifiers of trailing blanks which can occur
+                    # under some unusual circumstances, such as if the
+                    # identifier 'witch' has trailing blanks on input here:
+                    #
+                    # sub
+                    # witch
+                    # ()   # prototype may be on new line ...
+                    # ...
+                    my $ord_ch = ord( substr( $token, -1, 1 ) );
+                    if (
+
+                        # quick check for possible ending space
+                        $ord_ch > 0 && ( $ord_ch < ORD_PRINTABLE_MIN
+                            || $ord_ch > ORD_PRINTABLE_MAX )
+                      )
+                    {
+                        $token =~ s/\s+$//g;
+                        $rtoken_vars->[_TOKEN_] = $token;
+                    }
                 }
             }
         }
