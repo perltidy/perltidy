@@ -4689,25 +4689,39 @@ EOM
             # Trim start of this line unless we are continuing a quoted line.
             # Do not trim end because we might end in a quote (test: deken4.pl)
             # Perl::Tidy::Formatter will delete needless trailing blanks
-            $input_line =~ s/^(\s+)//;
+            if ( !length($input_line) ) {
 
-            # Calculate a guessed level for nonblank lines to avoid calls to
-            #    sub guess_old_indentation_level()
-            if ( length($input_line) && $1 ) {
-                my $leading_spaces = $1;
-                my $spaces         = length($leading_spaces);
+                # line is empty
+            }
+            elsif ( $input_line =~ m/\S/g ) {
 
-                # handle leading tabs
-                if ( ord( substr( $leading_spaces, 0, 1 ) ) == ORD_TAB
-                    && $leading_spaces =~ /^(\t+)/ )
-                {
-                    my $tabsize = $self->[_tabsize_];
-                    $spaces += length($1) * ( $tabsize - 1 );
+                # There are $spaces blank characters before a nonblank character
+                my $spaces = pos($input_line) - 1;
+                if ( $spaces > 0 ) {
+
+                    # Trim the leading spaces
+                    $input_line = substr( $input_line, $spaces );
+
+                    # Find actual space count if there are leading tabs
+                    if (
+                        ord( substr( $untrimmed_input_line, 0, 1 ) ) == ORD_TAB
+                        && $untrimmed_input_line =~ /^(\t+)/ )
+                    {
+                        my $tabsize = $self->[_tabsize_];
+                        $spaces += length($1) * ( $tabsize - 1 );
+                    }
+
+                    # Calculate a guessed level for nonblank lines to avoid
+                    # calls to sub guess_old_indentation_level()
+                    my $indent_columns = $self->[_indent_columns_];
+                    $line_of_tokens->{_guessed_indentation_level} =
+                      int( $spaces / $indent_columns );
                 }
+            }
+            else {
 
-                my $indent_columns = $self->[_indent_columns_];
-                $line_of_tokens->{_guessed_indentation_level} =
-                  int( $spaces / $indent_columns );
+                # line has all blank characters
+                $input_line = EMPTY_STRING;
             }
 
             $is_END_or_DATA = substr( $input_line, 0, 1 ) eq '_'
