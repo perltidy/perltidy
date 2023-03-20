@@ -31,9 +31,12 @@ foreach my $short_name ( @{$rshort_names} ) {
     }
 }
 
-# delete these: -check-syntax or -syn is accepted but no longer does anything
+# delete these:
+# -check-syntax or -syn is accepted but no longer does anything
+# -fuzzy-line-length or -fll is accepted but no longer does anything
 my @skip = qw(
   check-syntax
+  fuzzy-line-length
 );
 foreach (@skip) {
     if ( $abbrev{$_} ) { delete $abbrev{$_} }

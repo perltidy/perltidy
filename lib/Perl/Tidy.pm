@@ -82,6 +82,7 @@ local $OUTPUT_AUTOFLUSH = 1;
 
 # DEVEL_MODE can be turned on for extra checking during development
 use constant DEVEL_MODE   => 0;
+use constant DIAGNOSTICS  => 0;
 use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };
 
@@ -916,7 +917,7 @@ EOM
     # Create a diagnostics object if requested;
     # This is only useful for code development
     my $diagnostics_object = undef;
-    if ( $rOpts->{'DIAGNOSTICS'} ) {
+    if (DIAGNOSTICS) {
         $diagnostics_object = Perl::Tidy::Diagnostics->new();
     }
 
@@ -3008,19 +3009,17 @@ sub generate_options {
     #  %option_range - a hash giving the valid ranges of certain options
 
     # Note: a few options are not documented in the man page and usage
-    # message. This is because these are experimental or debug options and
-    # may or may not be retained in future versions.
+    # message. This is because these are depricated, experimental or debug
+    # options and may or may not be retained in future versions:
+
+    # These undocumented flags are accepted but not used:
+    # --check-syntax
+    # --fuzzy-line-length
     #
-    # Here are the undocumented flags as far as I know.  Any of them
-    # may disappear at any time.  They are mainly for fine-tuning
-    # and debugging.
+    # These undocumented flags are for debugging:
+    # --recombine                           # used to debug line breaks
+    # --short-concatenation-item-length     # used to break a '.' chain
     #
-    # fll --> fuzzy-line-length           # a trivial parameter which gets
-    #                                       turned off for the extrude option
-    #                                       which is mainly for debugging
-    # scl --> short-concatenation-item-length   # helps break at '.'
-    # recombine                           # for debugging line breaks
-    # I   --> DIAGNOSTICS                 # for debugging [**DEACTIVATED**]
     ######################################################################
 
     # here is a summary of the Getopt codes:
@@ -3391,22 +3390,21 @@ sub generate_options {
     ########################################
     $category = 13;    # Debugging
     ########################################
-    $add_option->( 'DIAGNOSTICS',              'I',    '!' ) if (DEVEL_MODE);
-    $add_option->( 'DEBUG',                    'D',    '!' );
-    $add_option->( 'dump-block-summary',       'dbs',  '!' );
-    $add_option->( 'dump-block-minimum-lines', 'dbl',  '=i' );
-    $add_option->( 'dump-block-types',         'dbt',  '=s' );
-    $add_option->( 'dump-cuddled-block-list',  'dcbl', '!' );
-    $add_option->( 'dump-defaults',            'ddf',  '!' );
-    $add_option->( 'dump-long-names',          'dln',  '!' );
-    $add_option->( 'dump-options',             'dop',  '!' );
-    $add_option->( 'dump-profile',             'dpro', '!' );
-    $add_option->( 'dump-short-names',         'dsn',  '!' );
-    $add_option->( 'dump-token-types',         'dtt',  '!' );
-    $add_option->( 'dump-want-left-space',     'dwls', '!' );
-    $add_option->( 'dump-want-right-space',    'dwrs', '!' );
-    $add_option->( 'fuzzy-line-length',        'fll',  '!' );
-    $add_option->( 'help',                     'h',    EMPTY_STRING );
+    $add_option->( 'DEBUG',                           'D',     '!' );
+    $add_option->( 'dump-block-summary',              'dbs',   '!' );
+    $add_option->( 'dump-block-minimum-lines',        'dbl',   '=i' );
+    $add_option->( 'dump-block-types',                'dbt',   '=s' );
+    $add_option->( 'dump-cuddled-block-list',         'dcbl',  '!' );
+    $add_option->( 'dump-defaults',                   'ddf',   '!' );
+    $add_option->( 'dump-long-names',                 'dln',   '!' );
+    $add_option->( 'dump-options',                    'dop',   '!' );
+    $add_option->( 'dump-profile',                    'dpro',  '!' );
+    $add_option->( 'dump-short-names',                'dsn',   '!' );
+    $add_option->( 'dump-token-types',                'dtt',   '!' );
+    $add_option->( 'dump-want-left-space',            'dwls',  '!' );
+    $add_option->( 'dump-want-right-space',           'dwrs',  '!' );
+    $add_option->( 'fuzzy-line-length',               'fll',   '!' );
+    $add_option->( 'help',                            'h',     EMPTY_STRING );
     $add_option->( 'short-concatenation-item-length', 'scl',   '=i' );
     $add_option->( 'show-options',                    'opt',   '!' );
     $add_option->( 'timestamp',                       'ts',    '!' );
@@ -4443,7 +4441,9 @@ EOM
     make_grep_alias_string($rOpts);
 
     # Turn on fuzzy-line-length unless this is an extrude run, as determined
-    # by the -i and -ci settings. Otherwise blinkers can form (case b935)
+    # by the -i and -ci settings. Otherwise blinkers can form (case b935).
+    # This is an undocumented parameter used only for stress-testing when
+    # --extrude is set.
     if ( !$rOpts->{'fuzzy-line-length'} ) {
         if (   $rOpts->{'maximum-line-length'} != 1
             || $rOpts->{'continuation-indentation'} != 0 )
