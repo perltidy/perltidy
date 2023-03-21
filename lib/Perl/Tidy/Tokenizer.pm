@@ -635,10 +635,6 @@ sub write_diagnostics {
     return;
 } ## end sub write_diagnostics
 
-sub get_maximum_level {
-    return $tokenizer_self->[_maximum_level_];
-}
-
 sub report_tokenization_errors {
 
     my ($self) = @_;
@@ -663,9 +659,9 @@ sub report_tokenization_errors {
     $maxue = 0 unless defined($maxue);
 
     my $level = get_indentation_level();
-    if ( $level != $tokenizer_self->[_starting_level_] ) {
+    if ( $level != $self->[_starting_level_] ) {
         warning("final indentation level: $level\n");
-        my $level_diff = $tokenizer_self->[_starting_level_] - $level;
+        my $level_diff = $self->[_starting_level_] - $level;
         if ( $level_diff < 0 ) { $level_diff = -$level_diff }
 
         # Set severe error flag if the level error is greater than 1.
@@ -685,32 +681,32 @@ EOM
     # scripts, so set the severe error flag at a low number.  This is similar
     # to the level check, but different because braces may balance but be
     # incorrectly interlaced.
-    if ( $tokenizer_self->[_true_brace_error_count_] > 2 ) {
+    if ( $self->[_true_brace_error_count_] > 2 ) {
         $severe_error = 1;
     }
 
-    if ( $tokenizer_self->[_look_for_hash_bang_]
-        && !$tokenizer_self->[_saw_hash_bang_] )
+    if ( $self->[_look_for_hash_bang_]
+        && !$self->[_saw_hash_bang_] )
     {
         warning(
             "hit EOF without seeing hash-bang line; maybe don't need -x?\n");
     }
 
-    if ( $tokenizer_self->[_in_format_] ) {
+    if ( $self->[_in_format_] ) {
         warning("hit EOF while in format description\n");
     }
 
-    if ( $tokenizer_self->[_in_skipped_] ) {
+    if ( $self->[_in_skipped_] ) {
         write_logfile_entry(
             "hit EOF while in lines skipped with --code-skipping\n");
     }
 
-    if ( $tokenizer_self->[_in_pod_] ) {
+    if ( $self->[_in_pod_] ) {
 
         # Just write log entry if this is after __END__ or __DATA__
         # because this happens to often, and it is not likely to be
         # a parsing error.
-        if ( $tokenizer_self->[_saw_data_] || $tokenizer_self->[_saw_end_] ) {
+        if ( $self->[_saw_data_] || $self->[_saw_end_] ) {
             write_logfile_entry(
 "hit eof while in pod documentation (no =cut seen)\n\tthis can cause trouble with some pod utilities\n"
             );
@@ -724,11 +720,11 @@ EOM
 
     }
 
-    if ( $tokenizer_self->[_in_here_doc_] ) {
+    if ( $self->[_in_here_doc_] ) {
         $severe_error = 1;
-        my $here_doc_target = $tokenizer_self->[_here_doc_target_];
+        my $here_doc_target = $self->[_here_doc_target_];
         my $started_looking_for_here_target_at =
-          $tokenizer_self->[_started_looking_for_here_target_at_];
+          $self->[_started_looking_for_here_target_at_];
         if ($here_doc_target) {
             warning(
 "hit EOF in here document starting at line $started_looking_for_here_target_at with target: $here_doc_target\n"
@@ -741,7 +737,7 @@ Hit EOF in here document starting at line $started_looking_for_here_target_at wi
 EOM
         }
         my $nearly_matched_here_target_at =
-          $tokenizer_self->[_nearly_matched_here_target_at_];
+          $self->[_nearly_matched_here_target_at_];
         if ($nearly_matched_here_target_at) {
             warning(
 "NOTE: almost matched at input line $nearly_matched_here_target_at except for whitespace\n"
@@ -750,12 +746,12 @@ EOM
     }
 
     # Something is seriously wrong if we ended inside a quote
-    if ( $tokenizer_self->[_in_quote_] ) {
+    if ( $self->[_in_quote_] ) {
         $severe_error = 1;
-        my $line_start_quote = $tokenizer_self->[_line_start_quote_];
-        my $quote_target     = $tokenizer_self->[_quote_target_];
+        my $line_start_quote = $self->[_line_start_quote_];
+        my $quote_target     = $self->[_quote_target_];
         my $what =
-          ( $tokenizer_self->[_in_attribute_list_] )
+          ( $self->[_in_attribute_list_] )
           ? "attribute list"
           : "quote/pattern";
         warning(
@@ -763,7 +759,7 @@ EOM
         );
     }
 
-    if ( $tokenizer_self->[_hit_bug_] ) {
+    if ( $self->[_hit_bug_] ) {
         $severe_error = 1;
     }
 
@@ -773,7 +769,7 @@ EOM
     # a shell script or an html file.  But unfortunately this check can
     # interfere with some extended syntaxes, such as RPerl, so it has to be off
     # by default.
-    my $ue_count = $tokenizer_self->[_unexpected_error_count_];
+    my $ue_count = $self->[_unexpected_error_count_];
     if ( $maxue > 0 && $ue_count > $maxue ) {
         warning(<<EOM);
 Formatting will be skipped since unexpected token count = $ue_count > -maxue=$maxue; use -maxue=0 to force formatting
@@ -781,7 +777,7 @@ EOM
         $severe_error = 1;
     }
 
-    unless ( $tokenizer_self->[_saw_perl_dash_w_] ) {
+    unless ( $self->[_saw_perl_dash_w_] ) {
         if ( $] < 5.006 ) {
             write_logfile_entry("Suggest including '-w parameter'\n");
         }
@@ -790,19 +786,18 @@ EOM
         }
     }
 
-    if ( $tokenizer_self->[_saw_perl_dash_P_] ) {
+    if ( $self->[_saw_perl_dash_P_] ) {
         write_logfile_entry("Use of -P parameter for defines is discouraged\n");
     }
 
-    unless ( $tokenizer_self->[_saw_use_strict_] ) {
+    unless ( $self->[_saw_use_strict_] ) {
         write_logfile_entry("Suggest including 'use strict;'\n");
     }
 
     # it is suggested that labels have at least one upper case character
     # for legibility and to avoid code breakage as new keywords are introduced
-    if ( $tokenizer_self->[_rlower_case_labels_at_] ) {
-        my @lower_case_labels_at =
-          @{ $tokenizer_self->[_rlower_case_labels_at_] };
+    if ( $self->[_rlower_case_labels_at_] ) {
+        my @lower_case_labels_at = @{ $self->[_rlower_case_labels_at_] };
         write_logfile_entry(
             "Suggest using upper case characters in label(s)\n");
         local $LIST_SEPARATOR = ')(';
@@ -1347,7 +1342,7 @@ sub find_starting_indentation_level {
             }
             next if ( $line =~ /^\s*#/ );    # skip past comments
             next if ( $line =~ /^\s*$/ );    # skip past blank lines
-            $starting_level = guess_old_indentation_level($line);
+            $starting_level = $self->guess_old_indentation_level($line);
             last;
         }
         $msg = "Line $i implies starting-indentation-level = $starting_level\n";
@@ -1359,7 +1354,7 @@ sub find_starting_indentation_level {
 } ## end sub find_starting_indentation_level
 
 sub guess_old_indentation_level {
-    my ($line) = @_;
+    my ( $self, $line ) = @_;
 
     # Guess the indentation level of an input line.
     #
@@ -1375,7 +1370,7 @@ sub guess_old_indentation_level {
     # a block of code within an editor, so that the block stays at the same
     # level when perltidy is applied repeatedly.
     #
-    # USES GLOBAL VARIABLES: $tokenizer_self
+    # USES GLOBAL VARIABLES: (none)
     my $level = 0;
 
     # find leading tabs, spaces, and any statement label
@@ -1384,20 +1379,20 @@ sub guess_old_indentation_level {
 
         # If there are leading tabs, we use the tab scheme for this run, if
         # any, so that the code will remain stable when editing.
-        if ($1) { $spaces += length($1) * $tokenizer_self->[_tabsize_] }
+        if ($1) { $spaces += length($1) * $self->[_tabsize_] }
 
         if ($2) { $spaces += length($2) }
 
         # correct for outdented labels
-        if ( $3 && $tokenizer_self->[_outdent_labels_] ) {
-            $spaces += $tokenizer_self->[_continuation_indentation_];
+        if ( $3 && $self->[_outdent_labels_] ) {
+            $spaces += $self->[_continuation_indentation_];
         }
     }
 
     # compute indentation using the value of -i for this run.
     # If -i=0 is used for this run (which is possible) it doesn't matter
     # what we do here but we'll guess that the old run used 4 spaces per level.
-    my $indent_columns = $tokenizer_self->[_indent_columns_];
+    my $indent_columns = $self->[_indent_columns_];
     $indent_columns = 4 if ( !$indent_columns );
     $level          = int( $spaces / $indent_columns );
     return ($level);
@@ -1937,7 +1932,7 @@ EOM
         #  $replacement_text
         # return:
         #  $rht = reference to any here-doc targets
-        my ($replacement_text) = @_;
+        my ( $self, $replacement_text ) = @_;
 
         # quick check
         return unless ( $replacement_text =~ /<</ );
@@ -1945,7 +1940,7 @@ EOM
         write_logfile_entry("scanning replacement text for here-doc targets\n");
 
         # save the logger object for error messages
-        my $logger_object = $tokenizer_self->[_logger_object_];
+        my $logger_object = $self->[_logger_object_];
 
         # localize all package variables
         local (
@@ -1990,18 +1985,18 @@ EOM
 
         # remove any here doc targets
         my $rht = undef;
-        if ( $tokenizer_self->[_in_here_doc_] ) {
+        if ( $tokenizer->[_in_here_doc_] ) {
             $rht = [];
             push @{$rht},
               [
-                $tokenizer_self->[_here_doc_target_],
-                $tokenizer_self->[_here_quote_character_]
+                $tokenizer->[_here_doc_target_],
+                $tokenizer->[_here_quote_character_]
               ];
-            if ( $tokenizer_self->[_rhere_target_list_] ) {
-                push @{$rht}, @{ $tokenizer_self->[_rhere_target_list_] };
-                $tokenizer_self->[_rhere_target_list_] = undef;
+            if ( $tokenizer->[_rhere_target_list_] ) {
+                push @{$rht}, @{ $tokenizer->[_rhere_target_list_] };
+                $tokenizer->[_rhere_target_list_] = undef;
             }
-            $tokenizer_self->[_in_here_doc_] = undef;
+            $tokenizer->[_in_here_doc_] = undef;
         }
 
         # now its safe to report errors
@@ -2513,6 +2508,8 @@ EOM
 
     sub do_DOLLAR_SIGN {
 
+        my $self = shift;
+
         # '$'
         # start looking for a scalar
         error_if_expecting_OPERATOR("Scalar")
@@ -2520,7 +2517,7 @@ EOM
         scan_simple_identifier();
 
         if ( $identifier eq '$^W' ) {
-            $tokenizer_self->[_saw_perl_dash_w_] = 1;
+            $self->[_saw_perl_dash_w_] = 1;
         }
 
         # Check for identifier in indirect object slot
@@ -2546,6 +2543,8 @@ EOM
     } ## end sub do_DOLLAR_SIGN
 
     sub do_LEFT_PARENTHESIS {
+
+        my $self = shift;
 
         # '('
         ++$paren_depth;
@@ -2630,7 +2629,7 @@ EOM
           if ( $last_nonblank_token ne ')' );
 
         ( $type_sequence, $indent_flag ) =
-          increase_nesting_depth( PAREN, $rtoken_map->[$i_tok] );
+          $self->increase_nesting_depth( PAREN, $rtoken_map->[$i_tok] );
 
         # propagate types down through nested parens
         # for example: the second paren in 'if ((' would be structural
@@ -2680,9 +2679,11 @@ EOM
 
     sub do_RIGHT_PARENTHESIS {
 
+        my $self = shift;
+
         # ')'
         ( $type_sequence, $indent_flag ) =
-          decrease_nesting_depth( PAREN, $rtoken_map->[$i_tok] );
+          $self->decrease_nesting_depth( PAREN, $rtoken_map->[$i_tok] );
 
         if ( $paren_structural_type[$paren_depth] eq '{' ) {
             $type = '}';
@@ -2840,6 +2841,8 @@ EOM
 
     sub do_LEFT_CURLY_BRACKET {
 
+        my $self = shift;
+
         # '{'
         # if we just saw a ')', we will label this block with
         # its type.  We need to do this to allow sub
@@ -2878,7 +2881,7 @@ EOM
 
             # check for syntax error here;
             unless ( $is_blocktype_with_paren{$last_nonblank_token} ) {
-                if ( $tokenizer_self->[_extended_syntax_] ) {
+                if ( $self->[_extended_syntax_] ) {
 
                     # we append a trailing () to mark this as an unknown
                     # block type.  This allows perltidy to format some
@@ -2975,11 +2978,13 @@ EOM
         $brace_structural_type[$brace_depth] = $type;
         $brace_context[$brace_depth]         = $context;
         ( $type_sequence, $indent_flag ) =
-          increase_nesting_depth( BRACE, $rtoken_map->[$i_tok] );
+          $self->increase_nesting_depth( BRACE, $rtoken_map->[$i_tok] );
         return;
     } ## end sub do_LEFT_CURLY_BRACKET
 
     sub do_RIGHT_CURLY_BRACKET {
+
+        my $self = shift;
 
         # '}'
         $block_type = $brace_type[$brace_depth];
@@ -2992,7 +2997,7 @@ EOM
         else {
         }
         ( $type_sequence, $indent_flag ) =
-          decrease_nesting_depth( BRACE, $rtoken_map->[$i_tok] );
+          $self->decrease_nesting_depth( BRACE, $rtoken_map->[$i_tok] );
 
         if ( $brace_structural_type[$brace_depth] eq 'L' ) {
             $type = 'R';
@@ -3057,6 +3062,8 @@ EOM
 
     sub do_QUESTION_MARK {
 
+        my $self = shift;
+
         # '?' = conditional or starting pattern?
         my $is_pattern;
 
@@ -3105,7 +3112,8 @@ EOM
         }
         else {
             ( $type_sequence, $indent_flag ) =
-              increase_nesting_depth( QUESTION_COLON, $rtoken_map->[$i_tok] );
+              $self->increase_nesting_depth( QUESTION_COLON,
+                $rtoken_map->[$i_tok] );
         }
         return;
     } ## end sub do_QUESTION_MARK
@@ -3162,6 +3170,8 @@ EOM
 
     sub do_COLON {
 
+        my $self = shift;
+
         # ':' = label, ternary, attribute, ?
 
         # if this is the first nonblank character, call it a label
@@ -3216,7 +3226,8 @@ EOM
         # otherwise, it should be part of a ?/: operator
         else {
             ( $type_sequence, $indent_flag ) =
-              decrease_nesting_depth( QUESTION_COLON, $rtoken_map->[$i_tok] );
+              $self->decrease_nesting_depth( QUESTION_COLON,
+                $rtoken_map->[$i_tok] );
             if ( $last_nonblank_token eq '?' ) {
                 warning("Syntax error near ? :\n");
             }
@@ -3267,10 +3278,13 @@ EOM
 
     sub do_LEFT_SQUARE_BRACKET {
 
+        my $self = shift;
+
         # '['
         $square_bracket_type[ ++$square_bracket_depth ] = $last_nonblank_token;
         ( $type_sequence, $indent_flag ) =
-          increase_nesting_depth( SQUARE_BRACKET, $rtoken_map->[$i_tok] );
+          $self->increase_nesting_depth( SQUARE_BRACKET,
+            $rtoken_map->[$i_tok] );
 
         # It may seem odd, but structural square brackets have
         # type '{' and '}'.  This simplifies the indentation logic.
@@ -3283,9 +3297,12 @@ EOM
 
     sub do_RIGHT_SQUARE_BRACKET {
 
+        my $self = shift;
+
         # ']'
         ( $type_sequence, $indent_flag ) =
-          decrease_nesting_depth( SQUARE_BRACKET, $rtoken_map->[$i_tok] );
+          $self->decrease_nesting_depth( SQUARE_BRACKET,
+            $rtoken_map->[$i_tok] );
 
         if ( $square_bracket_structural_type[$square_bracket_depth] eq '{' ) {
             $type = '}';
@@ -3342,6 +3359,8 @@ EOM
 
     sub do_CARAT_SIGN {
 
+        my $self = shift;
+
         # '^'
         # check for special variables like ${^WARNING_BITS}
         if ( $expecting == TERM ) {
@@ -3352,7 +3371,7 @@ EOM
             {
 
                 if ( $next_tok eq 'W' ) {
-                    $tokenizer_self->[_saw_perl_dash_w_] = 1;
+                    $self->[_saw_perl_dash_w_] = 1;
                 }
                 $tok  = $tok . $next_tok;
                 $i    = $i + 1;
@@ -3398,6 +3417,8 @@ EOM
 
     sub do_LEFT_SHIFT {
 
+        my $self = shift;
+
         # '<<' = maybe a here-doc?
 
 ##      This check removed because it could be a deprecated here-doc with
@@ -3413,7 +3434,7 @@ EOM
                 $found_target, $here_doc_target, $here_quote_character, $i,
                 $saw_error
               )
-              = find_here_doc( $expecting, $i, $rtokens, $rtoken_map,
+              = $self->find_here_doc( $expecting, $i, $rtokens, $rtoken_map,
                 $max_token_index );
 
             if ($found_target) {
@@ -3459,6 +3480,9 @@ EOM
     sub do_NEW_HERE_DOC {
 
         # '<<~' = a here-doc, new type added in v26
+
+        my $self = shift;
+
         return
           unless ( $i < $max_token_index )
           ;    # here-doc not possible if end of line
@@ -3469,7 +3493,7 @@ EOM
                 $found_target, $here_doc_target, $here_quote_character, $i,
                 $saw_error
               )
-              = find_here_doc( $expecting, $i, $rtokens, $rtoken_map,
+              = $self->find_here_doc( $expecting, $i, $rtokens, $rtoken_map,
                 $max_token_index );
 
             if ($found_target) {
@@ -3885,6 +3909,8 @@ EOM
 
     sub do_QUOTE_OPERATOR {
 
+        my $self = shift;
+
         if ( $expecting == OPERATOR ) {
 
             # Be careful not to call an error for a qw quote
@@ -3922,7 +3948,7 @@ EOM
         # of leading and trailing whitespace.  So they are given a
         # separate type, 'q', unless requested otherwise.
         $type =
-          ( $tok eq 'qw' && $tokenizer_self->[_trim_qw_] )
+          ( $tok eq 'qw' && $self->[_trim_qw_] )
           ? 'q'
           : 'Q';
         $quote_type = $type;
@@ -4069,7 +4095,7 @@ EOM
 
     sub do_BAREWORD {
 
-        my ($is_END_or_DATA) = @_;
+        my ( $self, $is_END_or_DATA ) = @_;
 
         # handle a bareword token:
         # returns
@@ -4165,14 +4191,14 @@ EOM
         elsif ( ( $tok eq 'strict' )
             and ( $last_nonblank_token eq 'use' ) )
         {
-            $tokenizer_self->[_saw_use_strict_] = 1;
+            $self->[_saw_use_strict_] = 1;
             scan_bare_identifier();
         }
 
         elsif ( ( $tok eq 'warnings' )
             and ( $last_nonblank_token eq 'use' ) )
         {
-            $tokenizer_self->[_saw_perl_dash_w_] = 1;
+            $self->[_saw_perl_dash_w_] = 1;
 
             # scan as identifier, so that we pick up something like:
             # use warnings::register
@@ -4181,7 +4207,7 @@ EOM
 
         elsif (
                $tok eq 'AutoLoader'
-            && $tokenizer_self->[_look_for_autoloader_]
+            && $self->[_look_for_autoloader_]
             && (
                 $last_nonblank_token eq 'use'
 
@@ -4193,22 +4219,22 @@ EOM
           )
         {
             write_logfile_entry("AutoLoader seen, -nlal deactivates\n");
-            $tokenizer_self->[_saw_autoloader_]      = 1;
-            $tokenizer_self->[_look_for_autoloader_] = 0;
+            $self->[_saw_autoloader_]      = 1;
+            $self->[_look_for_autoloader_] = 0;
             scan_bare_identifier();
         }
 
         elsif (
                $tok eq 'SelfLoader'
-            && $tokenizer_self->[_look_for_selfloader_]
+            && $self->[_look_for_selfloader_]
             && (   $last_nonblank_token eq 'use'
                 || $input_line =~ /^\s*(use|require)\s+SelfLoader\b/
                 || $input_line =~ /\bISA\s*=.*\bSelfLoader\b/ )
           )
         {
             write_logfile_entry("SelfLoader seen, -nlsl deactivates\n");
-            $tokenizer_self->[_saw_selfloader_]      = 1;
-            $tokenizer_self->[_look_for_selfloader_] = 0;
+            $self->[_saw_selfloader_]      = 1;
+            $self->[_look_for_selfloader_] = 0;
             scan_bare_identifier();
         }
 
@@ -4220,7 +4246,7 @@ EOM
 
         # various quote operators
         elsif ( $is_q_qq_qw_qx_qr_s_y_tr_m{$tok} ) {
-            do_QUOTE_OPERATOR();
+            $self->do_QUOTE_OPERATOR();
         }
 
         # check for a statement label
@@ -4235,8 +4261,7 @@ EOM
           )
         {
             if ( $tok !~ /[A-Z]/ ) {
-                push @{ $tokenizer_self->[_rlower_case_labels_at_] },
-                  $input_line_number;
+                push @{ $self->[_rlower_case_labels_at_] }, $input_line_number;
             }
             $type = 'J';
             $tok .= ':';
@@ -4296,9 +4321,9 @@ EOM
         # Fix for c035: split 'format' from 'is_format_END_DATA' to be
         # more restrictive. Require a new statement to be ok here.
         elsif ( $tok_kw eq 'format' && new_statement_ok() ) {
-            $type = ';';    # make tokenizer look for TERM next
-            $tokenizer_self->[_in_format_] = 1;
-            $is_last = 1;                          ## is last token on this line
+            $type                = ';';    # make tokenizer look for TERM next
+            $self->[_in_format_] = 1;
+            $is_last             = 1;      ## is last token on this line
         }
 
         # Note on token types for format, __DATA__, __END__:
@@ -4309,8 +4334,8 @@ EOM
             $type = ';';    # make tokenizer look for TERM next
 
             # Remember that we are in one of these three sections
-            $tokenizer_self->[ $is_END_DATA{$tok_kw} ] = 1;
-            $is_last = 1;    ## is last token on this line
+            $self->[ $is_END_DATA{$tok_kw} ] = 1;
+            $is_last = 1;                          ## is last token on this line
         }
 
         elsif ( $is_keyword{$tok_kw} ) {
@@ -4335,6 +4360,8 @@ EOM
     } ## end sub do_BAREWORD
 
     sub do_FOLLOW_QUOTE {
+
+        my $self = shift;
 
         # Continue following a quote on a new line
         $type = $quote_type;
@@ -4406,7 +4433,7 @@ EOM
                 # See test 'here2.in'.
                 if ( $saw_modifier_e && $i_tok >= 0 ) {
 
-                    my $rht = scan_replacement_text($qs1);
+                    my $rht = $self->scan_replacement_text($qs1);
 
                     # Change type from 'Q' to 'h' for quotes with
                     # here-doc targets so that the formatter (see sub
@@ -4850,7 +4877,7 @@ EOM
 
             # continue looking for the end of a quote
             if ($in_quote) {
-                do_FOLLOW_QUOTE();
+                $self->do_FOLLOW_QUOTE();
                 last if ( $in_quote || $i > $max_token_index );
             }
 
@@ -5100,7 +5127,7 @@ EOM
             if ( $pre_type eq 'w' ) {
                 $expecting =
                   operator_expected( [ $prev_type, $tok, $next_type ] );
-                my $is_last = do_BAREWORD($is_END_or_DATA);
+                my $is_last = $self->do_BAREWORD($is_END_or_DATA);
                 last if ($is_last);
             }
 
@@ -5121,7 +5148,7 @@ EOM
                 if ($code) {
                     $expecting =
                       operator_expected( [ $prev_type, $tok, $next_type ] );
-                    $code->();
+                    $code->($self);
                     redo if $in_quote;
                 }
             }
@@ -5372,6 +5399,7 @@ EOM
                     push( @{$rslevel_stack}, 1 + $slevel_in_tokenizer );
                     $level_in_tokenizer++;
 
+                    ##NOTE: _maximum_level_ does not seem to be needed now
                     if ( $level_in_tokenizer > $self->[_maximum_level_] ) {
                         $self->[_maximum_level_] = $level_in_tokenizer;
                     }
@@ -6586,16 +6614,16 @@ sub is_non_structural_brace {
 # way.
 
 sub increase_nesting_depth {
-    my ( $aa, $pos ) = @_;
+    my ( $self, $aa, $pos ) = @_;
 
-    # USES GLOBAL VARIABLES: $tokenizer_self, @current_depth,
+    # USES GLOBAL VARIABLES: @current_depth,
     # @current_sequence_number, @depth_array, @starting_line_of_current_depth,
     # $statement_type
     $current_depth[$aa]++;
     $total_depth++;
     $total_depth[$aa][ $current_depth[$aa] ] = $total_depth;
-    my $input_line_number = $tokenizer_self->[_last_line_number_];
-    my $input_line        = $tokenizer_self->[_line_of_text_];
+    my $input_line_number = $self->[_last_line_number_];
+    my $input_line        = $self->[_line_of_text_];
 
     # Sequence numbers increment by number of items.  This keeps
     # a unique set of numbers but still allows the relative location
@@ -6659,14 +6687,14 @@ sub is_balanced_closing_container {
 
 sub decrease_nesting_depth {
 
-    my ( $aa, $pos ) = @_;
+    my ( $self, $aa, $pos ) = @_;
 
-    # USES GLOBAL VARIABLES: $tokenizer_self, @current_depth,
+    # USES GLOBAL VARIABLES: @current_depth,
     # @current_sequence_number, @depth_array, @starting_line_of_current_depth
     # $statement_type
     my $seqno             = 0;
-    my $input_line_number = $tokenizer_self->[_last_line_number_];
-    my $input_line        = $tokenizer_self->[_line_of_text_];
+    my $input_line_number = $self->[_last_line_number_];
+    my $input_line        = $self->[_line_of_text_];
 
     my $outdent = 0;
     $total_depth--;
@@ -6766,7 +6794,7 @@ EOM
         increment_brace_error();
 
         # keep track of errors in braces alone (ignoring ternary nesting errors)
-        $tokenizer_self->[_true_brace_error_count_]++
+        $self->[_true_brace_error_count_]++
           if ( $closing_brace_names[$aa] ne "':'" );
     }
     return ( $seqno, $outdent );
@@ -7119,22 +7147,20 @@ sub guess_if_pattern_or_division {
 # returns 1 if it is probably a here doc, 0 if not
 sub guess_if_here_doc {
 
+    my ( $self, $next_token ) = @_;
+
     # This is how many lines we will search for a target as part of the
     # guessing strategy.  It is a constant because there is probably
     # little reason to change it.
-    # USES GLOBAL VARIABLES: $tokenizer_self, $current_package
-    # %is_constant,
+    # USES GLOBAL VARIABLES: $current_package %is_constant,
     my $HERE_DOC_WINDOW = 40;
 
-    my $next_token        = shift;
     my $here_doc_expected = 0;
     my $line;
     my $k   = 0;
     my $msg = "checking <<";
 
-    while ( $line =
-        $tokenizer_self->[_line_buffer_object_]->peek_ahead( $k++ ) )
-    {
+    while ( $line = $self->[_line_buffer_object_]->peek_ahead( $k++ ) ) {
         chomp $line;
 
         if ( $line =~ /^$next_token$/ ) {
@@ -8290,7 +8316,7 @@ BEGIN {
 
                 # shouldn't happen: bad call parameter
                 my $msg =
-"Program bug detected: scan_identifier received bad starting token = '$tok'\n";
+"Program bug detected: scan_complex_identifier received bad starting token = '$tok'\n";
                 if (DEVEL_MODE) { Fault($msg) }
                 if ( !$tokenizer_self->[_in_error_] ) {
                     warning($msg);
@@ -9385,7 +9411,8 @@ sub find_here_doc {
     #   $i - unchanged if not here doc,
     #    or index of the last token of the here target
     #   $saw_error - flag noting unbalanced quote on here target
-    my ( $expecting, $i, $rtokens, $rtoken_map, $max_token_index ) = @_;
+    my ( $self, $expecting, $i, $rtokens, $rtoken_map, $max_token_index ) = @_;
+
     my $ibeg                 = $i;
     my $found_target         = 0;
     my $here_doc_target      = EMPTY_STRING;
@@ -9455,7 +9482,7 @@ sub find_here_doc {
 
         my $here_doc_expected;
         if ( $expecting == UNKNOWN ) {
-            $here_doc_expected = guess_if_here_doc($next_token);
+            $here_doc_expected = $self->guess_if_here_doc($next_token);
         }
         else {
             $here_doc_expected = 1;
