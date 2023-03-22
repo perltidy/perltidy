@@ -2352,8 +2352,9 @@ EOM
     } ## end sub class_ok_here
 
     sub scan_id {
+        my $self = shift;
         ( $i, $tok, $type, $id_scan_state ) =
-          scan_id_do( $input_line, $i, $tok, $rtokens, $rtoken_map,
+          $self->scan_id_do( $input_line, $i, $tok, $rtokens, $rtoken_map,
             $id_scan_state, $max_token_index );
         return;
     } ## end sub scan_id
@@ -3651,7 +3652,7 @@ EOM
 
     sub do_ATTRIBUTE_LIST {
 
-        my ($next_nonblank_token) = @_;
+        my ( $self, $next_nonblank_token ) = @_;
 
         # Called at a bareword encountered while in an attribute list
         # returns 'is_attribute':
@@ -3671,7 +3672,7 @@ EOM
 
                 # start just after the word 'prototype'
                 my $i_beg = $i + 1;
-                ( $i, $tok, $type, $id_scan_state ) = do_scan_sub(
+                ( $i, $tok, $type, $id_scan_state ) = $self->do_scan_sub(
                     {
                         input_line      => $input_line,
                         i               => $i,
@@ -4117,7 +4118,7 @@ EOM
         }
 
         if ($in_attribute_list) {
-            my $is_attribute = do_ATTRIBUTE_LIST($next_nonblank_token);
+            my $is_attribute = $self->do_ATTRIBUTE_LIST($next_nonblank_token);
             return if ($is_attribute);
         }
 
@@ -4285,14 +4286,14 @@ EOM
                 }
                 else {
                     initialize_subname();
-                    scan_id();
+                    $self->scan_id();
                 }
             }
             else {
                 error_if_expecting_OPERATOR()
                   if ( $expecting == OPERATOR );
                 initialize_subname();
-                scan_id();
+                $self->scan_id();
             }
         }
 
@@ -4311,12 +4312,12 @@ EOM
                 {
                     do_UNKNOWN_BAREWORD($next_nonblank_token);
                 }
-                else { scan_id() }
+                else { $self->scan_id() }
             }
             else {
                 error_if_expecting_OPERATOR()
                   if ( $expecting == OPERATOR );
-                scan_id();
+                $self->scan_id();
             }
         }
 
@@ -4974,7 +4975,7 @@ EOM
             if ($id_scan_state) {
 
                 if ( $is_sub{$id_scan_state} || $is_package{$id_scan_state} ) {
-                    scan_id();
+                    $self->scan_id();
                 }
                 else {
                     scan_identifier();
@@ -7424,7 +7425,7 @@ sub scan_id_do {
 # USES GLOBAL VARIABLES: $current_package, $last_nonblank_token, $in_attribute_list,
 # $statement_type, $tokenizer_self
 
-    my ( $input_line, $i, $tok, $rtokens, $rtoken_map, $id_scan_state,
+    my ( $self, $input_line, $i, $tok, $rtokens, $rtoken_map, $id_scan_state,
         $max_token_index )
       = @_;
     use constant DEBUG_NSCAN => 0;
@@ -7478,7 +7479,7 @@ sub scan_id_do {
     unless ($blank_line) {
 
         if ( $is_sub{$id_scan_state} ) {
-            ( $i, $tok, $type, $id_scan_state ) = do_scan_sub(
+            ( $i, $tok, $type, $id_scan_state ) = $self->do_scan_sub(
                 {
                     input_line      => $input_line,
                     i               => $i,
@@ -8578,7 +8579,7 @@ EOM
         # $in_attribute_list, %saw_function_definition,
         # $statement_type
 
-        my ($rinput_hash) = @_;
+        my ( $self, $rinput_hash ) = @_;
 
         my $input_line      = $rinput_hash->{input_line};
         my $i               = $rinput_hash->{i};
@@ -8644,7 +8645,7 @@ EOM
 
                     # This may end badly, it is safest to block formatting
                     # For an example, see perl527/lexsub.t (issue c203)
-                    $tokenizer_self->[_in_trouble_] = 1;
+                    $self->[_in_trouble_] = 1;
                 }
             }
             else {
@@ -8798,7 +8799,7 @@ EOM
                         }
                     }
                     $saw_function_definition{$subname}{$package} =
-                      $tokenizer_self->[_last_line_number_];
+                      $self->[_last_line_number_];
                 }
             }
             elsif ( $next_nonblank_token eq ';' ) {
