@@ -1282,10 +1282,11 @@ sub check_token_array {
         return;
     }
 
+    # Available for debugging but not currently used:
     sub write_diagnostics {
-        my ($msg) = @_;
+        my ( $msg, $line_number ) = @_;
         if ($diagnostics_object) {
-            $diagnostics_object->write_diagnostics($msg);
+            $diagnostics_object->write_diagnostics( $msg, $line_number );
         }
         return;
     } ## end sub write_diagnostics

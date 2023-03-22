@@ -626,11 +626,13 @@ sub get_unexpected_error_count {
     return $self->[_unexpected_error_count_];
 }
 
-# interface to Perl::Tidy::Diagnostics routines
+# Interface to Perl::Tidy::Diagnostics
 sub write_diagnostics {
-    my $msg = shift;
-    if ( $tokenizer_self->[_diagnostics_object_] ) {
-        $tokenizer_self->[_diagnostics_object_]->write_diagnostics($msg);
+    my ($msg)              = @_;
+    my $input_line_number  = $tokenizer_self->[_last_line_number_];
+    my $diagnostics_object = $tokenizer_self->[_diagnostics_object_];
+    if ($diagnostics_object) {
+        $diagnostics_object->write_diagnostics( $msg, $input_line_number );
     }
     return;
 } ## end sub write_diagnostics
