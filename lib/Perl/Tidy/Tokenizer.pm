@@ -530,7 +530,14 @@ sub new {
 
 } ## end sub new
 
+sub get_unexpected_error_count {
+    my ($self) = @_;
+    return $self->[_unexpected_error_count_];
+}
+
+#-----------------------------------------
 # interface to Perl::Tidy::Logger routines
+#-----------------------------------------
 sub warning {
     my $msg           = shift;
     my $logger_object = $tokenizer_self->[_logger_object_];
@@ -621,12 +628,9 @@ sub get_saw_brace_error {
     }
 } ## end sub get_saw_brace_error
 
-sub get_unexpected_error_count {
-    my ($self) = @_;
-    return $self->[_unexpected_error_count_];
-}
-
+#-------------------------------------
 # Interface to Perl::Tidy::Diagnostics
+#-------------------------------------
 sub write_diagnostics {
     my ($msg)              = @_;
     my $input_line_number  = $tokenizer_self->[_last_line_number_];
@@ -2459,10 +2463,11 @@ EOM
 
     # a sub to warn if token found where term expected
     sub error_if_expecting_TERM {
+        my $self = shift;
         if ( $expecting == TERM ) {
             if ( $really_want_term{$last_nonblank_type} ) {
-                report_unexpected( $tok, "term", $i_tok, $last_nonblank_i,
-                    $rtoken_map, $rtoken_type, $input_line );
+                $self->report_unexpected( $tok, "term", $i_tok,
+                    $last_nonblank_i, $rtoken_map, $rtoken_type, $input_line );
                 return 1;
             }
         }
@@ -2471,11 +2476,11 @@ EOM
 
     # a sub to warn if token found where operator expected
     sub error_if_expecting_OPERATOR {
-        my $thing = shift;
+        my ( $self, $thing ) = @_;
         if ( $expecting == OPERATOR ) {
             if ( !defined($thing) ) { $thing = $tok }
-            report_unexpected( $thing, "operator", $i_tok, $last_nonblank_i,
-                $rtoken_map, $rtoken_type, $input_line );
+            $self->report_unexpected( $thing, "operator", $i_tok,
+                $last_nonblank_i, $rtoken_map, $rtoken_type, $input_line );
             if ( $i_tok == 0 ) {
                 interrupt_logfile();
                 warning("Missing ';' or ',' above?\n");
@@ -2495,16 +2500,20 @@ EOM
     #------------------
     sub do_GREATER_THAN_SIGN {
 
+        my $self = shift;
+
         # '>'
-        error_if_expecting_TERM()
+        $self->error_if_expecting_TERM()
           if ( $expecting == TERM );
         return;
     } ## end sub do_GREATER_THAN_SIGN
 
     sub do_VERTICAL_LINE {
 
+        my $self = shift;
+
         # '|'
-        error_if_expecting_TERM()
+        $self->error_if_expecting_TERM()
           if ( $expecting == TERM );
         return;
     } ## end sub do_VERTICAL_LINE
@@ -2515,7 +2524,7 @@ EOM
 
         # '$'
         # start looking for a scalar
-        error_if_expecting_OPERATOR("Scalar")
+        $self->error_if_expecting_OPERATOR("Scalar")
           if ( $expecting == OPERATOR );
         scan_simple_identifier();
 
@@ -2599,7 +2608,7 @@ EOM
                     {
                         my $hint;
 
-                        error_if_expecting_OPERATOR('(');
+                        $self->error_if_expecting_OPERATOR('(');
 
                         if ( $last_nonblank_type eq 'C' ) {
                             $hint =
@@ -2714,6 +2723,8 @@ EOM
 
     sub do_COMMA {
 
+        my $self = shift;
+
         # ','
         if ( $last_nonblank_type eq ',' ) {
             complain("Repeated ','s \n");
@@ -2732,6 +2743,8 @@ EOM
     } ## end sub do_COMMA
 
     sub do_SEMICOLON {
+
+        my $self = shift;
 
         # ';'
         $context        = UNKNOWN_CONTEXT;
@@ -2761,8 +2774,10 @@ EOM
 
     sub do_QUOTATION_MARK {
 
+        my $self = shift;
+
         # '"'
-        error_if_expecting_OPERATOR("String")
+        $self->error_if_expecting_OPERATOR("String")
           if ( $expecting == OPERATOR );
         $in_quote                = 1;
         $type                    = 'Q';
@@ -2772,8 +2787,10 @@ EOM
 
     sub do_APOSTROPHE {
 
+        my $self = shift;
+
         # "'"
-        error_if_expecting_OPERATOR("String")
+        $self->error_if_expecting_OPERATOR("String")
           if ( $expecting == OPERATOR );
         $in_quote                = 1;
         $type                    = 'Q';
@@ -2783,8 +2800,10 @@ EOM
 
     sub do_BACKTICK {
 
+        my $self = shift;
+
         # '`'
-        error_if_expecting_OPERATOR("String")
+        $self->error_if_expecting_OPERATOR("String")
           if ( $expecting == OPERATOR );
         $in_quote                = 1;
         $type                    = 'Q';
@@ -2793,6 +2812,8 @@ EOM
     } ## end sub do_BACKTICK
 
     sub do_SLASH {
+
+        my $self = shift;
 
         # '/'
         my $is_pattern;
@@ -3020,6 +3041,8 @@ EOM
 
     sub do_AMPERSAND {
 
+        my $self = shift;
+
         # '&' = maybe sub call? start looking
         # We have to check for sub call unless we are sure we
         # are expecting an operator.  This example from s2p
@@ -3042,6 +3065,8 @@ EOM
 
     sub do_LESS_THAN_SIGN {
 
+        my $self = shift;
+
         # '<' - angle operator or less than?
         if ( $expecting != OPERATOR ) {
             ( $i, $type ) =
@@ -3051,7 +3076,7 @@ EOM
             ##  This message is not very helpful and quite confusing if the above
             ##  routine decided not to write a message with the line number.
             ##  if ( $type eq '<' && $expecting == TERM ) {
-            ##      error_if_expecting_TERM();
+            ##      $self->error_if_expecting_TERM();
             ##      interrupt_logfile();
             ##      warning("Unterminated <> operator?\n");
             ##      resume_logfile();
@@ -3123,6 +3148,8 @@ EOM
 
     sub do_STAR {
 
+        my $self = shift;
+
         # '*' = typeglob, or multiply?
         if ( $expecting == UNKNOWN && $last_nonblank_type eq 'Z' ) {
             if (   $next_type ne 'b'
@@ -3158,11 +3185,13 @@ EOM
 
     sub do_DOT {
 
+        my $self = shift;
+
         # '.' =  what kind of . ?
         if ( $expecting != OPERATOR ) {
             scan_number();
             if ( $type eq '.' ) {
-                error_if_expecting_TERM()
+                $self->error_if_expecting_TERM()
                   if ( $expecting == TERM );
             }
         }
@@ -3240,6 +3269,8 @@ EOM
 
     sub do_PLUS_SIGN {
 
+        my $self = shift;
+
         # '+' = what kind of plus?
         if ( $expecting == TERM ) {
             my $number = scan_number_fast();
@@ -3257,14 +3288,18 @@ EOM
 
     sub do_AT_SIGN {
 
+        my $self = shift;
+
         # '@' = sigil for array?
-        error_if_expecting_OPERATOR("Array")
+        $self->error_if_expecting_OPERATOR("Array")
           if ( $expecting == OPERATOR );
         scan_simple_identifier();
         return;
     } ## end sub do_AT_SIGN
 
     sub do_PERCENT_SIGN {
+
+        my $self = shift;
 
         # '%' = hash or modulo?
         # first guess is hash if no following blank or paren
@@ -3323,6 +3358,8 @@ EOM
     } ## end sub do_RIGHT_SQUARE_BRACKET
 
     sub do_MINUS_SIGN {
+
+        my $self = shift;
 
         # '-' = what kind of minus?
         if ( ( $expecting != OPERATOR )
@@ -3400,7 +3437,7 @@ EOM
             }
 
             else {
-                unless ( error_if_expecting_TERM() ) {
+                unless ( $self->error_if_expecting_TERM() ) {
 
                     # Something like this is valid but strange:
                     # undef ^I;
@@ -3412,6 +3449,8 @@ EOM
     } ## end sub do_CARAT_SIGN
 
     sub do_DOUBLE_COLON {
+
+        my $self = shift;
 
         #  '::' = probably a sub call
         scan_bare_identifier();
@@ -3535,7 +3574,7 @@ EOM
             }
         }
         else {
-            error_if_expecting_OPERATOR();
+            $self->error_if_expecting_OPERATOR();
         }
         return;
     } ## end sub do_NEW_HERE_DOC
@@ -3547,6 +3586,8 @@ EOM
     }
 
     sub do_PLUS_PLUS {
+
+        my $self = shift;
 
         # '++'
         # type = 'pp' for pre-increment, '++' for post-increment
@@ -3570,6 +3611,8 @@ EOM
 
     sub do_FAT_COMMA {
 
+        my $self = shift;
+
         # '=>'
         if ( $last_nonblank_type eq $tok ) {
             complain("Repeated '=>'s \n");
@@ -3582,6 +3625,8 @@ EOM
     } ## end sub do_FAT_COMMA
 
     sub do_MINUS_MINUS {
+
+        my $self = shift;
 
         # '--'
         # type = 'mm' for pre-decrement, '--' for post-decrement
@@ -3605,32 +3650,40 @@ EOM
 
     sub do_LOGICAL_AND {
 
+        my $self = shift;
+
         # '&&'
-        error_if_expecting_TERM()
+        $self->error_if_expecting_TERM()
           if ( $expecting == TERM && $last_nonblank_token ne ',' );    #c015
         return;
     } ## end sub do_LOGICAL_AND
 
     sub do_LOGICAL_OR {
 
+        my $self = shift;
+
         # '||'
-        error_if_expecting_TERM()
+        $self->error_if_expecting_TERM()
           if ( $expecting == TERM && $last_nonblank_token ne ',' );    #c015
         return;
     } ## end sub do_LOGICAL_OR
 
     sub do_SLASH_SLASH {
 
+        my $self = shift;
+
         # '//'
-        error_if_expecting_TERM()
+        $self->error_if_expecting_TERM()
           if ( $expecting == TERM );
         return;
     } ## end sub do_SLASH_SLASH
 
     sub do_DIGITS {
 
+        my $self = shift;
+
         # 'd' = string of digits
-        error_if_expecting_OPERATOR("Number")
+        $self->error_if_expecting_OPERATOR("Number")
           if ( $expecting == OPERATOR );
 
         my $number = scan_number_fast();
@@ -3717,6 +3770,8 @@ EOM
 
     sub do_QUOTED_BAREWORD {
 
+        my $self = shift;
+
         # find type of a bareword followed by a '=>'
         if ( $is_constant{$current_package}{$tok} ) {
             $type = 'C';
@@ -3766,13 +3821,15 @@ EOM
 
                 # git #18
                 $type = 'w';
-                error_if_expecting_OPERATOR();
+                $self->error_if_expecting_OPERATOR();
             }
         }
         return;
     } ## end sub do_QUOTED_BAREWORD
 
     sub do_X_OPERATOR {
+
+        my $self = shift;
 
         if ( $tok eq 'x' ) {
             if ( $rtokens->[ $i + 1 ] eq '=' ) {    # x=
@@ -3800,6 +3857,9 @@ EOM
     } ## end sub do_X_OPERATOR
 
     sub do_USE_CONSTANT {
+
+        my $self = shift;
+
         scan_bare_identifier();
         my ( $next_nonblank_tok2, $i_next2 ) =
           find_next_nonblank_token( $i, $rtokens, $max_token_index );
@@ -3831,6 +3891,8 @@ EOM
 
     sub do_KEYWORD {
 
+        my $self = shift;
+
         # found a keyword - set any associated flags
         $type = 'k';
 
@@ -3846,7 +3908,7 @@ EOM
         # recognize 'use' statements, which are special
         elsif ( $is_use_require{$tok} ) {
             $statement_type = $tok;
-            error_if_expecting_OPERATOR()
+            $self->error_if_expecting_OPERATOR()
               if ( $expecting == OPERATOR );
         }
 
@@ -3940,7 +4002,7 @@ EOM
                     || $is_for_foreach{$want_paren} )
               )
             {
-                error_if_expecting_OPERATOR();
+                $self->error_if_expecting_OPERATOR();
             }
         }
         $in_quote                = $quote_items{$tok};
@@ -3960,7 +4022,7 @@ EOM
 
     sub do_UNKNOWN_BAREWORD {
 
-        my ($next_nonblank_token) = @_;
+        my ( $self, $next_nonblank_token ) = @_;
 
         scan_bare_identifier();
 
@@ -4014,7 +4076,7 @@ EOM
                     }
                 }
                 else {
-                    error_if_expecting_OPERATOR("bareword");
+                    $self->error_if_expecting_OPERATOR("bareword");
                 }
             }
 
@@ -4075,7 +4137,7 @@ EOM
 
     sub sub_attribute_ok_here {
 
-        my ( $tok_kw, $next_nonblank_token, $i_next ) = @_;
+        my ( $self, $tok_kw, $next_nonblank_token, $i_next ) = @_;
 
         # Decide if 'sub :' can be the start of a sub attribute list.
         # We will decide based on if the colon is followed by a
@@ -4156,7 +4218,7 @@ EOM
             && $next_nonblank_token eq '='
             && $rtokens->[ $i_next + 1 ] eq '>' )
         {
-            do_QUOTED_BAREWORD();
+            $self->do_QUOTED_BAREWORD();
         }
 
         # quote a bare word within braces..like xxx->{s}; note that we
@@ -4185,7 +4247,7 @@ EOM
                 || substr( $tok, 1, 1 ) =~ /^\d/ )
           )
         {
-            do_X_OPERATOR();
+            $self->do_X_OPERATOR();
         }
         elsif ( $tok_kw eq 'CORE::' ) {
             $type = $tok = $tok_kw;
@@ -4244,7 +4306,7 @@ EOM
         elsif ( ( $tok eq 'constant' )
             and ( $last_nonblank_token eq 'use' ) )
         {
-            do_USE_CONSTANT();
+            $self->do_USE_CONSTANT();
         }
 
         # various quote operators
@@ -4259,7 +4321,8 @@ EOM
             && ( $i_next <= $max_token_index )    # colon on same line
 
             # like 'sub : lvalue' ?
-            && !sub_attribute_ok_here( $tok_kw, $next_nonblank_token, $i_next )
+            && !$self->sub_attribute_ok_here( $tok_kw, $next_nonblank_token,
+                $i_next )
             && label_ok()
           )
         {
@@ -4282,7 +4345,7 @@ EOM
                     || $next_nonblank_token !~ /^(\w|\:)/
                     || !method_ok_here() )
                 {
-                    do_UNKNOWN_BAREWORD($next_nonblank_token);
+                    $self->do_UNKNOWN_BAREWORD($next_nonblank_token);
                 }
                 else {
                     initialize_subname();
@@ -4290,7 +4353,7 @@ EOM
                 }
             }
             else {
-                error_if_expecting_OPERATOR()
+                $self->error_if_expecting_OPERATOR()
                   if ( $expecting == OPERATOR );
                 initialize_subname();
                 $self->scan_id();
@@ -4310,12 +4373,12 @@ EOM
                     || $next_nonblank_token !~ /^(\w|\:)/
                     || !class_ok_here() )
                 {
-                    do_UNKNOWN_BAREWORD($next_nonblank_token);
+                    $self->do_UNKNOWN_BAREWORD($next_nonblank_token);
                 }
                 else { $self->scan_id() }
             }
             else {
-                error_if_expecting_OPERATOR()
+                $self->error_if_expecting_OPERATOR()
                   if ( $expecting == OPERATOR );
                 $self->scan_id();
             }
@@ -4342,7 +4405,7 @@ EOM
         }
 
         elsif ( $is_keyword{$tok_kw} ) {
-            do_KEYWORD();
+            $self->do_KEYWORD();
         }
 
         # check for inline label following
@@ -4355,7 +4418,7 @@ EOM
 
         # something else --
         else {
-            do_UNKNOWN_BAREWORD($next_nonblank_token);
+            $self->do_UNKNOWN_BAREWORD($next_nonblank_token);
         }
 
         return $is_last;
@@ -5140,7 +5203,7 @@ EOM
             elsif ( $pre_type eq 'd' ) {
                 $expecting =
                   operator_expected( [ $prev_type, $tok, $next_type ] );
-                do_DIGITS();
+                $self->do_DIGITS();
             }
 
             #----------------------------
@@ -6480,16 +6543,16 @@ sub decide_if_code_block {
 sub report_unexpected {
 
     # report unexpected token type and show where it is
-    # USES GLOBAL VARIABLES: $tokenizer_self
-    my ( $found, $expecting, $i_tok, $last_nonblank_i, $rpretoken_map,
+    # USES GLOBAL VARIABLES: (none)
+    my ( $self, $found, $expecting, $i_tok, $last_nonblank_i, $rpretoken_map,
         $rpretoken_type, $input_line )
       = @_;
 
-    if ( ++$tokenizer_self->[_unexpected_error_count_] <= MAX_NAG_MESSAGES ) {
+    if ( ++$self->[_unexpected_error_count_] <= MAX_NAG_MESSAGES ) {
         my $msg = "found $found where $expecting expected";
         my $pos = $rpretoken_map->[$i_tok];
         interrupt_logfile();
-        my $input_line_number = $tokenizer_self->[_last_line_number_];
+        my $input_line_number = $self->[_last_line_number_];
         my ( $offset, $numbered_line, $underline ) =
           make_numbered_line( $input_line_number, $input_line, $pos );
         $underline = write_on_underline( $underline, $pos - $offset, '^' );
