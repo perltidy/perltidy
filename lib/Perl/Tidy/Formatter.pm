@@ -18312,10 +18312,11 @@ EOM
         # The most extreme cases in my collection are:
         #    camel1.t  - needs 2.7 compares per line (12 without optimization)
         #    ternary.t - needs 2.8 compares per line (12 without optimization)
-        # So a value of MAX_COMPARE_RATIO = 3 looks like an upper bound as
+        #    c206      - needs 3.3 compares per line, found with random testing
+        # So a value of MAX_COMPARE_RATIO = 4 looks like an upper bound as
         # long as optimization is used.  A value of 20 should allow all code to
         # pass even if optimization is turned off for testing.
-        use constant MAX_COMPARE_RATIO => DEVEL_MODE ? 3 : 20;
+        use constant MAX_COMPARE_RATIO => DEVEL_MODE ? 4 : 20;
 
         my $num_pairs    = $nend - $nbeg + 1;
         my $max_compares = MAX_COMPARE_RATIO * $num_pairs;
