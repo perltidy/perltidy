@@ -233,6 +233,7 @@ my (
     $rOpts_variable_maximum_line_length,
     $rOpts_valign_code,
     $rOpts_valign_side_comments,
+    $rOpts_valign_if_unless,
     $rOpts_whitespace_cycle,
     $rOpts_extended_line_up_parentheses,
 
@@ -2395,6 +2396,7 @@ sub initialize_global_option_vars {
     $rOpts_tee_side_comments         = $rOpts->{'tee-side-comments'};
     $rOpts_valign_code               = $rOpts->{'valign-code'};
     $rOpts_valign_side_comments      = $rOpts->{'valign-side-comments'};
+    $rOpts_valign_if_unless          = $rOpts->{'valign-if-unless'};
     $rOpts_variable_maximum_line_length =
       $rOpts->{'variable-maximum-line-length'};
 
@@ -26446,6 +26448,13 @@ EOM
                 #  /^(if|unless|and|or|eq|ne)$/
                 if ( $is_vertical_alignment_keyword{$token} ) {
                     $alignment_type = $token;
+
+                    # Align postfix 'unless' and 'if' if requested (git #116)
+                    # These are the only equivalent keywords. For equivalent
+                    # token types see '%operator_map'.
+                    if ( $token eq 'unless' && $rOpts_valign_if_unless ) {
+                        $alignment_type = 'if';
+                    }
                 }
             }
 
@@ -27566,8 +27575,12 @@ sub xlp_tweak {
 
         # Note: %block_type_map is now global to enable the -gal=s option
 
-        # map certain keywords to the same 'if' class to align
-        # long if/elsif sequences. [elsif.pl]
+        # Map certain keywords to the same 'if' class to align
+        # long if/elsif sequences. [elsif.pl]. But note that this is
+        # only for purposes of making the patterns, not alignment tokens.
+        # The only possible equivalent alignment tokens are 'if' and 'unless',
+        # and this is handled earlier under control of $rOpts_valign_if_unless
+        # to avoid making this a global hash.
         %keyword_map = (
             'unless'  => 'if',
             'else'    => 'if',
@@ -27580,7 +27593,10 @@ sub xlp_tweak {
             'undef' => 'Q',
         );
 
-        # map certain operators to the same class for pattern matching
+        # Map certain operators to the same class for alignment.
+        # Note that this map is for the alignment tokens, not the patterns.
+        # We could have placed 'unless' => 'if' here, but since that is
+        # under control of $rOpts_valign_if_unless, it is handled elsewhere.
         %operator_map = (
             '!~' => '=~',
             '+=' => '+=',
@@ -27611,8 +27627,8 @@ sub xlp_tweak {
 
         # token types which prevent using leading word as a container name
         @q = qw(
-          x / : % . | ^ < = > || >= != *= => !~ == && |= .= -= =~ += <= %= ^= x= ~~ ** << /=
-          &= // >> ~. &. |. ^.
+          x / : % . | ^ < = > || >= != *= => !~ == && |= .= -= =~ += <=
+          %= ^= x= ~~ ** << /= &= // >> ~. &. |. ^.
           **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~
         );
         push @q, ',';

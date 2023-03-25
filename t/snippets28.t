@@ -6,6 +6,8 @@
 #3 recombine6.def
 #4 recombine7.def
 #5 recombine8.def
+#6 git116.def
+#7 git116.git116
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -24,6 +26,7 @@ BEGIN {
     ###########################################
     $rparams = {
         'def'    => "",
+        'git116' => "-viu",
         'olbxl2' => <<'----------',
 -olbxl='*'
 ----------
@@ -33,6 +36,13 @@ BEGIN {
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'git116' => <<'----------',
+print "Tried to add: @ResolveRPM\n" if ( @ResolveRPM and !$Quiet );
+print "Would need: @DepList\n" if ( @DepList and !$Quiet );
+print "RPM Output:\n" unless $Quiet;
+print join( "\n", @RPMOutput ) . "\n" unless $Quiet;
+----------
 
         'olbxl' => <<'----------',
             eval {
@@ -182,6 +192,28 @@ $v_gb = -1 * ( eval($pmt_gb) ) * (
     )
 );
 #5...........
+        },
+
+        'git116.def' => {
+            source => "git116",
+            params => "def",
+            expect => <<'#6...........',
+print "Tried to add: @ResolveRPM\n" if ( @ResolveRPM and !$Quiet );
+print "Would need: @DepList\n"      if ( @DepList    and !$Quiet );
+print "RPM Output:\n"                 unless $Quiet;
+print join( "\n", @RPMOutput ) . "\n" unless $Quiet;
+#6...........
+        },
+
+        'git116.git116' => {
+            source => "git116",
+            params => "git116",
+            expect => <<'#7...........',
+print "Tried to add: @ResolveRPM\n"   if ( @ResolveRPM and !$Quiet );
+print "Would need: @DepList\n"        if ( @DepList    and !$Quiet );
+print "RPM Output:\n"                 unless $Quiet;
+print join( "\n", @RPMOutput ) . "\n" unless $Quiet;
+#7...........
         },
     };
 

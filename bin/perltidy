@@ -4734,6 +4734,26 @@ alignment cannot be made for some reason.
 But also notice that side comments remain aligned because their alignment is
 controlled separately with the parameter B<--valign-side_comments> described above.
 
+=item B<Aligning postfix unless and if with --valign-if-unless or -viu>
+
+By default, postfix B<if> terms align and postfix B<unless> terms align,
+but separately.  For example,
+
+    # perltidy [DEFAULT]
+    print "Tried to add: @ResolveRPM\n" if ( @ResolveRPM and !$Quiet );
+    print "Would need: @DepList\n"      if ( @DepList    and !$Quiet );
+    print "RPM Output:\n"                 unless $Quiet;
+    print join( "\n", @RPMOutput ) . "\n" unless $Quiet;
+
+The B<-viu> flag causes a postfix B<unless> to be treated as if it were a
+postfix B<if> for purposes of alignment.  Thus
+
+    # perltidy -viu
+    print "Tried to add: @ResolveRPM\n"   if ( @ResolveRPM and !$Quiet );
+    print "Would need: @DepList\n"        if ( @DepList    and !$Quiet );
+    print "RPM Output:\n"                 unless $Quiet;
+    print join( "\n", @RPMOutput ) . "\n" unless $Quiet;
+
 =back
 
 =head2 Extended Syntax

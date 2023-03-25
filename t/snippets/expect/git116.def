@@ -1,0 +1,4 @@
+print "Tried to add: @ResolveRPM\n" if ( @ResolveRPM and !$Quiet );
+print "Would need: @DepList\n"      if ( @DepList    and !$Quiet );
+print "RPM Output:\n"                 unless $Quiet;
+print join( "\n", @RPMOutput ) . "\n" unless $Quiet;

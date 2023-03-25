@@ -2,6 +2,10 @@
 
 ## 2023 03 09.01
 
+    - Issue git #116. A new flag --valign-if-unless, -viu, was added to
+      allow postfix 'unless' terms to align with postfix 'if' terms.  The
+      default remains not to do this.
+
     - Fixed git #115. In the two most recent CPAN releases, when the
       Perl::Tidy module was called with the source pointing to a file,
       but no destination specified, the output went to the standard

@@ -3234,6 +3234,7 @@ sub generate_options {
     $add_option->( 'valign-side-comments',                      'vsc',   '!' );
     $add_option->( 'valign-exclusion-list',                     'vxl',   '=s' );
     $add_option->( 'valign-inclusion-list',                     'vil',   '=s' );
+    $add_option->( 'valign-if-unless',                          'viu',   '!' );
 
     ########################################
     $category = 4;    # Comment controls
