@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2023 03 09.01
+## 2023 03 09.02
 
     - Issue git #116. A new flag --valign-if-unless, -viu, was added to
       allow postfix 'unless' terms to align with postfix 'if' terms.  The

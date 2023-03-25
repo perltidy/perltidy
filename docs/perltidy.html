@@ -3749,6 +3749,26 @@
 <p>But also notice that side comments remain aligned because their alignment is controlled separately with the parameter <b>--valign-side_comments</b> described above.</p>
 
 </dd>
+<dt id="Aligning-postfix-unless-and-if-with---valign-if-unless-or--viu"><b>Aligning postfix unless and if with --valign-if-unless or -viu</b></dt>
+<dd>
+
+<p>By default, postfix <b>if</b> terms align and postfix <b>unless</b> terms align, but separately. For example,</p>
+
+<pre><code>    # perltidy [DEFAULT]
+    print &quot;Tried to add: @ResolveRPM\n&quot; if ( @ResolveRPM and !$Quiet );
+    print &quot;Would need: @DepList\n&quot;      if ( @DepList    and !$Quiet );
+    print &quot;RPM Output:\n&quot;                 unless $Quiet;
+    print join( &quot;\n&quot;, @RPMOutput ) . &quot;\n&quot; unless $Quiet;</code></pre>
+
+<p>The <b>-viu</b> flag causes a postfix <b>unless</b> to be treated as if it were a postfix <b>if</b> for purposes of alignment. Thus</p>
+
+<pre><code>    # perltidy -viu
+    print &quot;Tried to add: @ResolveRPM\n&quot;   if ( @ResolveRPM and !$Quiet );
+    print &quot;Would need: @DepList\n&quot;        if ( @DepList    and !$Quiet );
+    print &quot;RPM Output:\n&quot;                 unless $Quiet;
+    print join( &quot;\n&quot;, @RPMOutput ) . &quot;\n&quot; unless $Quiet;</code></pre>
+
+</dd>
 </dl>
 
 <h2 id="Extended-Syntax">Extended Syntax</h2>
@@ -4405,7 +4425,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20230309.01</p>
+<p>This man page documents perltidy version 20230309.02</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 
