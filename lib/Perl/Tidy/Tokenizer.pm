@@ -815,10 +815,9 @@ EOM
 sub report_v_string {
 
     # warn if this version can't handle v-strings
-    my $tok = shift;
-    unless ( $tokenizer_self->[_saw_v_string_] ) {
-        $tokenizer_self->[_saw_v_string_] =
-          $tokenizer_self->[_last_line_number_];
+    my ( $self, $tok ) = @_;
+    unless ( $self->[_saw_v_string_] ) {
+        $self->[_saw_v_string_] = $self->[_last_line_number_];
     }
     if ( $] < 5.006 ) {
         warning(
@@ -2018,19 +2017,23 @@ EOM
     } ## end sub scan_replacement_text
 
     sub scan_bare_identifier {
+        my $self = shift;
         ( $i, $tok, $type, $prototype ) =
-          scan_bare_identifier_do( $input_line, $i, $tok, $type, $prototype,
-            $rtoken_map, $max_token_index );
+          $self->scan_bare_identifier_do( $input_line, $i, $tok, $type,
+            $prototype, $rtoken_map, $max_token_index );
         return;
     } ## end sub scan_bare_identifier
 
     sub scan_identifier {
+
+        my $self = shift;
+
         (
             $i, $tok, $type, $id_scan_state, $identifier,
             my $split_pretoken_flag
           )
-          = scan_complex_identifier( $i, $id_scan_state, $identifier, $rtokens,
-            $max_token_index, $expecting, $paren_type[$paren_depth] );
+          = $self->scan_complex_identifier( $i, $id_scan_state, $identifier,
+            $rtokens, $max_token_index, $expecting, $paren_type[$paren_depth] );
 
         # Check for signal to fix a special variable adjacent to a keyword,
         # such as '$^One$0'.
@@ -2091,6 +2094,8 @@ EOM
         #     ||  ---- $i_next [= next nonblank pretoken ]
         #     |----$i_plus_1 [= a bareword ]
         #     ---$i_begin [= a sigil]
+
+        my $self = shift;
 
         my $i_begin   = $i;
         my $tok_begin = $tok;
@@ -2183,7 +2188,7 @@ EOM
 
             $tok = $tok_begin;
             $i   = $i_begin;
-            scan_identifier();
+            $self->scan_identifier();
 
             if (   $tok ne $tok_simple
                 || $type ne $fast_scan_type
@@ -2204,7 +2209,7 @@ EOM
         # call full scanner if fast method did not succeed
         #-------------------------------------------------
         if ( !$fast_scan_type ) {
-            scan_identifier();
+            $self->scan_identifier();
         }
         return;
     } ## end sub scan_simple_identifier
@@ -2364,9 +2369,10 @@ EOM
     } ## end sub scan_id
 
     sub scan_number {
+        my $self = shift;
         my $number;
         ( $i, $type, $number ) =
-          scan_number_do( $input_line, $i, $rtoken_map, $type,
+          $self->scan_number_do( $input_line, $i, $rtoken_map, $type,
             $max_token_index );
         return $number;
     } ## end sub scan_number
@@ -2379,6 +2385,7 @@ EOM
         # scan for a simple integer.  It calls the original scan_number if it
         # does not find one.
 
+        my $self      = shift;
         my $i_begin   = $i;
         my $tok_begin = $tok;
         my $number;
@@ -2438,7 +2445,7 @@ EOM
 
             $tok    = $tok_begin;
             $i      = $i_begin;
-            $number = scan_number();
+            $number = $self->scan_number();
 
             if (   $type ne $type_simple
                 || ( $i != $i_simple && $i <= $max_token_index )
@@ -2456,7 +2463,7 @@ EOM
         # call full scanner if may not be integer
         #----------------------------------------
         if ( !defined($number) ) {
-            $number = scan_number();
+            $number = $self->scan_number();
         }
         return $number;
     } ## end sub scan_number_fast
@@ -2526,7 +2533,7 @@ EOM
         # start looking for a scalar
         $self->error_if_expecting_OPERATOR("Scalar")
           if ( $expecting == OPERATOR );
-        scan_simple_identifier();
+        $self->scan_simple_identifier();
 
         if ( $identifier eq '$^W' ) {
             $self->[_saw_perl_dash_w_] = 1;
@@ -3055,7 +3062,7 @@ EOM
             # For example we probably don't want & as sub call here:
             #    Fcntl::S_IRUSR & $mode;
             if ( $expecting == TERM || $next_type ne 'b' ) {
-                scan_simple_identifier();
+                $self->scan_simple_identifier();
             }
         }
         else {
@@ -3160,7 +3167,7 @@ EOM
             }
         }
         if ( $expecting == TERM ) {
-            scan_simple_identifier();
+            $self->scan_simple_identifier();
         }
         else {
 
@@ -3189,7 +3196,7 @@ EOM
 
         # '.' =  what kind of . ?
         if ( $expecting != OPERATOR ) {
-            scan_number();
+            $self->scan_number();
             if ( $type eq '.' ) {
                 $self->error_if_expecting_TERM()
                   if ( $expecting == TERM );
@@ -3273,7 +3280,7 @@ EOM
 
         # '+' = what kind of plus?
         if ( $expecting == TERM ) {
-            my $number = scan_number_fast();
+            my $number = $self->scan_number_fast();
 
             # unary plus is safest assumption if not a number
             if ( !defined($number) ) { $type = 'p'; }
@@ -3293,7 +3300,7 @@ EOM
         # '@' = sigil for array?
         $self->error_if_expecting_OPERATOR("Array")
           if ( $expecting == OPERATOR );
-        scan_simple_identifier();
+        $self->scan_simple_identifier();
         return;
     } ## end sub do_AT_SIGN
 
@@ -3309,7 +3316,7 @@ EOM
             }
         }
         if ( $expecting == TERM ) {
-            scan_simple_identifier();
+            $self->scan_simple_identifier();
         }
         return;
     } ## end sub do_PERCENT_SIGN
@@ -3380,7 +3387,7 @@ EOM
             }
         }
         elsif ( $expecting == TERM ) {
-            my $number = scan_number_fast();
+            my $number = $self->scan_number_fast();
 
             # maybe part of bareword token? unary is safest
             if ( !defined($number) ) { $type = 'm'; }
@@ -3453,7 +3460,7 @@ EOM
         my $self = shift;
 
         #  '::' = probably a sub call
-        scan_bare_identifier();
+        $self->scan_bare_identifier();
         return;
     } ## end sub do_DOUBLE_COLON
 
@@ -3686,7 +3693,7 @@ EOM
         $self->error_if_expecting_OPERATOR("Number")
           if ( $expecting == OPERATOR );
 
-        my $number = scan_number_fast();
+        my $number = $self->scan_number_fast();
         if ( !defined($number) ) {
 
             # shouldn't happen - we should always get a number
@@ -3782,7 +3789,7 @@ EOM
         }
         elsif ( $tok =~ /^v\d+$/ ) {
             $type = 'v';
-            report_v_string($tok);
+            $self->report_v_string($tok);
         }
         else {
 
@@ -3860,7 +3867,7 @@ EOM
 
         my $self = shift;
 
-        scan_bare_identifier();
+        $self->scan_bare_identifier();
         my ( $next_nonblank_tok2, $i_next2 ) =
           find_next_nonblank_token( $i, $rtokens, $max_token_index );
 
@@ -4024,7 +4031,7 @@ EOM
 
         my ( $self, $next_nonblank_token ) = @_;
 
-        scan_bare_identifier();
+        $self->scan_bare_identifier();
 
         if (   $statement_type eq 'use'
             && $last_nonblank_token eq 'use' )
@@ -4205,7 +4212,7 @@ EOM
         # Scan a bare word following a -> as an identifier; it could
         # have a long package name.  Fixes c037, c041.
         if ( $last_nonblank_token eq '->' ) {
-            scan_bare_identifier();
+            $self->scan_bare_identifier();
 
             # a bareward after '->' gets type 'i'
             $type = 'i';
@@ -4257,7 +4264,7 @@ EOM
             and ( $last_nonblank_token eq 'use' ) )
         {
             $self->[_saw_use_strict_] = 1;
-            scan_bare_identifier();
+            $self->scan_bare_identifier();
         }
 
         elsif ( ( $tok eq 'warnings' )
@@ -4267,7 +4274,7 @@ EOM
 
             # scan as identifier, so that we pick up something like:
             # use warnings::register
-            scan_bare_identifier();
+            $self->scan_bare_identifier();
         }
 
         elsif (
@@ -4286,7 +4293,7 @@ EOM
             write_logfile_entry("AutoLoader seen, -nlal deactivates\n");
             $self->[_saw_autoloader_]      = 1;
             $self->[_look_for_autoloader_] = 0;
-            scan_bare_identifier();
+            $self->scan_bare_identifier();
         }
 
         elsif (
@@ -4300,7 +4307,7 @@ EOM
             write_logfile_entry("SelfLoader seen, -nlsl deactivates\n");
             $self->[_saw_selfloader_]      = 1;
             $self->[_look_for_selfloader_] = 0;
-            scan_bare_identifier();
+            $self->scan_bare_identifier();
         }
 
         elsif ( ( $tok eq 'constant' )
@@ -5041,7 +5048,7 @@ EOM
                     $self->scan_id();
                 }
                 else {
-                    scan_identifier();
+                    $self->scan_identifier();
                 }
 
                 if ($id_scan_state) {
@@ -7272,7 +7279,7 @@ sub scan_bare_identifier_do {
     # USES GLOBAL VARIABLES: $current_package, $last_nonblank_token,
     # $last_nonblank_type,@paren_type, $paren_depth
 
-    my ( $input_line, $i, $tok, $type, $prototype, $rtoken_map,
+    my ( $self, $input_line, $i, $tok, $type, $prototype, $rtoken_map,
         $max_token_index )
       = @_;
     my $i_begin = $i;
@@ -7343,7 +7350,7 @@ sub scan_bare_identifier_do {
                 $type = 'v';
 
                 # warn if this version can't handle v-strings
-                report_v_string($tok);
+                $self->report_v_string($tok);
             }
 
             elsif ( $is_constant{$package}{$sub_name} ) {
@@ -7471,22 +7478,20 @@ sub scan_bare_identifier_do {
 
 sub scan_id_do {
 
-# This is the new scanner and will eventually replace scan_identifier.
-# Only type 'sub' and 'package' are implemented.
-# Token types $ * % @ & -> are not yet implemented.
-#
-# Scan identifier following a type token.
-# The type of call depends on $id_scan_state: $id_scan_state = ''
-# for starting call, in which case $tok must be the token defining
-# the type.
-#
-# If the type token is the last nonblank token on the line, a value
-# of $id_scan_state = $tok is returned, indicating that further
-# calls must be made to get the identifier.  If the type token is
-# not the last nonblank token on the line, the identifier is
-# scanned and handled and a value of '' is returned.
-# USES GLOBAL VARIABLES: $current_package, $last_nonblank_token, $in_attribute_list,
-# $statement_type, $tokenizer_self
+    # This is the new scanner and will eventually replace scan_identifier.
+    # Only type 'sub' and 'package' are implemented.
+    # Token types $ * % @ & -> are not yet implemented.
+    #
+    # Scan identifier following a type token.
+    # The type of call depends on $id_scan_state: $id_scan_state = ''
+    # for starting call, in which case $tok must be the token defining
+    # the type.
+    #
+    # If the type token is the last nonblank token on the line, a value
+    # of $id_scan_state = $tok is returned, indicating that further
+    # calls must be made to get the identifier.  If the type token is
+    # not the last nonblank token on the line, the identifier is
+    # scanned and handled and a value of '' is returned.
 
     my ( $self, $input_line, $i, $tok, $rtokens, $rtoken_map, $id_scan_state,
         $max_token_index )
@@ -8319,6 +8324,8 @@ BEGIN {
         # This routine now serves a a backup for sub scan_simple_identifier
         # which handles most identifiers.
 
+        my $self = shift;
+
         (
             $i,         $id_scan_state, $identifier, $rtokens, $max_token_index,
             $expecting, $container_type
@@ -8384,9 +8391,9 @@ BEGIN {
                 my $msg =
 "Program bug detected: scan_complex_identifier received bad starting token = '$tok'\n";
                 if (DEVEL_MODE) { Fault($msg) }
-                if ( !$tokenizer_self->[_in_error_] ) {
+                if ( !$self->[_in_error_] ) {
                     warning($msg);
-                    $tokenizer_self->[_in_error_] = 1;
+                    $self->[_in_error_] = 1;
                 }
                 $id_scan_state = EMPTY_STRING;
 
@@ -9318,7 +9325,8 @@ sub scan_number_do {
     #    $i            - last pre_token index of the number just scanned
     #    number        - the number (characters); or undef if not a number
 
-    my ( $input_line, $i, $rtoken_map, $input_type, $max_token_index ) = @_;
+    my ( $self, $input_line, $i, $rtoken_map, $input_type, $max_token_index ) =
+      @_;
     my $pos_beg = $rtoken_map->[$i];
     my $pos;
     my $i_begin = $i;
@@ -9347,7 +9355,7 @@ EOM
         my $numc = $pos - $pos_beg;
         $number = substr( $input_line, $pos_beg, $numc );
         $type   = 'v';
-        report_v_string($number);
+        $self->report_v_string($number);
     }
 
     # handle octal, hex, binary
