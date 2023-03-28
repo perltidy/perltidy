@@ -542,7 +542,8 @@ sub warning {
     my $msg           = shift;
     my $logger_object = $tokenizer_self->[_logger_object_];
     if ($logger_object) {
-        $logger_object->warning($msg);
+        my $msg_line_number = $tokenizer_self->[_last_line_number_];
+        $logger_object->warning( $msg, $msg_line_number );
     }
     return;
 } ## end sub warning
@@ -557,12 +558,13 @@ sub get_input_stream_name {
 } ## end sub get_input_stream_name
 
 sub complain {
-    my $msg           = shift;
+
+    my $msg = shift;
+
     my $logger_object = $tokenizer_self->[_logger_object_];
     if ($logger_object) {
-        my $input_line_number = $tokenizer_self->[_last_line_number_] + 1;
-        $msg = "Line $input_line_number: $msg";
-        $logger_object->complain($msg);
+        my $input_line_number = $tokenizer_self->[_last_line_number_];
+        $logger_object->complain( $msg, $input_line_number );
     }
     return;
 } ## end sub complain
@@ -601,10 +603,11 @@ sub increment_brace_error {
 } ## end sub increment_brace_error
 
 sub brace_warning {
-    my $msg           = shift;
-    my $logger_object = $tokenizer_self->[_logger_object_];
+    my ( $self, $msg ) = @_;
+    my $logger_object = $self->[_logger_object_];
     if ($logger_object) {
-        $logger_object->brace_warning($msg);
+        my $msg_line_number = $self->[_last_line_number_];
+        $logger_object->brace_warning( $msg, $msg_line_number );
     }
     return;
 } ## end sub brace_warning
@@ -659,6 +662,13 @@ sub report_tokenization_errors {
     # _in_trouble_ lets the tokenizer finish so that all errors are seen
     # Both block formatting and cause the input stream to be output verbatim.
     my $severe_error = $self->[_in_error_] || $self->[_in_trouble_];
+
+    # Inform the logger object on length of input stream
+    my $logger_object = $self->[_logger_object_];
+    if ($logger_object) {
+        my $last_line_number = $self->[_last_line_number_];
+        $logger_object->set_last_input_line_number($last_line_number);
+    }
 
     my $maxle = $self->[_rOpts_maximum_level_errors_];
     my $maxue = $self->[_rOpts_maximum_unexpected_errors_];
@@ -831,10 +841,6 @@ sub report_v_string {
 sub is_valid_token_type {
     my ($type) = @_;
     return $is_valid_token_type{$type};
-}
-
-sub get_input_line_number {
-    return $tokenizer_self->[_last_line_number_];
 }
 
 sub log_numbered_msg {
@@ -5273,7 +5279,7 @@ EOM
         if ( $level_in_tokenizer < 0 ) {
             if ( $input_line =~ /^\s*(sub|package)\s+(\w+)/ ) {
                 reset_indentation_level(0);
-                brace_warning("resetting level to 0 at $1 $2\n");
+                $self->brace_warning("resetting level to 0 at $1 $2\n");
             }
         }
 

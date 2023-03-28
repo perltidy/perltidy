@@ -90,6 +90,7 @@ sub new {
         _rOpts                         => $rOpts,
         _fh_warnings                   => $fh_warnings,
         _last_input_line_written       => 0,
+        _last_input_line_number        => undef,
         _at_end_of_file                => 0,
         _use_prefix                    => 1,
         _block_log_output              => 0,
@@ -113,6 +114,11 @@ sub new {
 sub get_input_stream_name {
     my $self = shift;
     return $self->{_input_stream_name};
+}
+
+sub set_last_input_line_number {
+    my ( $self, $lno ) = @_;
+    $self->{_last_input_line_number} = $lno;
 }
 
 sub get_warning_count {
@@ -316,13 +322,13 @@ sub increment_brace_error {
 }
 
 sub brace_warning {
-    my ( $self, $msg ) = @_;
+    my ( $self, $msg, $msg_line_number ) = @_;
 
     use constant BRACE_WARNING_LIMIT => 10;
     my $saw_brace_error = $self->{_saw_brace_error};
 
     if ( $saw_brace_error < BRACE_WARNING_LIMIT ) {
-        $self->warning($msg);
+        $self->warning( $msg, $msg_line_number );
     }
     $saw_brace_error++;
     $self->{_saw_brace_error} = $saw_brace_error;
@@ -336,17 +342,22 @@ sub brace_warning {
 sub complain {
 
     # handle non-critical warning messages based on input flag
-    my ( $self, $msg ) = @_;
+    my ( $self, $msg, $msg_line_number ) = @_;
     my $rOpts = $self->{_rOpts};
 
     # these appear in .ERR output only if -w flag is used
     if ( $rOpts->{'warning-output'} ) {
-        $self->warning($msg);
+        $self->warning( $msg, $msg_line_number );
     }
 
     # otherwise, they go to the .LOG file
     else {
         $self->{_complaint_count}++;
+        if ($msg_line_number) {
+
+            # TODO: consider using same prefix as warning()
+            $msg = $msg_line_number . ':' . $msg;
+        }
         $self->write_logfile_entry($msg);
     }
     return;
@@ -355,7 +366,7 @@ sub complain {
 sub warning {
 
     # report errors to .ERR file (or stdout)
-    my ( $self, $msg ) = @_;
+    my ( $self, $msg, $msg_line_number ) = @_;
 
     use constant WARNING_LIMIT => 50;
 
@@ -402,14 +413,11 @@ sub warning {
                 }
             }
 
-            if ( $self->get_use_prefix() > 0 ) {
+            if ( $self->get_use_prefix() > 0 && defined($msg_line_number) ) {
                 $self->write_logfile_entry("WARNING: $msg");
 
                 # add prefix 'filename:line_no: ' to message lines
-                my $input_line_number =
-                  Perl::Tidy::Tokenizer::get_input_line_number();
-                if ( !defined($input_line_number) ) { $input_line_number = -1 }
-                my $pre_string = $filename_stamp . $input_line_number . ': ';
+                my $pre_string = $filename_stamp . $msg_line_number . ': ';
                 chomp $msg;
                 $msg =~ s/\n/\n$pre_string/g;
                 $msg = $pre_string . $msg . "\n";
@@ -461,28 +469,32 @@ sub finish {
     # called after all formatting to summarize errors
     my ($self) = @_;
 
-    my $warning_count = $self->{_warning_count};
-    my $save_logfile  = $self->{_save_logfile};
-    my $log_file      = $self->{_log_file};
+    my $warning_count   = $self->{_warning_count};
+    my $save_logfile    = $self->{_save_logfile};
+    my $log_file        = $self->{_log_file};
+    my $msg_line_number = $self->{_last_input_line_number};
 
     if ($warning_count) {
         if ($save_logfile) {
             $self->block_log_output();    # avoid echoing this to the logfile
             $self->warning(
-                "The logfile $log_file may contain useful information\n");
+                "The logfile $log_file may contain useful information\n",
+                $msg_line_number );
             $self->unblock_log_output();
         }
 
         if ( $self->{_complaint_count} > 0 ) {
             $self->warning(
-"To see $self->{_complaint_count} non-critical warnings rerun with -w\n"
+"To see $self->{_complaint_count} non-critical warnings rerun with -w\n",
+                $msg_line_number
             );
         }
 
         if ( $self->{_saw_brace_error}
             && ( $self->{_logfile_gap} > 1 || !$save_logfile ) )
         {
-            $self->warning("To save a full .LOG file rerun with -g\n");
+            $self->warning( "To save a full .LOG file rerun with -g\n",
+                $msg_line_number );
         }
     }
 

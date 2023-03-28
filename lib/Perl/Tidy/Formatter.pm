@@ -1237,15 +1237,17 @@ sub check_token_array {
 
     # interface to Perl::Tidy::Logger routines
     sub warning {
-        my ($msg) = @_;
-        if ($logger_object) { $logger_object->warning($msg); }
+        my ( $msg, $msg_line_number ) = @_;
+        if ($logger_object) {
+            $logger_object->warning( $msg, $msg_line_number );
+        }
         return;
     }
 
     sub complain {
-        my ($msg) = @_;
+        my ( $msg, $msg_line_number ) = @_;
         if ($logger_object) {
-            $logger_object->complain($msg);
+            $logger_object->complain( $msg, $msg_line_number );
         }
         return;
     } ## end sub complain
@@ -30258,8 +30260,14 @@ sub add_closing_side_comment {
                     # otherwise we'll make a note of it
                     else {
 
+                        my $msg_line_number;
+                        my $K = $K_to_go[$i_terminal];
+                        if ( defined($K) ) {
+                            $msg_line_number = $rLL->[$K]->[_LINE_INDEX_] + 1;
+                        }
                         warning(
-"perltidy -cscw replaced: $tokens_to_go[$max_index_to_go]\n"
+"perltidy -cscw replaced: $tokens_to_go[$max_index_to_go]\n",
+                            $msg_line_number
                         );
 
                         # save the old side comment in a new trailing block
