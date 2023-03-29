@@ -183,6 +183,7 @@ BEGIN {
         _saw_perl_dash_w_                    => $i++,
         _saw_use_strict_                     => $i++,
         _saw_v_string_                       => $i++,
+        _saw_brace_error_                    => $i++,
         _hit_bug_                            => $i++,
         _look_for_autoloader_                => $i++,
         _look_for_selfloader_                => $i++,
@@ -479,6 +480,7 @@ sub new {
     $self->[_saw_perl_dash_w_]          = 0;
     $self->[_saw_use_strict_]           = 0;
     $self->[_saw_v_string_]             = 0;
+    $self->[_saw_brace_error_]          = 0;
     $self->[_hit_bug_]                  = 0;
     $self->[_look_for_autoloader_]      = $args{look_for_autoloader};
     $self->[_look_for_selfloader_]      = $args{look_for_selfloader};
@@ -539,7 +541,9 @@ sub get_unexpected_error_count {
 # interface to Perl::Tidy::Logger routines
 #-----------------------------------------
 sub warning {
-    my $msg           = shift;
+
+    my $msg = shift;
+
     my $logger_object = $tokenizer_self->[_logger_object_];
     if ($logger_object) {
         my $msg_line_number = $tokenizer_self->[_last_line_number_];
@@ -570,7 +574,9 @@ sub complain {
 } ## end sub complain
 
 sub write_logfile_entry {
-    my $msg           = shift;
+
+    my $msg = shift;
+
     my $logger_object = $tokenizer_self->[_logger_object_];
     if ($logger_object) {
         $logger_object->write_logfile_entry($msg);
@@ -579,7 +585,10 @@ sub write_logfile_entry {
 } ## end sub write_logfile_entry
 
 sub interrupt_logfile {
-    my $logger_object = $tokenizer_self->[_logger_object_];
+
+    my $self = shift;
+
+    my $logger_object = $self->[_logger_object_];
     if ($logger_object) {
         $logger_object->interrupt_logfile();
     }
@@ -587,23 +596,20 @@ sub interrupt_logfile {
 } ## end sub interrupt_logfile
 
 sub resume_logfile {
-    my $logger_object = $tokenizer_self->[_logger_object_];
+
+    my $self = shift;
+
+    my $logger_object = $self->[_logger_object_];
     if ($logger_object) {
         $logger_object->resume_logfile();
     }
     return;
 } ## end sub resume_logfile
 
-sub increment_brace_error {
-    my $logger_object = $tokenizer_self->[_logger_object_];
-    if ($logger_object) {
-        $logger_object->increment_brace_error();
-    }
-    return;
-} ## end sub increment_brace_error
-
 sub brace_warning {
     my ( $self, $msg ) = @_;
+    $self->[_saw_brace_error_]++;
+
     my $logger_object = $self->[_logger_object_];
     if ($logger_object) {
         my $msg_line_number = $self->[_last_line_number_];
@@ -612,14 +618,22 @@ sub brace_warning {
     return;
 } ## end sub brace_warning
 
-sub get_saw_brace_error {
-    my $logger_object = $tokenizer_self->[_logger_object_];
+sub increment_brace_error {
+
+    # This is same as sub brace_warning but without a message
+    my $self = shift;
+    $self->[_saw_brace_error_]++;
+
+    my $logger_object = $self->[_logger_object_];
     if ($logger_object) {
-        return $logger_object->get_saw_brace_error();
+        $logger_object->increment_brace_error();
     }
-    else {
-        return 0;
-    }
+    return;
+} ## end sub increment_brace_error
+
+sub get_saw_brace_error {
+    my $self = shift;
+    return $self->[_saw_brace_error_];
 } ## end sub get_saw_brace_error
 
 sub report_definite_bug {
@@ -692,7 +706,7 @@ EOM
         }
     }
 
-    check_final_nesting_depths();
+    $self->check_final_nesting_depths();
 
     # Likewise, large numbers of brace errors usually indicate non-perl
     # scripts, so set the severe error flag at a low number.  This is similar
@@ -2059,12 +2073,12 @@ EOM
                 # This shouldn't happen ...
                 my $var    = substr( $tok, 0, 3 );
                 my $excess = substr( $tok, 3 );
-                interrupt_logfile();
+                $self->interrupt_logfile();
                 warning(<<EOM);
 $input_line_number: Trouble parsing at characters '$excess' after special variable '$var'.
 A space may be needed after '$var'. 
 EOM
-                resume_logfile();
+                $self->resume_logfile();
             }
         }
         return;
@@ -2500,9 +2514,9 @@ EOM
             $self->report_unexpected( $thing, "operator", $i_tok,
                 $last_nonblank_i, $rtoken_map, $rtoken_type, $input_line );
             if ( $i_tok == 0 ) {
-                interrupt_logfile();
+                $self->interrupt_logfile();
                 warning("Missing ';' or ',' above?\n");
-                resume_logfile();
+                $self->resume_logfile();
             }
             return 1;
         }
@@ -2642,9 +2656,9 @@ EOM
                             }
                         }
                         if ($hint) {
-                            interrupt_logfile();
+                            $self->interrupt_logfile();
                             warning($hint);
-                            resume_logfile();
+                            $self->resume_logfile();
                         }
                     } ## end if ( $next_nonblank_token...
                 } ## end else [ if ( $last_last_nonblank_token...
@@ -3101,9 +3115,9 @@ EOM
             ##  routine decided not to write a message with the line number.
             ##  if ( $type eq '<' && $expecting == TERM ) {
             ##      $self->error_if_expecting_TERM();
-            ##      interrupt_logfile();
+            ##      $self->interrupt_logfile();
             ##      warning("Unterminated <> operator?\n");
-            ##      resume_logfile();
+            ##      $self->resume_logfile();
             ##  }
 
         }
@@ -6577,7 +6591,7 @@ sub report_unexpected {
     if ( ++$self->[_unexpected_error_count_] <= MAX_NAG_MESSAGES ) {
         my $msg = "found $found where $expecting expected";
         my $pos = $rpretoken_map->[$i_tok];
-        interrupt_logfile();
+        $self->interrupt_logfile();
         my $input_line_number = $self->[_last_line_number_];
         my ( $offset, $numbered_line, $underline ) =
           make_numbered_line( $input_line_number, $input_line, $pos );
@@ -6603,7 +6617,7 @@ sub report_unexpected {
         warning( $numbered_line . "\n" );
         warning( $underline . "\n" );
         warning( $msg . $trailer . "\n" );
-        resume_logfile();
+        $self->resume_logfile();
     }
     return;
 } ## end sub report_unexpected
@@ -6823,7 +6837,7 @@ sub decrease_nesting_depth {
                   $depth_array[$aa][$bb][ $current_depth[$aa] ];
 
                 # don't whine too many times
-                my $saw_brace_error = get_saw_brace_error();
+                my $saw_brace_error = $self->get_saw_brace_error();
                 if (
                     $saw_brace_error <= MAX_NAG_MESSAGES
 
@@ -6832,7 +6846,7 @@ sub decrease_nesting_depth {
                     && ( ( $diff > 0 ) || ( $saw_brace_error <= 0 ) )
                   )
                 {
-                    interrupt_logfile();
+                    $self->interrupt_logfile();
                     my $rsl =
                       $starting_line_of_current_depth[$aa]
                       [ $current_depth[$aa] ];
@@ -6851,7 +6865,7 @@ sub decrease_nesting_depth {
                       ( $diff > 0 )
                       ? $opening_brace_names[$bb]
                       : $closing_brace_names[$bb];
-                    write_error_indicator_pair( @{$rsl}, '^' );
+                    $self->write_error_indicator_pair( @{$rsl}, '^' );
                     my $msg = <<"EOM";
 Found $diff extra $bname$ess between $opening_brace_names[$aa] on line $sl and $closing_brace_names[$aa] on line $el
 EOM
@@ -6863,27 +6877,28 @@ EOM
                         my $ml = $rml->[0];
                         $msg .=
 "    The most recent un-matched $bname is on line $ml\n";
-                        write_error_indicator_pair( @{$rml}, '^' );
+                        $self->write_error_indicator_pair( @{$rml}, '^' );
                     }
-                    write_error_indicator_pair( @{$rel}, '^' );
+                    $self->write_error_indicator_pair( @{$rel}, '^' );
                     warning($msg);
-                    resume_logfile();
+                    $self->resume_logfile();
                 }
-                increment_brace_error();
+                $self->increment_brace_error();
             }
         }
         $current_depth[$aa]--;
     }
     else {
 
-        my $saw_brace_error = get_saw_brace_error();
+        my $saw_brace_error = $self->get_saw_brace_error();
         if ( $saw_brace_error <= MAX_NAG_MESSAGES ) {
             my $msg = <<"EOM";
 There is no previous $opening_brace_names[$aa] to match a $closing_brace_names[$aa] on line $input_line_number
 EOM
-            indicate_error( $msg, $input_line_number, $input_line, $pos, '^' );
+            $self->indicate_error( $msg, $input_line_number, $input_line, $pos,
+                '^' );
         }
-        increment_brace_error();
+        $self->increment_brace_error();
 
         # keep track of errors in braces alone (ignoring ternary nesting errors)
         $self->[_true_brace_error_count_]++
@@ -6895,6 +6910,7 @@ EOM
 sub check_final_nesting_depths {
 
     # USES GLOBAL VARIABLES: @current_depth, @starting_line_of_current_depth
+    my $self = shift;
 
     for my $aa ( 0 .. @closing_brace_names - 1 ) {
 
@@ -6906,8 +6922,8 @@ sub check_final_nesting_depths {
 Final nesting depth of $opening_brace_names[$aa]s is $current_depth[$aa]
 The most recent un-matched $opening_brace_names[$aa] is on line $sl
 EOM
-            indicate_error( $msg, @{$rsl}, '^' );
-            increment_brace_error();
+            $self->indicate_error( $msg, @{$rsl}, '^' );
+            $self->increment_brace_error();
         }
     }
     return;
@@ -9867,16 +9883,17 @@ sub follow_quoted_string {
 } ## end sub follow_quoted_string
 
 sub indicate_error {
-    my ( $msg, $line_number, $input_line, $pos, $carrat ) = @_;
-    interrupt_logfile();
+    my ( $self, $msg, $line_number, $input_line, $pos, $carrat ) = @_;
+    $self->interrupt_logfile();
     warning($msg);
-    write_error_indicator_pair( $line_number, $input_line, $pos, $carrat );
-    resume_logfile();
+    $self->write_error_indicator_pair( $line_number, $input_line, $pos,
+        $carrat );
+    $self->resume_logfile();
     return;
 } ## end sub indicate_error
 
 sub write_error_indicator_pair {
-    my ( $line_number, $input_line, $pos, $carrat ) = @_;
+    my ( $self, $line_number, $input_line, $pos, $carrat ) = @_;
     my ( $offset, $numbered_line, $underline ) =
       make_numbered_line( $line_number, $input_line, $pos );
     $underline = write_on_underline( $underline, $pos - $offset, $carrat );
