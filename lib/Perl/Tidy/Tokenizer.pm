@@ -254,7 +254,7 @@ sub Die {
 }
 
 sub Fault {
-    my ($msg) = @_;
+    my ( $self, $msg ) = @_;
 
     # This routine is called for errors that really should not occur
     # except if there has been a bug introduced by a recent program change.
@@ -265,7 +265,15 @@ sub Fault {
     my ( $package2, $filename2, $line2, $subroutine2 ) = caller(2);
     my $pkg = __PACKAGE__;
 
-    my $input_stream_name = get_input_stream_name();
+    # Catch potential error of not being a method call
+    my $input_stream_name;
+    if ( !ref($self) ) {
+        $msg               = "Fault not called as a method - please fix\n";
+        $input_stream_name = "(UNKNOWN)";
+    }
+    else {
+        $input_stream_name = $self->get_input_stream_name();
+    }
 
     Die(<<EOM);
 ==============================================================================
@@ -556,8 +564,11 @@ sub warning {
 } ## end sub warning
 
 sub get_input_stream_name {
+
+    my $self = shift;
+
     my $input_stream_name = EMPTY_STRING;
-    my $logger_object     = $tokenizer_self->[_logger_object_];
+    my $logger_object     = $self->[_logger_object_];
     if ($logger_object) {
         $input_stream_name = $logger_object->get_input_stream_name();
     }
@@ -566,9 +577,9 @@ sub get_input_stream_name {
 
 sub complain {
 
-    my $msg = shift;
+    my ( $self, $msg ) = @_;
 
-    my $logger_object = $tokenizer_self->[_logger_object_];
+    my $logger_object = $self->[_logger_object_];
     if ($logger_object) {
         my $input_line_number = $tokenizer_self->[_last_line_number_];
         $logger_object->complain( $msg, $input_line_number );
@@ -747,7 +758,7 @@ EOM
         }
 
         else {
-            complain(
+            $self->complain(
 "hit eof while in pod documentation (no =cut seen)\n\tthis can cause trouble with some pod utilities\n"
             );
         }
@@ -1156,7 +1167,7 @@ sub get_line {
                     );
                 }
                 else {
-                    complain("Useless hash-bang after line 1\n");
+                    $self->complain("Useless hash-bang after line 1\n");
                 }
             }
 
@@ -1217,7 +1228,7 @@ sub get_line {
         # leading =head.  In any case, this isn't good.
         if ( $input_line =~ /^=cut\b/ ) {
             if ( $self->[_saw_data_] || $self->[_saw_end_] ) {
-                complain("=cut while not in pod ignored\n");
+                $self->complain("=cut while not in pod ignored\n");
                 $self->[_in_pod_] = 0;
                 $line_of_tokens->{_line_type} = 'POD_END';
             }
@@ -1729,7 +1740,7 @@ sub prepare_for_a_new_file {
 
     sub split_pretoken {
 
-        my ($numc) = @_;
+        my ( $self, $numc ) = @_;
 
      # Split the leading $numc characters from the current token (at index=$i)
      # which is pre-type 'w' and insert the remainder back into the pretoken
@@ -1803,7 +1814,7 @@ sub prepare_for_a_new_file {
 
             # Shouldn't get here
             if (DEVEL_MODE) {
-                Fault(<<EOM);
+                $self->Fault(<<EOM);
 While working near line number $input_line_number, bad arg '$tok' passed to sub split_pretoken()
 EOM
             }
@@ -2066,7 +2077,7 @@ EOM
             # Try to fix it by splitting the pretoken
             if (   $i > 0
                 && $rtokens->[ $i - 1 ] eq '^'
-                && split_pretoken(1) )
+                && $self->split_pretoken(1) )
             {
                 $identifier = substr( $identifier, 0, 3 );
                 $tok        = $identifier;
@@ -2624,7 +2635,7 @@ EOM
 
                 # ref: camel 3 p 703.
                 if ( $last_last_nonblank_token eq 'do' ) {
-                    complain(
+                    $self->complain(
 "do SUBROUTINE is deprecated; consider & or -> notation\n"
                     );
                 }
@@ -2763,7 +2774,7 @@ EOM
 
         # ','
         if ( $last_nonblank_type eq ',' ) {
-            complain("Repeated ','s \n");
+            $self->complain("Repeated ','s \n");
         }
 
         # Note that we have to check both token and type here because a
@@ -3483,7 +3494,7 @@ EOM
 
                     # Something like this is valid but strange:
                     # undef ^I;
-                    complain("The '^' seems unusual here\n");
+                    $self->complain("The '^' seems unusual here\n");
                 }
             }
         }
@@ -3527,7 +3538,7 @@ EOM
                 $type = 'h';
                 if ( length($here_doc_target) > 80 ) {
                     my $truncated = substr( $here_doc_target, 0, 80 );
-                    complain("Long here-target: '$truncated' ...\n");
+                    $self->complain("Long here-target: '$truncated' ...\n");
                 }
                 elsif ( !$here_doc_target ) {
                     warning(
@@ -3535,7 +3546,7 @@ EOM
                       unless ($here_quote_character);
                 }
                 elsif ( $here_doc_target !~ /^[A-Z_]\w+$/ ) {
-                    complain(
+                    $self->complain(
                         "Unconventional here-target: '$here_doc_target'\n");
                 }
             }
@@ -3545,7 +3556,7 @@ EOM
                     # shouldn't happen..arriving here implies an error in
                     # the logic in sub 'find_here_doc'
                     if (DEVEL_MODE) {
-                        Fault(<<EOM);
+                        $self->Fault(<<EOM);
 Program bug; didn't find here doc target
 EOM
                     }
@@ -3584,10 +3595,10 @@ EOM
 
                 if ( length($here_doc_target) > 80 ) {
                     my $truncated = substr( $here_doc_target, 0, 80 );
-                    complain("Long here-target: '$truncated' ...\n");
+                    $self->complain("Long here-target: '$truncated' ...\n");
                 }
                 elsif ( $here_doc_target !~ /^[A-Z_]\w+$/ ) {
-                    complain(
+                    $self->complain(
                         "Unconventional here-target: '$here_doc_target'\n");
                 }
 
@@ -3604,7 +3615,7 @@ EOM
                     # shouldn't happen..arriving here implies an error in
                     # the logic in sub 'find_here_doc'
                     if (DEVEL_MODE) {
-                        Fault(<<EOM);
+                        $self->Fault(<<EOM);
 Program bug; didn't find here doc target
 EOM
                     }
@@ -3657,7 +3668,7 @@ EOM
 
         # '=>'
         if ( $last_nonblank_type eq $tok ) {
-            complain("Repeated '=>'s \n");
+            $self->complain("Repeated '=>'s \n");
         }
 
         # patch for operator_expected: note if we are in the list (use.t)
@@ -3733,7 +3744,7 @@ EOM
 
             # shouldn't happen - we should always get a number
             if (DEVEL_MODE) {
-                Fault(<<EOM);
+                $self->Fault(<<EOM);
 non-number beginning with digit--program bug
 EOM
             }
@@ -3854,7 +3865,7 @@ EOM
               )
             {
                 $type = 'n';
-                if ( split_pretoken(1) ) {
+                if ( $self->split_pretoken(1) ) {
                     $type = 'x';
                     $tok  = 'x';
                 }
@@ -3890,7 +3901,7 @@ EOM
             # as a number, $type = 'n', and fixed downstream by the
             # Formatter.
             $type = 'n';
-            if ( split_pretoken(1) ) {
+            if ( $self->split_pretoken(1) ) {
                 $type = 'x';
                 $tok  = 'x';
             }
@@ -4111,7 +4122,7 @@ EOM
                 #
                 elsif ( $last_nonblank_type eq 'C' ) {
                     if ( $tok !~ /::$/ ) {
-                        complain(<<EOM);
+                        $self->complain(<<EOM);
 Expecting operator after '$last_nonblank_token' but found bare word '$tok'
        Maybe indirectet object notation?
 EOM
@@ -4799,7 +4810,7 @@ EOM
             # Must not be in multi-line quote
             # and must not be in an equation
             if ( !$in_quote
-                && ( operator_expected( [ 'b', '=', 'b' ] ) == TERM ) )
+                && ( $self->operator_expected( [ 'b', '=', 'b' ] ) == TERM ) )
             {
                 $self->[_in_pod_] = 1;
                 return;
@@ -4996,10 +5007,10 @@ EOM
                 if ( ( $type eq 'n' ) && ( $tok ne '0' ) ) {
 
                     if ( $last_nonblank_token eq 'eq' ) {
-                        complain("Should 'eq' be '==' here ?\n");
+                        $self->complain("Should 'eq' be '==' here ?\n");
                     }
                     elsif ( $last_nonblank_token eq 'ne' ) {
-                        complain("Should 'ne' be '!=' here ?\n");
+                        $self->complain("Should 'ne' be '!=' here ?\n");
                     }
                 }
 
@@ -5151,7 +5162,8 @@ EOM
                 if ( $test_tok eq '//' && $last_nonblank_type ne 'Z' ) {
 
                     # note that here $tok = '/' and the next tok and type is '/'
-                    $expecting = operator_expected( [ $prev_type, $tok, '/' ] );
+                    $expecting =
+                      $self->operator_expected( [ $prev_type, $tok, '/' ] );
 
                     # Patched for RT#101547, was 'unless ($expecting==OPERATOR)'
                     $combine_ok = 0 if ( $expecting == TERM );
@@ -5235,7 +5247,7 @@ EOM
 
             if ( $pre_type eq 'w' ) {
                 $expecting =
-                  operator_expected( [ $prev_type, $tok, $next_type ] );
+                  $self->operator_expected( [ $prev_type, $tok, $next_type ] );
                 my $is_last = $self->do_BAREWORD($is_END_or_DATA);
                 last if ($is_last);
             }
@@ -5245,7 +5257,7 @@ EOM
             #-----------------------------
             elsif ( $pre_type eq 'd' ) {
                 $expecting =
-                  operator_expected( [ $prev_type, $tok, $next_type ] );
+                  $self->operator_expected( [ $prev_type, $tok, $next_type ] );
                 $self->do_DIGITS();
             }
 
@@ -5256,7 +5268,8 @@ EOM
                 my $code = $tokenization_code->{$tok};
                 if ($code) {
                     $expecting =
-                      operator_expected( [ $prev_type, $tok, $next_type ] );
+                      $self->operator_expected(
+                        [ $prev_type, $tok, $next_type ] );
                     $code->($self);
                     redo if $in_quote;
                 }
@@ -5854,7 +5867,7 @@ EOM
 
                     # Should not happen unless @{$rtoken_map} is corrupted
                     DEVEL_MODE
-                      && Fault(
+                      && $self->Fault(
                         "number of characters is '$numc' but should be >0\n");
                 }
             }
@@ -5881,7 +5894,7 @@ EOM
 
                 # Should not happen unless @{$rtoken_map} is corrupted
                 DEVEL_MODE
-                  && Fault(
+                  && $self->Fault(
                     "Number of Characters is '$numc' but should be >0\n");
             }
         }
@@ -5962,7 +5975,8 @@ sub operator_expected {
     # Returns a parameter indicating what types of tokens can occur next
 
     # Call format:
-    #    $op_expected = operator_expected( [ $prev_type, $tok, $next_type ] );
+    #    $op_expected =
+    #      $self->operator_expected( [ $prev_type, $tok, $next_type ] );
     # where
     #    $prev_type is the type of the previous token (blank or not)
     #    $tok is the current token
@@ -6006,7 +6020,7 @@ sub operator_expected {
     # the 'operator_expected' value by a simple hash lookup.  If there are
     # exceptions, that is an indication that a new type is needed.
 
-    my ($rarg) = @_;
+    my ( $self, $rarg ) = @_;
 
     #-------------
     # Table lookup
@@ -6231,7 +6245,7 @@ sub operator_expected {
             # For example, from RT#130344:
             #   use lib $FindBin::Bin . '/lib';
             if ( $statement_type ne 'use' ) {
-                complain(
+                $self->complain(
 "operator in possible indirect object location not recommended\n"
                 );
             }
@@ -7475,7 +7489,7 @@ sub scan_bare_identifier_do {
                         # could be bug caused by older perltidy if
                         # followed by '('
                         if ( $input_line =~ m/\G\s*\(/gc ) {
-                            complain(
+                            $self->complain(
 "Caution: unknown word '$tok' in indirect object slot\n"
                             );
                         }
@@ -7615,7 +7629,7 @@ sub scan_id_do {
 
         # shouldn't happen:
         if (DEVEL_MODE) {
-            Fault(<<EOM);
+            $self->Fault(<<EOM);
 Program bug in scan_id: undefined type but scan_state=$id_scan_state
 EOM
         }
@@ -8428,7 +8442,7 @@ BEGIN {
                 # shouldn't happen: bad call parameter
                 my $msg =
 "Program bug detected: scan_complex_identifier received bad starting token = '$tok'\n";
-                if (DEVEL_MODE) { Fault($msg) }
+                if (DEVEL_MODE) { $self->Fault($msg) }
                 if ( !$self->[_in_error_] ) {
                     warning($msg);
                     $self->[_in_error_] = 1;
@@ -8447,7 +8461,7 @@ BEGIN {
 
             # check for a valid starting state
             if ( DEVEL_MODE && !$is_returnable_scan_state{$id_scan_state} ) {
-                Fault(<<EOM);
+                $self->Fault(<<EOM);
 Unexpected starting scan state in sub scan_complex_identifier: '$id_scan_state'
 EOM
             }
@@ -8472,7 +8486,7 @@ EOM
                 # unknown state - should not happen
                 else {
                     if (DEVEL_MODE) {
-                        Fault(<<EOM);
+                        $self->Fault(<<EOM);
 Unknown scan state in sub scan_complex_identifier: '$id_scan_state'
 Scan state at sub entry was '$id_scan_state_begin'
 EOM
@@ -9193,7 +9207,7 @@ sub find_angle_operator_termination {
     # shouldn't happen - we shouldn't be here if operator is expected
     else {
         if (DEVEL_MODE) {
-            Fault(<<EOM);
+            $self->Fault(<<EOM);
 Bad call to find_angle_operator_termination
 EOM
         }
@@ -9276,7 +9290,7 @@ EOM
             # If this happens, it may be necessary to split the pretoken.
             if ($error) {
                 if (DEVEL_MODE) {
-                    Fault(<<EOM);
+                    $self->Fault(<<EOM);
 unexpected error condition returned by inverse_pretoken_map
 EOM
                 }
@@ -9378,7 +9392,7 @@ sub scan_number_do {
     # Look for bad starting characters; Shouldn't happen..
     if ( $first_char !~ /[\d\.\+\-Ee]/ ) {
         if (DEVEL_MODE) {
-            Fault(<<EOM);
+            $self->Fault(<<EOM);
 Program bug - scan_number given bad first character = '$first_char'
 EOM
         }
