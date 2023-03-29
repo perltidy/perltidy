@@ -87,45 +87,43 @@ use vars qw{
 
 # GLOBAL CONSTANTS for routines in this package,
 # Initialized in a BEGIN block.
-use vars qw{
-  %is_indirect_object_taker
-  %is_block_operator
-  %expecting_operator_token
-  %expecting_operator_types
-  %expecting_term_types
-  %expecting_term_token
-  %is_digraph
-  %can_start_digraph
-  %is_file_test_operator
-  %is_trigraph
-  %is_tetragraph
-  %is_valid_token_type
-  %is_keyword
-  %is_my_our_state
-  %is_code_block_token
-  %is_sort_map_grep_eval_do
-  %is_sort_map_grep
-  %is_grep_alias
-  %really_want_term
-  @opening_brace_names
-  @closing_brace_names
-  %is_keyword_taking_list
-  %is_keyword_taking_optional_arg
-  %is_keyword_rejecting_slash_as_pattern_delimiter
-  %is_keyword_rejecting_question_as_pattern_delimiter
-  %is_q_qq_qx_qr_s_y_tr_m
-  %is_q_qq_qw_qx_qr_s_y_tr_m
-  %is_sub
-  %is_package
-  %is_comma_question_colon
-  %is_if_elsif_unless
-  %is_if_elsif_unless_case_when
-  %other_line_endings
-  %is_END_DATA_format_sub
-  %is_semicolon_or_t
-  $code_skipping_pattern_begin
-  $code_skipping_pattern_end
-};
+my (
+    %is_indirect_object_taker,
+    %is_block_operator,
+    %expecting_operator_token,
+    %expecting_operator_types,
+    %expecting_term_types,
+    %expecting_term_token,
+    %is_digraph,
+    %can_start_digraph,
+    %is_file_test_operator,
+    %is_trigraph,
+    %is_tetragraph,
+    %is_valid_token_type,
+    %is_keyword,
+    %is_my_our_state,
+    %is_code_block_token,
+    %is_sort_map_grep_eval_do,
+    %is_sort_map_grep,
+    %is_grep_alias,
+    %really_want_term,
+    @opening_brace_names,
+    @closing_brace_names,
+    %is_keyword_taking_list,
+    %is_keyword_taking_optional_arg,
+    %is_keyword_rejecting_slash_as_pattern_delimiter,
+    %is_keyword_rejecting_question_as_pattern_delimiter,
+    %is_q_qq_qx_qr_s_y_tr_m,
+    %is_q_qq_qw_qx_qr_s_y_tr_m,
+    %is_sub,
+    %is_package,
+    %is_comma_question_colon,
+    %is_if_elsif_unless,
+    %is_if_elsif_unless_case_when,
+    %other_line_endings,
+    %is_END_DATA_format_sub,
+    %is_semicolon_or_t,
+);
 
 # GLOBAL VARIABLES which are constant after being configured by user-supplied
 # parameters.  They remain constant as a file is being processed.
@@ -535,6 +533,11 @@ sub new {
 sub get_unexpected_error_count {
     my ($self) = @_;
     return $self->[_unexpected_error_count_];
+}
+
+sub is_keyword {
+    my ($str) = @_;
+    return $is_keyword{$str};
 }
 
 #-----------------------------------------
@@ -8359,9 +8362,9 @@ BEGIN {
         # This routine now serves a a backup for sub scan_simple_identifier
         # which handles most identifiers.
 
-        my $self = shift;
-
         (
+            my $self,
+
             $i,         $id_scan_state, $identifier, $rtokens, $max_token_index,
             $expecting, $container_type
         ) = @_;

@@ -1508,7 +1508,7 @@ EOM
 
     # FUTURE: if not a keyword, assume that it is an identifier
     foreach (@okw) {
-        if ( $Perl::Tidy::Tokenizer::is_keyword{$_} ) {
+        if ( Perl::Tidy::Tokenizer::is_keyword($_) ) {
             $outdent_keyword{$_} = 1;
         }
         else {

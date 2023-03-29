@@ -119,6 +119,7 @@ sub get_input_stream_name {
 sub set_last_input_line_number {
     my ( $self, $lno ) = @_;
     $self->{_last_input_line_number} = $lno;
+    return;
 }
 
 sub get_warning_count {
