@@ -159,6 +159,9 @@ my $str = $$# the process ID
  . " xxx\n";
 print "str='$str'\n";
 
+==> c208.in <==
+$1x$2
+
 ==> git82.in <==
 say
 $

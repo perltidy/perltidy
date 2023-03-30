@@ -7893,9 +7893,11 @@ sub do_scan_package {
             }
         }
         elsif ( $tok =~ /^\w/ ) {    # alphanumeric ..
-            $saw_alpha     = 1;
-            $id_scan_state = $scan_state_COLON;    # now need ::
+            $saw_alpha = 1;
             $identifier .= $tok;
+
+            # now need :: except for special digit vars like '$1' (c208)
+            $id_scan_state = $tok =~ /^\d/ ? EMPTY_STRING : $scan_state_COLON;
         }
         elsif ( $tok eq '::' ) {
             $id_scan_state = $scan_state_ALPHA;
