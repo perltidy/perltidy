@@ -42,47 +42,42 @@ use constant ORD_PRINTABLE_MAX => 126;
 # These must be package variables because most may get localized during
 # processing.  Most are initialized in sub prepare_for_a_new_file.
 use vars qw{
-  $tokenizer_self
-
+  $brace_depth
+  $context
+  $current_package
+  $in_attribute_list
+  $last_nonblank_block_type
   $last_nonblank_token
   $last_nonblank_type
-  $last_nonblank_block_type
-  $statement_type
-  $in_attribute_list
-  $current_package
-  $context
-
-  %is_constant
-  %is_user_function
-  %user_function_prototype
-  %is_block_function
-  %is_block_list_function
-  %saw_function_definition
-  %saw_use_module
-
-  $brace_depth
+  $next_sequence_number
   $paren_depth
   $square_bracket_depth
-
-  @current_depth
-  @total_depth
+  $statement_type
   $total_depth
-  $next_sequence_number
-  @nesting_sequence_number
-  @current_sequence_number
-  @paren_type
-  @paren_semicolon_count
-  @paren_structural_type
-  @brace_type
-  @brace_structural_type
+  %is_block_function
+  %is_block_list_function
+  %is_constant
+  %is_user_function
+  %saw_function_definition
+  %saw_use_module
+  %user_function_prototype
   @brace_context
   @brace_package
-  @square_bracket_type
-  @square_bracket_structural_type
+  @brace_structural_type
+  @brace_type
+  @current_depth
+  @current_sequence_number
   @depth_array
-  @nested_ternary_flag
   @nested_statement_type
+  @nested_ternary_flag
+  @nesting_sequence_number
+  @paren_semicolon_count
+  @paren_structural_type
+  @paren_type
+  @square_bracket_structural_type
+  @square_bracket_type
   @starting_line_of_current_depth
+  @total_depth
 };
 
 # GLOBAL CONSTANTS for routines in this package,
@@ -265,10 +260,12 @@ sub Fault {
     my ( $package2, $filename2, $line2, $subroutine2 ) = caller(2);
     my $pkg = __PACKAGE__;
 
-    # Catch potential error of not being a method call
+    # Catch potential error of Fault not called as a method
     my $input_stream_name;
     if ( !ref($self) ) {
-        $msg               = "Fault not called as a method - please fix\n";
+        $msg = "Fault not called as a method - please fix\n";
+        if ( $self && length($self) < 200 ) { $msg .= $self }
+        $self              = undef;
         $input_stream_name = "(UNKNOWN)";
     }
     else {
@@ -521,8 +518,6 @@ sub new {
 
     bless $self, $class;
 
-    $tokenizer_self = $self;
-
     prepare_for_a_new_file();
     $self->find_starting_indentation_level();
 
@@ -538,11 +533,13 @@ sub new {
 
 } ## end sub new
 
+# Called externally
 sub get_unexpected_error_count {
     my ($self) = @_;
     return $self->[_unexpected_error_count_];
 }
 
+# Called externally
 sub is_keyword {
     my ($str) = @_;
     return $is_keyword{$str};
@@ -553,11 +550,11 @@ sub is_keyword {
 #-----------------------------------------
 sub warning {
 
-    my $msg = shift;
+    my ( $self, $msg ) = @_;
 
-    my $logger_object = $tokenizer_self->[_logger_object_];
+    my $logger_object = $self->[_logger_object_];
     if ($logger_object) {
-        my $msg_line_number = $tokenizer_self->[_last_line_number_];
+        my $msg_line_number = $self->[_last_line_number_];
         $logger_object->warning( $msg, $msg_line_number );
     }
     return;
@@ -581,7 +578,7 @@ sub complain {
 
     my $logger_object = $self->[_logger_object_];
     if ($logger_object) {
-        my $input_line_number = $tokenizer_self->[_last_line_number_];
+        my $input_line_number = $self->[_last_line_number_];
         $logger_object->complain( $msg, $input_line_number );
     }
     return;
@@ -705,7 +702,7 @@ sub report_tokenization_errors {
 
     my $level = get_indentation_level();
     if ( $level != $self->[_starting_level_] ) {
-        warning("final indentation level: $level\n");
+        $self->warning("final indentation level: $level\n");
         my $level_diff = $self->[_starting_level_] - $level;
         if ( $level_diff < 0 ) { $level_diff = -$level_diff }
 
@@ -714,7 +711,7 @@ sub report_tokenization_errors {
         # best not to attempt formatting for a high level error.
         if ( $maxle >= 0 && $level_diff > $maxle ) {
             $severe_error = 1;
-            warning(<<EOM);
+            $self->warning(<<EOM);
 Formatting will be skipped because level error '$level_diff' exceeds -maxle=$maxle; use -maxle=-1 to force formatting
 EOM
         }
@@ -733,12 +730,12 @@ EOM
     if ( $self->[_look_for_hash_bang_]
         && !$self->[_saw_hash_bang_] )
     {
-        warning(
+        $self->warning(
             "hit EOF without seeing hash-bang line; maybe don't need -x?\n");
     }
 
     if ( $self->[_in_format_] ) {
-        warning("hit EOF while in format description\n");
+        $self->warning("hit EOF while in format description\n");
     }
 
     if ( $self->[_in_skipped_] ) {
@@ -771,12 +768,12 @@ EOM
         my $started_looking_for_here_target_at =
           $self->[_started_looking_for_here_target_at_];
         if ($here_doc_target) {
-            warning(
+            $self->warning(
 "hit EOF in here document starting at line $started_looking_for_here_target_at with target: $here_doc_target\n"
             );
         }
         else {
-            warning(<<EOM);
+            $self->warning(<<EOM);
 Hit EOF in here document starting at line $started_looking_for_here_target_at with empty target string.
   (Perl will match to the end of file but this may not be intended).
 EOM
@@ -784,7 +781,7 @@ EOM
         my $nearly_matched_here_target_at =
           $self->[_nearly_matched_here_target_at_];
         if ($nearly_matched_here_target_at) {
-            warning(
+            $self->warning(
 "NOTE: almost matched at input line $nearly_matched_here_target_at except for whitespace\n"
             );
         }
@@ -799,7 +796,7 @@ EOM
           ( $self->[_in_attribute_list_] )
           ? "attribute list"
           : "quote/pattern";
-        warning(
+        $self->warning(
 "hit EOF seeking end of $what starting at line $line_start_quote ending in $quote_target\n"
         );
     }
@@ -816,7 +813,7 @@ EOM
     # by default.
     my $ue_count = $self->[_unexpected_error_count_];
     if ( $maxue > 0 && $ue_count > $maxue ) {
-        warning(<<EOM);
+        $self->warning(<<EOM);
 Formatting will be skipped since unexpected token count = $ue_count > -maxue=$maxue; use -maxue=0 to force formatting
 EOM
         $severe_error = 1;
@@ -861,7 +858,7 @@ sub report_v_string {
         $self->[_saw_v_string_] = $self->[_last_line_number_];
     }
     if ( $] < 5.006 ) {
-        warning(
+        $self->warning(
 "Found v-string '$tok' but v-strings are not implemented in your version of perl; see Camel 3 book ch 2\n"
         );
     }
@@ -1052,7 +1049,7 @@ sub get_line {
             $self->[_in_pod_] = 0;
         }
         if ( $input_line =~ /^\#\!.*perl\b/ && !$self->[_in_end_] ) {
-            warning(
+            $self->warning(
                 "Hash-bang in pod can cause older versions of perl to fail! \n"
             );
         }
@@ -1164,7 +1161,7 @@ sub get_line {
                 # this is helpful for VMS systems; we may have accidentally
                 # tokenized some DCL commands
                 if ( $self->[_started_tokenizing_] ) {
-                    warning(
+                    $self->warning(
 "There seems to be a hash-bang after line 1; do you need to run with -x ?\n"
                     );
                 }
@@ -1215,7 +1212,7 @@ sub get_line {
     # handle severe error (binary data in script)
     if ( $self->[_in_error_] ) {
         $self->[_in_quote_] = 0;    # to avoid any more messages
-        warning("Giving up after error\n");
+        $self->warning("Giving up after error\n");
         $line_of_tokens->{_line_type} = 'ERROR';
         reset_indentation_level(0);    # avoid error messages
         return $line_of_tokens;
@@ -1236,7 +1233,7 @@ sub get_line {
             }
             else {
                 $line_of_tokens->{_line_type} = 'POD_START';
-                warning(
+                $self->warning(
 "=cut starts a pod section .. this can fool pod utilities.\n"
                 ) unless (DEVEL_MODE);
                 $self->log_numbered_msg("Entering POD section\n");
@@ -1987,24 +1984,43 @@ EOM
 
         # localize all package variables
         local (
-            $tokenizer_self,                 $last_nonblank_token,
-            $last_nonblank_type,             $last_nonblank_block_type,
-            $statement_type,                 $in_attribute_list,
-            $current_package,                $context,
-            %is_constant,                    %is_user_function,
-            %user_function_prototype,        %is_block_function,
-            %is_block_list_function,         %saw_function_definition,
-            $brace_depth,                    $paren_depth,
-            $square_bracket_depth,           @current_depth,
-            @total_depth,                    $total_depth,
-            @nesting_sequence_number,        @current_sequence_number,
-            @paren_type,                     @paren_semicolon_count,
-            @paren_structural_type,          @brace_type,
-            @brace_structural_type,          @brace_context,
-            @brace_package,                  @square_bracket_type,
-            @square_bracket_structural_type, @depth_array,
-            @starting_line_of_current_depth, @nested_ternary_flag,
-            @nested_statement_type,          $next_sequence_number,
+
+            $brace_depth,
+            $context,
+            $current_package,
+            $in_attribute_list,
+            $last_nonblank_block_type,
+            $last_nonblank_token,
+            $last_nonblank_type,
+            $next_sequence_number,
+            $paren_depth,
+            $square_bracket_depth,
+            $statement_type,
+            $total_depth,
+            %is_block_function,
+            %is_block_list_function,
+            %is_constant,
+            %is_user_function,
+            %saw_function_definition,
+            %saw_use_module,
+            %user_function_prototype,
+            @brace_context,
+            @brace_package,
+            @brace_structural_type,
+            @brace_type,
+            @current_depth,
+            @current_sequence_number,
+            @depth_array,
+            @nested_statement_type,
+            @nested_ternary_flag,
+            @nesting_sequence_number,
+            @paren_semicolon_count,
+            @paren_structural_type,
+            @paren_type,
+            @square_bracket_structural_type,
+            @square_bracket_type,
+            @starting_line_of_current_depth,
+            @total_depth,
         );
 
         # save all lexical variables
@@ -2091,7 +2107,7 @@ EOM
                 my $var    = substr( $tok, 0, 3 );
                 my $excess = substr( $tok, 3 );
                 $self->interrupt_logfile();
-                warning(<<EOM);
+                $self->warning(<<EOM);
 $input_line_number: Trouble parsing at characters '$excess' after special variable '$var'.
 A space may be needed after '$var'. 
 EOM
@@ -2532,7 +2548,7 @@ EOM
                 $last_nonblank_i, $rtoken_map, $rtoken_type, $input_line );
             if ( $i_tok == 0 ) {
                 $self->interrupt_logfile();
-                warning("Missing ';' or ',' above?\n");
+                $self->warning("Missing ';' or ',' above?\n");
                 $self->resume_logfile();
             }
             return 1;
@@ -2674,7 +2690,7 @@ EOM
                         }
                         if ($hint) {
                             $self->interrupt_logfile();
-                            warning($hint);
+                            $self->warning($hint);
                             $self->resume_logfile();
                         }
                     } ## end if ( $next_nonblank_token...
@@ -2731,7 +2747,7 @@ EOM
         }
 
         if ( $last_nonblank_type eq ')' ) {
-            warning(
+            $self->warning(
                 "Syntax error? found token '$last_nonblank_type' then '('\n");
         }
         $paren_structural_type[$paren_depth] = $type;
@@ -2763,7 +2779,7 @@ EOM
         if ( $is_for_foreach{ $paren_type[$paren_depth] } ) {
             my $num_sc = $paren_semicolon_count[$paren_depth];
             if ( $num_sc > 0 && $num_sc != 2 ) {
-                warning("Expected 2 ';' in 'for(;;)' but saw $num_sc\n");
+                $self->warning("Expected 2 ';' in 'for(;;)' but saw $num_sc\n");
             }
         }
 
@@ -2783,7 +2799,7 @@ EOM
         # Note that we have to check both token and type here because a
         # comma following a qw list can have last token='(' but type = 'q'
         elsif ( $last_nonblank_token eq '(' && $last_nonblank_type eq '{' ) {
-            warning("Unexpected leading ',' after a '('\n");
+            $self->warning("Unexpected leading ',' after a '('\n");
         }
 
         # patch for operator_expected: note if we are in the list (use.t)
@@ -2970,7 +2986,7 @@ EOM
                 else {
                     my $list =
                       join( SPACE, sort keys %is_blocktype_with_paren );
-                    warning(
+                    $self->warning(
 "syntax error at ') {', didn't see one of: <<$list>>; If this code is okay try using the -xs flag\n"
                     );
                 }
@@ -2984,7 +3000,7 @@ EOM
         {
             $last_nonblank_token = $want_paren;
             if ( $last_last_nonblank_token eq $want_paren ) {
-                warning(
+                $self->warning(
 "syntax error at '$want_paren .. {' -- missing \$ loop variable\n"
                 );
 
@@ -3133,7 +3149,7 @@ EOM
             ##  if ( $type eq '<' && $expecting == TERM ) {
             ##      $self->error_if_expecting_TERM();
             ##      $self->interrupt_logfile();
-            ##      warning("Unterminated <> operator?\n");
+            ##      $self->warning("Unterminated <> operator?\n");
             ##      $self->resume_logfile();
             ##  }
 
@@ -3316,7 +3332,7 @@ EOM
               $self->decrease_nesting_depth( QUESTION_COLON,
                 $rtoken_map->[$i_tok] );
             if ( $last_nonblank_token eq '?' ) {
-                warning("Syntax error near ? :\n");
+                $self->warning("Syntax error near ? :\n");
             }
         }
         return;
@@ -3488,7 +3504,7 @@ EOM
                     && $last_last_nonblank_type ne 'Z'
                     && $last_last_nonblank_token ne '$#' )
                 {
-                    warning("Possible syntax error near '{^'\n");
+                    $self->warning("Possible syntax error near '{^'\n");
                 }
             }
 
@@ -3544,7 +3560,7 @@ EOM
                     $self->complain("Long here-target: '$truncated' ...\n");
                 }
                 elsif ( !$here_doc_target ) {
-                    warning(
+                    $self->warning(
                         'Use of bare << to mean <<"" is deprecated' . "\n" )
                       unless ($here_quote_character);
                 }
@@ -3563,7 +3579,7 @@ EOM
 Program bug; didn't find here doc target
 EOM
                     }
-                    warning(
+                    $self->warning(
                         "Possible program error: didn't find here doc target\n"
                     );
                     $self->report_definite_bug();
@@ -3622,7 +3638,7 @@ EOM
 Program bug; didn't find here doc target
 EOM
                     }
-                    warning(
+                    $self->warning(
                         "Possible program error: didn't find here doc target\n"
                     );
                     $self->report_definite_bug();
@@ -3751,7 +3767,7 @@ EOM
 non-number beginning with digit--program bug
 EOM
             }
-            warning(
+            $self->warning(
                 "Unexpected error condition: non-number beginning with digit\n"
             );
             $self->report_definite_bug();
@@ -3932,7 +3948,7 @@ EOM
                 # versions of perl do not complain here, but
                 # the coding is retained for reference.
                 if ( 0 && $next_nonblank_tok2 ne 'qw' ) {
-                    warning(
+                    $self->warning(
 "Attempting to define constant '$next_nonblank_tok2' which is a perl keyword\n"
                     );
                 }
@@ -3984,7 +4000,7 @@ EOM
                 && !$is_if_elsif_unless{$last_nonblank_block_type}
               )
             {
-                warning(
+                $self->warning(
                     "expecting '$tok' to follow one of 'if|elsif|unless'\n");
             }
         }
@@ -4004,7 +4020,7 @@ EOM
                 && !$is_if_elsif_unless_case_when{$statement_type}
               )
             {
-                warning(
+                $self->warning(
 "expecting '$tok' to follow one of 'if|elsif|unless|case|when'\n"
                 );
             }
@@ -4590,7 +4606,7 @@ EOM
                     # This error might also be triggered if my quote
                     # modifier characters are incomplete
                     else {
-                        warning(<<EOM);
+                        $self->warning(<<EOM);
 
 Partial match to quote modifier $allowed_quote_modifiers at word: '$str'
 Please put a space between quote modifiers and trailing keywords.
@@ -5486,7 +5502,7 @@ EOM
                 # silently accepts a 032 (^Z) and takes it as the end
                 if ( !$is_valid_token_type{$type_i} ) {
                     my $val = ord($type_i);
-                    warning(
+                    $self->warning(
 "unexpected character decimal $val ($type_i) in script\n"
                     );
                     $self->[_in_error_] = 1;
@@ -5632,7 +5648,7 @@ EOM
                     if ( $level_in_tokenizer < 0 ) {
                         unless ( $self->[_saw_negative_indentation_] ) {
                             $self->[_saw_negative_indentation_] = 1;
-                            warning("Starting negative indentation\n");
+                            $self->warning("Starting negative indentation\n");
                         }
                     }
 
@@ -6634,9 +6650,9 @@ sub report_unexpected {
             $trailer = " (previous token underlined)";
         }
         $underline =~ s/\s+$//;
-        warning( $numbered_line . "\n" );
-        warning( $underline . "\n" );
-        warning( $msg . $trailer . "\n" );
+        $self->warning( $numbered_line . "\n" );
+        $self->warning( $underline . "\n" );
+        $self->warning( $msg . $trailer . "\n" );
         $self->resume_logfile();
     }
     return;
@@ -6900,7 +6916,7 @@ EOM
                         $self->write_error_indicator_pair( @{$rml}, '^' );
                     }
                     $self->write_error_indicator_pair( @{$rel}, '^' );
-                    warning($msg);
+                    $self->warning($msg);
                     $self->resume_logfile();
                 }
                 $self->increment_brace_error();
@@ -7514,7 +7530,8 @@ sub scan_bare_identifier_do {
         ( $i, $error ) =
           inverse_pretoken_map( $i, $pos, $rtoken_map, $max_token_index );
         if ($error) {
-            warning("scan_bare_identifier: Possibly invalid tokenization\n");
+            $self->warning(
+                "scan_bare_identifier: Possibly invalid tokenization\n");
         }
     }
 
@@ -7524,7 +7541,7 @@ sub scan_bare_identifier_do {
         $type = 'w';
 
         # change this warning to log message if it becomes annoying
-        warning("didn't find identifier after leading ::\n");
+        $self->warning("didn't find identifier after leading ::\n");
     }
     return ( $i, $tok, $type, $prototype );
 } ## end sub scan_bare_identifier_do
@@ -7623,7 +7640,7 @@ sub scan_id_do {
         }
 
         else {
-            warning("invalid token in scan_id: $tok\n");
+            $self->warning("invalid token in scan_id: $tok\n");
             $id_scan_state = EMPTY_STRING;
         }
     }
@@ -7636,7 +7653,7 @@ sub scan_id_do {
 Program bug in scan_id: undefined type but scan_state=$id_scan_state
 EOM
         }
-        warning(
+        $self->warning(
 "Possible program bug in sub scan_id: undefined type but scan_state=$id_scan_state\n"
         );
         $self->report_definite_bug();
@@ -7732,7 +7749,7 @@ sub do_scan_package {
         my $error;
         ( $i, $error ) =
           inverse_pretoken_map( $i, $pos, $rtoken_map, $max_token_index );
-        if ($error) { warning("Possibly invalid package\n") }
+        if ($error) { $self->warning("Possibly invalid package\n") }
         $current_package = $package;
 
         # we should now have package NAMESPACE
@@ -7756,7 +7773,7 @@ sub do_scan_package {
             $statement_type = $tok;
         }
         else {
-            warning(
+            $self->warning(
                 "Unexpected '$next_nonblank_token' after package name '$tok'\n"
             );
         }
@@ -8392,6 +8409,12 @@ BEGIN {
         # This routine now serves a a backup for sub scan_simple_identifier
         # which handles most identifiers.
 
+        # Note that $self must be a 'my' variable and not be a closure
+        # variables like the other args. Otherwise it will not get
+        # automatically deleted at the end of a file. Then an attempt to create
+        # multiple tokenizers can occur when multiple files are processed,
+        # causing an error.
+
         (
             my $self, $i, $id_scan_state, $identifier, $rtokens,
             $max_token_index, $expecting, $container_type
@@ -8763,7 +8786,7 @@ EOM
             my $is_lexical_sub =
               $last_nonblank_type eq 'k' && $last_nonblank_token eq 'my';
             if ( $is_lexical_sub && $1 ) {
-                warning("'my' sub $subname cannot be in package '$1'\n");
+                $self->warning("'my' sub $subname cannot be in package '$1'\n");
                 $is_lexical_sub = 0;
             }
 
@@ -8775,7 +8798,7 @@ EOM
                 $seqno   = 1 unless ( defined($seqno) );
                 $package = $seqno;
                 if ( $warn_if_lexical{$subname} ) {
-                    warning(
+                    $self->warning(
 "'my' sub '$subname' matches a builtin name and may not be handled correctly in this perltidy version.\n"
                     );
 
@@ -8877,7 +8900,7 @@ EOM
                 my $error;
                 ( $i, $error ) = inverse_pretoken_map( $i, $pos, $rtoken_map,
                     $max_token_index );
-                if ($error) { warning("Possibly invalid sub\n") }
+                if ($error) { $self->warning("Possibly invalid sub\n") }
 
                 # Patch part #2 to fixes cases b994 and b1053:
                 # Do not let spaces be part of the token of an anonymous sub
@@ -8923,13 +8946,13 @@ EOM
                     {
                         my $lno = $saw_function_definition{$subname}{$package};
                         if ( $package =~ /^\d/ ) {
-                            warning(
+                            $self->warning(
 "already saw definition of lexical 'sub $subname' at line $lno\n"
                             );
 
                         }
                         else {
-                            warning(
+                            $self->warning(
 "already saw definition of 'sub $subname' in package '$package' at line $lno\n"
                             ) unless (DEVEL_MODE);
                         }
@@ -8986,7 +9009,7 @@ EOM
                 }
                 else {
                     $subname = EMPTY_STRING unless defined($subname);
-                    warning(
+                    $self->warning(
 "expecting ':' or ';' or '{' after definition or declaration of sub '$subname' but saw '$next_nonblank_token'\n"
                     );
                 }
@@ -9308,7 +9331,7 @@ EOM
 unexpected error condition returned by inverse_pretoken_map
 EOM
                 }
-                warning(
+                $self->warning(
                     "Possible tokinization error..please check this line\n");
             }
 
@@ -9374,7 +9397,7 @@ EOM
         # didn't find ending >
         else {
             if ( $expecting == TERM ) {
-                warning("No ending > for angle operator\n");
+                $self->warning("No ending > for angle operator\n");
             }
         }
     }
@@ -9515,7 +9538,7 @@ EOM
     my $error;
     ( $i, $error ) =
       inverse_pretoken_map( $i, $pos, $rtoken_map, $max_token_index );
-    if ($error) { warning("Possibly invalid number\n") }
+    if ($error) { $self->warning("Possibly invalid number\n") }
 
     return ( $i, $type, $number );
 } ## end sub scan_number_do
@@ -9591,7 +9614,7 @@ sub find_here_doc {
         if ($in_quote) {    # didn't find end of quote, so no target found
             $i = $ibeg;
             if ( $expecting == TERM ) {
-                warning(
+                $self->warning(
 "Did not find here-doc string terminator ($here_quote_character) before end of line \n"
                 );
                 $saw_error = 1;
@@ -9919,7 +9942,7 @@ sub follow_quoted_string {
 sub indicate_error {
     my ( $self, $msg, $line_number, $input_line, $pos, $carrat ) = @_;
     $self->interrupt_logfile();
-    warning($msg);
+    $self->warning($msg);
     $self->write_error_indicator_pair( $line_number, $input_line, $pos,
         $carrat );
     $self->resume_logfile();
@@ -9931,9 +9954,9 @@ sub write_error_indicator_pair {
     my ( $offset, $numbered_line, $underline ) =
       make_numbered_line( $line_number, $input_line, $pos );
     $underline = write_on_underline( $underline, $pos - $offset, $carrat );
-    warning( $numbered_line . "\n" );
+    $self->warning( $numbered_line . "\n" );
     $underline =~ s/\s*$//;
-    warning( $underline . "\n" );
+    $self->warning( $underline . "\n" );
     return;
 } ## end sub write_error_indicator_pair
 
