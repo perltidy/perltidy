@@ -80,53 +80,53 @@ use vars qw{
   @total_depth
 };
 
-# GLOBAL CONSTANTS for routines in this package,
-# Initialized in a BEGIN block.
 my (
-    %is_indirect_object_taker,
-    %is_block_operator,
+
+    # GLOBAL CONSTANTS for routines in this package,
+    # INITIALIZER: BEGIN block.
+    %can_start_digraph,
     %expecting_operator_token,
     %expecting_operator_types,
-    %expecting_term_types,
     %expecting_term_token,
-    %is_digraph,
-    %can_start_digraph,
-    %is_file_test_operator,
-    %is_trigraph,
-    %is_tetragraph,
-    %is_valid_token_type,
-    %is_keyword,
-    %is_my_our_state,
-    %is_code_block_token,
-    %is_sort_map_grep_eval_do,
-    %is_sort_map_grep,
-    %is_grep_alias,
-    %really_want_term,
-    @opening_brace_names,
-    @closing_brace_names,
-    %is_keyword_taking_list,
-    %is_keyword_taking_optional_arg,
-    %is_keyword_rejecting_slash_as_pattern_delimiter,
-    %is_keyword_rejecting_question_as_pattern_delimiter,
-    %is_q_qq_qx_qr_s_y_tr_m,
-    %is_q_qq_qw_qx_qr_s_y_tr_m,
-    %is_sub,
-    %is_package,
+    %expecting_term_types,
+    %is_block_operator,
     %is_comma_question_colon,
+    %is_digraph,
+    %is_file_test_operator,
     %is_if_elsif_unless,
     %is_if_elsif_unless_case_when,
-    %other_line_endings,
-    %is_END_DATA_format_sub,
+    %is_indirect_object_taker,
+    %is_keyword_rejecting_question_as_pattern_delimiter,
+    %is_keyword_rejecting_slash_as_pattern_delimiter,
+    %is_keyword_taking_list,
+    %is_keyword_taking_optional_arg,
+    %is_q_qq_qw_qx_qr_s_y_tr_m,
+    %is_q_qq_qx_qr_s_y_tr_m,
     %is_semicolon_or_t,
-);
+    %is_sort_map_grep,
+    %is_sort_map_grep_eval_do,
+    %is_tetragraph,
+    %is_trigraph,
+    %is_valid_token_type,
+    %other_line_endings,
+    %really_want_term,
+    @closing_brace_names,
+    @opening_brace_names,
 
-# GLOBAL VARIABLES which are constant after being configured by user-supplied
-# parameters.  They remain constant as a file is being processed.
-my (
+    # GLOBAL VARIABLES which are constant after being configured.
+    # INITIALIZER: BEGIN block and modified by sub check_options
+    %is_code_block_token,
+    %is_keyword,
+    %is_my_our_state,
+    %is_package,
 
-    $rOpts_code_skipping,
+    # INITIALIZER: sub check_options
     $code_skipping_pattern_begin,
     $code_skipping_pattern_end,
+    $rOpts_code_skipping,
+    %is_END_DATA_format_sub,
+    %is_grep_alias,
+    %is_sub,
 );
 
 # possible values of operator_expected()
@@ -7788,20 +7788,21 @@ sub do_scan_package {
     return ( $i, $tok, $type );
 } ## end sub do_scan_package
 
-my %is_special_variable_char;
-
-BEGIN {
-
-    # These are the only characters which can (currently) form special
-    # variables, like $^W: (issue c066).
-    my @q =
-      qw{ ? A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ \ ] ^ _ };
-    @{is_special_variable_char}{@q} = (1) x scalar(@q);
-} ## end BEGIN
-
 {    ## begin closure for sub scan_complex_identifier
 
     use constant DEBUG_SCAN_ID => 0;
+
+    # Constant hash:
+    my %is_special_variable_char;
+
+    BEGIN {
+
+        # These are the only characters which can (currently) form special
+        # variables, like $^W: (issue c066).
+        my @q =
+          qw{ ? A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ \ ] ^ _ };
+        @{is_special_variable_char}{@q} = (1) x scalar(@q);
+    } ## end BEGIN
 
     # These are the possible states for this scanner:
     my $scan_state_SIGIL     = '$';
@@ -8411,9 +8412,9 @@ BEGIN {
 
         # Note that $self must be a 'my' variable and not be a closure
         # variables like the other args. Otherwise it will not get
-        # automatically deleted at the end of a file. Then an attempt to create
-        # multiple tokenizers can occur when multiple files are processed,
-        # causing an error.
+        # deleted by a DESTROY call at the end of a file. Then an
+        # attempt to create multiple tokenizers can occur when multiple
+        # files are processed, causing an error.
 
         (
             my $self, $i, $id_scan_state, $identifier, $rtokens,
@@ -10599,6 +10600,8 @@ BEGIN {
     # these token TYPES expect trailing operator but not a term
     # note: ++ and -- are post-increment and decrement, 'C' = constant
     my @operator_requestor_types = qw( ++ -- C <> q );
+
+    # NOTE: This hash is available but not currently used
     @expecting_operator_types{@operator_requestor_types} =
       (1) x scalar(@operator_requestor_types);
 
@@ -10614,6 +10617,8 @@ BEGIN {
       #;
     push( @value_requestor_type, ',' )
       ;    # (perl doesn't like a ',' in a qw block)
+
+    # NOTE: This hash is available but not currently used
     @expecting_term_types{@value_requestor_type} =
       (1) x scalar(@value_requestor_type);
 
@@ -10625,7 +10630,8 @@ BEGIN {
     # For simple syntax checking, it is nice to have a list of operators which
     # will really be unhappy if not followed by a term.  This includes most
     # of the above...
-    %really_want_term = %expecting_term_types;
+    @really_want_term{@value_requestor_type} =
+      (1) x scalar(@value_requestor_type);
 
     # with these exceptions...
     delete $really_want_term{'U'}; # user sub, depends on prototype
@@ -10759,6 +10765,8 @@ BEGIN {
       given
       when
     );
+
+    # NOTE: This hash is available but not currently used
     @is_keyword_taking_list{@keyword_taking_list} =
       (1) x scalar(@keyword_taking_list);
 
@@ -10777,7 +10785,7 @@ BEGIN {
     # currently only used to disambiguate a ? used as a ternary from one used
     # as a (deprecated) pattern delimiter.  In the future, they might be used
     # to give a warning about ambiguous syntax before a /.
-    # Note: split has been omitted (see not below).
+    # Note: split has been omitted (see note below).
     my @keywords_taking_optional_arg = qw(
       abs
       alarm
