@@ -589,9 +589,9 @@ sub complain {
 
 sub write_logfile_entry {
 
-    my $msg = shift;
+    my ( $self, $msg ) = @_;
 
-    my $logger_object = $tokenizer_self->[_logger_object_];
+    my $logger_object = $self->[_logger_object_];
     if ($logger_object) {
         $logger_object->write_logfile_entry($msg);
     }
@@ -742,7 +742,7 @@ EOM
     }
 
     if ( $self->[_in_skipped_] ) {
-        write_logfile_entry(
+        $self->write_logfile_entry(
             "hit EOF while in lines skipped with --code-skipping\n");
     }
 
@@ -752,7 +752,7 @@ EOM
         # because this happens to often, and it is not likely to be
         # a parsing error.
         if ( $self->[_saw_data_] || $self->[_saw_end_] ) {
-            write_logfile_entry(
+            $self->write_logfile_entry(
 "hit eof while in pod documentation (no =cut seen)\n\tthis can cause trouble with some pod utilities\n"
             );
         }
@@ -824,29 +824,31 @@ EOM
 
     unless ( $self->[_saw_perl_dash_w_] ) {
         if ( $] < 5.006 ) {
-            write_logfile_entry("Suggest including '-w parameter'\n");
+            $self->write_logfile_entry("Suggest including '-w parameter'\n");
         }
         else {
-            write_logfile_entry("Suggest including 'use warnings;'\n");
+            $self->write_logfile_entry("Suggest including 'use warnings;'\n");
         }
     }
 
     if ( $self->[_saw_perl_dash_P_] ) {
-        write_logfile_entry("Use of -P parameter for defines is discouraged\n");
+        $self->write_logfile_entry(
+            "Use of -P parameter for defines is discouraged\n");
     }
 
     unless ( $self->[_saw_use_strict_] ) {
-        write_logfile_entry("Suggest including 'use strict;'\n");
+        $self->write_logfile_entry("Suggest including 'use strict;'\n");
     }
 
     # it is suggested that labels have at least one upper case character
     # for legibility and to avoid code breakage as new keywords are introduced
     if ( $self->[_rlower_case_labels_at_] ) {
         my @lower_case_labels_at = @{ $self->[_rlower_case_labels_at_] };
-        write_logfile_entry(
+        $self->write_logfile_entry(
             "Suggest using upper case characters in label(s)\n");
         local $LIST_SEPARATOR = ')(';
-        write_logfile_entry("  defined at line(s): (@lower_case_labels_at)\n");
+        $self->write_logfile_entry(
+            "  defined at line(s): (@lower_case_labels_at)\n");
     }
     return $severe_error;
 } ## end sub report_tokenization_errors
@@ -876,7 +878,7 @@ sub log_numbered_msg {
 
     # write input line number + message to logfile
     my $input_line_number = $self->[_last_line_number_];
-    write_logfile_entry("Line $input_line_number: $msg");
+    $self->write_logfile_entry("Line $input_line_number: $msg");
     return;
 } ## end sub log_numbered_msg
 
@@ -1386,7 +1388,7 @@ sub find_starting_indentation_level {
             last;
         }
         $msg = "Line $i implies starting-indentation-level = $starting_level\n";
-        write_logfile_entry("$msg");
+        $self->write_logfile_entry("$msg");
     }
     $self->[_starting_level_] = $starting_level;
     reset_indentation_level($starting_level);
@@ -1977,7 +1979,8 @@ EOM
         # quick check
         return unless ( $replacement_text =~ /<</ );
 
-        write_logfile_entry("scanning replacement text for here-doc targets\n");
+        $self->write_logfile_entry(
+            "scanning replacement text for here-doc targets\n");
 
         # save the logger object for error messages
         my $logger_object = $self->[_logger_object_];
@@ -2883,7 +2886,7 @@ EOM
 
             if ($msg) {
                 $self->write_diagnostics("DIVIDE:$msg\n");
-                write_logfile_entry($msg);
+                $self->write_logfile_entry($msg);
             }
         }
         else { $is_pattern = ( $expecting == TERM ) }
@@ -3181,7 +3184,7 @@ EOM
               $self->guess_if_pattern_or_conditional( $i, $rtokens, $rtoken_map,
                 $max_token_index );
 
-            if ($msg) { write_logfile_entry($msg) }
+            if ($msg) { $self->write_logfile_entry($msg) }
         }
         else { $is_pattern = ( $expecting == TERM ) }
 
@@ -4337,7 +4340,7 @@ EOM
             )
           )
         {
-            write_logfile_entry("AutoLoader seen, -nlal deactivates\n");
+            $self->write_logfile_entry("AutoLoader seen, -nlal deactivates\n");
             $self->[_saw_autoloader_]      = 1;
             $self->[_look_for_autoloader_] = 0;
             $self->scan_bare_identifier();
@@ -4351,7 +4354,7 @@ EOM
                 || $input_line =~ /\bISA\s*=.*\bSelfLoader\b/ )
           )
         {
-            write_logfile_entry("SelfLoader seen, -nlsl deactivates\n");
+            $self->write_logfile_entry("SelfLoader seen, -nlsl deactivates\n");
             $self->[_saw_selfloader_]      = 1;
             $self->[_look_for_selfloader_] = 0;
             $self->scan_bare_identifier();
@@ -4502,7 +4505,7 @@ EOM
             $quoted_string_1,
             $quoted_string_2,
 
-        ) = do_quote(
+        ) = $self->do_quote(
 
             $i,
             $in_quote,
@@ -4607,7 +4610,7 @@ EOM
                     # example file: rokicki4.pl
                     # This error might also be triggered if my quote
                     # modifier characters are incomplete
-                    write_logfile_entry(
+                    $self->write_logfile_entry(
                         "Note: found word $str at quote modifier location\n");
                 }
             }
@@ -7039,7 +7042,7 @@ sub guess_if_pattern_or_conditional {
             $quote_depth,
             $quoted_string,
 
-        ) = follow_quoted_string(
+        ) = $self->follow_quoted_string(
 
             $ibeg,
             $in_quote,
@@ -7161,8 +7164,8 @@ sub guess_if_pattern_or_division {
             $i, $in_quote, $quote_character, $quote_pos, $quote_depth,
             $quoted_string
           )
-          = follow_quoted_string( $ibeg, $in_quote, $rtokens, $quote_character,
-            $quote_pos, $quote_depth, $max_token_index );
+          = $self->follow_quoted_string( $ibeg, $in_quote, $rtokens,
+            $quote_character, $quote_pos, $quote_depth, $max_token_index );
 
         if ($in_quote) {
 
@@ -7314,7 +7317,7 @@ sub guess_if_here_doc {
             }
         }
     }
-    write_logfile_entry($msg);
+    $self->write_logfile_entry($msg);
     return $here_doc_expected;
 } ## end sub guess_if_here_doc
 
@@ -7858,6 +7861,8 @@ BEGIN {
     #----------------------------------
     sub do_id_scan_state_dollar {
 
+        my $self = shift;
+
         # We saw a sigil, now looking to start a variable name
         if ( $tok eq '$' ) {
 
@@ -8117,7 +8122,8 @@ BEGIN {
                 }
                 else {
                     $i = $i_save;
-                    write_logfile_entry( 'Use of $# is deprecated' . "\n" );
+                    $self->write_logfile_entry(
+                        'Use of $# is deprecated' . "\n" );
                 }
             }
             elsif ( $identifier eq '$$' ) {
@@ -8151,6 +8157,8 @@ BEGIN {
 
     sub do_id_scan_state_alpha {
 
+        my $self = shift;
+
         # looking for alphanumeric after ::
         $tok_is_blank = $tok =~ /^\s*$/;
 
@@ -8180,6 +8188,8 @@ BEGIN {
     } ## end sub do_id_scan_state_alpha
 
     sub do_id_scan_state_colon {
+
+        my $self = shift;
 
         # looking for possible :: after alphanumeric
 
@@ -8221,6 +8231,8 @@ BEGIN {
 
     sub do_id_scan_state_left_paren {
 
+        my $self = shift;
+
         # looking for possible '(' of a prototype
 
         if ( $tok eq '(' ) {    # got it
@@ -8239,6 +8251,8 @@ BEGIN {
     } ## end sub do_id_scan_state_left_paren
 
     sub do_id_scan_state_right_paren {
+
+        my $self = shift;
 
         # looking for a ')' of prototype to close a '('
 
@@ -8259,6 +8273,8 @@ BEGIN {
     } ## end sub do_id_scan_state_right_paren
 
     sub do_id_scan_state_ampersand {
+
+        my $self = shift;
 
         # Starting sub call after seeing an '&'
 
@@ -8377,10 +8393,8 @@ BEGIN {
         # which handles most identifiers.
 
         (
-            my $self,
-
-            $i,         $id_scan_state, $identifier, $rtokens, $max_token_index,
-            $expecting, $container_type
+            my $self, $i, $id_scan_state, $identifier, $rtokens,
+            $max_token_index, $expecting, $container_type
         ) = @_;
 
         # return flag telling caller to split the pretoken
@@ -8512,7 +8526,7 @@ EOM
                 $i++;
             }
 
-            $code->();
+            $code->($self);
 
             # check for forward progress: a decrease in the index $i
             # implies that scanning has finished
@@ -8609,7 +8623,7 @@ EOM
         # See if we formed an identifier...
         if ($identifier) {
             $tok = $identifier;
-            if ($message) { write_logfile_entry($message) }
+            if ($message) { $self->write_logfile_entry($message) }
         }
 
         # did not find an identifier, back  up
@@ -9351,7 +9365,8 @@ EOM
                 else {
                     $self->write_diagnostics(
                         "ANGLE-Guessing yes: $str expecting=$expecting\n");
-                    write_logfile_entry("Guessing angle operator here: $str\n");
+                    $self->write_logfile_entry(
+                        "Guessing angle operator here: $str\n");
                 }
             }
         }
@@ -9570,7 +9585,7 @@ sub find_here_doc {
             $i, $in_quote, $here_quote_character, $quote_pos, $quote_depth,
             $quoted_string
           )
-          = follow_quoted_string( $i_next_nonblank, $in_quote, $rtokens,
+          = $self->follow_quoted_string( $i_next_nonblank, $in_quote, $rtokens,
             $here_quote_character, $quote_pos, $quote_depth, $max_token_index );
 
         if ($in_quote) {    # didn't find end of quote, so no target found
@@ -9602,7 +9617,7 @@ sub find_here_doc {
 
     elsif ( ( $next_token =~ /^\s*$/ ) and ( $expecting == TERM ) ) {
         $found_target = 1;
-        write_logfile_entry(
+        $self->write_logfile_entry(
             "found blank here-target after <<; suggest using \"\"\n");
         $i = $ibeg;
     }
@@ -9627,7 +9642,7 @@ sub find_here_doc {
 
         if ( $expecting == TERM ) {
             $found_target = 1;
-            write_logfile_entry("Note: bare here-doc operator <<\n");
+            $self->write_logfile_entry("Note: bare here-doc operator <<\n");
         }
         else {
             $i = $ibeg;
@@ -9654,6 +9669,7 @@ sub do_quote {
     #  $quoted_string_2 = quoted string seen while in_quote=2
     my (
 
+        $self,
         $i,
         $in_quote,
         $quote_character,
@@ -9674,8 +9690,8 @@ sub do_quote {
             $i, $in_quote, $quote_character, $quote_pos, $quote_depth,
             $quoted_string
           )
-          = follow_quoted_string( $ibeg, $in_quote, $rtokens, $quote_character,
-            $quote_pos, $quote_depth, $max_token_index );
+          = $self->follow_quoted_string( $ibeg, $in_quote, $rtokens,
+            $quote_character, $quote_pos, $quote_depth, $max_token_index );
         $quoted_string_2 .= $quoted_string;
         if ( $in_quote == 1 ) {
             if ( $quote_character =~ /[\{\[\<\(]/ ) { $i++; }
@@ -9692,8 +9708,8 @@ sub do_quote {
             $i, $in_quote, $quote_character, $quote_pos, $quote_depth,
             $quoted_string
           )
-          = follow_quoted_string( $ibeg, $in_quote, $rtokens, $quote_character,
-            $quote_pos, $quote_depth, $max_token_index );
+          = $self->follow_quoted_string( $ibeg, $in_quote, $rtokens,
+            $quote_character, $quote_pos, $quote_depth, $max_token_index );
         $quoted_string_1 .= $quoted_string;
         if ( $in_quote == 1 ) {
             $quoted_string_1 .= "\n";
@@ -9731,6 +9747,7 @@ sub follow_quoted_string {
     #   $quoted_string = the text of the quote (without quotation tokens)
     my (
 
+        $self,
         $i_beg,
         $in_quote,
         $rtokens,
@@ -9804,7 +9821,7 @@ sub follow_quoted_string {
         # Note this because it is not recommended practice except
         # for obfuscated perl contests
         if ( $in_quote == 1 ) {
-            write_logfile_entry(
+            $self->write_logfile_entry(
                 "Note: alphanumeric quote delimiter ($beginning_tok) \n");
         }
 
