@@ -157,6 +157,8 @@ BEGIN {
         _in_format_                          => $i++,
         _in_error_                           => $i++,
         _in_trouble_                         => $i++,
+        _warning_count_                      => $i++,
+        _html_tag_count_                     => $i++,
         _in_pod_                             => $i++,
         _in_skipped_                         => $i++,
         _in_attribute_list_                  => $i++,
@@ -442,6 +444,8 @@ sub new {
     # _in_skipped_           flag set if we are in a skipped section
     # _in_error_             flag set if we saw severe error (binary in script)
     # _in_trouble_           set if we saw a troublesome lexical like 'my sub s'
+    # _warning_count_        number of calls to logger sub warning
+    # _html_tag_count_       number of apparent html tags seen (indicates html)
     # _in_data_              flag set if we are in __DATA__ section
     # _in_end_               flag set if we are in __END__ section
     # _in_format_            flag set if we are in a format description
@@ -464,6 +468,8 @@ sub new {
     $self->[_in_format_]                = 0;
     $self->[_in_error_]                 = 0;
     $self->[_in_trouble_]               = 0;
+    $self->[_warning_count_]            = 0;
+    $self->[_html_tag_count_]           = 0;
     $self->[_in_pod_]                   = 0;
     $self->[_in_skipped_]               = 0;
     $self->[_in_attribute_list_]        = 0;
@@ -553,6 +559,7 @@ sub warning {
     my ( $self, $msg ) = @_;
 
     my $logger_object = $self->[_logger_object_];
+    $self->[_warning_count_]++;
     if ($logger_object) {
         my $msg_line_number = $self->[_last_line_number_];
         $logger_object->warning( $msg, $msg_line_number );
@@ -687,6 +694,9 @@ sub report_tokenization_errors {
     # _in_trouble_ lets the tokenizer finish so that all errors are seen
     # Both block formatting and cause the input stream to be output verbatim.
     my $severe_error = $self->[_in_error_] || $self->[_in_trouble_];
+
+    # And do not format if it looks like an html file (c209)
+    $severe_error ||= $self->[_html_tag_count_] && $self->[_warning_count_];
 
     # Inform the logger object on length of input stream
     my $logger_object = $self->[_logger_object_];
@@ -9338,6 +9348,31 @@ EOM
                     "Possible tokinization error..please check this line\n");
             }
 
+            # See if this looks like html...
+            my $is_html_tag =
+
+              # something that looks like an html comment '<!...'
+              $str =~ /^<\s*!/
+
+              # or possible html end tag, something like </h1>
+              || $str =~ /^<\s*\/\w+\s*>$/;
+
+            if ($is_html_tag) {
+
+                $self->[_html_tag_count_]++;
+
+                # Issue a warning on seeing '<!' at the start of a file;
+                # this will insure that the file is ouput verbatim.
+                if (   $self->[_last_line_number_] == 1
+                    && $i_beg == 0
+                    && $str =~ /^<\s*!/ )
+                {
+                    $self->warning(
+"looks like a markup language, continuing error checks\n"
+                    );
+                }
+            }
+
             # count blanks on inside of brackets
             my $blank_count = 0;
             $blank_count++ if ( $str =~ /<\s+/ );
@@ -9346,6 +9381,9 @@ EOM
             # Now let's see where we stand....
             # OK if math op not possible
             if ( $expecting == TERM ) {
+            }
+
+            elsif ($is_html_tag) {
             }
 
             # OK if there are no more than 2 non-blank pre-tokens inside
