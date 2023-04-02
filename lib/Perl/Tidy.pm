@@ -563,6 +563,8 @@ sub perltidy {
     $Warn_count = 0;
 
     # don't overwrite callers ARGV
+    # Localization of @ARGV could be avoided by calling GetOptionsFromArray
+    # instead of GetOptions, but that is not available before perl 5.10
     local @ARGV   = @ARGV;
     local *STDERR = *STDERR;
 

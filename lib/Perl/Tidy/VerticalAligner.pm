@@ -325,7 +325,6 @@ sub new {
     # Initialize other caches and buffers
     initialize_step_B_cache();
     initialize_valign_buffer();
-    initialize_leading_string_cache();
     initialize_decode();
     set_logger_object( $args{logger_object} );
 
@@ -1557,8 +1556,6 @@ sub _flush_comment_lines {
     my $group_level               = $self->[_group_level_];
     my $group_maximum_line_length = $self->[_group_maximum_line_length_];
     my $leading_space_count       = $self->[_comment_leading_space_count_];
-##  my $leading_string =
-##    $self->get_leading_string( $leading_space_count, $group_level );
 
     # look for excessively long lines
     my $max_excess = 0;
@@ -5587,80 +5584,6 @@ sub valign_output_step_D {
 
     return;
 } ## end sub valign_output_step_D
-
-{    ## closure for sub get_leading_string
-
-    my @leading_string_cache;
-
-    sub initialize_leading_string_cache {
-        @leading_string_cache = ();
-        return;
-    }
-
-    sub get_leading_string {
-
-        # define the leading whitespace string for this line..
-        my ( $self, $leading_whitespace_count, $group_level ) = @_;
-
-        # Handle case of zero whitespace, which includes multi-line quotes
-        # (which may have a finite level; this prevents tab problems)
-        if ( $leading_whitespace_count <= 0 ) {
-            return EMPTY_STRING;
-        }
-
-        # look for previous result
-        elsif ( $leading_string_cache[$leading_whitespace_count] ) {
-            return $leading_string_cache[$leading_whitespace_count];
-        }
-
-        # must compute a string for this number of spaces
-        my $leading_string;
-
-        # Handle simple case of no tabs
-        my $rOpts_indent_columns = $self->[_rOpts_indent_columns_];
-        my $rOpts_tabs           = $self->[_rOpts_tabs_];
-        my $rOpts_entab_leading_whitespace =
-          $self->[_rOpts_entab_leading_whitespace_];
-
-        if ( !( $rOpts_tabs || $rOpts_entab_leading_whitespace )
-            || $rOpts_indent_columns <= 0 )
-        {
-            $leading_string = ( SPACE x $leading_whitespace_count );
-        }
-
-        # Handle entab option
-        elsif ($rOpts_entab_leading_whitespace) {
-            my $space_count =
-              $leading_whitespace_count % $rOpts_entab_leading_whitespace;
-            my $tab_count = int(
-                $leading_whitespace_count / $rOpts_entab_leading_whitespace );
-            $leading_string = "\t" x $tab_count . SPACE x $space_count;
-        }
-
-        # Handle option of one tab per level
-        else {
-            $leading_string = ( "\t" x $group_level );
-            my $space_count =
-              $leading_whitespace_count - $group_level * $rOpts_indent_columns;
-
-            # shouldn't happen:
-            if ( $space_count < 0 ) {
-                DEBUG_TABS
-                  && warning(
-"Error in get_leading_string: for level=$group_level count=$leading_whitespace_count\n"
-                  );
-
-                # -- skip entabbing
-                $leading_string = ( SPACE x $leading_whitespace_count );
-            }
-            else {
-                $leading_string .= ( SPACE x $space_count );
-            }
-        }
-        $leading_string_cache[$leading_whitespace_count] = $leading_string;
-        return $leading_string;
-    } ## end sub get_leading_string
-} ## end get_leading_string
 
 ##########################
 # CODE SECTION 10: Summary
