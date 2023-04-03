@@ -9348,29 +9348,37 @@ EOM
                     "Possible tokinization error..please check this line\n");
             }
 
-            # See if this looks like html...
-            my $is_html_tag =
+            # Check for accidental formatting of a markup language doc...
+            # Formatting will be skipped if we set _html_tag_count_ and
+            # also set a warning of any kind.
+            my $is_html_tag;
+            my $is_first_string =
+              $i_beg == 0 && $self->[_last_line_number_] == 1;
 
-              # something that looks like an html comment '<!...'
-              $str =~ /^<\s*!/
-
-              # or possible html end tag, something like </h1>
-              || $str =~ /^<\s*\/\w+\s*>$/;
-
-            if ($is_html_tag) {
-
-                $self->[_html_tag_count_]++;
-
-                # Issue a warning on seeing '<!' at the start of a file;
-                # this will insure that the file is ouput verbatim.
-                if (   $self->[_last_line_number_] == 1
-                    && $i_beg == 0
-                    && $str =~ /^<\s*!/ )
-                {
+            # html comment '<!...' of any type
+            if ( $str =~ /^<\s*!/ ) {
+                $is_html_tag = 1;
+                if ($is_first_string) {
                     $self->warning(
 "looks like a markup language, continuing error checks\n"
                     );
                 }
+            }
+
+            # html end tag, something like </h1>
+            elsif ( $str =~ /^<\s*\/\w+\s*>$/ ) {
+                $is_html_tag = 1;
+            }
+
+            # xml prolog?
+            elsif ( $str =~ /^<\?xml\s.*\?>$/i && $is_first_string ) {
+                $is_html_tag = 1;
+                $self->warning(
+                    "looks like a markup language, continuing error checks\n");
+            }
+
+            if ($is_html_tag) {
+                $self->[_html_tag_count_]++;
             }
 
             # count blanks on inside of brackets
