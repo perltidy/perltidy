@@ -54,30 +54,29 @@ use vars qw{
   $square_bracket_depth
   $statement_type
   $total_depth
-  %is_block_function
-  %is_block_list_function
-  %is_constant
-  %is_user_function
-  %saw_function_definition
-  %saw_use_module
-  %user_function_prototype
-  @brace_context
-  @brace_package
-  @brace_structural_type
-  @brace_type
-  @current_depth
-  @current_sequence_number
-  @depth_array
-  @nested_statement_type
-  @nested_ternary_flag
-  @nesting_sequence_number
-  @paren_semicolon_count
-  @paren_structural_type
-  @paren_type
-  @square_bracket_structural_type
-  @square_bracket_type
-  @starting_line_of_current_depth
-  @total_depth
+  $ris_block_function
+  $ris_block_list_function
+  $ris_constant
+  $ris_user_function
+  $rsaw_function_definition
+  $rsaw_use_module
+  $ruser_function_prototype
+  $rbrace_context
+  $rbrace_package
+  $rbrace_structural_type
+  $rbrace_type
+  $rcurrent_depth
+  $rcurrent_sequence_number
+  $rdepth_array
+  $rnested_statement_type
+  $rnested_ternary_flag
+  $rparen_semicolon_count
+  $rparen_structural_type
+  $rparen_type
+  $rsquare_bracket_structural_type
+  $rsquare_bracket_type
+  $rstarting_line_of_current_depth
+  $rtotal_depth
 };
 
 my (
@@ -524,7 +523,7 @@ sub new {
 
     bless $self, $class;
 
-    prepare_for_a_new_file();
+    $self->prepare_for_a_new_file();
     $self->find_starting_indentation_level();
 
     # This is not a full class yet, so die if an attempt is made to
@@ -1451,26 +1450,26 @@ sub guess_old_indentation_level {
 sub dump_functions {
 
     my $fh = *STDOUT;
-    foreach my $pkg ( keys %is_user_function ) {
+    foreach my $pkg ( keys %{$ris_user_function} ) {
         $fh->print("\nnon-constant subs in package $pkg\n");
 
-        foreach my $sub ( keys %{ $is_user_function{$pkg} } ) {
+        foreach my $sub ( keys %{ $ris_user_function->{$pkg} } ) {
             my $msg = EMPTY_STRING;
-            if ( $is_block_list_function{$pkg}{$sub} ) {
+            if ( $ris_block_list_function->{$pkg}{$sub} ) {
                 $msg = 'block_list';
             }
 
-            if ( $is_block_function{$pkg}{$sub} ) {
+            if ( $ris_block_function->{$pkg}{$sub} ) {
                 $msg = 'block';
             }
             $fh->print("$sub $msg\n");
         }
     }
 
-    foreach my $pkg ( keys %is_constant ) {
+    foreach my $pkg ( keys %{$ris_constant} ) {
         $fh->print("\nconstants and constant subs in package $pkg\n");
 
-        foreach my $sub ( keys %{ $is_constant{$pkg} } ) {
+        foreach my $sub ( keys %{ $ris_constant->{$pkg} } ) {
             $fh->print("$sub\n");
         }
     }
@@ -1478,6 +1477,8 @@ sub dump_functions {
 } ## end sub dump_functions
 
 sub prepare_for_a_new_file {
+
+    my $self = shift;
 
     # previous tokens needed to determine what to expect next
     $last_nonblank_token      = ';';    # the only possible starting state which
@@ -1493,49 +1494,48 @@ sub prepare_for_a_new_file {
     $context         = UNKNOWN_CONTEXT;
 
     # hashes used to remember function information
-    %is_constant             = ();        # user-defined constants
-    %is_user_function        = ();        # user-defined functions
-    %user_function_prototype = ();        # their prototypes
-    %is_block_function       = ();
-    %is_block_list_function  = ();
-    %saw_function_definition = ();
-    %saw_use_module          = ();
+    $ris_constant             = {};       # user-defined constants
+    $ris_user_function        = {};       # user-defined functions
+    $ruser_function_prototype = {};       # their prototypes
+    $ris_block_function       = {};
+    $ris_block_list_function  = {};
+    $rsaw_function_definition = {};
+    $rsaw_use_module          = {};
 
     # variables used to track depths of various containers
     # and report nesting errors
-    $paren_depth             = 0;
-    $brace_depth             = 0;
-    $square_bracket_depth    = 0;
-    @current_depth           = (0) x scalar @closing_brace_names;
-    $total_depth             = 0;
-    @total_depth             = ();
-    @nesting_sequence_number = ( 0 .. @closing_brace_names - 1 );
-    @current_sequence_number = ();
-    $next_sequence_number    = 2;    # The value 1 is reserved for SEQ_ROOT
+    $paren_depth              = 0;
+    $brace_depth              = 0;
+    $square_bracket_depth     = 0;
+    $rcurrent_depth           = [ (0) x scalar @closing_brace_names ];
+    $total_depth              = 0;
+    $rtotal_depth             = [];
+    $rcurrent_sequence_number = [];
+    $next_sequence_number     = 2;    # The value 1 is reserved for SEQ_ROOT
 
-    @paren_type                     = ();
-    @paren_semicolon_count          = ();
-    @paren_structural_type          = ();
-    @brace_type                     = ();
-    @brace_structural_type          = ();
-    @brace_context                  = ();
-    @brace_package                  = ();
-    @square_bracket_type            = ();
-    @square_bracket_structural_type = ();
-    @depth_array                    = ();
-    @nested_ternary_flag            = ();
-    @nested_statement_type          = ();
-    @starting_line_of_current_depth = ();
+    $rparen_type                     = [];
+    $rparen_semicolon_count          = [];
+    $rparen_structural_type          = [];
+    $rbrace_type                     = [];
+    $rbrace_structural_type          = [];
+    $rbrace_context                  = [];
+    $rbrace_package                  = [];
+    $rsquare_bracket_type            = [];
+    $rsquare_bracket_structural_type = [];
+    $rdepth_array                    = [];
+    $rnested_ternary_flag            = [];
+    $rnested_statement_type          = [];
+    $rstarting_line_of_current_depth = [];
 
-    $paren_type[$paren_depth]            = EMPTY_STRING;
-    $paren_semicolon_count[$paren_depth] = 0;
-    $paren_structural_type[$brace_depth] = EMPTY_STRING;
-    $brace_type[$brace_depth] = ';';    # identify opening brace as code block
-    $brace_structural_type[$brace_depth]                   = EMPTY_STRING;
-    $brace_context[$brace_depth]                           = UNKNOWN_CONTEXT;
-    $brace_package[$paren_depth]                           = $current_package;
-    $square_bracket_type[$square_bracket_depth]            = EMPTY_STRING;
-    $square_bracket_structural_type[$square_bracket_depth] = EMPTY_STRING;
+    $rparen_type->[$paren_depth]            = EMPTY_STRING;
+    $rparen_semicolon_count->[$paren_depth] = 0;
+    $rparen_structural_type->[$brace_depth] = EMPTY_STRING;
+    $rbrace_type->[$brace_depth] = ';';   # identify opening brace as code block
+    $rbrace_structural_type->[$brace_depth]        = EMPTY_STRING;
+    $rbrace_context->[$brace_depth]                = UNKNOWN_CONTEXT;
+    $rbrace_package->[$paren_depth]                = $current_package;
+    $rsquare_bracket_type->[$square_bracket_depth] = EMPTY_STRING;
+    $rsquare_bracket_structural_type->[$square_bracket_depth] = EMPTY_STRING;
 
     initialize_tokenizer_state();
     return;
@@ -2007,30 +2007,29 @@ EOM
             $square_bracket_depth,
             $statement_type,
             $total_depth,
-            %is_block_function,
-            %is_block_list_function,
-            %is_constant,
-            %is_user_function,
-            %saw_function_definition,
-            %saw_use_module,
-            %user_function_prototype,
-            @brace_context,
-            @brace_package,
-            @brace_structural_type,
-            @brace_type,
-            @current_depth,
-            @current_sequence_number,
-            @depth_array,
-            @nested_statement_type,
-            @nested_ternary_flag,
-            @nesting_sequence_number,
-            @paren_semicolon_count,
-            @paren_structural_type,
-            @paren_type,
-            @square_bracket_structural_type,
-            @square_bracket_type,
-            @starting_line_of_current_depth,
-            @total_depth,
+            $ris_block_function,
+            $ris_block_list_function,
+            $ris_constant,
+            $ris_user_function,
+            $rsaw_function_definition,
+            $rsaw_use_module,
+            $ruser_function_prototype,
+            $rbrace_context,
+            $rbrace_package,
+            $rbrace_structural_type,
+            $rbrace_type,
+            $rcurrent_depth,
+            $rcurrent_sequence_number,
+            $rdepth_array,
+            $rnested_statement_type,
+            $rnested_ternary_flag,
+            $rparen_semicolon_count,
+            $rparen_structural_type,
+            $rparen_type,
+            $rsquare_bracket_structural_type,
+            $rsquare_bracket_type,
+            $rstarting_line_of_current_depth,
+            $rtotal_depth,
         );
 
         # save all lexical variables
@@ -2097,7 +2096,8 @@ EOM
             my $split_pretoken_flag
           )
           = $self->scan_complex_identifier( $i, $id_scan_state, $identifier,
-            $rtokens, $max_token_index, $expecting, $paren_type[$paren_depth] );
+            $rtokens, $max_token_index, $expecting,
+            $rparen_type->[$paren_depth] );
 
         # Check for signal to fix a special variable adjacent to a keyword,
         # such as '$^One$0'.
@@ -2614,7 +2614,7 @@ EOM
                $is_indirect_object_taker{$last_nonblank_token}
             && $last_nonblank_type eq 'k'
             || ( ( $last_nonblank_token eq '(' )
-                && $is_indirect_object_taker{ $paren_type[$paren_depth] } )
+                && $is_indirect_object_taker{ $rparen_type->[$paren_depth] } )
             || (   $last_nonblank_type eq 'w'
                 || $last_nonblank_type eq 'U' )    # possible object
           )
@@ -2636,7 +2636,7 @@ EOM
 
         # '('
         ++$paren_depth;
-        $paren_semicolon_count[$paren_depth] = 0;
+        $rparen_semicolon_count->[$paren_depth] = 0;
         if ($want_paren) {
             $container_type = $want_paren;
             $want_paren     = EMPTY_STRING;
@@ -2713,7 +2713,7 @@ EOM
         # correctly marked.  I have implemented this as a general rule, which
         # should be safe, but if necessary it could be restricted to certain
         # container statement types such as 'for'.
-        $paren_type[$paren_depth] = $container_type
+        $rparen_type->[$paren_depth] = $container_type
           if ( $last_nonblank_token ne ')' );
 
         ( $type_sequence, $indent_flag ) =
@@ -2760,7 +2760,7 @@ EOM
             $self->warning(
                 "Syntax error? found token '$last_nonblank_type' then '('\n");
         }
-        $paren_structural_type[$paren_depth] = $type;
+        $rparen_structural_type->[$paren_depth] = $type;
         return;
 
     } ## end sub do_LEFT_PARENTHESIS
@@ -2773,11 +2773,11 @@ EOM
         ( $type_sequence, $indent_flag ) =
           $self->decrease_nesting_depth( PAREN, $rtoken_map->[$i_tok] );
 
-        if ( $paren_structural_type[$paren_depth] eq '{' ) {
+        if ( $rparen_structural_type->[$paren_depth] eq '{' ) {
             $type = '}';
         }
 
-        $container_type = $paren_type[$paren_depth];
+        $container_type = $rparen_type->[$paren_depth];
 
         # restore statement type as 'sub' at closing paren of a signature
         # so that a subsequent ':' is identified as an attribute
@@ -2786,8 +2786,8 @@ EOM
         }
 
         #    /^(for|foreach)$/
-        if ( $is_for_foreach{ $paren_type[$paren_depth] } ) {
-            my $num_sc = $paren_semicolon_count[$paren_depth];
+        if ( $is_for_foreach{ $rparen_type->[$paren_depth] } ) {
+            my $num_sc = $rparen_semicolon_count->[$paren_depth];
             if ( $num_sc > 0 && $num_sc != 2 ) {
                 $self->warning("Expected 2 ';' in 'for(;;)' but saw $num_sc\n");
             }
@@ -2828,7 +2828,7 @@ EOM
         $want_paren     = EMPTY_STRING;
 
         #    /^(for|foreach)$/
-        if ( $is_for_foreach{ $paren_type[$paren_depth] } )
+        if ( $is_for_foreach{ $rparen_type->[$paren_depth] } )
         {    # mark ; in for loop
 
             # Be careful: we do not want a semicolon such as the
@@ -2836,13 +2836,13 @@ EOM
             #
             #    for (sort {strcoll($a,$b);} keys %investments) {
 
-            if (   $brace_depth == $depth_array[PAREN][BRACE][$paren_depth]
+            if (   $brace_depth == $rdepth_array->[PAREN][BRACE][$paren_depth]
                 && $square_bracket_depth ==
-                $depth_array[PAREN][SQUARE_BRACKET][$paren_depth] )
+                $rdepth_array->[PAREN][SQUARE_BRACKET][$paren_depth] )
             {
 
                 $type = 'f';
-                $paren_semicolon_count[$paren_depth]++;
+                $rparen_semicolon_count->[$paren_depth]++;
             }
         }
         return;
@@ -2974,7 +2974,7 @@ EOM
         }
 
         elsif ( $last_nonblank_token eq ')' ) {
-            $last_nonblank_token = $paren_type[ $paren_depth + 1 ];
+            $last_nonblank_token = $rparen_type->[ $paren_depth + 1 ];
 
             # defensive move in case of a nesting error (pbug.t)
             # in which this ')' had no previous '('
@@ -3071,17 +3071,17 @@ EOM
             }
         }
 
-        $brace_type[ ++$brace_depth ] = $block_type;
+        $rbrace_type->[ ++$brace_depth ] = $block_type;
 
         # Patch for CLASS BLOCK definitions: do not update the package for the
         # current depth if this is a BLOCK type definition.
         # TODO: should make 'class' separate from 'package' and only do
         # this for 'class'
-        $brace_package[$brace_depth] = $current_package
+        $rbrace_package->[$brace_depth] = $current_package
           if ( substr( $block_type, 0, 8 ) ne 'package ' );
 
-        $brace_structural_type[$brace_depth] = $type;
-        $brace_context[$brace_depth]         = $context;
+        $rbrace_structural_type->[$brace_depth] = $type;
+        $rbrace_context->[$brace_depth]         = $context;
         ( $type_sequence, $indent_flag ) =
           $self->increase_nesting_depth( BRACE, $rtoken_map->[$i_tok] );
         return;
@@ -3092,10 +3092,10 @@ EOM
         my $self = shift;
 
         # '}'
-        $block_type = $brace_type[$brace_depth];
+        $block_type = $rbrace_type->[$brace_depth];
         if ($block_type) { $statement_type = EMPTY_STRING }
-        if ( defined( $brace_package[$brace_depth] ) ) {
-            $current_package = $brace_package[$brace_depth];
+        if ( defined( $rbrace_package->[$brace_depth] ) ) {
+            $current_package = $rbrace_package->[$brace_depth];
         }
 
         # can happen on brace error (caught elsewhere)
@@ -3104,7 +3104,7 @@ EOM
         ( $type_sequence, $indent_flag ) =
           $self->decrease_nesting_depth( BRACE, $rtoken_map->[$i_tok] );
 
-        if ( $brace_structural_type[$brace_depth] eq 'L' ) {
+        if ( $rbrace_structural_type->[$brace_depth] eq 'L' ) {
             $type = 'R';
         }
 
@@ -3115,7 +3115,7 @@ EOM
             $tok = $block_type;
         }
 
-        $context = $brace_context[$brace_depth];
+        $context = $rbrace_context->[$brace_depth];
         if ( $brace_depth > 0 ) { $brace_depth--; }
         return;
     } ## end sub do_RIGHT_CURLY_BRACKET
@@ -3304,7 +3304,7 @@ EOM
         # Within a signature, unless we are in a ternary.  For example,
         # from 't/filter_example.t':
         #    method foo4 ( $class: $bar ) { $class->bar($bar) }
-        elsif ( $paren_type[$paren_depth] =~ /^sub\b/
+        elsif ( $rparen_type->[$paren_depth] =~ /^sub\b/
             && !is_balanced_closing_container(QUESTION_COLON) )
         {
             $type              = 'A';
@@ -3314,7 +3314,7 @@ EOM
         # check for scalar attribute, such as
         # my $foo : shared = 1;
         elsif ($is_my_our_state{$statement_type}
-            && $current_depth[QUESTION_COLON] == 0 )
+            && $rcurrent_depth->[QUESTION_COLON] == 0 )
         {
             $type              = 'A';
             $in_attribute_list = 1;
@@ -3400,7 +3400,8 @@ EOM
         my $self = shift;
 
         # '['
-        $square_bracket_type[ ++$square_bracket_depth ] = $last_nonblank_token;
+        $rsquare_bracket_type->[ ++$square_bracket_depth ] =
+          $last_nonblank_token;
         ( $type_sequence, $indent_flag ) =
           $self->increase_nesting_depth( SQUARE_BRACKET,
             $rtoken_map->[$i_tok] );
@@ -3410,7 +3411,7 @@ EOM
         if ( !is_non_structural_brace() ) {
             $type = '{';
         }
-        $square_bracket_structural_type[$square_bracket_depth] = $type;
+        $rsquare_bracket_structural_type->[$square_bracket_depth] = $type;
         return;
     } ## end sub do_LEFT_SQUARE_BRACKET
 
@@ -3423,15 +3424,16 @@ EOM
           $self->decrease_nesting_depth( SQUARE_BRACKET,
             $rtoken_map->[$i_tok] );
 
-        if ( $square_bracket_structural_type[$square_bracket_depth] eq '{' ) {
+        if ( $rsquare_bracket_structural_type->[$square_bracket_depth] eq '{' )
+        {
             $type = '}';
         }
 
         # propagate type information for smartmatch operator.  This is
         # necessary to enable us to know if an operator or term is expected
         # next.
-        if ( $square_bracket_type[$square_bracket_depth] eq '~~' ) {
-            $tok = $square_bracket_type[$square_bracket_depth];
+        if ( $rsquare_bracket_type->[$square_bracket_depth] eq '~~' ) {
+            $tok = $rsquare_bracket_type->[$square_bracket_depth];
         }
 
         if ( $square_bracket_depth > 0 ) { $square_bracket_depth--; }
@@ -3855,12 +3857,12 @@ EOM
         my $self = shift;
 
         # find type of a bareword followed by a '=>'
-        if ( $is_constant{$current_package}{$tok} ) {
+        if ( $ris_constant->{$current_package}{$tok} ) {
             $type = 'C';
         }
-        elsif ( $is_user_function{$current_package}{$tok} ) {
+        elsif ( $ris_user_function->{$current_package}{$tok} ) {
             $type      = 'U';
-            $prototype = $user_function_prototype{$current_package}{$tok};
+            $prototype = $ruser_function_prototype->{$current_package}{$tok};
         }
         elsif ( $tok =~ /^v\d+$/ ) {
             $type = 'v';
@@ -3965,7 +3967,7 @@ EOM
             }
 
             else {
-                $is_constant{$current_package}{$next_nonblank_tok2} = 1;
+                $ris_constant->{$current_package}{$next_nonblank_tok2} = 1;
             }
         }
         return;
@@ -4111,7 +4113,7 @@ EOM
         if (   $statement_type eq 'use'
             && $last_nonblank_token eq 'use' )
         {
-            $saw_use_module{$current_package}->{$tok} = 1;
+            $rsaw_use_module->{$current_package}->{$tok} = 1;
         }
 
         if ( $type eq 'w' ) {
@@ -4125,7 +4127,7 @@ EOM
                 #    '*' => \&sse_mul,
                 #    '/' => \&sse_div;
                 # TODO: this could eventually be generalized
-                if (   $saw_use_module{$current_package}->{'RPerl'}
+                if (   $rsaw_use_module->{$current_package}->{'RPerl'}
                     && $tok =~ /^sse_(mul|div|add|sub)$/ )
                 {
 
@@ -4188,9 +4190,9 @@ EOM
             # patch for SWITCH/CASE if 'case' and 'when are
             # not treated as keywords:
             if (
-                ( $tok eq 'case' && $brace_type[$brace_depth] eq 'switch' )
+                ( $tok eq 'case' && $rbrace_type->[$brace_depth] eq 'switch' )
                 || (   $tok eq 'when'
-                    && $brace_type[$brace_depth] eq 'given' )
+                    && $rbrace_type->[$brace_depth] eq 'given' )
               )
             {
                 $statement_type = $tok;    # next '{' is block
@@ -5252,10 +5254,10 @@ EOM
             DEBUG_TOKENIZE && do {
                 local $LIST_SEPARATOR = ')(';
                 my @debug_list = (
-                    $last_nonblank_token,      $tok,
-                    $next_tok,                 $brace_depth,
-                    $brace_type[$brace_depth], $paren_depth,
-                    $paren_type[$paren_depth],
+                    $last_nonblank_token,         $tok,
+                    $next_tok,                    $brace_depth,
+                    $rbrace_type->[$brace_depth], $paren_depth,
+                    $rparen_type->[$paren_depth],
                 );
                 print STDOUT "TOKENIZE:(@debug_list)\n";
             };
@@ -6310,7 +6312,7 @@ sub label_ok {
 
     # Decide if a bare word followed by a colon here is a label
     # USES GLOBAL VARIABLES: $last_nonblank_token, $last_nonblank_type,
-    # $brace_depth, @brace_type
+    # $brace_depth, $rbrace_type
 
     # if it follows an opening or closing code block curly brace..
     if ( ( $last_nonblank_token eq '{' || $last_nonblank_token eq '}' )
@@ -6318,7 +6320,7 @@ sub label_ok {
     {
 
         # it is a label if and only if the curly encloses a code block
-        return $brace_type[$brace_depth];
+        return $rbrace_type->[$brace_depth];
     }
 
     # otherwise, it is a label if and only if it follows a ';' (real or fake)
@@ -6338,7 +6340,7 @@ sub code_block_type {
     # to indicate the type of code block.  (For example, 'last_nonblank_token'
     # might be 'if' for an if block, 'else' for an else block, etc).
     # USES GLOBAL VARIABLES: $last_nonblank_token, $last_nonblank_type,
-    # $last_nonblank_block_type, $brace_depth, @brace_type
+    # $last_nonblank_block_type, $brace_depth, $rbrace_type
 
     # handle case of multiple '{'s
 
@@ -6351,7 +6353,7 @@ sub code_block_type {
 
         # opening brace where a statement may appear is probably
         # a code block but might be and anonymous hash reference
-        if ( $brace_type[$brace_depth] ) {
+        if ( $rbrace_type->[$brace_depth] ) {
             return $self->decide_if_code_block( $i, $rtokens, $rtoken_type,
                 $max_token_index );
         }
@@ -6467,7 +6469,7 @@ sub code_block_type {
     #    map( { foreach my $item ( '0', '1' ) { print $item} } qw(a b c) );
     # Check for a code block within a parenthesized function call
     elsif ( $last_nonblank_token eq '(' ) {
-        my $paren_type = $paren_type[$paren_depth];
+        my $paren_type = $rparen_type->[$paren_depth];
 
         #                   /^(map|grep|sort)$/
         if ( $paren_type && $is_sort_map_grep{$paren_type} ) {
@@ -6751,7 +6753,7 @@ sub is_non_structural_brace {
 #
 # The matrix
 #
-#         $depth_array[$a][$b][ $current_depth[$a] ] = $current_depth[$b];
+#  $rdepth_array->[$a][$b][ $rcurrent_depth->[$a] ] = $rcurrent_depth->[$b];
 #
 # saves the nesting depth of brace type $b (where $b is either of the other
 # nesting types) when brace type $a enters a new depth.  When this depth
@@ -6768,12 +6770,12 @@ sub is_non_structural_brace {
 sub increase_nesting_depth {
     my ( $self, $aa, $pos ) = @_;
 
-    # USES GLOBAL VARIABLES: @current_depth,
-    # @current_sequence_number, @depth_array, @starting_line_of_current_depth,
-    # $statement_type
-    $current_depth[$aa]++;
+    # USES GLOBAL VARIABLES: $rcurrent_depth,
+    # $rcurrent_sequence_number, $rdepth_array,
+    # $rstarting_line_of_current_depth, $statement_type
+    my $cd_aa = ++$rcurrent_depth->[$aa];
     $total_depth++;
-    $total_depth[$aa][ $current_depth[$aa] ] = $total_depth;
+    $rtotal_depth->[$aa][$cd_aa] = $total_depth;
     my $input_line_number = $self->[_last_line_number_];
     my $input_line        = $self->[_line_of_text_];
 
@@ -6784,33 +6786,33 @@ sub increase_nesting_depth {
     # make a new unique sequence number
     my $seqno = $next_sequence_number++;
 
-    $current_sequence_number[$aa][ $current_depth[$aa] ] = $seqno;
+    $rcurrent_sequence_number->[$aa][$cd_aa] = $seqno;
 
-    $starting_line_of_current_depth[$aa][ $current_depth[$aa] ] =
+    $rstarting_line_of_current_depth->[$aa][$cd_aa] =
       [ $input_line_number, $input_line, $pos ];
 
     for my $bb ( 0 .. @closing_brace_names - 1 ) {
         next if ( $bb == $aa );
-        $depth_array[$aa][$bb][ $current_depth[$aa] ] = $current_depth[$bb];
+        $rdepth_array->[$aa][$bb][$cd_aa] = $rcurrent_depth->[$bb];
     }
 
     # set a flag for indenting a nested ternary statement
     my $indent = 0;
     if ( $aa == QUESTION_COLON ) {
-        $nested_ternary_flag[ $current_depth[$aa] ] = 0;
-        if ( $current_depth[$aa] > 1 ) {
-            if ( $nested_ternary_flag[ $current_depth[$aa] - 1 ] == 0 ) {
-                my $pdepth = $total_depth[$aa][ $current_depth[$aa] - 1 ];
+        $rnested_ternary_flag->[$cd_aa] = 0;
+        if ( $cd_aa > 1 ) {
+            if ( $rnested_ternary_flag->[ $cd_aa - 1 ] == 0 ) {
+                my $pdepth = $rtotal_depth->[$aa][ $cd_aa - 1 ];
                 if ( $pdepth == $total_depth - 1 ) {
                     $indent = 1;
-                    $nested_ternary_flag[ $current_depth[$aa] - 1 ] = -1;
+                    $rnested_ternary_flag->[ $cd_aa - 1 ] = -1;
                 }
             }
         }
     }
 
     # Fix part #1 for git82: save last token type for propagation of type 'Z'
-    $nested_statement_type[$aa][ $current_depth[$aa] ] =
+    $rnested_statement_type->[$aa][$cd_aa] =
       [ $statement_type, $last_nonblank_type, $last_nonblank_token ];
     $statement_type = EMPTY_STRING;
     return ( $seqno, $indent );
@@ -6823,14 +6825,15 @@ sub is_balanced_closing_container {
     my ($aa) = @_;
 
     # cannot close if there was no opening
-    return unless ( $current_depth[$aa] > 0 );
+    my $cd_aa = $rcurrent_depth->[$aa];
+    return unless ( $cd_aa > 0 );
 
     # check that any other brace types $bb contained within would be balanced
     for my $bb ( 0 .. @closing_brace_names - 1 ) {
         next if ( $bb == $aa );
         return
-          unless ( $depth_array[$aa][$bb][ $current_depth[$aa] ] ==
-            $current_depth[$bb] );
+          unless (
+            $rdepth_array->[$aa][$bb][$cd_aa] == $rcurrent_depth->[$bb] );
     }
 
     # OK, everything will be balanced
@@ -6841,8 +6844,8 @@ sub decrease_nesting_depth {
 
     my ( $self, $aa, $pos ) = @_;
 
-    # USES GLOBAL VARIABLES: @current_depth,
-    # @current_sequence_number, @depth_array, @starting_line_of_current_depth
+    # USES GLOBAL VARIABLES: $rcurrent_depth,
+    # $rcurrent_sequence_number, $rdepth_array, $rstarting_line_of_current_depth
     # $statement_type
     my $seqno             = 0;
     my $input_line_number = $self->[_last_line_number_];
@@ -6850,23 +6853,24 @@ sub decrease_nesting_depth {
 
     my $outdent = 0;
     $total_depth--;
-    if ( $current_depth[$aa] > 0 ) {
+    my $cd_aa = $rcurrent_depth->[$aa];
+    if ( $cd_aa > 0 ) {
 
         # set a flag for un-indenting after seeing a nested ternary statement
-        $seqno = $current_sequence_number[$aa][ $current_depth[$aa] ];
+        $seqno = $rcurrent_sequence_number->[$aa][$cd_aa];
         if ( $aa == QUESTION_COLON ) {
-            $outdent = $nested_ternary_flag[ $current_depth[$aa] ];
+            $outdent = $rnested_ternary_flag->[$cd_aa];
         }
 
         # Fix part #2 for git82: use saved type for propagation of type 'Z'
         # through type L-R braces.  Perl seems to allow ${bareword}
         # as an indirect object, but nothing much more complex than that.
         ( $statement_type, my $saved_type, my $saved_token ) =
-          @{ $nested_statement_type[$aa][ $current_depth[$aa] ] };
+          @{ $rnested_statement_type->[$aa][ $rcurrent_depth->[$aa] ] };
         if (   $aa == BRACE
             && $saved_type eq 'Z'
             && $last_nonblank_type eq 'w'
-            && $brace_structural_type[$brace_depth] eq 'L' )
+            && $rbrace_structural_type->[$brace_depth] eq 'L' )
         {
             $last_nonblank_type = $saved_type;
         }
@@ -6875,12 +6879,11 @@ sub decrease_nesting_depth {
         for my $bb ( 0 .. @closing_brace_names - 1 ) {
             next if ( $bb == $aa );
 
-            unless ( $depth_array[$aa][$bb][ $current_depth[$aa] ] ==
-                $current_depth[$bb] )
+            unless (
+                $rdepth_array->[$aa][$bb][$cd_aa] == $rcurrent_depth->[$bb] )
             {
                 my $diff =
-                  $current_depth[$bb] -
-                  $depth_array[$aa][$bb][ $current_depth[$aa] ];
+                  $rcurrent_depth->[$bb] - $rdepth_array->[$aa][$bb][$cd_aa];
 
                 # don't whine too many times
                 my $saw_brace_error = $self->get_saw_brace_error();
@@ -6893,9 +6896,7 @@ sub decrease_nesting_depth {
                   )
                 {
                     $self->interrupt_logfile();
-                    my $rsl =
-                      $starting_line_of_current_depth[$aa]
-                      [ $current_depth[$aa] ];
+                    my $rsl = $rstarting_line_of_current_depth->[$aa][$cd_aa];
                     my $sl  = $rsl->[0];
                     my $rel = [ $input_line_number, $input_line, $pos ];
                     my $el  = $rel->[0];
@@ -6918,8 +6919,8 @@ EOM
 
                     if ( $diff > 0 ) {
                         my $rml =
-                          $starting_line_of_current_depth[$bb]
-                          [ $current_depth[$bb] ];
+                          $rstarting_line_of_current_depth->[$bb]
+                          [ $rcurrent_depth->[$bb] ];
                         my $ml = $rml->[0];
                         $msg .=
 "    The most recent un-matched $bname is on line $ml\n";
@@ -6932,7 +6933,7 @@ EOM
                 $self->increment_brace_error();
             }
         }
-        $current_depth[$aa]--;
+        $rcurrent_depth->[$aa]--;
     }
     else {
 
@@ -6955,17 +6956,17 @@ EOM
 
 sub check_final_nesting_depths {
 
-    # USES GLOBAL VARIABLES: @current_depth, @starting_line_of_current_depth
+    # USES GLOBAL VARIABLES: $rcurrent_depth, $rstarting_line_of_current_depth
     my $self = shift;
 
     for my $aa ( 0 .. @closing_brace_names - 1 ) {
 
-        if ( $current_depth[$aa] ) {
-            my $rsl =
-              $starting_line_of_current_depth[$aa][ $current_depth[$aa] ];
+        my $cd_aa = $rcurrent_depth->[$aa];
+        if ($cd_aa) {
+            my $rsl = $rstarting_line_of_current_depth->[$aa][$cd_aa];
             my $sl  = $rsl->[0];
             my $msg = <<"EOM";
-Final nesting depth of $opening_brace_names[$aa]s is $current_depth[$aa]
+Final nesting depth of $opening_brace_names[$aa]s is $cd_aa
 The most recent un-matched $opening_brace_names[$aa] is on line $sl
 EOM
             $self->indicate_error( $msg, @{$rsl}, '^' );
@@ -7304,7 +7305,7 @@ sub guess_if_here_doc {
     # This is how many lines we will search for a target as part of the
     # guessing strategy.  It is a constant because there is probably
     # little reason to change it.
-    # USES GLOBAL VARIABLES: $current_package %is_constant,
+    # USES GLOBAL VARIABLES: $current_package $ris_constant,
     my $HERE_DOC_WINDOW = 40;
 
     my $here_doc_expected = 0;
@@ -7332,7 +7333,7 @@ sub guess_if_here_doc {
         }
         else {                          # still unsure..taking a wild guess
 
-            if ( !$is_constant{$current_package}{$next_token} ) {
+            if ( !$ris_constant->{$current_package}{$next_token} ) {
                 $here_doc_expected = 1;
                 $msg .=
                   " -- guessing it's a here-doc ($next_token not a constant)\n";
@@ -7356,7 +7357,7 @@ sub scan_bare_identifier_do {
     # this routine is called to scan a token starting with an alphanumeric
     # variable or package separator, :: or '.
     # USES GLOBAL VARIABLES: $current_package, $last_nonblank_token,
-    # $last_nonblank_type,@paren_type, $paren_depth
+    # $last_nonblank_type, $rparen_type, $paren_depth
 
     my ( $self, $input_line, $i, $tok, $type, $prototype, $rtoken_map,
         $max_token_index )
@@ -7432,7 +7433,7 @@ sub scan_bare_identifier_do {
                 $self->report_v_string($tok);
             }
 
-            elsif ( $is_constant{$package}{$sub_name} ) {
+            elsif ( $ris_constant->{$package}{$sub_name} ) {
                 $type = 'C';
             }
 
@@ -7453,21 +7454,21 @@ sub scan_bare_identifier_do {
             # If this ever changes, here is the update
             # to make perltidy behave accordingly:
 
-            # elsif ( $is_block_function{$package}{$tok} ) {
+            # elsif ( $ris_block_function->{$package}{$tok} ) {
             #    $tok='eval'; # patch to do braces like eval  - doesn't work
             #    $type = 'k';
             #}
             # TODO: This could become a separate type to allow for different
             # future behavior:
-            elsif ( $is_block_function{$package}{$sub_name} ) {
+            elsif ( $ris_block_function->{$package}{$sub_name} ) {
                 $type = 'G';
             }
-            elsif ( $is_block_list_function{$package}{$sub_name} ) {
+            elsif ( $ris_block_list_function->{$package}{$sub_name} ) {
                 $type = 'G';
             }
-            elsif ( $is_user_function{$package}{$sub_name} ) {
+            elsif ( $ris_user_function->{$package}{$sub_name} ) {
                 $type      = 'U';
-                $prototype = $user_function_prototype{$package}{$sub_name};
+                $prototype = $ruser_function_prototype->{$package}{$sub_name};
             }
 
             # check for indirect object
@@ -7486,7 +7487,8 @@ sub scan_bare_identifier_do {
                     # or preceded by something like 'print(' or 'printf('
                     || (
                         ( $last_nonblank_token eq '(' )
-                        && $is_indirect_object_taker{ $paren_type[$paren_depth]
+                        && $is_indirect_object_taker{
+                            $rparen_type->[$paren_depth]
                         }
 
                     )
@@ -7683,8 +7685,8 @@ sub check_prototype {
         $proto =~ s/^\s*\(\s*//;
         $proto =~ s/\s*\)$//;
         if ($proto) {
-            $is_user_function{$package}{$subname}        = 1;
-            $user_function_prototype{$package}{$subname} = "($proto)";
+            $ris_user_function->{$package}{$subname}        = 1;
+            $ruser_function_prototype->{$package}{$subname} = "($proto)";
 
             # prototypes containing '&' must be treated specially..
             if ( $proto =~ /\&/ ) {
@@ -7692,22 +7694,22 @@ sub check_prototype {
                 # right curly braces of prototypes ending in
                 # '&' may be followed by an operator
                 if ( $proto =~ /\&$/ ) {
-                    $is_block_function{$package}{$subname} = 1;
+                    $ris_block_function->{$package}{$subname} = 1;
                 }
 
                 # right curly braces of prototypes NOT ending in
                 # '&' may NOT be followed by an operator
                 elsif ( $proto !~ /\&$/ ) {
-                    $is_block_list_function{$package}{$subname} = 1;
+                    $ris_block_list_function->{$package}{$subname} = 1;
                 }
             }
         }
         else {
-            $is_constant{$package}{$subname} = 1;
+            $ris_constant->{$package}{$subname} = 1;
         }
     }
     else {
-        $is_user_function{$package}{$subname} = 1;
+        $ris_user_function->{$package}{$subname} = 1;
     }
     return;
 } ## end sub check_prototype
@@ -8748,7 +8750,7 @@ EOM
         # a name is given if and only if a non-anonymous sub is
         # appropriate.
         # USES GLOBAL VARS: $current_package, $last_nonblank_token,
-        # $in_attribute_list, %saw_function_definition,
+        # $in_attribute_list, $rsaw_function_definition,
         # $statement_type
 
         my ( $self, $rinput_hash ) = @_;
@@ -8807,7 +8809,8 @@ EOM
 
                 # lexical subs use the block sequence number as a package name
                 my $seqno =
-                  $current_sequence_number[BRACE][ $current_depth[BRACE] ];
+                  $rcurrent_sequence_number->[BRACE]
+                  [ $rcurrent_depth->[BRACE] ];
                 $seqno   = 1 unless ( defined($seqno) );
                 $package = $seqno;
                 if ( $warn_if_lexical{$subname} ) {
@@ -8954,10 +8957,11 @@ EOM
                     # Check for multiple definitions of a sub, but
                     # it is ok to have multiple sub BEGIN, etc,
                     # so we do not complain if name is all caps
-                    if (   $saw_function_definition{$subname}{$package}
+                    if (   $rsaw_function_definition->{$subname}{$package}
                         && $subname !~ /^[A-Z]+$/ )
                     {
-                        my $lno = $saw_function_definition{$subname}{$package};
+                        my $lno =
+                          $rsaw_function_definition->{$subname}{$package};
                         if ( $package =~ /^\d/ ) {
                             $self->warning(
 "already saw definition of lexical 'sub $subname' at line $lno\n"
@@ -8970,7 +8974,7 @@ EOM
                             ) unless (DEVEL_MODE);
                         }
                     }
-                    $saw_function_definition{$subname}{$package} =
+                    $rsaw_function_definition->{$subname}{$package} =
                       $self->[_last_line_number_];
                 }
             }
