@@ -45,7 +45,6 @@ use vars qw{
   $brace_depth
   $context
   $current_package
-  $in_attribute_list
   $last_nonblank_block_type
   $last_nonblank_token
   $last_nonblank_type
@@ -1486,17 +1485,16 @@ sub prepare_for_a_new_file {
     $last_nonblank_block_type = EMPTY_STRING;
 
     # scalars for remembering statement types across multiple lines
-    $statement_type    = EMPTY_STRING;    # '' or 'use' or 'sub..' or 'case..'
-    $in_attribute_list = 0;
+    $statement_type = EMPTY_STRING;     # '' or 'use' or 'sub..' or 'case..'
 
     # scalars for remembering where we are in the file
     $current_package = "main";
     $context         = UNKNOWN_CONTEXT;
 
     # hashes used to remember function information
-    $ris_constant             = {};       # user-defined constants
-    $ris_user_function        = {};       # user-defined functions
-    $ruser_function_prototype = {};       # their prototypes
+    $ris_constant             = {};     # user-defined constants
+    $ris_user_function        = {};     # user-defined functions
+    $ruser_function_prototype = {};     # their prototypes
     $ris_block_function       = {};
     $ris_block_list_function  = {};
     $rsaw_function_definition = {};
@@ -1998,7 +1996,6 @@ EOM
             $brace_depth,
             $context,
             $current_package,
-            $in_attribute_list,
             $last_nonblank_block_type,
             $last_nonblank_token,
             $last_nonblank_type,
@@ -3297,8 +3294,8 @@ EOM
         # either after a 'sub' keyword or within a paren list
         # Added 'package' (can be 'class') for --use-feature=class (rt145706)
         elsif ( $statement_type =~ /^(sub|package)\b/ ) {
-            $type              = 'A';
-            $in_attribute_list = 1;
+            $type = 'A';
+            $self->[_in_attribute_list_] = 1;
         }
 
         # Within a signature, unless we are in a ternary.  For example,
@@ -3307,8 +3304,8 @@ EOM
         elsif ( $rparen_type->[$paren_depth] =~ /^sub\b/
             && !is_balanced_closing_container(QUESTION_COLON) )
         {
-            $type              = 'A';
-            $in_attribute_list = 1;
+            $type = 'A';
+            $self->[_in_attribute_list_] = 1;
         }
 
         # check for scalar attribute, such as
@@ -3316,8 +3313,8 @@ EOM
         elsif ($is_my_our_state{$statement_type}
             && $rcurrent_depth->[QUESTION_COLON] == 0 )
         {
-            $type              = 'A';
-            $in_attribute_list = 1;
+            $type = 'A';
+            $self->[_in_attribute_list_] = 1;
         }
 
         # Look for Switch::Plain syntax if an error would otherwise occur
@@ -4264,7 +4261,7 @@ EOM
             $tok_kw .= '::';
         }
 
-        if ($in_attribute_list) {
+        if ( $self->[_in_attribute_list_] ) {
             my $is_attribute = $self->do_ATTRIBUTE_LIST($next_nonblank_token);
             return if ($is_attribute);
         }
@@ -5264,8 +5261,8 @@ EOM
 
             # Turn off attribute list on first non-blank, non-bareword.
             # Added '#' to fix c038 (later moved above).
-            if ( $in_attribute_list && $pre_type ne 'w' ) {
-                $in_attribute_list = 0;
+            if ( $pre_type ne 'w' && $self->[_in_attribute_list_] ) {
+                $self->[_in_attribute_list_] = 0;
             }
 
             #--------------------------------------------------------
@@ -5344,8 +5341,7 @@ EOM
             }
         }
 
-        $self->[_in_attribute_list_] = $in_attribute_list;
-        $self->[_in_quote_]          = $in_quote;
+        $self->[_in_quote_] = $in_quote;
         $self->[_quote_target_] =
           $in_quote ? matching_end_token($quote_character) : EMPTY_STRING;
         $self->[_rhere_target_list_] = $rhere_target_list;
@@ -8750,7 +8746,7 @@ EOM
         # a name is given if and only if a non-anonymous sub is
         # appropriate.
         # USES GLOBAL VARS: $current_package, $last_nonblank_token,
-        # $in_attribute_list, $rsaw_function_definition,
+        # $rsaw_function_definition,
         # $statement_type
 
         my ( $self, $rinput_hash ) = @_;
@@ -8904,8 +8900,8 @@ EOM
 
             # catch case of line with leading ATTR ':' after anonymous sub
             if ( $pos == $pos_beg && $tok eq ':' ) {
-                $type              = 'A';
-                $in_attribute_list = 1;
+                $type = 'A';
+                $self->[_in_attribute_list_] = 1;
             }
 
             # Otherwise, if we found a match we must convert back from
