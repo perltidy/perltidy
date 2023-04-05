@@ -38,45 +38,47 @@ use constant ORD_SPACE         => 32;
 use constant ORD_PRINTABLE_MIN => 33;
 use constant ORD_PRINTABLE_MAX => 126;
 
-# PACKAGE VARIABLES for processing an entire FILE.
-# These must be package variables because most may get localized during
-# processing.  Most are initialized in sub prepare_for_a_new_file.
-use vars qw{
-  $brace_depth
-  $context
-  $current_package
-  $last_nonblank_block_type
-  $last_nonblank_token
-  $last_nonblank_type
-  $next_sequence_number
-  $paren_depth
-  $square_bracket_depth
-  $statement_type
-  $total_depth
-  $ris_block_function
-  $ris_block_list_function
-  $ris_constant
-  $ris_user_function
-  $rsaw_function_definition
-  $rsaw_use_module
-  $ruser_function_prototype
-  $rbrace_context
-  $rbrace_package
-  $rbrace_structural_type
-  $rbrace_type
-  $rcurrent_depth
-  $rcurrent_sequence_number
-  $rdepth_array
-  $rnested_statement_type
-  $rnested_ternary_flag
-  $rparen_semicolon_count
-  $rparen_structural_type
-  $rparen_type
-  $rsquare_bracket_structural_type
-  $rsquare_bracket_type
-  $rstarting_line_of_current_depth
-  $rtotal_depth
-};
+# GLOBAL VARIABLES which change during tokenization:
+# These could also be stored in $self but it is more convenient and
+# efficient to make them global lexical variables.
+# INITIALIZER: sub prepare_for_a_new_file
+my (
+
+    $brace_depth,
+    $context,
+    $current_package,
+    $last_nonblank_block_type,
+    $last_nonblank_token,
+    $last_nonblank_type,
+    $next_sequence_number,
+    $paren_depth,
+    $rbrace_context,
+    $rbrace_package,
+    $rbrace_structural_type,
+    $rbrace_type,
+    $rcurrent_depth,
+    $rcurrent_sequence_number,
+    $rdepth_array,
+    $ris_block_function,
+    $ris_block_list_function,
+    $ris_constant,
+    $ris_user_function,
+    $rnested_statement_type,
+    $rnested_ternary_flag,
+    $rparen_semicolon_count,
+    $rparen_structural_type,
+    $rparen_type,
+    $rsaw_function_definition,
+    $rsaw_use_module,
+    $rsquare_bracket_structural_type,
+    $rsquare_bracket_type,
+    $rstarting_line_of_current_depth,
+    $rtotal_depth,
+    $ruser_function_prototype,
+    $square_bracket_depth,
+    $statement_type,
+    $total_depth,
+);
 
 my (
 
@@ -1605,6 +1607,7 @@ sub prepare_for_a_new_file {
 
     sub initialize_tokenizer_state {
 
+        # TV0: initialized once
         # TV1: initialized on each call
         # TV2: initialized on each call
         # TV3:
@@ -1650,6 +1653,45 @@ sub prepare_for_a_new_file {
 
     sub save_tokenizer_state {
 
+        # Save package variables:
+        my $rTV0 = [
+
+            $brace_depth,
+            $context,
+            $current_package,
+            $last_nonblank_block_type,
+            $last_nonblank_token,
+            $last_nonblank_type,
+            $next_sequence_number,
+            $paren_depth,
+            $rbrace_context,
+            $rbrace_package,
+            $rbrace_structural_type,
+            $rbrace_type,
+            $rcurrent_depth,
+            $rcurrent_sequence_number,
+            $rdepth_array,
+            $ris_block_function,
+            $ris_block_list_function,
+            $ris_constant,
+            $ris_user_function,
+            $rnested_statement_type,
+            $rnested_ternary_flag,
+            $rparen_semicolon_count,
+            $rparen_structural_type,
+            $rparen_type,
+            $rsaw_function_definition,
+            $rsaw_use_module,
+            $rsquare_bracket_structural_type,
+            $rsquare_bracket_type,
+            $rstarting_line_of_current_depth,
+            $rtotal_depth,
+            $ruser_function_prototype,
+            $square_bracket_depth,
+            $statement_type,
+            $total_depth,
+        ];
+
         my $rTV1 = [
             $block_type,        $container_type,    $expecting,
             $i,                 $i_tok,             $input_line,
@@ -1694,12 +1736,51 @@ sub prepare_for_a_new_file {
             $last_last_nonblank_type_sequence,
             $last_nonblank_prototype,
         ];
-        return [ $rTV1, $rTV2, $rTV3, $rTV4, $rTV5, $rTV6 ];
+        return [ $rTV0, $rTV1, $rTV2, $rTV3, $rTV4, $rTV5, $rTV6 ];
     } ## end sub save_tokenizer_state
 
     sub restore_tokenizer_state {
         my ($rstate) = @_;
-        my ( $rTV1, $rTV2, $rTV3, $rTV4, $rTV5, $rTV6 ) = @{$rstate};
+        my ( $rTV0, $rTV1, $rTV2, $rTV3, $rTV4, $rTV5, $rTV6 ) = @{$rstate};
+
+        (
+
+            $brace_depth,
+            $context,
+            $current_package,
+            $last_nonblank_block_type,
+            $last_nonblank_token,
+            $last_nonblank_type,
+            $next_sequence_number,
+            $paren_depth,
+            $rbrace_context,
+            $rbrace_package,
+            $rbrace_structural_type,
+            $rbrace_type,
+            $rcurrent_depth,
+            $rcurrent_sequence_number,
+            $rdepth_array,
+            $ris_block_function,
+            $ris_block_list_function,
+            $ris_constant,
+            $ris_user_function,
+            $rnested_statement_type,
+            $rnested_ternary_flag,
+            $rparen_semicolon_count,
+            $rparen_structural_type,
+            $rparen_type,
+            $rsaw_function_definition,
+            $rsaw_use_module,
+            $rsquare_bracket_structural_type,
+            $rsquare_bracket_type,
+            $rstarting_line_of_current_depth,
+            $rtotal_depth,
+            $ruser_function_prototype,
+            $square_bracket_depth,
+            $statement_type,
+            $total_depth,
+        ) = @{$rTV0};
+
         (
             $block_type,        $container_type,    $expecting,
             $i,                 $i_tok,             $input_line,
@@ -1989,45 +2070,6 @@ EOM
 
         # save the logger object for error messages
         my $logger_object = $self->[_logger_object_];
-
-        # localize all package variables
-        local (
-
-            $brace_depth,
-            $context,
-            $current_package,
-            $last_nonblank_block_type,
-            $last_nonblank_token,
-            $last_nonblank_type,
-            $next_sequence_number,
-            $paren_depth,
-            $square_bracket_depth,
-            $statement_type,
-            $total_depth,
-            $ris_block_function,
-            $ris_block_list_function,
-            $ris_constant,
-            $ris_user_function,
-            $rsaw_function_definition,
-            $rsaw_use_module,
-            $ruser_function_prototype,
-            $rbrace_context,
-            $rbrace_package,
-            $rbrace_structural_type,
-            $rbrace_type,
-            $rcurrent_depth,
-            $rcurrent_sequence_number,
-            $rdepth_array,
-            $rnested_statement_type,
-            $rnested_ternary_flag,
-            $rparen_semicolon_count,
-            $rparen_structural_type,
-            $rparen_type,
-            $rsquare_bracket_structural_type,
-            $rsquare_bracket_type,
-            $rstarting_line_of_current_depth,
-            $rtotal_depth,
-        );
 
         # save all lexical variables
         my $rstate = save_tokenizer_state();
