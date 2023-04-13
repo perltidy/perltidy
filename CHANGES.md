@@ -2,6 +2,11 @@
 
 ## 2023 03 09.02
 
+    - Issue git #118. A warning will be issued if a duplicate format-skipping
+      starting marker is seen within a format-skipping section. The same
+      applies to duplicate code-skipping starting markers within code-skipping
+      sections.
+
     - Issue git #116. A new flag --valign-if-unless, -viu, was added to
       allow postfix 'unless' terms to align with postfix 'if' terms.  The
       default remains not to do this.

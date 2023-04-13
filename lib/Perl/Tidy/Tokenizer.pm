@@ -1076,6 +1076,14 @@ sub get_line {
             $self->log_numbered_msg("Exiting code-skipping section\n");
             $self->[_in_skipped_] = 0;
         }
+        elsif ( $input_line =~ /$code_skipping_pattern_begin/ ) {
+
+            # warn of duplicate starting comment lines, git #118
+            my $lno = $self->[_in_skipped_];
+            $self->warning(
+                "Already in code-skipping section which started at line $lno\n"
+            );
+        }
         return $line_of_tokens;
     }
 
@@ -1607,7 +1615,7 @@ sub prepare_for_a_new_file {
 
     sub initialize_tokenizer_state {
 
-        # TV0: initialized once
+        # GV1: initialized once
         # TV1: initialized on each call
         # TV2: initialized on each call
         # TV3:
@@ -1653,9 +1661,8 @@ sub prepare_for_a_new_file {
 
     sub save_tokenizer_state {
 
-        # Save package variables:
-        my $rTV0 = [
-
+        # Global variables:
+        my $rGV1 = [
             $brace_depth,
             $context,
             $current_package,
@@ -1690,8 +1697,10 @@ sub prepare_for_a_new_file {
             $square_bracket_depth,
             $statement_type,
             $total_depth,
+
         ];
 
+        # Tokenizer closure variables:
         my $rTV1 = [
             $block_type,        $container_type,    $expecting,
             $i,                 $i_tok,             $input_line,
@@ -1736,15 +1745,14 @@ sub prepare_for_a_new_file {
             $last_last_nonblank_type_sequence,
             $last_nonblank_prototype,
         ];
-        return [ $rTV0, $rTV1, $rTV2, $rTV3, $rTV4, $rTV5, $rTV6 ];
+        return [ $rGV1, $rTV1, $rTV2, $rTV3, $rTV4, $rTV5, $rTV6 ];
     } ## end sub save_tokenizer_state
 
     sub restore_tokenizer_state {
         my ($rstate) = @_;
-        my ( $rTV0, $rTV1, $rTV2, $rTV3, $rTV4, $rTV5, $rTV6 ) = @{$rstate};
+        my ( $rGV1, $rTV1, $rTV2, $rTV3, $rTV4, $rTV5, $rTV6 ) = @{$rstate};
 
         (
-
             $brace_depth,
             $context,
             $current_package,
@@ -1779,7 +1787,8 @@ sub prepare_for_a_new_file {
             $square_bracket_depth,
             $statement_type,
             $total_depth,
-        ) = @{$rTV0};
+
+        ) = @{$rGV1};
 
         (
             $block_type,        $container_type,    $expecting,
@@ -4953,7 +4962,7 @@ EOM
                 if (   $rOpts_code_skipping
                     && $input_line =~ /$code_skipping_pattern_begin/ )
                 {
-                    $self->[_in_skipped_] = 1;
+                    $self->[_in_skipped_] = $self->[_last_line_number_];
                     return;
                 }
 

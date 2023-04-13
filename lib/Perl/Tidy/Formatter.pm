@@ -6738,6 +6738,25 @@ sub set_CODE_type {
                 write_logfile_entry(
                     "Line $input_line_no: Exiting format-skipping section\n");
             }
+            elsif (
+                $is_block_comment
+
+                # optional fast pre-check
+                && ( substr( $rLL->[$Kfirst]->[_TOKEN_], 0, 4 ) eq '#<<<'
+                    || $rOpts_format_skipping_begin )
+
+                && $rOpts_format_skipping
+                && ( $rLL->[$Kfirst]->[_TOKEN_] . SPACE ) =~
+                /$format_skipping_pattern_begin/
+              )
+            {
+                # warn of duplicate starting comment lines, git #118
+                my $input_line_no = $line_of_tokens->{_line_number};
+                warning(
+"Already in format-skipping section which started at line $In_format_skipping_section\n",
+                    $input_line_no
+                );
+            }
             $CODE_type = 'FS';
             next;
         }
@@ -6770,8 +6789,8 @@ sub set_CODE_type {
             /$format_skipping_pattern_begin/
           )
         {
-            $In_format_skipping_section = 1;
             my $input_line_no = $line_of_tokens->{_line_number};
+            $In_format_skipping_section = $input_line_no;
             write_logfile_entry(
                 "Line $input_line_no: Entering format-skipping section\n");
             $CODE_type = 'FS';
@@ -7547,7 +7566,7 @@ sub respace_tokens_inner_loop {
     foreach my $KK ( $Kfirst .. $Klast ) {
 
         # TODO: consider eliminating this closure var by passing directly to
-        # store_token following pattern of store_tokens_to_go.
+        # store_token following pattern of store_token_to_go.
         $Ktoken_vars = $KK;
 
         my $rtoken_vars = $rLL->[$KK];
