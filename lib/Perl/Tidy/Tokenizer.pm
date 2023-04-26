@@ -1035,6 +1035,11 @@ sub get_line {
             if ( !$self->[_in_format_] ) {
                 $self->log_numbered_msg("Exiting format section\n");
                 $line_of_tokens->{_line_type} = 'FORMAT_END';
+
+                # Make the tokenizer mark an opening brace which follows
+                # as a code block. Fixes issue c202/t032.
+                $last_nonblank_token = ';';
+                $last_nonblank_type  = ';';
             }
         }
         else {
