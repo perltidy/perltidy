@@ -5862,9 +5862,11 @@ EOM
                     $sign                                    = -1;
                 }
                 elsif ( $token eq '?' ) {
+                    $self->[_K_opening_ternary_]->{$seqno} = @{$rLL};
                 }
                 elsif ( $token eq ':' ) {
                     $sign = -1;
+                    $self->[_K_closing_ternary_]->{$seqno} = @{$rLL};
                 }
 
                 # The only sequenced types output by the tokenizer are
@@ -6664,10 +6666,10 @@ sub set_ci {
     # This is an experimental routine which will eventually replace
     # the ci values computed by the tokenizer.
 
-    use constant TEST_NEW_CI  => 0;
+    use constant TEST_NEW_CI  => 0 || DEVEL_MODE;
     use constant DEBUG_SET_CI => 0;
 
-    return unless (TEST_NEW_CI);
+    return unless TEST_NEW_CI;
 
     #---------------------------------------------------------------------------
     ## FIXME: This is also in break_lists; might become a global constant
@@ -6688,8 +6690,9 @@ sub set_ci {
 
     #---------------------------------------------------------------------------
 
-    # Trying to match old version for t027
-    # add = for t015
+    # - Contents are set to match old version for issue t027
+    # - add '=' for t015
+    # - a possible fix for t022 would be to add '['
     # FIXME: See @value_requestor_type for more that might be included
     my %bin_op_type;
     @q = qw# . ** -> + - / * = != ^ #;
@@ -6702,40 +6705,35 @@ sub set_ci {
 
     my $token   = ';';
     my $type    = ';';
-    my $level   = 0;
-    my $seqno   = EMPTY_STRING;
-    my $ci      = 0;
     my $ci_next = 0;
 
     my $last_token = $token;
     my $last_type  = $type;
-    my $last_level = $level;
-    my $last_seqno = $seqno;
-    my $ci_last    = $ci;
+    my $ci_last    = 0;
 
-    my $rstack;
+    my $rstack = ();
 
     # TODO:
     #   - note that ci_default = 0 only for 'List'
     my $seq_root = SEQ_ROOT;
-    push @{$rstack},
-      {
-        _seqno          => $seq_root,
-        _ci_open        => 0,
-        _ci_open_next   => 0,
-        _ci_close       => 0,
-        _ci_close_next  => 0,
-        _container_type => 'Block',
-        _ci_default     => 1,
-        _in_ci          => 0,
-        _keep_ci        => 0,
-        _has_comma      => 0,
-        _Kc             => undef,
-      };
+    my $rparent  = {
+        _seqno                      => $seq_root,
+        _ci_open                    => 0,
+        _ci_open_next               => 0,
+        _ci_close                   => 0,
+        _ci_close_next              => 0,
+        _container_type             => 'Block',
+        _ci_default                 => 1,
+        _in_ci                      => 0,
+        _keep_ci                    => 0,
+        _has_comma                  => 0,
+        _Kc                         => undef,
+        _is_block_without_semicolon => undef,
+    };
 
     DEBUG_SET_CI
       && print STDERR <<EOM;
-lno\tci\tci_this\tci_next\tlast_type\tlast_tok\tlast_seqno\tlast_level\ttype\ttok\tseqno\tlevel\tname\tpname\tin_ci\tblock_type\terror?
+lno\tci\tci_this\tci_next\tlast_type\tlast_tok\ttype\ttok\tseqno\tlevel\tpname\tin_ci\tblock_type\terror?
 EOM
 
     my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
@@ -6743,6 +6741,8 @@ EOM
     my $ris_asub_block       = $self->[_ris_asub_block_];
     my $K_opening_container  = $self->[_K_opening_container_];
     my $K_closing_container  = $self->[_K_closing_container_];
+    my $K_opening_ternary    = $self->[_K_opening_ternary_];
+    my $K_closing_ternary    = $self->[_K_closing_ternary_];
 
     my $map_block_follows = sub {
 
@@ -6768,35 +6768,25 @@ EOM
         return;
     };
 
-    my $KK_last = 0;
-    my $K_start_statement =
-      $rLL->[0]->[_TYPE_] eq '#' ? $self->K_next_code(0) : 0;
+##  my $K_start_statement =
+##    $rLL->[0]->[_TYPE_] eq '#' ? $self->K_next_code(0) : 0;
     foreach my $KK ( 0 .. $Klimit ) {
-        my $item = $rLL->[$KK];
+        my $rtoken_K = $rLL->[$KK];
 
-        $type  = $item->[_TYPE_];
-        $token = $item->[_TOKEN_];
-        $level = $item->[_LEVEL_];
-        $seqno = $item->[_TYPE_SEQUENCE_];
-        $ci    = $item->[_CI_LEVEL_];
-
-        # PATCH to ignore ci>1 from tokenizer when making comparisons
-        if ( $ci > 1 ) { $ci = 1 }
-
-        my $lno = $item->[_LINE_INDEX_] + 1;
+        $type  = $rtoken_K->[_TYPE_];
+        $token = $rtoken_K->[_TOKEN_];
 
         # Definitions:
         # $ci_this    = the ci for this token
         # $ci_next    = the ci for the next token
         # $ci_default = the default ci for this container
-        my $container_type = EMPTY_STRING;
 
         # Normally we use the ci value value set by previous token.
         my $ci_this = $ci_next;
 
         # First guess at next value uses the stored default
         # which is 0 for logical containers, 1 for other containers:
-        $ci_next = $rstack->[-1]->{_ci_default};
+        $ci_next = $rparent->{_ci_default};
 
         # We will change these two ci values necessary for special cases...
 
@@ -6805,7 +6795,21 @@ EOM
         #-------------------------------
 
         # Handle a comment
-        if ( $type eq '#' ) { $ci_next = $ci_this }
+        if ( $type eq '#' ) {
+            $ci_next = $ci_this;
+
+            # check for comment in ternary; c202/t037
+            if ( $rparent->{_container_type} eq 'Ternary' ) {
+
+                # FIXME: although ci does not matter for a side comment,
+                # we could skip this for a side comment.
+                my $Kn = $self->K_next_code($KK);
+                my $Kc = $rparent->{_Kc};
+                if ( $Kn && $Kc && $Kn == $Kc ) {
+                    $ci_this = $rparent->{_ci_close};
+                }
+            }
+        }
 
         # For blanks, the ci should not be important,
         # but to match existing code a rule for blanks seems to be:
@@ -6823,10 +6827,10 @@ EOM
         # unless ci has been set at a lower level
         elsif ( $type eq ',' ) {
 
-            if ( $rstack->[-1]->{_container_type} eq 'List' ) {
-                $ci_this = $ci_next = $rstack->[-1]->{_in_ci};
+            if ( $rparent->{_container_type} eq 'List' ) {
+                $ci_this = $ci_next = $rparent->{_in_ci};
             }
-            $rstack->[-1]->{_has_comma} = 1;
+            $rparent->{_has_comma} = 1;
         }
 
         # The next token after a ';' and label (type 'J') starts a new stmt
@@ -6834,8 +6838,8 @@ EOM
         # TODO: There is redundant coding in sub respace which can be
         # removed if this becomes the standard routine for computing ci.
         elsif ( $type eq ';' || $type eq 'J' || $type eq 'f' ) {
-            $ci_next           = 0;
-            $K_start_statement = $self->K_next_code($KK);
+            $ci_next = 0;
+##          $K_start_statement = $self->K_next_code($KK);
         }
 
         # Undo ci after a format statement
@@ -6846,33 +6850,35 @@ EOM
         #---------------------------
         # Handle container tokens...
         #---------------------------
-        elsif ($seqno) {
+        elsif ( my $seqno = $rtoken_K->[_TYPE_SEQUENCE_] ) {
 
             #------------------------
             # Opening container token
             #------------------------
             if ( $is_opening_sequence_token{$token} ) {
 
+                my $level          = $rtoken_K->[_LEVEL_];
+                my $container_type = EMPTY_STRING;
+
                 # Default ci values for the closing token, to be modified
                 # as necessary:
                 my $ci_close      = $ci_next;
-                my $ci_close_next = $rstack->[-1]->{_ci_default};
+                my $ci_close_next = $rparent->{_ci_default};
 
-                my $level_next = $level;
-                my $Kn         = $self->K_next_nonblank($KK);
-                if ( defined($Kn) ) {
-                    $level_next = $rLL->[$Kn]->[_LEVEL_];
-                }
-                my $Kc  = $K_closing_container->{$seqno};
+                my $Kc =
+                    $type eq '?'
+                  ? $K_closing_ternary->{$seqno}
+                  : $K_closing_container->{$seqno};
                 my $Kcn = $self->K_next_code($Kc);
+                my $Kn  = $self->K_next_nonblank($KK);
 
-                my $opening_level_jump = $level_next - $level;
+                my $opening_level_jump =
+                  $Kn ? $rLL->[$Kn]->[_LEVEL_] - $level : 0;
 
+                #--------------------------------
                 # Determine the container type...
-                my $is_logical =
-                  ##      k => && || ? : .
-                  $is_container_label_type{$last_type}
-
+                #--------------------------------
+                my $is_logical = $is_container_label_type{$last_type}
                   && $is_logical_container{$last_token};
 
                 if ( $token eq '(' ) {
@@ -6884,22 +6890,20 @@ EOM
                     }
 
                     # Check for 'for' and 'foreach' loops with iterators
-                    # FIXME: should make a sub to check this more carefully
-                    elsif ($last_type eq 'i'
-                        && $K_start_statement
-                        && $KK - $K_start_statement <= 6 )
-                    {
-                        my $type_1  = $rLL->[$K_start_statement]->[_TYPE_];
-                        my $token_1 = $rLL->[$K_start_statement]->[_TOKEN_];
-                        my $level_1 = $rLL->[$K_start_statement]->[_LEVEL_];
-                        $is_logical ||=
-                             $type_1 eq 'k'
-                          && $level == $level_1
-                          && ( $token_1 eq 'for' || $token_1 eq 'foreach' );
+                    elsif ( $last_type eq 'i' && defined($Kcn) ) {
+                        my $seqno_kcn = $rLL->[$Kcn]->[_TYPE_SEQUENCE_];
+                        my $type_kcn  = $rLL->[$Kcn]->[_TOKEN_];
+                        if ( $seqno_kcn && $type_kcn eq '{' ) {
+                            my $block_type_kcn =
+                              $rblock_type_of_seqno->{$seqno_kcn};
+                            $is_logical ||= $block_type_kcn eq 'for'
+                              || $block_type_kcn eq 'foreach';
+                        }
                     }
+
                     elsif ( $last_token eq '(' ) {
                         $is_logical ||=
-                          $rstack->[-1]->{_container_type} eq 'Logical';
+                          $rparent->{_container_type} eq 'Logical';
                     }
                 }
 
@@ -6911,69 +6915,98 @@ EOM
                 # Default: ci of first item of list with level jump is same as
                 # ci of first item of container
                 if ( $opening_level_jump > 0 ) {
-                    $ci_next = $rstack->[-1]->{_ci_open_next};
+                    $ci_next = $rparent->{_ci_open_next};
                 }
 
+                my $no_semicolon;
+
+                #---------------------------------------
                 # Block; or an opening brace in the star
+                #---------------------------------------
                 if ($block_type) {
                     $container_type = 'Block';
 
-                    # default is zero ci for closing paren
+                    $no_semicolon =
+                         $is_block_without_semicolon{$block_type}
+                      || $ris_sub_block->{$seqno}
+                      || $last_type eq 'J';   ##substr($block_type,-1,1) eq ':';
+
+                    # set default depending on block type
                     $ci_close = 0;
 
-                    # block types sort/map/etc use zero ci at terminal
-                    # brace if previous keyword had zero ci. This will
-                    # cause sort/map/grep filter blocks to line up.
-                    if ( $is_block_with_ci{$block_type} ) {
-                        if ( $map_block_follows->($seqno) ) {
-                            if ($ci_last) {
+                    if ( !$no_semicolon ) {
+
+                        # Fix for block types sort/map/etc which use zero ci
+                        # at terminal brace if previous keyword had zero ci.
+                        # This will cause sort/map/grep filter blocks to line
+                        # up.
+                        if ( $is_block_with_ci{$block_type} ) {
+                            if ( $map_block_follows->($seqno) ) {
+                                if ($ci_last) {
+                                    $ci_close = $ci_this;
+                                }
+                            }
+                            else {
                                 $ci_close = $ci_this;
                             }
                         }
-                        else {
-                            $ci_close = $ci_this;
+
+                        # keep ci if certain operators follow (fix c202/t024)
+                        if ( !$ci_close && $Kcn ) {
+                            my $type_kcn  = $rLL->[$Kcn]->[_TYPE_];
+                            my $token_kcn = $rLL->[$Kcn]->[_TOKEN_];
+                            if (   $type_kcn =~ /^(\.|\&\&|\|\|)$/
+                                || $type_kcn eq 'k' && $is_and_or{$token_kcn} )
+                            {
+                                $ci_close = $ci_this;
+                            }
                         }
                     }
 
-                    $ci_this           = 0;
-                    $ci_next           = 0;
-                    $ci_close_next     = $ci_close;
-                    $K_start_statement = $self->K_next_code($KK);
+                    $ci_this       = 0;
+                    $ci_next       = 0;
+                    $ci_close_next = $ci_close;
+##                  $K_start_statement = $self->K_next_code($KK);
                 }
 
+                #--------
                 # Ternary
+                #--------
                 elsif ( $type eq '?' ) {
                     $container_type = 'Ternary';
-                    if ( $rstack->[-1]->{_container_type} eq 'List'
-                        && !$rstack->[-1]->{_keep_ci} )
+                    if ( $rparent->{_container_type} eq 'List'
+                        && !$rparent->{_keep_ci} )
                     {
                         $ci_this  = 0;
                         $ci_close = 0;
                     }
                 }
 
+                #--------
                 # Logical
+                #--------
                 elsif ($is_logical) {
                     $container_type = 'Logical';
                     $ci_default     = 0;
                     $ci_close_next  = $ci_this;
                 }
 
+                #--------------------------------------------
                 # List (or maybe just some grouping of terms)
+                #--------------------------------------------
                 else {
                     $container_type = 'List';
 
                     # lists not in blocks ...
-                    if ( $rstack->[-1]->{_container_type} ne 'Block' ) {
-                        if ( !$rstack->[-1]->{_has_comma} ) {
-                            if ($opening_level_jump) {
-                                $ci_close = $ci_this;
-                            }
+                    if ( $rparent->{_container_type} ne 'Block' ) {
+                        if ( !$rparent->{_has_comma} ) {
+                            $ci_close = $ci_this;
 
                             # undo ci at binary op after right paren if no
                             # commas in container; fixes t027, t028
                             if ( defined($Kcn) ) {
-                                if ( $bin_op_type{ $rLL->[$Kcn]->[_TYPE_] } ) {
+                                my $type_kcn = $rLL->[$Kcn]->[_TYPE_];
+                                if ( $bin_op_type{$type_kcn} ) {
                                     $ci_close_next = $ci_close;
                                 }
                             }
@@ -6981,9 +7014,9 @@ EOM
 
                         # Undo ci for block comment between a pair of closing
                         # tokens; fixes issue c022/t012;
-                        my $Kc_parent = $rstack->[-1]->{_Kc};
+                        my $Kc_parent = $rparent->{_Kc};
                         if (   $ci_close_next
-                            && $rstack->[-1]->{_has_comma}
+                            && $rparent->{_has_comma}
                             && $Kc_parent
                             && $Kc_parent == $Kcn )
                         {
@@ -6993,84 +7026,75 @@ EOM
 
                     # lists in blocks
                     else {
-                        if ( $rstack->[-1]->{_container_type} eq 'Block' ) {
+                        if ( $rparent->{_container_type} eq 'Block' ) {
 
                             # undo ci if another closing token follows
-                            my $Kc = $K_closing_container->{$seqno};
-                            if ( defined($Kc) ) {
-                                my $Kcn = $self->K_next_code($Kc);
-                                if ( defined($Kcn) ) {
-                                    my $closing_level_jump =
-                                      $rLL->[$Kcn]->[_LEVEL_] - $level;
-                                    if ( $closing_level_jump < 0 ) {
-                                        $ci_close = $ci_this;
-                                    }
+                            if ( defined($Kcn) ) {
+                                my $closing_level_jump =
+                                  $rLL->[$Kcn]->[_LEVEL_] - $level;
+                                if ( $closing_level_jump < 0 ) {
+                                    $ci_close = $ci_this;
                                 }
                             }
                         }
                     }
 
-                    if ( $rstack->[-1]->{_container_type} eq 'Ternary' ) {
+                    if ( $rparent->{_container_type} eq 'Ternary' ) {
                         $ci_next = 0;
                     }
                 }
 
                 my $in_ci = $ci_next
                   && ( !$opening_level_jump
-                    || !$rstack->[-1]->{_container_type} ne 'Block' ) ? 1 : 0;
+                    || !$rparent->{_container_type} ne 'Block' ) ? 1 : 0;
 
                 my $keep_ci = $ci_next && !$opening_level_jump;
 
                 # check: closing ci must not be less than opening
                 if ( $ci_close < $ci_this ) { $ci_close = $ci_this }
 
-                push @{$rstack},
-                  {
-                    _seqno          => $seqno,
-                    _container_type => $container_type,
-                    _ci_default     => $ci_default,
-                    _in_ci          => $in_ci,
-                    _ci_open        => $ci_this,
-                    _ci_open_next   => $ci_next,
-                    _ci_close       => $ci_close,
-                    _ci_close_next  => $ci_close_next,
-                    _keep_ci        => $keep_ci,
-                    _has_comma      => 0,
-                    _Kc             => $Kc,
-                  };
+                push @{$rstack}, $rparent;
+                $rparent = {
+                    _seqno                      => $seqno,
+                    _container_type             => $container_type,
+                    _ci_default                 => $ci_default,
+                    _in_ci                      => $in_ci,
+                    _ci_open                    => $ci_this,
+                    _ci_open_next               => $ci_next,
+                    _ci_close                   => $ci_close,
+                    _ci_close_next              => $ci_close_next,
+                    _keep_ci                    => $keep_ci,
+                    _has_comma                  => 0,
+                    _Kc                         => $Kc,
+                    _is_block_without_semicolon => $no_semicolon,
+                };
             }
 
             #------------------------
             # Closing container token
             #------------------------
             else {
-                if ( @{$rstack} > 1 ) {
+                my $seqno_test = $rparent->{_seqno};
+                if ( $seqno_test ne $seqno ) {
 
-                    # We just have to pull out the values set by the
-                    # corresponding opening token
-                    my $item       = pop @{$rstack};
-                    my $seqno_test = $item->{_seqno};
+                    # Shouldn't happen if we are processing balanced text.
+                    # (Unbalanced text should go out verbatim)
+                    DEVEL_MODE
+                      && Fault("stack error: $seqno_test != $seqno\n");
+                }
 
-                    $ci_this = $item->{_ci_close};
-                    $ci_next = $item->{_ci_close_next};
+                # use the values set by the opening token
+                $ci_this = $rparent->{_ci_close};
+                $ci_next = $rparent->{_ci_close_next};
 
-                    if ( $seqno_test ne $seqno ) {
+##              # The next token after certain closing block braces
+##              # starts a new statement
+##              if ( $rparent->{_is_block_without_semicolon} ) {
+##                  $K_start_statement = $self->K_next_code($KK);
+##              }
 
-                        # Shouldn't happen if we are processing balanced text.
-                        DEVEL_MODE
-                          && Fault("stack error: $seqno_test != $seqno\n");
-                    }
-
-                    # The next token after certain closing block braces
-                    # starts a new statement
-                    my $block_type = $rblock_type_of_seqno->{$seqno};
-                    if ($block_type) {
-                        if (   $is_block_without_semicolon{$block_type}
-                            || $ris_sub_block->{$seqno} )
-                        {
-                            $K_start_statement = $self->K_next_code($KK);
-                        }
-                    }
+                if ( @{$rstack} ) {
+                    $rparent = pop @{$rstack};
                 }
                 else {
 
@@ -7080,10 +7104,17 @@ EOM
             }
         }
 
-        #-----------------------
-        # ci_this should match ci
-        #-----------------------
+        #-----------------------------------------------------------------
+        # Development test: ci_this should match the ci from the tokenizer
+        # except where the new value makes an improvement.
+        #-----------------------------------------------------------------
         DEBUG_SET_CI && do {
+
+            my $seqno = $rtoken_K->[_TYPE_SEQUENCE_];
+            my $level = $rtoken_K->[_LEVEL_];
+            my $ci    = $rtoken_K->[_CI_LEVEL_];
+            if ( $ci > 1 ) { $ci = 1 }
+
             my $tok      = $token;
             my $last_tok = $last_token;
             $tok      =~ s/\t//g;
@@ -7097,30 +7128,27 @@ EOM
             $block_type = $rblock_type_of_seqno->{$seqno} if ($seqno);
             $block_type = EMPTY_STRING unless ($block_type);
             if ( !defined($block_type) ) { $block_type = EMPTY_STRING }
-            my $name  = $container_type;
-            my $ptype = $rstack->[-1]->{_container_type};
+            my $ptype = $rparent->{_container_type};
             my $pname = $ptype;
+
             my $error =
               $ci_this == $ci ? EMPTY_STRING : $type eq 'b' ? "error" : "ERROR";
-            my $in_ci = $rstack->[-1]->{_in_ci};
+
+            my $in_ci = $rparent->{_in_ci};
+            my $lno   = $rtoken_K->[_LINE_INDEX_] + 1;
             print STDERR <<EOM;
-$lno\t$ci\t$ci_this\t$ci_next\t$last_type\t$last_tok\t$last_seqno\t$last_level\t$type\t$tok\t$seqno\t$level\t$name\t$pname\t$in_ci\t$block_type\t$error
+$lno\t$ci\t$ci_this\t$ci_next\t$last_type\t$last_tok\t$type\t$tok\t$seqno\t$level\t$pname\t$in_ci\t$block_type\t$error
 EOM
         };
 
-        if (TEST_NEW_CI) {
-            $item->[_CI_LEVEL_] = $ci_this;
-        }
+        $rtoken_K->[_CI_LEVEL_] = $ci_this;
 
         next if ( $type eq 'b' || $type eq '#' );
 
         # Remember last nonblank, non-comment token info
-        $KK_last    = $KK;
         $ci_last    = $ci_this;
         $last_token = $token;
         $last_type  = $type;
-        $last_level = $level;
-        $last_seqno = $seqno;
 
     }
     return;
