@@ -6663,13 +6663,15 @@ sub dump_block_summary {
 sub set_ci {
 
     # Set the basic continuation indentation (ci) for all tokens.
-    # This is an experimental routine which will eventually replace
-    # the ci values computed by the tokenizer.
 
-    use constant TEST_NEW_CI  => 0 || DEVEL_MODE;
+    # This is an experimental routine intended to eventually replace
+    # the ci values computed by the tokenizer.  For testing it is invoked
+    # with -exp=ci
+    my $use_experimental_ci = DEVEL_MODE
+      || $rOpts->{'experimental'} && $rOpts->{'experimental'} =~ /\bci\b/;
+    return unless ($use_experimental_ci);
+
     use constant DEBUG_SET_CI => 0;
-
-    return unless TEST_NEW_CI;
 
     #---------------------------------------------------------------------------
     ## FIXME: This is also in break_lists; might become a global constant
@@ -6717,18 +6719,17 @@ sub set_ci {
     #   - note that ci_default = 0 only for 'List'
     my $seq_root = SEQ_ROOT;
     my $rparent  = {
-        _seqno                      => $seq_root,
-        _ci_open                    => 0,
-        _ci_open_next               => 0,
-        _ci_close                   => 0,
-        _ci_close_next              => 0,
-        _container_type             => 'Block',
-        _ci_default                 => 1,
-        _in_ci                      => 0,
-        _keep_ci                    => 0,
-        _has_comma                  => 0,
-        _Kc                         => undef,
-        _is_block_without_semicolon => undef,
+        _seqno          => $seq_root,
+        _ci_open        => 0,
+        _ci_open_next   => 0,
+        _ci_close       => 0,
+        _ci_close_next  => 0,
+        _container_type => 'Block',
+        _ci_default     => 1,
+        _in_ci          => 0,
+        _keep_ci        => 0,
+        _has_comma      => 0,
+        _Kc             => undef,
     };
 
     DEBUG_SET_CI
@@ -6768,8 +6769,6 @@ EOM
         return;
     };
 
-##  my $K_start_statement =
-##    $rLL->[0]->[_TYPE_] eq '#' ? $self->K_next_code(0) : 0;
     foreach my $KK ( 0 .. $Klimit ) {
         my $rtoken_K = $rLL->[$KK];
 
@@ -6794,12 +6793,26 @@ EOM
         # Handle certain specific tokens
         #-------------------------------
 
-        # Handle a comment
-        if ( $type eq '#' ) {
-            $ci_next = $ci_this;
+        # For blanks, the ci should not be important,
+        # but to match existing code a rule for blanks seems to be:
+        # A blank after closing token has same ci as previous token,
+        # Otherwise a blank has same ci as next token;
+        if ( $type eq 'b' ) {
 
-            # check for comment in ternary; c202/t037
-            if ( $rparent->{_container_type} eq 'Ternary' ) {
+            $ci_next = $ci_this;
+            if ( $is_closing_type{$last_type} ) {
+                $ci_this = $ci_last;
+            }
+            $rtoken_K->[_CI_LEVEL_] = $ci_this;
+            next;
+        }
+
+        # Handle a comment
+        elsif ( $type eq '#' ) {
+
+            # Check for a comment with ci followed by a closing container
+            # Originally: check for comment in ternary; c202/t037
+            if ( $ci_this && !$rparent->{_ci_close} ) {
 
                 # FIXME: although ci does not matter for a side comment,
                 # we could skip this for a side comment.
@@ -6809,18 +6822,9 @@ EOM
                     $ci_this = $rparent->{_ci_close};
                 }
             }
-        }
-
-        # For blanks, the ci should not be important,
-        # but to match existing code a rule for blanks seems to be:
-        # A blank after closing token has same ci as previous token,
-        # Otherwise a blank has same ci as next token;
-        elsif ( $type eq 'b' ) {
-
             $ci_next = $ci_this;
-            if ( $is_closing_type{$last_type} ) {
-                $ci_this = $ci_last;
-            }
+            $rtoken_K->[_CI_LEVEL_] = $ci_this;
+            next;
         }
 
         # A comma and the subsequent item normally have ci undone
@@ -6839,7 +6843,6 @@ EOM
         # removed if this becomes the standard routine for computing ci.
         elsif ( $type eq ';' || $type eq 'J' || $type eq 'f' ) {
             $ci_next = 0;
-##          $K_start_statement = $self->K_next_code($KK);
         }
 
         # Undo ci after a format statement
@@ -6920,16 +6923,16 @@ EOM
 
                 my $no_semicolon;
 
-                #---------------------------------------
-                # Block; or an opening brace in the star
-                #---------------------------------------
+                #-----------
+                # Code Block
+                #-----------
                 if ($block_type) {
                     $container_type = 'Block';
 
                     $no_semicolon =
                          $is_block_without_semicolon{$block_type}
                       || $ris_sub_block->{$seqno}
-                      || $last_type eq 'J';   ##substr($block_type,-1,1) eq ':';
+                      || $last_type eq 'J';
 
                     # set default depending on block type
                     $ci_close = 0;
@@ -6966,7 +6969,6 @@ EOM
                     $ci_this       = 0;
                     $ci_next       = 0;
                     $ci_close_next = $ci_close;
-##                  $K_start_statement = $self->K_next_code($KK);
                 }
 
                 #--------
@@ -7011,17 +7013,6 @@ EOM
                                 }
                             }
                         }
-
-                        # Undo ci for block comment between a pair of closing
-                        # tokens; fixes issue c022/t012;
-                        my $Kc_parent = $rparent->{_Kc};
-                        if (   $ci_close_next
-                            && $rparent->{_has_comma}
-                            && $Kc_parent
-                            && $Kc_parent == $Kcn )
-                        {
-                            $ci_close_next = 0;
-                        }
                     }
 
                     # lists in blocks
@@ -7055,18 +7046,17 @@ EOM
 
                 push @{$rstack}, $rparent;
                 $rparent = {
-                    _seqno                      => $seqno,
-                    _container_type             => $container_type,
-                    _ci_default                 => $ci_default,
-                    _in_ci                      => $in_ci,
-                    _ci_open                    => $ci_this,
-                    _ci_open_next               => $ci_next,
-                    _ci_close                   => $ci_close,
-                    _ci_close_next              => $ci_close_next,
-                    _keep_ci                    => $keep_ci,
-                    _has_comma                  => 0,
-                    _Kc                         => $Kc,
-                    _is_block_without_semicolon => $no_semicolon,
+                    _seqno          => $seqno,
+                    _container_type => $container_type,
+                    _ci_default     => $ci_default,
+                    _in_ci          => $in_ci,
+                    _ci_open        => $ci_this,
+                    _ci_open_next   => $ci_next,
+                    _ci_close       => $ci_close,
+                    _ci_close_next  => $ci_close_next,
+                    _keep_ci        => $keep_ci,
+                    _has_comma      => 0,
+                    _Kc             => $Kc,
                 };
             }
 
@@ -7086,12 +7076,6 @@ EOM
                 # use the values set by the opening token
                 $ci_this = $rparent->{_ci_close};
                 $ci_next = $rparent->{_ci_close_next};
-
-##              # The next token after certain closing block braces
-##              # starts a new statement
-##              if ( $rparent->{_is_block_without_semicolon} ) {
-##                  $K_start_statement = $self->K_next_code($KK);
-##              }
 
                 if ( @{$rstack} ) {
                     $rparent = pop @{$rstack};
@@ -7142,8 +7126,6 @@ EOM
         };
 
         $rtoken_K->[_CI_LEVEL_] = $ci_this;
-
-        next if ( $type eq 'b' || $type eq '#' );
 
         # Remember last nonblank, non-comment token info
         $ci_last    = $ci_this;
