@@ -6810,18 +6810,36 @@ EOM
         # Handle a comment
         elsif ( $type eq '#' ) {
 
-            # Check for a comment with ci followed by a closing container
-            # Originally: check for comment in ternary; c202/t037
+            # If at '#' in ternary before a ? or :, use that level to make
+            # the comment line up with the next ? or : line.  (see c202/t052)
+            # i.e. if a nested ? follows, we increase the '#' level by 1, and
+            # if a nested : follows, we decrease the '#' level by 1.
+            # This is the only place where this sub changes a _LEVEL_ value.
+            my $Kn;
+            if ( $rparent->{_container_type} eq 'Ternary' ) {
+                $Kn = $self->K_next_code($KK);
+                if ($Kn) {
+                    my $type_kn = $rLL->[$Kn]->[_TYPE_];
+                    if ( $is_ternary{$type_kn} ) {
+                        my $level_KK = $rLL->[$KK]->[_LEVEL_];
+                        my $level_Kn = $rLL->[$Kn]->[_LEVEL_];
+                        $rLL->[$KK]->[_LEVEL_] = $rLL->[$Kn]->[_LEVEL_];
+                    }
+                }
+            }
+
+            # Also check for a comment with ci followed by a closing container
             if ( $ci_this && !$rparent->{_ci_close} ) {
 
                 # FIXME: although ci does not matter for a side comment,
                 # we could skip this for a side comment.
-                my $Kn = $self->K_next_code($KK);
+                $Kn = $self->K_next_code($KK) if ( !$Kn );
                 my $Kc = $rparent->{_Kc};
                 if ( $Kn && $Kc && $Kn == $Kc ) {
                     $ci_this = $rparent->{_ci_close};
                 }
             }
+
             $ci_next = $ci_this;
             $rtoken_K->[_CI_LEVEL_] = $ci_this;
             next;
@@ -6899,8 +6917,9 @@ EOM
                         if ( $seqno_kcn && $type_kcn eq '{' ) {
                             my $block_type_kcn =
                               $rblock_type_of_seqno->{$seqno_kcn};
-                            $is_logical ||= $block_type_kcn eq 'for'
-                              || $block_type_kcn eq 'foreach';
+                            $is_logical ||= $block_type_kcn
+                              && ( $block_type_kcn eq 'for'
+                                || $block_type_kcn eq 'foreach' );
                         }
                     }
 
@@ -7077,6 +7096,7 @@ EOM
                 $ci_this = $rparent->{_ci_close};
                 $ci_next = $rparent->{_ci_close_next};
 
+                my $ci_open_old = $rparent->{_ci_open};
                 if ( @{$rstack} ) {
                     $rparent = pop @{$rstack};
                 }
@@ -7084,6 +7104,17 @@ EOM
 
                     # Shouldn't happen if we are processing balanced text.
                     DEVEL_MODE && Fault("empty stack - shouldn't happen\n");
+                }
+
+                # Undo ci at a closing token followed by a closing token. Goal
+                # is to keep formatting independent of the existance of a
+                # trailing comma or semicolon.
+                if ( $ci_this > 0 && !$ci_open_old ) {
+                    my $Kc = $rparent->{_Kc};
+                    my $Kn = $self->K_next_code($KK);
+                    if ( $Kc && $Kn && $Kc == $Kn ) {
+                        $ci_this = $ci_next = 0;
+                    }
                 }
             }
         }
