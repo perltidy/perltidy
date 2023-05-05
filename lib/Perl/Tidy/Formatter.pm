@@ -6700,6 +6700,11 @@ sub set_ci {
     @q = qw# . ** -> + - / * = != ^ #;
     @bin_op_type{@q} = (1) x scalar(@q);
 
+    my %is_list_end_type;
+    @q = qw( ; { } );
+    push @q, ',';
+    @is_list_end_type{@q} = (1) x scalar(@q);
+
     my ($self) = @_;
     my $rLL    = $self->[_rLL_];
     my $Klimit = $self->[_Klimit_];
@@ -6985,7 +6990,9 @@ EOM
                         }
                     }
 
-                    $ci_this       = 0;
+                    if ( $rparent->{_container_type} ne 'Ternary' ) {
+                        $ci_this = 0;
+                    }
                     $ci_next       = 0;
                     $ci_close_next = $ci_close;
                 }
@@ -7052,6 +7059,11 @@ EOM
                     if ( $rparent->{_container_type} eq 'Ternary' ) {
                         $ci_next = 0;
                     }
+
+                    # Undo ci at a chain of indexes or hash keys
+                    if ( $token ne '(' && $last_type eq '}' ) {
+                        $ci_this = $ci_close = $ci_last;
+                    }
                 }
 
                 my $in_ci = $ci_next
@@ -7060,7 +7072,15 @@ EOM
 
                 my $keep_ci = $ci_next && !$opening_level_jump;
 
-                # check: closing ci must not be less than opening
+                # Most closing tokens should align with their opening tokens.
+                if (   $type eq '{'
+                    && $token ne '('
+                    && $is_list_end_type{$last_type} )
+                {
+                    $ci_close = $ci_this;
+                }
+
+                # Closing ci must never be less than opening
                 if ( $ci_close < $ci_this ) { $ci_close = $ci_this }
 
                 push @{$rstack}, $rparent;
