@@ -6695,9 +6695,11 @@ sub set_ci {
     # - Contents are set to match old version for issue t027
     # - add '=' for t015
     # - a possible fix for t022 would be to add '['
-    # FIXME: See @value_requestor_type for more that might be included
+    # Note:
+    #   See @value_requestor_type for more that might be included
+    #   See also @is_binary_type
     my %bin_op_type;
-    @q = qw# . ** -> + - / * = != ^ #;
+    @q = qw# . ** -> + - / * = != ^ < > % >= <= #;
     @bin_op_type{@q} = (1) x scalar(@q);
 
     my %is_list_end_type;
@@ -6720,8 +6722,7 @@ sub set_ci {
 
     my $rstack = ();
 
-    # TODO:
-    #   - note that ci_default = 0 only for 'List'
+    # - note that ci_default = 0 only for 'List'
     my $seq_root = SEQ_ROOT;
     my $rparent  = {
         _seqno          => $seq_root,
@@ -6749,6 +6750,9 @@ EOM
     my $K_closing_container  = $self->[_K_closing_container_];
     my $K_opening_ternary    = $self->[_K_opening_ternary_];
     my $K_closing_ternary    = $self->[_K_closing_ternary_];
+    my $rlines               = $self->[_rlines_];
+
+    my $want_break_before_comma = $want_break_before{','};
 
     my $map_block_follows = sub {
 
@@ -6821,7 +6825,8 @@ EOM
             # if a nested : follows, we decrease the '#' level by 1.
             # This is the only place where this sub changes a _LEVEL_ value.
             my $Kn;
-            if ( $rparent->{_container_type} eq 'Ternary' ) {
+            my $parent_container_type = $rparent->{_container_type};
+            if ( $parent_container_type eq 'Ternary' ) {
                 $Kn = $self->K_next_code($KK);
                 if ($Kn) {
                     my $type_kn = $rLL->[$Kn]->[_TYPE_];
@@ -6833,15 +6838,61 @@ EOM
                 }
             }
 
-            # Also check for a comment with ci followed by a closing container
-            if ( $ci_this && !$rparent->{_ci_close} ) {
+            # Undo ci for a block comment followed by a closing token or , or ;
+            # provided that the parent container:
+            # - ends without ci, or
+            # - starts ci=0 and is a comma list or this follows a closing type
+            # - has a level jump
+            if (
+                $ci_this
+                && (
+                    !$rparent->{_ci_close}
+                    || (
+                        !$rparent->{_ci_open_next}
+                        && (   $rparent->{_has_comma}
+                            || $is_closing_type{$last_type} )
+                    )
+                )
+              )
+            {
+                # Be sure this is a block comment
+                my $lx       = $rtoken_K->[_LINE_INDEX_];
+                my $rK_range = $rlines->[$lx]->{_rK_range};
+                my $Kfirst;
+                if ($rK_range) { $Kfirst = $rK_range->[0] }
+                if ( defined($Kfirst) && $Kfirst == $KK ) {
 
-                # FIXME: although ci does not matter for a side comment,
-                # we could skip this for a side comment.
-                $Kn = $self->K_next_code($KK) if ( !$Kn );
-                my $Kc = $rparent->{_Kc};
-                if ( $Kn && $Kc && $Kn == $Kc ) {
-                    $ci_this = $rparent->{_ci_close};
+                    # Look for trailing closing token
+                    #    [ and possibly ',' or ';' ]
+                    $Kn = $self->K_next_code($KK) if ( !$Kn );
+                    my $Kc = $rparent->{_Kc};
+                    if (
+                           $Kn
+                        && $Kc
+                        && (
+                            $Kn == $Kc
+
+                            # only look for comma if -wbb=',' is set
+                            # to minimize changes to existing formatting
+                            || (   $rLL->[$Kn]->[_TYPE_] eq ','
+                                && $want_break_before_comma
+                                && $parent_container_type eq 'List' )
+
+                            # do not look ahead for a bare ';' because
+                            # it changes old formatting with little benefit.
+##                          || (   $rLL->[$Kn]->[_TYPE_] eq ';'
+##                                && $parent_container_type eq 'Block' )
+                        )
+                      )
+                    {
+
+                        # Be sure container has a level jump
+                        my $level_KK = $rLL->[$KK]->[_LEVEL_];
+                        my $level_Kc = $rLL->[$Kc]->[_LEVEL_];
+                        if ( $level_Kc < $level_KK ) {
+                            $ci_this = 0;
+                        }
+                    }
                 }
             }
 
@@ -6862,10 +6913,11 @@ EOM
 
         # The next token after a ';' and label (type 'J') starts a new stmt
         # The ci after a C-style for ';' (type 'f') is handled similarly.
-        # TODO: There is redundant coding in sub respace which can be
-        # removed if this becomes the standard routine for computing ci.
+        # TODO: There is type 'f' redundant coding in sub respace which can
+        # be removed if this becomes the standard routine for computing ci.
         elsif ( $type eq ';' || $type eq 'J' || $type eq 'f' ) {
             $ci_next = 0;
+            if ( $is_closing_type{$last_type} ) { $ci_this = $ci_last }
         }
 
         # Undo ci after a format statement
@@ -6901,6 +6953,11 @@ EOM
                 my $opening_level_jump =
                   $Kn ? $rLL->[$Kn]->[_LEVEL_] - $level : 0;
 
+                my $is_nested =
+                     $is_opening_type{$last_type}
+                  && $Kcn
+                  && $Kcn == $rparent->{_Kc};
+
                 #--------------------------------
                 # Determine the container type...
                 #--------------------------------
@@ -6932,6 +6989,9 @@ EOM
                         $is_logical ||=
                           $rparent->{_container_type} eq 'Logical';
                     }
+
+                    # Pass ci though an '!'
+                    elsif ( $last_type eq '!' ) { $ci_this = $ci_last }
                 }
 
                 my $ci_default = 1;
@@ -7027,7 +7087,8 @@ EOM
 
                     # lists not in blocks ...
                     if ( $rparent->{_container_type} ne 'Block' ) {
-                        if ( !$rparent->{_has_comma} ) {
+
+                        if ( !$rparent->{_has_comma} && !$is_nested ) {
                             $ci_close = $ci_this;
 
                             # undo ci at binary op after right paren if no
@@ -7129,7 +7190,7 @@ EOM
                 # Undo ci at a closing token followed by a closing token. Goal
                 # is to keep formatting independent of the existance of a
                 # trailing comma or semicolon.
-                if ( $ci_this > 0 && !$ci_open_old ) {
+                if ( $ci_this > 0 && !$ci_open_old && !$rparent->{_ci_close} ) {
                     my $Kc = $rparent->{_Kc};
                     my $Kn = $self->K_next_code($KK);
                     if ( $Kc && $Kn && $Kc == $Kn ) {
