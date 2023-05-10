@@ -6673,6 +6673,11 @@ sub set_ci {
 
     use constant DEBUG_SET_CI => 0;
 
+    # This turns on an optional piece of logic which makes the new and
+    # old computations of ci agree.  It has almost no effect on actual
+    # programs.
+    use constant SET_CI_OPTION_1 => 1;
+
     #---------------------------------------------------------------------------
     ## FIXME: This is also in break_lists; might become a global constant
     my %is_logical_container;
@@ -6694,12 +6699,13 @@ sub set_ci {
 
     # - Contents are set to match old version for issue t027
     # - add '=' for t015
-    # - a possible fix for t022 would be to add '['
+    # - add '=~' for 'locale.in'
+    # - add '<=>' for 'corelist.in'
     # Note:
     #   See @value_requestor_type for more that might be included
     #   See also @is_binary_type
     my %bin_op_type;
-    @q = qw# . ** -> + - / * = != ^ < > % >= <= #;
+    @q = qw# . ** -> + - / * = != ^ < > % >= <= =~ !~ <=> x #;
     @bin_op_type{@q} = (1) x scalar(@q);
 
     my %is_list_end_type;
@@ -6738,10 +6744,9 @@ sub set_ci {
         _Kc             => undef,
     };
 
-    DEBUG_SET_CI
-      && print STDERR <<EOM;
-lno\tci\tci_this\tci_next\tlast_type\tlast_tok\ttype\ttok\tseqno\tlevel\tpname\tin_ci\tblock_type\terror?
-EOM
+    # Debug stuff
+    my @debug_lines;
+    my %saw_ci_diff;
 
     my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
     my $ris_sub_block        = $self->[_ris_sub_block_];
@@ -6921,8 +6926,10 @@ EOM
         }
 
         # Undo ci after a format statement
-        elsif ( $type eq 'k' && substr( $token, 0, 6 ) eq 'format' ) {
-            $ci_next = 0;
+        elsif ( $type eq 'k' ) {
+            if ( substr( $token, 0, 6 ) eq 'format' ) {
+                $ci_next = 0;
+            }
         }
 
         #---------------------------
@@ -6953,16 +6960,16 @@ EOM
                 my $opening_level_jump =
                   $Kn ? $rLL->[$Kn]->[_LEVEL_] - $level : 0;
 
-                my $is_nested =
-                     $is_opening_type{$last_type}
-                  && $Kcn
-                  && $Kcn == $rparent->{_Kc};
-
                 #--------------------------------
                 # Determine the container type...
                 #--------------------------------
                 my $is_logical = $is_container_label_type{$last_type}
                   && $is_logical_container{$last_token};
+
+                # Part 1 of optional patch to get agreement with previous ci
+                # This makes almost no difference in a typical program because
+                # we will seldom break within an array index.
+                $is_logical ||= $type eq '[' && SET_CI_OPTION_1;
 
                 if ( $token eq '(' ) {
 
@@ -6982,6 +6989,21 @@ EOM
                             $is_logical ||= $block_type_kcn
                               && ( $block_type_kcn eq 'for'
                                 || $block_type_kcn eq 'foreach' );
+                        }
+
+                        # Search backwards for 'for'/'foreach' with iterator in
+                        # case user is running from an editor and did not
+                        # include the block (fixes case 'xci.in').
+                        my $Km = $self->K_previous_code($KK);
+                        foreach ( 0 .. 2 ) {
+                            $Km = $self->K_previous_code($Km);
+                            last unless defined($Km);
+                            last unless $rLL->[$Km]->[_TYPE_] eq 'k';
+                            my $tok = $rLL->[$Km]->[_TOKEN_];
+                            next if $tok eq 'my';
+                            $is_logical ||=
+                              ( $tok eq 'for' || $tok eq 'foreach' );
+                            last;
                         }
                     }
 
@@ -7004,7 +7026,6 @@ EOM
                 if ( $opening_level_jump > 0 ) {
                     $ci_next = $rparent->{_ci_open_next};
                 }
-
                 my $no_semicolon;
 
                 #-----------
@@ -7075,8 +7096,24 @@ EOM
                 #--------
                 elsif ($is_logical) {
                     $container_type = 'Logical';
-                    $ci_default     = 0;
-                    $ci_close_next  = $ci_this;
+
+                    $ci_default    = 0;
+                    $ci_close_next = $ci_this;
+
+                    # Part 2 of optional patch to get agreement with previous ci
+                    if ( $type eq '[' && SET_CI_OPTION_1 ) {
+
+                        $ci_default = $ci_this;
+
+                        # Undo ci at a chain of indexes or hash keys
+                        if ( $last_type eq '}' ) {
+                            $ci_this = $ci_last;
+                        }
+                    }
+
+                    if ($opening_level_jump) {
+                        $ci_next = 0;
+                    }
                 }
 
                 #--------------------------------------------
@@ -7088,7 +7125,7 @@ EOM
                     # lists not in blocks ...
                     if ( $rparent->{_container_type} ne 'Block' ) {
 
-                        if ( !$rparent->{_has_comma} && !$is_nested ) {
+                        if ( !$rparent->{_has_comma} ) {
                             $ci_close = $ci_this;
 
                             # undo ci at binary op after right paren if no
@@ -7229,10 +7266,11 @@ EOM
 
             my $error =
               $ci_this == $ci ? EMPTY_STRING : $type eq 'b' ? "error" : "ERROR";
+            if ($error) { $saw_ci_diff{$KK} = 1 }
 
             my $in_ci = $rparent->{_in_ci};
             my $lno   = $rtoken_K->[_LINE_INDEX_] + 1;
-            print STDERR <<EOM;
+            $debug_lines[$KK] = <<EOM;
 $lno\t$ci\t$ci_this\t$ci_next\t$last_type\t$last_tok\t$type\t$tok\t$seqno\t$level\t$pname\t$in_ci\t$block_type\t$error
 EOM
         };
@@ -7245,6 +7283,34 @@ EOM
         $last_type  = $type;
 
     }
+
+    if (DEBUG_SET_CI) {
+        my @output_lines;
+        foreach my $KK ( 0 .. $Klimit ) {
+            my $line = $debug_lines[$KK];
+            if ($line) {
+                my $Kp = $self->K_previous_code($KK);
+                my $Kn = $self->K_next_code($KK);
+                if (   DEBUG_SET_CI > 1
+                    || $Kp && $saw_ci_diff{$Kp}
+                    || $saw_ci_diff{$KK}
+                    || $Kn && $saw_ci_diff{$Kn} )
+                {
+                    push @output_lines, $line;
+                }
+            }
+        }
+        if (@output_lines) {
+            unshift @output_lines, <<EOM;
+lno\tci\tci_this\tci_next\tlast_type\tlast_tok\ttype\ttok\tseqno\tlevel\tpname\tin_ci\tblock_type\terror?
+EOM
+            foreach my $line (@output_lines) {
+                chomp $line;
+                print STDERR $line, "\n";
+            }
+        }
+    }
+
     return;
 } ## end sub set_ci
 
