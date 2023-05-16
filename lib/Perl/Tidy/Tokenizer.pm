@@ -5931,7 +5931,7 @@ EOM
             #--------------------------------
             # Store the values for this token
             #--------------------------------
-            push( @ci_string,     $ci_string_i );
+            push( @ci_string,     $ci_string_i ? 1 : 0 );         # clip ci to 1
             push( @levels,        $level_i );
             push( @block_type,    $routput_block_type->[$i] );
             push( @type_sequence, $routput_type_sequence->[$i] );

@@ -6669,14 +6669,21 @@ sub set_ci {
     # with -exp=ci
     my $use_experimental_ci = DEVEL_MODE
       || $rOpts->{'experimental'} && $rOpts->{'experimental'} =~ /\bci\b/;
-    return unless ($use_experimental_ci);
 
-    use constant DEBUG_SET_CI => 0;
+    # This flag causes sub set_ci to still operate on comments when it would
+    # otherwise not be used.  This allows the effect on comments to be
+    # filtered out in testing. This option is only for testing.
+    my $use_experimental_ci1 =
+      $rOpts->{'experimental'} && $rOpts->{'experimental'} =~ /\bci1\b/;
+
+    return if ( !$use_experimental_ci && !$use_experimental_ci1 );
 
     # This turns on an optional piece of logic which makes the new and
     # old computations of ci agree.  It has almost no effect on actual
-    # programs.
-    use constant SET_CI_OPTION_1 => 1;
+    # programs but is useful for testing.
+    use constant SET_CI_OPTION_0 => 1;
+
+    use constant DEBUG_SET_CI => 0;
 
     #---------------------------------------------------------------------------
     ## FIXME: This is also in break_lists; might become a global constant
@@ -6738,9 +6745,8 @@ sub set_ci {
         _ci_close_next  => 0,
         _container_type => 'Block',
         _ci_default     => 1,
-        _in_ci          => 0,
-        _keep_ci        => 0,
-        _has_comma      => 0,
+        _comma_count    => 0,
+        _redo_list      => undef,
         _Kc             => undef,
     };
 
@@ -6779,6 +6785,32 @@ sub set_ci {
 
         if ($block_type) {
             return $is_block_with_ci{$block_type};
+        }
+        return;
+    };
+
+    my $redo_ci_if_comma = sub {
+
+        # This is called when we reach the close of a container to
+        # go back and fix any ci values that were tentatively set
+        # assuming that this container had no commas.
+        if ( !$rparent->{_comma_count} ) {
+            return;
+        }
+        my $rlist = $rparent->{_redo_list};
+        foreach my $item ( @{$rlist} ) {
+            my ( $K, $ci ) = @{$item};
+            $rLL->[$K]->[_CI_LEVEL_] = $ci;
+
+            # Also update any preceding comments to have the new ci
+            # (this may also change side comment ci but it doesn't matter)
+            my $Km = $self->K_previous_code($K);
+            return if ( !defined($Km) );
+            foreach my $Kt ( $Km + 1 .. $K - 1 ) {
+                if ( $rLL->[$Kt]->[_TYPE_] eq '#' ) {
+                    $rLL->[$Kt]->[_CI_LEVEL_] = $ci;
+                }
+            }
         }
         return;
     };
@@ -6854,7 +6886,7 @@ sub set_ci {
                     !$rparent->{_ci_close}
                     || (
                         !$rparent->{_ci_open_next}
-                        && (   $rparent->{_has_comma}
+                        && (   $rparent->{_comma_count}
                             || $is_closing_type{$last_type} )
                     )
                 )
@@ -6911,9 +6943,9 @@ sub set_ci {
         elsif ( $type eq ',' ) {
 
             if ( $rparent->{_container_type} eq 'List' ) {
-                $ci_this = $ci_next = $rparent->{_in_ci};
+                $ci_this = $ci_next = $rparent->{_ci_open_next};
             }
-            $rparent->{_has_comma} = 1;
+            $rparent->{_comma_count}++;
         }
 
         # The next token after a ';' and label (type 'J') starts a new stmt
@@ -6969,7 +7001,7 @@ sub set_ci {
                 # Part 1 of optional patch to get agreement with previous ci
                 # This makes almost no difference in a typical program because
                 # we will seldom break within an array index.
-                $is_logical ||= $type eq '[' && SET_CI_OPTION_1;
+                $is_logical ||= $type eq '[' && SET_CI_OPTION_0;
 
                 if ( $token eq '(' ) {
 
@@ -7084,7 +7116,7 @@ sub set_ci {
                 elsif ( $type eq '?' ) {
                     $container_type = 'Ternary';
                     if ( $rparent->{_container_type} eq 'List'
-                        && !$rparent->{_keep_ci} )
+                        && !$rparent->{_ci_open_next} )
                     {
                         $ci_this  = 0;
                         $ci_close = 0;
@@ -7101,7 +7133,7 @@ sub set_ci {
                     $ci_close_next = $ci_this;
 
                     # Part 2 of optional patch to get agreement with previous ci
-                    if ( $type eq '[' && SET_CI_OPTION_1 ) {
+                    if ( $type eq '[' && SET_CI_OPTION_0 ) {
 
                         $ci_default = $ci_this;
 
@@ -7125,14 +7157,26 @@ sub set_ci {
                     # lists not in blocks ...
                     if ( $rparent->{_container_type} ne 'Block' ) {
 
-                        if ( !$rparent->{_has_comma} ) {
+                        if ( !$rparent->{_comma_count} ) {
+
                             $ci_close = $ci_this;
 
                             # undo ci at binary op after right paren if no
                             # commas in container; fixes t027, t028
-                            if ( defined($Kcn) ) {
+                            if ( $ci_close_next != $ci_close && defined($Kcn) )
+                            {
+
                                 my $type_kcn = $rLL->[$Kcn]->[_TYPE_];
                                 if ( $bin_op_type{$type_kcn} ) {
+
+                                    # Save info to undo this in case we find
+                                    # later that this container has a comma.
+                                    if ( !defined( $rparent->{_redo_list} ) ) {
+                                        $rparent->{_redo_list} = [];
+                                    }
+
+                                    push @{ $rparent->{_redo_list} },
+                                      [ $Kcn, $ci_close_next ];
                                     $ci_close_next = $ci_close;
                                 }
                             }
@@ -7164,12 +7208,6 @@ sub set_ci {
                     }
                 }
 
-                my $in_ci = $ci_next
-                  && ( !$opening_level_jump
-                    || !$rparent->{_container_type} ne 'Block' ) ? 1 : 0;
-
-                my $keep_ci = $ci_next && !$opening_level_jump;
-
                 # Most closing tokens should align with their opening tokens.
                 if (   $type eq '{'
                     && $token ne '('
@@ -7186,14 +7224,13 @@ sub set_ci {
                     _seqno          => $seqno,
                     _container_type => $container_type,
                     _ci_default     => $ci_default,
-                    _in_ci          => $in_ci,
                     _ci_open        => $ci_this,
                     _ci_open_next   => $ci_next,
                     _ci_close       => $ci_close,
                     _ci_close_next  => $ci_close_next,
-                    _keep_ci        => $keep_ci,
-                    _has_comma      => 0,
+                    _comma_count    => 0,
                     _Kc             => $Kc,
+                    _redo_list      => undef,
                 };
             }
 
@@ -7213,6 +7250,14 @@ sub set_ci {
                 # use the values set by the opening token
                 $ci_this = $rparent->{_ci_close};
                 $ci_next = $rparent->{_ci_close_next};
+
+                # Do not count a trailing comma
+                if ( $last_type eq ',' ) { $rparent->{_comma_count} -= 1 }
+
+                # Redo ci where tentatively made assuming no commas
+                if ( $rparent->{_comma_count} && $rparent->{_redo_list} ) {
+                    $redo_ci_if_comma->();
+                }
 
                 my $ci_open_old = $rparent->{_ci_open};
                 if ( @{$rstack} ) {
@@ -7268,14 +7313,16 @@ sub set_ci {
               $ci_this == $ci ? EMPTY_STRING : $type eq 'b' ? "error" : "ERROR";
             if ($error) { $saw_ci_diff{$KK} = 1 }
 
-            my $in_ci = $rparent->{_in_ci};
-            my $lno   = $rtoken_K->[_LINE_INDEX_] + 1;
+            my $lno = $rtoken_K->[_LINE_INDEX_] + 1;
             $debug_lines[$KK] = <<EOM;
-$lno\t$ci\t$ci_this\t$ci_next\t$last_type\t$last_tok\t$type\t$tok\t$seqno\t$level\t$pname\t$in_ci\t$block_type\t$error
+$lno\t$ci\t$ci_this\t$ci_next\t$last_type\t$last_tok\t$type\t$tok\t$seqno\t$level\t$pname\t$block_type\t$error
 EOM
         };
 
-        $rtoken_K->[_CI_LEVEL_] = $ci_this;
+        $rtoken_K->[_CI_LEVEL_] = $ci_this
+
+          # TESTING
+          if ($use_experimental_ci);
 
         # Remember last nonblank, non-comment token info
         $ci_last    = $ci_this;
@@ -7302,7 +7349,7 @@ EOM
         }
         if (@output_lines) {
             unshift @output_lines, <<EOM;
-lno\tci\tci_this\tci_next\tlast_type\tlast_tok\ttype\ttok\tseqno\tlevel\tpname\tin_ci\tblock_type\terror?
+lno\tci\tci_this\tci_next\tlast_type\tlast_tok\ttype\ttok\tseqno\tlevel\tpname\tblock_type\terror?
 EOM
             foreach my $line (@output_lines) {
                 chomp $line;
@@ -11294,6 +11341,7 @@ sub weld_nested_containers {
 
     my $iline_outer_opening   = -1;
     my $weld_count_this_start = 0;
+    my $weld_starts_in_block  = 0;
 
     # OLD: $single_line_tol added to fix cases b1180 b1181
     #       = $rOpts_continuation_indentation > $rOpts_indent_columns ? 1 : 0;
@@ -11490,6 +11538,7 @@ EOM
             # Remember the line we are using as a reference
             $iline_outer_opening   = $iline_oo;
             $weld_count_this_start = 0;
+            $weld_starts_in_block  = 0;
 
             ( my $new_weld_ok, $maximum_text_length, $starting_lentot, my $msg )
               = $self->setup_new_weld_measurements( $Kouter_opening,
@@ -11838,6 +11887,10 @@ EOM
             }
             push @welds, $item;
 
+            my $parent_seqno = $self->parent_seqno_by_K($Kouter_closing);
+            $weld_starts_in_block = $parent_seqno == SEQ_ROOT
+              || $rblock_type_of_seqno->{$parent_seqno};
+
             $rK_weld_right->{$Kouter_opening} = $Kinner_opening;
             $rK_weld_left->{$Kinner_opening}  = $Kouter_opening;
 
@@ -11890,9 +11943,12 @@ EOM
             $rLL->[$Kinner_opening]->[_CI_LEVEL_] =
               $rLL->[$Kouter_opening]->[_CI_LEVEL_];
 
-            # But do not copy the closing ci level ... it can give poor results
-            ## $rLL->[$Kinner_closing]->[_CI_LEVEL_] =
-            ##  $rLL->[$Kouter_closing]->[_CI_LEVEL_];
+            # But only copy the closing ci level if the outer container is
+            # in a block; otherwise poor results can be produced.
+            if ($weld_starts_in_block) {
+                $rLL->[$Kinner_closing]->[_CI_LEVEL_] =
+                  $rLL->[$Kouter_closing]->[_CI_LEVEL_];
+            }
         }
     }
 
