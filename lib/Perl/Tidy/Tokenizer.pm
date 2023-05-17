@@ -205,6 +205,7 @@ BEGIN {
         _rOpts_maximum_unexpected_errors_    => $i++,
         _rOpts_logfile_                      => $i++,
         _rOpts_                              => $i++,
+        _calculate_ci_                       => $i++,
     };
 } ## end BEGIN
 
@@ -517,6 +518,8 @@ sub new {
       $rOpts->{'maximum-unexpected-errors'};
     $self->[_rOpts_logfile_] = $rOpts->{'logfile'};
     $self->[_rOpts_]         = $rOpts;
+    $self->[_calculate_ci_] =
+      !$rOpts->{'experimental'} || $rOpts->{'experimental'} !~ /\bci\b/;
 
     # These vars are used for guessing indentation and must be positive
     $self->[_tabsize_]        = 8 if ( !$self->[_tabsize_] );
@@ -1976,10 +1979,18 @@ EOM
     @q = qw< L { ( [ >;
     @is_opening_type{@q} = (1) x scalar(@q);
 
+    my %is_opening_or_ternary_type;
+    push @q, '?';
+    @is_opening_or_ternary_type{@q} = (1) x scalar(@q);
+
     # 'R' is token for closing } at hash key
     my %is_closing_type;
     @q = qw< R } ) ] >;
     @is_closing_type{@q} = (1) x scalar(@q);
+
+    my %is_closing_or_ternary_type;
+    push @q, ':';
+    @is_closing_or_ternary_type{@q} = (1) x scalar(@q);
 
     my %is_redo_last_next_goto;
     @q = qw(redo last next goto);
@@ -5029,8 +5040,12 @@ EOM
         # all done tokenizing this line ...
         # now prepare the final list of tokens and types
         #-----------------------------------------------
-
-        $self->tokenizer_wrapup_line($line_of_tokens);
+        if ( $self->[_calculate_ci_] ) {
+            $self->tokenizer_wrapup_line($line_of_tokens);
+        }
+        else {
+            $self->tokenizer_wrapup_line_no_ci($line_of_tokens);
+        }
 
         return;
     } ## end sub tokenize_this_line
@@ -5994,6 +6009,226 @@ EOM
 
         return;
     } ## end sub tokenizer_wrapup_line
+
+    sub tokenizer_wrapup_line_no_ci {
+        my ( $self, $line_of_tokens ) = @_;
+
+        #---------------------------------------------------------
+        # Package a line of tokens for shipping back to the caller
+        #---------------------------------------------------------
+
+        # This version does not compute continuation indentation
+        # and instead returns 0 values.
+
+        my @token_type    = ();    # stack of output token types
+        my @block_type    = ();    # stack of output code block types
+        my @type_sequence = ();    # stack of output type sequence numbers
+        my @tokens        = ();    # output tokens
+        my @levels        = ();    # structural brace levels of output tokens
+        my @ci_string = ();  # string needed to compute continuation indentation
+
+        $line_of_tokens->{_nesting_tokens_0} = $nesting_token_string;
+
+        my $level_i;
+
+        #-----------------
+        # Loop over tokens
+        #-----------------
+        my $rtoken_map_im;
+        foreach my $i ( @{$routput_token_list} ) {
+
+            my $type_i = $routput_token_type->[$i];
+            $level_i = $level_in_tokenizer;
+
+            # blanks and comments
+            if ( $type_i eq 'b' || $type_i eq '#' ) {
+
+            }
+
+            # All other types
+            else {
+
+                # $tok_i is the PRE-token.  It only equals the token for symbols
+                my $tok_i = $rtokens->[$i];
+
+                # Check for an invalid token type..
+                # This can happen by running perltidy on non-scripts although
+                # it could also be bug introduced by programming change.  Perl
+                # silently accepts a 032 (^Z) and takes it as the end
+                if ( !$is_valid_token_type{$type_i} ) {
+                    my $val = ord($type_i);
+                    $self->warning(
+"unexpected character decimal $val ($type_i) in script\n"
+                    );
+                    $self->[_in_error_] = 1;
+                }
+
+                # $ternary_indentation_flag indicates that we need a change
+                # in level at a nested ternary, as follows
+                #     1 => at a nested ternary ?
+                #    -1 => at a nested ternary :
+                #     0 => otherwise
+
+                #-------------------------------------------
+                # Section 1: handle a level-increasing token
+                #-------------------------------------------
+                # set primary indentation levels based on structural braces
+                # Note: these are set so that the leading braces have a HIGHER
+                # level than their CONTENTS, which is convenient for indentation
+                # Also, define continuation indentation for each token.
+                if ( $is_opening_or_ternary_type{$type_i} ) {
+
+                    if ( $type_i eq '?' ) {
+                        if ( $routput_indent_flag->[$i] > 0 ) {
+                            $level_in_tokenizer++;
+
+                            # break BEFORE '?' in a nested ternary
+                            $level_i = $level_in_tokenizer;
+                            $nesting_block_string .= "$nesting_block_flag";
+                        }
+                    }
+                    else {
+
+                        $nesting_token_string .= $tok_i;
+
+                        if ( $type_i eq '{' || $type_i eq 'L' ) {
+
+                            $level_in_tokenizer++;
+
+                            if ( $routput_block_type->[$i] ) {
+                                $nesting_block_flag = 1;
+                                $nesting_block_string .= '1';
+                            }
+                            else {
+                                $nesting_block_flag = 0;
+                                $nesting_block_string .= '0';
+                            }
+                        }
+                    }
+                } ## end if ( $type_i eq '{' ||...})
+
+                #-------------------------------------------
+                # Section 2: handle a level-decreasing token
+                #-------------------------------------------
+                elsif ( $is_closing_or_ternary_type{$type_i} ) {
+
+                    if ( $type_i ne ':' ) {
+                        my $char = chop $nesting_token_string;
+                        if ( $char ne $matching_start_token{$tok_i} ) {
+                            $nesting_token_string .= $char . $tok_i;
+                        }
+                    }
+
+                    if (   $type_i eq '}'
+                        || $type_i eq 'R'
+                        || $type_i eq ':' && $routput_indent_flag->[$i] < 0 )
+                    {
+
+                        $level_i = --$level_in_tokenizer;
+
+                        if ( $level_in_tokenizer < 0 ) {
+                            unless ( $self->[_saw_negative_indentation_] ) {
+                                $self->[_saw_negative_indentation_] = 1;
+                                $self->warning(
+                                    "Starting negative indentation\n");
+                            }
+                        }
+
+                        # restore previous level values
+                        if ( length($nesting_block_string) > 1 )
+                        {    # true for valid script
+                            chop $nesting_block_string;
+                            $nesting_block_flag =
+                              substr( $nesting_block_string, -1 ) eq '1';
+                        } ## end if ( length($nesting_block_string...))
+
+                    } ## end elsif ( $type_i eq '}' ||...{)
+                } ## end elsif ( $type_i eq '}' ||...{)
+
+                #-------------------------------------------
+                # Section 3: operations on other types
+                #-------------------------------------------
+                # apply token type patch:
+                # - output anonymous 'sub' as keyword (type 'k')
+                # - output __END__, __DATA__, and format as type 'k' instead
+                #   of ';' to make html colors correct, etc.
+                # The following hash tests are equivalent to these older tests:
+                #   if ( $type_i eq 't' && $is_sub{$tok_i} ) { $fix_type = 'k' }
+                #   if ( $type_i eq ';' && $tok_i =~ /\w/ ) { $fix_type = 'k' }
+                elsif ($is_END_DATA_format_sub{$tok_i}
+                    && $is_semicolon_or_t{$type_i} )
+                {
+                    $type_i = 'k';
+                }
+            } ## end else [ if ( $type_i eq 'b' ||...)]
+
+            #--------------------------------
+            # Store the values for this token
+            #--------------------------------
+            push( @ci_string,     0 );
+            push( @levels,        $level_i );
+            push( @block_type,    $routput_block_type->[$i] );
+            push( @type_sequence, $routput_type_sequence->[$i] );
+            push( @token_type,    $type_i );
+
+            # Form and store the PREVIOUS token
+            if ( defined($rtoken_map_im) ) {
+                my $numc =
+                  $rtoken_map->[$i] - $rtoken_map_im;    # how many characters
+
+                if ( $numc > 0 ) {
+                    push( @tokens,
+                        substr( $input_line, $rtoken_map_im, $numc ) );
+                }
+                else {
+
+                    # Should not happen unless @{$rtoken_map} is corrupted
+                    DEVEL_MODE
+                      && $self->Fault(
+                        "number of characters is '$numc' but should be >0\n");
+                }
+            }
+
+            # or grab some values for the leading token (needed for log output)
+            else {
+                $line_of_tokens->{_nesting_blocks_0} = $nesting_block_string;
+            }
+
+            $rtoken_map_im = $rtoken_map->[$i];
+        } ## end foreach my $i ( @{$routput_token_list...})
+
+        #------------------------
+        # End loop to over tokens
+        #------------------------
+
+        # Form and store the final token of this line
+        if ( defined($rtoken_map_im) ) {
+            my $numc = length($input_line) - $rtoken_map_im;
+            if ( $numc > 0 ) {
+                push( @tokens, substr( $input_line, $rtoken_map_im, $numc ) );
+            }
+            else {
+
+                # Should not happen unless @{$rtoken_map} is corrupted
+                DEVEL_MODE
+                  && $self->Fault(
+                    "Number of Characters is '$numc' but should be >0\n");
+            }
+        }
+
+        #----------------------------------------------------------
+        # Wrap up this line of tokens for shipping to the Formatter
+        #----------------------------------------------------------
+        $line_of_tokens->{_rtoken_type}    = \@token_type;
+        $line_of_tokens->{_rtokens}        = \@tokens;
+        $line_of_tokens->{_rblock_type}    = \@block_type;
+        $line_of_tokens->{_rtype_sequence} = \@type_sequence;
+        $line_of_tokens->{_rlevels}        = \@levels;
+        $line_of_tokens->{_rci_levels}     = \@ci_string;
+
+        return;
+    } ## end sub tokenizer_wrapup_line_no_ci
+
 } ## end tokenize_this_line
 
 #######################################################################

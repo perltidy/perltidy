@@ -7209,9 +7209,14 @@ sub set_ci {
                 }
 
                 # Most closing tokens should align with their opening tokens.
-                if (   $type eq '{'
+                if (
+                       $type eq '{'
                     && $token ne '('
-                    && $is_list_end_type{$last_type} )
+                    && $is_list_end_type{$last_type}
+
+                    # avoid asub blocks, which may have prototypes ending in '}'
+                    && !$ris_asub_block->{$seqno}
+                  )
                 {
                     $ci_close = $ci_this;
                 }
