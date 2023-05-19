@@ -518,8 +518,15 @@ sub new {
       $rOpts->{'maximum-unexpected-errors'};
     $self->[_rOpts_logfile_] = $rOpts->{'logfile'};
     $self->[_rOpts_]         = $rOpts;
-    $self->[_calculate_ci_] =
-      !$rOpts->{'experimental'} || $rOpts->{'experimental'} !~ /\bci\b/;
+
+    # -exp=ci0 and -exp=ci1 turn on the tokenizer ci calculation for testing.
+    # See comments in sub Perl::Tidy::Formatter::set_ci.
+    my $calculate_ci = 0;    # current default
+    if ( $rOpts->{'experimental'} && $rOpts->{'experimental'} =~ /\bci(\d+)\b/ )
+    {
+        $calculate_ci = ( $1 == 0 || $1 == 1 );
+    }
+    $self->[_calculate_ci_] = $calculate_ci;
 
     # These vars are used for guessing indentation and must be positive
     $self->[_tabsize_]        = 8 if ( !$self->[_tabsize_] );
@@ -5427,6 +5434,9 @@ EOM
         # Package a line of tokens for shipping back to the caller
         #---------------------------------------------------------
 
+        # NOTE: This routine is only called when -exp=ci0 or -exp=ci1 are set
+        # for testing purposes.
+
         # Most of the remaining work involves defining the two indentation
         # parameters that the formatter needs for each token:
         # - $level    = structural indentation level and
@@ -6017,8 +6027,9 @@ EOM
         # Package a line of tokens for shipping back to the caller
         #---------------------------------------------------------
 
-        # This version does not compute continuation indentation
-        # and instead returns 0 values.
+        # This version does not compute continuation indentation and instead
+        # returns 0 values.  The ci values are computed later by the Formatter
+        # in sub set_ci.
 
         my @token_type    = ();    # stack of output token types
         my @block_type    = ();    # stack of output code block types

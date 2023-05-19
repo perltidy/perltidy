@@ -6662,52 +6662,52 @@ sub dump_block_summary {
 
 sub set_ci {
 
+    my ($self) = @_;
+
     # Set the basic continuation indentation (ci) for all tokens.
+    # This is a replacement for the values previously computed in
+    # sub Perl::Tidy::Tokenizer::tokenizer_wrapup. In most cases it
+    # produces identical results, but in a few cases it is an improvement.
 
-    # This is an experimental routine intended to eventually replace
-    # the ci values computed by the tokenizer.  For testing it is invoked
-    # with -exp=ci
-    my $use_experimental_ci = DEVEL_MODE
-      || $rOpts->{'experimental'} && $rOpts->{'experimental'} =~ /\bci\b/;
+    use constant DEBUG_SET_CI => 0;
 
-    # This flag causes sub set_ci to still operate on comments when it would
-    # otherwise not be used.  This allows the effect on comments to be
-    # filtered out in testing. This option is only for testing.
-    my $use_experimental_ci1 =
-      $rOpts->{'experimental'} && $rOpts->{'experimental'} =~ /\bci1\b/;
-
-    return if ( !$use_experimental_ci && !$use_experimental_ci1 );
+    # The following flag values are temporavailable for experimentation:
+    # -exp=ci0 OLD: use ci values computed by tokenizer
+    # -exp=ci1 MIXED: old ci values except for new ci for comments.
+    # -exp=ci2 NEW: ci values computed by this sub
+    my $calculate_ci = 2;    # current default
+    if    ( DEVEL_MODE || DEBUG_SET_CI ) { $calculate_ci = 2 }
+    elsif ($rOpts->{'experimental'}
+        && $rOpts->{'experimental'} =~ /\bci(\d+)\b/ )
+    {
+        $calculate_ci = $1;
+    }
+    return if ( !$calculate_ci );
+    my $ci_comments_only = $calculate_ci == 1;
 
     # This turns on an optional piece of logic which makes the new and
     # old computations of ci agree.  It has almost no effect on actual
     # programs but is useful for testing.
     use constant SET_CI_OPTION_0 => 1;
 
-    use constant DEBUG_SET_CI => 0;
-
-    #---------------------------------------------------------------------------
-    ## FIXME: This is also in break_lists; might become a global constant
+    # NOTE: This is slightly different from the hash in in break_lists
+    # with the same name
     my %is_logical_container;
-
-    # Removed ? : to fix t007 and others
+    ## Removed ? : to fix t007 and others
     ##my @q = qw# if elsif unless while and or err not && | || ? : ! #;
     my @q = qw# if elsif unless while and or err not && | || ! #;
     @is_logical_container{@q} = (1) x scalar(@q);
 
-    # CAUTION: using differnt hash than in tokenizer here, but same name:
+    # NOTE: using differnt hash than in tokenizer here, but same name:
     my %is_container_label_type;
-    ## From tokenizer ???@q = qw( k => && || ? : . );
-    ## Need to include '!'
-    ## What about placing '.' in logical container
     @q = qw# k && | || ? : ! #;
     @is_container_label_type{@q} = (1) x scalar(@q);
 
-    #---------------------------------------------------------------------------
-
-    # - Contents are set to match old version for issue t027
-    # - add '=' for t015
-    # - add '=~' for 'locale.in'
-    # - add '<=>' for 'corelist.in'
+    # The following hash is set to match old ci values
+    # - initially defined for issue t027, then
+    # - added '=' for t015
+    # - added '=~' for 'locale.in'
+    # - added '<=>' for 'corelist.in'
     # Note:
     #   See @value_requestor_type for more that might be included
     #   See also @is_binary_type
@@ -6720,7 +6720,6 @@ sub set_ci {
     push @q, ',';
     @is_list_end_type{@q} = (1) x scalar(@q);
 
-    my ($self) = @_;
     my $rLL    = $self->[_rLL_];
     my $Klimit = $self->[_Klimit_];
     return unless defined($Klimit);
@@ -6744,7 +6743,7 @@ sub set_ci {
         _ci_close       => 0,
         _ci_close_next  => 0,
         _container_type => 'Block',
-        _ci_default     => 1,
+        _ci_next_next   => 1,
         _comma_count    => 0,
         _redo_list      => undef,
         _Kc             => undef,
@@ -6822,18 +6821,18 @@ sub set_ci {
         $token = $rtoken_K->[_TOKEN_];
 
         # Definitions:
-        # $ci_this    = the ci for this token
-        # $ci_next    = the ci for the next token
-        # $ci_default = the default ci for this container
+        # $ci_this      = the ci for this token
+        # $ci_next      = the ci for the next token
+        # $ci_next_next = the normal next value of $ci_next in this container
 
         # Normally we use the ci value value set by previous token.
         my $ci_this = $ci_next;
 
         # First guess at next value uses the stored default
         # which is 0 for logical containers, 1 for other containers:
-        $ci_next = $rparent->{_ci_default};
+        $ci_next = $rparent->{_ci_next_next};
 
-        # We will change these two ci values necessary for special cases...
+        # We will change these ci values necessary for special cases...
 
         #-------------------------------
         # Handle certain specific tokens
@@ -6980,7 +6979,7 @@ sub set_ci {
                 # Default ci values for the closing token, to be modified
                 # as necessary:
                 my $ci_close      = $ci_next;
-                my $ci_close_next = $rparent->{_ci_default};
+                my $ci_close_next = $rparent->{_ci_next_next};
 
                 my $Kc =
                     $type eq '?'
@@ -7048,7 +7047,7 @@ sub set_ci {
                     elsif ( $last_type eq '!' ) { $ci_this = $ci_last }
                 }
 
-                my $ci_default = 1;
+                my $ci_next_next = 1;
 
                 my $block_type = $rblock_type_of_seqno->{$seqno};
                 $block_type = EMPTY_STRING unless ($block_type);
@@ -7129,13 +7128,13 @@ sub set_ci {
                 elsif ($is_logical) {
                     $container_type = 'Logical';
 
-                    $ci_default    = 0;
+                    $ci_next_next  = 0;
                     $ci_close_next = $ci_this;
 
                     # Part 2 of optional patch to get agreement with previous ci
                     if ( $type eq '[' && SET_CI_OPTION_0 ) {
 
-                        $ci_default = $ci_this;
+                        $ci_next_next = $ci_this;
 
                         # Undo ci at a chain of indexes or hash keys
                         if ( $last_type eq '}' ) {
@@ -7228,7 +7227,7 @@ sub set_ci {
                 $rparent = {
                     _seqno          => $seqno,
                     _container_type => $container_type,
-                    _ci_default     => $ci_default,
+                    _ci_next_next   => $ci_next_next,
                     _ci_open        => $ci_this,
                     _ci_open_next   => $ci_next,
                     _ci_close       => $ci_close,
@@ -7326,14 +7325,27 @@ EOM
 
         $rtoken_K->[_CI_LEVEL_] = $ci_this
 
-          # TESTING
-          if ($use_experimental_ci);
+          # do not store in hybrid testing mode
+          if ( !$ci_comments_only );
 
         # Remember last nonblank, non-comment token info
         $ci_last    = $ci_this;
         $last_token = $token;
         $last_type  = $type;
 
+    }
+
+    # if the logfile is saved, we need to save the leading ci of
+    # each old line of code.
+    if ( $self->[_save_logfile_] ) {
+        my $rlines = $self->[_rlines_];
+        foreach my $line_of_tokens ( @{$rlines} ) {
+            my $line_type = $line_of_tokens->{_line_type};
+            next if ( $line_type ne 'CODE' );
+            my ( $Kfirst, $Klast ) = @{ $line_of_tokens->{_rK_range} };
+            next if ( !defined($Kfirst) );
+            $line_of_tokens->{_ci_level_0} = $rLL->[$Kfirst]->[_CI_LEVEL_];
+        }
     }
 
     if (DEBUG_SET_CI) {
