@@ -6036,7 +6036,7 @@ EOM
         my @type_sequence = ();    # stack of output type sequence numbers
         my @tokens        = ();    # output tokens
         my @levels        = ();    # structural brace levels of output tokens
-        my @ci_string = ();  # string needed to compute continuation indentation
+        my @ci_levels     = ();
 
         $line_of_tokens->{_nesting_tokens_0} = $nesting_token_string;
 
@@ -6176,7 +6176,6 @@ EOM
             #--------------------------------
             # Store the values for this token
             #--------------------------------
-            push( @ci_string,     0 );
             push( @levels,        $level_i );
             push( @block_type,    $routput_block_type->[$i] );
             push( @type_sequence, $routput_type_sequence->[$i] );
@@ -6227,6 +6226,9 @@ EOM
             }
         }
 
+        # This sub returns zero ci values
+        if (@levels) { @ci_levels = (0) x $#levels }
+
         #----------------------------------------------------------
         # Wrap up this line of tokens for shipping to the Formatter
         #----------------------------------------------------------
@@ -6235,7 +6237,7 @@ EOM
         $line_of_tokens->{_rblock_type}    = \@block_type;
         $line_of_tokens->{_rtype_sequence} = \@type_sequence;
         $line_of_tokens->{_rlevels}        = \@levels;
-        $line_of_tokens->{_rci_levels}     = \@ci_string;
+        $line_of_tokens->{_rci_levels}     = \@ci_levels;
 
         return;
     } ## end sub tokenizer_wrapup_line_no_ci

@@ -6732,6 +6732,8 @@ sub set_ci {
     my $last_type  = $type;
     my $ci_last    = 0;
 
+    my $ci_next_next = 1;
+
     my $rstack = ();
 
     # - note that ci_default = 0 only for 'List'
@@ -6743,7 +6745,7 @@ sub set_ci {
         _ci_close       => 0,
         _ci_close_next  => 0,
         _container_type => 'Block',
-        _ci_next_next   => 1,
+        _ci_next_next   => $ci_next_next,
         _comma_count    => 0,
         _redo_list      => undef,
         _Kc             => undef,
@@ -6830,14 +6832,13 @@ sub set_ci {
 
         # First guess at next value uses the stored default
         # which is 0 for logical containers, 1 for other containers:
-        $ci_next = $rparent->{_ci_next_next};
+        $ci_next = $ci_next_next;
 
         # We will change these ci values necessary for special cases...
 
-        #-------------------------------
-        # Handle certain specific tokens
-        #-------------------------------
-
+        #-------
+        # Blanks
+        #-------
         # For blanks, the ci should not be important,
         # but to match existing code a rule for blanks seems to be:
         # A blank after closing token has same ci as previous token,
@@ -6849,128 +6850,21 @@ sub set_ci {
                 $ci_this = $ci_last;
             }
             $rtoken_K->[_CI_LEVEL_] = $ci_this;
+
+            # 'next' to avoid saving last_ values for blanks and commas
             next;
         }
 
-        # Handle a comment
-        elsif ( $type eq '#' ) {
+        #--------------------
+        # Container tokens...
+        #--------------------
+        elsif ( $rtoken_K->[_TYPE_SEQUENCE_] ) {
 
-            # If at '#' in ternary before a ? or :, use that level to make
-            # the comment line up with the next ? or : line.  (see c202/t052)
-            # i.e. if a nested ? follows, we increase the '#' level by 1, and
-            # if a nested : follows, we decrease the '#' level by 1.
-            # This is the only place where this sub changes a _LEVEL_ value.
-            my $Kn;
-            my $parent_container_type = $rparent->{_container_type};
-            if ( $parent_container_type eq 'Ternary' ) {
-                $Kn = $self->K_next_code($KK);
-                if ($Kn) {
-                    my $type_kn = $rLL->[$Kn]->[_TYPE_];
-                    if ( $is_ternary{$type_kn} ) {
-                        my $level_KK = $rLL->[$KK]->[_LEVEL_];
-                        my $level_Kn = $rLL->[$Kn]->[_LEVEL_];
-                        $rLL->[$KK]->[_LEVEL_] = $rLL->[$Kn]->[_LEVEL_];
-                    }
-                }
-            }
+            my $seqno = $rtoken_K->[_TYPE_SEQUENCE_];
 
-            # Undo ci for a block comment followed by a closing token or , or ;
-            # provided that the parent container:
-            # - ends without ci, or
-            # - starts ci=0 and is a comma list or this follows a closing type
-            # - has a level jump
-            if (
-                $ci_this
-                && (
-                    !$rparent->{_ci_close}
-                    || (
-                        !$rparent->{_ci_open_next}
-                        && (   $rparent->{_comma_count}
-                            || $is_closing_type{$last_type} )
-                    )
-                )
-              )
-            {
-                # Be sure this is a block comment
-                my $lx       = $rtoken_K->[_LINE_INDEX_];
-                my $rK_range = $rlines->[$lx]->{_rK_range};
-                my $Kfirst;
-                if ($rK_range) { $Kfirst = $rK_range->[0] }
-                if ( defined($Kfirst) && $Kfirst == $KK ) {
-
-                    # Look for trailing closing token
-                    #    [ and possibly ',' or ';' ]
-                    $Kn = $self->K_next_code($KK) if ( !$Kn );
-                    my $Kc = $rparent->{_Kc};
-                    if (
-                           $Kn
-                        && $Kc
-                        && (
-                            $Kn == $Kc
-
-                            # only look for comma if -wbb=',' is set
-                            # to minimize changes to existing formatting
-                            || (   $rLL->[$Kn]->[_TYPE_] eq ','
-                                && $want_break_before_comma
-                                && $parent_container_type eq 'List' )
-
-                            # do not look ahead for a bare ';' because
-                            # it changes old formatting with little benefit.
-##                          || (   $rLL->[$Kn]->[_TYPE_] eq ';'
-##                                && $parent_container_type eq 'Block' )
-                        )
-                      )
-                    {
-
-                        # Be sure container has a level jump
-                        my $level_KK = $rLL->[$KK]->[_LEVEL_];
-                        my $level_Kc = $rLL->[$Kc]->[_LEVEL_];
-                        if ( $level_Kc < $level_KK ) {
-                            $ci_this = 0;
-                        }
-                    }
-                }
-            }
-
-            $ci_next = $ci_this;
-            $rtoken_K->[_CI_LEVEL_] = $ci_this;
-            next;
-        }
-
-        # A comma and the subsequent item normally have ci undone
-        # unless ci has been set at a lower level
-        elsif ( $type eq ',' ) {
-
-            if ( $rparent->{_container_type} eq 'List' ) {
-                $ci_this = $ci_next = $rparent->{_ci_open_next};
-            }
-            $rparent->{_comma_count}++;
-        }
-
-        # The next token after a ';' and label (type 'J') starts a new stmt
-        # The ci after a C-style for ';' (type 'f') is handled similarly.
-        # TODO: There is type 'f' redundant coding in sub respace which can
-        # be removed if this becomes the standard routine for computing ci.
-        elsif ( $type eq ';' || $type eq 'J' || $type eq 'f' ) {
-            $ci_next = 0;
-            if ( $is_closing_type{$last_type} ) { $ci_this = $ci_last }
-        }
-
-        # Undo ci after a format statement
-        elsif ( $type eq 'k' ) {
-            if ( substr( $token, 0, 6 ) eq 'format' ) {
-                $ci_next = 0;
-            }
-        }
-
-        #---------------------------
-        # Handle container tokens...
-        #---------------------------
-        elsif ( my $seqno = $rtoken_K->[_TYPE_SEQUENCE_] ) {
-
-            #------------------------
-            # Opening container token
-            #------------------------
+            #-------------------------
+            # Opening container tokens
+            #-------------------------
             if ( $is_opening_sequence_token{$token} ) {
 
                 my $level          = $rtoken_K->[_LEVEL_];
@@ -6979,14 +6873,33 @@ sub set_ci {
                 # Default ci values for the closing token, to be modified
                 # as necessary:
                 my $ci_close      = $ci_next;
-                my $ci_close_next = $rparent->{_ci_next_next};
+                my $ci_close_next = $ci_next_next;
 
                 my $Kc =
                     $type eq '?'
                   ? $K_closing_ternary->{$seqno}
                   : $K_closing_container->{$seqno};
-                my $Kcn = $self->K_next_code($Kc);
-                my $Kn  = $self->K_next_nonblank($KK);
+
+                ##my $Kn  = $self->K_next_nonblank($KK);
+                my $Kn;
+                if ( $KK < $Klimit ) {
+                    $Kn = $KK + 1;
+                    if ( $rLL->[$Kn]->[_TYPE_] eq 'b' && $Kn < $Klimit ) {
+                        $Kn += 1;
+                    }
+                }
+
+                ##my $Kcn = $self->K_next_code($Kc);
+                my $Kcn;
+                if ( $Kc && $Kc < $Klimit ) {
+                    $Kcn = $Kc + 1;
+                    if ( $rLL->[$Kcn]->[_TYPE_] eq 'b' && $Kcn < $Klimit ) {
+                        $Kcn += 1;
+                    }
+                    if ( $rLL->[$Kcn]->[_TYPE_] eq '#' ) {
+                        $Kcn = $self->K_next_code($Kcn);
+                    }
+                }
 
                 my $opening_level_jump =
                   $Kn ? $rLL->[$Kn]->[_LEVEL_] - $level : 0;
@@ -7047,7 +6960,8 @@ sub set_ci {
                     elsif ( $last_type eq '!' ) { $ci_this = $ci_last }
                 }
 
-                my $ci_next_next = 1;
+                # initialize ci_next_next to its standard value
+                $ci_next_next = 1;
 
                 my $block_type = $rblock_type_of_seqno->{$seqno};
                 $block_type = EMPTY_STRING unless ($block_type);
@@ -7238,9 +7152,9 @@ sub set_ci {
                 };
             }
 
-            #------------------------
-            # Closing container token
-            #------------------------
+            #-------------------------
+            # Closing container tokens
+            #-------------------------
             else {
                 my $seqno_test = $rparent->{_seqno};
                 if ( $seqno_test ne $seqno ) {
@@ -7265,7 +7179,8 @@ sub set_ci {
 
                 my $ci_open_old = $rparent->{_ci_open};
                 if ( @{$rstack} ) {
-                    $rparent = pop @{$rstack};
+                    $rparent      = pop @{$rstack};
+                    $ci_next_next = $rparent->{_ci_next_next};
                 }
                 else {
 
@@ -7284,6 +7199,130 @@ sub set_ci {
                     }
                 }
             }
+        }
+
+        #---------
+        # Comments
+        #---------
+        elsif ( $type eq '#' ) {
+
+            # If at '#' in ternary before a ? or :, use that level to make
+            # the comment line up with the next ? or : line.  (see c202/t052)
+            # i.e. if a nested ? follows, we increase the '#' level by 1, and
+            # if a nested : follows, we decrease the '#' level by 1.
+            # This is the only place where this sub changes a _LEVEL_ value.
+            my $Kn;
+            my $parent_container_type = $rparent->{_container_type};
+            if ( $parent_container_type eq 'Ternary' ) {
+                $Kn = $self->K_next_code($KK);
+                if ($Kn) {
+                    my $type_kn = $rLL->[$Kn]->[_TYPE_];
+                    if ( $is_ternary{$type_kn} ) {
+                        my $level_KK = $rLL->[$KK]->[_LEVEL_];
+                        my $level_Kn = $rLL->[$Kn]->[_LEVEL_];
+                        $rLL->[$KK]->[_LEVEL_] = $rLL->[$Kn]->[_LEVEL_];
+                    }
+                }
+            }
+
+            # Undo ci for a block comment followed by a closing token or , or ;
+            # provided that the parent container:
+            # - ends without ci, or
+            # - starts ci=0 and is a comma list or this follows a closing type
+            # - has a level jump
+            if (
+                $ci_this
+                && (
+                    !$rparent->{_ci_close}
+                    || (
+                        !$rparent->{_ci_open_next}
+                        && (   $rparent->{_comma_count}
+                            || $is_closing_type{$last_type} )
+                    )
+                )
+              )
+            {
+                # Be sure this is a block comment
+                my $lx       = $rtoken_K->[_LINE_INDEX_];
+                my $rK_range = $rlines->[$lx]->{_rK_range};
+                my $Kfirst;
+                if ($rK_range) { $Kfirst = $rK_range->[0] }
+                if ( defined($Kfirst) && $Kfirst == $KK ) {
+
+                    # Look for trailing closing token
+                    #    [ and possibly ',' or ';' ]
+                    $Kn = $self->K_next_code($KK) if ( !$Kn );
+                    my $Kc = $rparent->{_Kc};
+                    if (
+                           $Kn
+                        && $Kc
+                        && (
+                            $Kn == $Kc
+
+                            # only look for comma if -wbb=',' is set
+                            # to minimize changes to existing formatting
+                            || (   $rLL->[$Kn]->[_TYPE_] eq ','
+                                && $want_break_before_comma
+                                && $parent_container_type eq 'List' )
+
+                            # do not look ahead for a bare ';' because
+                            # it changes old formatting with little benefit.
+##                          || (   $rLL->[$Kn]->[_TYPE_] eq ';'
+##                                && $parent_container_type eq 'Block' )
+                        )
+                      )
+                    {
+
+                        # Be sure container has a level jump
+                        my $level_KK = $rLL->[$KK]->[_LEVEL_];
+                        my $level_Kc = $rLL->[$Kc]->[_LEVEL_];
+                        if ( $level_Kc < $level_KK ) {
+                            $ci_this = 0;
+                        }
+                    }
+                }
+            }
+
+            $ci_next = $ci_this;
+            $rtoken_K->[_CI_LEVEL_] = $ci_this;
+
+            # 'next' to avoid saving last_ values for blanks and commas
+            next;
+        }
+
+        #----------------------
+        # Semicolons and Labels
+        #----------------------
+        # The next token after a ';' and label (type 'J') starts a new stmt
+        # The ci after a C-style for ';' (type 'f') is handled similarly.
+        # TODO: There is type 'f' redundant coding in sub respace which can
+        # be removed if this becomes the standard routine for computing ci.
+        elsif ( $type eq ';' || $type eq 'J' || $type eq 'f' ) {
+            $ci_next = 0;
+            if ( $is_closing_type{$last_type} ) { $ci_this = $ci_last }
+        }
+
+        #---------
+        # Keywords
+        #---------
+        # Undo ci after a format statement
+        elsif ( $type eq 'k' ) {
+            if ( substr( $token, 0, 6 ) eq 'format' ) {
+                $ci_next = 0;
+            }
+        }
+
+        #-------
+        # Commas
+        #-------
+        # A comma and the subsequent item normally have ci undone
+        # unless ci has been set at a lower level
+        elsif ( $type eq ',' ) {
+
+            if ( $rparent->{_container_type} eq 'List' ) {
+                $ci_this = $ci_next = $rparent->{_ci_open_next};
+            }
+            $rparent->{_comma_count}++;
         }
 
         #-----------------------------------------------------------------
@@ -7334,6 +7373,10 @@ EOM
         $last_type  = $type;
 
     }
+
+    #--------------
+    # End main loop
+    #--------------
 
     # if the logfile is saved, we need to save the leading ci of
     # each old line of code.
@@ -26986,7 +27029,7 @@ EOM
                 # it is any specially marked side comment
                 ( defined($KK) && $self->[_rspecial_side_comment_type_]->{$KK} )
 
-                # or it is a static side comment
+                  # or it is a static side comment
                   || ( $rOpts->{'static-side-comments'}
                     && $token =~ /$static_side_comment_pattern/ )
 

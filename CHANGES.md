@@ -2,6 +2,15 @@
 
 ## 2023 03 09.02
 
+    - Some rare, minor issues with continuation indentation have been fixed.
+      Most scripts will remain unchanged.  The main change is that block
+      comments which occur just before a closing brace, bracket or paren
+      now have an indentation which is independent of the existance of
+      an optional comma or semicolon.  Previously, adding or deleting
+      an optional trailing comma could cause their indentation to jump.
+      Also, indentation of comments within ternary statements has been
+      improved.
+
     - Issue git #118. A warning will be issued if a duplicate format-skipping
       starting marker is seen within a format-skipping section. The same
       applies to duplicate code-skipping starting markers within code-skipping
