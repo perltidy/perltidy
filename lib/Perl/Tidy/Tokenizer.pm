@@ -6036,7 +6036,6 @@ EOM
         my @type_sequence = ();    # stack of output type sequence numbers
         my @tokens        = ();    # output tokens
         my @levels        = ();    # structural brace levels of output tokens
-        my @ci_levels     = ();
 
         $line_of_tokens->{_nesting_tokens_0} = $nesting_token_string;
 
@@ -6227,7 +6226,7 @@ EOM
         }
 
         # This sub returns zero ci values
-        if (@levels) { @ci_levels = (0) x $#levels }
+        my @ci_levels = (0) x scalar(@levels);
 
         #----------------------------------------------------------
         # Wrap up this line of tokens for shipping to the Formatter

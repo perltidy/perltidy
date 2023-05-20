@@ -1,30 +1,38 @@
 # An update to the basic Perl::TIdy continuation indentation model
 
-The next release after Perl::Tidy versison 20230309 has several changes in the basic method for computing "continuation indentation".  The changes mainly apply to some unusual situations, and most programs will remain unchanged.  This note explains what the changes are and why they are needed.
+The next release after Perl::Tidy versison 20230309 has several changes in the
+basic method for computing "continuation indentation".  The changes mainly
+apply to some unusual situations, and most programs will remain unchanged.
+This note explains what the changes are and why they are needed.
 
 To briefly review, the indentation of a line is the sum of two parts: 
 (**1**) structural indentation, and (**2**) continuation indentation.
 
 These are occasionally called primary and secondary indentation.
 
-Basically, structural indentation is introduced by opening container
-tokens **{**, **(**, or **[**.  Default
-structural indentation is 4 characters by default but can be changed
-with the **-i=n** parameter. The total structural indentation is easily
-determined by keeping a stack of the opening tokens which contain a given line.
+**Structural indentation** is introduced by opening container tokens
+**{**, **(**, or **[**.  Default structural indentation is 4 characters by
+default but can be changed with the **-i=n** parameter. The total structural
+indentation is easily determined by keeping a stack of the opening tokens which
+contain a given line.
  
-Continuation indentation is introduced whenever a statement in a code block is
-broken before its terminating semicolon, or when a long list item is broken
-before its terminating comma.  Default continuation indentation is 2 characters
-but this can be changed with the **-ci=n** parameter.  In more complex
-situations, such as a mixture of ternary statements and list items, the
-continuation can be more difficult to define and compute.
+**Continuation indentation** is introduced whenever a statement in a code block
+is so long that it must have an internal line break before its terminating
+semicolon, or when a long list item is broken before its terminating comma.  In
+this case, any continuation lines receive the additional continuation
+indentation to contrast them with the start of subsequent statements or list
+items.  In complex situations, such as a mixture of ternary statements and list
+items which contain function calls and logical expressions, it can be
+difficult to design rules for the continuation indentation.
 
-The original coding for continuation indentation worked in the tokenizer during
-a single pass through the file, and this placed some limits on what it could
-do.  This update moves this coding downstream into the formatter module, where
-the entire file is accessible, and this allows the following improvements to be
-made.
+The default continuation indentation is 2 characters but this can be changed
+with the **-ci=n** parameter.
+
+The original coding for continuation indentation operated in the Tokenizer
+module during a single pass through the file, and this placed some limits on
+what it could do.  This update moves this coding downstream into the Formatter
+module, where the entire file is accessible with complete data structures, and
+this allows the following improvements to be made.
 
 ## Block comment indentation changes before closing braces, brackets and parens
 
@@ -32,8 +40,8 @@ The indentation of one-line comments, also called block comments, which
 appear near the end of a containing structure are now independent of the
 existance of any optional trailing comma or semicolon.
 
-To illustrate the issue, consider the following example where the last statement
-is terminated with a semicolon:
+To illustrate the issue, consider the following example where the last
+statement is terminated with a semicolon:
 
 ```
 if ( $name =~ m/^$AccentTokens$/ ) {
@@ -43,9 +51,9 @@ if ( $name =~ m/^$AccentTokens$/ ) {
 }
 ```
 
-The comment has the basic indentation of the block but now continuation indentation.
-But if the terminal semicolon is removed in this line then the old old default formatting 
-would add continuation indentation to the comment:
+The comment has the basic indentation of the block but now continuation
+indentation.  But if the terminal semicolon is removed in this line then the
+old default formatting would add continuation indentation to the comment:
 
 ```
 if ( $name =~ m/^$AccentTokens$/ ) {
@@ -55,9 +63,9 @@ if ( $name =~ m/^$AccentTokens$/ ) {
 }
 ```
 
-The same issue occurs in lists regarding the existance of an optional trailing comma.
-This change is undesirable and has been removed in the current version. So the new indentation 
-for this example is independent of the final semicolon:
+The same issue occurs in lists regarding the existance of an optional trailing
+comma.  This change is undesirable and has been removed in the current version.
+So the new indentation for this example is independent of the final semicolon:
 
 ```
 if ( $name =~ m/^$AccentTokens$/ ) {

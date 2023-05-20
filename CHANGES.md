@@ -2,15 +2,6 @@
 
 ## 2023 03 09.02
 
-    - Some rare, minor issues with continuation indentation have been fixed.
-      Most scripts will remain unchanged.  The main change is that block
-      comments which occur just before a closing brace, bracket or paren
-      now have an indentation which is independent of the existance of
-      an optional comma or semicolon.  Previously, adding or deleting
-      an optional trailing comma could cause their indentation to jump.
-      Also, indentation of comments within ternary statements has been
-      improved.
-
     - Issue git #118. A warning will be issued if a duplicate format-skipping
       starting marker is seen within a format-skipping section. The same
       applies to duplicate code-skipping starting markers within code-skipping
@@ -29,6 +20,17 @@
     - Fixed git #110, add missing documentation for new options
       -cpb and -bfvt=n. These work in version 20230309 but the pod
       documentation was missing and has been added.
+
+    - Some rare, minor issues with continuation indentation have been fixed.
+      Most scripts will remain unchanged.  The main change is that block
+      comments which occur just before a closing brace, bracket or paren
+      now have an indentation which is independent of the existance of
+      an optional comma or semicolon.  Previously, adding or deleting
+      an optional trailing comma could cause their indentation to jump.
+      Also, indentation of comments within ternary statements has been
+      improved. For additonal information see
+
+      https://github.com/perltidy/perltidy/blob/master/docs/ci_update.md
 
 ## 2023 03 09
 
