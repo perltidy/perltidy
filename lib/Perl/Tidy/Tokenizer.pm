@@ -5048,7 +5048,7 @@ EOM
         # now prepare the final list of tokens and types
         #-----------------------------------------------
         if ( $self->[_calculate_ci_] ) {
-            $self->tokenizer_wrapup_line($line_of_tokens);
+            $self->tokenizer_wrapup_line_with_ci($line_of_tokens);
         }
         else {
             $self->tokenizer_wrapup_line_no_ci($line_of_tokens);
@@ -5427,15 +5427,16 @@ EOM
         return;
     } ## end sub tokenizer_main_loop
 
-    sub tokenizer_wrapup_line {
+    sub tokenizer_wrapup_line_with_ci {
         my ( $self, $line_of_tokens ) = @_;
 
         #---------------------------------------------------------
         # Package a line of tokens for shipping back to the caller
         #---------------------------------------------------------
 
-        # NOTE: This routine is only called when -exp=ci0 or -exp=ci1 are set
-        # for testing purposes.
+        # NOTE: This routine is retained for testing purposes only; it should
+        # be removed by about 2025. Until then, it can be called for testing
+        # with -exp=ci0 or -exp=ci1.
 
         # Most of the remaining work involves defining the two indentation
         # parameters that the formatter needs for each token:
@@ -6018,7 +6019,7 @@ EOM
         $line_of_tokens->{_rci_levels}     = \@ci_string;
 
         return;
-    } ## end sub tokenizer_wrapup_line
+    } ## end sub tokenizer_wrapup_line_with_ci
 
     sub tokenizer_wrapup_line_no_ci {
         my ( $self, $line_of_tokens ) = @_;
@@ -6027,19 +6028,18 @@ EOM
         # Package a line of tokens for shipping back to the caller
         #---------------------------------------------------------
 
-        # This version does not compute continuation indentation and instead
-        # returns 0 values.  The ci values are computed later by the Formatter
-        # in sub set_ci.
+        # Note: This is the new version of this routine. It does not compute
+        # continuation indentation; it returns values ci=0.  The ci values
+        # are computed later by sub Formatter::set_ci.
 
-        my @token_type    = ();    # stack of output token types
+        # Arrays to hold token values for this line:
+        my @levels        = ();    # structural brace levels of output tokens
         my @block_type    = ();    # stack of output code block types
         my @type_sequence = ();    # stack of output type sequence numbers
+        my @token_type    = ();    # stack of output token types
         my @tokens        = ();    # output tokens
-        my @levels        = ();    # structural brace levels of output tokens
 
         $line_of_tokens->{_nesting_tokens_0} = $nesting_token_string;
-
-        my $level_i;
 
         #-----------------
         # Loop over tokens
@@ -6048,24 +6048,33 @@ EOM
         foreach my $i ( @{$routput_token_list} ) {
 
             my $type_i = $routput_token_type->[$i];
-            $level_i = $level_in_tokenizer;
 
-            # blanks and comments
-            if ( $type_i eq 'b' || $type_i eq '#' ) {
+            #--------------------------------
+            # 1. Handle a non-sequenced token
+            #--------------------------------
+            if ( !$routput_type_sequence->[$i] ) {
 
-            }
+                # 1.1 blanks and comments
+                if ( $type_i eq 'b' || $type_i eq '#' ) {
 
-            # All other types
-            else {
+                }
 
-                # $tok_i is the PRE-token.  It only equals the token for symbols
-                my $tok_i = $rtokens->[$i];
+                # 1.2 types ';' and 't'
+                # - output anonymous 'sub' as keyword (type 'k')
+                # - output __END__, __DATA__, and format as type 'k' instead
+                #   of ';' to make html colors correct, etc.
+                elsif ( $is_semicolon_or_t{$type_i} ) {
+                    my $tok_i = $rtokens->[$i];
+                    if ( $is_END_DATA_format_sub{$tok_i} ) {
+                        $type_i = 'k';
+                    }
+                }
 
-                # Check for an invalid token type..
+                # 1.3 Check for an invalid token type..
                 # This can happen by running perltidy on non-scripts although
                 # it could also be bug introduced by programming change.  Perl
                 # silently accepts a 032 (^Z) and takes it as the end
-                if ( !$is_valid_token_type{$type_i} ) {
+                elsif ( !$is_valid_token_type{$type_i} ) {
                     my $val = ord($type_i);
                     $self->warning(
 "unexpected character decimal $val ($type_i) in script\n"
@@ -6073,22 +6082,41 @@ EOM
                     $self->[_in_error_] = 1;
                 }
 
-                # $ternary_indentation_flag indicates that we need a change
+                # Store values for a non-sequenced token
+                push( @levels,        $level_in_tokenizer );
+                push( @block_type,    EMPTY_STRING );
+                push( @type_sequence, EMPTY_STRING );
+                push( @token_type,    $type_i );
+
+            }
+
+            #----------------------------
+            # 2. Handle a sequenced token
+            #    One of { [ ( ? ) ] } :
+            #----------------------------
+            else {
+
+                # $level_i is the level we will store.  Levels of braces are
+                # set so that the leading braces have a HIGHER level than their
+                # CONTENTS, which is convenient for indentation.
+                my $level_i = $level_in_tokenizer;
+
+                # $tok_i is the PRE-token.  It only equals the token for symbols
+                my $tok_i = $rtokens->[$i];
+
+                # $routput_indent_flag->[$i] indicates that we need a change
                 # in level at a nested ternary, as follows
                 #     1 => at a nested ternary ?
                 #    -1 => at a nested ternary :
                 #     0 => otherwise
 
-                #-------------------------------------------
-                # Section 1: handle a level-increasing token
-                #-------------------------------------------
-                # set primary indentation levels based on structural braces
-                # Note: these are set so that the leading braces have a HIGHER
-                # level than their CONTENTS, which is convenient for indentation
-                # Also, define continuation indentation for each token.
+                #------------------------------------
+                # 2.1 handle a level-increasing token
+                #------------------------------------
                 if ( $is_opening_or_ternary_type{$type_i} ) {
 
                     if ( $type_i eq '?' ) {
+
                         if ( $routput_indent_flag->[$i] > 0 ) {
                             $level_in_tokenizer++;
 
@@ -6115,11 +6143,11 @@ EOM
                             }
                         }
                     }
-                } ## end if ( $type_i eq '{' ||...})
+                }
 
-                #-------------------------------------------
-                # Section 2: handle a level-decreasing token
-                #-------------------------------------------
+                #------------------------------------
+                # 2.2 handle a level-decreasing token
+                #------------------------------------
                 elsif ( $is_closing_or_ternary_type{$type_i} ) {
 
                     if ( $type_i ne ':' ) {
@@ -6129,9 +6157,13 @@ EOM
                         }
                     }
 
-                    if (   $type_i eq '}'
+                    if (
+                           $type_i eq '}'
                         || $type_i eq 'R'
-                        || $type_i eq ':' && $routput_indent_flag->[$i] < 0 )
+
+                        # only the second and higher ? : have levels
+                        || $type_i eq ':' && $routput_indent_flag->[$i] < 0
+                      )
                     {
 
                         $level_i = --$level_in_tokenizer;
@@ -6150,37 +6182,34 @@ EOM
                             chop $nesting_block_string;
                             $nesting_block_flag =
                               substr( $nesting_block_string, -1 ) eq '1';
-                        } ## end if ( length($nesting_block_string...))
+                        }
 
-                    } ## end elsif ( $type_i eq '}' ||...{)
-                } ## end elsif ( $type_i eq '}' ||...{)
-
-                #-------------------------------------------
-                # Section 3: operations on other types
-                #-------------------------------------------
-                # apply token type patch:
-                # - output anonymous 'sub' as keyword (type 'k')
-                # - output __END__, __DATA__, and format as type 'k' instead
-                #   of ';' to make html colors correct, etc.
-                # The following hash tests are equivalent to these older tests:
-                #   if ( $type_i eq 't' && $is_sub{$tok_i} ) { $fix_type = 'k' }
-                #   if ( $type_i eq ';' && $tok_i =~ /\w/ ) { $fix_type = 'k' }
-                elsif ($is_END_DATA_format_sub{$tok_i}
-                    && $is_semicolon_or_t{$type_i} )
-                {
-                    $type_i = 'k';
+                    }
                 }
-            } ## end else [ if ( $type_i eq 'b' ||...)]
 
-            #--------------------------------
-            # Store the values for this token
-            #--------------------------------
-            push( @levels,        $level_i );
-            push( @block_type,    $routput_block_type->[$i] );
-            push( @type_sequence, $routput_type_sequence->[$i] );
-            push( @token_type,    $type_i );
+                #-------------------------------------------------------
+                # 2.3 Unexpected sequenced token type - shouldn't happen
+                #-------------------------------------------------------
+                else {
 
-            # Form and store the PREVIOUS token
+                    # The tokenizer should only be assigning sequence numbers
+                    # to types { [ ( ? ) ] } :
+                    DEVEL_MODE && $self->Fault(<<EOM);
+unexpected sequence number on token type $type_i with pre-tok=$tok_i
+EOM
+                }
+
+                # Store values for a sequenced token
+                push( @levels,        $level_i );
+                push( @block_type,    $routput_block_type->[$i] );
+                push( @type_sequence, $routput_type_sequence->[$i] );
+                push( @token_type,    $type_i );
+
+            }
+
+            #-------------------------------------
+            # 3. Form and store the PREVIOUS token
+            #-------------------------------------
             if ( defined($rtoken_map_im) ) {
                 my $numc =
                   $rtoken_map->[$i] - $rtoken_map_im;    # how many characters
@@ -6204,7 +6233,7 @@ EOM
             }
 
             $rtoken_map_im = $rtoken_map->[$i];
-        } ## end foreach my $i ( @{$routput_token_list...})
+        }
 
         #------------------------
         # End loop to over tokens
