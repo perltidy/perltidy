@@ -1,12 +1,12 @@
-# An update to the basic Perl::TIdy continuation indentation model
+# An update to the basic Perl::Tidy continuation indentation model
 
 The next release after Perl::Tidy versison 20230309 has several changes in the
 basic method for computing "continuation indentation".  The changes mainly
 apply to some unusual situations, and most programs will remain unchanged.
 This note explains what the changes are and why they are needed.
 
-To briefly review, the indentation of a line is the sum of two parts: 
-(**1**) structural indentation, and (**2**) continuation indentation.
+To briefly review, the indentation of a line is the sum of two parts:
+(1) **structural indentation**, and (2) **continuation indentation**.
 
 These are occasionally called primary and secondary indentation.
 
@@ -15,7 +15,7 @@ These are occasionally called primary and secondary indentation.
 default but can be changed with the **-i=n** parameter. The total structural
 indentation is easily determined by keeping a stack of the opening tokens which
 contain a given line.
- 
+
 **Continuation indentation** is introduced whenever a statement in a code block
 is so long that it must have an internal line break before its terminating
 semicolon, or when a long list item is broken before its terminating comma.  In
@@ -29,10 +29,11 @@ The default continuation indentation is 2 characters but this can be changed
 with the **-ci=n** parameter.
 
 The original coding for continuation indentation operated in the Tokenizer
-module during a single pass through the file, and this placed some limits on
-what it could do.  This update moves this coding downstream into the Formatter
-module, where the entire file is accessible with complete data structures, and
-this allows the following improvements to be made.
+module during an initial pass through the file, and this placed some
+limits on what it could do.  This update moves this coding downstream into the
+Formatter module, where the entire file is accessible with complete data
+structures, and this allows several improvements to be made. The main
+improvements are as follows.
 
 ## Block comment indentation changes before closing braces, brackets and parens
 
@@ -73,6 +74,42 @@ if ( $name =~ m/^$AccentTokens$/ ) {
 
     # block comment
 }
+```
+
+## Closing brace indentation changes
+
+A related issue which has been fixed is illustrated with the following
+example which shows the previous formatting:
+
+```
+        if ( $term->ReadLine eq "Term::ReadLine::Gnu" ) {
+            my $attribs = $term->Attribs;
+            $attribs->{attempted_completion_function} = sub {
+                &CPAN::Complete::gnu_cpl;
+              }
+
+              #
+              #
+        }
+```
+
+An optional terminal semicolon is missing after the closing sub brace, and
+there are some comments before the closing ``if`` block brace. The previous
+logic had a limited look-ahead ability, and in this case the continuation
+indentation of the closing sub brace was not removed.
+
+The updated logic has no limits and handles this correctly:
+
+```
+        if ( $term->ReadLine eq "Term::ReadLine::Gnu" ) {
+            my $attribs = $term->Attribs;
+            $attribs->{attempted_completion_function} = sub {
+                &CPAN::Complete::gnu_cpl;
+            }
+
+            #
+            #
+        }
 ```
 
 ## Block comment indentation changes in ternary statements
@@ -159,7 +196,7 @@ is_deeply $fixer->fix( {
   'specific testing';
 ```
 
-The closing '} )' is not indented correctly.  The new default formatting is 
+The closing '} )' is not indented correctly.  The new default formatting is
 
 ```
 is_deeply $fixer->fix( {
@@ -239,4 +276,38 @@ Note how $e and $f have excess indenation. The update version is:
         : print "hello\n";
 ```
 
+## Some problems with indentation in ternary expressions
+
+The continuation indentation in some complex ternary statements has been
+improved.  For example, in the following old formatting the lines beginning
+with ``&&`` lack continuation indentation:
+
+```
+    if (
+          $file eq '-'      ? open(PHONES, '<&STDIN')
+        : $file =~ /\.Z$/   ? open(PHONES, "zcat '$file' 2>/dev/null |")
+        : $file =~ /\.pgp$/ ? $usepgp
+        && length($ENV{PGPPASS})
+        && open(PHONES, "pgp -fd <'$file' |")
+        : open(PHONES, "< $file\0")
+       )
+    {
+    }
+```
+
+The updated version adds indentation to these lines to help indicate that
+they are a continuation of the previous line.
+
+```
+    if (
+          $file eq '-'      ? open(PHONES, '<&STDIN')
+        : $file =~ /\.Z$/   ? open(PHONES, "zcat '$file' 2>/dev/null |")
+        : $file =~ /\.pgp$/ ? $usepgp
+          && length($ENV{PGPPASS})
+          && open(PHONES, "pgp -fd <'$file' |")
+        : open(PHONES, "< $file\0")
+       )
+    {
+    }
+```
 
