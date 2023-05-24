@@ -592,6 +592,7 @@ BEGIN {
         _batch_CODE_type_            => $i++,
         _ri_starting_one_line_block_ => $i++,
         _runmatched_opening_indexes_ => $i++,
+        _lp_object_count_this_batch_ => $i++,
     };
 } ## end BEGIN
 
@@ -17570,15 +17571,21 @@ EOM
 
         return if ( $max_index_to_go < 0 );
 
+        my $lp_object_count_this_batch = 0;
         if ($rOpts_line_up_parentheses) {
-            $self->set_lp_indentation();
+            $lp_object_count_this_batch = $self->set_lp_indentation();
         }
+        $this_batch->[_lp_object_count_this_batch_] =
+          $lp_object_count_this_batch;
 
-        #--------------------------------------------------
-        # Shortcut for block comments
-        # Note that this shortcut does not work for -lp yet
-        #--------------------------------------------------
-        elsif ( !$max_index_to_go && $types_to_go[0] eq '#' ) {
+        #-----------------------------------------------------------
+        # Shortcut for block comments. But not for block comments
+        # with lp because they must use the lp corrector step below.
+        #-----------------------------------------------------------
+        if (  !$max_index_to_go
+            && $types_to_go[0] eq '#'
+            && !$lp_object_count_this_batch )
+        {
             my $ibeg = 0;
             $this_batch->[_ri_first_] = [$ibeg];
             $this_batch->[_ri_last_]  = [$ibeg];
@@ -17915,6 +17922,35 @@ EOM
               $rLL->[$Kend]->[_LINE_INDEX_] - $rLL->[$Kbeg]->[_LINE_INDEX_];
         }
 
+        # Optional optimization: avoid calling break_lists for a single block
+        # brace.  This is done by turning off the flag $is_unbalanced_batch.
+        elsif ($is_unbalanced_batch) {
+            my $block_type = $block_type_to_go[0];
+            if (   $block_type
+                && !$lp_object_count_this_batch
+                && $is_block_without_semicolon{$block_type} )
+            {
+                # opening blocks can skip break_lists call if no commas in
+                # container.
+                if ( $leading_type eq '{' ) {
+                    my $seqno       = $type_sequence_to_go[0];
+                    my $rtype_count = $self->[_rtype_count_by_seqno_]->{$seqno};
+                    if ($rtype_count) {
+                        my $comma_count = $rtype_count->{','};
+                        if ( !$comma_count ) {
+                            $is_unbalanced_batch = 0;
+                        }
+                    }
+                }
+
+                # closing block braces can be skipped
+                else {
+                    $is_unbalanced_batch = 0;
+                }
+
+            }
+        }
+
         my $rbond_strength_bias = [];
         if (
                $is_long_line
@@ -18037,7 +18073,7 @@ EOM
         #-------------------
         # -lp corrector step
         #-------------------
-        if ($rOpts_line_up_parentheses) {
+        if ($lp_object_count_this_batch) {
             $self->correct_lp_indentation( $ri_first, $ri_last );
         }
 
@@ -22003,6 +22039,8 @@ sub do_colon_breaks {
             $minimum_depth = $depth_t;
 
             # these arrays need not retain values between calls
+            my $old_seqno     = $type_sequence_stack[$depth_t];
+            my $changed_seqno = !defined($old_seqno) || $old_seqno != $seqno;
             $type_sequence_stack[$depth_t] = $seqno;
             $override_cab3[$depth_t]       = undef;
             if ( $rOpts_comma_arrow_breakpoints == 3 && $seqno ) {
@@ -22028,7 +22066,7 @@ sub do_colon_breaks {
             $i_equals[$depth_t]                    = -1;
 
             # these arrays must retain values between calls
-            if ( !defined( $has_broken_sublist[$depth_t] ) ) {
+            if ( $changed_seqno || !defined( $has_broken_sublist[$depth_t] ) ) {
                 $dont_align[$depth_t]         = 0;
                 $has_broken_sublist[$depth_t] = 0;
                 $want_comma_break[$depth_t]   = 0;
@@ -25121,15 +25159,14 @@ sub total_line_length {
     # return length of a line of tokens ($ibeg .. $iend)
     my ( $ibeg, $iend ) = @_;
 
-    # Start with the leading spaces on this line ...
-    my $length = $leading_spaces_to_go[$ibeg];
-    if ( ref($length) ) { $length = $length->get_spaces() }
+    # get the leading spaces on this line ...
+    my $spaces = $leading_spaces_to_go[$ibeg];
+    if ( ref($spaces) ) { $spaces = $spaces->get_spaces() }
 
     # ... then add the net token length
-    $length +=
-      $summed_lengths_to_go[ $iend + 1 ] - $summed_lengths_to_go[$ibeg];
+    return $spaces + $summed_lengths_to_go[ $iend + 1 ] -
+      $summed_lengths_to_go[$ibeg];
 
-    return $length;
 } ## end sub total_line_length
 
 sub excess_line_length {
@@ -25144,12 +25181,6 @@ sub excess_line_length {
     my $excess = $leading_spaces_to_go[$ibeg];
     if ( ref($excess) ) { $excess = $excess->get_spaces() }
 
-    # ... then add the net token length, minus the maximum length
-    $excess +=
-      $summed_lengths_to_go[ $iend + 1 ] -
-      $summed_lengths_to_go[$ibeg] -
-      $maximum_line_length_at_level[ $levels_to_go[$ibeg] ];
-
     # ... and include right weld lengths unless requested not to
     if (   $total_weld_count
         && $type_sequence_to_go[$iend]
@@ -25159,7 +25190,12 @@ sub excess_line_length {
         $excess += $wr if defined($wr);
     }
 
-    return $excess;
+    # ... then add the net token length, minus the maximum length
+    return $excess +
+      $summed_lengths_to_go[ $iend + 1 ] -
+      $summed_lengths_to_go[$ibeg] -
+      $maximum_line_length_at_level[ $levels_to_go[$ibeg] ];
+
 } ## end sub excess_line_length
 
 sub get_spaces {
@@ -25285,8 +25321,17 @@ sub get_available_spaces_to_go {
         # when the -lp formatting is selected.
         #------------------------------------------------------------------
 
-        return unless ($rOpts_line_up_parentheses);
-        return unless ( defined($max_index_to_go) && $max_index_to_go >= 0 );
+        # Returns number of tokens in this batch which have leading spaces
+        # defined by an lp object:
+        my $lp_object_count_this_batch = 0;
+
+        # Safety check, should not be needed:
+        if (   !$rOpts_line_up_parentheses
+            || !defined($max_index_to_go)
+            || $max_index_to_go < 0 )
+        {
+            return $lp_object_count_this_batch;
+        }
 
         # List of -lp indentation objects created in this batch
         $rlp_object_list    = [];
@@ -25526,6 +25571,7 @@ sub get_available_spaces_to_go {
             # replace leading whitespace with indentation objects where used
             #---------------------------------------------------------------
             if ( $rLP->[$max_lp_stack]->[_lp_object_] ) {
+                $lp_object_count_this_batch++;
                 my $lp_object = $rLP->[$max_lp_stack]->[_lp_object_];
                 $leading_spaces_to_go[$ii] = $lp_object;
                 if (   $max_lp_stack > 0
@@ -25544,7 +25590,7 @@ sub get_available_spaces_to_go {
         undo_incomplete_lp_indentation()
           if ( !$rOpts_extended_line_up_parentheses );
 
-        return;
+        return $lp_object_count_this_batch;
     } ## end sub set_lp_indentation
 
     sub lp_equals_break_check {
