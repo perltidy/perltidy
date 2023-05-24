@@ -2253,11 +2253,11 @@ sub sweep_left_to_right {
         $is_good_alignment_token{'='}      = 1;
         $is_good_alignment_token{'if'}     = 1;
         $is_good_alignment_token{'unless'} = 1;
-        $is_good_alignment_token{'=>'}     = 1
+        $is_good_alignment_token{'=>'}     = 1;
 
-          # Note the hash values are set so that:
-          #         if ($is_good_alignment_token{$raw_tok}) => best
-          # if defined ($is_good_alignment_token{$raw_tok}) => good or best
+        # Note the hash values are set so that:
+        #         if ($is_good_alignment_token{$raw_tok}) => best
+        # if defined ($is_good_alignment_token{$raw_tok}) => good or best
 
     } ## end BEGIN
 
