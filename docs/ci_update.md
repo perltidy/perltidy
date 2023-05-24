@@ -1,6 +1,6 @@
 # An update to the basic Perl::Tidy continuation indentation model
 
-The next release after Perl::Tidy versison 20230309 has several changes in the
+The next release after Perl::Tidy version 20230309 has several changes in the
 basic method for computing "continuation indentation".  The changes mainly
 apply to some unusual situations, and most programs will remain unchanged.
 This note explains what the changes are and why they are needed.
@@ -39,42 +39,41 @@ improvements are as follows.
 
 The indentation of one-line comments, also called block comments, which
 appear near the end of a containing structure are now independent of the
-existance of any optional trailing comma or semicolon.
+existence of any optional trailing comma or semicolon.
 
-To illustrate the issue, consider the following example where the last
-statement is terminated with a semicolon:
+To illustrate the issue, consider the following example, from the Perl::Tidy
+code itself, where the last statement is not terminated with a semicolon.
+Previously, the subsequent comments would have continuation indentation, since
+the statement is not terminated:
 
 ```
-if ( $name =~ m/^$AccentTokens$/ ) {
-    print OUTFILE "$pre_space\n", '\i ', $name, '{';
+BEGIN {
 
-    # block comment
+    $my_hash{'word1'} = 1;
+    $my_hash{'word2'} = 1
+
+      # comment
+      # ...
 }
 ```
 
-The comment has the basic indentation of the block but now continuation
-indentation.  But if the terminal semicolon is removed in this line then the
-old default formatting would add continuation indentation to the comment:
+In the updated version, since the final semicolon is optional, the
+comments do not have the continuation indentation:
 
 ```
-if ( $name =~ m/^$AccentTokens$/ ) {
-    print OUTFILE "$pre_space\n", '\i ', $name, '{'
+BEGIN {
 
-      # block comment
+    $my_hash{'word1'} = 1;
+    $my_hash{'word2'} = 1
+
+    # comment
+    # ...
 }
 ```
 
-The same issue occurs in lists regarding the existance of an optional trailing
-comma.  This change is undesirable and has been removed in the current version.
-So the new indentation for this example is independent of the final semicolon:
-
-```
-if ( $name =~ m/^$AccentTokens$/ ) {
-    print OUTFILE "$pre_space\n", '\i ', $name, '{'
-
-    # block comment
-}
-```
+This makes the comments have the same indentation as if there were a
+terminal semicolon. This update keeps large blocks of comments from shifting
+when an optional trailing semicolon or comma is added or removed.
 
 ## Closing brace indentation changes
 
@@ -262,7 +261,7 @@ Here is another example, also run with **-ci=4** for emphasis:
         : print "hello\n";
 ```
 
-Note how $e and $f have excess indenation. The update version is:
+Note how $e and $f have excess indentation. The updated version is:
 
 ```
     $a
