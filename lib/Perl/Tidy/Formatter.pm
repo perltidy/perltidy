@@ -6791,6 +6791,18 @@ sub set_ci {
         return;
     };
 
+    my $redo_preceding_comment_ci = sub {
+        my ( $K, $ci ) = @_;
+        my $Km = $self->K_previous_code($K);
+        return if ( !defined($Km) );
+        foreach my $Kt ( $Km + 1 .. $K - 1 ) {
+            if ( $rLL->[$Kt]->[_TYPE_] eq '#' ) {
+                $rLL->[$Kt]->[_CI_LEVEL_] = $ci;
+            }
+        }
+        return;
+    };
+
     my $redo_ci_if_comma = sub {
 
         # This is called when we reach the close of a container to
@@ -6806,13 +6818,7 @@ sub set_ci {
 
             # Also update any preceding comments to have the new ci
             # (this may also change side comment ci but it doesn't matter)
-            my $Km = $self->K_previous_code($K);
-            return if ( !defined($Km) );
-            foreach my $Kt ( $Km + 1 .. $K - 1 ) {
-                if ( $rLL->[$Kt]->[_TYPE_] eq '#' ) {
-                    $rLL->[$Kt]->[_CI_LEVEL_] = $ci;
-                }
-            }
+            $redo_preceding_comment_ci->( $K, $ci );
         }
         return;
     };
@@ -7035,6 +7041,12 @@ sub set_ci {
                         $ci_this  = 0;
                         $ci_close = 0;
                     }
+
+                    # redo ci of any preceding comments if necessary
+                    # at an outermost ? (which has no level jump)
+                    if ( !$opening_level_jump ) {
+                        $redo_preceding_comment_ci->( $KK, $ci_this );
+                    }
                 }
 
                 #--------
@@ -7222,6 +7234,11 @@ sub set_ci {
                         my $level_KK = $rLL->[$KK]->[_LEVEL_];
                         my $level_Kn = $rLL->[$Kn]->[_LEVEL_];
                         $rLL->[$KK]->[_LEVEL_] = $rLL->[$Kn]->[_LEVEL_];
+
+                        # and use the ci of a terminating ':'
+                        if ( $Kn == $rparent->{_Kc} ) {
+                            $ci_this = $rparent->{_ci_close};
+                        }
                     }
                 }
             }
