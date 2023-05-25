@@ -16,24 +16,22 @@ default but can be changed with the **-i=n** parameter. The total structural
 indentation is easily determined by keeping a stack of the opening tokens which
 contain a given line.
 
-**Continuation indentation** is introduced whenever a statement in a code block
-is so long that it must have an internal line break before its terminating
-semicolon, or when a long list item is broken before its terminating comma.  In
-this case, any continuation lines receive the additional continuation
-indentation to contrast them with the start of subsequent statements or list
-items.  In complex situations, such as a mixture of ternary statements and list
-items which contain function calls and logical expressions, it can be
-difficult to design rules for the continuation indentation.
+**Continuation indentation** is introduced to help show structure in multi-line
+statements, list items, and logical expressions. The first line of such long
+lines usually starts with the basic structural indentation. Subsequent
+lines are given the additional continuation indentation to emphasize that
+they are a continuation of the statement.
 
 The default continuation indentation is 2 characters but this can be changed
 with the **-ci=n** parameter.
 
-The original coding for continuation indentation operated in the Tokenizer
-module during an initial pass through the file, and this placed some
-limits on what it could do.  This update moves this coding downstream into the
-Formatter module, where the entire file is accessible with complete data
-structures, and this allows several improvements to be made. The main
-improvements are as follows.
+The original continuation indentation programming in perltidy operated in the
+initial pass through a file, and this placed some limits on what it could do.
+This update moves this coding downstream in the processing pipeline, where the
+entire file is accessible with full data structures, and this allows several
+improvements to be made.  These mainly involve either (1) the continuation
+indentation assigned to comments in unusual circumstances, or (2) the
+indenation of complex ternary expressions.  Some examples are as follows.
 
 ## Block comment indentation changes before closing braces, brackets and parens
 
@@ -41,10 +39,10 @@ The indentation of one-line comments, also called block comments, which
 appear near the end of a containing structure are now independent of the
 existence of any optional trailing comma or semicolon.
 
-To illustrate the issue, consider the following example, from the Perl::Tidy
-code itself, where the last statement is not terminated with a semicolon.
-Previously, the subsequent comments would have continuation indentation, since
-the statement is not terminated:
+To illustrate the issue, consider the following example, in which the last
+statement is not terminated with a semicolon.  Previously, the subsequent
+comments would have continuation indentation, since the statement is not
+terminated:
 
 ```
 BEGIN {
@@ -87,15 +85,15 @@ example which shows the previous formatting:
                 &CPAN::Complete::gnu_cpl;
               }
 
-              #
-              #
+              # comment
+              # comment
         }
 ```
 
-An optional terminal semicolon is missing after the closing sub brace, and
-there are some comments before the closing ``if`` block brace. The previous
-logic had a limited look-ahead ability, and in this case the continuation
-indentation of the closing sub brace was not removed.
+Here again, an optional terminal semicolon is missing after the closing sub
+brace, and there are some comments before the closing ``if`` block brace. The
+previous logic had a limited look-ahead ability, and in this case the
+continuation indentation of the closing sub brace was not removed.
 
 The updated logic has no limits and handles this correctly:
 
@@ -106,8 +104,8 @@ The updated logic has no limits and handles this correctly:
                 &CPAN::Complete::gnu_cpl;
             }
 
-            #
-            #
+            # comment
+            # comment
         }
 ```
 
@@ -146,7 +144,7 @@ a complex ternary with lots of comments:
       : loc("suppressed in batch mode");
 ```
 
-The comment indentation is rather poor. Here is the new improved formatting:
+The comment indentation is very poor. Here is the new formatting:
 
 ```
     # a) under an interactive shell?
