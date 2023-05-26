@@ -26526,8 +26526,25 @@ sub convey_batch_to_vertical_aligner {
     # ----------------------------------------------------------
     # define the vertical alignments for all lines of this batch
     # ----------------------------------------------------------
-    my $rline_alignments =
-      $self->make_vertical_alignments( $ri_first, $ri_last );
+    my $rline_alignments;
+
+    if ( !$max_index_to_go ) {
+
+        # Optional shortcut for single token ...
+        # = [ [ $rtokens, $rfields, $rpatterns, $rfield_lengths ] ];
+        $rline_alignments = [
+            [
+                [],
+                [ $tokens_to_go[0] ],
+                [ $types_to_go[0] ],
+                [ $summed_lengths_to_go[1] - $summed_lengths_to_go[0] ],
+            ]
+        ];
+    }
+    else {
+        $rline_alignments =
+          $self->make_vertical_alignments( $ri_first, $ri_last );
+    }
 
     # ----------------------------------------------
     # loop to send each line to the vertical aligner
