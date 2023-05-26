@@ -31,7 +31,7 @@ This update moves this coding downstream in the processing pipeline, where the
 entire file is accessible with full data structures, and this allows several
 improvements to be made.  These mainly involve either (1) the continuation
 indentation assigned to comments in unusual circumstances, or (2) the
-indenation of complex ternary expressions.  Some examples are as follows.
+indentation of complex ternary expressions.  Some examples are as follows.
 
 ## Block comment indentation changes before closing braces, brackets and parens
 
@@ -95,7 +95,7 @@ brace, and there are some comments before the closing ``if`` block brace. The
 previous logic had a limited look-ahead ability, and in this case the
 continuation indentation of the closing sub brace was not removed.
 
-The updated logic has no limits and handles this correctly:
+The updated logic handles this correctly:
 
 ```
         if ( $term->ReadLine eq "Term::ReadLine::Gnu" ) {
