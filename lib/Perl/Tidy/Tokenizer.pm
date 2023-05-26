@@ -5048,10 +5048,10 @@ EOM
         # now prepare the final list of tokens and types
         #-----------------------------------------------
         if ( $self->[_calculate_ci_] ) {
-            $self->tokenizer_wrapup_line_with_ci($line_of_tokens);
+            $self->OLD_tokenizer_wrapup_line($line_of_tokens);
         }
         else {
-            $self->tokenizer_wrapup_line_no_ci($line_of_tokens);
+            $self->tokenizer_wrapup_line($line_of_tokens);
         }
 
         return;
@@ -5427,7 +5427,7 @@ EOM
         return;
     } ## end sub tokenizer_main_loop
 
-    sub tokenizer_wrapup_line_with_ci {
+    sub OLD_tokenizer_wrapup_line {
         my ( $self, $line_of_tokens ) = @_;
 
         #---------------------------------------------------------
@@ -6019,9 +6019,9 @@ EOM
         $line_of_tokens->{_rci_levels}     = \@ci_string;
 
         return;
-    } ## end sub tokenizer_wrapup_line_with_ci
+    } ## end sub OLD_tokenizer_wrapup_line
 
-    sub tokenizer_wrapup_line_no_ci {
+    sub tokenizer_wrapup_line {
         my ( $self, $line_of_tokens ) = @_;
 
         #---------------------------------------------------------
@@ -6041,6 +6041,9 @@ EOM
 
         $line_of_tokens->{_nesting_tokens_0} = $nesting_token_string;
 
+        # Remember starting nesting block string
+        my $nesting_block_string_0 = $nesting_block_string;
+
         #-----------------
         # Loop over tokens
         #-----------------
@@ -6054,23 +6057,18 @@ EOM
             #--------------------------------
             if ( !$routput_type_sequence->[$i] ) {
 
-                # 1.1 blanks and comments
-                if ( $type_i eq 'b' || $type_i eq '#' ) {
-
-                }
-
-                # 1.2 types ';' and 't'
+                # 1.1 types ';' and 't'
                 # - output anonymous 'sub' as keyword (type 'k')
                 # - output __END__, __DATA__, and format as type 'k' instead
                 #   of ';' to make html colors correct, etc.
-                elsif ( $is_semicolon_or_t{$type_i} ) {
+                if ( $is_semicolon_or_t{$type_i} ) {
                     my $tok_i = $rtokens->[$i];
                     if ( $is_END_DATA_format_sub{$tok_i} ) {
                         $type_i = 'k';
                     }
                 }
 
-                # 1.3 Check for an invalid token type..
+                # 1.2 Check for an invalid token type..
                 # This can happen by running perltidy on non-scripts although
                 # it could also be bug introduced by programming change.  Perl
                 # silently accepts a 032 (^Z) and takes it as the end
@@ -6123,6 +6121,7 @@ EOM
                             # break BEFORE '?' in a nested ternary
                             $level_i = $level_in_tokenizer;
                             $nesting_block_string .= "$nesting_block_flag";
+
                         }
                     }
                     else {
@@ -6199,6 +6198,12 @@ unexpected sequence number on token type $type_i with pre-tok=$tok_i
 EOM
                 }
 
+                # The starting nesting block string, which is used in any .LOG
+                # output, should include the first token of the line
+                if ( !@levels ) {
+                    $nesting_block_string_0 = $nesting_block_string;
+                }
+
                 # Store values for a sequenced token
                 push( @levels,        $level_i );
                 push( @block_type,    $routput_block_type->[$i] );
@@ -6207,49 +6212,38 @@ EOM
 
             }
 
-            #-------------------------------------
-            # 3. Form and store the PREVIOUS token
-            #-------------------------------------
-            if ( defined($rtoken_map_im) ) {
-                my $numc =
-                  $rtoken_map->[$i] - $rtoken_map_im;    # how many characters
-
-                if ( $numc > 0 ) {
-                    push( @tokens,
-                        substr( $input_line, $rtoken_map_im, $numc ) );
-                }
-                else {
-
-                    # Should not happen unless @{$rtoken_map} is corrupted
-                    DEVEL_MODE
-                      && $self->Fault(
-                        "number of characters is '$numc' but should be >0\n");
-                }
-            }
-
-            # or grab some values for the leading token (needed for log output)
-            else {
-                $line_of_tokens->{_nesting_blocks_0} = $nesting_block_string;
-            }
-
-            $rtoken_map_im = $rtoken_map->[$i];
         }
 
-        #------------------------
         # End loop to over tokens
-        #------------------------
 
-        # Form and store the final token of this line
-        if ( defined($rtoken_map_im) ) {
-            my $numc = length($input_line) - $rtoken_map_im;
-            if ( $numc > 0 ) {
-                push( @tokens, substr( $input_line, $rtoken_map_im, $numc ) );
+        $line_of_tokens->{_nesting_blocks_0} = $nesting_block_string_0;
+
+        #--------------------------
+        # Form and store the tokens
+        #--------------------------
+        if (@levels) {
+
+            my $im     = shift @{$routput_token_list};
+            my $offset = $rtoken_map->[$im];
+            foreach my $i ( @{$routput_token_list} ) {
+                my $numc = $rtoken_map->[$i] - $offset;
+                push( @tokens, substr( $input_line, $offset, $numc ) );
+
+                if ( DEVEL_MODE && $numc <= 0 ) {
+
+                    # Should not happen unless @{$rtoken_map} is corrupted
+                    $self->Fault(
+                        "number of characters is '$numc' but should be >0\n");
+                }
+                $offset = $rtoken_map->[$i];
             }
-            else {
 
-                # Should not happen unless @{$rtoken_map} is corrupted
-                DEVEL_MODE
-                  && $self->Fault(
+            # Form and store the final token of this line
+            my $numc = length($input_line) - $offset;
+            push( @tokens, substr( $input_line, $offset, $numc ) );
+
+            if ( DEVEL_MODE && $numc <= 0 ) {
+                $self->Fault(
                     "Number of Characters is '$numc' but should be >0\n");
             }
         }
@@ -6268,7 +6262,7 @@ EOM
         $line_of_tokens->{_rci_levels}     = \@ci_levels;
 
         return;
-    } ## end sub tokenizer_wrapup_line_no_ci
+    } ## end sub tokenizer_wrapup_line
 
 } ## end tokenize_this_line
 

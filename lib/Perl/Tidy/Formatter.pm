@@ -6846,16 +6846,19 @@ sub set_ci {
         #-------
         # Blanks
         #-------
-        # For blanks, the ci should not be important,
-        # but to match existing code a rule for blanks seems to be:
-        # A blank after closing token has same ci as previous token,
-        # Otherwise a blank has same ci as next token;
         if ( $type eq 'b' ) {
 
             $ci_next = $ci_this;
-            if ( $is_closing_type{$last_type} ) {
-                $ci_this = $ci_last;
-            }
+
+            # We should never be using the ci of a blank token, but for
+            # reference, here is the rule and code to match the old ci coding:
+
+            #  A blank after closing token has same ci as previous token,
+            #  Otherwise a blank has same ci as next token;
+            #  if ( $is_closing_type{$last_type} ) {
+            #      $ci_this = $ci_last;
+            #  }
+
             $rtoken_K->[_CI_LEVEL_] = $ci_this;
 
             # 'next' to avoid saving last_ values for blanks and commas
@@ -6887,7 +6890,7 @@ sub set_ci {
                   ? $K_closing_ternary->{$seqno}
                   : $K_closing_container->{$seqno};
 
-                ##my $Kn  = $self->K_next_nonblank($KK);
+                #  $Kn  = $self->K_next_nonblank($KK);
                 my $Kn;
                 if ( $KK < $Klimit ) {
                     $Kn = $KK + 1;
@@ -6896,7 +6899,7 @@ sub set_ci {
                     }
                 }
 
-                ##my $Kcn = $self->K_next_code($Kc);
+                #  $Kcn = $self->K_next_code($Kc);
                 my $Kcn;
                 if ( $Kc && $Kc < $Klimit ) {
                     $Kcn = $Kc + 1;
