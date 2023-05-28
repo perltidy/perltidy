@@ -15147,6 +15147,7 @@ EOM
     my $line_of_tokens;
     my $no_internal_newlines;
     my $CODE_type;
+    my $current_line_starts_in_quote;
 
     # range of K of tokens for the current line
     my ( $K_first, $K_last );
@@ -15429,13 +15430,9 @@ EOM
         ## $block_type_to_go[$max_index_to_go]        = EMPTY_STRING;
         ## $type_sequence_to_go[$max_index_to_go]     = $seqno;
 
-        # NOTE1:  nobreak_to_go can be treated as a sparse array, but testing
+        # NOTE:  nobreak_to_go can be treated as a sparse array, but testing
         # showed that there is almost no efficiency gain because an if test
         # would need to be added.
-
-        # NOTE2: Eventually '$type_sequence_to_go' can be also handled as a
-        # sparse array with undef's, but this will require extensive testing
-        # because of its heavy use.
 
         # We keep a running sum of token lengths from the start of this batch:
         #   summed_lengths_to_go[$i]   = total length to just before token $i
@@ -15484,23 +15481,25 @@ EOM
         # Define the indentation that this token will have in two cases:
         # Without CI = reduced_spaces_to_go
         # With CI    = leading_spaces_to_go
-        if ( ( $Ktoken_vars == $K_first )
-            && $line_of_tokens->{_starting_in_quote} )
+        $leading_spaces_to_go[$max_index_to_go] =
+          $reduced_spaces_to_go[$max_index_to_go] =
+          $rOpts_indent_columns * $radjusted_levels->[$Ktoken_vars];
+
+        $leading_spaces_to_go[$max_index_to_go] +=
+          $rOpts_continuation_indentation
+          if ($ci_level);
+        ## NOTE: No longer allowing ci_level > 1, so avoid multiplication
+        ## $rOpts_continuation_indentation * $ci_level
+
+        # Correct these values if we are starting in a continued quote
+        if (   $current_line_starts_in_quote
+            && $Ktoken_vars == $K_first )
         {
             # in a continued quote - correct value set above if first token
             if ( $max_index_to_go == 0 ) { $starting_in_quote = 1 }
 
             $leading_spaces_to_go[$max_index_to_go] = 0;
             $reduced_spaces_to_go[$max_index_to_go] = 0;
-        }
-        else {
-            $leading_spaces_to_go[$max_index_to_go] =
-              $reduced_spaces_to_go[$max_index_to_go] =
-              $rOpts_indent_columns * $radjusted_levels->[$Ktoken_vars];
-
-            $leading_spaces_to_go[$max_index_to_go] +=
-              $rOpts_continuation_indentation * $ci_level
-              if ($ci_level);
         }
 
         DEBUG_STORE && do {
@@ -15668,8 +15667,9 @@ EOM
         }
 
         ( $K_first, $K_last ) = @{$rK_range};
-        $last_CODE_type = $CODE_type;
-        $CODE_type      = $line_of_tokens->{_code_type};
+        $last_CODE_type               = $CODE_type;
+        $CODE_type                    = $line_of_tokens->{_code_type};
+        $current_line_starts_in_quote = $line_of_tokens->{_starting_in_quote};
 
         $rLL                     = $self->[_rLL_];
         $radjusted_levels        = $self->[_radjusted_levels_];
@@ -17591,12 +17591,11 @@ EOM
 
         return if ( $max_index_to_go < 0 );
 
-        my $lp_object_count_this_batch = 0;
+        my $lp_object_count_this_batch;
         if ($rOpts_line_up_parentheses) {
-            $lp_object_count_this_batch = $self->set_lp_indentation();
+            $this_batch->[_lp_object_count_this_batch_] =
+              $lp_object_count_this_batch = $self->set_lp_indentation();
         }
-        $this_batch->[_lp_object_count_this_batch_] =
-          $lp_object_count_this_batch;
 
         #-----------------------------------------------------------
         # Shortcut for block comments. But not for block comments
