@@ -6048,6 +6048,8 @@ EOM
         # Loop over tokens
         #-----------------
         my $rtoken_map_im;
+
+        # $i is the index of the pretoken which starts this full token
         foreach my $i ( @{$routput_token_list} ) {
 
             my $type_i = $routput_token_type->[$i];
