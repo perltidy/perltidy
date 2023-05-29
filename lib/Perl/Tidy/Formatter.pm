@@ -6018,8 +6018,8 @@ EOM
     # Verify that the line hash does not have any unknown keys.
     $self->check_line_hashes() if (DEVEL_MODE);
 
-    # Experimental new ci calculation
-    $self->set_ci();
+    # calling set_ci before respace is possible, but type counts are not ready
+    ## $self->set_ci();
 
     {
         # Make a pass through all tokens, adding or deleting any whitespace as
@@ -6032,6 +6032,9 @@ EOM
             $self->wrapup();
             return 1;
         }
+
+        # calling set_ci after respace allows it to use type counts
+        $self->set_ci();
 
         $self->find_multiline_qw($rqw_lines);
     }
@@ -6725,6 +6728,10 @@ sub set_ci {
     my $Klimit = $self->[_Klimit_];
     return unless defined($Klimit);
 
+    # Set a flag which tells if sub respace_tokens has been called yet. This
+    # allows this sub to work either before or after respace_tokens is called.
+    my $respace_tokens_called = defined( $rLL->[0]->[_KNEXT_SEQ_ITEM_] );
+
     my $token   = ';';
     my $type    = ';';
     my $ci_next = 0;
@@ -6764,6 +6771,7 @@ sub set_ci {
     my $K_opening_ternary    = $self->[_K_opening_ternary_];
     my $K_closing_ternary    = $self->[_K_closing_ternary_];
     my $rlines               = $self->[_rlines_];
+    my $rtype_count_by_seqno = $self->[_rtype_count_by_seqno_];
 
     my $want_break_before_comma = $want_break_before{','};
 
@@ -6777,12 +6785,15 @@ sub set_ci {
         my $Kcn = $self->K_next_code($Kc);
         return unless defined($Kcn);
         my $seqno_n = $rLL->[$Kcn]->[_TYPE_SEQUENCE_];
-        return if ( defined($seqno_n) );
+
+        #return if ( defined($seqno_n) );
+        return if ($seqno_n);
         my $Knn = $self->K_next_code($Kcn);
         return unless defined($Knn);
         my $seqno_nn = $rLL->[$Knn]->[_TYPE_SEQUENCE_];
-        return unless defined($seqno_nn);
-        return unless $K_opening_container->{$seqno_nn} == $Knn;
+        return unless ($seqno_nn);
+        my $K_nno = $K_opening_container->{$seqno_nn};
+        return unless $K_nno && $K_nno == $Knn;
         my $block_type = $rblock_type_of_seqno->{$seqno_nn};
 
         if ($block_type) {
@@ -6928,9 +6939,22 @@ sub set_ci {
                 if ( $token eq '(' ) {
 
                     # 'foreach' and 'for' paren contents are treated as logical
+                    #  except for C-style 'for'
                     if ( $last_type eq 'k' ) {
-                        $is_logical ||=
-                          $last_token eq 'for' || $last_token eq 'foreach';
+                        $is_logical ||= $last_token eq 'foreach';
+
+                        if ( $last_token eq 'for' ) {
+                            my $rtype_count = $rtype_count_by_seqno->{$seqno};
+                            if (   $rtype_count
+                                && $rtype_count->{'f'} )
+                            {
+                                # C-style 'for' container will be type 'List'
+                                $is_logical = 0;
+                            }
+                            else {
+                                $is_logical = 1;
+                            }
+                        }
                     }
 
                     # Check for 'for' and 'foreach' loops with iterators
@@ -6999,12 +7023,33 @@ sub set_ci {
 
                     if ( !$no_semicolon ) {
 
-                        # Fix for block types sort/map/etc which use zero ci
-                        # at terminal brace if previous keyword had zero ci.
-                        # This will cause sort/map/grep filter blocks to line
-                        # up.
+                        # Optional fix for block types sort/map/etc which use
+                        # zero ci at terminal brace if previous keyword had
+                        # zero ci.  This will cause sort/map/grep filter blocks
+                        # to line up. Note that sub 'undo_ci' will also try to
+                        # do this, so this is not a critical operation.
                         if ( $is_block_with_ci{$block_type} ) {
-                            if ( $map_block_follows->($seqno) ) {
+                            my $parent_seqno = $rparent->{_seqno};
+                            my $rtype_count =
+                              $rtype_count_by_seqno->{$parent_seqno};
+                            if (
+
+                                # only do this within containers
+                                $parent_seqno != SEQ_ROOT
+
+                                # Only do this if sub respace_tokens has
+                                # been called, so that counts are available
+                                && $respace_tokens_called
+                                && (
+
+                                    # only in containers without ',' and ';'
+                                    # TODO: could subtract 1 a trailing ';'
+                                    !$rtype_count || ( !$rtype_count->{','}
+                                        && !$rtype_count->{';'} )
+                                )
+                                && $map_block_follows->($seqno)
+                              )
+                            {
                                 if ($ci_last) {
                                     $ci_close = $ci_this;
                                 }
@@ -7344,6 +7389,16 @@ sub set_ci {
                 $ci_this = $ci_next = $rparent->{_ci_open_next};
             }
             $rparent->{_comma_count}++;
+        }
+
+        # Treat hanging side comments like blanks
+        elsif ( $type eq 'q' && $token eq EMPTY_STRING ) {
+            $ci_next = $ci_this;
+
+            $rtoken_K->[_CI_LEVEL_] = $ci_this;
+
+            # 'next' to avoid saving last_ values for blanks and commas
+            next;
         }
 
         #-----------------------------------------------------------------

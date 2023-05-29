@@ -29,9 +29,10 @@ The original continuation indentation programming in perltidy operated in the
 initial pass through a file, and this placed some limits on what it could do.
 This update moves this coding downstream in the processing pipeline, where the
 entire file is accessible with full data structures, and this allows several
-improvements to be made.  These mainly involve either (1) the continuation
+improvements to be made.  These mainly involve (1) the continuation
 indentation assigned to comments in unusual circumstances, or (2) the
-indentation of complex ternary expressions.  Some examples are as follows.
+indentation of complex ternary expressions, or (3) the indentation of
+chains of ``sort/map/grep`` blocks.  Some examples are as follows.
 
 ## Block comment indentation changes before closing braces, brackets and parens
 
@@ -308,3 +309,44 @@ they are a continuation of the previous line.
     }
 ```
 
+## Some improved indentation of filter block chains
+
+The lines of an isolated chain of ``sort/map/grep`` blocks are normally all
+given the same indentation.  For example
+
+```
+            @new_in_dir = (
+                grep { not $seen{$_} }
+                map  { $dir . "/" . $_ }
+                grep { not ignore_file($_) }
+                grep { not $skip{$_} } readdir(D)
+            );
+```
+
+Previously, there were a a number of situations where this could not be
+achieved. As an example, if the above example had side comments then the
+formatting would be
+
+```
+            @new_in_dir = (
+                grep   { not $seen{$_} }          # files not yet processed
+                  map  { $dir . "/" . $_ }        # map from file to dir/file
+                  grep { not ignore_file($_) }    # ignore files in cvsignore
+                  grep { not $skip{$_} }          # skip files to be ignored
+                  readdir(D)
+            );
+```
+
+The first line now has a different indentation from the rest, and this is
+undesirable because ideally indentation should be independent of the existance
+of side comments.  The new version handles this correctly:
+
+```
+            @new_in_dir = (
+                grep { not $seen{$_} }          # files not yet processed
+                map  { $dir . "/" . $_ }        # map from file to dir/file
+                grep { not ignore_file($_) }    # ignore files in cvsignore
+                grep { not $skip{$_} }          # skip files to be ignored
+                  readdir(D)
+            );
+```

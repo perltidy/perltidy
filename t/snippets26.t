@@ -791,7 +791,7 @@ abcdefghijklmnopq
                     $q = 201 ;
                     print '-' x 79, "\n" ;
                     $g = (
-                          $f ^ ( $w = ( $z = $m . $e ) ^ substr $e, $q )
+                        $f ^ ( $w = ( $z = $m . $e ) ^ substr $e, $q )
                           ^ ( $n = $b ^ $d | $a ^ $l )
                     ) & ( $w | $z ^ $f ^ $n ) & ( $l | $g )
                   )
