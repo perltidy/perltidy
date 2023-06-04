@@ -6018,9 +6018,6 @@ EOM
     # Verify that the line hash does not have any unknown keys.
     $self->check_line_hashes() if (DEVEL_MODE);
 
-    # calling set_ci before respace is possible, but type counts are not ready
-    ## $self->set_ci();
-
     {
         # Make a pass through all tokens, adding or deleting any whitespace as
         # required.  Also make any other changes, such as adding semicolons.
@@ -6696,16 +6693,16 @@ sub set_ci {
 
     # NOTE: This is slightly different from the hash in in break_lists
     # with the same name
-    my %is_logical_container;
+    my %is_logical_container_for_ci;
     ## Removed ? : to fix t007 and others
     ##my @q = qw# if elsif unless while and or err not && | || ? : ! #;
     my @q = qw# if elsif unless while and or err not && | || ! #;
-    @is_logical_container{@q} = (1) x scalar(@q);
+    @is_logical_container_for_ci{@q} = (1) x scalar(@q);
 
     # NOTE: using differnt hash than in tokenizer here, but same name:
-    my %is_container_label_type;
+    my %is_container_label_type_for_ci;
     @q = qw# k && | || ? : ! #;
-    @is_container_label_type{@q} = (1) x scalar(@q);
+    @is_container_label_type_for_ci{@q} = (1) x scalar(@q);
 
     # The following hash is set to match old ci values
     # - initially defined for issue t027, then
@@ -6755,7 +6752,6 @@ sub set_ci {
         _container_type => 'Block',
         _ci_next_next   => $ci_next_next,
         _comma_count    => 0,
-        _redo_list      => undef,
         _Kc             => undef,
     };
 
@@ -6814,26 +6810,9 @@ sub set_ci {
         return;
     };
 
-    my $redo_ci_if_comma = sub {
-
-        # This is called when we reach the close of a container to
-        # go back and fix any ci values that were tentatively set
-        # assuming that this container had no commas.
-        if ( !$rparent->{_comma_count} ) {
-            return;
-        }
-        my $rlist = $rparent->{_redo_list};
-        foreach my $item ( @{$rlist} ) {
-            my ( $K, $ci ) = @{$item};
-            $rLL->[$K]->[_CI_LEVEL_] = $ci;
-
-            # Also update any preceding comments to have the new ci
-            # (this may also change side comment ci but it doesn't matter)
-            $redo_preceding_comment_ci->( $K, $ci );
-        }
-        return;
-    };
-
+    #----------
+    # Main loop
+    #----------
     foreach my $KK ( 0 .. $Klimit ) {
         my $rtoken_K = $rLL->[$KK];
 
@@ -6854,9 +6833,9 @@ sub set_ci {
 
         # We will change these ci values necessary for special cases...
 
-        #-------
-        # Blanks
-        #-------
+        #----------
+        # 1. Blanks
+        #----------
         if ( $type eq 'b' ) {
 
             $ci_next = $ci_this;
@@ -6877,15 +6856,17 @@ sub set_ci {
         }
 
         #--------------------
-        # Container tokens...
+        # 2. Container tokens
         #--------------------
         elsif ( $rtoken_K->[_TYPE_SEQUENCE_] ) {
 
-            my $seqno = $rtoken_K->[_TYPE_SEQUENCE_];
+            my $seqno       = $rtoken_K->[_TYPE_SEQUENCE_];
+            my $rtype_count = $rtype_count_by_seqno->{$seqno};
+            my $comma_count = $rtype_count ? $rtype_count->{','} : 0;
 
-            #-------------------------
-            # Opening container tokens
-            #-------------------------
+            #-----------------------------
+            # 2.1 Opening container tokens
+            #-----------------------------
             if ( $is_opening_sequence_token{$token} ) {
 
                 my $level          = $rtoken_K->[_LEVEL_];
@@ -6925,11 +6906,11 @@ sub set_ci {
                 my $opening_level_jump =
                   $Kn ? $rLL->[$Kn]->[_LEVEL_] - $level : 0;
 
-                #--------------------------------
-                # Determine the container type...
-                #--------------------------------
-                my $is_logical = $is_container_label_type{$last_type}
-                  && $is_logical_container{$last_token};
+                #-----------------------------------
+                # 2.1.1 Determine the container type
+                #-----------------------------------
+                my $is_logical = $is_container_label_type_for_ci{$last_type}
+                  && $is_logical_container_for_ci{$last_token};
 
                 # Part 1 of optional patch to get agreement with previous ci
                 # This makes almost no difference in a typical program because
@@ -6944,7 +6925,6 @@ sub set_ci {
                         $is_logical ||= $last_token eq 'foreach';
 
                         if ( $last_token eq 'for' ) {
-                            my $rtype_count = $rtype_count_by_seqno->{$seqno};
                             if (   $rtype_count
                                 && $rtype_count->{'f'} )
                             {
@@ -7007,9 +6987,9 @@ sub set_ci {
                 }
                 my $no_semicolon;
 
-                #-----------
-                # Code Block
-                #-----------
+                #-----------------
+                # 2.1.2 Code Block
+                #-----------------
                 if ($block_type) {
                     $container_type = 'Block';
 
@@ -7030,7 +7010,7 @@ sub set_ci {
                         # do this, so this is not a critical operation.
                         if ( $is_block_with_ci{$block_type} ) {
                             my $parent_seqno = $rparent->{_seqno};
-                            my $rtype_count =
+                            my $rtype_count_p =
                               $rtype_count_by_seqno->{$parent_seqno};
                             if (
 
@@ -7044,8 +7024,8 @@ sub set_ci {
 
                                     # only in containers without ',' and ';'
                                     # TODO: could subtract 1 a trailing ';'
-                                    !$rtype_count || ( !$rtype_count->{','}
-                                        && !$rtype_count->{';'} )
+                                    !$rtype_count_p || ( !$rtype_count_p->{','}
+                                        && !$rtype_count_p->{';'} )
                                 )
                                 && $map_block_follows->($seqno)
                               )
@@ -7078,9 +7058,9 @@ sub set_ci {
                     $ci_close_next = $ci_close;
                 }
 
-                #--------
-                # Ternary
-                #--------
+                #--------------
+                # 2.1.3 Ternary
+                #--------------
                 elsif ( $type eq '?' ) {
                     $container_type = 'Ternary';
                     if ( $rparent->{_container_type} eq 'List'
@@ -7097,9 +7077,9 @@ sub set_ci {
                     }
                 }
 
-                #--------
-                # Logical
-                #--------
+                #--------------
+                # 2.1.4 Logical
+                #--------------
                 elsif ($is_logical) {
                     $container_type = 'Logical';
 
@@ -7122,14 +7102,29 @@ sub set_ci {
                     }
                 }
 
-                #--------------------------------------------
-                # List (or maybe just some grouping of terms)
-                #--------------------------------------------
+                #-----------
+                # 2.1.5 List
+                #-----------
                 else {
+
+                    # Here 'List' is a catchall for none of the above types
                     $container_type = 'List';
 
+                    # lists in blocks ...
+                    if ( $rparent->{_container_type} eq 'Block' ) {
+
+                        # undo ci if another closing token follows
+                        if ( defined($Kcn) ) {
+                            my $closing_level_jump =
+                              $rLL->[$Kcn]->[_LEVEL_] - $level;
+                            if ( $closing_level_jump < 0 ) {
+                                $ci_close = $ci_this;
+                            }
+                        }
+                    }
+
                     # lists not in blocks ...
-                    if ( $rparent->{_container_type} ne 'Block' ) {
+                    else {
 
                         if ( !$rparent->{_comma_count} ) {
 
@@ -7139,41 +7134,16 @@ sub set_ci {
                             # commas in container; fixes t027, t028
                             if ( $ci_close_next != $ci_close && defined($Kcn) )
                             {
-
                                 my $type_kcn = $rLL->[$Kcn]->[_TYPE_];
                                 if ( $bin_op_type{$type_kcn} ) {
-
-                                    # Save info to undo this in case we find
-                                    # later that this container has a comma.
-                                    if ( !defined( $rparent->{_redo_list} ) ) {
-                                        $rparent->{_redo_list} = [];
-                                    }
-
-                                    push @{ $rparent->{_redo_list} },
-                                      [ $Kcn, $ci_close_next ];
                                     $ci_close_next = $ci_close;
                                 }
                             }
                         }
-                    }
 
-                    # lists in blocks
-                    else {
-                        if ( $rparent->{_container_type} eq 'Block' ) {
-
-                            # undo ci if another closing token follows
-                            if ( defined($Kcn) ) {
-                                my $closing_level_jump =
-                                  $rLL->[$Kcn]->[_LEVEL_] - $level;
-                                if ( $closing_level_jump < 0 ) {
-                                    $ci_close = $ci_this;
-                                }
-                            }
+                        if ( $rparent->{_container_type} eq 'Ternary' ) {
+                            $ci_next = 0;
                         }
-                    }
-
-                    if ( $rparent->{_container_type} eq 'Ternary' ) {
-                        $ci_next = 0;
                     }
 
                     # Undo ci at a chain of indexes or hash keys
@@ -7181,6 +7151,10 @@ sub set_ci {
                         $ci_this = $ci_close = $ci_last;
                     }
                 }
+
+                #--------------------------------
+                # 2.1.6 Closing token common code
+                #--------------------------------
 
                 # Most closing tokens should align with their opening tokens.
                 if (
@@ -7207,15 +7181,14 @@ sub set_ci {
                     _ci_open_next   => $ci_next,
                     _ci_close       => $ci_close,
                     _ci_close_next  => $ci_close_next,
-                    _comma_count    => 0,
+                    _comma_count    => $comma_count,
                     _Kc             => $Kc,
-                    _redo_list      => undef,
                 };
             }
 
-            #-------------------------
-            # Closing container tokens
-            #-------------------------
+            #-----------------------------
+            # 2.2 Closing container tokens
+            #-----------------------------
             else {
                 my $seqno_test = $rparent->{_seqno};
                 if ( $seqno_test ne $seqno ) {
@@ -7229,14 +7202,6 @@ sub set_ci {
                 # use the values set by the opening token
                 $ci_this = $rparent->{_ci_close};
                 $ci_next = $rparent->{_ci_close_next};
-
-                # Do not count a trailing comma
-                if ( $last_type eq ',' ) { $rparent->{_comma_count} -= 1 }
-
-                # Redo ci where tentatively made assuming no commas
-                if ( $rparent->{_comma_count} && $rparent->{_redo_list} ) {
-                    $redo_ci_if_comma->();
-                }
 
                 my $ci_open_old = $rparent->{_ci_open};
                 if ( @{$rstack} ) {
@@ -7262,9 +7227,9 @@ sub set_ci {
             }
         }
 
-        #---------
-        # Comments
-        #---------
+        #------------
+        # 3. Comments
+        #------------
         elsif ( $type eq '#' ) {
 
             # If at '#' in ternary before a ? or :, use that level to make
@@ -7302,7 +7267,7 @@ sub set_ci {
                     !$rparent->{_ci_close}
                     || (
                         !$rparent->{_ci_open_next}
-                        && (   $rparent->{_comma_count}
+                        && ( ( $rparent->{_comma_count} || $last_type eq ',' )
                             || $is_closing_type{$last_type} )
                     )
                 )
@@ -7356,9 +7321,9 @@ sub set_ci {
             next;
         }
 
-        #----------------------
-        # Semicolons and Labels
-        #----------------------
+        #-------------------------
+        # 4. Semicolons and Labels
+        #-------------------------
         # The next token after a ';' and label (type 'J') starts a new stmt
         # The ci after a C-style for ';' (type 'f') is handled similarly.
         # TODO: There is type 'f' redundant coding in sub respace which can
@@ -7368,9 +7333,9 @@ sub set_ci {
             if ( $is_closing_type{$last_type} ) { $ci_this = $ci_last }
         }
 
-        #---------
-        # Keywords
-        #---------
+        #------------
+        # 5. Keywords
+        #------------
         # Undo ci after a format statement
         elsif ( $type eq 'k' ) {
             if ( substr( $token, 0, 6 ) eq 'format' ) {
@@ -7378,9 +7343,9 @@ sub set_ci {
             }
         }
 
-        #-------
-        # Commas
-        #-------
+        #----------
+        # 6. Commas
+        #----------
         # A comma and the subsequent item normally have ci undone
         # unless ci has been set at a lower level
         elsif ( $type eq ',' ) {
@@ -7388,9 +7353,11 @@ sub set_ci {
             if ( $rparent->{_container_type} eq 'List' ) {
                 $ci_this = $ci_next = $rparent->{_ci_open_next};
             }
-            $rparent->{_comma_count}++;
         }
 
+        #-------------------------
+        # 7. Hanging side comments
+        #-------------------------
         # Treat hanging side comments like blanks
         elsif ( $type eq 'q' && $token eq EMPTY_STRING ) {
             $ci_next = $ci_this;
@@ -7450,14 +7417,11 @@ EOM
 
     }
 
-    #--------------
     # End main loop
-    #--------------
 
     # if the logfile is saved, we need to save the leading ci of
     # each old line of code.
     if ( $self->[_save_logfile_] ) {
-        my $rlines = $self->[_rlines_];
         foreach my $line_of_tokens ( @{$rlines} ) {
             my $line_type = $line_of_tokens->{_line_type};
             next if ( $line_type ne 'CODE' );
