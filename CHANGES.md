@@ -21,6 +21,10 @@
       -cpb and -bfvt=n. These work in version 20230309 but the pod
       documentation was missing and has been added.
 
+    - Fixed an undefined reference message when running with
+      --dump-block-summary on a file without any subs or other
+      selected block types.
+
     - Some rare, minor issues with continuation indentation have been fixed.
       Most scripts will remain unchanged.  The main change is that block
       comments which occur just before a closing brace, bracket or paren

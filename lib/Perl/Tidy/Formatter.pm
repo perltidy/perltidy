@@ -6298,13 +6298,14 @@ sub find_selected_packages {
 
     my ( $self, $rdump_block_types ) = @_;
 
-    # returns a list of all package statements in a file if requested
+    # returns a list of all selected package statements in a file
+    my @package_list;
 
     unless ( $rdump_block_types->{'*'}
         || $rdump_block_types->{'package'}
         || $rdump_block_types->{'class'} )
     {
-        return;
+        return \@package_list;
     }
 
     my $rLL    = $self->[_rLL_];
@@ -6312,7 +6313,6 @@ sub find_selected_packages {
     my $rlines = $self->[_rlines_];
 
     my $K_closing_container = $self->[_K_closing_container_];
-    my @package_list;
     my @package_sweep;
     foreach my $KK ( 0 .. $Klimit ) {
         my $item = $rLL->[$KK];
