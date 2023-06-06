@@ -6691,20 +6691,18 @@ sub set_ci {
     # programs but is useful for testing.
     use constant SET_CI_OPTION_0 => 1;
 
-    # NOTE: This is slightly different from the hash in in break_lists
-    # with the same name
+    # This is slightly different from the hash in in break_lists
+    # with a similar name (removed '?' and ':' to fix t007 and others)
     my %is_logical_container_for_ci;
-    ## Removed ? : to fix t007 and others
-    ##my @q = qw# if elsif unless while and or err not && | || ? : ! #;
     my @q = qw# if elsif unless while and or err not && | || ! #;
     @is_logical_container_for_ci{@q} = (1) x scalar(@q);
 
-    # NOTE: using differnt hash than in tokenizer here, but same name:
+    # This is slightly differnt from a tokenizer hash with a similar name:
     my %is_container_label_type_for_ci;
     @q = qw# k && | || ? : ! #;
     @is_container_label_type_for_ci{@q} = (1) x scalar(@q);
 
-    # The following hash is set to match old ci values
+    # Undo ci of closing list paren followed by these binary operatiors:
     # - initially defined for issue t027, then
     # - added '=' for t015
     # - added '=~' for 'locale.in'
@@ -6727,21 +6725,18 @@ sub set_ci {
 
     # Set a flag which tells if sub respace_tokens has been called yet. This
     # allows this sub to work either before or after respace_tokens is called.
+    # NOTE: this can eventually be removed since it will always be true
     my $respace_tokens_called = defined( $rLL->[0]->[_KNEXT_SEQ_ITEM_] );
 
-    my $token   = ';';
-    my $type    = ';';
-    my $ci_next = 0;
-
-    my $last_token = $token;
-    my $last_type  = $type;
-    my $ci_last    = 0;
-
+    my $token        = ';';
+    my $type         = ';';
+    my $ci_next      = 0;
+    my $last_token   = $token;
+    my $last_type    = $type;
+    my $ci_last      = 0;
     my $ci_next_next = 1;
+    my $rstack       = ();
 
-    my $rstack = ();
-
-    # - note that ci_default = 0 only for 'List'
     my $seq_root = SEQ_ROOT;
     my $rparent  = {
         _seqno          => $seq_root,
@@ -6799,6 +6794,8 @@ sub set_ci {
     };
 
     my $redo_preceding_comment_ci = sub {
+
+        # We need to reset the ci of the previous comment(s)
         my ( $K, $ci ) = @_;
         my $Km = $self->K_previous_code($K);
         return if ( !defined($Km) );
@@ -6810,427 +6807,38 @@ sub set_ci {
         return;
     };
 
-    #----------
-    # Main loop
-    #----------
-    foreach my $KK ( 0 .. $Klimit ) {
-        my $rtoken_K = $rLL->[$KK];
+    # Definitions of the sequence of ci_values being maintained:
+    # $ci_last      = the ci value of the previous non-blank, non-comment token
+    # $ci_this      = the ci value to be stored for this token at index $KK
+    # $ci_next      = the normal ci for the next token, set by the previous tok
+    # $ci_next_next = the normal next value of $ci_next in this container
 
-        $type  = $rtoken_K->[_TYPE_];
-        $token = $rtoken_K->[_TOKEN_];
+    #--------------------------
+    # Main loop over all tokens
+    #--------------------------
+    my $KK = -1;
+    foreach my $rtoken_K ( @{$rLL} ) {
 
-        # Definitions:
-        # $ci_this      = the ci for this token
-        # $ci_next      = the ci for the next token
-        # $ci_next_next = the normal next value of $ci_next in this container
+        $KK++;
+        $type = $rtoken_K->[_TYPE_];
 
-        # Normally we use the ci value value set by previous token.
-        my $ci_this = $ci_next;
-
-        # First guess at next value uses the stored default
-        # which is 0 for logical containers, 1 for other containers:
-        $ci_next = $ci_next_next;
-
-        # We will change these ci values necessary for special cases...
-
-        #----------
-        # 1. Blanks
-        #----------
+        #------------------
+        # Section 1. Blanks
+        #------------------
         if ( $type eq 'b' ) {
 
-            $ci_next = $ci_this;
-
-            # We should never be using the ci of a blank token, but for
-            # reference, here is the rule and code to match the old ci coding:
-
-            #  A blank after closing token has same ci as previous token,
-            #  Otherwise a blank has same ci as next token;
-            #  if ( $is_closing_type{$last_type} ) {
-            #      $ci_this = $ci_last;
-            #  }
-
-            $rtoken_K->[_CI_LEVEL_] = $ci_this;
+            $rtoken_K->[_CI_LEVEL_] = $ci_next;
 
             # 'next' to avoid saving last_ values for blanks and commas
             next;
         }
 
         #--------------------
-        # 2. Container tokens
+        # Section 2. Comments
         #--------------------
-        elsif ( $rtoken_K->[_TYPE_SEQUENCE_] ) {
+        if ( $type eq '#' ) {
 
-            my $seqno       = $rtoken_K->[_TYPE_SEQUENCE_];
-            my $rtype_count = $rtype_count_by_seqno->{$seqno};
-            my $comma_count = $rtype_count ? $rtype_count->{','} : 0;
-
-            #-----------------------------
-            # 2.1 Opening container tokens
-            #-----------------------------
-            if ( $is_opening_sequence_token{$token} ) {
-
-                my $level          = $rtoken_K->[_LEVEL_];
-                my $container_type = EMPTY_STRING;
-
-                # Default ci values for the closing token, to be modified
-                # as necessary:
-                my $ci_close      = $ci_next;
-                my $ci_close_next = $ci_next_next;
-
-                my $Kc =
-                    $type eq '?'
-                  ? $K_closing_ternary->{$seqno}
-                  : $K_closing_container->{$seqno};
-
-                #  $Kn  = $self->K_next_nonblank($KK);
-                my $Kn;
-                if ( $KK < $Klimit ) {
-                    $Kn = $KK + 1;
-                    if ( $rLL->[$Kn]->[_TYPE_] eq 'b' && $Kn < $Klimit ) {
-                        $Kn += 1;
-                    }
-                }
-
-                #  $Kcn = $self->K_next_code($Kc);
-                my $Kcn;
-                if ( $Kc && $Kc < $Klimit ) {
-                    $Kcn = $Kc + 1;
-                    if ( $rLL->[$Kcn]->[_TYPE_] eq 'b' && $Kcn < $Klimit ) {
-                        $Kcn += 1;
-                    }
-                    if ( $rLL->[$Kcn]->[_TYPE_] eq '#' ) {
-                        $Kcn = $self->K_next_code($Kcn);
-                    }
-                }
-
-                my $opening_level_jump =
-                  $Kn ? $rLL->[$Kn]->[_LEVEL_] - $level : 0;
-
-                #-----------------------------------
-                # 2.1.1 Determine the container type
-                #-----------------------------------
-                my $is_logical = $is_container_label_type_for_ci{$last_type}
-                  && $is_logical_container_for_ci{$last_token};
-
-                # Part 1 of optional patch to get agreement with previous ci
-                # This makes almost no difference in a typical program because
-                # we will seldom break within an array index.
-                $is_logical ||= $type eq '[' && SET_CI_OPTION_0;
-
-                if ( $token eq '(' ) {
-
-                    # 'foreach' and 'for' paren contents are treated as logical
-                    #  except for C-style 'for'
-                    if ( $last_type eq 'k' ) {
-                        $is_logical ||= $last_token eq 'foreach';
-
-                        if ( $last_token eq 'for' ) {
-                            if (   $rtype_count
-                                && $rtype_count->{'f'} )
-                            {
-                                # C-style 'for' container will be type 'List'
-                                $is_logical = 0;
-                            }
-                            else {
-                                $is_logical = 1;
-                            }
-                        }
-                    }
-
-                    # Check for 'for' and 'foreach' loops with iterators
-                    elsif ( $last_type eq 'i' && defined($Kcn) ) {
-                        my $seqno_kcn = $rLL->[$Kcn]->[_TYPE_SEQUENCE_];
-                        my $type_kcn  = $rLL->[$Kcn]->[_TOKEN_];
-                        if ( $seqno_kcn && $type_kcn eq '{' ) {
-                            my $block_type_kcn =
-                              $rblock_type_of_seqno->{$seqno_kcn};
-                            $is_logical ||= $block_type_kcn
-                              && ( $block_type_kcn eq 'for'
-                                || $block_type_kcn eq 'foreach' );
-                        }
-
-                        # Search backwards for 'for'/'foreach' with iterator in
-                        # case user is running from an editor and did not
-                        # include the block (fixes case 'xci.in').
-                        my $Km = $self->K_previous_code($KK);
-                        foreach ( 0 .. 2 ) {
-                            $Km = $self->K_previous_code($Km);
-                            last unless defined($Km);
-                            last unless $rLL->[$Km]->[_TYPE_] eq 'k';
-                            my $tok = $rLL->[$Km]->[_TOKEN_];
-                            next if $tok eq 'my';
-                            $is_logical ||=
-                              ( $tok eq 'for' || $tok eq 'foreach' );
-                            last;
-                        }
-                    }
-
-                    elsif ( $last_token eq '(' ) {
-                        $is_logical ||=
-                          $rparent->{_container_type} eq 'Logical';
-                    }
-
-                    # Pass ci though an '!'
-                    elsif ( $last_type eq '!' ) { $ci_this = $ci_last }
-                }
-
-                # initialize ci_next_next to its standard value
-                $ci_next_next = 1;
-
-                my $block_type = $rblock_type_of_seqno->{$seqno};
-                $block_type = EMPTY_STRING unless ($block_type);
-
-                # Default: ci of first item of list with level jump is same as
-                # ci of first item of container
-                if ( $opening_level_jump > 0 ) {
-                    $ci_next = $rparent->{_ci_open_next};
-                }
-                my $no_semicolon;
-
-                #-----------------
-                # 2.1.2 Code Block
-                #-----------------
-                if ($block_type) {
-                    $container_type = 'Block';
-
-                    $no_semicolon =
-                         $is_block_without_semicolon{$block_type}
-                      || $ris_sub_block->{$seqno}
-                      || $last_type eq 'J';
-
-                    # set default depending on block type
-                    $ci_close = 0;
-
-                    if ( !$no_semicolon ) {
-
-                        # Optional fix for block types sort/map/etc which use
-                        # zero ci at terminal brace if previous keyword had
-                        # zero ci.  This will cause sort/map/grep filter blocks
-                        # to line up. Note that sub 'undo_ci' will also try to
-                        # do this, so this is not a critical operation.
-                        if ( $is_block_with_ci{$block_type} ) {
-                            my $parent_seqno = $rparent->{_seqno};
-                            my $rtype_count_p =
-                              $rtype_count_by_seqno->{$parent_seqno};
-                            if (
-
-                                # only do this within containers
-                                $parent_seqno != SEQ_ROOT
-
-                                # Only do this if sub respace_tokens has
-                                # been called, so that counts are available
-                                && $respace_tokens_called
-                                && (
-
-                                    # only in containers without ',' and ';'
-                                    # TODO: could subtract 1 a trailing ';'
-                                    !$rtype_count_p || ( !$rtype_count_p->{','}
-                                        && !$rtype_count_p->{';'} )
-                                )
-                                && $map_block_follows->($seqno)
-                              )
-                            {
-                                if ($ci_last) {
-                                    $ci_close = $ci_this;
-                                }
-                            }
-                            else {
-                                $ci_close = $ci_this;
-                            }
-                        }
-
-                        # keep ci if certain operators follow (fix c202/t024)
-                        if ( !$ci_close && $Kcn ) {
-                            my $type_kcn  = $rLL->[$Kcn]->[_TYPE_];
-                            my $token_kcn = $rLL->[$Kcn]->[_TOKEN_];
-                            if (   $type_kcn =~ /^(\.|\&\&|\|\|)$/
-                                || $type_kcn eq 'k' && $is_and_or{$token_kcn} )
-                            {
-                                $ci_close = $ci_this;
-                            }
-                        }
-                    }
-
-                    if ( $rparent->{_container_type} ne 'Ternary' ) {
-                        $ci_this = 0;
-                    }
-                    $ci_next       = 0;
-                    $ci_close_next = $ci_close;
-                }
-
-                #--------------
-                # 2.1.3 Ternary
-                #--------------
-                elsif ( $type eq '?' ) {
-                    $container_type = 'Ternary';
-                    if ( $rparent->{_container_type} eq 'List'
-                        && !$rparent->{_ci_open_next} )
-                    {
-                        $ci_this  = 0;
-                        $ci_close = 0;
-                    }
-
-                    # redo ci of any preceding comments if necessary
-                    # at an outermost ? (which has no level jump)
-                    if ( !$opening_level_jump ) {
-                        $redo_preceding_comment_ci->( $KK, $ci_this );
-                    }
-                }
-
-                #--------------
-                # 2.1.4 Logical
-                #--------------
-                elsif ($is_logical) {
-                    $container_type = 'Logical';
-
-                    $ci_next_next  = 0;
-                    $ci_close_next = $ci_this;
-
-                    # Part 2 of optional patch to get agreement with previous ci
-                    if ( $type eq '[' && SET_CI_OPTION_0 ) {
-
-                        $ci_next_next = $ci_this;
-
-                        # Undo ci at a chain of indexes or hash keys
-                        if ( $last_type eq '}' ) {
-                            $ci_this = $ci_last;
-                        }
-                    }
-
-                    if ($opening_level_jump) {
-                        $ci_next = 0;
-                    }
-                }
-
-                #-----------
-                # 2.1.5 List
-                #-----------
-                else {
-
-                    # Here 'List' is a catchall for none of the above types
-                    $container_type = 'List';
-
-                    # lists in blocks ...
-                    if ( $rparent->{_container_type} eq 'Block' ) {
-
-                        # undo ci if another closing token follows
-                        if ( defined($Kcn) ) {
-                            my $closing_level_jump =
-                              $rLL->[$Kcn]->[_LEVEL_] - $level;
-                            if ( $closing_level_jump < 0 ) {
-                                $ci_close = $ci_this;
-                            }
-                        }
-                    }
-
-                    # lists not in blocks ...
-                    else {
-
-                        if ( !$rparent->{_comma_count} ) {
-
-                            $ci_close = $ci_this;
-
-                            # undo ci at binary op after right paren if no
-                            # commas in container; fixes t027, t028
-                            if ( $ci_close_next != $ci_close && defined($Kcn) )
-                            {
-                                my $type_kcn = $rLL->[$Kcn]->[_TYPE_];
-                                if ( $bin_op_type{$type_kcn} ) {
-                                    $ci_close_next = $ci_close;
-                                }
-                            }
-                        }
-
-                        if ( $rparent->{_container_type} eq 'Ternary' ) {
-                            $ci_next = 0;
-                        }
-                    }
-
-                    # Undo ci at a chain of indexes or hash keys
-                    if ( $token ne '(' && $last_type eq '}' ) {
-                        $ci_this = $ci_close = $ci_last;
-                    }
-                }
-
-                #--------------------------------
-                # 2.1.6 Closing token common code
-                #--------------------------------
-
-                # Most closing tokens should align with their opening tokens.
-                if (
-                       $type eq '{'
-                    && $token ne '('
-                    && $is_list_end_type{$last_type}
-
-                    # avoid asub blocks, which may have prototypes ending in '}'
-                    && !$ris_asub_block->{$seqno}
-                  )
-                {
-                    $ci_close = $ci_this;
-                }
-
-                # Closing ci must never be less than opening
-                if ( $ci_close < $ci_this ) { $ci_close = $ci_this }
-
-                push @{$rstack}, $rparent;
-                $rparent = {
-                    _seqno          => $seqno,
-                    _container_type => $container_type,
-                    _ci_next_next   => $ci_next_next,
-                    _ci_open        => $ci_this,
-                    _ci_open_next   => $ci_next,
-                    _ci_close       => $ci_close,
-                    _ci_close_next  => $ci_close_next,
-                    _comma_count    => $comma_count,
-                    _Kc             => $Kc,
-                };
-            }
-
-            #-----------------------------
-            # 2.2 Closing container tokens
-            #-----------------------------
-            else {
-                my $seqno_test = $rparent->{_seqno};
-                if ( $seqno_test ne $seqno ) {
-
-                    # Shouldn't happen if we are processing balanced text.
-                    # (Unbalanced text should go out verbatim)
-                    DEVEL_MODE
-                      && Fault("stack error: $seqno_test != $seqno\n");
-                }
-
-                # use the values set by the opening token
-                $ci_this = $rparent->{_ci_close};
-                $ci_next = $rparent->{_ci_close_next};
-
-                my $ci_open_old = $rparent->{_ci_open};
-                if ( @{$rstack} ) {
-                    $rparent      = pop @{$rstack};
-                    $ci_next_next = $rparent->{_ci_next_next};
-                }
-                else {
-
-                    # Shouldn't happen if we are processing balanced text.
-                    DEVEL_MODE && Fault("empty stack - shouldn't happen\n");
-                }
-
-                # Undo ci at a closing token followed by a closing token. Goal
-                # is to keep formatting independent of the existance of a
-                # trailing comma or semicolon.
-                if ( $ci_this > 0 && !$ci_open_old && !$rparent->{_ci_close} ) {
-                    my $Kc = $rparent->{_Kc};
-                    my $Kn = $self->K_next_code($KK);
-                    if ( $Kc && $Kn && $Kc == $Kn ) {
-                        $ci_this = $ci_next = 0;
-                    }
-                }
-            }
-        }
-
-        #------------
-        # 3. Comments
-        #------------
-        elsif ( $type eq '#' ) {
+            my $ci_this = $ci_next;
 
             # If at '#' in ternary before a ? or :, use that level to make
             # the comment line up with the next ? or : line.  (see c202/t052)
@@ -7321,9 +6929,389 @@ sub set_ci {
             next;
         }
 
-        #-------------------------
-        # 4. Semicolons and Labels
-        #-------------------------
+        #------------------------------------------------------------
+        # Section 3. Continuing with non-blank and non-comment tokens
+        #------------------------------------------------------------
+
+        $token = $rtoken_K->[_TOKEN_];
+
+        # Set ci values appropriate for most tokens:
+        my $ci_this = $ci_next;
+        $ci_next = $ci_next_next;
+
+        # Now change these ci values as necessary for special cases...
+
+        #----------------------------
+        # Section 4. Container tokens
+        #----------------------------
+        if ( $rtoken_K->[_TYPE_SEQUENCE_] ) {
+
+            my $seqno       = $rtoken_K->[_TYPE_SEQUENCE_];
+            my $rtype_count = $rtype_count_by_seqno->{$seqno};
+            my $comma_count = $rtype_count ? $rtype_count->{','} : 0;
+
+            #-------------------------------------
+            # Section 4.1 Opening container tokens
+            #-------------------------------------
+            if ( $is_opening_sequence_token{$token} ) {
+
+                my $level = $rtoken_K->[_LEVEL_];
+
+                # Default ci values for the closing token, to be modified
+                # as necessary:
+                my $ci_close      = $ci_next;
+                my $ci_close_next = $ci_next_next;
+
+                my $Kc =
+                    $type eq '?'
+                  ? $K_closing_ternary->{$seqno}
+                  : $K_closing_container->{$seqno};
+
+                #  $Kn  = $self->K_next_nonblank($KK);
+                my $Kn;
+                if ( $KK < $Klimit ) {
+                    $Kn = $KK + 1;
+                    if ( $rLL->[$Kn]->[_TYPE_] eq 'b' && $Kn < $Klimit ) {
+                        $Kn += 1;
+                    }
+                }
+
+                #  $Kcn = $self->K_next_code($Kc);
+                my $Kcn;
+                if ( $Kc && $Kc < $Klimit ) {
+                    $Kcn = $Kc + 1;
+                    if ( $rLL->[$Kcn]->[_TYPE_] eq 'b' && $Kcn < $Klimit ) {
+                        $Kcn += 1;
+                    }
+                    if ( $rLL->[$Kcn]->[_TYPE_] eq '#' ) {
+                        $Kcn = $self->K_next_code($Kcn);
+                    }
+                }
+
+                my $opening_level_jump =
+                  $Kn ? $rLL->[$Kn]->[_LEVEL_] - $level : 0;
+
+                # initialize ci_next_next to its standard value
+                $ci_next_next = 1;
+
+                # Default: ci of first item of list with level jump is same as
+                # ci of first item of container
+                if ( $opening_level_jump > 0 ) {
+                    $ci_next = $rparent->{_ci_open_next};
+                }
+
+                my $container_type;
+
+                #-------------------------
+                # Section 4.1.1 Code Block
+                #-------------------------
+                my $block_type = $rblock_type_of_seqno->{$seqno};
+                if ($block_type) {
+                    $container_type = 'Block';
+
+                    # set default depending on block type
+                    $ci_close = 0;
+
+                    my $no_semicolon =
+                         $is_block_without_semicolon{$block_type}
+                      || $ris_sub_block->{$seqno}
+                      || $last_type eq 'J';
+
+                    if ( !$no_semicolon ) {
+
+                        # Optional fix for block types sort/map/etc which use
+                        # zero ci at terminal brace if previous keyword had
+                        # zero ci.  This will cause sort/map/grep filter blocks
+                        # to line up. Note that sub 'undo_ci' will also try to
+                        # do this, so this is not a critical operation.
+                        if ( $is_block_with_ci{$block_type} ) {
+                            my $parent_seqno = $rparent->{_seqno};
+                            my $rtype_count_p =
+                              $rtype_count_by_seqno->{$parent_seqno};
+                            if (
+
+                                # only do this within containers
+                                $parent_seqno != SEQ_ROOT
+
+                                # Only do this if sub respace_tokens has
+                                # been called, so that counts are available
+                                && $respace_tokens_called
+                                && (
+
+                                    # only in containers without ',' and ';'
+                                    # TODO: could subtract 1 a trailing ';'
+                                    !$rtype_count_p || ( !$rtype_count_p->{','}
+                                        && !$rtype_count_p->{';'} )
+                                )
+                                && $map_block_follows->($seqno)
+                              )
+                            {
+                                if ($ci_last) {
+                                    $ci_close = $ci_this;
+                                }
+                            }
+                            else {
+                                $ci_close = $ci_this;
+                            }
+                        }
+
+                        # keep ci if certain operators follow (fix c202/t024)
+                        if ( !$ci_close && $Kcn ) {
+                            my $type_kcn  = $rLL->[$Kcn]->[_TYPE_];
+                            my $token_kcn = $rLL->[$Kcn]->[_TOKEN_];
+                            if (   $type_kcn =~ /^(\.|\&\&|\|\|)$/
+                                || $type_kcn eq 'k' && $is_and_or{$token_kcn} )
+                            {
+                                $ci_close = $ci_this;
+                            }
+                        }
+                    }
+
+                    if ( $rparent->{_container_type} ne 'Ternary' ) {
+                        $ci_this = 0;
+                    }
+                    $ci_next       = 0;
+                    $ci_close_next = $ci_close;
+                }
+
+                #----------------------
+                # Section 4.1.2 Ternary
+                #----------------------
+                elsif ( $type eq '?' ) {
+                    $container_type = 'Ternary';
+                    if ( $rparent->{_container_type} eq 'List'
+                        && !$rparent->{_ci_open_next} )
+                    {
+                        $ci_this  = 0;
+                        $ci_close = 0;
+                    }
+
+                    # redo ci of any preceding comments if necessary
+                    # at an outermost ? (which has no level jump)
+                    if ( !$opening_level_jump ) {
+                        $redo_preceding_comment_ci->( $KK, $ci_this );
+                    }
+                }
+
+                #-------------------------------
+                # Section 4.1.3 Logical or List?
+                #-------------------------------
+                else {
+                    my $is_logical = $is_container_label_type_for_ci{$last_type}
+                      && $is_logical_container_for_ci{$last_token}
+
+                      # Part 1 of optional patch to get agreement with previous
+                      # ci This makes almost no difference in a typical program
+                      # because we will seldom break within an array index.
+                      || $type eq '[' && SET_CI_OPTION_0;
+
+                    if ( !$is_logical && $token eq '(' ) {
+
+                        # 'foreach' and 'for' paren contents are treated as
+                        # logical except for C-style 'for'
+                        if ( $last_type eq 'k' ) {
+                            $is_logical ||= $last_token eq 'foreach';
+
+                            # C-style 'for' container will be type 'List'
+                            if ( $last_token eq 'for' ) {
+                                $is_logical =
+                                  !( $rtype_count && $rtype_count->{'f'} );
+                            }
+                        }
+
+                        # Check for 'for' and 'foreach' loops with iterators
+                        elsif ( $last_type eq 'i' && defined($Kcn) ) {
+                            my $seqno_kcn = $rLL->[$Kcn]->[_TYPE_SEQUENCE_];
+                            my $type_kcn  = $rLL->[$Kcn]->[_TOKEN_];
+                            if ( $seqno_kcn && $type_kcn eq '{' ) {
+                                my $block_type_kcn =
+                                  $rblock_type_of_seqno->{$seqno_kcn};
+                                $is_logical ||= $block_type_kcn
+                                  && ( $block_type_kcn eq 'for'
+                                    || $block_type_kcn eq 'foreach' );
+                            }
+
+                            # Search backwards for 'for'/'foreach' with
+                            # iterator in case user is running from an editor
+                            # and did not include the block (fixes case
+                            # 'xci.in').
+                            my $Km = $self->K_previous_code($KK);
+                            foreach ( 0 .. 2 ) {
+                                $Km = $self->K_previous_code($Km);
+                                last unless defined($Km);
+                                last unless $rLL->[$Km]->[_TYPE_] eq 'k';
+                                my $tok = $rLL->[$Km]->[_TOKEN_];
+                                next if $tok eq 'my';
+                                $is_logical ||=
+                                  ( $tok eq 'for' || $tok eq 'foreach' );
+                                last;
+                            }
+                        }
+                        elsif ( $last_token eq '(' ) {
+                            $is_logical ||=
+                              $rparent->{_container_type} eq 'Logical';
+                        }
+                    }
+
+                    #------------------------
+                    # Section 4.1.3.1 Logical
+                    #------------------------
+                    if ($is_logical) {
+                        $container_type = 'Logical';
+
+                        # Pass ci though an '!'
+                        if ( $last_type eq '!' ) { $ci_this = $ci_last }
+
+                        $ci_next_next  = 0;
+                        $ci_close_next = $ci_this;
+
+                        # Part 2 of optional patch to get agreement with
+                        # previous ci
+                        if ( $type eq '[' && SET_CI_OPTION_0 ) {
+
+                            $ci_next_next = $ci_this;
+
+                            # Undo ci at a chain of indexes or hash keys
+                            if ( $last_type eq '}' ) {
+                                $ci_this = $ci_last;
+                            }
+                        }
+
+                        if ($opening_level_jump) {
+                            $ci_next = 0;
+                        }
+                    }
+
+                    #---------------------
+                    # Section 4.1.3.2 List
+                    #---------------------
+                    else {
+
+                        # Here 'List' is a catchall for none of the above types
+                        $container_type = 'List';
+
+                        # lists in blocks ...
+                        if ( $rparent->{_container_type} eq 'Block' ) {
+
+                            # undo ci if another closing token follows
+                            if ( defined($Kcn) ) {
+                                my $closing_level_jump =
+                                  $rLL->[$Kcn]->[_LEVEL_] - $level;
+                                if ( $closing_level_jump < 0 ) {
+                                    $ci_close = $ci_this;
+                                }
+                            }
+                        }
+
+                        # lists not in blocks ...
+                        else {
+
+                            if ( !$rparent->{_comma_count} ) {
+
+                                $ci_close = $ci_this;
+
+                                # undo ci at binary op after right paren if no
+                                # commas in container; fixes t027, t028
+                                if (   $ci_close_next != $ci_close
+                                    && defined($Kcn)
+                                    && $bin_op_type{ $rLL->[$Kcn]->[_TYPE_] } )
+                                {
+                                    $ci_close_next = $ci_close;
+                                }
+                            }
+
+                            if ( $rparent->{_container_type} eq 'Ternary' ) {
+                                $ci_next = 0;
+                            }
+                        }
+
+                        # Undo ci at a chain of indexes or hash keys
+                        if ( $token ne '(' && $last_type eq '}' ) {
+                            $ci_this = $ci_close = $ci_last;
+                        }
+                    }
+                }
+
+                #---------------------------------------
+                # Section 4.1.4 Store opening token info
+                #---------------------------------------
+
+                # Most closing tokens should align with their opening tokens.
+                if (
+                       $type eq '{'
+                    && $token ne '('
+                    && $is_list_end_type{$last_type}
+
+                    # avoid asub blocks, which may have prototypes ending in '}'
+                    && !$ris_asub_block->{$seqno}
+                  )
+                {
+                    $ci_close = $ci_this;
+                }
+
+                # Closing ci must never be less than opening
+                if ( $ci_close < $ci_this ) { $ci_close = $ci_this }
+
+                push @{$rstack}, $rparent;
+                $rparent = {
+                    _seqno          => $seqno,
+                    _container_type => $container_type,
+                    _ci_next_next   => $ci_next_next,
+                    _ci_open        => $ci_this,
+                    _ci_open_next   => $ci_next,
+                    _ci_close       => $ci_close,
+                    _ci_close_next  => $ci_close_next,
+                    _comma_count    => $comma_count,
+                    _Kc             => $Kc,
+                };
+            }
+
+            #-------------------------------------
+            # Section 4.2 Closing container tokens
+            #-------------------------------------
+            else {
+
+                my $seqno_test = $rparent->{_seqno};
+                if ( $seqno_test ne $seqno ) {
+
+                    # Shouldn't happen if we are processing balanced text.
+                    # (Unbalanced text should go out verbatim)
+                    DEVEL_MODE
+                      && Fault("stack error: $seqno_test != $seqno\n");
+                }
+
+                # Use ci_this, ci_next values set by the matching opening token:
+                $ci_this = $rparent->{_ci_close};
+                $ci_next = $rparent->{_ci_close_next};
+                my $ci_open_old = $rparent->{_ci_open};
+
+                # Then pop the stack and use the parent ci_next_next value:
+                if ( @{$rstack} ) {
+                    $rparent      = pop @{$rstack};
+                    $ci_next_next = $rparent->{_ci_next_next};
+                }
+                else {
+
+                    # Shouldn't happen if we are processing balanced text.
+                    DEVEL_MODE && Fault("empty stack - shouldn't happen\n");
+                }
+
+                # Fix: undo ci at a closing token followed by a closing token.
+                # Goal is to keep formatting independent of the existance of a
+                # trailing comma or semicolon.
+                if ( $ci_this > 0 && !$ci_open_old && !$rparent->{_ci_close} ) {
+                    my $Kc = $rparent->{_Kc};
+                    my $Kn = $self->K_next_code($KK);
+                    if ( $Kc && $Kn && $Kc == $Kn ) {
+                        $ci_this = $ci_next = 0;
+                    }
+                }
+            }
+        }
+
+        #---------------------------------
+        # Section 5. Semicolons and Labels
+        #---------------------------------
         # The next token after a ';' and label (type 'J') starts a new stmt
         # The ci after a C-style for ';' (type 'f') is handled similarly.
         # TODO: There is type 'f' redundant coding in sub respace which can
@@ -7333,9 +7321,9 @@ sub set_ci {
             if ( $is_closing_type{$last_type} ) { $ci_this = $ci_last }
         }
 
-        #------------
-        # 5. Keywords
-        #------------
+        #--------------------
+        # Section 6. Keywords
+        #--------------------
         # Undo ci after a format statement
         elsif ( $type eq 'k' ) {
             if ( substr( $token, 0, 6 ) eq 'format' ) {
@@ -7343,9 +7331,9 @@ sub set_ci {
             }
         }
 
-        #----------
-        # 6. Commas
-        #----------
+        #------------------
+        # Section 7. Commas
+        #------------------
         # A comma and the subsequent item normally have ci undone
         # unless ci has been set at a lower level
         elsif ( $type eq ',' ) {
@@ -7355,9 +7343,9 @@ sub set_ci {
             }
         }
 
-        #-------------------------
-        # 7. Hanging side comments
-        #-------------------------
+        #---------------------------------
+        # Section 8. Hanging side comments
+        #---------------------------------
         # Treat hanging side comments like blanks
         elsif ( $type eq 'q' && $token eq EMPTY_STRING ) {
             $ci_next = $ci_this;
@@ -7368,10 +7356,7 @@ sub set_ci {
             next;
         }
 
-        #-----------------------------------------------------------------
-        # Development test: ci_this should match the ci from the tokenizer
-        # except where the new value makes an improvement.
-        #-----------------------------------------------------------------
+        # Save debug info if requested
         DEBUG_SET_CI && do {
 
             my $seqno = $rtoken_K->[_TYPE_SEQUENCE_];
@@ -7391,7 +7376,6 @@ sub set_ci {
             my $block_type;
             $block_type = $rblock_type_of_seqno->{$seqno} if ($seqno);
             $block_type = EMPTY_STRING unless ($block_type);
-            if ( !defined($block_type) ) { $block_type = EMPTY_STRING }
             my $ptype = $rparent->{_container_type};
             my $pname = $ptype;
 
@@ -7405,19 +7389,24 @@ $lno\t$ci\t$ci_this\t$ci_next\t$last_type\t$last_tok\t$type\t$tok\t$seqno\t$leve
 EOM
         };
 
+        #----------------------------------
+        # Store the ci value for this token
+        #----------------------------------
         $rtoken_K->[_CI_LEVEL_] = $ci_this
 
           # do not store in hybrid testing mode
           if ( !$ci_comments_only );
 
-        # Remember last nonblank, non-comment token info
+        # Remember last nonblank, non-comment token info for the next pass
         $ci_last    = $ci_this;
         $last_token = $token;
         $last_type  = $type;
 
-    }
+    }    ## End main loop over tokens
 
-    # End main loop
+    #----------------------
+    # Post-loop operations:
+    #----------------------
 
     # if the logfile is saved, we need to save the leading ci of
     # each old line of code.
