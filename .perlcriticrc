@@ -76,9 +76,10 @@ short_subroutine_statements = 2
 
 # This policy is very useful in locating complex code which might benefit from
 # simplification.  The max value has to be set rather high here because there
-# are some routines in Formatter.pm with high mccabe values.
+# are some critical loops in Formatter.pm whose high mccabe values cannot
+# be reduced without significantly increasing run time.
 [Subroutines::ProhibitExcessComplexity]
-max_mccabe=125
+max_mccabe=180
 
 # This policy can be very helpful for locating complex code, but sometimes
 # deep nests are the best option, especially in error handling and debug
