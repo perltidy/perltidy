@@ -391,6 +391,10 @@
 ../snippets28.t	recombine8.def
 ../snippets28.t	git116.def
 ../snippets28.t	git116.git116
+../snippets28.t	xbt.def
+../snippets28.t	xbt.xbt1
+../snippets28.t	xbt.xbt2
+../snippets28.t	xbt.xbt3
 ../snippets3.t	ce_wn1.ce_wn
 ../snippets3.t	ce_wn1.def
 ../snippets3.t	colin.colin

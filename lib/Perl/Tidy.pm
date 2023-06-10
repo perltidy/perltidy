@@ -3237,6 +3237,8 @@ sub generate_options {
     $add_option->( 'valign-exclusion-list',                     'vxl',   '=s' );
     $add_option->( 'valign-inclusion-list',                     'vil',   '=s' );
     $add_option->( 'valign-if-unless',                          'viu',   '!' );
+    $add_option->( 'extended-block-tightness',                  'xbt',   '!' );
+    $add_option->( 'extended-block-tightness-list',             'xbtl',  '=s' );
 
     ########################################
     $category = 4;    # Comment controls

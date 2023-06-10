@@ -2,6 +2,11 @@
 
 ## 2023 03 09.02
 
+    - Issue git #121. Added parameters -xbt, or --extended-block-tightness,
+      and -xbtl=s, or --extended-block-tightness-list=s, to allow
+      certain small code blocks to have internal spacing controlled by
+      -bbt=n instead of -bt=n. The man pages have details.
+
     - Issue git #118. A warning will be issued if a duplicate format-skipping
       starting marker is seen within a format-skipping section. The same
       applies to duplicate code-skipping starting markers within code-skipping

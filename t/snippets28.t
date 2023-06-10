@@ -8,6 +8,10 @@
 #5 recombine8.def
 #6 git116.def
 #7 git116.git116
+#8 xbt.def
+#9 xbt.xbt1
+#10 xbt.xbt2
+#11 xbt.xbt3
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -29,6 +33,11 @@ BEGIN {
         'git116' => "-viu",
         'olbxl2' => <<'----------',
 -olbxl='*'
+----------
+        'xbt1' => "-xbt",
+        'xbt2' => "-xbt -xbtl=k",
+        'xbt3' => <<'----------',
+-xbt -bbt=2 -xbtl="print say t"
 ----------
     };
 
@@ -93,6 +102,19 @@ $rotate = Math::MatrixReal->new_from_string( "[ " . cos($theta) . " " . -sin($th
         'recombine8' => <<'----------',
 # recombine uses normal forward mode
 $v_gb = -1*(eval($pmt_gb))*(-1+((((-1+(1/((eval($i_gb)/100)+1))**  ((eval($n_gb)-1)))))/(eval($i_gb)/100)));
+----------
+
+        'xbt' => <<'----------',
+print {*STDERR} ${$data_sref};
+say {*STDERR} dump $c->{cookies};
+$rc = system {"lskdfj"} "lskdfj";
+test !eval { exec { 'notaint' } $TAINT },  'exec';
+delete ${"$ {dest}::"}{$name};
+my @matches = @{$nodes_ref} > 1 ? @{$nodes_ref}[ 1 .. $#{$nodes_ref} ] : ();
+%{$self} = %{$project};
+*{$name} = $sub;
+grep { defined &{ ${ "${class}::" }{$_} } }
+&{"${class}::Clear"}();
 ----------
     };
 
@@ -214,6 +236,71 @@ print "Would need: @DepList\n"        if ( @DepList    and !$Quiet );
 print "RPM Output:\n"                 unless $Quiet;
 print join( "\n", @RPMOutput ) . "\n" unless $Quiet;
 #7...........
+        },
+
+        'xbt.def' => {
+            source => "xbt",
+            params => "def",
+            expect => <<'#8...........',
+print {*STDERR} ${$data_sref};
+say   {*STDERR} dump $c->{cookies};
+$rc = system {"lskdfj"} "lskdfj";
+test !eval { exec {'notaint'} $TAINT }, 'exec';
+delete ${"$ {dest}::"}{$name};
+my @matches = @{$nodes_ref} > 1 ? @{$nodes_ref}[ 1 .. $#{$nodes_ref} ] : ();
+%{$self} = %{$project};
+*{$name} = $sub;
+grep { defined &{ ${"${class}::"}{$_} } } &{"${class}::Clear"}();
+#8...........
+        },
+
+        'xbt.xbt1' => {
+            source => "xbt",
+            params => "xbt1",
+            expect => <<'#9...........',
+print { *STDERR } ${ $data_sref };
+say   { *STDERR } dump $c->{cookies};
+$rc = system { "lskdfj" } "lskdfj";
+test !eval { exec { 'notaint' } $TAINT }, 'exec';
+delete ${ "$ {dest}::" }{$name};
+my @matches =
+  @{ $nodes_ref } > 1 ? @{ $nodes_ref }[ 1 .. $#{ $nodes_ref } ] : ();
+%{ $self } = %{ $project };
+*{ $name } = $sub;
+grep { defined &{ ${ "${class}::" }{$_} } } &{ "${class}::Clear" }();
+#9...........
+        },
+
+        'xbt.xbt2' => {
+            source => "xbt",
+            params => "xbt2",
+            expect => <<'#10...........',
+print { *STDERR } ${$data_sref};
+say   { *STDERR } dump $c->{cookies};
+$rc = system { "lskdfj" } "lskdfj";
+test !eval { exec { 'notaint' } $TAINT }, 'exec';
+delete ${"$ {dest}::"}{$name};
+my @matches = @{$nodes_ref} > 1 ? @{$nodes_ref}[ 1 .. $#{$nodes_ref} ] : ();
+%{$self} = %{$project};
+*{$name} = $sub;
+grep { defined &{ ${"${class}::"}{$_} } } &{"${class}::Clear"}();
+#10...........
+        },
+
+        'xbt.xbt3' => {
+            source => "xbt",
+            params => "xbt3",
+            expect => <<'#11...........',
+print {*STDERR} ${$data_sref};
+say   {*STDERR} dump $c->{cookies};
+$rc = system {"lskdfj"} "lskdfj";
+test !eval {exec {'notaint'} $TAINT}, 'exec';
+delete ${"$ {dest}::"}{$name};
+my @matches = @{$nodes_ref} > 1 ? @{$nodes_ref}[ 1 .. $#{$nodes_ref} ] : ();
+%{$self} = %{$project};
+*{$name} = $sub;
+grep {defined &{${"${class}::"}{$_}}} &{"${class}::Clear"}();
+#11...........
         },
     };
 

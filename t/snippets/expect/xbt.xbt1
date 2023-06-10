@@ -1,0 +1,10 @@
+print { *STDERR } ${ $data_sref };
+say   { *STDERR } dump $c->{cookies};
+$rc = system { "lskdfj" } "lskdfj";
+test !eval { exec { 'notaint' } $TAINT }, 'exec';
+delete ${ "$ {dest}::" }{$name};
+my @matches =
+  @{ $nodes_ref } > 1 ? @{ $nodes_ref }[ 1 .. $#{ $nodes_ref } ] : ();
+%{ $self } = %{ $project };
+*{ $name } = $sub;
+grep { defined &{ ${ "${class}::" }{$_} } } &{ "${class}::Clear" }();

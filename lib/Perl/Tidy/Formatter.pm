@@ -235,6 +235,7 @@ my (
     $rOpts_valign_side_comments,
     $rOpts_valign_if_unless,
     $rOpts_whitespace_cycle,
+    $rOpts_extended_block_tightness,
     $rOpts_extended_line_up_parentheses,
 
     # Static hashes
@@ -314,6 +315,9 @@ my (
 
     # INITIALIZER: sub initialize_space_after_keyword
     %space_after_keyword,
+
+    # INITIALIZER: sub initialize_extended_block_tightness_list
+    %extended_block_tightness_list,
 
     # INITIALIZED BY initialize_global_option_vars
     %opening_vertical_tightness,
@@ -1561,6 +1565,8 @@ EOM
 
     initialize_space_after_keyword();
 
+    initialize_extended_block_tightness_list();
+
     initialize_token_break_preferences();
 
     #--------------------------------------------------------------
@@ -2151,6 +2157,68 @@ sub initialize_space_after_keyword {
     return;
 } ## end sub initialize_space_after_keyword
 
+sub initialize_extended_block_tightness_list {
+
+    # keywords taking indirect objects:
+    my @k_list = keys %is_indirect_object_taker;
+
+    # type symbols which may precede an opening block brace
+    my @t_list = qw($ @ % & *);
+    push @t_list, '$#';
+
+    # Set the default to include all keywords ant types.
+    # We will build the selection in %hash
+    my %hash;
+    my @all = ( @k_list, @t_list );
+    @hash{@all} = (1) x scalar(@all);
+
+    # This can be overridden with -xbtl="..."
+    my $long_name = 'extended-block-tightness-list';
+    if ( $rOpts->{$long_name} ) {
+        my @words = split_words( $rOpts->{$long_name} );
+        my @unknown;
+
+        # Turn everything off
+        @hash{@all} = (0) x scalar(@all);
+
+        # Then turn on selections
+        foreach my $word (@words) {
+
+            # 'print' etc turns on a specific word or symbol
+            if ( defined( $hash{$word} ) ) { $hash{$word} = 1; }
+
+            # 'k' turns on all keywords
+            elsif ( $word eq 'k' ) {
+                @hash{@k_list} = (1) x scalar(@k_list);
+            }
+
+            # 't' turns on all symbols
+            elsif ( $word eq 't' ) {
+                @hash{@t_list} = (1) x scalar(@t_list);
+            }
+
+            # 'kt' same as 'k' and 't' for convenience (same as default)
+            elsif ( $word eq 'kt' ) {
+                @hash{@all} = (1) x scalar(@all);
+            }
+
+            # Anything else is an error
+            else { push @unknown, $word }
+        }
+        if (@unknown) {
+            my $num = @unknown;
+            local $LIST_SEPARATOR = SPACE;
+            Warn(<<EOM);
+$num unrecognized keyword(s) were input with --$long_name :
+@unknown
+EOM
+        }
+    }
+
+    %extended_block_tightness_list = %hash;
+    return;
+}
+
 sub initialize_token_break_preferences {
 
     # implement user break preferences
@@ -2372,6 +2440,7 @@ sub initialize_global_option_vars {
     $rOpts_indent_only              = $rOpts->{'indent-only'};
     $rOpts_keep_interior_semicolons = $rOpts->{'keep-interior-semicolons'};
     $rOpts_line_up_parentheses      = $rOpts->{'line-up-parentheses'};
+    $rOpts_extended_block_tightness = $rOpts->{'extended-block-tightness'};
     $rOpts_extended_line_up_parentheses =
       $rOpts->{'extended-line-up-parentheses'};
     $rOpts_logical_padding = $rOpts->{'logical-padding'};
@@ -2896,6 +2965,9 @@ sub set_whitespace_flags {
 
     my $rtokh_last_last = $rtokh_last;
 
+    # This will identify braces to be treated as blocks for the -xbt flag
+    my %block_type_for_tightness;
+
     my ( $ws_1, $ws_2, $ws_3, $ws_4 );
 
     # main loop over all tokens to define the whitespace flags
@@ -2929,7 +3001,8 @@ sub set_whitespace_flags {
             my $seqno           = $rtokh->[_TYPE_SEQUENCE_];
             my $block_type      = $rblock_type_of_seqno->{$seqno};
             my $last_seqno      = $rtokh_last->[_TYPE_SEQUENCE_];
-            my $last_block_type = $rblock_type_of_seqno->{$last_seqno};
+            my $last_block_type = $rblock_type_of_seqno->{$last_seqno}
+              || $block_type_for_tightness{$last_seqno};
 
             $j_tight_closing_paren = -1;
 
@@ -2951,10 +3024,7 @@ sub set_whitespace_flags {
                 # tightness = 2 means never pad inside with space
 
                 my $tightness;
-                if (   $last_type eq '{'
-                    && $last_token eq '{'
-                    && $last_block_type )
-                {
+                if ( $last_block_type && $last_token eq '{' ) {
                     $tightness = $rOpts_block_brace_tightness;
                 }
                 else { $tightness = $tightness{$last_token} }
@@ -3121,8 +3191,10 @@ sub set_whitespace_flags {
                 if ( !defined($ws) ) {
 
                     my $tightness;
-                    my $block_type = $rblock_type_of_seqno->{$seqno};
-                    if ( $type eq '}' && $token eq '}' && $block_type ) {
+                    my $block_type = $rblock_type_of_seqno->{$seqno}
+                      || $block_type_for_tightness{$seqno};
+
+                    if ( $block_type && $token eq '}' ) {
                         $tightness = $rOpts_block_brace_tightness;
                     }
                     else { $tightness = $tightness{$token} }
@@ -3264,6 +3336,19 @@ sub set_whitespace_flags {
                 #  @opts{'a','b',...}
                 if ( $last_type eq 'i' && $last_token =~ /^\@/ ) {
                     $ws = WS_NO;
+                }
+            }
+
+            # The --extended-block-tightness option allows certain braces
+            # to be treated as blocks just for setting inner whitespace
+            if ( $rOpts_extended_block_tightness && $token eq '{' ) {
+                my $seqno = $rtokh->[_TYPE_SEQUENCE_];
+                if (  !$rblock_type_of_seqno->{$seqno}
+                    && $extended_block_tightness_list{$last_token} )
+                {
+
+                    # Ok - make this brace a block type for tightness only
+                    $block_type_for_tightness{$seqno} = $last_token;
                 }
             }
         } ## end if ( $is_opening_type{$type} ) {

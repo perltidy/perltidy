@@ -1239,6 +1239,56 @@ To simplify input in the case that all of the tightness flags have the same
 value <n>, the parameter <-act=n> or B<--all-containers-tightness=n> is an
 abbreviation for the combination <-pt=n -sbt=n -bt=n -bbt=n>.
 
+=item B<-xbt>,   B<--extended-block-tightness>
+
+Curly braces which are considered by perltidy to contain code blocks for
+formatting purposes exclude some of the code blocks used by Perl mainly for
+isolating terms.  These include curly braces following a keyword where an
+indirect object might occur, or curly braces following a type symbol. For
+example
+
+  print {*STDERR} $message;
+  return @{$self};
+
+Since perltidy does not format these small containers as code blocks, by
+default the spacing within for these braces follows the flag
+B<--brace-tightness=n>.
+
+But they can be made to instead follow the spacing defined by the
+B<--block-brace-tightness=n> flag by seting
+B<--extended-block-tightness>.
+
+Note that if the two flags B<-bbt=n> and B<-bt=n> have the same value
+B<n> then there would be no reason to set this flag.
+
+=item B<-xbtl=s>,   B<--extended-block-tightness-list=s>
+
+The small blocks to which the parameter B<-xbt> applies consist of those curly braces preceded by the keywords
+
+    print printf sort exec system say
+
+and special symbols
+
+    $ @ % & * $#
+
+To restrict B<-xbt> to apply to just the above keywords use
+
+   -xbtl=k
+
+and to restrict it to apply to just the above special type symbols use
+
+   -xbtl=t
+
+To restrict it to certain specific keywords or type symbols, enter them in the
+parameter B<s>. For example, the following restricts it apply to just the
+keywords B<print> and B<say>:
+
+   -xbtl="print say"
+
+Note that this parameter merely changes the way that the parameter
+B<--extended-block-tightness> works. It has no effect unless
+B<--extended-block-tightness> is set.
+
 
 =item B<-tso>,   B<--tight-secret-operators>
 
@@ -5555,19 +5605,19 @@ The following list shows all short parameter names which allow a prefix
  boc    bok    bol    bom    bos    bot    cblx   ce     conv   cpb
  cs     csc    cscb   cscw   dac    dbc    dbs    dcbl   dcsc   ddf
  dln    dnl    dop    dp     dpro   drc    dsc    dsm    dsn    dtc
- dtt    dwic   dwls   dwrs   dws    eos    f      fll    fpva   frm
- fs     fso    gcs    hbc    hbcm   hbco   hbh    hbhh   hbi    hbj
- hbk    hbm    hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv
- hbw    hent   hic    hicm   hico   hih    hihh   hii    hij    hik
- him    hin    hip    hipd   hipu   hiq    his    hisc   hiv    hiw
- hsc    html   ibc    icb    icp    iob    isbc   iscl   kgb    kgbd
- kgbi   kis    lal    log    lop    lp     lsl    mem    nib    ohbr
- okw    ola    olc    oll    olq    opr    opt    osbc   osbr   otr
- ple    pod    pvl    q      sac    sbc    sbl    scbb   schb   scp
- scsb   sct    se     sfp    sfs    skp    sob    sobb   sohb   sop
- sosb   sot    ssc    st     sts    t      tac    tbc    toc    tp
- tqw    trp    ts     tsc    tso    vbc    vc     vmll   vsc    w
- wfc    wn     x      xci    xlp    xs
+ dtt    dwic   dwls   dwrs   dws    eos    f      fpva   frm    fs
+ fso    gcs    hbc    hbcm   hbco   hbh    hbhh   hbi    hbj    hbk
+ hbm    hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv    hbw
+ hent   hic    hicm   hico   hih    hihh   hii    hij    hik    him
+ hin    hip    hipd   hipu   hiq    his    hisc   hiv    hiw    hsc
+ html   ibc    icb    icp    iob    isbc   iscl   kgb    kgbd   kgbi
+ kis    lal    log    lop    lp     lsl    mem    nib    ohbr   okw
+ ola    olc    oll    olq    opr    opt    osbc   osbr   otr    ple
+ pod    pvl    q      sac    sbc    sbl    scbb   schb   scp    scsb
+ sct    se     sfp    sfs    skp    sob    sobb   sohb   sop    sosb
+ sot    ssc    st     sts    t      tac    tbc    toc    tp     tqw
+ trp    ts     tsc    tso    vbc    vc     viu    vmll   vsc    w
+ wfc    wn     x      xbt    xci    xlp    xs
 
 Equivalently, the prefix 'no' or 'no-' on the corresponding long names may be
 used.
