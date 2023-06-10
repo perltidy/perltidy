@@ -1,8 +1,18 @@
 <h1>Perltidy Change Log</h1>
 
-<h2>2023 03 09.02</h2>
+<h2>2023 03 09.03</h2>
 
-<pre><code>- Issue git #116. A new flag --valign-if-unless, -viu, was added to
+<pre><code>- Issue git #121. Added parameters -xbt, or --extended-block-tightness,
+  and -xbtl=s, or --extended-block-tightness-list=s, to allow
+  certain small code blocks to have internal spacing controlled by
+  -bbt=n instead of -bt=n. The man pages have details.
+
+- Issue git #118. A warning will be issued if a duplicate format-skipping
+  starting marker is seen within a format-skipping section. The same
+  applies to duplicate code-skipping starting markers within code-skipping
+  sections.
+
+- Issue git #116. A new flag --valign-if-unless, -viu, was added to
   allow postfix 'unless' terms to align with postfix 'if' terms.  The
   default remains not to do this.
 
@@ -15,6 +25,21 @@
 - Fixed git #110, add missing documentation for new options
   -cpb and -bfvt=n. These work in version 20230309 but the pod
   documentation was missing and has been added.
+
+- Fixed an undefined reference message when running with
+  --dump-block-summary on a file without any subs or other
+  selected block types.
+
+- Some rare, minor issues with continuation indentation have been fixed.
+  Most scripts will remain unchanged.  The main change is that block
+  comments which occur just before a closing brace, bracket or paren
+  now have an indentation which is independent of the existance of
+  an optional comma or semicolon.  Previously, adding or deleting
+  an optional trailing comma could cause their indentation to jump.
+  Also, indentation of comments within ternary statements has been
+  improved. For additonal information see
+
+  https://github.com/perltidy/perltidy/blob/master/docs/ci_update.md
 </code></pre>
 
 <h2>2023 03 09</h2>

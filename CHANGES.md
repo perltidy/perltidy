@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2023 03 09.02
+## 2023 03 09.03
 
     - Issue git #121. Added parameters -xbt, or --extended-block-tightness,
       and -xbtl=s, or --extended-block-tightness-list=s, to allow

@@ -641,8 +641,7 @@ while (
 sub bb {
     for ( my $i =
           $first,
-          my $j =
-          0 ;
+        my $j = 0 ;
         $i <=
           $last ;
       )
@@ -656,8 +655,7 @@ sub bb {
 sub bB {
     for ( my $i =
           $first,
-          my $j =
-          0 ;
+        my $j = 0 ;
         $i <=
           $last ;
       )
@@ -670,7 +668,7 @@ __END__
 ==> b068 <==
        # State 1
        for ($r[0]=0,
-                my $i
+              my $i
                 = 1
                 ;
               $i<=
@@ -681,7 +679,7 @@ __END__
          for (
               $r[0]
                 = 0,
-                my $i
+              my $i
                 = 1
                 ;
               $i<=
@@ -1822,7 +1820,8 @@ my @boolfunc =
 "c"
                         ]
                   ]
-                  => "SubField must have two parts"
+                    =>
+"SubField must have two parts"
             ],
         );
 
@@ -1835,7 +1834,8 @@ my @boolfunc =
 "c"
                         ]
                   ]
-                  => "SubField must have two parts"
+                    =>
+"SubField must have two parts"
             ],
         );
 
@@ -1944,7 +1944,7 @@ like (
                                 my @tail =
                                   (
                                         @buf[ ( $i % ( -$p )
-                                                    + 1 )
+                                                  + 1 )
                                           .. $#buf ],
                                         @buf[ 0 .. $i % ( -$p )
                                         ] );
@@ -1952,7 +1952,7 @@ like (
                                 # State 2
                                 my @tail = (
                                         @buf[ ( $i % ( -$p )
-                                                    + 1 )
+                                                  + 1 )
                                           .. $#buf ],
                                         @buf[ 0 .. $i % ( -$p )
                                         ] );
@@ -2626,10 +2626,10 @@ $term =
                        [
                             curr_opt (
                                    @beg[ 2,
-                                   5 ] ),
+                                     5 ] ),
                             1,
                             @beg[ 0, 1, 3,
-                            4 ] ];
+                              4 ] ];
                 }
 
 ==> b1090 <==
@@ -3100,7 +3100,8 @@ foreach $port (
 ==> b1105 <==
 foreach $port (
     sort
-    ( @ARGV[ 1 .. $#ARGV ] ) )
+         ( @ARGV[ 1 .. $#ARGV ]
+         ) )
 __END__
 foreach $port (
     sort
@@ -3909,16 +3910,16 @@ my @schedule = (
     my $line_number=
       $self->{line_no}
       ->[@{$self
-            ->{line_no}}
-      - @{$self->{line}}
-      -1];
+          ->{line_no}}-
+      @{$self->{line}}-
+      1];
 
     my $line_number=
       $self->{line_no}
       ->[@{$self
-            ->{line_no}}
-      - @{$self->{line}}
-      -1];
+          ->{line_no}}-
+      @{$self->{line}}-
+      1];
 
 ==> b1147 <==
     @summary=
@@ -3933,19 +3934,19 @@ my @schedule = (
 ==> b1148 <==
         $self->{line_no}
             ->[ @{ $self
-                    ->{line_no} } -
+                ->{line_no} } -
             @{ $self->{line} } -
             1 ];
 
         $self->{line_no}
             ->[ @{ $self
-                    ->{line_no} } -
+                ->{line_no} } -
             @{ $self->{line} } -
             1 ];
 
         $self->{line_no}
             ->[ @{ $self
-                    ->{line_no} } -
+                ->{line_no} } -
             @{ $self->{line} } -
             1 ];
 
@@ -5348,26 +5349,22 @@ is(
   # S1
   my $oldage
           = (
-   sort        { $a <=> $b }
-           map { -M }
-           @files )[-1];
+   sort { $a <=> $b }
+   map { -M } @files )[-1];
   my $depage
           = (
    sort { $a <=> $b }
-   map  { -M } @deps )
-          [0];
+   map { -M } @deps )[0];
 
   # S2
   my $oldage
           = (
-   sort        { $a <=> $b }
-           map { -M }
-           @files )[-1];
+   sort { $a <=> $b }
+   map { -M } @files )[-1];
   my $depage
           = (
    sort { $a <=> $b }
-   map  { -M } @deps )
-          [0];
+   map { -M } @deps )[0];
 
 ==> b1236 <==
 # Added level test when applying kpit
@@ -9734,9 +9731,9 @@ for (
 for
   my $index(
     GZIP_MIN_HEADER_SIZE..
-    GZIP_MIN_HEADER_SIZE
-    + length($Name)
-    -1)
+      GZIP_MIN_HEADER_SIZE
+      + length($Name)
+      -1)
 
 __END__
 for my $index(
@@ -9750,9 +9747,9 @@ for my $index(
 ==> b787 <==
 # State 1: the +GZIP is parsed as type p
 for my $index ( GZIP_MIN_HEADER_SIZE
-    +1 .. GZIP_MIN_HEADER_SIZE
-    -GZIP_FEXTRA_HEADER_SIZE
-    +1 )
+      +1 .. GZIP_MIN_HEADER_SIZE
+      -GZIP_FEXTRA_HEADER_SIZE
+      +1 )
 
 __END__
 
@@ -9829,8 +9826,7 @@ return $oDoW[
              (
                  localtime(
                      $time
-                              ->as_int
-                 )
+                     ->as_int )
              )[6]
     ];
 }
@@ -9841,8 +9837,7 @@ return $oDoW[
              (
                  localtime(
                      $time
-                              ->as_int
-                 )
+                     ->as_int )
              )[6]
     ];
 }
@@ -10205,7 +10200,7 @@ my %nodecount =
 ==> b924 <==
 foreach my $p(
         sort{lc($a)cmp lc($b)}
-        keys%v
+          keys%v
   )
 
 __END__
@@ -10387,7 +10382,7 @@ my @parts
 # S1
 foreach my $x (
         sort{lc($a)cmp lc($b)}
-        keys %INC
+          keys %INC
   )
 
 __END__
@@ -10902,7 +10897,7 @@ my (
 ==> b975 <==
 foreach my $x (
               sort { lc($a) cmp lc($b) }
-              keys %INC
+                keys %INC
   )
 
 __END__
