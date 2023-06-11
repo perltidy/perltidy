@@ -223,6 +223,11 @@ sub filter_files {
     @{$rlist} = grep { $_ !~ /\.LOG$/ } @{$rlist};
     @{$rlist} = grep { $_ !~ /\bDIAGNOSTICS$/ } @{$rlist};
 
+    # Ignore files with associated .ERR files
+    # Otherwise, it is too difficult to locate new problems in testing
+    # NOTE: this could also be an option
+    @{$rlist} = grep { !-e "$_.ERR" }
+
     # exclude pro{$rlist}
     @{$rlist} = grep { $_ !~ /profile\.[0-9]*/ } @{$rlist};
 
