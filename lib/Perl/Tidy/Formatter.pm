@@ -166,6 +166,9 @@ my (
     # Section 1: Global variables which are either always constant or
     # are constant after being configured by user-supplied
     # parameters.  They remain constant as a file is being processed.
+    # The INITIALIZER comment tells the sub responsible for initializing
+    # each variable. Failure to initialize or re-initialize a global
+    # variable can cause bugs which are hard to locate.
     #-----------------------------------------------------------------
 
     # INITIALIZER: sub check_options
@@ -6808,31 +6811,27 @@ sub set_ci {
     my $Klimit = $self->[_Klimit_];
     return unless defined($Klimit);
 
-    # Set a flag which tells if sub respace_tokens has been called yet. This
-    # allows this sub to work either before or after respace_tokens is called.
-    # NOTE: this can eventually be removed since it will always be true
-    my $respace_tokens_called = defined( $rLL->[0]->[_KNEXT_SEQ_ITEM_] );
-
     my $token        = ';';
     my $type         = ';';
-    my $ci_next      = 0;
     my $last_token   = $token;
     my $last_type    = $type;
     my $ci_last      = 0;
+    my $ci_next      = 0;
     my $ci_next_next = 1;
-    my $rstack       = ();
+    my $rstack       = [];
 
     my $seq_root = SEQ_ROOT;
     my $rparent  = {
-        _seqno          => $seq_root,
-        _ci_open        => 0,
-        _ci_open_next   => 0,
-        _ci_close       => 0,
-        _ci_close_next  => 0,
-        _container_type => 'Block',
-        _ci_next_next   => $ci_next_next,
-        _comma_count    => 0,
-        _Kc             => undef,
+        _seqno           => $seq_root,
+        _ci_open         => 0,
+        _ci_open_next    => 0,
+        _ci_close        => 0,
+        _ci_close_next   => 0,
+        _container_type  => 'Block',
+        _ci_next_next    => $ci_next_next,
+        _comma_count     => 0,
+        _semicolon_count => 0,
+        _Kc              => undef,
     };
 
     # Debug stuff
@@ -7031,9 +7030,7 @@ sub set_ci {
         #----------------------------
         if ( $rtoken_K->[_TYPE_SEQUENCE_] ) {
 
-            my $seqno       = $rtoken_K->[_TYPE_SEQUENCE_];
-            my $rtype_count = $rtype_count_by_seqno->{$seqno};
-            my $comma_count = $rtype_count ? $rtype_count->{','} : 0;
+            my $seqno = $rtoken_K->[_TYPE_SEQUENCE_];
 
             #-------------------------------------
             # Section 4.1 Opening container tokens
@@ -7085,6 +7082,24 @@ sub set_ci {
                     $ci_next = $rparent->{_ci_open_next};
                 }
 
+                my ( $comma_count, $semicolon_count );
+                my $rtype_count = $rtype_count_by_seqno->{$seqno};
+                if ($rtype_count) {
+                    $comma_count     = $rtype_count->{','};
+                    $semicolon_count = $rtype_count->{';'};
+
+                    # Do not include a terminal semicolon in the count (the
+                    # comma_count has already been corrected by respace_tokens)
+                    # We only need to know if there are semicolons or not, so
+                    # for speed we can just do this test if the count is 1.
+                    if ( $semicolon_count && $semicolon_count == 1 ) {
+                        my $Kcm = $self->K_previous_code($Kc);
+                        if ( $rLL->[$Kcm]->[_TYPE_] eq ';' ) {
+                            $semicolon_count--;
+                        }
+                    }
+                }
+
                 my $container_type;
 
                 #-------------------------
@@ -7118,16 +7133,10 @@ sub set_ci {
                                 # only do this within containers
                                 $parent_seqno != SEQ_ROOT
 
-                                # Only do this if sub respace_tokens has
-                                # been called, so that counts are available
-                                && $respace_tokens_called
-                                && (
+                                # only in containers without ',' and ';'
+                                && !$rparent->{_comma_count}
+                                && !$rparent->{_semicolon_count}
 
-                                    # only in containers without ',' and ';'
-                                    # TODO: could subtract 1 a trailing ';'
-                                    !$rtype_count_p || ( !$rtype_count_p->{','}
-                                        && !$rtype_count_p->{';'} )
-                                )
                                 && $map_block_follows->($seqno)
                               )
                             {
@@ -7339,15 +7348,16 @@ sub set_ci {
 
                 push @{$rstack}, $rparent;
                 $rparent = {
-                    _seqno          => $seqno,
-                    _container_type => $container_type,
-                    _ci_next_next   => $ci_next_next,
-                    _ci_open        => $ci_this,
-                    _ci_open_next   => $ci_next,
-                    _ci_close       => $ci_close,
-                    _ci_close_next  => $ci_close_next,
-                    _comma_count    => $comma_count,
-                    _Kc             => $Kc,
+                    _seqno           => $seqno,
+                    _container_type  => $container_type,
+                    _ci_next_next    => $ci_next_next,
+                    _ci_open         => $ci_this,
+                    _ci_open_next    => $ci_next,
+                    _ci_close        => $ci_close,
+                    _ci_close_next   => $ci_close_next,
+                    _comma_count     => $comma_count,
+                    _semicolon_count => $semicolon_count,
+                    _Kc              => $Kc,
                 };
             }
 
@@ -7858,6 +7868,19 @@ sub set_CODE_type {
 sub find_non_indenting_braces {
 
     my ( $self, $rix_side_comments ) = @_;
+
+    # Find and mark all non-indenting braces in this file.
+
+    # Given:
+    #   $rix_side_comments = index of lines which have side comments
+    # Find and save the line indexes of these special side comments in:
+    #   $self->[_rseqno_non_indenting_brace_by_ix_];
+
+    # Non-indenting braces are opening braces of the form
+    #   { #<<< ...
+    # which do not cause an increase in indentation level.
+    # They are enabled with the --non-indenting-braces, or -nib, flag.
+
     return unless ( $rOpts->{'non-indenting-braces'} );
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
@@ -8018,7 +8041,10 @@ EOM
 } ## end sub delete_side_comments
 
 sub dump_verbatim {
-    my $self   = shift;
+    my $self = shift;
+
+    # Dump the input file to the output verbatim. This is called when
+    # there is a severe error and formatted output cannot be made.
     my $rlines = $self->[_rlines_];
     foreach my $line ( @{$rlines} ) {
         my $input_line = $line->{_line_text};
