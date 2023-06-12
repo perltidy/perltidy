@@ -2960,6 +2960,9 @@ sub set_whitespace_flags {
     my $last_token = SPACE;
     my $last_type  = 'b';
 
+    my $last_token_dbg = SPACE;
+    my $last_type_dbg  = 'b';
+
     my $rtokh_last = [ @{ $rLL->[0] } ];
     $rtokh_last->[_TOKEN_]         = $last_token;
     $rtokh_last->[_TYPE_]          = $last_type;
@@ -3366,7 +3369,13 @@ sub set_whitespace_flags {
             && $type ne '#' # no longer required due to early exit for '#' above
           )
         {
-            $ws = WS_OPTIONAL;
+            # no space for '$ {' even if '$' is marked as type 'Z', issue c221
+            if ( $last_type eq 'Z' && $last_token eq '$' && $token eq '{' ) {
+                $ws = WS_NO;
+            }
+            else {
+                $ws = WS_OPTIONAL;
+            }
         }
 
         $ws_4 = $ws_3 = $ws
@@ -3442,19 +3451,26 @@ sub set_whitespace_flags {
         $rtokh_last_last = $rtokh_last;
         $rtokh_last      = $rtokh;
 
+        # Programming note: for some reason, it is very much faster to 'next'
+        # out of this loop here than to put the DEBUG coding in a block.
+        # But note that the debug code must then update its own copies
+        # of $last_token and $last_type.
         next if ( !DEBUG_WHITE );
 
-        my $str = substr( $last_token, 0, 15 );
+        my $str = substr( $last_token_dbg, 0, 15 );
         $str .= SPACE x ( 16 - length($str) );
         if ( !defined($ws_1) ) { $ws_1 = "*" }
         if ( !defined($ws_2) ) { $ws_2 = "*" }
         if ( !defined($ws_3) ) { $ws_3 = "*" }
         if ( !defined($ws_4) ) { $ws_4 = "*" }
         print STDOUT
-"NEW WHITE:  i=$j $str $last_type $type $ws_1 : $ws_2 : $ws_3 : $ws_4 : $ws \n";
+"NEW WHITE:  i=$j $str $last_type_dbg $type $ws_1 : $ws_2 : $ws_3 : $ws_4 : $ws \n";
 
         # reset for next pass
         $ws_1 = $ws_2 = $ws_3 = $ws_4 = undef;
+
+        $last_token_dbg = $token;
+        $last_type_dbg  = $type;
 
     } ## end main loop
 
@@ -3859,7 +3875,8 @@ EOM
 
           # retain any space after possible filehandle
           # (testfiles prnterr1.t with --extrude and mangle.t with --mangle)
-          || $typel eq 'Z'
+          # but no space for '$ {' even if '$' is marked as type 'Z', issue c221
+          || ( $typel eq 'Z' && !( $tokenl eq '$' && $tokenr eq '{' ) )
 
           # Added 'Y' here 16 Jan 2021 to prevent -mangle option from removing
           # space after type Y. Otherwise, it will get parsed as type 'Z' later
