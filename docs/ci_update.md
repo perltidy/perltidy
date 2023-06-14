@@ -365,7 +365,7 @@ The alignment of the ``map`` and ``sort`` braces produces an undesirable
 gap. The revised formatting avoids this:
 
 ```
-    return sort grep { length($_) > 0 }
-        map { substr( $_, $length ) }
-        grep { starts_with( $_, $prefix . $text ) } @bookmarks;
+        print $fh map { $_->[0] }
+          sort { $a->[1] cmp $b->[1] || $a->[0] cmp $b->[0] }
+          map { my $f = lc $_; $f =~ s/[^a-z0-9\s]//g; [ $_, $f ] } @manifest;
 ```
