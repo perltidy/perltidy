@@ -1241,21 +1241,25 @@ abbreviation for the combination <-pt=n -sbt=n -bt=n -bbt=n>.
 
 =item B<-xbt>,   B<--extended-block-tightness>
 
+There are two controls for spacing within curly braces in this scheme, namely
+B<-block-brace-tightness=n> for code block braces and B<-brace-tightness=n> for
+all other braces.
+
 Curly braces which are considered by perltidy to contain code blocks for
 formatting purposes exclude some of the code blocks used by Perl mainly for
-isolating terms.  These include curly braces following a keyword where an
-indirect object might occur, or curly braces following a type symbol. For
-example
+isolating terms. These include curly braces following a keyword where an
+indirect object might occur, or curly braces following a type symbol.  For
+example, perltidy does not mark the following braces as code block braces:
 
-  print {*STDERR} $message;
-  return @{$self};
+    print {*STDERR} $message;
+    return @{$self};
 
-Since perltidy does not format these small containers as code blocks, by
-default the spacing within for these braces follows the flag
-B<--brace-tightness=n>.
+Consequently, the spacing within these small braced containers follows the flag
+B<--brace-tightness=n> rather than B<--block-brace-tightness=n>, as one might
+expect.
 
-But they can be made to instead follow the spacing defined by the
-B<--block-brace-tightness=n> flag by seting
+If desired, these small blocks can be made to instead follow the spacing
+defined by the B<--block-brace-tightness=n> flag by seting
 B<--extended-block-tightness>.
 
 Note that if the two flags B<-bbt=n> and B<-bt=n> have the same value
@@ -1263,15 +1267,17 @@ B<n> then there would be no reason to set this flag.
 
 =item B<-xbtl=s>,   B<--extended-block-tightness-list=s>
 
-The small blocks to which the parameter B<-xbt> applies consist of those curly braces preceded by the keywords
+By default, the previous parameter B<-xbt> applies to curly braces preceded by
+the keywords
 
-    print printf sort exec system say
+    print printf exec system say
 
-and special symbols
+and by the special symbols
 
     $ @ % & * $#
 
-To restrict B<-xbt> to apply to just the above keywords use
+This default behavior can be changed as follows.  To restrict B<-xbt> to apply
+to just the above keywords use
 
    -xbtl=k
 
@@ -1279,16 +1285,15 @@ and to restrict it to apply to just the above special type symbols use
 
    -xbtl=t
 
-To restrict it to certain specific keywords or type symbols, enter them in the
-parameter B<s>. For example, the following restricts it apply to just the
-keywords B<print> and B<say>:
+More generally, to restrict it to specific keywords or type symbols in the
+above lists, enter them in the parameter list B<s>. For example, the following
+restricts it apply to just the keywords B<print> and B<say>:
 
    -xbtl="print say"
 
 Note that this parameter merely changes the way that the parameter
 B<--extended-block-tightness> works. It has no effect unless
-B<--extended-block-tightness> is set.
-
+B<--extended-block-tightness> is actually set.
 
 =item B<-tso>,   B<--tight-secret-operators>
 
