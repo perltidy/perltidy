@@ -28969,6 +28969,10 @@ sub xlp_tweak {
                     if ( $block_type =~ /^[A-Z]+$/ ) { $block_type = 'BEGIN' }
 
                     $tok .= $block_type;
+
+                    # Avoid aligning opening braces across leading ci level
+                    # changes by marking block type with _ci (issue c224)
+                    if ( $ci_levels_to_go[$ibeg] ) { $tok .= '_1' }
                 }
 
                 # Mark multiple copies of certain tokens with the copy number
