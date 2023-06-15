@@ -11560,6 +11560,36 @@ my $red_color = $widget->window->get_colormap->color_alloc( {
 --variable-maximum-line-length
 --weld-nested-containers
 
+==> b1455.in <==
+if ($BOLD_MATH) {
+    (
+       $labels, $comment,
+       join( '',
+                 '<B>', &make_math ( $mode, '', '', $_ ),
+                 '</B>', ),
+    )
+}
+
+if ($BOLD_MATH) {
+    (
+       $labels, $comment,
+       join(
+                 '', '<B>', &make_math ( $mode, '', '', $_ ),
+                 '</B>'
+       ),
+    )
+}
+
+==> b1455.par <==
+--add-trailing-commas
+--continuation-indentation=8
+--delete-trailing-commas
+--extended-continuation-indentation
+--line-up-parentheses
+--maximum-line-length=66
+--space-function-paren
+--want-trailing-commas='b'
+
 ==> b146.in <==
 # State 1
 

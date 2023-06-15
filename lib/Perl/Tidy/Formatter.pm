@@ -23999,6 +23999,12 @@ EOM
             }
         }
 
+        # Increase tol when -atc and -dtc are both used to allow for
+        # possible loss in length on next pass due to a comma. Fixes b1455.
+        if ( $rOpts_delete_trailing_commas && $rOpts_add_trailing_commas ) {
+            $tol += 1;
+        }
+
         my $i_opening_minus = $self->find_token_starting_list($i_opening_paren);
         my $excess =
           $self->excess_line_length( $i_opening_minus, $i_closing_paren );
