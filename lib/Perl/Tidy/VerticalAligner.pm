@@ -1324,12 +1324,13 @@ sub check_match {
 
     # See if the current line matches the current vertical alignment group.
 
-    my ( $self, $new_line, $base_line, $prev_line ) = @_;
+    my ( $self, $new_line, $base_line, $prev_line, $group_line_count ) = @_;
 
     # Given:
     #  $new_line  = the line being considered for group inclusion
     #  $base_line = the first line of the current group
     #  $prev_line = the line just before $new_line
+    #  $group_line_count = number of lines in the current group
 
     # returns a flag and a value as follows:
     #    return (0, $imax_align)   if the line does not match
@@ -1379,7 +1380,28 @@ sub check_match {
             # calculated and stored by sub 'match_line_pair'.
             $imax_align = $prev_line->{'imax_pair'};
 
-            if ( $imax_align != $jlimit ) {
+            # Only the following ci sequences are accepted (issue c225):
+            #   0 0 0 ...  OK
+            #   0 1 1 ...  OK but marginal*
+            #   1 1 1 ...  OK
+            # This check is rarely activated, but for example we want
+            # to avoid something like this 'tail wag dog' situation:
+            #  $tag        =~ s/\b([a-z]+)/\L\u$1/gio;
+            #  $tag        =~ s/\b([b-df-hj-np-tv-z]+)\b/\U$1/gio
+            #      if $tag =~ /-/;
+            # *Note: we could set a flag for the 0 1 marginal case and
+            # use it to prevent alignment of selected token types.
+            my $ci_prev = $prev_line->{'ci_level'};
+            my $ci_new  = $new_line->{'ci_level'};
+            if (   $ci_prev != $ci_new
+                && $imax_align >= 0
+                && ( $ci_new == 0 || $group_line_count > 1 ) )
+            {
+                $imax_align = -1;
+                $GoToMsg    = "Not all tokens match: $imax_align != $jlimit\n";
+                $return_value = NO_MATCH;
+            }
+            elsif ( $imax_align != $jlimit ) {
                 $GoToMsg = "Not all tokens match: $imax_align != $jlimit\n";
                 $return_value = NO_MATCH;
             }
@@ -1927,7 +1949,8 @@ EOM
             if ($group_line_count) {
                 ( $match_code, my $imax_align ) =
                   $self->check_match( $new_line, $base_line,
-                    $rall_lines->[ $jline - 1 ] );
+                    $rall_lines->[ $jline - 1 ],
+                    $group_line_count );
                 if ( $match_code != 2 ) { end_rgroup($imax_align) }
             }
 
