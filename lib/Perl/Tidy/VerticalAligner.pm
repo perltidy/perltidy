@@ -1398,7 +1398,8 @@ sub check_match {
                 && ( $ci_new == 0 || $group_line_count > 1 ) )
             {
                 $imax_align = -1;
-                $GoToMsg    = "Not all tokens match: $imax_align != $jlimit\n";
+                $GoToMsg =
+"Rejected ci: ci_prev=$ci_prev ci_new=$ci_new num=$group_line_count\n";
                 $return_value = NO_MATCH;
             }
             elsif ( $imax_align != $jlimit ) {
