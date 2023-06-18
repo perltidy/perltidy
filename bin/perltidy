@@ -567,11 +567,12 @@ this flag is in effect.
 
 =item B<-enc=s>,  B<--character-encoding=s>
 
-This flag indicates if the input data stream use a character encoding.
+This flag indicates if the input data stream uses a character encoding.
 Perltidy does not look for the encoding directives in the source stream, such
 as B<use utf8>, and instead relies on this flag to determine the encoding.
-(Note that perltidy often works on snippets of code rather than complete files
-so it cannot rely on B<use utf8> directives).
+(This is because perltidy often works on snippets of code rather than complete
+files, so it cannot rely on B<use utf8> directives).  Consequently perltidy is
+likely to encounter problems formatting a file which is only partially encoded.
 
 The possible values for B<s> are:
 
