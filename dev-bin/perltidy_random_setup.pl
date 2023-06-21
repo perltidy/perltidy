@@ -1126,6 +1126,7 @@ EOM
         my %option_range = (
             'format'             => [ 'tidy', 'html' ],    #, 'user' ],
             'output-line-ending' => [ 'dos',  'win', 'mac', 'unix' ],
+            'extended-block-tightness-list' => [ 'k', 't', 'kt' ],
 
             'space-backslash-quote'         => [ 0, 2 ],
             'block-brace-tightness'         => [ 0, 2 ],

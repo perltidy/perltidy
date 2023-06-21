@@ -35,7 +35,7 @@ BEGIN {
 -olbxl='*'
 ----------
         'xbt1' => "-xbt",
-        'xbt2' => "-xbt -xbtl=k",
+        'xbt2' => "-xbt -xbtl=kt",
         'xbt3' => <<'----------',
 -xbt -bbt=2 -xbtl="print say t"
 ----------
@@ -258,6 +258,22 @@ grep { defined &{ ${"${class}::"}{$_} } } &{"${class}::Clear"}();
             source => "xbt",
             params => "xbt1",
             expect => <<'#9...........',
+print { *STDERR } ${$data_sref};
+say   { *STDERR } dump $c->{cookies};
+$rc = system { "lskdfj" } "lskdfj";
+test !eval { exec { 'notaint' } $TAINT }, 'exec';
+delete ${"$ {dest}::"}{$name};
+my @matches = @{$nodes_ref} > 1 ? @{$nodes_ref}[ 1 .. $#{$nodes_ref} ] : ();
+%{$self} = %{$project};
+*{$name} = $sub;
+grep { defined &{ ${"${class}::"}{$_} } } &{"${class}::Clear"}();
+#9...........
+        },
+
+        'xbt.xbt2' => {
+            source => "xbt",
+            params => "xbt2",
+            expect => <<'#10...........',
 print { *STDERR } ${ $data_sref };
 say   { *STDERR } dump $c->{cookies};
 $rc = system { "lskdfj" } "lskdfj";
@@ -268,22 +284,6 @@ my @matches =
 %{ $self } = %{ $project };
 *{ $name } = $sub;
 grep { defined &{ ${ "${class}::" }{$_} } } &{ "${class}::Clear" }();
-#9...........
-        },
-
-        'xbt.xbt2' => {
-            source => "xbt",
-            params => "xbt2",
-            expect => <<'#10...........',
-print { *STDERR } ${$data_sref};
-say   { *STDERR } dump $c->{cookies};
-$rc = system { "lskdfj" } "lskdfj";
-test !eval { exec { 'notaint' } $TAINT }, 'exec';
-delete ${"$ {dest}::"}{$name};
-my @matches = @{$nodes_ref} > 1 ? @{$nodes_ref}[ 1 .. $#{$nodes_ref} ] : ();
-%{$self} = %{$project};
-*{$name} = $sub;
-grep { defined &{ ${"${class}::"}{$_} } } &{"${class}::Clear"}();
 #10...........
         },
 

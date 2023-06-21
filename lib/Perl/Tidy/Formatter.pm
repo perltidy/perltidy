@@ -2162,6 +2162,8 @@ sub initialize_space_after_keyword {
 
 sub initialize_extended_block_tightness_list {
 
+    # Setup the control hash for --extended-block-tightness
+
     # keywords taking indirect objects:
     my @k_list = keys %is_indirect_object_taker;
 
@@ -2169,11 +2171,13 @@ sub initialize_extended_block_tightness_list {
     my @t_list = qw($ @ % & *);
     push @t_list, '$#';
 
-    # Set the default to include all keywords ant types.
-    # We will build the selection in %hash
-    my %hash;
     my @all = ( @k_list, @t_list );
-    @hash{@all} = (1) x scalar(@all);
+
+    # We will build the selection in %hash
+    # By default the option is 'on' for keywords only (-xbtl='k')
+    my %hash;
+    @hash{@k_list} = (1) x scalar(@k_list);
+    @hash{@t_list} = (0) x scalar(@t_list);
 
     # This can be overridden with -xbtl="..."
     my $long_name = 'extended-block-tightness-list';
@@ -2200,7 +2204,7 @@ sub initialize_extended_block_tightness_list {
                 @hash{@t_list} = (1) x scalar(@t_list);
             }
 
-            # 'kt' same as 'k' and 't' for convenience (same as default)
+            # 'kt' same as 'k' and 't' for convenience
             elsif ( $word eq 'kt' ) {
                 @hash{@all} = (1) x scalar(@all);
             }
@@ -2218,9 +2222,11 @@ EOM
         }
     }
 
+    # Transfer the result to the global hash
     %extended_block_tightness_list = %hash;
+
     return;
-}
+} ## end sub initialize_extended_block_tightness_list
 
 sub initialize_token_break_preferences {
 

@@ -1246,53 +1246,77 @@ There are two controls for spacing within curly braces in this scheme, namely
 B<-block-brace-tightness=n> for code block braces and B<-brace-tightness=n> for
 all other braces.
 
-Curly braces which are considered by perltidy to contain code blocks for
-formatting purposes exclude some of the code blocks used by Perl mainly for
-isolating terms. These include curly braces following a keyword where an
-indirect object might occur, or curly braces following a type symbol.  For
-example, perltidy does not mark the following braces as code block braces:
+There is a little fuzziness in this division of brace types though because the
+curly braces considered by perltidy to contain code blocks for formatting
+purposes, such as highlighting code structure, exclude some of the small code
+blocks used by Perl mainly for isolating terms.  These include curly braces
+following a keyword where an indirect object might occur, or curly braces
+following a type symbol.  For example, perltidy does not mark the following
+braces as code block braces:
 
     print {*STDERR} $message;
-    return @{$self};
+    return ${$foo};
 
-Consequently, the spacing within these small braced containers follows the flag
-B<--brace-tightness=n> rather than B<--block-brace-tightness=n>, as one might
-expect.
+Consequently, the spacing within these small braced containers by default
+follows the flag B<--brace-tightness=n> rather than
+B<--block-brace-tightness=n>, as one might expect.
 
-If desired, these small blocks can be made to instead follow the spacing
-defined by the B<--block-brace-tightness=n> flag by seting
-B<--extended-block-tightness>.
+If desired, small blocks such as these can be made to instead follow the
+spacing defined by the B<--block-brace-tightness=n> flag by seting
+B<--extended-block-tightness>.  The specific types of small blocks to which
+this parameter applies is controlled by a companion control parameter,
+described in the next section.
 
 Note that if the two flags B<-bbt=n> and B<-bt=n> have the same value
 B<n> then there would be no reason to set this flag.
 
 =item B<-xbtl=s>,   B<--extended-block-tightness-list=s>
 
-By default, the previous parameter B<-xbt> applies to curly braces preceded by
-the keywords
+The previous parameter B<-xbt> can be made to apply curly braces preceded by
+any of the keywords
 
     print printf exec system say
 
-and by the special symbols
+and/or the special symbols
 
     $ @ % & * $#
 
-This default behavior can be changed as follows.  To restrict B<-xbt> to apply
-to just the above keywords use
+The parameter string B<s> may contain a selection of these keywords and symbols
+to indicate the brace types to which B<-xbt> applies.  For convenience, all of
+the keywords can be selected with 'k', and all of the special symbols
+can be selected with 't'.  The default is equivalent to B<-xbtl='k'>, which
+selects all of the keywords.
 
-   -xbtl=k
+Examples:
 
-and to restrict it to apply to just the above special type symbols use
+   -xbtl='k'          # selects just the keywords [DEFAULT]
+   -xbtl="t"          # selects just the special type symbols
+   -xbtl="k t"        # selects all keywords and symbols, or more simply
+   -xbtl="kt"         # selects all keywords and symbols
+   -xbtl="print say"  # selects just keywords B<print> and B<say>:
 
-   -xbtl=t
+Here are some formatting examples using the default values of B<-bt=n> and
+B<-bbt=n>. Note that in these examples B<$ref> is in block braces but B<$key>
+is not.
 
-More generally, to restrict it to specific keywords or type symbols in the
-above lists, enter them in the parameter list B<s>. For example, the following
-restricts it apply to just the keywords B<print> and B<say>:
+    # default formatting
+    print {*STDERR} $message;
+    my $refalue = ${$ref}{$key};
 
-   -xbtl="print say"
+    # perltidy -xbt           or
+    # perltidy -xbt -xbtl=k
+    print { *STDERR } $message;
+    my $refalue = ${$ref}{$key};
 
-Note that this parameter merely changes the way that the parameter
+    # perltidy -xbt -xbtl=t
+    print {*STDERR} $message;
+    my $refalue = ${ $ref }{$key};
+
+    # perltidy -xbt -xbtl=kt
+    print { *STDERR } $message;
+    my $refalue = ${ $ref }{$key};
+
+Finally, note that this parameter merely changes the way that the parameter
 B<--extended-block-tightness> works. It has no effect unless
 B<--extended-block-tightness> is actually set.
 
