@@ -16,27 +16,38 @@ use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };
 
 # class variables
-use vars qw{
-  %html_color
-  %html_bold
-  %html_italic
-  %token_short_names
-  %short_to_long_names
-  $rOpts
-  $css_filename
-  $css_linkname
-  $missing_html_entities
-  $missing_pod_html
-};
+my (
+
+    # INITIALIZER: BEGIN block
+    $missing_html_entities,
+    $missing_pod_html,
+
+    # INITIALIZER: BEGIN block
+    %short_to_long_names,
+    %token_short_names,
+
+    # INITIALIZER: sub check_options
+    $rOpts,
+    $rOpts_html_entities,
+    $css_linkname,
+    %html_bold,
+    %html_color,
+    %html_italic,
+
+);
 
 # replace unsafe characters with HTML entity representation if HTML::Entities
 # is available
 #{ eval "use HTML::Entities"; $missing_html_entities = $@; }
 
 BEGIN {
+
+    $missing_html_entities = EMPTY_STRING;
     if ( !eval { require HTML::Entities; 1 } ) {
         $missing_html_entities = $EVAL_ERROR ? $EVAL_ERROR : 1;
     }
+
+    $missing_pod_html = EMPTY_STRING;
     if ( !eval { require Pod::Html; 1 } ) {
         $missing_pod_html = $EVAL_ERROR ? $EVAL_ERROR : 1;
     }
@@ -555,6 +566,7 @@ sub check_options {
     }
 
     # make sure user gives a file name after -css
+    $css_linkname = EMPTY_STRING;
     if ( defined( $rOpts->{'html-linked-style-sheet'} ) ) {
         $css_linkname = $rOpts->{'html-linked-style-sheet'};
         if ( $css_linkname =~ /^-/ ) {
@@ -578,21 +590,20 @@ sub check_options {
         # forgets to specify the style sheet, like this:
         #    perltidy -html -css myfile1.pl myfile2.pl
         # This would cause myfile1.pl to parsed as the style sheet by GetOpts
-        my $css_filename = $css_linkname;
-        unless ( -e $css_filename ) {
-            write_style_sheet_file($css_filename);
+        unless ( -e $css_linkname ) {
+            write_style_sheet_file($css_linkname);
         }
     }
-    $missing_html_entities = 1 unless $rOpts->{'html-entities'};
+    $rOpts_html_entities = $rOpts->{'html-entities'};
     return;
 } ## end sub check_options
 
 sub write_style_sheet_file {
 
-    my $css_filename = shift;
+    my $filename = shift;
     my $fh;
-    unless ( $fh = IO::File->new("> $css_filename") ) {
-        Perl::Tidy::Die("can't open $css_filename: $ERRNO\n");
+    unless ( $fh = IO::File->new("> $filename") ) {
+        Perl::Tidy::Die("can't open $filename: $ERRNO\n");
     }
     write_style_sheet_data($fh);
     close_object($fh);
@@ -1381,7 +1392,7 @@ sub markup_html_element {
 sub escape_html {
 
     my $token = shift;
-    if ($missing_html_entities) {
+    if ( $missing_html_entities || !$rOpts_html_entities ) {
         $token =~ s/\&/&amp;/g;
         $token =~ s/\</&lt;/g;
         $token =~ s/\>/&gt;/g;

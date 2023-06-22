@@ -46,10 +46,10 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 [Subroutines::RequireArgUnpacking]
 short_subroutine_statements = 2
 
-# The advantages of 'use constant' greatly outweigh the
+# Completely Disagree: The advantages of 'use constant' greatly outweigh the
 # few disadvantages.  Perl::Tidy relies heavily on constants for efficient and
-# robust coding of array indexes and debug code, and to avoid autovivication
-# problems that would occur if hashes were used instead.
+# robust coding of array indexes and for compiling out debug code, and to
+# avoid autovivication problems that would occur if hashes were used instead.
 [-ValuesAndExpressions::ProhibitConstantPragma]
 
 # Completely Disagree: adding quotes on here doc terminators causes needless
@@ -57,7 +57,10 @@ short_subroutine_statements = 2
 # my editor uses color to make it clear if interpolation is in effect.
 [-ValuesAndExpressions::RequireQuotedHeredocTerminator]
 
-# Perlcritic doesn't know that ARGV in Perl::Tidy actually is localized
+# Perlcritic doesn't know that ARGV in Perl::Tidy actually is localized.
+# Localization of @ARGV could be avoided by calling GetOptionsFromArray
+# instead of GetOptions, but that is not available before perl 5.10, and
+# we want to continue supporting Perl 5.8.
 [-Variables::RequireLocalizedPunctuationVars]
 
 # Unfortunately the perlcritic coding for this policy is buggy when lines=n is
@@ -108,8 +111,8 @@ max_nests=9
 # substr.  So skip this one.
 [-BuiltinFunctions::ProhibitLvalueSubstr]
 
-# The Tokenizer.pm needs package variables
-[-Variables::ProhibitPackageVars]
+# OK to do this check:
+# [-Variables::ProhibitPackageVars]
 
 # These would be okay for new code, but do not change any debugged regular
 # expressions without good reason.  It is too easy to introduce a subtle error.
