@@ -1262,7 +1262,7 @@ follows the flag B<--brace-tightness=n> rather than
 B<--block-brace-tightness=n>, as one might expect.
 
 If desired, small blocks such as these can be made to instead follow the
-spacing defined by the B<--block-brace-tightness=n> flag by seting
+spacing defined by the B<--block-brace-tightness=n> flag by setting
 B<--extended-block-tightness>.  The specific types of small blocks to which
 this parameter applies is controlled by a companion control parameter,
 described in the next section.
@@ -1301,20 +1301,20 @@ is not.
 
     # default formatting
     print {*STDERR} $message;
-    my $refalue = ${$ref}{$key};
+    my $val = ${$ref}{$key};
 
     # perltidy -xbt           or
     # perltidy -xbt -xbtl=k
     print { *STDERR } $message;
-    my $refalue = ${$ref}{$key};
+    my $val = ${$ref}{$key};
 
     # perltidy -xbt -xbtl=t
     print {*STDERR} $message;
-    my $refalue = ${ $ref }{$key};
+    my $val = ${ $ref }{$key};
 
     # perltidy -xbt -xbtl=kt
     print { *STDERR } $message;
-    my $refalue = ${ $ref }{$key};
+    my $val = ${ $ref }{$key};
 
 Finally, note that this parameter merely changes the way that the parameter
 B<--extended-block-tightness> works. It has no effect unless
@@ -4980,10 +4980,7 @@ An example might be F<C:\Documents and Settings\All Users\perltidy.ini>.
 
 Another option is the use of the PERLTIDY environment variable.
 The method for setting environment variables depends upon the version of
-Windows that you are using.  Instructions for Windows 95 and later versions can
-be found here:
-
-http://www.netmanage.com/000/20021101_005_tcm21-6336.pdf
+Windows that you are using.
 
 Under Windows NT / 2000 / XP the PERLTIDY environment variable can be placed in
 either the user section or the system section.  The later makes the

@@ -3148,7 +3148,7 @@ EOM
                 if (@idel) {
                     delete_selected_tokens( $line, \@idel );
                 }
-            }    # End loopover lines
+            }    # End loop over lines
         } ## end main loop over subgroups
 
         return;
@@ -3544,7 +3544,7 @@ sub get_line_token_info {
             $rtoken_patterns->{$lev_max} = $token_pattern_max;
             $rtoken_indexes->{$lev_max}  = [ ( 0 .. $imax ) ];
 
-            my $lev_top = pop @levs;    # alread did max level
+            my $lev_top = pop @levs;    # already did max level
             my $itok    = -1;
             foreach my $tok ( @{$rtokens} ) {
                 $itok++;

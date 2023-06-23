@@ -5275,7 +5275,7 @@ EOM
                     $combine_ok = 0 if ( $expecting == TERM );
                 }
 
-                # Patch for RT #114359: Missparsing of "print $x ** 0.5;
+                # Patch for RT #114359: mis-parsing of "print $x ** 0.5;
                 # Accept the digraphs '**' only after type 'Z'
                 # Otherwise postpone the decision.
                 if ( $test_tok eq '**' ) {

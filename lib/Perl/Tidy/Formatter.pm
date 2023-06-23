@@ -1177,7 +1177,7 @@ sub check_token_array {
 
 {    ## begin closure check_line_hashes
 
-    # This code checks that no autovivification occurs in the 'line' hash
+    # This code checks that no auto-vivification occurs in the 'line' hash
 
     my %valid_line_hash;
 
@@ -3744,7 +3744,7 @@ EOM
 
         # Note2: The -mangle option causes large numbers of calls to this
         # routine and therefore is a good test. So if a change is made, be sure
-        # to use nytprof to profile with both old and reviesed coding using the
+        # to use nytprof to profile with both old and revised coding using the
         # -mangle option and check differences.
 
         my ( $tokenll, $typell, $tokenl, $typel, $tokenr, $typer ) = @_;
@@ -5750,8 +5750,11 @@ EOM
 
         return if ( !$block_type );
 
+        # Save the type of a block in a hash using sequence number as key
         $self->[_rblock_type_of_seqno_]->{$seqno} = $block_type;
 
+        # and save named subs and anynymous subs in separate hashes so that
+        # we only have to do the pattern tests once.
         if ( $block_type =~ /$ASUB_PATTERN/ ) {
             $self->[_ris_asub_block_]->{$seqno} = 1;
         }
@@ -6288,7 +6291,7 @@ sub find_loop_label {
     return $label unless ( defined($K_opening) );
     my $lx_open = $rLL->[$K_opening]->[_LINE_INDEX_];
 
-    # look for a lable within a few lines; allow a couple of blank lines
+    # look for a label within a few lines; allow a couple of blank lines
     foreach my $lx ( reverse( $lx_open - 3 .. $lx_open ) ) {
         last if ( $lx < 0 );
         my $line_of_tokens = $rlines->[$lx];
@@ -6565,7 +6568,7 @@ EOM
             $inner_loop_plus = $item->{is_inner_loop} ? '+' : EMPTY_STRING;
         }
 
-        # Skip closures unless type 'closure' is explicitely requested
+        # Skip closures unless type 'closure' is explicitly requested
         if ( ( $block_type eq '}' || $block_type eq ';' )
             && $rdump_block_types->{'closure'} )
         {
@@ -6783,7 +6786,7 @@ sub set_ci {
 
     use constant DEBUG_SET_CI => 0;
 
-    # The following flag values are temporavailable for experimentation:
+    # The following flag values are temporarily available for experimentation:
     # -exp=ci0 OLD: use ci values computed by tokenizer
     # -exp=ci1 MIXED: old ci values except for new ci for comments.
     # -exp=ci2 NEW: ci values computed by this sub
@@ -6808,12 +6811,12 @@ sub set_ci {
     my @q = qw# if elsif unless while and or err not && | || ! #;
     @is_logical_container_for_ci{@q} = (1) x scalar(@q);
 
-    # This is slightly differnt from a tokenizer hash with a similar name:
+    # This is slightly different from a tokenizer hash with a similar name:
     my %is_container_label_type_for_ci;
     @q = qw# k && | || ? : ! #;
     @is_container_label_type_for_ci{@q} = (1) x scalar(@q);
 
-    # Undo ci of closing list paren followed by these binary operatiors:
+    # Undo ci of closing list paren followed by these binary operators:
     # - initially defined for issue t027, then
     # - added '=' for t015
     # - added '=~' for 'locale.in'
@@ -7415,7 +7418,7 @@ sub set_ci {
                 }
 
                 # Fix: undo ci at a closing token followed by a closing token.
-                # Goal is to keep formatting independent of the existance of a
+                # Goal is to keep formatting independent of the existence of a
                 # trailing comma or semicolon.
                 if ( $ci_this > 0 && !$ci_open_old && !$rparent->{_ci_close} ) {
                     my $Kc = $rparent->{_Kc};
@@ -8118,7 +8121,7 @@ BEGIN {
 
 } ## end BEGIN
 
-{ #<<< begin clousure respace_tokens
+{ #<<< begin closure respace_tokens
 
 my $rLL_new;    # This will be the new array of tokens
 
@@ -8371,7 +8374,7 @@ sub respace_tokens {
             #      indented
             # 'SBCX'=Static Block Comment Without Leading Space
             # 'VER'=VERSION statement
-            # '' or (undefined) - no restructions
+            # '' or (undefined) - no restrictions
 
             # For a hanging side comment we insert an empty quote before
             # the comment so that it becomes a normal side comment and
@@ -9086,6 +9089,10 @@ sub respace_post_loop_ops {
 
 sub set_permanently_broken {
     my ( $self, $seqno ) = @_;
+
+    # Mark this container, and all of its parent containers, as being
+    # permanently broken (for example, by containing a blank line).  This
+    # is needed for certain list formatting operations.
     while ( defined($seqno) ) {
         $ris_permanently_broken->{$seqno} = 1;
         $seqno = $rparent_of_seqno->{$seqno};
@@ -9731,7 +9738,7 @@ sub match_trailing_comma_rule {
     #  $Kfirst = (old) index of first token on the current line of input tokens
     #  $Kp = index of previous nonblank token in new ($rLL_new) array
     #  $trailing_comma_rule = packed user control flags
-    #  $if_add = true if adding comma, false if deleteing comma
+    #  $if_add = true if adding comma, false if deleting comma
 
     # Returns:
     #   false if no match
@@ -10391,7 +10398,7 @@ sub resync_lines_and_tokens {
     # lines since they have probably changed due to inserting and deleting
     # blanks and a few other tokens.
 
-    # Return paremeters:
+    # Return parameters:
     # set severe_error = true if processing needs to terminate
     my $severe_error;
     my $rqw_lines = [];
@@ -10817,6 +10824,9 @@ sub weld_containers {
 
 sub cumulative_length_before_K {
     my ( $self, $KK ) = @_;
+
+    # Returns the cumulative character length from the first token to
+    # token before the token at index $KK.
     my $rLL = $self->[_rLL_];
     return ( $KK <= 0 ) ? 0 : $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
 }
@@ -15973,7 +15983,7 @@ EOM
             $self->flush();
             my $line = $input_line;
 
-            # Fix for rt #125506 Unexpected string formating
+            # Fix for rt #125506 Unexpected string formatting
             # in which leading space of a terminal quote was removed
             $line =~ s/\s+$//;
             $line =~ s/^\s+// unless ( $line_of_tokens->{_starting_in_quote} );
@@ -18275,6 +18285,9 @@ EOM
 
     sub iprev_to_go {
         my ($i) = @_;
+
+        # Given index $i of a token in the '_to_go' arrays, return
+        # the index of the previous nonblank token.
         return $i - 1 > 0
           && $types_to_go[ $i - 1 ] eq 'b' ? $i - 2 : $i - 1;
     }
@@ -21286,9 +21299,9 @@ sub undo_lp_ci {
     return;
 } ## end sub undo_lp_ci
 
-###############################################
-# CODE SECTION 10: Code to break long statments
-###############################################
+################################################
+# CODE SECTION 10: Code to break long statements
+################################################
 
 use constant DEBUG_BREAK_LINES => 0;
 
@@ -22478,6 +22491,8 @@ EOM
 
     sub set_for_semicolon_breakpoints {
         my ( $self, $dd ) = @_;
+
+        # Set breakpoints for semicolons in C-style 'for' containers
         foreach ( @{ $rfor_semicolon_list[$dd] } ) {
             $self->set_forced_breakpoint($_);
         }
@@ -22486,6 +22501,8 @@ EOM
 
     sub set_logical_breakpoints {
         my ( $self, $dd ) = @_;
+
+        # Set breakpoints at logical operators
         if (
                $item_count_stack[$dd] == 0
             && $is_logical_container{ $container_type[$dd] }
@@ -24029,6 +24046,9 @@ EOM
 
         my ( $self, $rhash_A, $interrupted ) = @_;
 
+        # Break at (almost) every comma for a list containing a broken
+        # sublist.
+
         my $ritem_lengths     = $rhash_A->{_ritem_lengths};
         my $ri_term_begin     = $rhash_A->{_ri_term_begin};
         my $ri_term_end       = $rhash_A->{_ri_term_end};
@@ -24102,8 +24122,8 @@ EOM
 
         ) = @_;
 
-        # The number of fields worked out to be negative, so we
-        # have to make an emergency fix.
+        # The computed number of table fields is negative, so we have to make
+        # an emergency fix.
 
         my $rcomma_index        = $rhash_IN->{rcomma_index};
         my $next_nonblank_type  = $rhash_IN->{next_nonblank_type};
@@ -24191,6 +24211,9 @@ EOM
     sub break_multiline_list {
         my ( $self, $rhash_IN, $rhash_A, $i_opening_minus ) = @_;
 
+        # We have a list spanning multiple lines and are trying
+        # to decide the best way to set comma breakpoints.
+
         # Overriden variables
         my $item_count       = $rhash_A->{_item_count_A};
         my $identifier_count = $rhash_A->{_identifier_count_A};
@@ -24208,7 +24231,7 @@ EOM
         my $i_last_comma           = $rhash_A->{_i_last_comma};
         my $i_true_last_comma      = $rhash_A->{_i_true_last_comma};
 
-        # Veriables received from caller
+        # Variables received from caller
         my $i_opening_paren     = $rhash_IN->{i_opening_paren};
         my $i_closing_paren     = $rhash_IN->{i_closing_paren};
         my $rcomma_index        = $rhash_IN->{rcomma_index};
@@ -24490,7 +24513,7 @@ EOM
 
         # Returns:
         #    - nothing if this list is empty, or
-        #    - a ref to a hash containg some derived parameters
+        #    - a ref to a hash containing some derived parameters
 
         my $i_opening_paren  = $rhash_IN->{i_opening_paren};
         my $i_closing_paren  = $rhash_IN->{i_closing_paren};
@@ -25251,6 +25274,9 @@ sub set_ragged_breakpoints {
 
 sub copy_old_breakpoints {
     my ( $self, $i_first_comma, $i_last_comma ) = @_;
+
+    # We are formatting a list and have decided to make comma breaks
+    # the same as in the input file.
     for my $i ( $i_first_comma .. $i_last_comma ) {
         if ( $old_breakpoint_to_go[$i] ) {
 
@@ -29426,7 +29452,7 @@ sub make_paren_name {
         }
 
         #-------------------------------------------------------------------
-        # Secton 2B: adjust_indentation == 1
+        # Section 2B: adjust_indentation == 1
         # Change the indentation to be that of a different token on the line
         #-------------------------------------------------------------------
         elsif ( $adjust_indentation == 1 ) {
@@ -29458,7 +29484,7 @@ sub make_paren_name {
         }
 
         #--------------------------------------------------------------
-        # Secton 2C: adjust_indentation == 2
+        # Section 2C: adjust_indentation == 2
         # Handle indented closing token which aligns with opening token
         #--------------------------------------------------------------
         elsif ( $adjust_indentation == 2 ) {
@@ -29532,7 +29558,7 @@ sub make_paren_name {
         }
 
         #-------------------------------------------------------------
-        # Secton 2D: adjust_indentation == 3
+        # Section 2D: adjust_indentation == 3
         # Full indentation of closing tokens (-icb and -icp or -cti=2)
         #-------------------------------------------------------------
         else {
@@ -30404,7 +30430,7 @@ sub set_vertical_tightness_flags {
             }
 
             # Fix for b1379, b1380, b1381, b1382, b1384 part 2,
-            # instablility with adding and deleting trailing commas:
+            # instability with adding and deleting trailing commas:
             # Reducing -cvt=2 to =1 fixes stability for -wtc=b in b1379,1380.
             # Reducing -cvt>0 to =0 fixes stability for -wtc=b in b1381,1382.
             # Reducing -cvt>0 to =0 fixes stability for -wtc=m in b1384

@@ -4494,7 +4494,7 @@ sub get_line_separator_default {
 
     my ( $rOpts, $input_file ) = @_;
 
-    # Get the line separator that will apply unless overriden by a
+    # Get the line separator that will apply unless overridden by a
     # --preserve-line-endings flag for a specific file
 
     my $line_separator_default = "\n";
