@@ -209,6 +209,7 @@ my (
     $rOpts_fuzzy_line_length,
     $rOpts_ignore_old_breakpoints,
     $rOpts_ignore_side_comment_lengths,
+    $rOpts_ignore_perlcritic_side_comment_lengths,
     $rOpts_indent_closing_brace,
     $rOpts_indent_columns,
     $rOpts_indent_only,
@@ -2444,6 +2445,8 @@ sub initialize_global_option_vars {
     $rOpts_ignore_old_breakpoints = $rOpts->{'ignore-old-breakpoints'};
     $rOpts_ignore_side_comment_lengths =
       $rOpts->{'ignore-side-comment-lengths'};
+    $rOpts_ignore_perlcritic_side_comment_lengths =
+      $rOpts->{'ignore-perlcritic-side-comment-lengths'};
     $rOpts_indent_closing_brace     = $rOpts->{'indent-closing-brace'};
     $rOpts_indent_columns           = $rOpts->{'indent-columns'};
     $rOpts_indent_only              = $rOpts->{'indent-only'};
@@ -9184,12 +9187,43 @@ sub store_token {
             $item->[_TOKEN_] = $token;
         }
 
-        # Mark length of side comments as just 1 if sc lengths are ignored
-        if ( $rOpts_ignore_side_comment_lengths
-            && ( !$CODE_type || $CODE_type eq 'HSC' ) )
+        my $ignore_sc_length = $rOpts_ignore_side_comment_lengths;
+
+        # Ignore length of '## no critic' comments if requested
+        if (   $rOpts_ignore_perlcritic_side_comment_lengths
+            && $token_length > 10
+            && substr( $token, 1, 1 ) eq '#'
+            && $token =~ /^##\s*no\s+critic\b/ )
         {
+
+            # Is it a side comment or a block comment?
+            if ( $Ktoken_vars > $Kfirst_old ) {
+
+                # This is a side comment. If we do not ignore its length, and
+                # -iscl has not been set, then the line could be broken and
+                # perlcritic will complain. So this is essential:
+                $ignore_sc_length ||= 1;
+
+                # It would be a good idea to also make this behave like a
+                # static side comment, but this is not essential and would
+                # change existing formatting.  So we will leave it to the user
+                # to set -ssc if desired.
+            }
+            else {
+
+                # This is a full-line (block) comment.
+                # It would be a good idea to make this behave like a static
+                # block comment, but this is not essential and would change
+                # existing formatting.  So we will leave it to the user to
+                # set -sbc if desired
+            }
+        }
+
+        # Set length of ignored side comments as just 1
+        if ( $ignore_sc_length && ( !$CODE_type || $CODE_type eq 'HSC' ) ) {
             $token_length = 1;
         }
+
         my $seqno = $seqno_stack{ $depth_next - 1 };
         if ( defined($seqno) ) {
             $self->[_rblank_and_comment_count_]->{$seqno} += 1

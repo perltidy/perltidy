@@ -65,6 +65,10 @@ sub macro_get_names { #
                 1, 4, 6, 4, 1,);
 #>>
 
+    local $Test::Builder::Level = $Test::Builder::Level + 1; ## no critic (Variables::ProhibitPackageVars)
+
+    ## no critic (ValuesAndExpressions::RequireInterpolationOfMetachars)
+
 
 
 # some blank lines follow

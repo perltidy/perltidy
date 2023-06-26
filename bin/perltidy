@@ -1793,6 +1793,14 @@ whereas without the -iscl flag the line will be broken:
         $vmsfile =~ s/;[\d\-]*$//
           ;    # Clip off version number; we can use a newer version as well
 
+=item B<-ipscl>,  B<--ignore-perlcritic-side-comment-lengths>
+
+The parameter B<-ipscl> tells perltidy to ignore the length of side comments
+beginning with B<## no critic> when making line breaks, even if the previous
+parameter B<-iscl> has not been set.  This parameter is on by default to avoid
+allowing these special B<perlcritic> comments, which are often quite long, to
+cause an unwanted line break, and thereby making the side comment ineffective
+in controlling B<perlcritic>.
 
 =item B<-hsc>, B<--hanging-side-comments>
 

@@ -52,8 +52,10 @@ BEGIN {
 -msc=10 -dbc -dp
 ----------
         'comments3' => <<'----------',
-# testing --maximum-consecutive-blank-lines=2 and --indent-spaced-block-comments --no-format-skipping
--mbl=2 -isbc -nfs
+--maximum-consecutive-blank-lines=2   # -mbl=2
+--indent-spaced-block-comments        # -isbc
+--no-format-skipping                  # -nfs
+--noignore-perlcritic-side-comment-lengths # -nipscl
 ----------
         'comments4' => <<'----------',
 # testing --keep-old-blank-lines=2 [=all] and 
@@ -171,6 +173,10 @@ sub macro_get_names { #
                 1, 3, 3, 1,
                 1, 4, 6, 4, 1,);
 #>>
+
+    local $Test::Builder::Level = $Test::Builder::Level + 1; ## no critic (Variables::ProhibitPackageVars)
+
+    ## no critic (ValuesAndExpressions::RequireInterpolationOfMetachars)
 
 
 
@@ -446,6 +452,10 @@ my @list = ( 1, 1, 1, 1, 2, 1, 1, 3, 3, 1, 1, 4, 6, 4, 1, );
 
 #>>
 
+local $Test::Builder::Level = $Test::Builder::Level + 1; ## no critic (Variables::ProhibitPackageVars)
+
+## no critic (ValuesAndExpressions::RequireInterpolationOfMetachars)
+
 # some blank lines follow
 
 =pod
@@ -521,6 +531,8 @@ sub macro_get_names {          #
 #>>>
 
 my @list = ( 1, 1, 1, 1, 2, 1, 1, 3, 3, 1, 1, 4, 6, 4, 1, );
+
+local $Test::Builder::Level = $Test::Builder::Level + 1;          ## no critic (Variables::ProhibitPackageVars)
 
 
 __END__
@@ -607,6 +619,11 @@ my @list = ( 1, 1, 1, 1, 2, 1, 1, 3, 3, 1, 1, 4, 6, 4, 1, );
 my @list = ( 1, 1, 1, 1, 2, 1, 1, 3, 3, 1, 1, 4, 6, 4, 1, );
 
 #>>
+
+local $Test::Builder::Level =
+  $Test::Builder::Level + 1;    ## no critic (Variables::ProhibitPackageVars)
+
+## no critic (ValuesAndExpressions::RequireInterpolationOfMetachars)
 
 
 # some blank lines follow
@@ -711,6 +728,10 @@ sub macro_get_names {    #
                 1, 4, 6, 4, 1,);
 #>>
 
+local $Test::Builder::Level = $Test::Builder::Level + 1;    ## no critic (Variables::ProhibitPackageVars)
+
+## no critic (ValuesAndExpressions::RequireInterpolationOfMetachars)
+
 
 
 # some blank lines follow
@@ -808,6 +829,10 @@ sub macro_get_names {    #
 my @list = ( 1, 1, 1, 1, 2, 1, 1, 3, 3, 1, 1, 4, 6, 4, 1, );
 
 #>>
+
+local $Test::Builder::Level = $Test::Builder::Level + 1;    ## no critic (Variables::ProhibitPackageVars)
+
+## no critic (ValuesAndExpressions::RequireInterpolationOfMetachars)
 
 # some blank lines follow
 
