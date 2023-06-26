@@ -3243,35 +3243,35 @@ sub generate_options {
     ########################################
     $category = 4;    # Comment controls
     ########################################
-    $add_option->( 'closing-side-comment-else-flag',         'csce', '=i' );
-    $add_option->( 'closing-side-comment-interval',          'csci', '=i' );
-    $add_option->( 'closing-side-comment-list',              'cscl', '=s' );
-    $add_option->( 'closing-side-comment-maximum-text',      'csct', '=i' );
-    $add_option->( 'closing-side-comment-prefix',            'cscp', '=s' );
-    $add_option->( 'closing-side-comment-warnings',          'cscw', '!' );
-    $add_option->( 'closing-side-comments',                  'csc',  '!' );
-    $add_option->( 'closing-side-comments-balanced',         'cscb', '!' );
-    $add_option->( 'code-skipping',                          'cs',   '!' );
-    $add_option->( 'code-skipping-begin',                    'csb',  '=s' );
-    $add_option->( 'code-skipping-end',                      'cse',  '=s' );
-    $add_option->( 'format-skipping',                        'fs',   '!' );
-    $add_option->( 'format-skipping-begin',                  'fsb',  '=s' );
-    $add_option->( 'format-skipping-end',                    'fse',  '=s' );
-    $add_option->( 'hanging-side-comments',                  'hsc',  '!' );
-    $add_option->( 'indent-block-comments',                  'ibc',  '!' );
-    $add_option->( 'indent-spaced-block-comments',           'isbc', '!' );
-    $add_option->( 'fixed-position-side-comment',            'fpsc', '=i' );
-    $add_option->( 'minimum-space-to-comment',               'msc',  '=i' );
-    $add_option->( 'non-indenting-braces',                   'nib',  '!' );
-    $add_option->( 'non-indenting-brace-prefix',             'nibp', '=s' );
-    $add_option->( 'outdent-long-comments',                  'olc',  '!' );
-    $add_option->( 'outdent-static-block-comments',          'osbc', '!' );
-    $add_option->( 'static-block-comment-prefix',            'sbcp', '=s' );
-    $add_option->( 'static-block-comments',                  'sbc',  '!' );
-    $add_option->( 'static-side-comment-prefix',             'sscp', '=s' );
-    $add_option->( 'static-side-comments',                   'ssc',  '!' );
-    $add_option->( 'ignore-side-comment-lengths',            'iscl', '!' );
-    $add_option->( 'ignore-perlcritic-side-comment-lengths', 'ipcl', '!' );
+    $add_option->( 'closing-side-comment-else-flag',    'csce', '=i' );
+    $add_option->( 'closing-side-comment-interval',     'csci', '=i' );
+    $add_option->( 'closing-side-comment-list',         'cscl', '=s' );
+    $add_option->( 'closing-side-comment-maximum-text', 'csct', '=i' );
+    $add_option->( 'closing-side-comment-prefix',       'cscp', '=s' );
+    $add_option->( 'closing-side-comment-warnings',     'cscw', '!' );
+    $add_option->( 'closing-side-comments',             'csc',  '!' );
+    $add_option->( 'closing-side-comments-balanced',    'cscb', '!' );
+    $add_option->( 'code-skipping',                     'cs',   '!' );
+    $add_option->( 'code-skipping-begin',               'csb',  '=s' );
+    $add_option->( 'code-skipping-end',                 'cse',  '=s' );
+    $add_option->( 'format-skipping',                   'fs',   '!' );
+    $add_option->( 'format-skipping-begin',             'fsb',  '=s' );
+    $add_option->( 'format-skipping-end',               'fse',  '=s' );
+    $add_option->( 'hanging-side-comments',             'hsc',  '!' );
+    $add_option->( 'indent-block-comments',             'ibc',  '!' );
+    $add_option->( 'indent-spaced-block-comments',      'isbc', '!' );
+    $add_option->( 'fixed-position-side-comment',       'fpsc', '=i' );
+    $add_option->( 'minimum-space-to-comment',          'msc',  '=i' );
+    $add_option->( 'non-indenting-braces',              'nib',  '!' );
+    $add_option->( 'non-indenting-brace-prefix',        'nibp', '=s' );
+    $add_option->( 'outdent-long-comments',             'olc',  '!' );
+    $add_option->( 'outdent-static-block-comments',     'osbc', '!' );
+    $add_option->( 'static-block-comment-prefix',       'sbcp', '=s' );
+    $add_option->( 'static-block-comments',             'sbc',  '!' );
+    $add_option->( 'static-side-comment-prefix',        'sscp', '=s' );
+    $add_option->( 'static-side-comments',              'ssc',  '!' );
+    $add_option->( 'ignore-side-comment-lengths',       'iscl', '!' );
+    $add_option->( 'ignore-perlcritic-comments',        'ipc',  '!' );
 
     ########################################
     $category = 5;    # Linebreak controls
@@ -3560,7 +3560,6 @@ sub generate_options {
       function-paren-vertical-alignment
       fuzzy-line-length
       hanging-side-comments
-      ignore-perlcritic-side-comment-lengths
       indent-block-comments
       indent-columns=4
       iterations=1

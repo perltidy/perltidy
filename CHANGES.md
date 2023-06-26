@@ -2,12 +2,12 @@
 
 ## 2023 03 09.03
 
-    - Add parameter -ipscl, or --ignore-perlcritic-side-comment-lengths. This
-      is on by default to help avoid problems due to unwanted line breaks
-      caused by long side comments beginning with '## no critic'. Perlcritic
-      users can also use the more general parameter B<-iscl> for this purpose,
-      but that parameter is off by default.  This new parameter is on by
-      default and serves as a backup in case B<-iscl> has not been set.
+    - Add parameter -ipc, or --ignore-perlcritic-comments.  Perltidy, by
+      default, will look for side comments beginning with B<## no critic> and
+      ignore their lengths when making line break decisions, even if the user
+      has not set B<-iscl>.  The reason is that an unwanted line break can
+      make these special comments ineffective in controlling B<perlcritic>.
+      The parameter -ipc can be set if, for some reason, this is not wanted.
 
     - Issue git #121. Added parameters -xbt, or --extended-block-tightness,
       and -xbtl=s, or --extended-block-tightness-list=s, to allow

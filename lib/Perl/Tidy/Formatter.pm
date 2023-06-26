@@ -209,7 +209,7 @@ my (
     $rOpts_fuzzy_line_length,
     $rOpts_ignore_old_breakpoints,
     $rOpts_ignore_side_comment_lengths,
-    $rOpts_ignore_perlcritic_side_comment_lengths,
+    $rOpts_ignore_perlcritic_comments,
     $rOpts_indent_closing_brace,
     $rOpts_indent_columns,
     $rOpts_indent_only,
@@ -2445,14 +2445,13 @@ sub initialize_global_option_vars {
     $rOpts_ignore_old_breakpoints = $rOpts->{'ignore-old-breakpoints'};
     $rOpts_ignore_side_comment_lengths =
       $rOpts->{'ignore-side-comment-lengths'};
-    $rOpts_ignore_perlcritic_side_comment_lengths =
-      $rOpts->{'ignore-perlcritic-side-comment-lengths'};
-    $rOpts_indent_closing_brace     = $rOpts->{'indent-closing-brace'};
-    $rOpts_indent_columns           = $rOpts->{'indent-columns'};
-    $rOpts_indent_only              = $rOpts->{'indent-only'};
-    $rOpts_keep_interior_semicolons = $rOpts->{'keep-interior-semicolons'};
-    $rOpts_line_up_parentheses      = $rOpts->{'line-up-parentheses'};
-    $rOpts_extended_block_tightness = $rOpts->{'extended-block-tightness'};
+    $rOpts_ignore_perlcritic_comments = $rOpts->{'ignore-perlcritic-comments'};
+    $rOpts_indent_closing_brace       = $rOpts->{'indent-closing-brace'};
+    $rOpts_indent_columns             = $rOpts->{'indent-columns'};
+    $rOpts_indent_only                = $rOpts->{'indent-only'};
+    $rOpts_keep_interior_semicolons   = $rOpts->{'keep-interior-semicolons'};
+    $rOpts_line_up_parentheses        = $rOpts->{'line-up-parentheses'};
+    $rOpts_extended_block_tightness   = $rOpts->{'extended-block-tightness'};
     $rOpts_extended_line_up_parentheses =
       $rOpts->{'extended-line-up-parentheses'};
     $rOpts_logical_padding = $rOpts->{'logical-padding'};
@@ -9189,8 +9188,9 @@ sub store_token {
 
         my $ignore_sc_length = $rOpts_ignore_side_comment_lengths;
 
-        # Ignore length of '## no critic' comments if requested
-        if (   $rOpts_ignore_perlcritic_side_comment_lengths
+        # Ignore length of '## no critic' comments even if -iscl is not set
+        if (   !$ignore_sc_length
+            && !$rOpts_ignore_perlcritic_comments
             && $token_length > 10
             && substr( $token, 1, 1 ) eq '#'
             && $token =~ /^##\s*no\s+critic\b/ )

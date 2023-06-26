@@ -1793,14 +1793,15 @@ whereas without the -iscl flag the line will be broken:
         $vmsfile =~ s/;[\d\-]*$//
           ;    # Clip off version number; we can use a newer version as well
 
-=item B<-ipscl>,  B<--ignore-perlcritic-side-comment-lengths>
+=item B<-ipc>,  B<--ignore-perlcritic-comments>
 
-The parameter B<-ipscl> tells perltidy to ignore the length of side comments
-beginning with B<## no critic> when making line breaks, even if the previous
-parameter B<-iscl> has not been set.  This parameter is on by default to avoid
-allowing these special B<perlcritic> comments, which are often quite long, to
-cause an unwanted line break, and thereby making the side comment ineffective
-in controlling B<perlcritic>.
+Perltidy, by default, will look for side comments beginning with
+B<## no critic> and ignore their lengths when making line break decisions,
+even if the user has not set B<-iscl>.  The reason is that an unwanted line
+break can make these special comments ineffective in controlling B<perlcritic>.
+
+Setting B<--ignore-perlcritic-comments> tells perltidy not to look for these 
+B<## no critic> comments.
 
 =item B<-hsc>, B<--hanging-side-comments>
 
@@ -5645,14 +5646,14 @@ The following list shows all short parameter names which allow a prefix
  hbm    hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv    hbw
  hent   hic    hicm   hico   hih    hihh   hii    hij    hik    him
  hin    hip    hipd   hipu   hiq    his    hisc   hiv    hiw    hsc
- html   ibc    icb    icp    iob    isbc   iscl   kgb    kgbd   kgbi
- kis    lal    log    lop    lp     lsl    mem    nib    ohbr   okw
- ola    olc    oll    olq    opr    opt    osbc   osbr   otr    ple
- pod    pvl    q      sac    sbc    sbl    scbb   schb   scp    scsb
- sct    se     sfp    sfs    skp    sob    sobb   sohb   sop    sosb
- sot    ssc    st     sts    t      tac    tbc    toc    tp     tqw
- trp    ts     tsc    tso    vbc    vc     viu    vmll   vsc    w
- wfc    wn     x      xbt    xci    xlp    xs
+ html   ibc    icb    icp    iob    ipc    isbc   iscl   kgb    kgbd
+ kgbi   kis    lal    log    lop    lp     lsl    mem    nib    ohbr
+ okw    ola    olc    oll    olq    opr    opt    osbc   osbr   otr
+ ple    pod    pvl    q      sac    sbc    sbl    scbb   schb   scp
+ scsb   sct    se     sfp    sfs    skp    sob    sobb   sohb   sop
+ sosb   sot    ssc    st     sts    t      tac    tbc    toc    tp
+ tqw    trp    ts     tsc    tso    vbc    vc     viu    vmll   vsc
+ w      wfc    wn     x      xbt    xci    xlp    xs
 
 Equivalently, the prefix 'no' or 'no-' on the corresponding long names may be
 used.

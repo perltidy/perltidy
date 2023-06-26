@@ -55,7 +55,7 @@ BEGIN {
 --maximum-consecutive-blank-lines=2   # -mbl=2
 --indent-spaced-block-comments        # -isbc
 --no-format-skipping                  # -nfs
---noignore-perlcritic-side-comment-lengths # -nipscl
+--ignore-perlcritic-comments          # -ipc
 ----------
         'comments4' => <<'----------',
 # testing --keep-old-blank-lines=2 [=all] and 
