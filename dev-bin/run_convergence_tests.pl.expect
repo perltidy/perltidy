@@ -7846,6 +7846,29 @@ if ($BOLD_MATH) {
     )
 }
 
+==> b1456 <==
+                    $resources->{$group_id} =
+                      {
+                         id => $group_id, ident => $group_ident,
+                         firstname   => $user->{firstname},
+                         lastname    => $user->{lastname},
+                         email       => $user->{email},
+                         timezone_id => $user->{timezone_id},
+                         name        => $user->{firstname} .
+                           " " . $user->{lastname}, selected => '0',
+                      };
+
+                    $resources->{$group_id} =
+                      {
+                         id => $group_id, ident => $group_ident,
+                         firstname   => $user->{firstname},
+                         lastname    => $user->{lastname},
+                         email       => $user->{email},
+                         timezone_id => $user->{timezone_id},
+                         name        => $user->{firstname} .
+                           " " . $user->{lastname}, selected => '0',
+                      };
+
 ==> b146 <==
 # State 1
 
@@ -7979,8 +8002,7 @@ Readonly::Array
        =>(
         q{$'},q{$$},
         q{$#},q{$:},
-       )
-       ;## no critic ( RequireInterpolationOfMetachars, ProhibitQuotedWordLists )
+       );## no critic ( RequireInterpolationOfMetachars, ProhibitQuotedWordLists )
 
 # State 2
 Readonly::Array
@@ -7988,8 +8010,7 @@ Readonly::Array
        =>(
         q{$'},q{$$},
         q{$#},q{$:},
-       )
-       ;## no critic ( RequireInterpolationOfMetachars, ProhibitQuotedWordLists )
+       );## no critic ( RequireInterpolationOfMetachars, ProhibitQuotedWordLists )
 
 
 ==> b183 <==

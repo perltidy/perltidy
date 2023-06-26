@@ -9918,6 +9918,27 @@ sub match_trailing_comma_rule {
             {
                 $match = 1;
             }
+
+            # Patch for instability issue b1456: -boc can trick this test; so
+            # skip it when deleting commas to avoid possible instability
+            # with option 'h' in combination with -atc -dtc -boc;
+            elsif (
+                $trailing_comma_style eq 'h'
+
+                # this is a deletion (due to -dtc)
+                && !$if_add
+
+                # -atc is also set
+                && $rOpts_add_trailing_commas
+
+                # -boc is set and active
+                && $rOpts_break_at_old_comma_breakpoints
+                && !$rOpts_ignore_old_breakpoints
+              )
+            {
+                # ignore this test
+            }
+
             else {
                 return;
             }

@@ -11590,6 +11590,41 @@ if ($BOLD_MATH) {
 --space-function-paren
 --want-trailing-commas='b'
 
+==> b1456.in <==
+                    $resources->{$group_id} =
+                      {
+                         id => $group_id, ident => $group_ident,
+                         firstname   => $user->{firstname},
+                         lastname    => $user->{lastname},
+                         email       => $user->{email},
+                         timezone_id => $user->{timezone_id},
+                         name        => $user->{firstname} .
+                           " " .
+                           $user->{lastname}, selected => '0'
+                      };
+
+                    $resources->{$group_id} =
+                      {
+                         id => $group_id, ident => $group_ident,
+                         firstname   => $user->{firstname},
+                         lastname    => $user->{lastname},
+                         email       => $user->{email},
+                         timezone_id => $user->{timezone_id},
+                         name        => $user->{firstname} .
+                           " " . $user->{lastname}, selected => '0',
+                      };
+
+==> b1456.par <==
+--add-trailing-commas
+--break-after-all-operators
+--break-at-old-comma-breakpoints
+--delete-trailing-commas
+--indent-columns=5
+--keep-old-breakpoints-after='Z <<>> += : b = -- ] //= {'
+--maximum-line-length=71
+--short-concatenation-item-length=1
+--want-trailing-commas='h'
+
 ==> b146.in <==
 # State 1
 
