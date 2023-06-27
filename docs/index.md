@@ -34,7 +34,7 @@ to precisely control the formatting details.
 
 Perltidy should run on any system with perl 5.008 or later.
 The total disk space needed after removing the installation directory will be
-about 2 Mb.
+about 4 Mb.
 
 
 ## Download

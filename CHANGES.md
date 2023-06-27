@@ -1,12 +1,12 @@
 # Perltidy Change Log
 
-## 2023 03 09.03
+## 2023 03 09.04
 
     - Add parameter -ipc, or --ignore-perlcritic-comments.  Perltidy, by
-      default, will look for side comments beginning with B<## no critic> and
+      default, will look for side comments beginning with ``## no critic`` and
       ignore their lengths when making line break decisions, even if the user
-      has not set B<-iscl>.  The reason is that an unwanted line break can
-      make these special comments ineffective in controlling B<perlcritic>.
+      has not set ``-iscl``.  The reason is that an unwanted line break can
+      make these special comments ineffective in controlling ``perlcritic``.
       The parameter -ipc can be set if, for some reason, this is not wanted.
 
     - Issue git #121. Added parameters -xbt, or --extended-block-tightness,

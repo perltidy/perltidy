@@ -1242,9 +1242,9 @@ abbreviation for the combination <-pt=n -sbt=n -bt=n -bbt=n>.
 
 =item B<-xbt>,   B<--extended-block-tightness>
 
-There are two controls for spacing within curly braces in this scheme, namely
-B<-block-brace-tightness=n> for code block braces and B<-brace-tightness=n> for
-all other braces.
+The previous section described two controls for spacing within curly braces,
+namely B<-block-brace-tightness=n> for code block braces and
+B<-brace-tightness=n> for all other braces.
 
 There is a little fuzziness in this division of brace types though because the
 curly braces considered by perltidy to contain code blocks for formatting
@@ -5752,7 +5752,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20230309.03
+This man page documents perltidy version 20230309.04
 
 =head1 BUG REPORTS
 

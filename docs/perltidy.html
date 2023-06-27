@@ -444,7 +444,7 @@
 <dt id="enc-s---character-encoding-s"><b>-enc=s</b>, <b>--character-encoding=s</b></dt>
 <dd>
 
-<p>This flag indicates if the input data stream use a character encoding. Perltidy does not look for the encoding directives in the source stream, such as <b>use utf8</b>, and instead relies on this flag to determine the encoding. (Note that perltidy often works on snippets of code rather than complete files so it cannot rely on <b>use utf8</b> directives).</p>
+<p>This flag indicates if the input data stream uses a character encoding. Perltidy does not look for the encoding directives in the source stream, such as <b>use utf8</b>, and instead relies on this flag to determine the encoding. (This is because perltidy often works on snippets of code rather than complete files, so it cannot rely on <b>use utf8</b> directives). Consequently perltidy is likely to encounter problems formatting a file which is only partially encoded.</p>
 
 <p>The possible values for <b>s</b> are:</p>
 
@@ -939,14 +939,16 @@
 <dt id="xbt---extended-block-tightness"><b>-xbt</b>, <b>--extended-block-tightness</b></dt>
 <dd>
 
-<p>Curly braces which are considered by perltidy to contain code blocks for formatting purposes exclude some of the code blocks used by Perl mainly for isolating terms. These include curly braces following a keyword where an indirect object might occur, or curly braces following a type symbol. For example</p>
+<p>The previous section described two controls for spacing within curly braces, namely <b>-block-brace-tightness=n</b> for code block braces and <b>-brace-tightness=n</b> for all other braces.</p>
 
-<pre><code>  print {*STDERR} $message;
-  return @{$self};</code></pre>
+<p>There is a little fuzziness in this division of brace types though because the curly braces considered by perltidy to contain code blocks for formatting purposes, such as highlighting code structure, exclude some of the small code blocks used by Perl mainly for isolating terms. These include curly braces following a keyword where an indirect object might occur, or curly braces following a type symbol. For example, perltidy does not mark the following braces as code block braces:</p>
 
-<p>Since perltidy does not format these small containers as code blocks, by default the spacing within for these braces follows the flag <b>--brace-tightness=n</b>.</p>
+<pre><code>    print {*STDERR} $message;
+    return ${$foo};</code></pre>
 
-<p>But they can be made to instead follow the spacing defined by the <b>--block-brace-tightness=n</b> flag by seting <b>--extended-block-tightness</b>.</p>
+<p>Consequently, the spacing within these small braced containers by default follows the flag <b>--brace-tightness=n</b> rather than <b>--block-brace-tightness=n</b>, as one might expect.</p>
+
+<p>If desired, small blocks such as these can be made to instead follow the spacing defined by the <b>--block-brace-tightness=n</b> flag by setting <b>--extended-block-tightness</b>. The specific types of small blocks to which this parameter applies is controlled by a companion control parameter, described in the next section.</p>
 
 <p>Note that if the two flags <b>-bbt=n</b> and <b>-bt=n</b> have the same value <b>n</b> then there would be no reason to set this flag.</p>
 
@@ -954,27 +956,44 @@
 <dt id="xbtl-s---extended-block-tightness-list-s"><b>-xbtl=s</b>, <b>--extended-block-tightness-list=s</b></dt>
 <dd>
 
-<p>The small blocks to which the parameter <b>-xbt</b> applies consist of those curly braces preceded by the keywords</p>
+<p>The previous parameter <b>-xbt</b> can be made to apply curly braces preceded by any of the keywords</p>
 
-<pre><code>    print printf sort exec system say</code></pre>
+<pre><code>    print printf exec system say</code></pre>
 
-<p>and special symbols</p>
+<p>and/or the special symbols</p>
 
 <pre><code>    $ @ % &amp; * $#</code></pre>
 
-<p>To restrict <b>-xbt</b> to apply to just the above keywords use</p>
+<p>The parameter string <b>s</b> may contain a selection of these keywords and symbols to indicate the brace types to which <b>-xbt</b> applies. For convenience, all of the keywords can be selected with &#39;k&#39;, and all of the special symbols can be selected with &#39;t&#39;. The default is equivalent to <b>-xbtl=&#39;k&#39;</b>, which selects all of the keywords.</p>
 
-<pre><code>   -xbtl=k</code></pre>
+<p>Examples:</p>
 
-<p>and to restrict it to apply to just the above special type symbols use</p>
+<pre><code>   -xbtl=&#39;k&#39;          # selects just the keywords [DEFAULT]
+   -xbtl=&quot;t&quot;          # selects just the special type symbols
+   -xbtl=&quot;k t&quot;        # selects all keywords and symbols, or more simply
+   -xbtl=&quot;kt&quot;         # selects all keywords and symbols
+   -xbtl=&quot;print say&quot;  # selects just keywords B&lt;print&gt; and B&lt;say&gt;:</code></pre>
 
-<pre><code>   -xbtl=t</code></pre>
+<p>Here are some formatting examples using the default values of <b>-bt=n</b> and <b>-bbt=n</b>. Note that in these examples <b>$ref</b> is in block braces but <b>$key</b> is not.</p>
 
-<p>To restrict it to certain specific keywords or type symbols, enter them in the parameter <b>s</b>. For example, the following restricts it apply to just the keywords <b>print</b> and <b>say</b>:</p>
+<pre><code>    # default formatting
+    print {*STDERR} $message;
+    my $val = ${$ref}{$key};
 
-<pre><code>   -xbtl=&quot;print say&quot;</code></pre>
+    # perltidy -xbt           or
+    # perltidy -xbt -xbtl=k
+    print { *STDERR } $message;
+    my $val = ${$ref}{$key};
 
-<p>Note that this parameter merely changes the way that the parameter <b>--extended-block-tightness</b> works. It has no effect unless <b>--extended-block-tightness</b> is set.</p>
+    # perltidy -xbt -xbtl=t
+    print {*STDERR} $message;
+    my $val = ${ $ref }{$key};
+
+    # perltidy -xbt -xbtl=kt
+    print { *STDERR } $message;
+    my $val = ${ $ref }{$key};</code></pre>
+
+<p>Finally, note that this parameter merely changes the way that the parameter <b>--extended-block-tightness</b> works. It has no effect unless <b>--extended-block-tightness</b> is actually set.</p>
 
 </dd>
 <dt id="tso---tight-secret-operators"><b>-tso</b>, <b>--tight-secret-operators</b></dt>
@@ -1391,6 +1410,14 @@
 <pre><code>     perltidy -l=80
         $vmsfile =~ s/;[\d\-]*$//
           ;    # Clip off version number; we can use a newer version as well</code></pre>
+
+</dd>
+<dt id="ipc---ignore-perlcritic-comments"><b>-ipc</b>, <b>--ignore-perlcritic-comments</b></dt>
+<dd>
+
+<p>Perltidy, by default, will look for side comments beginning with <b>## no critic</b> and ignore their lengths when making line break decisions, even if the user has not set <b>-iscl</b>. The reason is that an unwanted line break can make these special comments ineffective in controlling <b>perlcritic</b>.</p>
+
+<p>Setting <b>--ignore-perlcritic-comments</b> tells perltidy not to look for these <b>## no critic</b> comments.</p>
 
 </dd>
 <dt id="hsc---hanging-side-comments"><b>-hsc</b>, <b>--hanging-side-comments</b></dt>
@@ -3927,9 +3954,7 @@
 
 <p>Under Windows, perltidy will also search for a configuration file named <i>perltidy.ini</i> since Windows does not allow files with a leading period (.). Use <code>perltidy -dpro</code> to see the possible locations for your system. An example might be <i>C:\Documents and Settings\All Users\perltidy.ini</i>.</p>
 
-<p>Another option is the use of the PERLTIDY environment variable. The method for setting environment variables depends upon the version of Windows that you are using. Instructions for Windows 95 and later versions can be found here:</p>
-
-<p>http://www.netmanage.com/000/20021101_005_tcm21-6336.pdf</p>
+<p>Another option is the use of the PERLTIDY environment variable. The method for setting environment variables depends upon the version of Windows that you are using.</p>
 
 <p>Under Windows NT / 2000 / XP the PERLTIDY environment variable can be placed in either the user section or the system section. The later makes the configuration file common to all users on the machine. Be sure to enter the full path of the configuration file in the value of the environment variable. Ex. PERLTIDY=C:\Documents and Settings\perltidy.ini</p>
 
@@ -4381,14 +4406,14 @@
  hbm    hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv    hbw
  hent   hic    hicm   hico   hih    hihh   hii    hij    hik    him
  hin    hip    hipd   hipu   hiq    his    hisc   hiv    hiw    hsc
- html   ibc    icb    icp    iob    isbc   iscl   kgb    kgbd   kgbi
- kis    lal    log    lop    lp     lsl    mem    nib    ohbr   okw
- ola    olc    oll    olq    opr    opt    osbc   osbr   otr    ple
- pod    pvl    q      sac    sbc    sbl    scbb   schb   scp    scsb
- sct    se     sfp    sfs    skp    sob    sobb   sohb   sop    sosb
- sot    ssc    st     sts    t      tac    tbc    toc    tp     tqw
- trp    ts     tsc    tso    vbc    vc     viu    vmll   vsc    w
- wfc    wn     x      xbt    xci    xlp    xs</code></pre>
+ html   ibc    icb    icp    iob    ipc    isbc   iscl   kgb    kgbd
+ kgbi   kis    lal    log    lop    lp     lsl    mem    nib    ohbr
+ okw    ola    olc    oll    olq    opr    opt    osbc   osbr   otr
+ ple    pod    pvl    q      sac    sbc    sbl    scbb   schb   scp
+ scsb   sct    se     sfp    sfs    skp    sob    sobb   sohb   sop
+ sosb   sot    ssc    st     sts    t      tac    tbc    toc    tp
+ tqw    trp    ts     tsc    tso    vbc    vc     viu    vmll   vsc
+ w      wfc    wn     x      xbt    xci    xlp    xs</code></pre>
 
 <p>Equivalently, the prefix &#39;no&#39; or &#39;no-&#39; on the corresponding long names may be used.</p>
 
@@ -4466,7 +4491,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20230309.03</p>
+<p>This man page documents perltidy version 20230309.04</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 
