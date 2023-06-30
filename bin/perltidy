@@ -1272,8 +1272,8 @@ B<n> then there would be no reason to set this flag.
 
 =item B<-xbtl=s>,   B<--extended-block-tightness-list=s>
 
-The previous parameter B<-xbt> can be made to apply curly braces preceded by
-any of the keywords
+The previous parameter B<-xbt> can be made to apply to curly braces preceded
+by any of the keywords
 
     print printf exec system say
 
@@ -5752,7 +5752,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20230309.04
+This man page documents perltidy version 20230701
 
 =head1 BUG REPORTS
 
@@ -5762,7 +5762,7 @@ To report a new bug or problem, use the "issues" link on this page.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2000-2022 by Steve Hancock
+Copyright (c) 2000-2023 by Steve Hancock
 
 =head1 LICENSE
 

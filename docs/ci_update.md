@@ -1,9 +1,10 @@
 # An update to the basic Perl::Tidy continuation indentation model
 
-The next release after Perl::Tidy version 20230309 has several changes in the
-basic method for computing "continuation indentation".  The changes mainly
-apply to some unusual situations, and most programs will remain unchanged.
-This note explains what the changes are and why they are needed.
+Perl::Tidy version 20230701 has several changes in the basic method for
+computing "continuation indentation".  This has been on the TODO list
+for a long time. The changes mainly apply to some unusual situations,
+and most programs will remain unchanged. This note explains what the changes
+are and why they are needed.
 
 To briefly review, the indentation of a line is the sum of two parts:
 (1) **structural indentation**, and (2) **continuation indentation**.
@@ -25,9 +26,9 @@ they are a continuation of the statement.
 The default continuation indentation is 2 characters but this can be changed
 with the **-ci=n** parameter.
 
-The original continuation indentation programming in perltidy operated in the
+Previously, computation of continuation indentation was done in the
 initial pass through a file, and this placed some limits on what it could do.
-This update moves this coding downstream in the processing pipeline, where the
+This computation has been moved downstream in the processing pipeline, where the
 entire file is accessible with full data structures, and this allows several
 improvements to be made.  These mainly involve (1) the continuation
 indentation assigned to comments in unusual circumstances, or (2) the
@@ -96,7 +97,7 @@ brace, and there are some comments before the closing ``if`` block brace. The
 previous logic had a limited look-ahead ability, and in this case the
 continuation indentation of the closing sub brace was not removed.
 
-The updated logic handles this correctly:
+The updated logic fixes this problem:
 
 ```
         if ( $term->ReadLine eq "Term::ReadLine::Gnu" ) {
@@ -113,8 +114,8 @@ The updated logic handles this correctly:
 ## Block comment indentation changes in ternary statements
 
 Another change is that the indentation of block comments within ternary
-statements is improved. For example, here is the old default formatting of
-a complex ternary with lots of comments:
+statements is improved. These can be difficult to format. For example,
+here is the old default formatting of a complex ternary with lots of comments:
 
 ```
     # a) under an interactive shell?
@@ -145,7 +146,7 @@ a complex ternary with lots of comments:
       : loc("suppressed in batch mode");
 ```
 
-The comment indentation is very poor. Here is the new formatting:
+The comment indentation is very poor here. Here is the new formatting:
 
 ```
     # a) under an interactive shell?
@@ -194,7 +195,8 @@ is_deeply $fixer->fix( {
   'specific testing';
 ```
 
-The closing '} )' is not indented correctly.  The new default formatting is
+The closing '} )' is missing some continuation indentation.  The new default
+formatting is
 
 ```
 is_deeply $fixer->fix( {

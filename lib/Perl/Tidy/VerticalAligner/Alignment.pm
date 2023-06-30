@@ -10,7 +10,7 @@ use warnings;
 
 { #<<< A non-indenting brace
 
-our $VERSION = '20230309.04';
+our $VERSION = '20230701';
 
 sub new {
     my ( $class, $rarg ) = @_;

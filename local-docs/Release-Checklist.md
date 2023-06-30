@@ -35,7 +35,7 @@
   - note that I have tidyall set to also run perlcritic right now
 - run podchecker on all .pod files
 - run ispell on all .pod files
-- Be sure builds at Travis.CI and Appveyor are clean for all version of perl
+- Be sure builds at github and Appveyor are clean for all version of perl
 - update VERSION numbers in all modules and some docs (build.pl can do this):
    - lib/Perl/Tidy.pm
    - lib/Perl/Tidy.pod
