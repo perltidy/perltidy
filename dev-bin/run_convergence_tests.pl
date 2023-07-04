@@ -16,7 +16,7 @@ There are four options: run [DEFAULT], pack, merge, unpack ( -r -p -m -u )
 
 usage:
 
-   $0 -h -u -m -p -r [ arg1 arg2 ...
+   $0 -h -u -m -p -r -s [ arg1 arg2 ...
 
 where one parameter may be given to specify the operation to be done:
 
@@ -26,6 +26,7 @@ where one parameter may be given to specify the operation to be done:
   -m merge files given in arg list into the default or specified database
   -p packs files given in arg list into a new database
   -e overwrites old expect data with the new results for cases run
+  -s write statistics on parameter frequency to stdout and exit
   -r runs the tests [DEFAULT operation]
 
   arg1 arg2 ... may contain: 
@@ -88,6 +89,7 @@ my @option_string = qw(
   m
   p
   r
+  s
   u
 );
 
@@ -114,10 +116,12 @@ if ( -e $tmp_dir && !-d $tmp_dir ) {
     exit 1;
 }
 
-print <<EOM;
+if ( !$Opts{s} ) {
+    print <<EOM;
 default temporary output directory: 
 $tmp_dir
 EOM
+}
 
 # Sift through the args...
 my @files;
@@ -217,6 +221,15 @@ if ( -e $db_fname ) {
 else {
 
     print STDERR "Cannot find data file $db_fname\n";
+    exit 1;
+}
+
+###################
+# s: run statistics
+###################
+
+if ( $Opts{s} ) {
+    dump_parameter_frequency($rdata_files); 
     exit 1;
 }
 
@@ -609,6 +622,41 @@ $num_old total files in merged data
 EOM
 
     write_hash_to_data_file( $db_fname, $rold_data );
+    return;
+}
+
+sub dump_parameter_frequency {
+    my ($rdata_files) = @_;
+
+    # Dump a list of parameters and the number of times they appear
+    my $rcount = {};
+
+    foreach my $fname ( keys %{$rdata_files} ) {
+        if ( $fname =~ /^(.*)\.par$/ ) {
+            my $string = $rdata_files->{$fname};
+            my @lines  = split /^/, $string;
+            foreach my $line (@lines) {
+                $line =~ s/^\s+//;
+                $line =~ s/\s+$//;
+                if ( $line && $line =~ /^-/ ) {
+                    if ( $line =~ /^-+(\w[\w-]*)/ ) {
+                        $rcount->{$1}++;
+                    }
+                }
+            }
+        }
+    }
+
+    # For a spreadsheet:
+##  my @sorted_keys = sort { $rcount->{$b} <=> $rcount->{$a} } keys %{$rcount};
+##  foreach my $key (@sorted_keys) {
+##      print "$rcount->{$key}, $key\n";
+##  }
+
+    # For a script:
+    use Data::Dumper;
+    print Dumper($rcount);
+
     return;
 }
 
