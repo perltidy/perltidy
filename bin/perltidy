@@ -1658,8 +1658,8 @@ or ternary expressions.
 
 Note that this is considered to be a different operation from "vertical
 alignment" because space at just one line is being adjusted, whereas in
-"vertical alignment" the spaces at all lines are being adjusted. So it sort of
-a local version of vertical alignment.
+"vertical alignment" the spaces at all lines are being adjusted. So it is
+sort of a local version of vertical alignment.
 
 Here is an example involving a ternary operator:
 
