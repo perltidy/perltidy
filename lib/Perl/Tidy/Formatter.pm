@@ -14370,6 +14370,16 @@ EOM
             # Count lengths of things like 'xx => yy' as a single item
             if ( $type eq '=>' ) {
                 $len += $token_length + 1;
+
+                # fix $len for -naws, issue b1457
+                if ( !$rOpts_add_whitespace ) {
+                    if ( defined( $rLL->[ $KK + 1 ] )
+                        && $rLL->[ $KK + 1 ]->[_TYPE_] ne 'b' )
+                    {
+                        $len -= 1;
+                    }
+                }
+
                 if ( $len > $max_prong_len ) { $max_prong_len = $len }
             }
             elsif ( $last_nonblank_type eq '=>' ) {

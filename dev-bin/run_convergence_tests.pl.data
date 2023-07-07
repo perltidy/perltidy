@@ -11625,6 +11625,47 @@ if ($BOLD_MATH) {
 --short-concatenation-item-length=1
 --want-trailing-commas='h'
 
+==> b1457.in <==
+BEGIN {
+         %messages=(
+                  0x95 => [
+                           StartSessionTransmission =>
+                                    qw( *_RemoteIPAddr V_SessionType )
+                  ],
+                  0x93 => [
+                             ConfigStat =>qw( Z16_DeviceName V_StationUserID
+                             V_StationUserInstance
+                             Z16_UserName Z16_ServerName
+                             V_NumberLines V_NumberSpeedDials )
+                  ],
+         ) ;
+}
+
+BEGIN {
+         %messages=(
+                  0x95 => [
+                           StartSessionTransmission =>
+                                    qw( *_RemoteIPAddr V_SessionType )
+                  ],
+                  0x93 => [
+                           ConfigStat =>
+                                    qw( Z16_DeviceName V_StationUserID
+                                    V_StationUserInstance
+                                    Z16_UserName Z16_ServerName
+                                    V_NumberLines V_NumberSpeedDials )
+                  ],
+         ) ;
+}
+
+
+==> b1457.par <==
+--maximum-line-length=76
+--indent-columns=9
+--continuation-indentation=9
+--noadd-whitespace
+--extended-continuation-indentation
+--extended-line-up-parentheses
+
 ==> b146.in <==
 # State 1
 

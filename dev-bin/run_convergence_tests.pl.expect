@@ -7869,6 +7869,38 @@ if ($BOLD_MATH) {
                            " " . $user->{lastname}, selected => '0',
                       };
 
+==> b1457 <==
+BEGIN {
+         %messages=(
+                  0x95 => [
+                           StartSessionTransmission =>
+                                    qw( *_RemoteIPAddr V_SessionType )
+                  ],
+                  0x93 => [
+                             ConfigStat =>qw( Z16_DeviceName V_StationUserID
+                             V_StationUserInstance
+                             Z16_UserName Z16_ServerName
+                             V_NumberLines V_NumberSpeedDials )
+                  ],
+         ) ;
+}
+
+BEGIN {
+         %messages=(
+                  0x95 => [
+                           StartSessionTransmission =>
+                                    qw( *_RemoteIPAddr V_SessionType )
+                  ],
+                  0x93 => [
+                             ConfigStat =>qw( Z16_DeviceName V_StationUserID
+                             V_StationUserInstance
+                             Z16_UserName Z16_ServerName
+                             V_NumberLines V_NumberSpeedDials )
+                  ],
+         ) ;
+}
+
+
 ==> b146 <==
 # State 1
 
