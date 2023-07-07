@@ -2970,11 +2970,7 @@ This format option is quite general but there are some limitations.
 One limitation is that any line length limit still applies and can cause long
 welded sections to be broken into multiple lines.
 
-Another limitation is that an opening symbol which delimits quoted text cannot
-be included in a welded pair.  This is because quote delimiters are treated
-specially in perltidy.
-
-Finally, the stacking of containers defined by this flag have priority over
+Also, the stacking of containers defined by this flag have priority over
 any other container stacking flags.  This is because any welding is done first.
 
 =item B<-wfc>,  B<--weld-fat-comma >
