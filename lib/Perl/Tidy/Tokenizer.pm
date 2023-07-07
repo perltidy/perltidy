@@ -66,7 +66,7 @@ my (
     $rnested_statement_type,
     $rnested_ternary_flag,
     $rparen_semicolon_count,
-    $rparen_structural_type,
+    $rparen_vars,
     $rparen_type,
     $rsaw_function_definition,
     $rsaw_use_module,
@@ -1538,7 +1538,7 @@ sub prepare_for_a_new_file {
 
     $rparen_type                     = [];
     $rparen_semicolon_count          = [];
-    $rparen_structural_type          = [];
+    $rparen_vars                     = [];
     $rbrace_type                     = [];
     $rbrace_structural_type          = [];
     $rbrace_context                  = [];
@@ -1552,7 +1552,7 @@ sub prepare_for_a_new_file {
 
     $rparen_type->[$paren_depth]            = EMPTY_STRING;
     $rparen_semicolon_count->[$paren_depth] = 0;
-    $rparen_structural_type->[$brace_depth] = EMPTY_STRING;
+    $rparen_vars->[$paren_depth]            = [];
     $rbrace_type->[$brace_depth] = ';';   # identify opening brace as code block
     $rbrace_structural_type->[$brace_depth]        = EMPTY_STRING;
     $rbrace_context->[$brace_depth]                = UNKNOWN_CONTEXT;
@@ -1700,7 +1700,7 @@ sub prepare_for_a_new_file {
             $rnested_statement_type,
             $rnested_ternary_flag,
             $rparen_semicolon_count,
-            $rparen_structural_type,
+            $rparen_vars,
             $rparen_type,
             $rsaw_function_definition,
             $rsaw_use_module,
@@ -1790,7 +1790,7 @@ sub prepare_for_a_new_file {
             $rnested_statement_type,
             $rnested_ternary_flag,
             $rparen_semicolon_count,
-            $rparen_structural_type,
+            $rparen_vars,
             $rparen_type,
             $rsaw_function_definition,
             $rsaw_use_module,
@@ -2707,9 +2707,13 @@ EOM
 
         # '('
         ++$paren_depth;
-        $rparen_semicolon_count->[$paren_depth] = 0;
+
+        # variable to enable check for brace after closing paren (c230)
+        my $want_brace = EMPTY_STRING;
+
         if ($want_paren) {
             $container_type = $want_paren;
+            $want_brace     = $want_paren;
             $want_paren     = EMPTY_STRING;
         }
         elsif ( $statement_type =~ /^sub\b/ ) {
@@ -2779,14 +2783,6 @@ EOM
             } ## end if ( $expecting == OPERATOR...
         }
 
-        # Do not update container type at ') ('; fix for git #105.  This will
-        # propagate the container type onward so that any subsequent brace gets
-        # correctly marked.  I have implemented this as a general rule, which
-        # should be safe, but if necessary it could be restricted to certain
-        # container statement types such as 'for'.
-        $rparen_type->[$paren_depth] = $container_type
-          if ( $last_nonblank_token ne ')' );
-
         ( $type_sequence, $indent_flag ) =
           $self->increase_nesting_depth( PAREN, $rtoken_map->[$i_tok] );
 
@@ -2831,7 +2827,24 @@ EOM
             $self->warning(
                 "Syntax error? found token '$last_nonblank_type' then '('\n");
         }
-        $rparen_structural_type->[$paren_depth] = $type;
+
+        # git #105: Copy container type and want-brace flag at ') (';
+        # propagate the container type onward so that any subsequent brace gets
+        # correctly marked.  I have implemented this as a general rule, which
+        # should be safe, but if necessary it could be restricted to certain
+        # container statement types such as 'for'.
+        if ( $last_nonblank_token eq ')' ) {
+            my $rvars = $rparen_vars->[$paren_depth];
+            if ( defined($rvars) ) {
+                $container_type = $rparen_type->[$paren_depth];
+                ( my $type_lp, $want_brace ) = @{$rvars};
+            }
+        }
+
+        $rparen_type->[$paren_depth]            = $container_type;
+        $rparen_vars->[$paren_depth]            = [ $type, $want_brace ];
+        $rparen_semicolon_count->[$paren_depth] = 0;
+
         return;
 
     } ## end sub do_LEFT_PARENTHESIS
@@ -2844,8 +2857,12 @@ EOM
         ( $type_sequence, $indent_flag ) =
           $self->decrease_nesting_depth( PAREN, $rtoken_map->[$i_tok] );
 
-        if ( $rparen_structural_type->[$paren_depth] eq '{' ) {
-            $type = '}';
+        my $rvars = $rparen_vars->[$paren_depth];
+        if ( defined($rvars) ) {
+            my ( $type_lp, $want_brace ) = @{$rvars};
+            if ( $type_lp && $type_lp eq '{' ) {
+                $type = '}';
+            }
         }
 
         $container_type = $rparen_type->[$paren_depth];
@@ -3054,8 +3071,22 @@ EOM
                 $last_nonblank_token = 'if';
             }
 
-            # check for syntax error here;
-            unless ( $is_blocktype_with_paren{$last_nonblank_token} ) {
+            # Syntax check at '){'
+            if ( $is_blocktype_with_paren{$last_nonblank_token} ) {
+
+                my $rvars = $rparen_vars->[ $paren_depth + 1 ];
+                if ( defined($rvars) ) {
+                    my ( $type_lp, $want_brace ) = @{$rvars};
+
+                    # Now verify that this is not a trailing form
+                    if ( !$want_brace ) {
+                        $self->warning(
+"syntax error at ') {', unexpected '{' after closing ')' of a trailing '$last_nonblank_token'\n"
+                        );
+                    }
+                }
+            }
+            else {
                 if ( $self->[_extended_syntax_] ) {
 
                     # we append a trailing () to mark this as an unknown
@@ -4054,14 +4085,16 @@ EOM
         # Since for and foreach may not be followed immediately
         # by an opening paren, we have to remember which keyword
         # is associated with the next '('
-        if ( $is_for_foreach{$tok} ) {
+        # Previously, before update   c230 : if ( $is_for_foreach{$tok} ) {
+        ##(if elsif unless while until for foreach switch case given when catch)
+        if ( $is_blocktype_with_paren{$tok} ) {
             if ( new_statement_ok() ) {
                 $want_paren = $tok;
             }
         }
 
         # recognize 'use' statements, which are special
-        elsif ( $is_use_require{$tok} ) {
+        if ( $is_use_require{$tok} ) {
             $statement_type = $tok;
             $self->error_if_expecting_OPERATOR()
               if ( $expecting == OPERATOR );
