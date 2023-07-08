@@ -162,6 +162,9 @@ print "str='$str'\n";
 ==> c208.in <==
 $1x$2
 
+==> c231.in <==
+print {LABEL: print "Hello "; STDOUT} "World\n";
+
 ==> git82.in <==
 say
 $

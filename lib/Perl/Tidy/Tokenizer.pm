@@ -4512,7 +4512,7 @@ EOM
             # like 'sub : lvalue' ?
             && !$self->sub_attribute_ok_here( $tok_kw, $next_nonblank_token,
                 $i_next )
-            && label_ok()
+            && new_statement_ok()
           )
         {
             if ( $tok !~ /[A-Z]/ ) {
@@ -6656,27 +6656,44 @@ sub operator_expected {
 
 sub new_statement_ok {
 
-    # return true if the current token can start a new statement
-    # USES GLOBAL VARIABLES: $last_nonblank_type
+    # Returns:
+    #   true if a new statement can begin here
+    #   false otherwise
 
-    return label_ok()    # a label would be ok here
-
-      || $last_nonblank_type eq 'J';    # or we follow a label
-
-} ## end sub new_statement_ok
-
-sub label_ok {
-
-    # Decide if a bare word followed by a colon here is a label
     # USES GLOBAL VARIABLES: $last_nonblank_token, $last_nonblank_type,
     # $brace_depth, $rbrace_type
 
-    # if it follows an opening or closing code block curly brace..
-    if ( ( $last_nonblank_token eq '{' || $last_nonblank_token eq '}' )
+    # Uses:
+    # - See if a 'class' statement can occur here
+    # - See if a keyword begins at a new statement; i.e. is an 'if' a
+    #   block if or a trailing if?  Also see if 'format' starts a statement.
+    # - Decide if a ':' is part of a statement label (not a ternary)
+
+    # Curly braces are tricky because some small blocks do not get marked as
+    # blocks..
+
+    # if it follows an opening curly brace..
+    if ( $last_nonblank_token eq '{' ) {
+
+        # The safe thing is to return true in all cases because:
+        # - a ternary ':' cannot occur here
+        # - an 'if' here, for example, cannot be a trailing if
+        # See test case c231 for an example.
+        # This works but could be improved, if necessary, by returning
+        #   'false' at obvious non-blocks.
+        return 1;
+    }
+
+    # if it follows a closing code block curly brace..
+    elsif ($last_nonblank_token eq '}'
         && $last_nonblank_type eq $last_nonblank_token )
     {
 
-        # it is a label if and only if the curly encloses a code block
+        # a new statement can follow certain closing block braces ...
+        # FIXME: The following has worked well but returns true in some cases
+        # where it really should not.  We could fix this by either excluding
+        # certain blocks, like sort/map/grep/eval/asub or by just including
+        # certain blocks.
         return $rbrace_type->[$brace_depth];
     }
 
@@ -6685,7 +6702,7 @@ sub label_ok {
     else {
         return ( $last_nonblank_type eq ';' || $last_nonblank_type eq 'J' );
     }
-} ## end sub label_ok
+} ## end sub new_statement_ok
 
 sub code_block_type {
 
