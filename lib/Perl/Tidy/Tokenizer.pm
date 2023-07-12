@@ -5,12 +5,11 @@
 # corresponding tokenized lines through its get_line() method.  Lines
 # flow from the source_object to the caller like this:
 #
-# source_object --> LineBuffer_object --> Tokenizer -->  calling routine
-#   get_line()         get_line()           get_line()     line_of_tokens
+# source_object --> Tokenizer -->  calling routine
+#   get_line()      get_line()     line_of_tokens
 #
 # The source object can be any object with a get_line() method which
 # supplies one line (a character string) perl call.
-# The LineBuffer object is created by the Tokenizer.
 # The Tokenizer returns a reference to a data structure 'line_of_tokens'
 # containing one tokenized line for each call to its get_line() method.
 #
@@ -25,7 +24,6 @@ use English qw( -no_match_vars );
 
 our $VERSION = '20230701';
 
-use Perl::Tidy::LineBuffer;
 use Carp;
 
 use constant DEVEL_MODE   => 0;
@@ -1471,7 +1469,9 @@ sub find_starting_indentation_level {
         my $i = 0;
 
         # keep looking at lines until we find a hash bang or piece of code
+        # ( or, for now, an =pod line)
         my $msg = EMPTY_STRING;
+        my $in_code_skipping;
         while ( $line = $self->peek_ahead( $i++ ) ) {
 
             # if first line is #! then assume starting level is zero
@@ -1479,8 +1479,27 @@ sub find_starting_indentation_level {
                 $starting_level = 0;
                 last;
             }
-            next if ( $line =~ /^\s*#/ );    # skip past comments
+
+            # ignore lines fenced off with code-skipping comments
+            if ( $line =~ /^\s*#/ ) {
+                if ( !$in_code_skipping ) {
+                    if (   $rOpts_code_skipping
+                        && $line =~ /$code_skipping_pattern_begin/ )
+                    {
+                        $in_code_skipping = 1;
+                    }
+                }
+                else {
+                    if ( $line =~ /$code_skipping_pattern_end/ ) {
+                        $in_code_skipping = 0;
+                    }
+                }
+                next;
+            }
+            next if ($in_code_skipping);
+
             next if ( $line =~ /^\s*$/ );    # skip past blank lines
+
             $starting_level = $self->guess_old_indentation_level($line);
             last;
         }
