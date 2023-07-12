@@ -2418,11 +2418,8 @@ sub process_iteration_layer {
     my $tabsize            = $self->[_tabsize_];
     my $user_formatter     = $self->[_user_formatter_];
 
-    # create a source object for the buffer
-    my $source_object = Perl::Tidy::LineSource->new(
-        input_file => \$buf,
-        rOpts      => $rOpts,
-    );
+    # create a source for the tokenizer .. we can use a string for efficiency.
+    my $source_buffer = $buf;
 
     # make a debugger object if requested
     my $debugger_object;
@@ -2570,7 +2567,7 @@ sub process_iteration_layer {
         # create the tokenizer for this file
         #-----------------------------------
         my $tokenizer = Perl::Tidy::Tokenizer->new(
-            source_object      => $source_object,
+            source_object      => \$source_buffer,
             logger_object      => $logger_object,
             debugger_object    => $debugger_object,
             diagnostics_object => $diagnostics_object,
@@ -2594,10 +2591,9 @@ sub process_iteration_layer {
         #---------------------------------
         $self->process_single_case( $tokenizer, $formatter );
 
-        #-----------------------------------------
-        # close the input source and report errors
-        #-----------------------------------------
-        $source_object->close_input_file();
+        #--------------
+        # report errors
+        #--------------
 
         # see if the formatter is converged
         if (   $max_iterations > 1
@@ -2615,10 +2611,7 @@ sub process_iteration_layer {
         if ( $iter < $max_iterations ) {
 
             $sink_object->close_output_file();
-            $source_object = Perl::Tidy::LineSource->new(
-                input_file => \$sink_buffer,
-                rOpts      => $rOpts,
-            );
+            $source_buffer = $sink_buffer;
 
             # stop iterations if errors or converged
             my $stop_now = $self->[_input_copied_verbatim_];
@@ -2701,10 +2694,9 @@ EOM
                 # we are stopping the iterations early;
                 # copy the output stream to its final destination
                 $sink_object = $sink_object_final;
-                while ( my $line = $source_object->get_line() ) {
+                foreach my $line ( split /^/, $source_buffer ) {
                     $sink_object->write_line($line);
                 }
-                $source_object->close_input_file();
                 last;
             }
         } ## end if ( $iter < $max_iterations)

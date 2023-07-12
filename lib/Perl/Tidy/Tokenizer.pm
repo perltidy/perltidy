@@ -189,7 +189,6 @@ BEGIN {
         _saw_data_                           => $i++,
         _saw_negative_indentation_           => $i++,
         _started_tokenizing_                 => $i++,
-        _line_buffer_object_                 => $i++,
         _debugger_object_                    => $i++,
         _diagnostics_object_                 => $i++,
         _logger_object_                      => $i++,
@@ -206,6 +205,8 @@ BEGIN {
         _rOpts_logfile_                      => $i++,
         _rOpts_                              => $i++,
         _calculate_ci_                       => $i++,
+        _rinput_lines_                       => $i++,
+        _input_line_index_next_              => $i++,
     };
 } ## end BEGIN
 
@@ -430,9 +431,6 @@ sub new {
     my $source_object = $args{source_object};
     my $rOpts         = $args{rOpts};
 
-    # we create another object with a get_line() and peek_ahead() method
-    my $line_buffer_object = Perl::Tidy::LineBuffer->new($source_object);
-
     # Tokenizer state data is as follows:
     # _rhere_target_list_    reference to list of here-doc targets
     # _here_doc_target_      the target string for a here document
@@ -453,7 +451,6 @@ sub new {
     # _in_attribute_list_    flag telling if we are looking for attributes
     # _in_quote_             flag telling if we are chasing a quote
     # _starting_level_       indentation level of first line
-    # _line_buffer_object_   object with get_line() method to supply source code
     # _diagnostics_object_   place to write debugging information
     # _unexpected_error_count_ error count used to limit output
     # _lower_case_labels_at_ line numbers where lower case labels seen
@@ -501,7 +498,6 @@ sub new {
     $self->[_saw_data_]                 = 0;
     $self->[_saw_negative_indentation_] = 0;
     $self->[_started_tokenizing_]       = 0;
-    $self->[_line_buffer_object_]       = $line_buffer_object;
     $self->[_debugger_object_]          = $args{debugger_object};
     $self->[_diagnostics_object_]       = $args{diagnostics_object};
     $self->[_logger_object_]            = $args{logger_object};
@@ -534,7 +530,7 @@ sub new {
 
     bless $self, $class;
 
-    $self->prepare_for_a_new_file();
+    $self->prepare_for_a_new_file($source_object);
     $self->find_starting_indentation_level();
 
     # This is not a full class yet, so die if an attempt is made to
@@ -560,6 +556,77 @@ sub is_keyword {
     my ($str) = @_;
     return $is_keyword{$str};
 }
+
+#----------------------------------------------------------------
+# Line input routines, previously handled by the LineBuffer class
+#----------------------------------------------------------------
+sub make_source_array {
+
+    my ( $self, $line_source_object ) = @_;
+
+    # Convert the source into an array of lines
+    my $rinput_lines = [];
+
+    my $rsource = ref($line_source_object);
+
+    # handle a string
+    if ( !$rsource ) {
+        my @lines = split /^/, $line_source_object;
+        $rinput_lines = \@lines;
+    }
+
+    # handle an ARRAY ref
+    elsif ( $rsource eq 'ARRAY' ) {
+        $rinput_lines = $line_source_object;
+    }
+
+    # handle a SCALAR ref
+    elsif ( $rsource eq 'SCALAR' ) {
+        my @lines = split /^/, ${$line_source_object};
+        $rinput_lines = \@lines;
+    }
+
+    # handle an object - must have a get_line method
+    else {
+        while ( my $line = $line_source_object->get_line() ) {
+            push( @{$rinput_lines}, $line );
+        }
+    }
+
+    $self->[_rinput_lines_]          = $rinput_lines;
+    $self->[_input_line_index_next_] = 0;
+    return;
+} ## end sub make_source_array
+
+sub get_next_line {
+
+    my $self = shift;
+
+    # return the next line from the input stream
+
+    my $rinput_lines = $self->[_rinput_lines_];
+    my $line_index   = $self->[_input_line_index_next_];
+    my $line;
+    if ( $line_index < @{$rinput_lines} ) {
+        $line = $rinput_lines->[ $line_index++ ];
+        $self->[_input_line_index_next_] = $line_index;
+    }
+    return $line;
+} ## end sub get_next_line
+
+sub peek_ahead {
+    my ( $self, $buffer_index ) = @_;
+
+    # look $buffer_index lines ahead of the current location without disturbing
+    # the input
+    my $line;
+    my $rinput_lines = $self->[_rinput_lines_];
+    my $line_index   = $buffer_index + $self->[_input_line_index_next_];
+    if ( $line_index < @{$rinput_lines} ) {
+        $line = $rinput_lines->[$line_index];
+    }
+    return $line;
+} ## end sub peek_ahead
 
 #-----------------------------------------
 # interface to Perl::Tidy::Logger routines
@@ -907,7 +974,7 @@ sub get_line {
     # USES GLOBAL VARIABLES:
     #   $brace_depth, $square_bracket_depth, $paren_depth
 
-    my $input_line = $self->[_line_buffer_object_]->get_line();
+    my $input_line = $self->get_next_line();
     $self->[_line_of_text_] = $input_line;
 
     return unless ($input_line);
@@ -1405,7 +1472,7 @@ sub find_starting_indentation_level {
 
         # keep looking at lines until we find a hash bang or piece of code
         my $msg = EMPTY_STRING;
-        while ( $line = $self->[_line_buffer_object_]->peek_ahead( $i++ ) ) {
+        while ( $line = $self->peek_ahead( $i++ ) ) {
 
             # if first line is #! then assume starting level is zero
             if ( $i == 1 && $line =~ /^\#\!/ ) {
@@ -1502,7 +1569,10 @@ sub dump_functions {
 
 sub prepare_for_a_new_file {
 
-    my $self = shift;
+    my ( $self, $source_object ) = @_;
+
+    # copy the source object lines to an array of lines
+    $self->make_source_array($source_object);
 
     # previous tokens needed to determine what to expect next
     $last_nonblank_token      = ';';    # the only possible starting state which
@@ -7364,7 +7434,7 @@ sub peek_ahead_for_n_nonblank_pre_tokens {
     my $i = 0;
     my ( $rpre_tokens, $rmap, $rpre_types );
 
-    while ( $line = $self->[_line_buffer_object_]->peek_ahead( $i++ ) ) {
+    while ( $line = $self->peek_ahead( $i++ ) ) {
         $line =~ s/^\s*//;                 # trim leading blanks
         next if ( length($line) <= 0 );    # skip blank
         next if ( $line =~ /^#/ );         # skip comment
@@ -7383,7 +7453,7 @@ sub peek_ahead_for_nonblank_token {
     my $line;
     my $i = 0;
 
-    while ( $line = $self->[_line_buffer_object_]->peek_ahead( $i++ ) ) {
+    while ( $line = $self->peek_ahead( $i++ ) ) {
         $line =~ s/^\s*//;                 # trim leading blanks
         next if ( length($line) <= 0 );    # skip blank
         next if ( $line =~ /^#/ );         # skip comment
@@ -7687,7 +7757,7 @@ sub guess_if_here_doc {
     my $k   = 0;
     my $msg = "checking <<";
 
-    while ( $line = $self->[_line_buffer_object_]->peek_ahead( $k++ ) ) {
+    while ( $line = $self->peek_ahead( $k++ ) ) {
         chomp $line;
 
         if ( $line =~ /^$next_token$/ ) {
