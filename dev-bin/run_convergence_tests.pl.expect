@@ -7901,6 +7901,17 @@ BEGIN {
 }
 
 
+==> b1458 <==
+     join( '',
+          grep { defined }
+           @{ $me->{'mail_hdr_list'}
+           }, );
+
+     join( '',
+          grep { defined }
+           @{ $me->{'mail_hdr_list'}
+           }, );
+
 ==> b146 <==
 # State 1
 

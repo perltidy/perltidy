@@ -9566,6 +9566,22 @@ sub add_trailing_comma {
       $self->match_trailing_comma_rule( $KK, $Kfirst, $Kp,
         $trailing_comma_rule, 1 );
 
+    # b1458 fix method 1: do not add if this would excess line length.
+    # This is more general than fix method 2, below, but the logic is not
+    # as clean. So this fix is currently deactivated.
+    if ( 0 && $match && $rOpts_delete_trailing_commas && $KK > 0 ) {
+        my $line_index     = $rLL->[ $KK - 1 ]->[_LINE_INDEX_];
+        my $rlines         = $self->[_rlines_];
+        my $line_of_tokens = $rlines->[$line_index];
+        my $input_line     = $line_of_tokens->{_line_text};
+        my $len            = $self->[_length_function_]->($input_line) - 1;
+        my $level          = $rLL->[$Kfirst]->[_LEVEL_];
+        my $max_len        = $maximum_line_length_at_level[$level];
+        if ( $len >= $max_len ) {
+            $match = 0;
+        }
+    }
+
     # if so, add a comma
     if ($match) {
         my $Knew = $self->store_new_token( ',', ',', $Kp );
@@ -9624,6 +9640,31 @@ sub delete_trailing_comma {
         if ( defined($Kn) ) {
             my $type_n = $rLL->[$Kn]->[_TYPE_];
             if ( $type_n ne ';' && $type_n ne '#' ) { return }
+        }
+    }
+
+    # b1458 fix method 2: do not remove a comma after a leading brace type 'R'
+    # since it is under stress and could become unstable. This is a more
+    # specific fix but the logic is cleaner than method 1.
+    if (  !$match
+        && $rOpts_add_trailing_commas
+        && $rLL->[$Kfirst]->[_TYPE_] eq 'R' )
+    {
+
+        # previous old token should be the comma..
+        my $Kp_old = $self->K_previous_nonblank( $KK, $rLL );
+        if (   defined($Kp_old)
+            && $Kp_old > $Kfirst
+            && $rLL->[$Kp_old]->[_TYPE_] eq ',' )
+        {
+
+            # if the comma follows the first token of the line ..
+            my $Kpp_old = $self->K_previous_nonblank( $Kp_old, $rLL );
+            if ( defined($Kpp_old) && $Kpp_old eq $Kfirst ) {
+
+                # do not delete it
+                $match = 1;
+            }
         }
     }
 

@@ -11666,6 +11666,25 @@ BEGIN {
 --extended-continuation-indentation
 --extended-line-up-parentheses
 
+==> b1458.in <==
+     join( '',
+          grep { defined }
+           @{ $me->{'mail_hdr_list'} }
+     );
+
+     join( '',
+          grep { defined }
+           @{ $me->{'mail_hdr_list'}
+           }, );
+
+==> b1458.par <==
+--maximum-line-length=38
+--indent-columns=5
+--continuation-indentation=1
+--add-trailing-commas
+--want-trailing-commas='b'
+--delete-trailing-commas
+
 ==> b146.in <==
 # State 1
 
