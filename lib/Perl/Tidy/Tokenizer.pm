@@ -8,12 +8,12 @@
 # source_object --> Tokenizer -->  calling routine
 #   get_line()      get_line()     line_of_tokens
 #
-# The source object can be any object with a get_line() method which
-# supplies one line (a character string) perl call.
+# The source object can be a STRING ref, an ARRAY ref, or an object with a
+# get_line() method which supplies one line (a character string) perl call.
 # The Tokenizer returns a reference to a data structure 'line_of_tokens'
 # containing one tokenized line for each call to its get_line() method.
 #
-# WARNING: This is not a real class.  Only one tokenizer my be used.
+# NOTE: This is not a real class.  Only one tokenizer my be used.
 #
 ########################################################################
 
@@ -429,6 +429,19 @@ sub new {
     my $source_object = $args{source_object};
     my $rOpts         = $args{rOpts};
 
+    # Check call args
+    if ( !defined($source_object) ) {
+        Die(
+"Perl::Tidy::Tokenizer::new called without a 'source_object' parameter\n"
+        );
+    }
+    if ( !ref($source_object) ) {
+        Die(<<EOM);
+sub Perl::Tidy::Tokenizer::new received a 'source_object' parameter which is not a reference;
+'source_object' must be a reference to a STRING, ARRAY, or object with a 'getline' method
+EOM
+    }
+
     # Tokenizer state data is as follows:
     # _rhere_target_list_    reference to list of here-doc targets
     # _here_doc_target_      the target string for a here document
@@ -567,10 +580,13 @@ sub make_source_array {
 
     my $rsource = ref($line_source_object);
 
-    # handle a string
     if ( !$rsource ) {
-        my @lines = split /^/, $line_source_object;
-        $rinput_lines = \@lines;
+
+        # shouldn't happen: this should have been checked in sub new
+        $self->Fault(<<EOM);
+sub Perl::Tidy::Tokenizer::new received a 'source_object' parameter which is not a reference;
+'source_object' must be a reference to a STRING, ARRAY, or object with a 'getline' method
+EOM
     }
 
     # handle an ARRAY ref
@@ -2197,13 +2213,8 @@ EOM
         _decrement_count();    # avoid error check for multiple tokenizers
 
         # make a new tokenizer
-        my $rOpts         = {};
-        my $source_object = Perl::Tidy::LineSource->new(
-            input_file => \$replacement_text,
-            rOpts      => $rOpts,
-        );
         my $tokenizer = Perl::Tidy::Tokenizer->new(
-            source_object        => $source_object,
+            source_object        => \$replacement_text,
             logger_object        => $logger_object,
             starting_line_number => $input_line_number,
         );
