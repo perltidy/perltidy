@@ -74,7 +74,6 @@ use Perl::Tidy::IOScalar;
 use Perl::Tidy::IOScalarArray;
 use Perl::Tidy::IndentationItem;
 use Perl::Tidy::LineSink;
-use Perl::Tidy::LineSource;
 use Perl::Tidy::Logger;
 use Perl::Tidy::Tokenizer;
 use Perl::Tidy::VerticalAligner;
@@ -354,7 +353,7 @@ sub find_input_line_ending {
 # Here is a map of the flow of data from the input source to the output
 # line sink:
 #
-# LineSource-->Tokenizer-->Formatter-->VerticalAligner-->FileWriter-->
+#             -->Tokenizer-->Formatter-->VerticalAligner-->FileWriter-->
 #       input                         groups                 output
 #       lines   tokens      lines       of          lines    lines
 #                                      lines
@@ -362,8 +361,6 @@ sub find_input_line_ending {
 # The names correspond to the package names responsible for the unit processes.
 #
 # The overall process is controlled by the "main" package.
-#
-# LineSource is the stream of input lines
 #
 # Tokenizer analyzes a line and breaks it into tokens, peeking ahead
 # if necessary.  A token is any section of the input line which should be
@@ -2341,14 +2338,11 @@ EOM
             }
         }
 
-        my $source_object = Perl::Tidy::LineSource->new(
-            input_file => \$buf_post,
-            rOpts      => $rOpts,
-        );
+        my @buf_post_lines = split /^/, $buf_post;
 
         # Copy the filtered buffer to the final destination
         if ( !$remove_terminal_newline ) {
-            while ( my $line = $source_object->get_line() ) {
+            foreach my $line (@buf_post_lines) {
                 $sink_object_post->write_line($line);
             }
         }
@@ -2357,7 +2351,7 @@ EOM
             # Copy the filtered buffer but remove the newline char from the
             # final line
             my $line;
-            while ( my $next_line = $source_object->get_line() ) {
+            foreach my $next_line (@buf_post_lines) {
                 $sink_object_post->write_line($line) if ($line);
                 $line = $next_line;
             }
@@ -2368,7 +2362,6 @@ EOM
             }
         }
         $sink_object_post->close_output_file();
-        $source_object->close_input_file();
     }
 
     #--------------------------------------------------------
