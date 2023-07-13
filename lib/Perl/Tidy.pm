@@ -1516,17 +1516,25 @@ sub get_decoded_string_buffer {
 
     my $rOpts = $self->[_rOpts_];
 
-    my $source_object = Perl::Tidy::LineSource->new(
-        input_file => $input_file,
-        rOpts      => $rOpts,
-    );
+    my ( $fh, $input_name ) = Perl::Tidy::streamhandle( $input_file, 'r' );
 
     # return nothing if error
-    return unless ($source_object);
+    return unless ($fh);
 
-    my $buf = EMPTY_STRING;
-    while ( my $line = $source_object->get_line() ) {
+    my $buf   = EMPTY_STRING;
+    my $count = 0;
+    while ( my $line = $fh->getline() ) {
         $buf .= $line;
+        $count++;
+    }
+
+    # patch to read raw mac files under unix, dos
+    # look for a single line with embedded \r's
+    if ( $count == 1 && $buf =~ /[\015][^\015\012]/ ) {
+        my @lines = map { $_ . "\n" } split /\015/, $buf;
+        if ( @lines > 1 ) {
+            $buf = join "", @lines;
+        }
     }
 
     my $encoding_in              = EMPTY_STRING;
