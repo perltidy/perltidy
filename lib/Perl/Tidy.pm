@@ -1530,7 +1530,7 @@ sub get_decoded_string_buffer {
     if ( $count == 1 && $buf =~ /[\015][^\015\012]/ ) {
         my @lines = map { $_ . "\n" } split /\015/, $buf;
         if ( @lines > 1 ) {
-            $buf = join "", @lines;
+            $buf = join EMPTY_STRING, @lines;
         }
     }
 
