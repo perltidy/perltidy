@@ -273,41 +273,36 @@ EOM
 
 sub find_input_line_ending {
 
-    # Peek at a file and return first line ending character.
-    # Return undefined value in case of any trouble.
-    my ($input_file) = @_;
+    # Given:
+    #   $buf = raw first line of input file
+    # Return
+    #   first line ending character.
+    #   undefined value in case of any trouble.
+    my ($buf) = @_;
+
     my $ending;
+    if ($buf) {
 
-    # silently ignore input from object or stdin
-    if ( ref($input_file) || $input_file eq '-' ) {
-        return $ending;
-    }
+        if ( $buf =~ /([\012\015]+)/ ) {
+            my $test = $1;
 
-    my $fh;
-    open( $fh, '<', $input_file ) || return $ending;
+            # dos
+            if ( $test =~ /^(\015\012)+$/ ) { $ending = "\015\012" }
 
-    binmode $fh;
-    my $buf;
-    read( $fh, $buf, 1024 );
-    close $fh || return $ending;
-    if ( $buf && $buf =~ /([\012\015]+)/ ) {
-        my $test = $1;
+            # mac
+            elsif ( $test =~ /^\015+$/ ) { $ending = "\015" }
 
-        # dos
-        if ( $test =~ /^(\015\012)+$/ ) { $ending = "\015\012" }
+            # unix
+            elsif ( $test =~ /^\012+$/ ) { $ending = "\012" }
 
-        # mac
-        elsif ( $test =~ /^\015+$/ ) { $ending = "\015" }
+            # unknown
+            else { }
+        }
 
-        # unix
-        elsif ( $test =~ /^\012+$/ ) { $ending = "\012" }
-
-        # unknown
+        # no ending seen
         else { }
-    }
 
-    # no ending seen
-    else { }
+    }
 
     return $ending;
 } ## end sub find_input_line_ending
@@ -1202,15 +1197,6 @@ sub backup_method_copy {
         }
     }
 
-    # or in a SCALAR ref (less efficient, and only used for testing)
-    elsif ( ref($output_file) eq 'SCALAR' ) {
-        foreach my $line ( split /^/, ${$output_file} ) {
-            $fout->print($line)
-              or
-              Die("cannot print to '$input_file' with -b option: $OS_ERROR\n");
-        }
-    }
-
     # Error if anything else ...
     # This can only happen if the output was changed from \@tmp_buff
     else {
@@ -1498,11 +1484,13 @@ sub get_decoded_string_buffer {
 
     # Decode the input buffer if necessary or requested
 
-    # Given
+    # Given:
     #   $input_file   = the input file or stream
     #   $display_name = its name to use in error messages
 
-    # Return
+    # Set $self->[_line_separator_], and
+
+    # Return:
     #   $buf = string buffer with input, decoded from utf8 if necessary
     #   $is_encoded_data  = true if $buf is decoded from utf8
     #   $decoded_input_as = true if perltidy decoded input buf
@@ -1518,12 +1506,25 @@ sub get_decoded_string_buffer {
     # return nothing if error
     return unless ($fh);
 
-    my $buf   = EMPTY_STRING;
-    my $count = 0;
+    my $buf            = EMPTY_STRING;
+    my $line_separator = $self->[_line_separator_default_];
+    my $count          = 0;
+
     while ( my $line = $fh->getline() ) {
         $buf .= $line;
+
+        # Find and change the line separator if requested with -ple
+        if ( !$count && $rOpts->{'preserve-line-endings'} ) {
+
+            # Limit string length in case we have a strange file
+            my $line1_raw = substr( $line, 0, 1024 );
+            my $ls_input  = find_input_line_ending($line1_raw);
+            if ( defined($ls_input) ) { $line_separator = $ls_input }
+        }
         $count++;
     }
+
+    $self->[_line_separator_] = $line_separator;
 
     # patch to read raw mac files under unix, dos
     # look for a single line with embedded \r's
@@ -1532,6 +1533,9 @@ sub get_decoded_string_buffer {
         if ( @lines > 1 ) {
             $buf = join EMPTY_STRING, @lines;
         }
+    }
+
+    if ( $rOpts->{'preserve-line-endings'} ) {
     }
 
     my $encoding_in              = EMPTY_STRING;
@@ -1737,10 +1741,9 @@ sub process_all_files {
     #   process_iteration_layer - handle any iterations on formatting
     #   process_single_case     - solves one formatting problem
 
-    my $rOpts                  = $self->[_rOpts_];
-    my $dot                    = $self->[_file_extension_separator_];
-    my $diagnostics_object     = $self->[_diagnostics_object_];
-    my $line_separator_default = $self->[_line_separator_default_];
+    my $rOpts              = $self->[_rOpts_];
+    my $dot                = $self->[_file_extension_separator_];
+    my $diagnostics_object = $self->[_diagnostics_object_];
 
     my $destination_stream = $rinput_hash->{'destination'};
     my $errorfile_stream   = $rinput_hash->{'errorfile'};
@@ -1998,9 +2001,8 @@ EOM
         else {
             if ($in_place_modify) {
 
-                # Send output to a temporary array buffer. This will
-                # allow efficient copying back to the input by
-                # sub backup_and_modify_in_place, below.
+                # Send output to a temporary array buffer. This is
+                # required by sub backup_and_modify_in_place, below.
                 my @tmp_buff;
                 $output_file = \@tmp_buff;
                 $output_name = $display_name;
@@ -2047,13 +2049,6 @@ EOM
             $logger_object->complain( ${$rpending_complaint} );
         }
 
-        # Use input line endings if requested
-        my $line_separator = $line_separator_default;
-        if ( $rOpts->{'preserve-line-endings'} ) {
-            my $ls_input = find_input_line_ending($input_file);
-            if ( defined($ls_input) ) { $line_separator = $ls_input }
-        }
-
         # additional parameters needed by lower level routines
         $self->[_actual_output_extension_] = $actual_output_extension;
         $self->[_debugfile_stream_]        = $debugfile_stream;
@@ -2063,7 +2058,6 @@ EOM
         $self->[_fileroot_]                = $fileroot;
         $self->[_is_encoded_data_]         = $is_encoded_data;
         $self->[_length_function_]         = $length_function;
-        $self->[_line_separator_]          = $line_separator;
         $self->[_logger_object_]           = $logger_object;
         $self->[_output_file_]             = $output_file;
         $self->[_teefile_stream_]          = $teefile_stream;
@@ -2171,7 +2165,8 @@ sub process_filter_layer {
     my $prefilter          = $self->[_prefilter_];
     my $postfilter         = $self->[_postfilter_];
     my $decoded_input_as   = $self->[_decoded_input_as_];
-    my $line_separator     = $self->[_line_separator_];
+
+    my $change_line_separator = $self->[_line_separator_] ne "\n";
 
     my $remove_terminal_newline =
       !$rOpts->{'add-terminal-newline'} && substr( $buf, -1, 1 ) !~ /\n/;
@@ -2218,6 +2213,7 @@ sub process_filter_layer {
         # These are used below, just after iterations are made.
         $use_postfilter_buffer =
              $postfilter
+          || $change_line_separator
           || $remove_terminal_newline
           || $rOpts->{'assert-tidy'}
           || $rOpts->{'assert-untidy'}
@@ -2269,7 +2265,7 @@ EOM
             output_file => $use_postfilter_buffer
             ? \$postfilter_buffer
             : $output_file,
-            line_separator  => $line_separator,
+            line_separator  => "\n",
             is_encoded_data => $is_encoded_data,
         );
     }
@@ -2294,9 +2290,13 @@ EOM
     #--------------------------------
     if ($use_postfilter_buffer) {
 
+        # Note that here we must pass the ultimate '$line_separator' so that
+        # any non-native $line_separator will be applied in the final 'print'
+        # step below.  The native line separator is used in all intermediate
+        # iterations and filter operations so that string operations work ok.
         my $sink_object_post = Perl::Tidy::LineSink->new(
             output_file     => $output_file,
-            line_separator  => $line_separator,
+            line_separator  => $self->[_line_separator_],
             is_encoded_data => $is_encoded_data,
         );
 
@@ -2413,7 +2413,6 @@ sub process_iteration_layer {
     my $fileroot           = $self->[_fileroot_];
     my $is_encoded_data    = $self->[_is_encoded_data_];
     my $length_function    = $self->[_length_function_];
-    my $line_separator     = $self->[_line_separator_];
     my $logger_object      = $self->[_logger_object_];
     my $rOpts              = $self->[_rOpts_];
     my $tabsize            = $self->[_tabsize_];
@@ -2494,7 +2493,7 @@ sub process_iteration_layer {
         if ( $iter < $max_iterations ) {
             $sink_object = Perl::Tidy::LineSink->new(
                 output_file     => \$sink_buffer,
-                line_separator  => $line_separator,
+                line_separator  => "\n",
                 is_encoded_data => $is_encoded_data,
             );
         }
