@@ -1173,6 +1173,8 @@ EOM
 
             'use-feature' => [ 'class', ' ', 'xyzzy' ],
 
+            'line-range-tidy' => [ '1:', '1:' ],
+
             # Arbitrary limits to keep things readable
             'blank-lines-after-opening-block'  => [ 0, 4 ],
             'blank-lines-before-closing-block' => [ 0, 3 ],
@@ -1303,6 +1305,7 @@ EOM
           recombine
           code-skipping-begin
           code-skipping-end
+          line-range-tidy
         );
 
         my %skip;

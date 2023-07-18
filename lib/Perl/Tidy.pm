@@ -113,7 +113,7 @@ BEGIN {
     # then the Release version must be bumped, and it is probably past time for
     # a release anyway.
 
-    $VERSION = '20230701';
+    $VERSION = '20230701.01';
 } ## end BEGIN
 
 sub DESTROY {
@@ -451,6 +451,8 @@ BEGIN {
         _length_function_          => $i++,
         _line_separator_default_   => $i++,
         _line_separator_           => $i++,
+        _line_tidy_begin_          => $i++,
+        _line_tidy_end_            => $i++,
         _logger_object_            => $i++,
         _output_file_              => $i++,
         _postfilter_               => $i++,
@@ -845,17 +847,18 @@ EOM
     # This is a safety precaution in case a user accidentally adds -dbs to the
     # command line parameters and is expecting formatted output to stdout.
     # Another precaution, added elsewhere, is to  ignore -dbs in a .perltidyrc
-    my $numf = @Arg_files;
-    if ( $rOpts->{'dump-block-summary'} && $numf != 1 ) {
+    my $num_files = @Arg_files;
+    if ( $rOpts->{'dump-block-summary'} && $num_files != 1 ) {
         Die(<<EOM);
---dump-block-summary expects 1 filename in the arg list but saw $numf filenames
+--dump-block-summary expects 1 filename in the arg list but saw $num_files filenames
 EOM
     }
 
     #----------------------------------------
     # check parameters and their interactions
     #----------------------------------------
-    $self->check_options( $is_Windows, $Windows_type, $rpending_complaint );
+    $self->check_options( $is_Windows, $Windows_type, $rpending_complaint,
+        $num_files );
 
     if ($user_formatter) {
         $rOpts->{'format'} = 'user';
@@ -2168,6 +2171,27 @@ sub process_filter_layer {
 
     my $change_line_separator = $self->[_line_separator_] ne "\n";
 
+    # reduce '$buf' to a limited formatting line range if requested
+    my @buf_lines_pre;
+    my @buf_lines_post;
+    my $line_tidy_begin = $self->[_line_tidy_begin_];
+    if ( $line_tidy_begin && $rOpts->{'format'} eq 'tidy' ) {
+
+        my @buf_lines = split /^/, $buf;
+
+        my $num           = @buf_lines;
+        my $line_tidy_end = $self->[_line_tidy_end_];
+        if ( !defined($line_tidy_end) || $line_tidy_end > $num ) {
+            $line_tidy_end = $num;
+        }
+
+        $buf = join EMPTY_STRING,
+          @buf_lines[ $line_tidy_begin - 1 .. $line_tidy_end - 1 ];
+
+        @buf_lines_pre  = @buf_lines[ 0 .. $line_tidy_begin - 2 ];
+        @buf_lines_post = @buf_lines[ $line_tidy_end .. $num - 1 ];
+    }
+
     my $remove_terminal_newline =
       !$rOpts->{'add-terminal-newline'} && substr( $buf, -1, 1 ) !~ /\n/;
 
@@ -2213,6 +2237,8 @@ sub process_filter_layer {
         # These are used below, just after iterations are made.
         $use_postfilter_buffer =
              $postfilter
+          || @buf_lines_pre
+          || @buf_lines_post
           || $change_line_separator
           || $remove_terminal_newline
           || $rOpts->{'assert-tidy'}
@@ -2338,7 +2364,8 @@ EOM
             }
         }
 
-        my @buf_post_lines = split /^/, $buf_post;
+        my @buf_post_lines =
+          ( @buf_lines_pre, ( split /^/, $buf_post ), @buf_lines_post );
 
         # Copy the filtered buffer to the final destination
         if ( !$remove_terminal_newline ) {
@@ -3135,6 +3162,7 @@ sub generate_options {
     $add_option->( 'use-unicode-gcstring',       'gcs',   '!' );
     $add_option->( 'warning-output',             'w',     '!' );
     $add_option->( 'add-terminal-newline',       'atnl',  '!' );
+    $add_option->( 'line-range-tidy',            'lrt',   '=s' );
 
     # options which are both toggle switches and values moved here
     # to hide from tidyview (which does not show category 0 flags):
@@ -4262,7 +4290,10 @@ sub cleanup_word_list {
 
 sub check_options {
 
-    my ( $self, $is_Windows, $Windows_type, $rpending_complaint ) = @_;
+    my ( $self, $is_Windows, $Windows_type, $rpending_complaint, $num_files ) =
+      @_;
+
+    # $num_files = number of files to be processed, for error checks
 
     my $rOpts = $self->[_rOpts_];
 
@@ -4479,6 +4510,41 @@ EOM
 
     # Define the default line ending, before any -ple option is applied
     $self->[_line_separator_default_] = get_line_separator_default($rOpts);
+
+    $self->[_line_tidy_begin_] = undef;
+    $self->[_line_tidy_end_]   = undef;
+    my $line_range_tidy = $rOpts->{'line-range-tidy'};
+    if ($line_range_tidy) {
+
+        if ( $num_files > 1 ) {
+            Die(<<EOM);
+--line-range-tidy expects no more than 1 filename in the arg list but saw $num_files filenames
+EOM
+        }
+
+        $line_range_tidy =~ s/\s+//g;
+        if ( $line_range_tidy =~ /^(\d+):(\d+)?$/ ) {
+            my $n1 = $1;
+            my $n2 = $2;
+            if ( $n1 < 1 ) {
+                Die(<<EOM);
+--line-range-tidy=n1:n2 expects starting line number n1>=1 but n1=$n1
+EOM
+            }
+            if ( defined($n2) && $n2 < $n1 ) {
+                Die(<<EOM);
+--line-range-tidy=n1:n2 expects ending line number n2>=n1 but n1=$n1 and n2=$n2
+EOM
+            }
+            $self->[_line_tidy_begin_] = $n1;
+            $self->[_line_tidy_end_]   = $n2;
+        }
+        else {
+            Die(
+"unrecognized 'line-range-tidy'; expecting format '-lrt=n1:n2'\n"
+            );
+        }
+    }
 
     return;
 } ## end sub check_options

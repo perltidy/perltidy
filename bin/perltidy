@@ -2294,6 +2294,32 @@ The default is equivalent to -cse='#>>V'.
 
 =back
 
+=head2 Formatting a Limited Range of Lines
+
+A command B<--line-range-tidy=n1:n2> is available to pass just a selected range
+of lines to perltidy.  This is command is mainly of interest to interactive
+code editors.  When it is used, just the selected range of lines are passed
+through the perltidy tokenizer and formatter, so they need to contain a
+complete statement or balanced container.  Otherwise, a syntax error will occur
+and the code will not be tidied.  There are a couple of limitations
+on the use of this command: (1) it may not be applied to multiple files, and
+(2) it only applies to code tidying and not, for example, html formatting.
+
+=over 4
+
+=item B<-lrt=n1:n2>,  B<--line-range-tidy=n1:n2>
+
+The range of lines is specified by integers B<n1> and B<n2>, where B<n1> is the first line number to be formatted (start counting with 1) and B<n2> is the last line number to be formatted.  If B<n2> is not given, or exceeds the actual number of lines, then formatting continues to the end of the file.
+
+Examples:
+
+  -line-range-tidy=43:109      # tidy lines 43 through 109
+  -line-range-tidy=' 43 : 109' # tidy lines 43 through 109 (spaces ok in quotes)
+  -line-range-tidy=1:          # tidy all lines
+  -line-range-tidy=0:90        # ERROR (n1 must be >= 1)
+
+=back
+
 =head2 Line Break Control
 
 The parameters in this and the next sections control breaks after
@@ -5748,7 +5774,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20230701
+This man page documents perltidy version 20230701.01
 
 =head1 BUG REPORTS
 

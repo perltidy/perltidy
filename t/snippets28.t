@@ -12,6 +12,8 @@
 #9 xbt.xbt1
 #10 xbt.xbt2
 #11 xbt.xbt3
+#12 lrt.def
+#13 lrt.lrt
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -31,6 +33,7 @@ BEGIN {
     $rparams = {
         'def'    => "",
         'git116' => "-viu",
+        'lrt'    => "--line-range-tidy=2:3",
         'olbxl2' => <<'----------',
 -olbxl='*'
 ----------
@@ -51,6 +54,13 @@ print "Tried to add: @ResolveRPM\n" if ( @ResolveRPM and !$Quiet );
 print "Would need: @DepList\n" if ( @DepList and !$Quiet );
 print "RPM Output:\n" unless $Quiet;
 print join( "\n", @RPMOutput ) . "\n" unless $Quiet;
+----------
+
+        'lrt' => <<'----------',
+=pod
+sub hello{ print
+"Hello World!"}
+=cut
 ----------
 
         'olbxl' => <<'----------',
@@ -301,6 +311,30 @@ my @matches = @{$nodes_ref} > 1 ? @{$nodes_ref}[ 1 .. $#{$nodes_ref} ] : ();
 *{$name} = $sub;
 grep {defined &{${"${class}::"}{$_}}} &{"${class}::Clear"}();
 #11...........
+        },
+
+        'lrt.def' => {
+            source => "lrt",
+            params => "def",
+            expect => <<'#12...........',
+
+=pod
+sub hello{ print
+"Hello World!"}
+=cut
+#12...........
+        },
+
+        'lrt.lrt' => {
+            source => "lrt",
+            params => "lrt",
+            expect => <<'#13...........',
+=pod
+sub hello {
+    print "Hello World!";
+}
+=cut
+#13...........
         },
     };
 

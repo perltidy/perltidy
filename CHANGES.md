@@ -1,5 +1,11 @@
 # Perltidy Change Log
 
+## 2023 07 01.01
+
+    - Issue git #122. Added parameter -lrt=n1:n2, or --line-range-tidy=n1:n2
+      to limit tidy operations to a limited line range.  Line numbers start
+      with 1. The man pages have details.
+
 ## 2023 07 01
 
     - Issue git #121. Added parameters -xbt, or --extended-block-tightness,
