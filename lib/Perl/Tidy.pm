@@ -2179,17 +2179,28 @@ sub process_filter_layer {
 
         my @buf_lines = split /^/, $buf;
 
-        my $num           = @buf_lines;
-        my $line_tidy_end = $self->[_line_tidy_end_];
-        if ( !defined($line_tidy_end) || $line_tidy_end > $num ) {
-            $line_tidy_end = $num;
+        my $num = @buf_lines;
+        if ( $line_tidy_begin > $num ) {
+            Warn(<<EOM);
+#--line-range-tidy=n1:n2 has n1=$line_tidy_begin which exceeds max line number of $num
+EOM
+            # Try to continue with an empty string to format, so that the
+            # caller gets everything back. If this causes trouble, we could
+            # call Die instead of Warn.
+            $buf           = EMPTY_STRING;
+            @buf_lines_pre = @buf_lines;
         }
+        else {
+            my $line_tidy_end = $self->[_line_tidy_end_];
+            if ( !defined($line_tidy_end) || $line_tidy_end > $num ) {
+                $line_tidy_end = $num;
+            }
+            $buf = join EMPTY_STRING,
+              @buf_lines[ $line_tidy_begin - 1 .. $line_tidy_end - 1 ];
 
-        $buf = join EMPTY_STRING,
-          @buf_lines[ $line_tidy_begin - 1 .. $line_tidy_end - 1 ];
-
-        @buf_lines_pre  = @buf_lines[ 0 .. $line_tidy_begin - 2 ];
-        @buf_lines_post = @buf_lines[ $line_tidy_end .. $num - 1 ];
+            @buf_lines_pre  = @buf_lines[ 0 .. $line_tidy_begin - 2 ];
+            @buf_lines_post = @buf_lines[ $line_tidy_end .. $num - 1 ];
+        }
     }
 
     my $remove_terminal_newline =

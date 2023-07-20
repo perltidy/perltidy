@@ -2297,7 +2297,7 @@ The default is equivalent to -cse='#>>V'.
 =head2 Formatting a Limited Range of Lines
 
 A command B<--line-range-tidy=n1:n2> is available to pass just a selected range
-of lines to perltidy.  This is command is mainly of interest to interactive
+of lines to perltidy.  This command is mainly of interest to interactive
 code editors.  When it is used, just the selected range of lines are passed
 through the perltidy tokenizer and formatter, so they need to contain a
 complete statement or balanced container.  Otherwise, a syntax error will occur
