@@ -2184,6 +2184,7 @@ sub process_filter_layer {
             Warn(<<EOM);
 #--line-range-tidy=n1:n2 has n1=$line_tidy_begin which exceeds max line number of $num
 EOM
+
             # Try to continue with an empty string to format, so that the
             # caller gets everything back. If this causes trouble, we could
             # call Die instead of Warn.
@@ -2327,16 +2328,6 @@ EOM
     #--------------------------------
     if ($use_postfilter_buffer) {
 
-        # Note that here we must pass the ultimate '$line_separator' so that
-        # any non-native $line_separator will be applied in the final 'print'
-        # step below.  The native line separator is used in all intermediate
-        # iterations and filter operations so that string operations work ok.
-        my $sink_object_post = Perl::Tidy::LineSink->new(
-            output_file     => $output_file,
-            line_separator  => $self->[_line_separator_],
-            is_encoded_data => $is_encoded_data,
-        );
-
         #----------------------------------------------------------------------
         # Apply any postfilter. The postfilter is a code reference that will be
         # applied to the source after tidying.
@@ -2375,31 +2366,44 @@ EOM
             }
         }
 
-        my @buf_post_lines =
+        # Handle --line-range-tidy line recombination
+        my @output_lines =
           ( @buf_lines_pre, ( split /^/, $buf_post ), @buf_lines_post );
 
-        # Copy the filtered buffer to the final destination
-        if ( !$remove_terminal_newline ) {
-            foreach my $line (@buf_post_lines) {
-                $sink_object_post->write_line($line);
-            }
-        }
-        else {
-
-            # Copy the filtered buffer but remove the newline char from the
-            # final line
-            my $line;
-            foreach my $next_line (@buf_post_lines) {
-                $sink_object_post->write_line($line) if ($line);
-                $line = $next_line;
-            }
-            if ($line) {
-                $sink_object_post->set_line_separator(undef);
+        # Handle --preserve-line-endings or -output-line-endings flags.
+        # The native line separator has been used in all intermediate
+        # iterations and filter operations until here so that string
+        # operations work ok.
+        if ($change_line_separator) {
+            my $line_separator = $self->[_line_separator_];
+            foreach my $line (@output_lines) {
                 chomp $line;
-                $sink_object_post->write_line($line);
+                $line .= $line_separator;
             }
         }
-        $sink_object_post->close_output_file();
+
+        # Handle a '--noadd-terminal-newline' flag
+        if ($remove_terminal_newline) {
+            chomp $output_lines[-1];
+        }
+
+        #-----------------------------------------
+        # Copy the filtered buffer to $output_file
+        #-----------------------------------------
+
+        # Most named files are written here. For output to non-files, and
+        # files in -b mode, this may not be the ultimate destination.
+        my ( $fh, $fh_name ) =
+          Perl::Tidy::streamhandle( $output_file, 'w', $is_encoded_data );
+        unless ($fh) { Die("Cannot write to output stream\n"); }
+
+        foreach my $line (@output_lines) {
+            $fh->print($line);
+        }
+
+        if ( $output_file ne '-' && !ref $output_file ) {
+            $fh->close();
+        }
     }
 
     #--------------------------------------------------------
