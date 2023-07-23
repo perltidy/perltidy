@@ -49,7 +49,7 @@ BEGIN {
     # Do not combine with other BEGIN blocks (c101).
     my $i = 0;
     use constant {
-        _line_sink_object_            => $i++,
+        _write_line_                  => $i++,
         _logger_object_               => $i++,
         _rOpts_                       => $i++,
         _output_line_number_          => $i++,
@@ -127,7 +127,6 @@ sub new {
     my ( $class, $line_sink_object, $rOpts, $logger_object ) = @_;
 
     my $self = [];
-    $self->[_line_sink_object_]            = $line_sink_object;
     $self->[_logger_object_]               = $logger_object;
     $self->[_rOpts_]                       = $rOpts;
     $self->[_output_line_number_]          = 1;
@@ -148,6 +147,30 @@ sub new {
     $self->[_K_sequence_error_msg_]        = EMPTY_STRING;
     $self->[_K_last_arrival_]              = -1;
     $self->[_save_logfile_]                = defined($logger_object);
+
+    # parameter '$line_sink_object' tells where to store the line, as follows:
+    my $ref = ref($line_sink_object);
+    if ( !$ref ) {
+        Fault("FileWriter expects line_sink_object to be a ref\n");
+    }
+    elsif ( $ref eq 'SCALAR' ) {
+        $self->[_write_line_] = sub { ${$line_sink_object} .= $_[0] };
+    }
+    elsif ( $ref eq 'ARRAY' ) {
+        $self->[_write_line_] = sub { push @{$line_sink_object}, $_[0] };
+    }
+    elsif ( $ref->can('write_line') ) {
+        $self->[_write_line_] = sub { $line_sink_object->write_line( $_[0] ) };
+    }
+    else {
+        my $str = $ref;
+        if ( length($str) > 63 ) { $str = substr( $str, 0, 60 ) . '...' }
+        Fault(<<EOM);
+FileWriter expects 'line_sink_object' to be ref to SCALAR, ARRAY,
+or obj with write_line method, but it is ref to:
+$str
+EOM
+    }
 
     # save input stream name for local error messages
     $input_stream_name = EMPTY_STRING;
@@ -261,7 +284,7 @@ sub write_blank_code_line {
         return;
     }
 
-    $self->[_line_sink_object_]->write_line("\n");
+    $self->[_write_line_]->("\n");
     $self->[_output_line_number_]++;
 
     $self->[_consecutive_blank_lines_]++;
@@ -285,7 +308,7 @@ sub write_code_line {
     $self->[_consecutive_new_blank_lines_] = 0;
     $self->[_consecutive_nonblank_lines_]++;
 
-    $self->[_line_sink_object_]->write_line($str);
+    $self->[_write_line_]->($str);
     if ( chomp $str )              { $self->[_output_line_number_]++; }
     if ( $self->[_save_logfile_] ) { $self->check_line_lengths($str) }
 
@@ -349,7 +372,7 @@ sub write_line {
     # Write a line directly to the output, without any counting of blank or
     # non-blank lines.
 
-    $self->[_line_sink_object_]->write_line($str);
+    $self->[_write_line_]->($str);
     if ( chomp $str )              { $self->[_output_line_number_]++; }
     if ( $self->[_save_logfile_] ) { $self->check_line_lengths($str) }
 
