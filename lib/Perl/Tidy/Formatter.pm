@@ -14722,7 +14722,11 @@ sub process_all_lines {
                 # out of __END__ and __DATA__ sections, because
                 # the user may be using this section for any purpose whatsoever
                 if ( $rOpts->{'delete-pod'} ) { $skip_line = 1; }
-                if ( $rOpts->{'trim-pod'} )   { $input_line =~ s/\s+$// }
+                if ( $rOpts->{'trim-pod'} ) {
+                    chomp $input_line;
+                    $input_line =~ s/\s+$//;
+                    $input_line .= "\n";
+                }
                 if (   !$skip_line
                     && !$in_format_skipping_section
                     && $line_type eq 'POD_START'
