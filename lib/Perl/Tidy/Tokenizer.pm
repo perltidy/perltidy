@@ -5255,24 +5255,57 @@ EOM
 
                 # fix c090, only rotate vars if a new token will be stored
                 if ( $i_tok >= 0 ) {
-                    $last_last_nonblank_token      = $last_nonblank_token;
-                    $last_last_nonblank_type       = $last_nonblank_type;
-                    $last_last_nonblank_block_type = $last_nonblank_block_type;
-                    $last_last_nonblank_container_type =
-                      $last_nonblank_container_type;
-                    $last_last_nonblank_type_sequence =
-                      $last_nonblank_type_sequence;
+
+                    # NOTE: This way of writing multiple assignments is harder
+                    # to read but is typically 20% faster than one-by-one. This
+                    # is a time-critical routine so it is worthwhile here.
+                    (
+
+                        $last_last_nonblank_token,
+                        $last_last_nonblank_type,
+                        $last_last_nonblank_block_type,
+                        $last_last_nonblank_container_type,
+                        $last_last_nonblank_type_sequence,
+                      )
+                      = (
+
+                        $last_nonblank_token,
+                        $last_nonblank_type,
+                        $last_nonblank_block_type,
+                        $last_nonblank_container_type,
+                        $last_nonblank_type_sequence,
+                      );
 
                     # Fix part #3 for git82: propagate type 'Z' though L-R pair
                     unless ( $type eq 'R' && $last_nonblank_type eq 'Z' ) {
-                        $last_nonblank_token = $tok;
-                        $last_nonblank_type  = $type;
+                        (
+
+                            $last_nonblank_token,
+                            $last_nonblank_type,
+                          )
+                          = (
+
+                            $tok,
+                            $type,
+                          );
                     }
-                    $last_nonblank_prototype      = $prototype;
-                    $last_nonblank_block_type     = $block_type;
-                    $last_nonblank_container_type = $container_type;
-                    $last_nonblank_type_sequence  = $type_sequence;
-                    $last_nonblank_i              = $i_tok;
+
+                    (
+
+                        $last_nonblank_prototype,
+                        $last_nonblank_block_type,
+                        $last_nonblank_container_type,
+                        $last_nonblank_type_sequence,
+                        $last_nonblank_i,
+                      )
+                      = (
+
+                        $prototype,
+                        $block_type,
+                        $container_type,
+                        $type_sequence,
+                        $i_tok,
+                      );
                 }
 
                 # Patch for c030: Fix things in case a '->' got separated from
@@ -5308,11 +5341,22 @@ EOM
             $i_tok = $i;
 
             # re-initialize various flags for the next output token
-            $block_type     &&= EMPTY_STRING;
-            $container_type &&= EMPTY_STRING;
-            $type_sequence  &&= EMPTY_STRING;
-            $indent_flag    &&= 0;
-            $prototype      &&= EMPTY_STRING;
+            (
+
+                $block_type,
+                $container_type,
+                $type_sequence,
+                $indent_flag,
+                $prototype,
+              )
+              = (
+
+                EMPTY_STRING,
+                EMPTY_STRING,
+                EMPTY_STRING,
+                0,
+                EMPTY_STRING,
+              );
 
             # this pre-token will start an output token
             push( @{$routput_token_list}, $i_tok );
@@ -5530,17 +5574,42 @@ EOM
 
         # Remember last nonblank values
         if ( $type ne 'b' && $type ne '#' ) {
-            $last_last_nonblank_token          = $last_nonblank_token;
-            $last_last_nonblank_type           = $last_nonblank_type;
-            $last_last_nonblank_block_type     = $last_nonblank_block_type;
-            $last_last_nonblank_container_type = $last_nonblank_container_type;
-            $last_last_nonblank_type_sequence  = $last_nonblank_type_sequence;
-            $last_nonblank_token               = $tok;
-            $last_nonblank_type                = $type;
-            $last_nonblank_block_type          = $block_type;
-            $last_nonblank_container_type      = $container_type;
-            $last_nonblank_type_sequence       = $type_sequence;
-            $last_nonblank_prototype           = $prototype;
+
+            (
+
+                $last_last_nonblank_token,
+                $last_last_nonblank_type,
+                $last_last_nonblank_block_type,
+                $last_last_nonblank_container_type,
+                $last_last_nonblank_type_sequence,
+              )
+              = (
+
+                $last_nonblank_token,
+                $last_nonblank_type,
+                $last_nonblank_block_type,
+                $last_nonblank_container_type,
+                $last_nonblank_type_sequence,
+              );
+
+            (
+
+                $last_nonblank_token,
+                $last_nonblank_type,
+                $last_nonblank_block_type,
+                $last_nonblank_container_type,
+                $last_nonblank_type_sequence,
+                $last_nonblank_prototype,
+              )
+              = (
+
+                $tok,
+                $type,
+                $block_type,
+                $container_type,
+                $type_sequence,
+                $prototype,
+              );
         }
 
         # reset indentation level if necessary at a sub or package
