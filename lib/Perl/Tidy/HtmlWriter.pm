@@ -791,7 +791,7 @@ sub pod_to_html {
         my $date = localtime;
         $timestamp = "on $date";
     }
-    while ( my $line = $fh_tmp->getline() ) {
+    while ( defined( my $line = $fh_tmp->getline() ) ) {
 
         if ( $line =~ /^\s*<html>\s*$/i ) {
             ##my $date = localtime;

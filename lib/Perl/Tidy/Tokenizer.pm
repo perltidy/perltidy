@@ -991,7 +991,7 @@ sub get_line {
     my $input_line = $self->get_next_line();
     $self->[_line_of_text_] = $input_line;
 
-    return unless ($input_line);
+    return unless ( defined($input_line) );
 
     my $input_line_number = ++$self->[_last_line_number_];
 

@@ -1513,7 +1513,7 @@ sub get_decoded_string_buffer {
     my $line_separator = $self->[_line_separator_default_];
     my $count          = 0;
 
-    while ( my $line = $fh->getline() ) {
+    while ( defined( my $line = $fh->getline() ) ) {
         $buf .= $line;
 
         # Find and change the line separator if requested with -ple
@@ -5023,7 +5023,7 @@ sub dump_config_file {
     print STDOUT "${$rconfig_file_chatter}";
     if ($fh) {
         print STDOUT "# Dump of file: '$config_file'\n";
-        while ( my $line = $fh->getline() ) { print STDOUT $line }
+        while ( defined( my $line = $fh->getline() ) ) { print STDOUT $line }
         my $ok = eval { $fh->close(); 1 };
         if ( !$ok && DEVEL_MODE ) {
             Fault("Could not close file handle(): $EVAL_ERROR\n");
@@ -5046,7 +5046,7 @@ sub read_config_file {
     my $name = undef;
     my $line_no;
     my $opening_brace_line;
-    while ( my $line = $fh->getline() ) {
+    while ( defined( my $line = $fh->getline() ) ) {
         $line_no++;
         chomp $line;
         ( $line, $death_message ) =

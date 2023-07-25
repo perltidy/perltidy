@@ -92,7 +92,7 @@ sub get_line {
 
         # patch to read raw mac files under unix, dos
         # see if the first line has embedded \r's
-        if ( $line && !$self->{_started} ) {
+        if ( defined($line) && !$self->{_started} ) {
             if ( $line =~ /[\015][^\015\012]/ ) {
 
                 # found one -- break the line up and store in a buffer
