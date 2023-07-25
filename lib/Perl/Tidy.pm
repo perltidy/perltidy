@@ -73,7 +73,6 @@ use Perl::Tidy::HtmlWriter;
 use Perl::Tidy::IOScalar;
 use Perl::Tidy::IOScalarArray;
 use Perl::Tidy::IndentationItem;
-use Perl::Tidy::LineSink;
 use Perl::Tidy::Logger;
 use Perl::Tidy::Tokenizer;
 use Perl::Tidy::VerticalAligner;
@@ -2586,10 +2585,6 @@ sub process_iteration_layer {
         # temporary output buffer
         if ( $iter < $max_iterations ) {
 
-            $sink_object->close_output_file()
-              if ( $sink_object
-                && ref($sink_object) ne 'SCALAR'
-                && ref($sink_object) ne 'ARRAY' );
             $source_buffer = $sink_buffer;
 
             # stop iterations if errors or converged
@@ -2673,34 +2668,19 @@ EOM
                 # we are stopping the iterations early;
                 # copy the output stream to its final destination
                 $sink_object = $sink_object_final;
-                my @lines;
-                if ( defined($source_buffer) ) {
-                    @lines = split /^/, $source_buffer;
-                }
                 if ( ref($sink_object) eq 'SCALAR' ) {
-                    foreach my $line (@lines) {
-                        ${$sink_object} .= $line;
-                    }
-                }
-                elsif ( ref($sink_object) eq 'ARRAY' ) {
-                    foreach my $line (@lines) {
-                        push @{$sink_object}, $line;
-                    }
+                    ${$sink_object} = $source_buffer;
                 }
                 else {
-                    foreach my $line (@lines) {
-                        $sink_object->write_line($line);
-                    }
+
+                    # caller must pass a SCALAR ref to receive output
+                    Fault("sink object is not a SCALAR ref\n");
                 }
                 last;
             }
         } ## end if ( $iter < $max_iterations)
     } ## end loop over iterations for one source file
 
-    $sink_object->close_output_file()
-      if ( $sink_object
-        && ref($sink_object) ne 'SCALAR'
-        && ref($sink_object) ne 'ARRAY' );
     $debugger_object->close_debug_file() if $debugger_object;
     $fh_tee->close()                     if $fh_tee;
 
