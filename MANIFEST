@@ -45,9 +45,6 @@ lib/Perl/Tidy/HtmlWriter.pm
 lib/Perl/Tidy/IndentationItem.pm
 lib/Perl/Tidy/IOScalar.pm
 lib/Perl/Tidy/IOScalarArray.pm
-lib/Perl/Tidy/LineBuffer.pm
-lib/Perl/Tidy/LineSink.pm
-lib/Perl/Tidy/LineSource.pm
 lib/Perl/Tidy/Logger.pm
 lib/Perl/Tidy/Tokenizer.pm
 lib/Perl/Tidy/VerticalAligner.pm

@@ -405,9 +405,6 @@ sub update_version_number {
       Tidy/IOScalar.pm
       Tidy/IOScalarArray.pm
       Tidy/IndentationItem.pm
-      Tidy/LineBuffer.pm
-      Tidy/LineSink.pm
-      Tidy/LineSource.pm
       Tidy/Logger.pm
       Tidy/Tokenizer.pm
       Tidy/VerticalAligner.pm
