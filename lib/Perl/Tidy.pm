@@ -1130,17 +1130,18 @@ sub check_in_place_modify {
 
 sub backup_method_copy {
 
-    my ( $self, $input_file, $output_file, $backup_extension, $delete_backup )
+    my ( $self, $input_file, $routput_string, $backup_extension,
+        $delete_backup )
       = @_;
 
     # Handle the -b (--backup-and-modify-in-place) option with -bm='copy':
     # - First copy $input file to $backup_name.
-    # - Then open input file and rewrite with contents of $output_file
+    # - Then open input file and rewrite with contents of $routput_string
     # - Then delete the backup if requested
 
     # NOTES:
     # - Die immediately on any error.
-    # - $output_file is actually an ARRAY ref
+    # - $routput_string is a SCALAR ref
 
     my $backup_file = $input_file . $backup_extension;
 
@@ -1189,25 +1190,15 @@ sub backup_method_copy {
     }
 
     # Now copy the formatted output to it..
-
-    # if formatted output is in an ARRAY ref
-    if ( ref($output_file) eq 'ARRAY' ) {
-        foreach my $line ( @{$output_file} ) {
-            $fout->print($line)
-              or
-              Die("cannot print to '$input_file' with -b option: $OS_ERROR\n");
-        }
-    }
-
-    # or SCALAR ref..
-    elsif ( ref($output_file) eq 'SCALAR' ) {
-        $fout->print( ${$output_file} )
+    # output must be SCALAR ref..
+    if ( ref($routput_string) eq 'SCALAR' ) {
+        $fout->print( ${$routput_string} )
           or Die("cannot print to '$input_file' with -b option: $OS_ERROR\n");
     }
 
     # Error if anything else ...
     else {
-        my $ref = ref($output_file);
+        my $ref = ref($routput_string);
         Die(<<EOM);
 Programming error: unable to print to '$input_file' with -b option:
 unexpected ref type '$ref'; expecting 'ARRAY' or 'SCALAR'
@@ -1281,17 +1272,18 @@ EOM
 
 sub backup_method_move {
 
-    my ( $self, $input_file, $output_file, $backup_extension, $delete_backup )
+    my ( $self, $input_file, $routput_string, $backup_extension,
+        $delete_backup )
       = @_;
 
     # Handle the -b (--backup-and-modify-in-place) option with -bm='move':
     # - First move $input file to $backup_name.
-    # - Then copy $output_file to $input_file.
+    # - Then copy $routput_string to $input_file.
     # - Then delete the backup if requested
 
     # NOTES:
     # - Die immediately on any error.
-    # - $output_file is actually an ARRAY ref
+    # - $routput_string is a SCALAR ref
     # - $input_file permissions will be set by sub set_output_file_permissions
 
     my $backup_name = $input_file . $backup_extension;
@@ -1337,25 +1329,15 @@ sub backup_method_move {
     }
 
     # Now copy the formatted output to it..
-
-    # if formatted output is in an ARRAY ref ...
-    if ( ref($output_file) eq 'ARRAY' ) {
-        foreach my $line ( @{$output_file} ) {
-            $fout->print($line)
-              or
-              Die("cannot print to '$input_file' with -b option: $OS_ERROR\n");
-        }
-    }
-
-    # or SCALAR ref..
-    elsif ( ref($output_file) eq 'SCALAR' ) {
-        $fout->print( ${$output_file} )
+    # output must be SCALAR ref..
+    if ( ref($routput_string) eq 'SCALAR' ) {
+        $fout->print( ${$routput_string} )
           or Die("cannot print to '$input_file' with -b option: $OS_ERROR\n");
     }
 
     # Error if anything else ...
     else {
-        my $ref = ref($output_file);
+        my $ref = ref($routput_string);
         Die(<<EOM);
 Programming error: unable to print to '$input_file' with -b option:
 unexpected ref type '$ref'; expecting 'ARRAY' or 'SCALAR'
@@ -1798,10 +1780,10 @@ sub process_all_files {
                 if ( $input_file =~ /([\?\*\[\{])/ ) {
 
                     # Windows shell may not remove quotes, so do it
-                    my $input_file = $input_file;
-                    if ( $input_file =~ /^\'(.+)\'$/ ) { $input_file = $1 }
-                    if ( $input_file =~ /^\"(.+)\"$/ ) { $input_file = $1 }
-                    my $pattern = fileglob_to_re($input_file);
+                    my $ifile = $input_file;
+                    if ( $ifile =~ /^\'(.+)\'$/ ) { $ifile = $1 }
+                    if ( $ifile =~ /^\"(.+)\"$/ ) { $ifile = $1 }
+                    my $pattern = fileglob_to_re($ifile);
                     my $dh;
                     if ( opendir( $dh, './' ) ) {
                         my @files =
@@ -2003,11 +1985,6 @@ EOM
         }
         else {
             if ($in_place_modify) {
-
-                # Capture output in a temporary buffer. This is
-                # used by sub backup_and_modify_in_place, below.
-                my $tmp_buff = EMPTY_STRING;
-                $output_file = \$tmp_buff;
                 $output_name = $display_name;
             }
             else {
@@ -2067,56 +2044,26 @@ EOM
         $self->[_input_copied_verbatim_]   = 0;
         $self->[_input_output_difference_] = 1;    ## updated later if -b used
 
-        #----------------------------------------------------------
-        # Do all formatting of this buffer.
-        # Results will go to the selected output file or streams(s)
-        #----------------------------------------------------------
-        $self->process_filter_layer($buf);
+        #--------------------
+        # process this buffer
+        #--------------------
+        my $routput_string = $self->process_filter_layer($buf);
 
-        #--------------------------------------------------
-        # Handle the -b option (backup and modify in-place)
-        #--------------------------------------------------
-        if ($in_place_modify) {
+        #------------------------------------------------
+        # send the tidied output to its final destination
+        #------------------------------------------------
+        if ( $rOpts->{'format'} eq 'tidy' && defined($routput_string) ) {
 
-            # For -b option, leave the file unchanged if a severe error caused
-            # formatting to be skipped. Otherwise we will overwrite any backup.
-            if ( !$self->[_input_copied_verbatim_] ) {
+            $self->write_tidy_output(
 
-                my $backup_method = $rOpts->{'backup-method'};
+                $routput_string,
 
-                # Option 1, -bm='copy': uses newer version in which original is
-                # copied to the backup and rewritten; see git #103.
-                if ( defined($backup_method) && $backup_method eq 'copy' ) {
-                    $self->backup_method_copy(
-                        $input_file,       $output_file,
-                        $backup_extension, $delete_backup
-                    );
-                }
-
-                # Option 2, -bm='move': uses older version, where original is
-                # moved to the backup and formatted output goes to a new file.
-                else {
-                    $self->backup_method_move(
-                        $input_file,       $output_file,
-                        $backup_extension, $delete_backup
-                    );
-                }
-            }
-            $output_file = $input_file;
-        }
-
-        #-------------------------------------------------------------------
-        # Otherwise set output file ownership and permissions if appropriate
-        #-------------------------------------------------------------------
-        elsif ( $output_file && -f $output_file && !-l $output_file ) {
-            if (@input_file_stat) {
-                if ( $rOpts->{'format'} eq 'tidy' ) {
-                    $self->set_output_file_permissions( $output_file,
-                        \@input_file_stat, $in_place_modify );
-                }
-
-                # else use default permissions for html and any other format
-            }
+                \@input_file_stat,
+                $in_place_modify,
+                $input_file,
+                $backup_extension,
+                $delete_backup,
+            );
         }
 
         $logger_object->finish()
@@ -2126,6 +2073,100 @@ EOM
     return;
 } ## end sub process_all_files
 
+sub write_tidy_output {
+
+    # Write tidied output in '$routput_string' to its final destination
+
+    my (
+        $self,
+
+        $routput_string,
+
+        $rinput_file_stat,
+        $in_place_modify,
+        $input_file,
+        $backup_extension,
+        $delete_backup,
+    ) = @_;
+
+    my $rOpts           = $self->[_rOpts_];
+    my $is_encoded_data = $self->[_is_encoded_data_];
+    my $output_file     = $self->[_output_file_];
+
+    # There are three main output paths:
+
+    #--------------------------------------------------------------------------
+    # PATH 1: send output to a destination stream ref received from an external
+    # perl program. The encoding rules for these are a bit tricky.  Note that
+    # in this case we have previously set $output_file = $destination_stream
+    #--------------------------------------------------------------------------
+    if ( ref($output_file) ) {
+        $self->copy_buffer_to_external_ref( $routput_string, $output_file );
+    }
+
+    #--------------------------------------------------
+    # PATH 2: the -b option (backup and modify in-place)
+    #--------------------------------------------------
+    elsif ($in_place_modify) {
+
+        # For -b option, leave the file unchanged if a severe error caused
+        # formatting to be skipped. Otherwise we will overwrite any backup.
+        if ( !$self->[_input_copied_verbatim_] ) {
+
+            my $backup_method = $rOpts->{'backup-method'};
+
+            # Option 1, -bm='copy': uses newer version in which original is
+            # copied to the backup and rewritten; see git #103.
+            if ( defined($backup_method) && $backup_method eq 'copy' ) {
+                $self->backup_method_copy(
+                    $input_file,       $routput_string,
+                    $backup_extension, $delete_backup
+                );
+            }
+
+            # Option 2, -bm='move': uses older version, where original is
+            # moved to the backup and formatted output goes to a new file.
+            else {
+                $self->backup_method_move(
+                    $input_file,       $routput_string,
+                    $backup_extension, $delete_backup
+                );
+            }
+        }
+    }
+
+    #-----------------------------------------------------------
+    # PATH 3: send output to the file system (named file or '-')
+    #-----------------------------------------------------------
+    else {
+
+        my ( $fh, $fh_name ) =
+          Perl::Tidy::streamhandle( $output_file, 'w', $is_encoded_data );
+        unless ($fh) { Die("Cannot write to output stream\n"); }
+
+        $fh->print( ${$routput_string} );
+
+        if ( $output_file ne '-' && !ref $output_file ) {
+            $fh->close();
+        }
+
+        if ($is_encoded_data) {
+            $rstatus->{'output_encoded_as'} = 'UTF-8';
+        }
+
+        # set output file ownership and permissions if appropriate
+        if ( $output_file && -f $output_file && !-l $output_file ) {
+            if ( @{$rinput_file_stat} ) {
+                $self->set_output_file_permissions( $output_file,
+                    \@{$rinput_file_stat}, $in_place_modify );
+            }
+        }
+    }
+
+    return;
+
+} ## end sub write_tidied_output
+
 sub process_filter_layer {
 
     my ( $self, $input_string ) = @_;
@@ -2133,7 +2174,9 @@ sub process_filter_layer {
     # This is the filter layer of processing.
     # Do all requested formatting on the string '$input_string', including any
     # pre- and post-processing with filters.
-    # Store the results in the selected output file(s) or stream(s).
+    # Returns:
+    #   $routput_string = ref to tidied output if in 'tidy' mode
+    #   (nothing) if not in 'tidy' mode [these modes handle output separately]
 
     # Total formatting is done with these layers of subroutines:
     #   perltidy                - main routine; checks run parameters
@@ -2146,9 +2189,9 @@ sub process_filter_layer {
     #  $input_string
     #   -> optional prefilter operations
     #     -> [ formatting by sub process_iteration_layer ]
-    #       -> early return if not in 'tidy' mode
+    #       -> return if not in 'tidy' mode
     #         -> optional postfilter operations
-    #           -> end destination (output_file or destination_stream)
+    #           -> $routput_string
 
     # What is done based on format type:
     #  utf8 decoding is done for all format types
@@ -2323,46 +2366,8 @@ EOM
         chomp $output_string;
     }
 
-    # Filtering is complete; copy result to end destination.
-    # There are two cases:
-
-    #----------------------------------------------------------------------
-    # Output Case 1: output to a destination stream ref received from an
-    # external perl program. This is handled specially because the encoding
-    # rules for these are a little tricky.
-    #----------------------------------------------------------------------
-    my $destination_stream = $self->[_destination_stream_];
-    if ( ref($destination_stream) ) {
-        $self->copy_buffer_to_external_ref( \$output_string,
-            $destination_stream );
-    }
-
-    #----------------------------------------------------------------
-    # Output Case 2: for output NOT going to an external perl program
-    #----------------------------------------------------------------
-    else {
-
-        my $output_file = $self->[_output_file_];
-        my ( $fh, $fh_name ) =
-          Perl::Tidy::streamhandle( $output_file, 'w', $is_encoded_data );
-        unless ($fh) { Die("Cannot write to output stream\n"); }
-
-        $fh->print($output_string);
-
-        if ( $output_file ne '-' && !ref $output_file ) {
-            $fh->close();
-        }
-
-        if ($is_encoded_data) {
-            $rstatus->{'output_encoded_as'} = 'UTF-8';
-        }
-    }
-
-    # The final formatted result should now be in the selected output file(s)
-    # or stream(s).
-    return;
-
-} ## end sub process_filter_layer
+    return \$output_string;
+}
 
 sub process_iteration_layer {
 
