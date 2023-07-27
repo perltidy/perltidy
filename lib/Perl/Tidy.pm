@@ -1911,7 +1911,7 @@ EOM
         #--------------------------
         # prepare the output stream
         #--------------------------
-        my $output_file = undef;
+        my $output_file;
         my $output_name = EMPTY_STRING;
         my $actual_output_extension;
 
@@ -2095,19 +2095,10 @@ sub write_tidy_output {
 
     # There are three main output paths:
 
-    #--------------------------------------------------------------------------
-    # PATH 1: send output to a destination stream ref received from an external
-    # perl program. The encoding rules for these are a bit tricky.  Note that
-    # in this case we have previously set $output_file = $destination_stream
-    #--------------------------------------------------------------------------
-    if ( ref($output_file) ) {
-        $self->copy_buffer_to_external_ref( $routput_string, $output_file );
-    }
-
-    #--------------------------------------------------
-    # PATH 2: the -b option (backup and modify in-place)
-    #--------------------------------------------------
-    elsif ($in_place_modify) {
+    #-------------------------------------------------------------------------
+    # PATH 1: $output_file is not defined: --backup and modify in-place option
+    #-------------------------------------------------------------------------
+    if ($in_place_modify) {
 
         # For -b option, leave the file unchanged if a severe error caused
         # formatting to be skipped. Otherwise we will overwrite any backup.
@@ -2115,7 +2106,7 @@ sub write_tidy_output {
 
             my $backup_method = $rOpts->{'backup-method'};
 
-            # Option 1, -bm='copy': uses newer version in which original is
+            # -b option 1, -bm='copy': uses newer version in which original is
             # copied to the backup and rewritten; see git #103.
             if ( defined($backup_method) && $backup_method eq 'copy' ) {
                 $self->backup_method_copy(
@@ -2124,7 +2115,7 @@ sub write_tidy_output {
                 );
             }
 
-            # Option 2, -bm='move': uses older version, where original is
+            # -b option 2, -bm='move': uses older version, where original is
             # moved to the backup and formatted output goes to a new file.
             else {
                 $self->backup_method_move(
@@ -2135,9 +2126,18 @@ sub write_tidy_output {
         }
     }
 
-    #-----------------------------------------------------------
-    # PATH 3: send output to the file system (named file or '-')
-    #-----------------------------------------------------------
+    #--------------------------------------------------------------------------
+    # PATH 2: $output_file is a reference (=destination_stream): send output to
+    # a destination stream ref received from an external perl program. The
+    # encoding rules for these are a bit tricky.
+    #--------------------------------------------------------------------------
+    elsif ( ref($output_file) ) {
+        $self->copy_buffer_to_external_ref( $routput_string, $output_file );
+    }
+
+    #--------------------------------------------------------------------------
+    # PATH 3: $output_file is named file or '-'; send output to the file system
+    #--------------------------------------------------------------------------
     else {
 
         my ( $fh, $fh_name ) =
@@ -2219,8 +2219,16 @@ sub process_filter_layer {
     my $digest_input;
     my $saved_input_buf;
 
+    # var for checking --noadd-terminal-newline
+    my $chomp_terminal_newline;
+
     # Setup post-filter vars; these apply to 'tidy' mode only
     if ( $rOpts->{'format'} eq 'tidy' ) {
+
+        # When -noadd-terminal-newline is set, and the input does not
+        # have a newline, then we remove the final newline of the output
+        $chomp_terminal_newline = !$rOpts->{'add-terminal-newline'}
+          && substr( $input_string, -1, 1 ) !~ /\n/;
 
         #-------------------------------------------------------------
         # for --line-range-tidy, reduce '$input_string' to a limited line range
@@ -2282,8 +2290,7 @@ EOM
     # For 'tidy', formatted result will be written to '$tidy_output_buffer'
     # For 'html' and 'user', result goes directly to its ultimate destination.
     #----------------------------------------------------------------------
-    my $tidy_output_buffer = EMPTY_STRING;
-    $self->process_iteration_layer( $input_string, \$tidy_output_buffer );
+    my $routput_string = $self->process_iteration_layer($input_string);
 
     #-------------------------------
     # All done if not in 'tidy' mode
@@ -2297,13 +2304,13 @@ EOM
     # applied to the source after tidying.
     #----------------------------------------------------------------------
     my $postfilter = $self->[_postfilter_];
-    my $output_string =
-        $postfilter
-      ? $postfilter->($tidy_output_buffer)
-      : $tidy_output_buffer;
+    if ($postfilter) {
+        my $output_string = $postfilter->( ${$routput_string} );
+        $routput_string = \$output_string;
+    }
 
     if ( defined($digest_input) ) {
-        my $digest_output = $md5_hex->($output_string);
+        my $digest_output = $md5_hex->( ${$routput_string} );
         $self->[_input_output_difference_] = $digest_output ne $digest_input;
     }
 
@@ -2313,7 +2320,7 @@ EOM
     if ( $rOpts->{'assert-tidy'} ) {
         if ( $self->[_input_output_difference_] ) {
             my $diff_msg =
-              compare_string_buffers( $saved_input_buf, $output_string,
+              compare_string_buffers( $saved_input_buf, ${$routput_string},
                 $is_encoded_data );
             $logger_object->warning(<<EOM);
 assertion failure: '--assert-tidy' is set but output differs from input
@@ -2336,9 +2343,10 @@ EOM
     # Handle --line-range-tidy line recombination
     #--------------------------------------------
     if ( @input_lines_pre || @input_lines_post ) {
-        my $str_pre  = join EMPTY_STRING, @input_lines_pre;
-        my $str_post = join EMPTY_STRING, @input_lines_post;
-        $output_string = $str_pre . $output_string . $str_post;
+        my $str_pre       = join EMPTY_STRING, @input_lines_pre;
+        my $str_post      = join EMPTY_STRING, @input_lines_post;
+        my $output_string = $str_pre . ${$routput_string} . $str_post;
+        $routput_string = \$output_string;
     }
 
     #--------------------------------------------------------------
@@ -2349,29 +2357,28 @@ EOM
     # operations work ok.
     if ( $self->[_line_separator_] ne "\n" ) {
         my $line_separator = $self->[_line_separator_];
-        my @output_lines   = split /^/, $output_string;
+        my @output_lines   = split /^/, ${$routput_string};
         foreach my $line (@output_lines) {
             chomp $line;
             $line .= $line_separator;
         }
-        $output_string = join EMPTY_STRING, @output_lines;
+        my $output_string = join EMPTY_STRING, @output_lines;
+        $routput_string = \$output_string;
     }
 
     #-----------------------------------------
     # Handle a '--noadd-terminal-newline' flag
     #-----------------------------------------
-    if ( !$rOpts->{'add-terminal-newline'}
-        && substr( $input_string, -1, 1 ) !~ /\n/ )
-    {
-        chomp $output_string;
+    if ($chomp_terminal_newline) {
+        chomp ${$routput_string};
     }
 
-    return \$output_string;
+    return $routput_string;
 }
 
 sub process_iteration_layer {
 
-    my ( $self, $buf, $sink_object ) = @_;
+    my ( $self, $buf ) = @_;
 
     # This is the iteration layer of processing.
     # Do all formatting, iterating if requested, on the source string $buf.
@@ -2388,7 +2395,7 @@ sub process_iteration_layer {
     #   process_single_case     - solves one formatting problem
 
     # Data Flow in this layer:
-    #      $buf -> [ loop over iterations ] -> $sink_object
+    #      $buf -> [ loop over iterations ] -> $routput_string
 
     # Only 'tidy' formatting can use multiple iterations.
 
@@ -2461,9 +2468,9 @@ sub process_iteration_layer {
     }
 
     # save objects to allow redirecting output during iterations
-    my $sink_object_final   = $sink_object;
     my $logger_object_final = $logger_object;
     my $iteration_of_formatter_convergence;
+    my $routput_string;
 
     #---------------------
     # Loop over iterations
@@ -2472,14 +2479,8 @@ sub process_iteration_layer {
 
         $rstatus->{'iteration_count'} += 1;
 
-        # send output stream to temp buffers until last iteration
         my $sink_buffer = EMPTY_STRING;
-        if ( $iter < $max_iterations ) {
-            $sink_object = \$sink_buffer;
-        }
-        else {
-            $sink_object = $sink_object_final;
-        }
+        $routput_string = \$sink_buffer;
 
         # Save logger, debugger and tee output only on pass 1 because:
         # (1) line number references must be to the starting
@@ -2529,7 +2530,7 @@ sub process_iteration_layer {
             $formatter = Perl::Tidy::Formatter->new(
                 logger_object      => $logger_object,
                 diagnostics_object => $diagnostics_object,
-                sink_object        => $sink_object,
+                sink_object        => $routput_string,
                 length_function    => $length_function,
                 is_encoded_data    => $is_encoded_data,
                 fh_tee             => $fh_tee,
@@ -2671,16 +2672,6 @@ EOM
                 }
 
                 # we are stopping the iterations early;
-                # copy the output stream to its final destination
-                $sink_object = $sink_object_final;
-                if ( ref($sink_object) eq 'SCALAR' ) {
-                    ${$sink_object} = $source_buffer;
-                }
-                else {
-
-                    # caller must pass a SCALAR ref to receive output
-                    Fault("sink object is not a SCALAR ref\n");
-                }
                 last;
             }
         } ## end if ( $iter < $max_iterations)
@@ -2694,7 +2685,7 @@ EOM
     $logger_object->write_logfile_entry($convergence_log_message)
       if $convergence_log_message;
 
-    return;
+    return $routput_string;
 
 } ## end sub process_iteration_layer
 
