@@ -1688,7 +1688,7 @@ EOM
         }
     }
     return (
-        $buf,
+        \$buf,
         $is_encoded_data,
         $decoded_input_as,
         $encoding_log_message,
@@ -1889,7 +1889,7 @@ EOM
 
         # copy source to a string buffer, decoding from utf8 if necessary
         my (
-            $buf,
+            $rinput_string,
             $is_encoded_data,
             $decoded_input_as,
             $encoding_log_message,
@@ -1899,14 +1899,14 @@ EOM
             $rpending_logfile_message );
 
         # Skip this file on any error
-        next if ( !defined($buf) );
+        next if ( !defined($rinput_string) );
 
         # Register this file name with the Diagnostics package, if any.
         $diagnostics_object->set_input_file($input_file)
           if $diagnostics_object;
 
-        # OK: the (possibly decoded) input is now in string $buf. We just need
-        # to to prepare the output and error logger before formatting it.
+        # The (possibly decoded) input is now in string ref $rinput_string.
+        # Now prepare the output stream and error logger.
 
         #--------------------------
         # prepare the output stream
@@ -2047,7 +2047,7 @@ EOM
         #--------------------
         # process this buffer
         #--------------------
-        my $routput_string = $self->process_filter_layer($buf);
+        my $routput_string = $self->process_filter_layer($rinput_string);
 
         #------------------------------------------------
         # send the tidied output to its final destination
@@ -2169,11 +2169,11 @@ sub write_tidy_output {
 
 sub process_filter_layer {
 
-    my ( $self, $input_string ) = @_;
+    my ( $self, $rinput_string ) = @_;
 
     # This is the filter layer of processing.
-    # Do all requested formatting on the string '$input_string', including any
-    # pre- and post-processing with filters.
+    # Do all requested formatting on the string ref '$rinput_string', including
+    # any pre- and post-processing with filters.
     # Returns:
     #   $routput_string = ref to tidied output if in 'tidy' mode
     #   (nothing) if not in 'tidy' mode [these modes handle output separately]
@@ -2186,7 +2186,7 @@ sub process_filter_layer {
     #   process_single_case     - solves one formatting problem
 
     # Data Flow in this layer:
-    #  $input_string
+    #  $rinput_string
     #   -> optional prefilter operations
     #     -> [ formatting by sub process_iteration_layer ]
     #       -> return if not in 'tidy' mode
@@ -2203,8 +2203,11 @@ sub process_filter_layer {
     #   - because html does its own encoding; user formatter does what it wants
 
     # Be sure the string we received is defined
-    if ( !defined($input_string) ) {
-        Fault("bad call: the source string \$input_string is undefined\n");
+    if ( !defined($rinput_string) ) {
+        Fault("bad call: the source string ref \$rinput_string is undefined\n");
+    }
+    if ( ref($rinput_string) ne 'SCALAR' ) {
+        Fault("bad call: the source string ref is not SCALAR\n");
     }
 
     my $rOpts           = $self->[_rOpts_];
@@ -2225,37 +2228,28 @@ sub process_filter_layer {
     # Setup post-filter vars; these apply to 'tidy' mode only
     if ( $rOpts->{'format'} eq 'tidy' ) {
 
-        # When -noadd-terminal-newline is set, and the input does not
-        # have a newline, then we remove the final newline of the output
-        $chomp_terminal_newline = !$rOpts->{'add-terminal-newline'}
-          && substr( $input_string, -1, 1 ) !~ /\n/;
-
         #-------------------------------------------------------------
-        # for --line-range-tidy, reduce '$input_string' to a limited line range
+        # for --line-range-tidy, reduce '$rinput_string' to a limited line range
         #-------------------------------------------------------------
         my $line_tidy_begin = $self->[_line_tidy_begin_];
         if ($line_tidy_begin) {
 
-            my @input_lines = split /^/, $input_string;
+            my @input_lines = split /^/, ${$rinput_string};
 
             my $num = @input_lines;
             if ( $line_tidy_begin > $num ) {
                 Die(<<EOM);
 #--line-range-tidy=n1:n2 has n1=$line_tidy_begin which exceeds max line number of $num
 EOM
-
-                # If we ever want to call Warn instead of Die, here is
-                # the coding needed to keep going.
-                $input_string    = EMPTY_STRING;
-                @input_lines_pre = @input_lines;
             }
             else {
                 my $line_tidy_end = $self->[_line_tidy_end_];
                 if ( !defined($line_tidy_end) || $line_tidy_end > $num ) {
                     $line_tidy_end = $num;
                 }
-                $input_string = join EMPTY_STRING,
+                my $input_string = join EMPTY_STRING,
                   @input_lines[ $line_tidy_begin - 1 .. $line_tidy_end - 1 ];
+                $rinput_string = \$input_string;
 
                 @input_lines_pre  = @input_lines[ 0 .. $line_tidy_begin - 2 ];
                 @input_lines_post = @input_lines[ $line_tidy_end .. $num - 1 ];
@@ -2271,9 +2265,15 @@ EOM
             || $rOpts->{'assert-untidy'}
             || $rOpts->{'backup-and-modify-in-place'} )
         {
-            $digest_input    = $md5_hex->($input_string);
-            $saved_input_buf = $input_string;
+            $digest_input    = $md5_hex->( ${$rinput_string} );
+            $saved_input_buf = ${$rinput_string};
         }
+
+        # When -noadd-terminal-newline is set, and the input does not
+        # have a newline, then we remove the final newline of the output
+        $chomp_terminal_newline = !$rOpts->{'add-terminal-newline'}
+          && substr( ${$rinput_string}, -1, 1 ) !~ /\n/;
+
     }
 
     #-----------------------------------------------------------------------
@@ -2283,14 +2283,17 @@ EOM
     # to avoid tokenization errors.
     #-----------------------------------------------------------------------
     my $prefilter = $self->[_prefilter_];
-    $input_string = $prefilter->($input_string) if $prefilter;
+    if ($prefilter) {
+        my $input_string = $prefilter->( ${$rinput_string} );
+        $rinput_string = \$input_string;
+    }
 
     #----------------------------------------------------------------------
-    # Format contents of string '$input_string', iterating if requested.
+    # Format contents of string '$rinput_string', iterating if requested.
     # For 'tidy', formatted result will be written to '$tidy_output_buffer'
     # For 'html' and 'user', result goes directly to its ultimate destination.
     #----------------------------------------------------------------------
-    my $routput_string = $self->process_iteration_layer($input_string);
+    my $routput_string = $self->process_iteration_layer($rinput_string);
 
     #-------------------------------
     # All done if not in 'tidy' mode
@@ -2378,7 +2381,7 @@ EOM
 
 sub process_iteration_layer {
 
-    my ( $self, $buf ) = @_;
+    my ( $self, $rinput_string ) = @_;
 
     # This is the iteration layer of processing.
     # Do all formatting, iterating if requested, on the source string $buf.
@@ -2395,7 +2398,7 @@ sub process_iteration_layer {
     #   process_single_case     - solves one formatting problem
 
     # Data Flow in this layer:
-    #      $buf -> [ loop over iterations ] -> $routput_string
+    #      $rinput_string -> [ loop over iterations ] -> $routput_string
 
     # Only 'tidy' formatting can use multiple iterations.
 
@@ -2408,9 +2411,6 @@ sub process_iteration_layer {
     my $rOpts              = $self->[_rOpts_];
     my $tabsize            = $self->[_tabsize_];
     my $user_formatter     = $self->[_user_formatter_];
-
-    # create a source for the tokenizer .. we can use a string for efficiency.
-    my $source_buffer = $buf;
 
     # make a debugger object if requested
     my $debugger_object;
@@ -2462,7 +2462,7 @@ sub process_iteration_layer {
         # get starting MD5 sum for convergence test
         if ( $max_iterations > 1 ) {
             $do_convergence_test = 1;
-            my $digest = $md5_hex->($buf);
+            my $digest = $md5_hex->( ${$rinput_string} );
             $saw_md5{$digest} = 0;
         }
     }
@@ -2479,6 +2479,7 @@ sub process_iteration_layer {
 
         $rstatus->{'iteration_count'} += 1;
 
+        # create a string to capture the output
         my $sink_buffer = EMPTY_STRING;
         $routput_string = \$sink_buffer;
 
@@ -2548,7 +2549,7 @@ sub process_iteration_layer {
         # create the tokenizer for this file
         #-----------------------------------
         my $tokenizer = Perl::Tidy::Tokenizer->new(
-            source_object      => \$source_buffer,
+            source_object      => $rinput_string,
             logger_object      => $logger_object,
             debugger_object    => $debugger_object,
             diagnostics_object => $diagnostics_object,
@@ -2591,7 +2592,7 @@ sub process_iteration_layer {
         # temporary output buffer
         if ( $iter < $max_iterations ) {
 
-            $source_buffer = $sink_buffer;
+            $rinput_string = \$sink_buffer;
 
             # stop iterations if errors or converged
             my $stop_now = $self->[_input_copied_verbatim_];
