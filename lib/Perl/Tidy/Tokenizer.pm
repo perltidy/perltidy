@@ -88,7 +88,6 @@ my (
     %expecting_term_token,
     %expecting_term_types,
     %is_block_operator,
-    %is_comma_question_colon,
     %is_digraph,
     %is_file_test_operator,
     %is_if_elsif_unless,
@@ -202,7 +201,6 @@ BEGIN {
         _rOpts_maximum_unexpected_errors_    => $i++,
         _rOpts_logfile_                      => $i++,
         _rOpts_                              => $i++,
-        _calculate_ci_                       => $i++,
         _rinput_lines_                       => $i++,
         _input_line_index_next_              => $i++,
     };
@@ -525,15 +523,6 @@ EOM
       $rOpts->{'maximum-unexpected-errors'};
     $self->[_rOpts_logfile_] = $rOpts->{'logfile'};
     $self->[_rOpts_]         = $rOpts;
-
-    # -exp=ci0 and -exp=ci1 turn on the tokenizer ci calculation for testing.
-    # See comments in sub Perl::Tidy::Formatter::set_ci.
-    my $calculate_ci = 0;    # current default
-    if ( $rOpts->{'experimental'} && $rOpts->{'experimental'} =~ /\bci(\d+)\b/ )
-    {
-        $calculate_ci = ( $1 == 0 || $1 == 1 );
-    }
-    $self->[_calculate_ci_] = $calculate_ci;
 
     # These vars are used for guessing indentation and must be positive
     $self->[_tabsize_]        = 8 if ( !$self->[_tabsize_] );
@@ -1711,12 +1700,8 @@ sub prepare_for_a_new_file {
     # Initialized once and continually updated as lines are
     # processed.
     my (
-        $nesting_token_string,      $nesting_type_string,
-        $nesting_block_string,      $nesting_block_flag,
-        $nesting_list_string,       $nesting_list_flag,
-        $ci_string_in_tokenizer,    $continuation_string_in_tokenizer,
-        $in_statement_continuation, $level_in_tokenizer,
-        $slevel_in_tokenizer,       $rslevel_stack,
+        $nesting_token_string, $nesting_block_string,
+        $nesting_block_flag,   $level_in_tokenizer,
     );
 
     # TV6: SCALARS for remembering several previous
@@ -1754,18 +1739,10 @@ sub prepare_for_a_new_file {
         $want_paren    = EMPTY_STRING;
 
         # TV5:
-        $nesting_token_string   = EMPTY_STRING;
-        $nesting_type_string    = EMPTY_STRING;
-        $nesting_block_string   = '1';            # initially in a block
-        $nesting_block_flag     = 1;
-        $nesting_list_string    = '0';            # initially not in a list
-        $nesting_list_flag      = 0;              # initially not in a list
-        $ci_string_in_tokenizer = EMPTY_STRING;
-        $continuation_string_in_tokenizer = "0";
-        $in_statement_continuation        = 0;
-        $level_in_tokenizer               = 0;
-        $slevel_in_tokenizer              = 0;
-        $rslevel_stack                    = [];
+        $nesting_token_string = EMPTY_STRING;
+        $nesting_block_string = '1';            # initially in a block
+        $nesting_block_flag   = 1;
+        $level_in_tokenizer   = 0;
 
         # TV6:
         $last_nonblank_container_type      = EMPTY_STRING;
@@ -1847,12 +1824,8 @@ sub prepare_for_a_new_file {
         my $rTV4 = [ $id_scan_state, $identifier, $want_paren ];
 
         my $rTV5 = [
-            $nesting_token_string,      $nesting_type_string,
-            $nesting_block_string,      $nesting_block_flag,
-            $nesting_list_string,       $nesting_list_flag,
-            $ci_string_in_tokenizer,    $continuation_string_in_tokenizer,
-            $in_statement_continuation, $level_in_tokenizer,
-            $slevel_in_tokenizer,       $rslevel_stack,
+            $nesting_token_string, $nesting_block_string,
+            $nesting_block_flag,   $level_in_tokenizer,
         ];
 
         my $rTV6 = [
@@ -1934,12 +1907,8 @@ sub prepare_for_a_new_file {
         ( $id_scan_state, $identifier, $want_paren ) = @{$rTV4};
 
         (
-            $nesting_token_string,      $nesting_type_string,
-            $nesting_block_string,      $nesting_block_flag,
-            $nesting_list_string,       $nesting_list_flag,
-            $ci_string_in_tokenizer,    $continuation_string_in_tokenizer,
-            $in_statement_continuation, $level_in_tokenizer,
-            $slevel_in_tokenizer,       $rslevel_stack,
+            $nesting_token_string, $nesting_block_string,
+            $nesting_block_flag,   $level_in_tokenizer,
         ) = @{$rTV5};
 
         (
@@ -2044,8 +2013,7 @@ EOM
     }
 
     sub reset_indentation_level {
-        $level_in_tokenizer = $slevel_in_tokenizer = shift;
-        push @{$rslevel_stack}, $slevel_in_tokenizer;
+        $level_in_tokenizer = shift;
         return;
     }
 
@@ -2068,6 +2036,7 @@ EOM
     # These block types terminate statements and do not need a trailing
     # semicolon
     # patched for SWITCH/CASE/
+    # NOTE: not currently used but may be used in the future
     my %is_zero_continuation_block_type;
     my @q;
     @q = qw( } { BEGIN END CHECK INIT AUTOLOAD DESTROY UNITCHECK continue ;
@@ -5123,14 +5092,11 @@ EOM
                 }
 
                 # Optional fast processing of a block comment
-                my $ci_string_sum =
-                  ( my $str = $ci_string_in_tokenizer ) =~ tr/1/0/;
-                my $ci_string_i = $ci_string_sum + $in_statement_continuation;
                 $line_of_tokens->{_line_type}        = 'CODE';
                 $line_of_tokens->{_rtokens}          = [$input_line];
                 $line_of_tokens->{_rtoken_type}      = ['#'];
                 $line_of_tokens->{_rlevels}          = [$level_in_tokenizer];
-                $line_of_tokens->{_rci_levels}       = [$ci_string_i];
+                $line_of_tokens->{_rci_levels}       = [0];
                 $line_of_tokens->{_rblock_type}      = [EMPTY_STRING];
                 $line_of_tokens->{_nesting_tokens_0} = $nesting_token_string;
                 $line_of_tokens->{_nesting_blocks_0} = $nesting_block_string;
@@ -5180,12 +5146,7 @@ EOM
         # all done tokenizing this line ...
         # now prepare the final list of tokens and types
         #-----------------------------------------------
-        if ( $self->[_calculate_ci_] ) {
-            $self->OLD_tokenizer_wrapup_line($line_of_tokens);
-        }
-        else {
-            $self->tokenizer_wrapup_line($line_of_tokens);
-        }
+        $self->tokenizer_wrapup_line($line_of_tokens);
 
         return;
     } ## end sub tokenize_this_line
@@ -5629,600 +5590,6 @@ EOM
         return;
     } ## end sub tokenizer_main_loop
 
-    sub OLD_tokenizer_wrapup_line {
-        my ( $self, $line_of_tokens ) = @_;
-
-        #---------------------------------------------------------
-        # Package a line of tokens for shipping back to the caller
-        #---------------------------------------------------------
-
-        # NOTE: This routine is retained for testing purposes only; it should
-        # be removed by about 2025. Until then, it can be called for testing
-        # with -exp=ci0 or -exp=ci1.
-
-        # Most of the remaining work involves defining the two indentation
-        # parameters that the formatter needs for each token:
-        # - $level    = structural indentation level and
-        # - $ci_level = continuation indentation level
-
-        # The method for setting the indentation level is straightforward.
-        # But the method used to define the continuation indentation is
-        # complicated because it has evolved over a long time by trial and
-        # error. It could undoubtedly be simplified but it works okay as is.
-
-        # Here is a brief description of how indentation is computed.
-        # Perl::Tidy computes indentation as the sum of 2 terms:
-        #
-        # (1) structural indentation, such as if/else/elsif blocks
-        # (2) continuation indentation, such as long parameter call lists.
-        #
-        # These are occasionally called primary and secondary indentation.
-        #
-        # Structural indentation is introduced by tokens of type '{',
-        # although the actual tokens might be '{', '(', or '['.  Structural
-        # indentation is of two types: BLOCK and non-BLOCK.  Default
-        # structural indentation is 4 characters if the standard indentation
-        # scheme is used.
-        #
-        # Continuation indentation is introduced whenever a line at BLOCK
-        # level is broken before its termination.  Default continuation
-        # indentation is 2 characters in the standard indentation scheme.
-        #
-        # Both types of indentation may be nested arbitrarily deep and
-        # interlaced.  The distinction between the two is somewhat arbitrary.
-        #
-        # For each token, we will define two variables which would apply if
-        # the current statement were broken just before that token, so that
-        # that token started a new line:
-        #
-        # $level = the structural indentation level,
-        # $ci_level = the continuation indentation level
-        #
-        # The total indentation will be $level * (4 spaces) + $ci_level * (2
-        # spaces), assuming defaults.  However, in some special cases it is
-        # customary to modify $ci_level from this strict value.
-        #
-        # The total structural indentation is easy to compute by adding and
-        # subtracting 1 from a saved value as types '{' and '}' are seen.
-        # The running value of this variable is $level_in_tokenizer.
-        #
-        # The total continuation is much more difficult to compute, and
-        # requires several variables.  These variables are:
-        #
-        # $ci_string_in_tokenizer = a string of 1's and 0's indicating, for
-        #   each indentation level, if there are intervening open secondary
-        #   structures just prior to that level.
-        # $continuation_string_in_tokenizer = a string of 1's and 0's
-        #   indicating if the last token at that level is "continued", meaning
-        #   that it is not the first token of an expression.
-        # $nesting_block_string = a string of 1's and 0's indicating, for each
-        #   indentation level, if the level is of type BLOCK or not.
-        # $nesting_block_flag = the most recent 1 or 0 of $nesting_block_string
-        # $nesting_list_string = a string of 1's and 0's indicating, for each
-        #   indentation level, if it is appropriate for list formatting.
-        #   If so, continuation indentation is used to indent long list items.
-        # $nesting_list_flag = the most recent 1 or 0 of $nesting_list_string
-        # @{$rslevel_stack} = a stack of total nesting depths at each
-        #   structural indentation level, where "total nesting depth" means
-        #   the nesting depth that would occur if every nesting token
-        #   -- '{', '[', #   and '(' -- , regardless of context, is used to
-        #   compute a nesting depth.
-
-        # Notes on the Continuation Indentation
-        #
-        # There is a sort of chicken-and-egg problem with continuation
-        # indentation.  The formatter can't make decisions on line breaks
-        # without knowing what 'ci' will be at arbitrary locations.
-        #
-        # But a problem with setting the continuation indentation (ci) here
-        # in the tokenizer is that we do not know where line breaks will
-        # actually be.  As a result, we don't know if we should propagate
-        # continuation indentation to higher levels of structure.
-        #
-        # For nesting of only structural indentation, we never need to do
-        # this.  For example, in a long if statement, like this
-        #
-        #   if ( !$output_block_type[$i]
-        #     && ($in_statement_continuation) )
-        #   {           <--outdented
-        #       do_something();
-        #   }
-        #
-        # the second line has ci but we do normally give the lines within
-        # the BLOCK any ci.  This would be true if we had blocks nested
-        # arbitrarily deeply.
-        #
-        # But consider something like this, where we have created a break
-        # after an opening paren on line 1, and the paren is not (currently)
-        # a structural indentation token:
-        #
-        # my $file = $menubar->Menubutton(
-        #   qw/-text File -underline 0 -menuitems/ => [
-        #       [
-        #           Cascade    => '~View',
-        #           -menuitems => [
-        #           ...
-        #
-        # The second line has ci, so it would seem reasonable to propagate
-        # it down, giving the third line 1 ci + 1 indentation.  This
-        # suggests the following rule, which is currently used to
-        # propagating ci down: if there are any non-structural opening
-        # parens (or brackets, or braces), before an opening structural
-        # brace, then ci is propagated down, and otherwise
-        # not.  The variable $intervening_secondary_structure contains this
-        # information for the current token, and the string
-        # "$ci_string_in_tokenizer" is a stack of previous values of this
-        # variable.
-
-        my @token_type    = ();    # stack of output token types
-        my @block_type    = ();    # stack of output code block types
-        my @type_sequence = ();    # stack of output type sequence numbers
-        my @tokens        = ();    # output tokens
-        my @levels        = ();    # structural brace levels of output tokens
-        my @ci_string = ();  # string needed to compute continuation indentation
-
-        # Count the number of '1's in the string (previously sub ones_count)
-        my $ci_string_sum = ( my $str = $ci_string_in_tokenizer ) =~ tr/1/0/;
-
-        $line_of_tokens->{_nesting_tokens_0} = $nesting_token_string;
-
-        my ( $ci_string_i, $level_i );
-
-        #-----------------
-        # Loop over tokens
-        #-----------------
-        my $rtoken_map_im;
-        foreach my $i ( @{$routput_token_list} ) {
-
-            my $type_i = $routput_token_type->[$i];
-            $level_i = $level_in_tokenizer;
-
-            # Quick handling of indentation levels for blanks and comments
-            if ( $type_i eq 'b' || $type_i eq '#' ) {
-                $ci_string_i = $ci_string_sum + $in_statement_continuation;
-            }
-
-            # All other types
-            else {
-
-                # $tok_i is the PRE-token.  It only equals the token for symbols
-                my $tok_i = $rtokens->[$i];
-
-                # Check for an invalid token type..
-                # This can happen by running perltidy on non-scripts although
-                # it could also be bug introduced by programming change.  Perl
-                # silently accepts a 032 (^Z) and takes it as the end
-                if ( !$is_valid_token_type{$type_i} ) {
-                    my $val = ord($type_i);
-                    $self->warning(
-"unexpected character decimal $val ($type_i) in script\n"
-                    );
-                    $self->[_in_error_] = 1;
-                }
-
-                # $ternary_indentation_flag indicates that we need a change
-                # in level at a nested ternary, as follows
-                #     1 => at a nested ternary ?
-                #    -1 => at a nested ternary :
-                #     0 => otherwise
-                my $ternary_indentation_flag = $routput_indent_flag->[$i];
-
-                #-------------------------------------------
-                # Section 1: handle a level-increasing token
-                #-------------------------------------------
-                # set primary indentation levels based on structural braces
-                # Note: these are set so that the leading braces have a HIGHER
-                # level than their CONTENTS, which is convenient for indentation
-                # Also, define continuation indentation for each token.
-                if (   $type_i eq '{'
-                    || $type_i eq 'L'
-                    || $ternary_indentation_flag > 0 )
-                {
-
-                    # if the difference between total nesting levels is not 1,
-                    # there are intervening non-structural nesting types between
-                    # this '{' and the previous unclosed '{'
-                    my $intervening_secondary_structure = 0;
-                    if ( @{$rslevel_stack} ) {
-                        $intervening_secondary_structure =
-                          $slevel_in_tokenizer - $rslevel_stack->[-1];
-                    }
-
-                    # save the current states
-                    push( @{$rslevel_stack}, 1 + $slevel_in_tokenizer );
-                    $level_in_tokenizer++;
-
-                    ##NOTE: _maximum_level_ does not seem to be needed now
-                    if ( $level_in_tokenizer > $self->[_maximum_level_] ) {
-                        $self->[_maximum_level_] = $level_in_tokenizer;
-                    }
-
-                    if ($ternary_indentation_flag) {
-
-                        # break BEFORE '?' in a nested ternary
-                        if ( $type_i eq '?' ) {
-                            $level_i = $level_in_tokenizer;
-                        }
-
-                        $nesting_block_string .= "$nesting_block_flag";
-                    } ## end if ($ternary_indentation_flag)
-                    else {
-
-                        if ( $routput_block_type->[$i] ) {
-                            $nesting_block_flag = 1;
-                            $nesting_block_string .= '1';
-                        }
-                        else {
-                            $nesting_block_flag = 0;
-                            $nesting_block_string .= '0';
-                        }
-                    }
-
-                    # we will use continuation indentation within containers
-                    # which are not blocks and not logical expressions
-                    my $bit = 0;
-                    if ( !$routput_block_type->[$i] ) {
-
-                        # propagate flag down at nested open parens
-                        if ( $routput_container_type->[$i] eq '(' ) {
-                            $bit = 1 if $nesting_list_flag;
-                        }
-
-                  # use list continuation if not a logical grouping
-                  # /^(if|elsif|unless|while|and|or|not|&&|!|\|\||for|foreach)$/
-                        else {
-                            $bit = 1
-                              unless
-                              $is_logical_container{ $routput_container_type
-                                  ->[$i] };
-                        }
-                    }
-                    $nesting_list_string .= $bit;
-                    $nesting_list_flag = $bit;
-
-                    $ci_string_in_tokenizer .=
-                      ( $intervening_secondary_structure != 0 ) ? '1' : '0';
-                    $ci_string_sum =
-                      ( my $str = $ci_string_in_tokenizer ) =~ tr/1/0/;
-                    $continuation_string_in_tokenizer .=
-                      ( $in_statement_continuation > 0 ) ? '1' : '0';
-
-                    #  Sometimes we want to give an opening brace
-                    #  continuation indentation, and sometimes not.  For code
-                    #  blocks, we don't do it, so that the leading '{' gets
-                    #  outdented, like this:
-                    #
-                    #   if ( !$output_block_type[$i]
-                    #     && ($in_statement_continuation) )
-                    #   {           <--outdented
-                    #
-                    #  For other types, we will give them continuation
-                    #  indentation.  For example, here is how a list looks
-                    #  with the opening paren indented:
-                    #
-                    #  @LoL =
-                    #    ( [ "fred", "barney" ], [ "george", "jane", "elroy" ],
-                    #      [ "homer", "marge", "bart" ], );
-                    #
-                    #  This looks best when 'ci' is one-half of the
-                    #  indentation  (i.e., 2 and 4)
-
-                    my $total_ci = $ci_string_sum;
-                    if (
-                        !$routput_block_type->[$i]    # patch: skip for BLOCK
-                        && ($in_statement_continuation)
-                        && !( $ternary_indentation_flag && $type_i eq ':' )
-                      )
-                    {
-                        $total_ci += $in_statement_continuation
-                          unless (
-                            substr( $ci_string_in_tokenizer, -1 ) eq '1' );
-                    }
-
-                    $ci_string_i               = $total_ci;
-                    $in_statement_continuation = 0;
-                } ## end if ( $type_i eq '{' ||...})
-
-                #-------------------------------------------
-                # Section 2: handle a level-decreasing token
-                #-------------------------------------------
-                elsif ($type_i eq '}'
-                    || $type_i eq 'R'
-                    || $ternary_indentation_flag < 0 )
-                {
-
-                    # only a nesting error in the script would prevent
-                    # popping here
-                    if ( @{$rslevel_stack} > 1 ) { pop( @{$rslevel_stack} ); }
-
-                    $level_i = --$level_in_tokenizer;
-
-                    if ( $level_in_tokenizer < 0 ) {
-                        unless ( $self->[_saw_negative_indentation_] ) {
-                            $self->[_saw_negative_indentation_] = 1;
-                            $self->warning("Starting negative indentation\n");
-                        }
-                    }
-
-                    # restore previous level values
-                    if ( length($nesting_block_string) > 1 )
-                    {    # true for valid script
-                        chop $nesting_block_string;
-                        $nesting_block_flag =
-                          substr( $nesting_block_string, -1 ) eq '1';
-                        chop $nesting_list_string;
-                        $nesting_list_flag =
-                          substr( $nesting_list_string, -1 ) eq '1';
-
-                        chop $ci_string_in_tokenizer;
-                        $ci_string_sum =
-                          ( my $str = $ci_string_in_tokenizer ) =~ tr/1/0/;
-
-                        $in_statement_continuation =
-                          chop $continuation_string_in_tokenizer;
-
-                        # zero continuation flag at terminal BLOCK '}' which
-                        # ends a statement.
-                        my $block_type_i = $routput_block_type->[$i];
-                        if ($block_type_i) {
-
-                            # ...These include non-anonymous subs
-                            # note: could be sub ::abc { or sub 'abc
-                            if ( substr( $block_type_i, 0, 3 ) eq 'sub'
-                                && $block_type_i =~ m/^sub\s*/gc )
-                            {
-
-                                # note: older versions of perl require the /gc
-                                # modifier here or else the \G does not work.
-                                $in_statement_continuation = 0
-                                  if ( $block_type_i =~ /\G('|::|\w)/gc );
-                            }
-
-                            # ...and include all block types except user subs
-                            # with block prototypes and these:
-                            # (sort|grep|map|do|eval)
-                            elsif (
-                                $is_zero_continuation_block_type{$block_type_i}
-                              )
-                            {
-                                $in_statement_continuation = 0;
-                            }
-
-                            # ..but these are not terminal types:
-                            #     /^(sort|grep|map|do|eval)$/ )
-                            elsif ($is_sort_map_grep_eval_do{$block_type_i}
-                                || $is_grep_alias{$block_type_i} )
-                            {
-                            }
-
-                            # ..and a block introduced by a label
-                            # /^\w+\s*:$/gc ) {
-                            elsif ( $block_type_i =~ /:$/ ) {
-                                $in_statement_continuation = 0;
-                            }
-
-                            # user function with block prototype
-                            else {
-                                $in_statement_continuation = 0;
-                            }
-                        } ## end if ($block_type_i)
-
-                        # If we are in a list, then
-                        # we must set continuation indentation at the closing
-                        # paren of something like this (paren after $check):
-                        #     assert(
-                        #         __LINE__,
-                        #         ( not defined $check )
-                        #           or ref $check
-                        #           or $check eq "new"
-                        #           or $check eq "old",
-                        #     );
-                        elsif ( $tok_i eq ')' ) {
-                            $in_statement_continuation = 1
-                              if (
-                                $is_list_end_type{
-                                    $routput_container_type->[$i]
-                                }
-                              );
-                            ##if $routput_container_type->[$i] =~ /^[;,\{\}]$/;
-                        }
-                    } ## end if ( length($nesting_block_string...))
-
-                    $ci_string_i = $ci_string_sum + $in_statement_continuation;
-                } ## end elsif ( $type_i eq '}' ||...{)
-
-                #-----------------------------------------
-                # Section 3: handle a constant level token
-                #-----------------------------------------
-                else {
-
-                    # zero the continuation indentation at certain tokens so
-                    # that they will be at the same level as its container.  For
-                    # commas, this simplifies the -lp indentation logic, which
-                    # counts commas.  For ?: it makes them stand out.
-                    if (
-                        $nesting_list_flag
-                        ##      $type_i =~ /^[,\?\:]$/
-                        && $is_comma_question_colon{$type_i}
-                      )
-                    {
-                        $in_statement_continuation = 0;
-                    }
-
-                    # Be sure binary operators get continuation indentation.
-                    # Note: the check on $nesting_block_flag is only needed
-                    # to add ci to binary operators following a 'try' block,
-                    # or similar extended syntax block operator (see c158).
-                    if (
-                           !$in_statement_continuation
-                        && ( $nesting_block_flag || $nesting_list_flag )
-                        && (   $type_i eq 'k' && $is_binary_keyword{$tok_i}
-                            || $is_binary_type{$type_i} )
-                      )
-                    {
-                        $in_statement_continuation = 1;
-                    }
-
-                    # continuation indentation is sum of any open ci from
-                    # previous levels plus the current level
-                    $ci_string_i = $ci_string_sum + $in_statement_continuation;
-
-                    # update continuation flag ...
-
-                    # if we are in a BLOCK
-                    if ($nesting_block_flag) {
-
-                        # the next token after a ';' and label starts a new stmt
-                        if ( $type_i eq ';' || $type_i eq 'J' ) {
-                            $in_statement_continuation = 0;
-                        }
-
-                        # otherwise, we are continuing the current statement
-                        else {
-                            $in_statement_continuation = 1;
-                        }
-                    }
-
-                    # if we are not in a BLOCK..
-                    else {
-
-                        # do not use continuation indentation if not list
-                        # environment (could be within if/elsif clause)
-                        if ( !$nesting_list_flag ) {
-                            $in_statement_continuation = 0;
-                        }
-
-                        # otherwise, the token after a ',' starts a new term
-
-                        # Patch FOR RT#99961; no continuation after a ';'
-                        # This is needed because perltidy currently marks
-                        # a block preceded by a type character like % or @
-                        # as a non block, to simplify formatting. But these
-                        # are actually blocks and can have semicolons.
-                        # See code_block_type() and is_non_structural_brace().
-                        elsif ( $type_i eq ',' || $type_i eq ';' ) {
-                            $in_statement_continuation = 0;
-                        }
-
-                        # otherwise, we are continuing the current term
-                        else {
-                            $in_statement_continuation = 1;
-                        }
-                    } ## end else [ if ($nesting_block_flag)]
-
-                } ## end else [ if ( $type_i eq '{' ||...})]
-
-                #-------------------------------------------
-                # Section 4: operations common to all levels
-                #-------------------------------------------
-
-                # set secondary nesting levels based on all containment token
-                # types Note: these are set so that the nesting depth is the
-                # depth of the PREVIOUS TOKEN, which is convenient for setting
-                # the strength of token bonds
-
-                #    /^[L\{\(\[]$/
-                if ( $is_opening_type{$type_i} ) {
-                    $slevel_in_tokenizer++;
-                    $nesting_token_string .= $tok_i;
-                    $nesting_type_string  .= $type_i;
-                }
-
-                #       /^[R\}\)\]]$/
-                elsif ( $is_closing_type{$type_i} ) {
-                    $slevel_in_tokenizer--;
-                    my $char = chop $nesting_token_string;
-
-                    if ( $char ne $matching_start_token{$tok_i} ) {
-                        $nesting_token_string .= $char . $tok_i;
-                        $nesting_type_string  .= $type_i;
-                    }
-                    else {
-                        chop $nesting_type_string;
-                    }
-                }
-
-                # apply token type patch:
-                # - output anonymous 'sub' as keyword (type 'k')
-                # - output __END__, __DATA__, and format as type 'k' instead
-                #   of ';' to make html colors correct, etc.
-                # The following hash tests are equivalent to these older tests:
-                #   if ( $type_i eq 't' && $is_sub{$tok_i} ) { $fix_type = 'k' }
-                #   if ( $type_i eq ';' && $tok_i =~ /\w/ ) { $fix_type = 'k' }
-                if (   $is_END_DATA_format_sub{$tok_i}
-                    && $is_semicolon_or_t{$type_i} )
-                {
-                    $type_i = 'k';
-                }
-            } ## end else [ if ( $type_i eq 'b' ||...)]
-
-            #--------------------------------
-            # Store the values for this token
-            #--------------------------------
-            push( @ci_string,     $ci_string_i ? 1 : 0 );         # clip ci to 1
-            push( @levels,        $level_i );
-            push( @block_type,    $routput_block_type->[$i] );
-            push( @type_sequence, $routput_type_sequence->[$i] );
-            push( @token_type,    $type_i );
-
-            # Form and store the PREVIOUS token
-            if ( defined($rtoken_map_im) ) {
-                my $numc =
-                  $rtoken_map->[$i] - $rtoken_map_im;    # how many characters
-
-                if ( $numc > 0 ) {
-                    push( @tokens,
-                        substr( $input_line, $rtoken_map_im, $numc ) );
-                }
-                else {
-
-                    # Should not happen unless @{$rtoken_map} is corrupted
-                    DEVEL_MODE
-                      && $self->Fault(
-                        "number of characters is '$numc' but should be >0\n");
-                }
-            }
-
-            # or grab some values for the leading token (needed for log output)
-            else {
-                $line_of_tokens->{_nesting_blocks_0} = $nesting_block_string;
-            }
-
-            $rtoken_map_im = $rtoken_map->[$i];
-        } ## end foreach my $i ( @{$routput_token_list...})
-
-        #------------------------
-        # End loop to over tokens
-        #------------------------
-
-        # Form and store the final token of this line
-        if ( defined($rtoken_map_im) ) {
-            my $numc = length($input_line) - $rtoken_map_im;
-            if ( $numc > 0 ) {
-                push( @tokens, substr( $input_line, $rtoken_map_im, $numc ) );
-            }
-            else {
-
-                # Should not happen unless @{$rtoken_map} is corrupted
-                DEVEL_MODE
-                  && $self->Fault(
-                    "Number of Characters is '$numc' but should be >0\n");
-            }
-        }
-
-        #----------------------------------------------------------
-        # Wrap up this line of tokens for shipping to the Formatter
-        #----------------------------------------------------------
-        $line_of_tokens->{_rtoken_type}    = \@token_type;
-        $line_of_tokens->{_rtokens}        = \@tokens;
-        $line_of_tokens->{_rblock_type}    = \@block_type;
-        $line_of_tokens->{_rtype_sequence} = \@type_sequence;
-        $line_of_tokens->{_rlevels}        = \@levels;
-        $line_of_tokens->{_rci_levels}     = \@ci_string;
-
-        return;
-    } ## end sub OLD_tokenizer_wrapup_line
-
     sub tokenizer_wrapup_line {
         my ( $self, $line_of_tokens ) = @_;
 
@@ -6230,16 +5597,8 @@ EOM
         # Package a line of tokens for shipping back to the caller
         #---------------------------------------------------------
 
-        # Note: This is the new version of this routine. It does not compute
-        # continuation indentation; it returns values ci=0.  The ci values
-        # are computed later by sub Formatter::set_ci.
-
         # Arrays to hold token values for this line:
-        my @levels        = ();    # structural brace levels of output tokens
-        my @block_type    = ();    # stack of output code block types
-        my @type_sequence = ();    # stack of output type sequence numbers
-        my @token_type    = ();    # stack of output token types
-        my @tokens        = ();    # output tokens
+        my ( @levels, @block_type, @type_sequence, @token_type, @tokens );
 
         $line_of_tokens->{_nesting_tokens_0} = $nesting_token_string;
 
@@ -6249,8 +5608,6 @@ EOM
         #-----------------
         # Loop over tokens
         #-----------------
-        my $rtoken_map_im;
-
         # $i is the index of the pretoken which starts this full token
         foreach my $i ( @{$routput_token_list} ) {
 
@@ -6452,7 +5809,10 @@ EOM
             }
         }
 
-        # This sub returns zero ci values
+        # Note: this is the new version of this routine. It does not compute
+        # continuation indentation; it returns values ci=0.  The ci values
+        # are computed later by sub Formatter::set_ci.
+
         my @ci_levels = (0) x scalar(@levels);
 
         #----------------------------------------------------------
@@ -11243,10 +10603,6 @@ BEGIN {
     # Note: 'class' will be added by sub check_options if -use-feature=class
     @q = qw(package);
     @is_package{@q} = (1) x scalar(@q);
-
-    @q = qw( ? : );
-    push @q, ',';
-    @is_comma_question_colon{@q} = (1) x scalar(@q);
 
     @q = qw( if elsif unless );
     @is_if_elsif_unless{@q} = (1) x scalar(@q);

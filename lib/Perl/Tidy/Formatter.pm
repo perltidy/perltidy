@@ -6788,20 +6788,6 @@ sub set_ci {
 
     use constant DEBUG_SET_CI => 0;
 
-    # The following flag values are temporarily available for experimentation:
-    # -exp=ci0 OLD: use ci values computed by tokenizer
-    # -exp=ci1 MIXED: old ci values except for new ci for comments.
-    # -exp=ci2 NEW: ci values computed by this sub
-    my $calculate_ci = 2;    # current default
-    if    ( DEVEL_MODE || DEBUG_SET_CI ) { $calculate_ci = 2 }
-    elsif ($rOpts->{'experimental'}
-        && $rOpts->{'experimental'} =~ /\bci(\d+)\b/ )
-    {
-        $calculate_ci = $1;
-    }
-    return if ( !$calculate_ci );
-    my $ci_comments_only = $calculate_ci == 1;
-
     # This turns on an optional piece of logic which makes the new and
     # old computations of ci agree.  It has almost no effect on actual
     # programs but is useful for testing.
@@ -7515,10 +7501,7 @@ EOM
         #----------------------------------
         # Store the ci value for this token
         #----------------------------------
-        $rtoken_K->[_CI_LEVEL_] = $ci_this
-
-          # do not store in hybrid testing mode
-          if ( !$ci_comments_only );
+        $rtoken_K->[_CI_LEVEL_] = $ci_this;
 
         # Remember last nonblank, non-comment token info for the next pass
         $ci_last    = $ci_this;

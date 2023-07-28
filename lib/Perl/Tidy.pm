@@ -2228,9 +2228,9 @@ sub process_filter_layer {
     # Setup post-filter vars; these apply to 'tidy' mode only
     if ( $rOpts->{'format'} eq 'tidy' ) {
 
-        #-------------------------------------------------------------
-        # for --line-range-tidy, reduce '$rinput_string' to a limited line range
-        #-------------------------------------------------------------
+        #---------------------------------------------------------------------
+        # for --line-range-tidy, clip '$rinput_string' to a limited line range
+        #---------------------------------------------------------------------
         my $line_tidy_begin = $self->[_line_tidy_begin_];
         if ($line_tidy_begin) {
 
@@ -2256,11 +2256,9 @@ EOM
             }
         }
 
-        #-------------------------------------------------------------------
-        # Setup vars for postfilter, destination buffer, assertions and
-        # sink object if needed.  These are only used for 'tidy' formatting.
-        #-------------------------------------------------------------------
-        # evaluate MD5 sum of input file, if needed, before any prefilter
+        #------------------------------------------
+        # evaluate MD5 sum of input file, if needed
+        #------------------------------------------
         if (   $rOpts->{'assert-tidy'}
             || $rOpts->{'assert-untidy'}
             || $rOpts->{'backup-and-modify-in-place'} )
@@ -2288,11 +2286,9 @@ EOM
         $rinput_string = \$input_string;
     }
 
-    #----------------------------------------------------------------------
-    # Format contents of string '$rinput_string', iterating if requested.
-    # For 'tidy', formatted result will be written to '$tidy_output_buffer'
-    # For 'html' and 'user', result goes directly to its ultimate destination.
-    #----------------------------------------------------------------------
+    #-------------------------------------------
+    # Format contents of string '$rinput_string'
+    #-------------------------------------------
     my $routput_string = $self->process_iteration_layer($rinput_string);
 
     #-------------------------------
@@ -2302,10 +2298,9 @@ EOM
         return;
     }
 
-    #----------------------------------------------------------------------
-    # Apply any postfilter. The postfilter is a code reference that will be
-    # applied to the source after tidying.
-    #----------------------------------------------------------------------
+    #---------------------
+    # apply any postfilter
+    #---------------------
     my $postfilter = $self->[_postfilter_];
     if ($postfilter) {
         my $output_string = $postfilter->( ${$routput_string} );
@@ -2317,9 +2312,9 @@ EOM
         $self->[_input_output_difference_] = $digest_output ne $digest_input;
     }
 
-    #--------------------------
-    # Check 'assert-...' status
-    #--------------------------
+    #-----------------------------------------------------
+    # check for changes if requested by 'assert-...' flags
+    #-----------------------------------------------------
     if ( $rOpts->{'assert-tidy'} ) {
         if ( $self->[_input_output_difference_] ) {
             my $diff_msg =
@@ -2342,9 +2337,9 @@ EOM
         }
     }
 
-    #--------------------------------------------
-    # Handle --line-range-tidy line recombination
-    #--------------------------------------------
+    #----------------------------------------
+    # do --line-range-tidy line recombination
+    #----------------------------------------
     if ( @input_lines_pre || @input_lines_post ) {
         my $str_pre       = join EMPTY_STRING, @input_lines_pre;
         my $str_post      = join EMPTY_STRING, @input_lines_post;
@@ -2352,9 +2347,9 @@ EOM
         $routput_string = \$output_string;
     }
 
-    #--------------------------------------------------------------
-    # Handle --preserve-line-endings or -output-line-endings flags.
-    #--------------------------------------------------------------
+    #-------------------------------------------------------------
+    # handle --preserve-line-endings or -output-line-endings flags
+    #-------------------------------------------------------------
     # The native line separator has been used in all intermediate
     # iterations and filter operations until here so that string
     # operations work ok.
@@ -2370,7 +2365,7 @@ EOM
     }
 
     #-----------------------------------------
-    # Handle a '--noadd-terminal-newline' flag
+    # handle a '--noadd-terminal-newline' flag
     #-----------------------------------------
     if ($chomp_terminal_newline) {
         chomp ${$routput_string};
@@ -2399,8 +2394,6 @@ sub process_iteration_layer {
 
     # Data Flow in this layer:
     #      $rinput_string -> [ loop over iterations ] -> $routput_string
-
-    # Only 'tidy' formatting can use multiple iterations.
 
     my $diagnostics_object = $self->[_diagnostics_object_];
     my $display_name       = $self->[_display_name_];
