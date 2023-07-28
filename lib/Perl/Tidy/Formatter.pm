@@ -53,7 +53,7 @@ use constant SPACE        => q{ };
 use Carp;
 use English    qw( -no_match_vars );
 use List::Util qw( min max );          # min, max are in Perl 5.8
-our $VERSION = '20230701.01';
+our $VERSION = '20230701.02';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
