@@ -1708,10 +1708,9 @@ sub prepare_for_a_new_file {
     # tokens. Initialized once and continually updated as
     # lines are processed.
     my (
-        $last_nonblank_container_type,     $last_nonblank_type_sequence,
-        $last_last_nonblank_token,         $last_last_nonblank_type,
-        $last_last_nonblank_block_type,    $last_last_nonblank_container_type,
-        $last_last_nonblank_type_sequence, $last_nonblank_prototype,
+        $last_nonblank_container_type, $last_nonblank_type_sequence,
+        $last_last_nonblank_token,     $last_last_nonblank_type,
+        $last_nonblank_prototype,
     );
 
     # ----------------------------------------------------------------
@@ -1745,14 +1744,11 @@ sub prepare_for_a_new_file {
         $level_in_tokenizer   = 0;
 
         # TV6:
-        $last_nonblank_container_type      = EMPTY_STRING;
-        $last_nonblank_type_sequence       = EMPTY_STRING;
-        $last_last_nonblank_token          = ';';
-        $last_last_nonblank_type           = ';';
-        $last_last_nonblank_block_type     = EMPTY_STRING;
-        $last_last_nonblank_container_type = EMPTY_STRING;
-        $last_last_nonblank_type_sequence  = EMPTY_STRING;
-        $last_nonblank_prototype           = EMPTY_STRING;
+        $last_nonblank_container_type = EMPTY_STRING;
+        $last_nonblank_type_sequence  = EMPTY_STRING;
+        $last_last_nonblank_token     = ';';
+        $last_last_nonblank_type      = ';';
+        $last_nonblank_prototype      = EMPTY_STRING;
         return;
     } ## end sub initialize_tokenizer_state
 
@@ -1829,13 +1825,8 @@ sub prepare_for_a_new_file {
         ];
 
         my $rTV6 = [
-            $last_nonblank_container_type,
-            $last_nonblank_type_sequence,
-            $last_last_nonblank_token,
-            $last_last_nonblank_type,
-            $last_last_nonblank_block_type,
-            $last_last_nonblank_container_type,
-            $last_last_nonblank_type_sequence,
+            $last_nonblank_container_type, $last_nonblank_type_sequence,
+            $last_last_nonblank_token,     $last_last_nonblank_type,
             $last_nonblank_prototype,
         ];
         return [ $rGV1, $rTV1, $rTV2, $rTV3, $rTV4, $rTV5, $rTV6 ];
@@ -1912,13 +1903,8 @@ sub prepare_for_a_new_file {
         ) = @{$rTV5};
 
         (
-            $last_nonblank_container_type,
-            $last_nonblank_type_sequence,
-            $last_last_nonblank_token,
-            $last_last_nonblank_type,
-            $last_last_nonblank_block_type,
-            $last_last_nonblank_container_type,
-            $last_last_nonblank_type_sequence,
+            $last_nonblank_container_type, $last_nonblank_type_sequence,
+            $last_last_nonblank_token,     $last_last_nonblank_type,
             $last_nonblank_prototype,
         ) = @{$rTV6};
         return;
@@ -5224,17 +5210,11 @@ EOM
 
                         $last_last_nonblank_token,
                         $last_last_nonblank_type,
-                        $last_last_nonblank_block_type,
-                        $last_last_nonblank_container_type,
-                        $last_last_nonblank_type_sequence,
                       )
                       = (
 
                         $last_nonblank_token,
                         $last_nonblank_type,
-                        $last_nonblank_block_type,
-                        $last_nonblank_container_type,
-                        $last_nonblank_type_sequence,
                       );
 
                     # Fix part #3 for git82: propagate type 'Z' though L-R pair
@@ -5540,17 +5520,11 @@ EOM
 
                 $last_last_nonblank_token,
                 $last_last_nonblank_type,
-                $last_last_nonblank_block_type,
-                $last_last_nonblank_container_type,
-                $last_last_nonblank_type_sequence,
               )
               = (
 
                 $last_nonblank_token,
                 $last_nonblank_type,
-                $last_nonblank_block_type,
-                $last_nonblank_container_type,
-                $last_nonblank_type_sequence,
               );
 
             (
@@ -5613,12 +5587,14 @@ EOM
 
             my $type_i = $routput_token_type->[$i];
 
-            #--------------------------------
-            # 1. Handle a non-sequenced token
-            #--------------------------------
+            #----------------------------------------
+            # Section 1. Handle a non-sequenced token
+            #----------------------------------------
             if ( !$routput_type_sequence->[$i] ) {
 
-                # 1.1 types ';' and 't'
+                #-------------------------------
+                # Section 1.1. types ';' and 't'
+                #-------------------------------
                 # - output anonymous 'sub' as keyword (type 'k')
                 # - output __END__, __DATA__, and format as type 'k' instead
                 #   of ';' to make html colors correct, etc.
@@ -5629,7 +5605,9 @@ EOM
                     }
                 }
 
-                # 1.2 Check for an invalid token type..
+                #----------------------------------------------
+                # Section 1.2. Check for an invalid token type.
+                #----------------------------------------------
                 # This can happen by running perltidy on non-scripts although
                 # it could also be bug introduced by programming change.  Perl
                 # silently accepts a 032 (^Z) and takes it as the end
@@ -5641,7 +5619,9 @@ EOM
                     $self->[_in_error_] = 1;
                 }
 
-                # Store values for a non-sequenced token
+                #----------------------------------------------------
+                # Section 1.3. Store values for a non-sequenced token
+                #----------------------------------------------------
                 push( @levels,        $level_in_tokenizer );
                 push( @block_type,    EMPTY_STRING );
                 push( @type_sequence, EMPTY_STRING );
@@ -5649,10 +5629,10 @@ EOM
 
             }
 
-            #----------------------------
-            # 2. Handle a sequenced token
+            #------------------------------------
+            # Section 2. Handle a sequenced token
             #    One of { [ ( ? ) ] } :
-            #----------------------------
+            #------------------------------------
             else {
 
                 # $level_i is the level we will store.  Levels of braces are
@@ -5669,9 +5649,9 @@ EOM
                 #    -1 => at a nested ternary :
                 #     0 => otherwise
 
-                #------------------------------------
-                # 2.1 handle a level-increasing token
-                #------------------------------------
+                #--------------------------------------------
+                # Section 2.1 Handle a level-increasing token
+                #--------------------------------------------
                 if ( $is_opening_or_ternary_type{$type_i} ) {
 
                     if ( $type_i eq '?' ) {
@@ -5705,9 +5685,9 @@ EOM
                     }
                 }
 
-                #------------------------------------
-                # 2.2 handle a level-decreasing token
-                #------------------------------------
+                #---------------------------------------------
+                # Section 2.2. Handle a level-decreasing token
+                #---------------------------------------------
                 elsif ( $is_closing_or_ternary_type{$type_i} ) {
 
                     if ( $type_i ne ':' ) {
@@ -5747,9 +5727,9 @@ EOM
                     }
                 }
 
-                #-------------------------------------------------------
-                # 2.3 Unexpected sequenced token type - shouldn't happen
-                #-------------------------------------------------------
+                #-----------------------------------------------------
+                # Section 2.3. Unexpected sequenced token type - error
+                #-----------------------------------------------------
                 else {
 
                     # The tokenizer should only be assigning sequence numbers
@@ -5758,6 +5738,10 @@ EOM
 unexpected sequence number on token type $type_i with pre-tok=$tok_i
 EOM
                 }
+
+                #------------------------------------------------
+                # Section 2.4. Store values for a sequenced token
+                #------------------------------------------------
 
                 # The starting nesting block string, which is used in any .LOG
                 # output, should include the first token of the line
@@ -5773,15 +5757,15 @@ EOM
 
             }
 
-        }
+        }    ## End loop to over tokens
 
-        # End loop to over tokens
+        #---------------------
+        # Post-loop operations
+        #---------------------
 
         $line_of_tokens->{_nesting_blocks_0} = $nesting_block_string_0;
 
-        #--------------------------
         # Form and store the tokens
-        #--------------------------
         if (@levels) {
 
             my $im     = shift @{$routput_token_list};
@@ -5809,15 +5793,11 @@ EOM
             }
         }
 
-        # Note: this is the new version of this routine. It does not compute
-        # continuation indentation; it returns values ci=0.  The ci values
-        # are computed later by sub Formatter::set_ci.
-
+        # This routine no longer computes continuation indentation. It returns
+        # ci=0. The ci values are computed later by sub Formatter::set_ci.
         my @ci_levels = (0) x scalar(@levels);
 
-        #----------------------------------------------------------
         # Wrap up this line of tokens for shipping to the Formatter
-        #----------------------------------------------------------
         $line_of_tokens->{_rtoken_type}    = \@token_type;
         $line_of_tokens->{_rtokens}        = \@tokens;
         $line_of_tokens->{_rblock_type}    = \@block_type;
