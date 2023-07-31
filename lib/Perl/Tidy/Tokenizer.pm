@@ -5187,7 +5187,7 @@ EOM
                 last if ( $in_quote || $i > $max_token_index );
             }
 
-            if ( $type ne 'b' && $tok ne 'CORE::' ) {
+            if ( $type ne 'b' && $type ne 'CORE::' ) {
 
                 # try to catch some common errors
                 if ( ( $type eq 'n' ) && ( $tok ne '0' ) ) {
