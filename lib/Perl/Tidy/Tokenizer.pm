@@ -5203,50 +5203,20 @@ EOM
                 # fix c090, only rotate vars if a new token will be stored
                 if ( $i_tok >= 0 ) {
 
-                    # NOTE: This way of writing multiple assignments is harder
-                    # to read but is typically 20% faster than one-by-one. This
-                    # is a time-critical routine so it is worthwhile here.
-                    (
+                    $last_last_nonblank_token = $last_nonblank_token;
+                    $last_last_nonblank_type  = $last_nonblank_type;
 
-                        $last_last_nonblank_token,
-                        $last_last_nonblank_type,
-                      )
-                      = (
-
-                        $last_nonblank_token,
-                        $last_nonblank_type,
-                      );
+                    $last_nonblank_prototype      = $prototype;
+                    $last_nonblank_block_type     = $block_type;
+                    $last_nonblank_container_type = $container_type;
+                    $last_nonblank_type_sequence  = $type_sequence;
+                    $last_nonblank_i              = $i_tok;
 
                     # Fix part #3 for git82: propagate type 'Z' though L-R pair
                     unless ( $type eq 'R' && $last_nonblank_type eq 'Z' ) {
-                        (
-
-                            $last_nonblank_token,
-                            $last_nonblank_type,
-                          )
-                          = (
-
-                            $tok,
-                            $type,
-                          );
+                        $last_nonblank_token = $tok;
+                        $last_nonblank_type  = $type;
                     }
-
-                    (
-
-                        $last_nonblank_prototype,
-                        $last_nonblank_block_type,
-                        $last_nonblank_container_type,
-                        $last_nonblank_type_sequence,
-                        $last_nonblank_i,
-                      )
-                      = (
-
-                        $prototype,
-                        $block_type,
-                        $container_type,
-                        $type_sequence,
-                        $i_tok,
-                      );
                 }
 
                 # Patch for c030: Fix things in case a '->' got separated from
@@ -5516,35 +5486,16 @@ EOM
         # Remember last nonblank values
         if ( $type ne 'b' && $type ne '#' ) {
 
-            (
+            $last_last_nonblank_token = $last_nonblank_token;
+            $last_last_nonblank_type  = $last_nonblank_type;
 
-                $last_last_nonblank_token,
-                $last_last_nonblank_type,
-              )
-              = (
+            $last_nonblank_prototype      = $prototype;
+            $last_nonblank_block_type     = $block_type;
+            $last_nonblank_container_type = $container_type;
+            $last_nonblank_type_sequence  = $type_sequence;
 
-                $last_nonblank_token,
-                $last_nonblank_type,
-              );
-
-            (
-
-                $last_nonblank_token,
-                $last_nonblank_type,
-                $last_nonblank_block_type,
-                $last_nonblank_container_type,
-                $last_nonblank_type_sequence,
-                $last_nonblank_prototype,
-              )
-              = (
-
-                $tok,
-                $type,
-                $block_type,
-                $container_type,
-                $type_sequence,
-                $prototype,
-              );
+            $last_nonblank_token = $tok;
+            $last_nonblank_type  = $type;
         }
 
         # reset indentation level if necessary at a sub or package
@@ -5756,7 +5707,6 @@ EOM
                 push( @token_type,    $type_i );
 
             }
-
         }    ## End loop to over tokens
 
         #---------------------
@@ -5793,8 +5743,8 @@ EOM
             }
         }
 
-        # This routine no longer computes continuation indentation. It returns
-        # ci=0. The ci values are computed later by sub Formatter::set_ci.
+        # NOTE: This routine returns ci=0. Eventually '_rci_levels' can be
+        # removed. The ci values are computed later by sub Formatter::set_ci.
         my @ci_levels = (0) x scalar(@levels);
 
         # Wrap up this line of tokens for shipping to the Formatter

@@ -5899,7 +5899,6 @@ EOM
         my $rblock_type    = $line_of_tokens_old->{_rblock_type};
         my $rtype_sequence = $line_of_tokens_old->{_rtype_sequence};
         my $rlevels        = $line_of_tokens_old->{_rlevels};
-        my $rci_levels     = $line_of_tokens_old->{_rci_levels};
 
         my $rLL                     = $self->[_rLL_];
         my $rSS                     = $self->[_rSS_];
@@ -5926,13 +5925,12 @@ EOM
         # NOTE: coding efficiency is critical in this loop over all tokens
         foreach my $token ( @{$rtokens} ) {
 
-            # Do not clip the 'level' variable yet. We will do this
-            # later, in sub 'store_token_to_go'. The reason is that in
-            # files with level errors, the logic in 'weld_cuddled_else'
-            # uses a stack logic that will give bad welds if we clip
-            # levels here.
-            ## $j++;
-            ## if ( $rlevels->[$j] < 0 ) { $rlevels->[$j] = 0 }
+            # NOTE: Do not clip the 'level' variable yet if it is negative. We
+            # will do that later, in sub 'store_token_to_go'. The reason is
+            # that in files with level errors, the logic in 'weld_cuddled_else'
+            # uses a stack logic that will give bad welds if we clip levels
+            # here. (A recent update will probably not even allow negative
+            # levels to arrive here any longer).
 
             my $seqno = EMPTY_STRING;
 
@@ -6018,27 +6016,24 @@ EOM
 
             }
 
+            # Here we are storing the first five variables per token. The
+            # remaining token variables will be added later as follows:
+            #  _TOKEN_LENGTH_      is added by sub store_token
+            #  _CUMULATIVE_LENGTH_ is added by sub store_token
+            #  _KNEXT_SEQ_ITEM_    is added by sub respace_post_loop_ops
+            #  _CI_LEVEL_          is added by sub set_ci
+            # So all token variables are available for use after sub set_ci.
+
             my @tokary;
-            @tokary[
 
-              _TOKEN_,
-              _TYPE_,
-              _TYPE_SEQUENCE_,
-              _LEVEL_,
-              _CI_LEVEL_,
-              _LINE_INDEX_,
+            $tokary[_TOKEN_]         = $token;
+            $tokary[_TYPE_]          = $rtoken_type->[$j];
+            $tokary[_TYPE_SEQUENCE_] = $seqno;
+            $tokary[_LEVEL_]         = $rlevels->[$j];
+            $tokary[_LINE_INDEX_]    = $line_index;
 
-              ] = (
-
-                $token,
-                $rtoken_type->[$j],
-                $seqno,
-                $rlevels->[$j],
-                $rci_levels->[$j],
-                $line_index,
-
-              );
             push @{$rLL}, \@tokary;
+
         } ## end token loop
 
         # Need to remember if we can trim the input line
@@ -6046,7 +6041,7 @@ EOM
 
         # Values needed by Logger
         $line_of_tokens->{_level_0}    = $rlevels->[0];
-        $line_of_tokens->{_ci_level_0} = $rci_levels->[0];
+        $line_of_tokens->{_ci_level_0} = 0;    # sub set_ci will fix this
         $line_of_tokens->{_nesting_blocks_0} =
           $line_of_tokens_old->{_nesting_blocks_0};
         $line_of_tokens->{_nesting_tokens_0} =
@@ -6146,7 +6141,8 @@ EOM
             return 1;
         }
 
-        # calling set_ci after respace allows it to use type counts
+        # sub 'set_ci' is called after sub respace to allow use of type counts
+        # Token variable _CI_LEVEL_ is only defined after this call
         $self->set_ci();
 
         $self->find_multiline_qw($rqw_lines);
@@ -8867,7 +8863,6 @@ sub respace_post_loop_ops {
     }
 
     # Find and remember lists by sequence number
-    my %is_C_style_for;
     foreach my $seqno ( keys %{$K_opening_container} ) {
         my $K_opening = $K_opening_container->{$seqno};
         next unless defined($K_opening);
@@ -8890,7 +8885,6 @@ sub respace_post_loop_ops {
             my $semicolon_count = $rtype_count->{';'};
             if ( $rtype_count->{'f'} ) {
                 $semicolon_count += $rtype_count->{'f'};
-                $is_C_style_for{$seqno} = 1;
             }
 
             # We will define a list to be a container with one or more commas
@@ -8945,11 +8939,7 @@ sub respace_post_loop_ops {
 
             # Convert to a hash brace if it looks like it holds a list
             if ($is_list) {
-
                 $block_type = EMPTY_STRING;
-
-                $rLL_new->[$K_opening]->[_CI_LEVEL_] = 1;
-                $rLL_new->[$K_closing]->[_CI_LEVEL_] = 1;
             }
 
             $rblock_type_of_seqno->{$seqno} = $block_type;
@@ -9056,19 +9046,6 @@ sub respace_post_loop_ops {
         }
     }
 
-    # Add -ci to C-style for loops (issue c154)
-    # This is much easier to do here than in the tokenizer.
-    foreach my $seqno ( keys %is_C_style_for ) {
-        my $K_opening = $K_opening_container->{$seqno};
-        my $K_closing = $K_closing_container->{$seqno};
-        my $type_last = 'f';
-        for my $KK ( $K_opening + 1 .. $K_closing - 1 ) {
-            $rLL_new->[$KK]->[_CI_LEVEL_] = $type_last eq 'f' ? 0 : 1;
-            my $type = $rLL_new->[$KK]->[_TYPE_];
-            if ( $type ne 'b' && $type ne '#' ) { $type_last = $type }
-        }
-    }
-
     return;
 } ## end sub respace_post_loop_ops
 
@@ -9116,7 +9093,6 @@ sub store_token {
             $item->[_TYPE_SEQUENCE_] = EMPTY_STRING;
             $item->[_LINE_INDEX_]    = $rLL_new->[-1]->[_LINE_INDEX_];
             $item->[_LEVEL_]         = $rLL_new->[-1]->[_LEVEL_];
-            $item->[_CI_LEVEL_]      = $rLL_new->[-1]->[_CI_LEVEL_];
         }
         else { return }
     }
