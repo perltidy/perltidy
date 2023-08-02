@@ -110,6 +110,10 @@ my (
     @closing_brace_names,
     @opening_brace_names,
 
+    # GLOBAL CONSTANT hash lookup table of operator expected values
+    # INITIALIZER: BEGIN block
+    %op_expected_table,
+
     # GLOBAL VARIABLES which are constant after being configured.
     # INITIALIZER: BEGIN block and modified by sub check_options
     %is_code_block_token,
@@ -5000,7 +5004,7 @@ EOM
             # Must not be in multi-line quote
             # and must not be in an equation
             if ( !$in_quote
-                && ( $self->operator_expected( [ 'b', '=', 'b' ] ) == TERM ) )
+                && ( $self->operator_expected( 'b', '=', 'b' ) == TERM ) )
             {
                 $self->[_in_pod_] = 1;
                 return;
@@ -5173,9 +5177,9 @@ EOM
         $i     = -1;
         $i_tok = -1;
 
-        #-----------------------------
-        # begin main tokenization loop
-        #-----------------------------
+        #-----------------------
+        # main tokenization loop
+        #-----------------------
 
         # we are looking at each pre-token of one line and combining them
         # into tokens
@@ -5272,14 +5276,16 @@ EOM
             # this pre-token will start an output token
             push( @{$routput_token_list}, $i_tok );
 
-            #--------------------------
-            # handle a whitespace token
-            #--------------------------
+            # The search for the full token ends in one of 5 main end NODES
+
+            #----------------------------------
+            # NODE 1: handle a whitespace token
+            #----------------------------------
             next if ( $pre_type eq 'b' );
 
-            #-----------------
-            # handle a comment
-            #-----------------
+            #-------------------------
+            # NODE 2: handle a comment
+            #-------------------------
             last if ( $pre_type eq '#' );
 
             # continue gathering identifier if necessary
@@ -5357,7 +5363,7 @@ EOM
 
                     # note that here $tok = '/' and the next tok and type is '/'
                     $expecting =
-                      $self->operator_expected( [ $prev_type, $tok, '/' ] );
+                      $self->operator_expected( $prev_type, $tok, '/' );
 
                     # Patched for RT#101547, was 'unless ($expecting==OPERATOR)'
                     $combine_ok = 0 if ( $expecting == TERM );
@@ -5414,6 +5420,13 @@ EOM
             $next_tok  = $rtokens->[ $i + 1 ];
             $next_type = $rtoken_type->[ $i + 1 ];
 
+            # expecting an operator here? first try table lookup, then function
+            $expecting = $op_expected_table{$last_nonblank_type};
+            if ( !defined($expecting) ) {
+                $expecting =
+                  $self->operator_expected( $prev_type, $tok, $next_type );
+            }
+
             DEBUG_TOKENIZE && do {
                 local $LIST_SEPARATOR = ')(';
                 my @debug_list = (
@@ -5425,54 +5438,40 @@ EOM
                 print STDOUT "TOKENIZE:(@debug_list)\n";
             };
 
-            # Turn off attribute list on first non-blank, non-bareword.
-            # Added '#' to fix c038 (later moved above).
-            if ( $pre_type ne 'w' && $self->[_in_attribute_list_] ) {
-                $self->[_in_attribute_list_] = 0;
-            }
-
-            #--------------------------------------------------------
             # We have the next token, $tok.
             # Now we have to examine this token and decide what it is
             # and define its $type
-            #
-            # section 1: bare words
-            #--------------------------------------------------------
 
+            #---------------------------
+            # NODE 3: handle a bare word
+            #---------------------------
             if ( $pre_type eq 'w' ) {
-                $expecting =
-                  $self->operator_expected( [ $prev_type, $tok, $next_type ] );
                 my $is_last = $self->do_BAREWORD($is_END_or_DATA);
                 last if ($is_last);
+                next;
             }
 
-            #-----------------------------
-            # section 2: strings of digits
-            #-----------------------------
-            elsif ( $pre_type eq 'd' ) {
-                $expecting =
-                  $self->operator_expected( [ $prev_type, $tok, $next_type ] );
+            # Turn off attribute list on first non-blank, non-bareword.
+            # Added '#' to fix c038 (later moved above).
+            $self->[_in_attribute_list_] &&= 0;
+
+            #----------------------------------
+            # NODE 4: handle a string of digits
+            #----------------------------------
+            if ( $pre_type eq 'd' ) {
                 $self->do_DIGITS();
+                next;
             }
 
-            #----------------------------
-            # section 3: all other tokens
-            #----------------------------
-            else {
-                my $code = $tokenization_code->{$tok};
-                if ($code) {
-                    $expecting =
-                      $self->operator_expected(
-                        [ $prev_type, $tok, $next_type ] );
-                    $code->($self);
-                    redo if $in_quote;
-                }
+            #--------------------------------
+            # NODE 5: handle all other tokens
+            #--------------------------------
+            my $code = $tokenization_code->{$tok};
+            if ($code) {
+                $code->($self);
+                redo if $in_quote;
             }
-        }
-
-        # -----------------------------
-        # end of main tokenization loop
-        # -----------------------------
+        }    ## End main tokenizer loop
 
         # Store the final token
         if ( $i_tok >= 0 ) {
@@ -5582,7 +5581,7 @@ EOM
 
             #------------------------------------
             # Section 2. Handle a sequenced token
-            #    One of { [ ( ? ) ] } :
+            #    One of { [ ( ? : ) ] }
             #------------------------------------
             else {
 
@@ -5764,8 +5763,8 @@ EOM
 # Tokenizer routines which assist in identifying token types
 #######################################################################
 
-# hash lookup table of operator expected values
-my %op_expected_table;
+# Define Global '%op_expected_table'
+#  = hash table of operator expected values based on last nonblank token
 
 # exceptions to perl's weird parsing rules after type 'Z'
 my %is_weird_parsing_rule_exception;
@@ -5823,7 +5822,7 @@ sub operator_expected {
 
     # Call format:
     #    $op_expected =
-    #      $self->operator_expected( [ $prev_type, $tok, $next_type ] );
+    #      $self->operator_expected( $prev_type, $tok, $next_type );
     # where
     #    $prev_type is the type of the previous token (blank or not)
     #    $tok is the current token
@@ -5867,14 +5866,15 @@ sub operator_expected {
     # the 'operator_expected' value by a simple hash lookup.  If there are
     # exceptions, that is an indication that a new type is needed.
 
-    my ( $self, $rarg ) = @_;
+    my ( $self, $prev_type, $tok, $next_type ) = @_;
 
-    #-------------
-    # Table lookup
-    #-------------
+    #--------------------------------------------
+    # Section 1: Table lookup will get most cases
+    #--------------------------------------------
 
     # Many types are can be obtained by a table lookup given the previous type.
     # This typically handles half or more of the calls.
+    # NOTE: for speed, caller can try table lookup first before calling this sub
     my $op_expected = $op_expected_table{$last_nonblank_type};
     if ( defined($op_expected) ) {
         DEBUG_OPERATOR_EXPECTED
@@ -5883,12 +5883,11 @@ sub operator_expected {
         return $op_expected;
     }
 
-    #---------------------
-    # Handle special cases
-    #---------------------
+    #---------------------------------------------
+    # Section 2: Handle special cases if necessary
+    #---------------------------------------------
 
     $op_expected = UNKNOWN;
-    my ( $prev_type, $tok, $next_type ) = @{$rarg};
 
     # Types 'k', '}' and 'Z' depend on context
     # Types 'i', 'n', 'v', 'q' currently also temporarily depend on context.
