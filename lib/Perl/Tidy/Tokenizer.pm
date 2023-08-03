@@ -605,22 +605,6 @@ EOM
     return;
 } ## end sub make_source_array
 
-sub get_next_line {
-
-    my $self = shift;
-
-    # return the next line from the input stream
-
-    my $rinput_lines = $self->[_rinput_lines_];
-    my $line_index   = $self->[_input_line_index_next_];
-    my $line;
-    if ( $line_index < @{$rinput_lines} ) {
-        $line = $rinput_lines->[ $line_index++ ];
-        $self->[_input_line_index_next_] = $line_index;
-    }
-    return $line;
-} ## end sub get_next_line
-
 sub peek_ahead {
     my ( $self, $buffer_index ) = @_;
 
@@ -973,15 +957,26 @@ sub log_numbered_msg {
     return;
 } ## end sub log_numbered_msg
 
-# returns the next tokenized line
 sub get_line {
 
     my $self = shift;
 
+    # Read the next input line and tokenize it
+    # Returns:
+    #   $line_of_tokens = ref to hash of info for the tokenized line
+
     # USES GLOBAL VARIABLES:
     #   $brace_depth, $square_bracket_depth, $paren_depth
 
-    my $input_line = $self->get_next_line();
+    # get the next line from the input array
+    my $input_line;
+    my $rinput_lines = $self->[_rinput_lines_];
+    my $line_index   = $self->[_input_line_index_next_];
+    if ( $line_index < @{$rinput_lines} ) {
+        $input_line = $rinput_lines->[ $line_index++ ];
+        $self->[_input_line_index_next_] = $line_index;
+    }
+
     $self->[_line_of_text_] = $input_line;
 
     return unless ( defined($input_line) );
@@ -1224,65 +1219,66 @@ sub get_line {
     }
 
     # check for a hash-bang line if we haven't seen one
-    if ( !$self->[_saw_hash_bang_] ) {
-        if ( $input_line =~ /^\#\!.*perl\b/ ) {
-            $self->[_saw_hash_bang_] = $input_line_number;
+    if (   !$self->[_saw_hash_bang_]
+        && substr( $input_line, 0, 2 ) eq '#!'
+        && $input_line =~ /^\#\!.*perl\b/ )
+    {
+        $self->[_saw_hash_bang_] = $input_line_number;
 
-            # check for -w and -P flags
-            if ( $input_line =~ /^\#\!.*perl\s.*-.*P/ ) {
-                $self->[_saw_perl_dash_P_] = 1;
-            }
+        # check for -w and -P flags
+        if ( $input_line =~ /^\#\!.*perl\s.*-.*P/ ) {
+            $self->[_saw_perl_dash_P_] = 1;
+        }
 
-            if ( $input_line =~ /^\#\!.*perl\s.*-.*w/ ) {
-                $self->[_saw_perl_dash_w_] = 1;
-            }
+        if ( $input_line =~ /^\#\!.*perl\s.*-.*w/ ) {
+            $self->[_saw_perl_dash_w_] = 1;
+        }
 
-            if (
-                $input_line_number > 1
+        if (
+            $input_line_number > 1
 
-                # leave any hash bang in a BEGIN block alone
-                # i.e. see 'debugger-duck_type.t'
-                && !(
-                       $last_nonblank_block_type
-                    && $last_nonblank_block_type eq 'BEGIN'
-                )
-                && !$self->[_look_for_hash_bang_]
+            # leave any hash bang in a BEGIN block alone
+            # i.e. see 'debugger-duck_type.t'
+            && !(
+                   $last_nonblank_block_type
+                && $last_nonblank_block_type eq 'BEGIN'
+            )
+            && !$self->[_look_for_hash_bang_]
 
-                # Try to avoid giving a false alarm at a simple comment.
-                # These look like valid hash-bang lines:
+            # Try to avoid giving a false alarm at a simple comment.
+            # These look like valid hash-bang lines:
 
-                #!/usr/bin/perl -w
-                #!   /usr/bin/perl -w
-                #!c:\perl\bin\perl.exe
+            #!/usr/bin/perl -w
+            #!   /usr/bin/perl -w
+            #!c:\perl\bin\perl.exe
 
-                # These are comments:
-                #! I love perl
-                #!  sunos does not yet provide a /usr/bin/perl
+            # These are comments:
+            #! I love perl
+            #!  sunos does not yet provide a /usr/bin/perl
 
-                # Comments typically have multiple spaces, which suggests
-                # the filter
-                && $input_line =~ /^\#\!(\s+)?(\S+)?perl/
-              )
-            {
+            # Comments typically have multiple spaces, which suggests
+            # the filter
+            && $input_line =~ /^\#\!(\s+)?(\S+)?perl/
+          )
+        {
 
-                # this is helpful for VMS systems; we may have accidentally
-                # tokenized some DCL commands
-                if ( $self->[_started_tokenizing_] ) {
-                    $self->warning(
+            # this is helpful for VMS systems; we may have accidentally
+            # tokenized some DCL commands
+            if ( $self->[_started_tokenizing_] ) {
+                $self->warning(
 "There seems to be a hash-bang after line 1; do you need to run with -x ?\n"
-                    );
-                }
-                else {
-                    $self->complain("Useless hash-bang after line 1\n");
-                }
+                );
             }
-
-            # Report the leading hash-bang as a system line
-            # This will prevent -dac from deleting it
             else {
-                $line_of_tokens->{_line_type} = 'SYSTEM';
-                return $line_of_tokens;
+                $self->complain("Useless hash-bang after line 1\n");
             }
+        }
+
+        # Report the leading hash-bang as a system line
+        # This will prevent -dac from deleting it
+        else {
+            $line_of_tokens->{_line_type} = 'SYSTEM';
+            return $line_of_tokens;
         }
     }
 
