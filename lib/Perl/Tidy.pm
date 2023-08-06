@@ -2398,8 +2398,7 @@ EOM
     if ( $rOpts->{'assert-tidy'} ) {
         if ( $self->[_input_output_difference_] ) {
             my $diff_msg =
-              compare_string_buffers( $saved_input_buf, ${$routput_string},
-                $is_encoded_data );
+              compare_string_buffers( \$saved_input_buf, $routput_string );
             $logger_object->warning(<<EOM);
 assertion failure: '--assert-tidy' is set but output differs from input
 EOM
@@ -2926,17 +2925,15 @@ sub compare_string_buffers {
 
     # Compare input and output string buffers and return a brief text
     # description of the first difference.
-    my ( $bufi, $bufo, $is_encoded_data ) = @_;
+    my ( $rbufi, $rbufo ) = @_;
 
-    my $leni = length($bufi);
-    my $leno = defined($bufo) ? length($bufo) : 0;
+    my $leni = defined($rbufi) ? length( ${$rbufi} ) : 0;
+    my $leno = defined($rbufo) ? length( ${$rbufo} ) : 0;
     my $msg =
       "Input  file length is $leni chars\nOutput file length is $leno chars\n";
     return $msg unless $leni && $leno;
-
-    my ( $fhi, $fnamei ) = streamhandle( \$bufi, 'r', $is_encoded_data );
-    my ( $fho, $fnameo ) = streamhandle( \$bufo, 'r', $is_encoded_data );
-    return $msg unless ( $fho && $fhi );    # for safety, shouldn't happen
+    my @aryi = split /^/, ${$rbufi};
+    my @aryo = split /^/, ${$rbufo};
     my ( $linei,  $lineo );
     my ( $counti, $counto )                          = ( 0, 0 );
     my ( $last_nonblank_line, $last_nonblank_count ) = ( EMPTY_STRING, 0 );
@@ -2952,8 +2949,8 @@ sub compare_string_buffers {
             $last_nonblank_line  = $linei;
             $last_nonblank_count = $counti;
         }
-        $linei = $fhi->getline();
-        $lineo = $fho->getline();
+        $linei = shift @aryi;
+        $lineo = shift @aryo;
 
         # compare chomp'ed lines
         if ( defined($linei) ) { $counti++; chomp $linei }
