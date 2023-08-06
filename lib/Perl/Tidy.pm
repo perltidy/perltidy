@@ -270,42 +270,6 @@ EOM
     return $fh, ( $ref or $filename );
 } ## end sub streamhandle
 
-sub find_input_line_ending {
-
-    # Given:
-    #   $buf = raw first line of input file
-    # Return
-    #   first line ending character.
-    #   undefined value in case of any trouble.
-    my ($buf) = @_;
-
-    my $ending;
-    if ($buf) {
-
-        if ( $buf =~ /([\012\015]+)/ ) {
-            my $test = $1;
-
-            # dos
-            if ( $test =~ /^(\015\012)+$/ ) { $ending = "\015\012" }
-
-            # mac
-            elsif ( $test =~ /^\015+$/ ) { $ending = "\015" }
-
-            # unix
-            elsif ( $test =~ /^\012+$/ ) { $ending = "\012" }
-
-            # unknown
-            else { }
-        }
-
-        # no ending seen
-        else { }
-
-    }
-
-    return $ending;
-} ## end sub find_input_line_ending
-
 {    ## begin closure for sub catfile
 
     my $missing_file_spec;
@@ -1476,7 +1440,7 @@ sub get_decoded_string_buffer {
     # Set $self->[_line_separator_], and
 
     # Return:
-    #   $buf = string buffer with input, decoded from utf8 if necessary
+    #   $rinput_string = ref to input string, decoded from utf8 if necessary
     #   $is_encoded_data  = true if $buf is decoded from utf8
     #   $decoded_input_as = true if perltidy decoded input buf
     #   $encoding_log_message = messages for log file,
@@ -1486,42 +1450,10 @@ sub get_decoded_string_buffer {
 
     my $rOpts = $self->[_rOpts_];
 
-    my ( $fh, $input_name ) = Perl::Tidy::streamhandle( $input_file, 'r' );
+    my $rinput_string = $self->slurp_input_stream($input_file);
+    return unless ( defined($rinput_string) );
 
-    # return nothing if error
-    return unless ($fh);
-
-    my $buf            = EMPTY_STRING;
-    my $line_separator = $self->[_line_separator_default_];
-    my $count          = 0;
-
-    while ( defined( my $line = $fh->getline() ) ) {
-        $buf .= $line;
-
-        # Find and change the line separator if requested with -ple
-        if ( !$count && $rOpts->{'preserve-line-endings'} ) {
-
-            # Limit string length in case we have a strange file
-            my $line1_raw = substr( $line, 0, 1024 );
-            my $ls_input  = find_input_line_ending($line1_raw);
-            if ( defined($ls_input) ) { $line_separator = $ls_input }
-        }
-        $count++;
-    }
-
-    $self->[_line_separator_] = $line_separator;
-
-    # patch to read raw mac files under unix, dos
-    # look for a single line with embedded \r's
-    if ( $count == 1 && $buf =~ /[\015][^\015\012]/ ) {
-        my @lines = map { $_ . "\n" } split /\015/, $buf;
-        if ( @lines > 1 ) {
-            $buf = join EMPTY_STRING, @lines;
-        }
-    }
-
-    if ( $rOpts->{'preserve-line-endings'} ) {
-    }
+    $rinput_string = $self->set_line_separator($rinput_string);
 
     my $encoding_in              = EMPTY_STRING;
     my $rOpts_character_encoding = $rOpts->{'character-encoding'};
@@ -1535,7 +1467,7 @@ sub get_decoded_string_buffer {
     # could also happen if the user has done some unusual manipulations of
     # the source.  In any case, we will not attempt to decode it because
     # that could result in an output string in a different mode.
-    if ( is_char_mode($buf) ) {
+    if ( is_char_mode( ${$rinput_string} ) ) {
         $encoding_in = "utf8";
         $rstatus->{'char_mode_source'} = 1;
     }
@@ -1561,21 +1493,21 @@ sub get_decoded_string_buffer {
         # In testing I have found that including additional guess 'suspect'
         # encodings sometimes works but can sometimes lead to disaster by
         # using an incorrect decoding.
-        my $buf_in = $buf;
 
-        my $decoder = guess_encoding( $buf_in, 'utf8' );
+        my $decoder = guess_encoding( ${$rinput_string}, 'utf8' );
         if ( ref($decoder) ) {
             $encoding_in = $decoder->name;
             if ( $encoding_in ne 'UTF-8' && $encoding_in ne 'utf8' ) {
                 $encoding_in = EMPTY_STRING;
-                $buf         = $buf_in;
                 $encoding_log_message .= <<EOM;
 Guessed encoding '$encoding_in' is not utf8; no encoding will be used
 EOM
             }
             else {
 
-                if ( !eval { $buf = $decoder->decode($buf_in); 1 } ) {
+                my $buf;
+                if ( !eval { $buf = $decoder->decode( ${$rinput_string} ); 1 } )
+                {
 
                     $encoding_log_message .= <<EOM;
 Guessed encoding '$encoding_in' but decoding was unsuccessful; no encoding is used
@@ -1587,13 +1519,13 @@ EOM
 "file: $display_name: bad guess to decode source as $encoding_in\n"
                     );
                     $encoding_in = EMPTY_STRING;
-                    $buf         = $buf_in;
                 }
                 else {
                     $encoding_log_message .= <<EOM;
 Guessed encoding '$encoding_in' successfully decoded
 EOM
                     $decoded_input_as = $encoding_in;
+                    $rinput_string    = \$buf;
                 }
             }
         }
@@ -1607,9 +1539,10 @@ EOM
     # Case 4. Decode with a specific encoding
     else {
         $encoding_in = $rOpts_character_encoding;
+        my $buf;
         if (
             !eval {
-                $buf = Encode::decode( $encoding_in, $buf,
+                $buf = Encode::decode( $encoding_in, ${$rinput_string},
                     Encode::FB_CROAK | Encode::LEAVE_SRC );
                 1;
             }
@@ -1630,6 +1563,7 @@ EOM
 Specified encoding '$encoding_in' successfully decoded
 EOM
             $decoded_input_as = $encoding_in;
+            $rinput_string    = \$buf;
         }
     }
 
@@ -1643,7 +1577,7 @@ EOM
 
     # Delete any Byte Order Mark (BOM), which can cause trouble
     if ($is_encoded_data) {
-        $buf =~ s/^\x{FEFF}//;
+        ${$rinput_string} =~ s/^\x{FEFF}//;
     }
 
     $rstatus->{'input_name'}       = $display_name;
@@ -1688,7 +1622,7 @@ EOM
         }
     }
     return (
-        \$buf,
+        $rinput_string,
         $is_encoded_data,
         $decoded_input_as,
         $encoding_log_message,
@@ -1696,6 +1630,152 @@ EOM
 
     );
 } ## end sub get_decoded_string_buffer
+
+sub slurp_input_stream {
+
+    my ( $self, $filename ) = @_;
+
+    # Read the text in $filename and
+    # return:
+    #    undef if read error, or
+    #    $rinput_string = ref to string of text
+
+    # if $filename is:     Read
+    # ----------------     -----------------
+    # ARRAY  ref           array ref
+    # SCALAR ref           string ref
+    # object ref           object with 'getline' method (exit if no 'getline')
+    # '-'                  STDIN
+    # string               file named $filename
+
+    # Note that any decoding from utf8 will occur later
+
+    my $ref = ref($filename);
+    my $rinput_string;
+
+    # handle a reference
+    if ($ref) {
+        if ( $ref eq 'ARRAY' ) {
+            my $buf = join EMPTY_STRING, @{$filename};
+            $rinput_string = \$buf;
+        }
+        elsif ( $ref eq 'SCALAR' ) {
+            $rinput_string = $filename;
+        }
+        else {
+            if ( $ref->can('getline') ) {
+                my $buf = EMPTY_STRING;
+                while ( defined( my $line = $filename->getline() ) ) {
+                    $buf .= $line;
+                }
+                $rinput_string = \$buf;
+            }
+            else {
+                confess <<EOM;
+------------------------------------------------------------------------
+No 'getline' method is defined for object of class '$ref'
+Please check your call to Perl::Tidy::perltidy.  Trace follows.
+------------------------------------------------------------------------
+EOM
+            }
+        }
+    }
+
+    # handle a string
+    else {
+        if ( $filename eq '-' ) {
+            local $INPUT_RECORD_SEPARATOR = undef;
+            my $buf = <>;
+            $rinput_string = \$buf;
+        }
+        else {
+            if ( open( my $fh, '<', $filename ) ) {
+                local $INPUT_RECORD_SEPARATOR = undef;
+                my $buf = <$fh>;
+                close $fh || Warn("Cannot close $filename\n");
+                $rinput_string = \$buf;
+            }
+            else {
+                Warn("Cannot open $filename: $ERRNO\n");
+                return;
+            }
+        }
+    }
+
+    return $rinput_string;
+} ## end sub slurp_input_stream
+
+sub set_line_separator {
+
+    my ( $self, $rinput_string ) = @_;
+
+    # Set the (output) line separator as requested or necessary
+
+    my $rOpts = $self->[_rOpts_];
+
+    # Start with the default (output) line separator
+    my $line_separator = $self->[_line_separator_default_];
+
+    # First try to find the line separator of the input stream
+    my $input_line_separator;
+
+    # Limit the search to a reasonable number of characters, in case we
+    # have a weird file
+    my $str = substr( ${$rinput_string}, 0, 1024 );
+    if ($str) {
+
+        if ( $str =~ /([\012\015]+)/ ) {
+            my $test = $1;
+
+            # dos
+            if ( $test =~ /^(\015\012)+$/ ) {
+                $input_line_separator = "\015\012";
+            }
+
+            # mac
+            elsif ( $test =~ /^\015+$/ ) { $input_line_separator = "\015" }
+
+            # unix
+            elsif ( $test =~ /^\012+$/ ) { $input_line_separator = "\012" }
+
+            # unknown
+            else { }
+        }
+
+        # no ending seen
+        else { }
+    }
+
+    # Now change the line separator if requested
+    if ( defined($input_line_separator) ) {
+
+        if ( $rOpts->{'preserve-line-endings'} ) {
+            $line_separator = $input_line_separator;
+        }
+
+        # patch to read raw mac files under unix, dos
+        if ( $input_line_separator ne "\n" && $input_line_separator eq "\015" )
+        {
+
+            # if this file is currently a single line ..
+            my @lines = split /^/, ${$rinput_string};
+            if ( @lines == 1 ) {
+
+                # and becomes multiple lines with the change ..
+                @lines = map { $_ . "\n" } split /\015/, ${$rinput_string};
+                if ( @lines > 1 ) {
+
+                    # then make the change
+                    my $buf = join EMPTY_STRING, @lines;
+                    $rinput_string = \$buf;
+                }
+            }
+        }
+    }
+
+    $self->[_line_separator_] = $line_separator;
+    return $rinput_string;
+} ## end sub set_line_separator
 
 sub process_all_files {
 
