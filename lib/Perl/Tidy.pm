@@ -1692,7 +1692,7 @@ EOM
             if ( open( my $fh, '<', $filename ) ) {
                 local $INPUT_RECORD_SEPARATOR = undef;
                 my $buf = <$fh>;
-                close $fh || Warn("Cannot close $filename\n");
+                $fh->close() || Warn("Cannot close $filename\n");
                 $rinput_string = \$buf;
             }
             else {
@@ -2219,15 +2219,26 @@ sub write_tidy_output {
     # PATH 3: $output_file is named file or '-'; send output to the file system
     #--------------------------------------------------------------------------
     else {
-
-        my ( $fh, $fh_name ) =
-          Perl::Tidy::streamhandle( $output_file, 'w', $is_encoded_data );
-        unless ($fh) { Die("Cannot write to output stream\n"); }
-
-        $fh->print( ${$routput_string} );
-
-        if ( $output_file ne '-' && !ref $output_file ) {
-            $fh->close();
+        if ( $output_file eq '-' ) {
+            my ( $fh, $fh_name ) =
+              Perl::Tidy::streamhandle( $output_file, 'w', $is_encoded_data );
+            unless ($fh) { Die("Cannot write to output stream\n"); }
+            $fh->print( ${$routput_string} );
+        }
+        else {
+            if ( open( my $fh, '>', $output_file ) ) {
+                if ($is_encoded_data) {
+                    binmode $fh, ":raw:encoding(UTF-8)";
+                }
+                else {
+                    binmode $fh;
+                }
+                $fh->print( ${$routput_string} );
+                $fh->close() || Warn("Cannot close $output_file\n");
+            }
+            else {
+                Die("Cannot open $output_file to write: $ERRNO\n");
+            }
         }
 
         if ($is_encoded_data) {

@@ -4999,8 +4999,12 @@ EOM
 
             # Must not be in multi-line quote
             # and must not be in an equation
-            if ( !$in_quote
-                && ( $self->operator_expected( 'b', '=', 'b' ) == TERM ) )
+            my $blank_after_Z = 1;
+            if (
+                !$in_quote
+                && ( $self->operator_expected( '=', 'b', $blank_after_Z ) ==
+                    TERM )
+              )
             {
                 $self->[_in_pod_] = 1;
                 return;
@@ -5320,9 +5324,6 @@ EOM
                 $tok  = $pre_tok;
             }
 
-##          my $prev_tok  = $i > 0 ? $rtokens->[ $i - 1 ]     : SPACE;
-            my $prev_type = $i > 0 ? $rtoken_type->[ $i - 1 ] : 'b';
-
             #-----------------------------------------------------------
             # Combine pre-tokens into digraphs and trigraphs if possible
             #-----------------------------------------------------------
@@ -5358,8 +5359,9 @@ EOM
                 if ( $test_tok eq '//' && $last_nonblank_type ne 'Z' ) {
 
                     # note that here $tok = '/' and the next tok and type is '/'
+                    my $blank_after_Z;
                     $expecting =
-                      $self->operator_expected( $prev_type, $tok, '/' );
+                      $self->operator_expected( $tok, '/', $blank_after_Z );
 
                     # Patched for RT#101547, was 'unless ($expecting==OPERATOR)'
                     $combine_ok = 0 if ( $expecting == TERM );
@@ -5419,8 +5421,10 @@ EOM
             # expecting an operator here? first try table lookup, then function
             $expecting = $op_expected_table{$last_nonblank_type};
             if ( !defined($expecting) ) {
+                my $blank_after_Z = $last_nonblank_type eq 'Z'
+                  && ( $i == 0 || $rtoken_type->[ $i - 1 ] eq 'b' );
                 $expecting =
-                  $self->operator_expected( $prev_type, $tok, $next_type );
+                  $self->operator_expected( $tok, $next_type, $blank_after_Z );
             }
 
             DEBUG_TOKENIZE && do {
@@ -5818,11 +5822,14 @@ sub operator_expected {
 
     # Call format:
     #    $op_expected =
-    #      $self->operator_expected( $prev_type, $tok, $next_type );
+    #      $self->operator_expected( $tok, $next_type, $blank_after_Z );
     # where
-    #    $prev_type is the type of the previous token (blank or not)
     #    $tok is the current token
     #    $next_type is the type of the next token (blank or not)
+    #    $blank_after_Z = flag for guessing after a type 'Z':
+    #       true  if $tok follows type 'Z' with intermediate blank
+    #       false if $tok follows type 'Z' with no intermediate blank
+    #       ignored if $tok does not follow type 'Z'
 
     # Many perl symbols have two or more meanings.  For example, '<<'
     # can be a shift operator or a here-doc operator.  The
@@ -5862,15 +5869,15 @@ sub operator_expected {
     # the 'operator_expected' value by a simple hash lookup.  If there are
     # exceptions, that is an indication that a new type is needed.
 
-    my ( $self, $prev_type, $tok, $next_type ) = @_;
+    my ( $self, $tok, $next_type, $blank_after_Z ) = @_;
 
     #--------------------------------------------
     # Section 1: Table lookup will get most cases
     #--------------------------------------------
 
-    # Many types are can be obtained by a table lookup given the previous type.
-    # This typically handles half or more of the calls.
-    # NOTE: for speed, caller can try table lookup first before calling this sub
+    # Many types are can be obtained by a table lookup.  This typically handles
+    # more than half of the calls.  For speed, the caller may try table lookup
+    # first before calling this sub.
     my $op_expected = $op_expected_table{$last_nonblank_type};
     if ( defined($op_expected) ) {
         DEBUG_OPERATOR_EXPECTED
@@ -5882,8 +5889,6 @@ sub operator_expected {
     #---------------------------------------------
     # Section 2: Handle special cases if necessary
     #---------------------------------------------
-
-    $op_expected = UNKNOWN;
 
     # Types 'k', '}' and 'Z' depend on context
     # Types 'i', 'n', 'v', 'q' currently also temporarily depend on context.
@@ -6073,7 +6078,7 @@ sub operator_expected {
         #    print $fh &xsi_protos(@mods);
         #    my $x = new $CompressClass *FH;
         #    print $OUT +( $count % 15 ? ", " : "\n\t" );
-        elsif ($prev_type eq 'b'
+        elsif ($blank_after_Z
             && $next_type ne 'b' )
         {
             $op_expected = TERM;
