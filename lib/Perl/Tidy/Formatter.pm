@@ -348,6 +348,7 @@ my (
     # INITIALIZER: sub make_sub_matching_pattern
     $SUB_PATTERN,
     $ASUB_PATTERN,
+    %matches_ASUB,
 
     # INITIALIZER: make_static_block_comment_pattern
     $static_block_comment_pattern,
@@ -5329,8 +5330,9 @@ sub make_sub_matching_pattern {
     #   sub'_ is a named sub           ( block type will be <sub '_> )
     #  'substr' is a keyword
     # So note that named subs always have a space after 'sub'
-    $SUB_PATTERN  = '^sub\s';    # match normal sub
-    $ASUB_PATTERN = '^sub$';     # match anonymous sub
+    $SUB_PATTERN  = '^sub\s';         # match normal sub
+    $ASUB_PATTERN = '^sub$';          # match anonymous sub
+    %matches_ASUB = ( 'sub' => 1 );
 
     # Note (see also RT #133130): These patterns are used by
     # sub make_block_pattern, which is used for making most patterns.
@@ -5341,7 +5343,15 @@ sub make_sub_matching_pattern {
         # Note that any 'sub-alias-list' has been preprocessed to
         # be a trimmed, space-separated list which includes 'sub'
         # for example, it might be 'sub method fun'
+
+        # Two ways are provided to match an anonymous sub:
+        # $ASUB_PATTERN - with a regex (old method, slow)
+        # %matches_ASUB - with a hash lookup (new method, faster)
+
         my $sub_alias_list = $rOpts->{'sub-alias-list'};
+        my @words          = split /\s+/, $sub_alias_list;
+        @matches_ASUB{@words} = (1) x scalar(@words);
+
         $sub_alias_list =~ s/\s+/\|/g;
         $SUB_PATTERN    =~ s/sub/\($sub_alias_list\)/;
         $ASUB_PATTERN   =~ s/sub/\($sub_alias_list\)/;
@@ -5757,7 +5767,7 @@ EOM
 
         # and save named subs and anynymous subs in separate hashes so that
         # we only have to do the pattern tests once.
-        if ( $block_type =~ /$ASUB_PATTERN/ ) {
+        if ( $matches_ASUB{$block_type} ) {
             $self->[_ris_asub_block_]->{$seqno} = 1;
         }
         elsif ( $block_type =~ /$SUB_PATTERN/ ) {
@@ -21845,7 +21855,7 @@ sub break_lines_inner_loop {
 
                     (
                            $next_nonblank_block_type =~ /$SUB_PATTERN/
-                        || $next_nonblank_block_type =~ /$ASUB_PATTERN/
+                        || $matches_ASUB{$next_nonblank_block_type}
                     )
                     && ( $nesting_depth_to_go[$i_begin] ==
                         $nesting_depth_to_go[$i_next_nonblank] )
@@ -27728,7 +27738,7 @@ EOM
                 # but do not align the opening brace of an anonymous sub
                 if (   $token eq '{'
                     && $block_type_to_go[$i]
-                    && $block_type_to_go[$i] =~ /$ASUB_PATTERN/ )
+                    && $matches_ASUB{ $block_type_to_go[$i] } )
                 {
 
                 }
