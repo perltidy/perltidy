@@ -5766,6 +5766,24 @@ EOM
         return;
     } ## end sub store_block_type
 
+    # hash keys which are common to old and new line_of_tokens
+    my @common_keys;
+
+    BEGIN {
+        @common_keys = qw(
+          _curly_brace_depth
+          _ending_in_quote
+          _guessed_indentation_level
+          _line_number
+          _line_text
+          _line_type
+          _paren_depth
+          _quote_character
+          _square_bracket_depth
+          _starting_in_quote
+        );
+    }
+
     sub write_line {
 
         # This routine receives lines one-by-one from the tokenizer and stores
@@ -5777,23 +5795,9 @@ EOM
 
         my $rLL            = $self->[_rLL_];
         my $line_of_tokens = {};
-        foreach (
-            qw(
-            _curly_brace_depth
-            _ending_in_quote
-            _guessed_indentation_level
-            _line_number
-            _line_text
-            _line_type
-            _paren_depth
-            _quote_character
-            _square_bracket_depth
-            _starting_in_quote
-            )
-          )
-        {
-            $line_of_tokens->{$_} = $line_of_tokens_old->{$_};
-        }
+
+        # copy common hash key values
+        @{$line_of_tokens}{@common_keys} = @{$line_of_tokens_old}{@common_keys};
 
         my $line_type = $line_of_tokens_old->{_line_type};
         my $tee_output;
