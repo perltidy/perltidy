@@ -49,7 +49,6 @@ BEGIN {
     # Do not combine with other BEGIN blocks (c101).
     my $i = 0;
     use constant {
-        _write_line_                  => $i++,
         _logger_object_               => $i++,
         _rOpts_                       => $i++,
         _output_line_number_          => $i++,
@@ -70,6 +69,7 @@ BEGIN {
         _K_sequence_error_msg_        => $i++,
         _K_last_arrival_              => $i++,
         _save_logfile_                => $i++,
+        _routput_string_              => $i++,
     };
 } ## end BEGIN
 
@@ -147,27 +147,21 @@ sub new {
     $self->[_K_sequence_error_msg_]        = EMPTY_STRING;
     $self->[_K_last_arrival_]              = -1;
     $self->[_save_logfile_]                = defined($logger_object);
+    $self->[_routput_string_]              = undef;
 
-    # parameter '$line_sink_object' tells where to store the line, as follows:
+    # '$line_sink_object' is a SCALAR ref which receives the lines.
     my $ref = ref($line_sink_object);
     if ( !$ref ) {
         Fault("FileWriter expects line_sink_object to be a ref\n");
     }
     elsif ( $ref eq 'SCALAR' ) {
-        $self->[_write_line_] = sub { ${$line_sink_object} .= $_[0] };
-    }
-    elsif ( $ref eq 'ARRAY' ) {
-        $self->[_write_line_] = sub { push @{$line_sink_object}, $_[0] };
-    }
-    elsif ( $ref->can('write_line') ) {
-        $self->[_write_line_] = sub { $line_sink_object->write_line( $_[0] ) };
+        $self->[_routput_string_] = $line_sink_object;
     }
     else {
         my $str = $ref;
         if ( length($str) > 63 ) { $str = substr( $str, 0, 60 ) . '...' }
         Fault(<<EOM);
-FileWriter expects 'line_sink_object' to be ref to SCALAR, ARRAY,
-or obj with write_line method, but it is ref to:
+FileWriter expects 'line_sink_object' to be ref to SCALAR but it is ref to:
 $str
 EOM
     }
@@ -284,9 +278,9 @@ sub write_blank_code_line {
         return;
     }
 
-    $self->[_write_line_]->("\n");
-    $self->[_output_line_number_]++;
+    ${ $self->[_routput_string_] } .= "\n";
 
+    $self->[_output_line_number_]++;
     $self->[_consecutive_blank_lines_]++;
     $self->[_consecutive_new_blank_lines_]++ if ($forced);
 
@@ -307,9 +301,10 @@ sub write_code_line {
     $self->[_consecutive_blank_lines_]     = 0;
     $self->[_consecutive_new_blank_lines_] = 0;
     $self->[_consecutive_nonblank_lines_]++;
+    $self->[_output_line_number_]++;
 
-    $self->[_write_line_]->($str);
-    if ( chomp $str )              { $self->[_output_line_number_]++; }
+    ${ $self->[_routput_string_] } .= $str;
+
     if ( $self->[_save_logfile_] ) { $self->check_line_lengths($str) }
 
     #----------------------------
@@ -334,15 +329,17 @@ sub write_code_line {
         # caused lines to go out in the wrong order.  This could happen if
         # either the cache or buffer that it uses are emptied in the wrong
         # order.
-        if ( !$self->[_K_sequence_error_msg_] ) {
+        if ( $K < $self->[_K_last_arrival_]
+            && !$self->[_K_sequence_error_msg_] )
+        {
             my $K_prev = $self->[_K_last_arrival_];
-            if ( $K < $K_prev ) {
-                chomp $str;
-                if ( length($str) > MAX_PRINTED_CHARS ) {
-                    $str = substr( $str, 0, MAX_PRINTED_CHARS ) . "...";
-                }
 
-                my $msg = <<EOM;
+            chomp $str;
+            if ( length($str) > MAX_PRINTED_CHARS ) {
+                $str = substr( $str, 0, MAX_PRINTED_CHARS ) . "...";
+            }
+
+            my $msg = <<EOM;
 While operating on input stream with name: '$input_stream_name'
 Lines have arrived out of order in sub 'write_code_line'
 as detected by token index K=$K arriving after index K=$K_prev in the following line:
@@ -350,16 +347,15 @@ $str
 This is probably due to a recent programming change and needs to be fixed.
 EOM
 
-                # Always die during development, this needs to be fixed
-                if (DEVEL_MODE) { Fault($msg) }
+            # Always die during development, this needs to be fixed
+            if (DEVEL_MODE) { Fault($msg) }
 
-                # Otherwise warn if string is not empty (added for b1378)
-                $self->warning($msg) if ( length($str) );
+            # Otherwise warn if string is not empty (added for b1378)
+            $self->warning($msg) if ( length($str) );
 
-                # Only issue this warning once
-                $self->[_K_sequence_error_msg_] = $msg;
+            # Only issue this warning once
+            $self->[_K_sequence_error_msg_] = $msg;
 
-            }
         }
         $self->[_K_last_arrival_] = $K;
     }
@@ -372,7 +368,8 @@ sub write_line {
     # Write a line directly to the output, without any counting of blank or
     # non-blank lines.
 
-    $self->[_write_line_]->($str);
+    ${ $self->[_routput_string_] } .= $str;
+
     if ( chomp $str )              { $self->[_output_line_number_]++; }
     if ( $self->[_save_logfile_] ) { $self->check_line_lengths($str) }
 
@@ -385,7 +382,8 @@ sub check_line_lengths {
     # collect info on line lengths for logfile
 
     # This calculation of excess line length ignores any internal tabs
-    my $rOpts   = $self->[_rOpts_];
+    my $rOpts = $self->[_rOpts_];
+    chomp $str;
     my $len_str = length($str);
     my $exceed  = $len_str - $rOpts->{'maximum-line-length'};
     if ( $str && substr( $str, 0, 1 ) eq "\t" && $str =~ /^\t+/g ) {

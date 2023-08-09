@@ -14661,7 +14661,7 @@ sub process_all_lines {
 
             # Handle Format Skipping (FS) and Verbatim (VB) Lines
             if ( $CODE_type eq 'VB' || $CODE_type eq 'FS' ) {
-                $self->write_unindented_line("$input_line");
+                $self->write_unindented_line($input_line);
                 $file_writer_object->reset_consecutive_blank_lines();
                 next;
             }
