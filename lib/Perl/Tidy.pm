@@ -2186,8 +2186,10 @@ sub write_tidy_output {
 
             my $backup_method = $rOpts->{'backup-method'};
 
-            # -b option 1, -bm='copy': uses newer version in which original is
+            #-------------------------------------------------------------
+            # PATH 1a: -bm='copy': uses newer version in which original is
             # copied to the backup and rewritten; see git #103.
+            #-------------------------------------------------------------
             if ( defined($backup_method) && $backup_method eq 'copy' ) {
                 $self->backup_method_copy(
                     $input_file,       $routput_string,
@@ -2195,8 +2197,10 @@ sub write_tidy_output {
                 );
             }
 
-            # -b option 2, -bm='move': uses older version, where original is
+            #-------------------------------------------------------------
+            # PATH 1b: -bm='move': uses older version, where original is
             # moved to the backup and formatted output goes to a new file.
+            #-------------------------------------------------------------
             else {
                 $self->backup_method_move(
                     $input_file,       $routput_string,
@@ -2208,8 +2212,8 @@ sub write_tidy_output {
 
     #--------------------------------------------------------------------------
     # PATH 2: $output_file is a reference (=destination_stream): send output to
-    # a destination stream ref received from an external perl program. The
-    # encoding rules for these are a bit tricky.
+    # a destination stream ref received from an external perl program. We use
+    # a sub to do this because the encoding rules are a bit tricky.
     #--------------------------------------------------------------------------
     elsif ( ref($output_file) ) {
         $self->copy_buffer_to_external_ref( $routput_string, $output_file );
@@ -2219,38 +2223,43 @@ sub write_tidy_output {
     # PATH 3: $output_file is named file or '-'; send output to the file system
     #--------------------------------------------------------------------------
     else {
+
+        #--------------------------
+        # PATH 3a: output to STDOUT
+        #--------------------------
         if ( $output_file eq '-' ) {
-            my ( $fh, $fh_name ) =
-              Perl::Tidy::streamhandle( $output_file, 'w', $is_encoded_data );
-            unless ($fh) { Die("Cannot write to output stream\n"); }
+            my $fh = *STDOUT;
+            if ($is_encoded_data) { binmode $fh, ":raw:encoding(UTF-8)" }
+            else                  { binmode $fh }
             $fh->print( ${$routput_string} );
         }
+
+        #--------------------------------
+        # PATH 3b: output to a named file
+        #--------------------------------
         else {
             if ( open( my $fh, '>', $output_file ) ) {
-                if ($is_encoded_data) {
-                    binmode $fh, ":raw:encoding(UTF-8)";
-                }
-                else {
-                    binmode $fh;
-                }
+                if ($is_encoded_data) { binmode $fh, ":raw:encoding(UTF-8)" }
+                else                  { binmode $fh }
                 $fh->print( ${$routput_string} );
                 $fh->close() || Warn("Cannot close $output_file\n");
             }
             else {
                 Die("Cannot open $output_file to write: $ERRNO\n");
             }
+
+            # set output file ownership and permissions if appropriate
+            if ( $output_file && -f $output_file && !-l $output_file ) {
+                if ( @{$rinput_file_stat} ) {
+                    $self->set_output_file_permissions( $output_file,
+                        \@{$rinput_file_stat}, $in_place_modify );
+                }
+            }
         }
 
+        # Save diagnostic info
         if ($is_encoded_data) {
             $rstatus->{'output_encoded_as'} = 'UTF-8';
-        }
-
-        # set output file ownership and permissions if appropriate
-        if ( $output_file && -f $output_file && !-l $output_file ) {
-            if ( @{$rinput_file_stat} ) {
-                $self->set_output_file_permissions( $output_file,
-                    \@{$rinput_file_stat}, $in_place_modify );
-            }
         }
     }
 
