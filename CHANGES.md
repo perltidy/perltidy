@@ -6,8 +6,8 @@
       to limit tidy operations to a limited line range.  Line numbers start
       with 1. The man pages have details.
 
-    - This version runs about five percent faster than the previous release
-      on large files.
+    - This version runs about 7% faster than the previous release on
+      large files.
 
 ## 2023 07 01
 

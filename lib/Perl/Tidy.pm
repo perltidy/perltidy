@@ -1494,8 +1494,11 @@ sub get_decoded_string_buffer {
         # encodings sometimes works but can sometimes lead to disaster by
         # using an incorrect decoding.
 
-        my $decoder = guess_encoding( ${$rinput_string}, 'utf8' );
-        if ( ref($decoder) ) {
+        my $decoder;
+        if ( ${$rinput_string} =~ /[^[:ascii:]]/ ) {
+            $decoder = guess_encoding( ${$rinput_string}, 'utf8' );
+        }
+        if ( $decoder && ref($decoder) ) {
             $encoding_in = $decoder->name;
             if ( $encoding_in ne 'UTF-8' && $encoding_in ne 'utf8' ) {
                 $encoding_in = EMPTY_STRING;
