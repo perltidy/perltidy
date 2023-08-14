@@ -1590,7 +1590,7 @@ EOM
 
     # Define the function to determine the display width of character
     # strings
-    my $length_function = sub { return length( $_[0] ) };
+    my $length_function;
     if ($is_encoded_data) {
 
         # Try to load Unicode::GCString for defining text display width, if

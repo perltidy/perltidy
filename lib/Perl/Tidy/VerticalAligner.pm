@@ -167,7 +167,6 @@ BEGIN {
         _file_writer_object_ => $i++,
         _logger_object_      => $i++,
         _diagnostics_object_ => $i++,
-        _length_function_    => $i++,
 
         _rOpts_                             => $i++,
         _rOpts_indent_columns_              => $i++,
@@ -318,7 +317,6 @@ sub new {
         file_writer_object => undef,
         logger_object      => undef,
         diagnostics_object => undef,
-        length_function    => sub { return length( $_[0] ) },
     );
     my %args = ( %defaults, @args );
 
@@ -337,7 +335,6 @@ sub new {
     $self->[_file_writer_object_] = $args{file_writer_object};
     $self->[_logger_object_]      = $args{logger_object};
     $self->[_diagnostics_object_] = $args{diagnostics_object};
-    $self->[_length_function_]    = $args{length_function};
 
     # shortcuts to user options
     my $rOpts = $args{rOpts};

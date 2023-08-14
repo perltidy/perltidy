@@ -234,7 +234,6 @@ my (
     $rOpts_tee_block_comments,
     $rOpts_tee_pod,
     $rOpts_tee_side_comments,
-    $rOpts_use_unicode_gcstring,
     $rOpts_variable_maximum_line_length,
     $rOpts_valign_code,
     $rOpts_valign_side_comments,
@@ -854,7 +853,7 @@ sub new {
         sink_object        => undef,
         diagnostics_object => undef,
         logger_object      => undef,
-        length_function    => sub { return length( $_[0] ) },
+        length_function    => undef,
         is_encoded_data    => EMPTY_STRING,
         fh_tee             => undef,
     );
@@ -890,7 +889,6 @@ sub new {
         file_writer_object => $file_writer_object,
         logger_object      => $logger_object,
         diagnostics_object => $diagnostics_object,
-        length_function    => $length_function,
     );
 
     write_logfile_entry("\nStarting tokenization pass...\n");
@@ -2479,7 +2477,6 @@ sub initialize_global_option_vars {
     $rOpts_tee_block_comments        = $rOpts->{'tee-block-comments'};
     $rOpts_tee_pod                   = $rOpts->{'tee-pod'};
     $rOpts_tee_side_comments         = $rOpts->{'tee-side-comments'};
-    $rOpts_use_unicode_gcstring      = $rOpts->{'use-unicode-gcstring'};
     $rOpts_valign_code               = $rOpts->{'valign-code'};
     $rOpts_valign_side_comments      = $rOpts->{'valign-side-comments'};
     $rOpts_valign_if_unless          = $rOpts->{'valign-if-unless'};
@@ -8084,6 +8081,7 @@ my %is_nonlist_keyword;
 my %is_nonlist_type;
 my %is_s_y_m_slash;
 my %is_unexpected_equals;
+my %is_ascii_type;
 
 BEGIN {
 
@@ -8116,6 +8114,18 @@ BEGIN {
     @q = qw( = == != );
     @is_unexpected_equals{@q} = (1) x scalar(@q);
 
+    # We can always skip expensive length_function->() calls for these
+    # ascii token types
+    @q = qw#
+      b k L R ; ( { [ ? : ] } ) f t n v F p m pp mm
+      .. :: << >> ** && .. || // -> => += -= .= %= &= |= ^= *= <>
+      ( ) <= >= == =~ !~ != ++ -- /= x=
+      ... **= <<= >>= &&= ||= //= <=>
+      + - / * | % ! x ~ = \ ? : . < > ^ &
+      #;
+    push @q, ',';
+    @is_ascii_type{@q} = (1) x scalar(@q);
+
 } ## end BEGIN
 
 { #<<< begin closure respace_tokens
@@ -8125,7 +8135,6 @@ my $rLL_new;    # This will be the new array of tokens
 # These are variables in $self
 my $rLL;
 my $length_function;
-my $is_encoded_data;
 
 my $K_closing_ternary;
 my $K_opening_ternary;
@@ -8180,10 +8189,9 @@ sub initialize_respace_tokens_closure {
 
     $rLL_new = [];    # This is the new array
 
-    $rLL             = $self->[_rLL_];
-    $length_function = $self->[_length_function_];
-    $is_encoded_data = $self->[_is_encoded_data_];
+    $rLL = $self->[_rLL_];
 
+    $length_function           = $self->[_length_function_];
     $K_closing_ternary         = $self->[_K_closing_ternary_];
     $K_opening_ternary         = $self->[_K_opening_ternary_];
     $rchildren_of_seqno        = $self->[_rchildren_of_seqno_];
@@ -8262,12 +8270,12 @@ sub respace_tokens {
         # though these values are not actually needed for option --indent-only.
 
         $rLL               = $self->[_rLL_];
-        $length_function   = $self->[_length_function_];
         $cumulative_length = 0;
 
         foreach my $item ( @{$rLL} ) {
-            my $token        = $item->[_TOKEN_];
-            my $token_length = $length_function->($token);
+            my $token = $item->[_TOKEN_];
+            my $token_length =
+              $length_function ? $length_function->($token) : length($token);
             $cumulative_length += $token_length;
             $item->[_TOKEN_LENGTH_]      = $token_length;
             $item->[_CUMULATIVE_LENGTH_] = $cumulative_length;
@@ -9078,22 +9086,6 @@ sub set_permanently_broken {
     return;
 } ## end sub set_permanently_broken
 
-# We do not need to call the unicode GCstring length function for these types.
-# This speeds up perltidy about 4% on large utf8 files.
-my %is_non_encoded_type;
-
-BEGIN {
-    my @q = qw#
-      b k L R ; ( { [ ? : ] } ) f t n v F p m pp mm
-      .. :: << >> ** && .. || // -> => += -= .= %= &= |= ^= *= <>
-      ( ) <= >= == =~ !~ != ++ -- /= x=
-      ... **= <<= >>= &&= ||= //= <=>
-      + - / * | % ! x ~ = \ ? : . < > ^ &
-      #;
-    push @q, ',';
-    @is_non_encoded_type{@q} = (1) x scalar(@q);
-}
-
 sub store_token {
 
     my ( $self, $item ) = @_;
@@ -9147,15 +9139,13 @@ sub store_token {
 
     # Set the token length.  Later it may be adjusted again if phantom or
     # ignoring side comment lengths. It is always okay to calculate the length
-    # with $length_function->(), and necessary for wide characters, but it is
-    # very slow so we avoid it and use length() when possible.  This reduces
-    # run time by several percent.  Printable ascii can use the builtin
-    # length function, but non-printable ascii characters (like tab) may get
-    # different lengths by the two methods.
+    # with $length_function->() if it is defined, but it is extremely slow so
+    # we avoid it and use the builtin length() for printable ascii tokens.
+    # Note: non-printable ascii characters (like tab) may get different lengths
+    # by the two methods, so we have to use $length_function for them.
     my $token_length =
-      (      $is_encoded_data
-          && $rOpts_use_unicode_gcstring
-          && !$is_non_encoded_type{$type}
+      (      $length_function
+          && !$is_ascii_type{$type}
           && $token =~ /[[:^ascii:][:^print:]]/ )
       ? $length_function->($token)
       : length($token);
@@ -9183,7 +9173,8 @@ sub store_token {
             && $token =~ s/\s+$//
           )
         {
-            $token_length = $length_function->($token);
+            $token_length =
+              $length_function ? $length_function->($token) : length($token);
             $item->[_TOKEN_] = $token;
         }
 
@@ -9575,9 +9566,13 @@ sub add_trailing_comma {
         my $rlines         = $self->[_rlines_];
         my $line_of_tokens = $rlines->[$line_index];
         my $input_line     = $line_of_tokens->{_line_text};
-        my $len            = $self->[_length_function_]->($input_line) - 1;
-        my $level          = $rLL->[$Kfirst]->[_LEVEL_];
-        my $max_len        = $maximum_line_length_at_level[$level];
+        my $len =
+            $length_function
+          ? $length_function->($input_line) - 1
+          : length($input_line) - 1;
+        my $level   = $rLL->[$Kfirst]->[_LEVEL_];
+        my $max_len = $maximum_line_length_at_level[$level];
+
         if ( $len >= $max_len ) {
             $match = 0;
         }
