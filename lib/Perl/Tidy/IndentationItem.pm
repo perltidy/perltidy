@@ -83,7 +83,6 @@ sub new {
     # align_seqno        =>  # if we are aligning with an opening structure,
     #                        # this is its seqno
     # marked             =>  # if visited by corrector logic
-    # stack_depth        =>  # indentation nesting depth
     # K_begin_line   =>  # first token index K of this level
     # arrow_count        =>  # how many =>'s
 
@@ -99,7 +98,6 @@ sub new {
     $self->[_recoverable_spaces_] = 0;
     $self->[_align_seqno_]        = $input_hash{align_seqno};
     $self->[_marked_]             = 0;
-    $self->[_stack_depth_]        = $input_hash{stack_depth};
     $self->[_K_begin_line_]       = $input_hash{K_begin_line};
     $self->[_arrow_count_]        = 0;
     $self->[_standard_spaces_]    = $input_hash{standard_spaces};
@@ -150,10 +148,6 @@ sub tentatively_decrease_available_spaces {
     $item->increase_recoverable_spaces($deleted_spaces);
     return $deleted_spaces;
 } ## end sub tentatively_decrease_available_spaces
-
-sub get_stack_depth {
-    return $_[0]->[_stack_depth_];
-}
 
 sub get_spaces {
     return $_[0]->[_spaces_];

@@ -26379,7 +26379,6 @@ EOM
                     available_spaces => $available_spaces,
                     lp_item_index    => $lp_item_index,
                     align_seqno      => $align_seqno,
-                    stack_depth      => $max_lp_stack,
                     K_begin_line     => $K_begin_line,
                     standard_spaces  => $standard_spaces,
                     K_extra_space    => $K_extra_space,
