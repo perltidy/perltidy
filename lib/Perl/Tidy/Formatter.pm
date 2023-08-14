@@ -234,6 +234,7 @@ my (
     $rOpts_tee_block_comments,
     $rOpts_tee_pod,
     $rOpts_tee_side_comments,
+    $rOpts_use_unicode_gcstring,
     $rOpts_variable_maximum_line_length,
     $rOpts_valign_code,
     $rOpts_valign_side_comments,
@@ -2478,6 +2479,7 @@ sub initialize_global_option_vars {
     $rOpts_tee_block_comments        = $rOpts->{'tee-block-comments'};
     $rOpts_tee_pod                   = $rOpts->{'tee-pod'};
     $rOpts_tee_side_comments         = $rOpts->{'tee-side-comments'};
+    $rOpts_use_unicode_gcstring      = $rOpts->{'use-unicode-gcstring'};
     $rOpts_valign_code               = $rOpts->{'valign-code'};
     $rOpts_valign_side_comments      = $rOpts->{'valign-side-comments'};
     $rOpts_valign_if_unless          = $rOpts->{'valign-if-unless'};
@@ -9076,6 +9078,22 @@ sub set_permanently_broken {
     return;
 } ## end sub set_permanently_broken
 
+# We do not need to call the unicode GCstring length function for these types.
+# This speeds up perltidy about 4% on large utf8 files.
+my %is_non_encoded_type;
+
+BEGIN {
+    my @q = qw#
+      b k L R ; ( { [ ? : ] } ) f t n v F p m pp mm
+      .. :: << >> ** && .. || // -> => += -= .= %= &= |= ^= *= <>
+      ( ) <= >= == =~ !~ != ++ -- /= x=
+      ... **= <<= >>= &&= ||= //= <=>
+      + - / * | % ! x ~ = \ ? : . < > ^ &
+      #;
+    push @q, ',';
+    @is_non_encoded_type{@q} = (1) x scalar(@q);
+}
+
 sub store_token {
 
     my ( $self, $item ) = @_;
@@ -9128,9 +9146,19 @@ sub store_token {
       ];
 
     # Set the token length.  Later it may be adjusted again if phantom or
-    # ignoring side comment lengths.
+    # ignoring side comment lengths. It is always okay to calculate the length
+    # with $length_function->(), and necessary for wide characters, but it is
+    # very slow so we avoid it and use length() when possible.  This reduces
+    # run time by several percent.  Printable ascii can use the builtin
+    # length function, but non-printable ascii characters (like tab) may get
+    # different lengths by the two methods.
     my $token_length =
-      $is_encoded_data ? $length_function->($token) : length($token);
+      (      $is_encoded_data
+          && $rOpts_use_unicode_gcstring
+          && !$is_non_encoded_type{$type}
+          && $token =~ /[[:^ascii:][:^print:]]/ )
+      ? $length_function->($token)
+      : length($token);
 
     # handle blanks
     if ( $type eq 'b' ) {
