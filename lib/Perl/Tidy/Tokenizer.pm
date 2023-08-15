@@ -5722,6 +5722,7 @@ EOM
             foreach my $i ( @{$routput_token_list} ) {
                 my $numc = $rtoken_map->[$i] - $offset;
                 push( @tokens, substr( $input_line, $offset, $numc ) );
+                $offset += $numc;
 
                 if ( DEVEL_MODE && $numc <= 0 ) {
 
@@ -5729,7 +5730,6 @@ EOM
                     $self->Fault(
                         "number of characters is '$numc' but should be >0\n");
                 }
-                $offset = $rtoken_map->[$i];
             }
 
             # Form and store the final token of this line
