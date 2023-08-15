@@ -9968,18 +9968,17 @@ sub pre_tokenize {
 
     do {
 
-        # whitespace
+        # whitespace - this must come before \W
         if ( $str =~ /\G(\s+)/gc ) { push @type, 'b'; }
 
-        # numbers
-        # note that this must come before words!
+        # non-whitespace single-character punctuation
+        elsif ( $str =~ /\G(\W)/gc ) { push @type, $1; }
+
+        # sequence of digits - this must come before \w
         elsif ( $str =~ /\G(\d+)/gc ) { push @type, 'd'; }
 
-        # words
+        # words not starting with a digit
         elsif ( $str =~ /\G(\w+)/gc ) { push @type, 'w'; }
-
-        # single-character punctuation
-        elsif ( $str =~ /\G(\W)/gc ) { push @type, $1; }
 
         # that's all..
         else {
