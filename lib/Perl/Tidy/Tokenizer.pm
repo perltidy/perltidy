@@ -9943,23 +9943,26 @@ sub pre_tokenize {
 
     my ( $str, $max_tokens_wanted ) = @_;
 
-    # Input parameter:
+    # Input parameters:
+    #  $str = string to be parsed
     #  $max_tokens_wanted > 0  to stop on reaching this many tokens.
     #                     = 0 means get all tokens
 
-    # Break a string, $str, into a sequence of preliminary tokens.  We
-    # are interested in these types of tokens:
-    #   words       (type='w'),            example: 'max_tokens_wanted'
-    #   digits      (type = 'd'),          example: '0755'
-    #   whitespace  (type = 'b'),          example: '   '
-    #   any other single character (i.e. punct; type = the character itself).
-    # We cannot do better than this yet because we might be in a quoted
-    # string or pattern.  Caller sets $max_tokens_wanted to 0 to get all
-    # tokens.
+    # Break a string, $str, into a sequence of preliminary tokens (pre-tokens).
+    # We look for these types of tokens:
+    #   words       (type='w'),               example: 'max_tokens_wanted'
+    #   digits      (type = 'd'),             example: '0755'
+    #   whitespace  (type = 'b'),             example: '   '
+    #   single character punct (type = char)  example: '='
+
+    # Later operations will combine one or more of these pre-tokens into final
+    # tokens.  We cannot do better than this yet because we might be in a
+    # quoted string or pattern.
 
     # An advantage of doing this pre-tokenization step is that it keeps almost
-    # all of the regex work highly localized.  A disadvantage is that in some
-    # very rare instances we will have to go back and split a pre-token.
+    # all of the regex parsing very simple and localized right here.  A
+    # disadvantage is that in some extremely rare instances we will have to go
+    # back and split a pre-token.
 
     # Return parameters:
     my @tokens    = ();     # array of the tokens themselves
@@ -9968,25 +9971,25 @@ sub pre_tokenize {
 
     do {
 
-        # whitespace - this must come before \W
-        if ( $str =~ /\G(\s+)/gc ) { push @type, 'b'; }
-
-        # non-whitespace single-character punctuation
-        elsif ( $str =~ /\G(\W)/gc ) { push @type, $1; }
-
-        # sequence of digits - this must come before \w
-        elsif ( $str =~ /\G(\d+)/gc ) { push @type, 'd'; }
-
-        # words not starting with a digit
-        elsif ( $str =~ /\G(\w+)/gc ) { push @type, 'w'; }
+        if (
+            $str =~ /\G(
+             (\s+) #     type 'b'  = whitespace - this must come before \W
+            |(\W)  #  or type=char = single-character, non-whitespace punct
+            |(\d+) #  or type 'd'  = sequence of digits - must come before \w
+            |(\w+) #  or type 'w'  = words not starting with a digit
+            )/gcx
+          )
+        {
+            push @tokens, $1;
+            push @type,
+              defined($2) ? 'b' : defined($3) ? $1 : defined($4) ? 'd' : 'w';
+            push @token_map, pos($str);
+        }
 
         # that's all..
         else {
             return ( \@tokens, \@token_map, \@type );
         }
-
-        push @tokens,    $1;
-        push @token_map, pos($str);
 
     } while ( --$max_tokens_wanted != 0 );
 
