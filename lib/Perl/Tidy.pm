@@ -166,6 +166,8 @@ sub streamhandle {
     # Case 2. Not given, or an empty string: unencoded binary data is being
     # transferred, set binary mode for files and for stdin.
 
+    # NOTE: sub slurp_stream is now preferred for reading.
+
     my ( $filename, $mode, $is_encoded_data ) = @_;
 
     my $ref = ref($filename);
@@ -269,6 +271,80 @@ EOM
 
     return $fh, ( $ref or $filename );
 } ## end sub streamhandle
+
+sub slurp_stream {
+
+    my ($filename) = @_;
+
+    # Read the text in $filename and
+    # return:
+    #    undef if read error, or
+    #    $rinput_string = ref to string of text
+
+    # if $filename is:     Read
+    # ----------------     -----------------
+    # ARRAY  ref           array ref
+    # SCALAR ref           string ref
+    # object ref           object with 'getline' method (exit if no 'getline')
+    # '-'                  STDIN
+    # string               file named $filename
+
+    # Note that any decoding from utf8 must be done by the caller
+
+    my $ref = ref($filename);
+    my $rinput_string;
+
+    # handle a reference
+    if ($ref) {
+        if ( $ref eq 'ARRAY' ) {
+            my $buf = join EMPTY_STRING, @{$filename};
+            $rinput_string = \$buf;
+        }
+        elsif ( $ref eq 'SCALAR' ) {
+            $rinput_string = $filename;
+        }
+        else {
+            if ( $ref->can('getline') ) {
+                my $buf = EMPTY_STRING;
+                while ( defined( my $line = $filename->getline() ) ) {
+                    $buf .= $line;
+                }
+                $rinput_string = \$buf;
+            }
+            else {
+                confess <<EOM;
+------------------------------------------------------------------------
+No 'getline' method is defined for object of class '$ref'
+Please check your call to Perl::Tidy::perltidy.  Trace follows.
+------------------------------------------------------------------------
+EOM
+            }
+        }
+    }
+
+    # handle a string
+    else {
+        if ( $filename eq '-' ) {
+            local $INPUT_RECORD_SEPARATOR = undef;
+            my $buf = <>;
+            $rinput_string = \$buf;
+        }
+        else {
+            if ( open( my $fh, '<', $filename ) ) {
+                local $INPUT_RECORD_SEPARATOR = undef;
+                my $buf = <$fh>;
+                $fh->close() || Warn("Cannot close $filename\n");
+                $rinput_string = \$buf;
+            }
+            else {
+                Warn("Cannot open $filename: $ERRNO\n");
+                return;
+            }
+        }
+    }
+
+    return $rinput_string;
+} ## end sub slurp_stream
 
 {    ## begin closure for sub catfile
 
@@ -1450,7 +1526,7 @@ sub get_decoded_string_buffer {
 
     my $rOpts = $self->[_rOpts_];
 
-    my $rinput_string = $self->slurp_input_stream($input_file);
+    my $rinput_string = slurp_stream($input_file);
     return unless ( defined($rinput_string) );
 
     $rinput_string = $self->set_line_separator($rinput_string);
@@ -1633,80 +1709,6 @@ EOM
 
     );
 } ## end sub get_decoded_string_buffer
-
-sub slurp_input_stream {
-
-    my ( $self, $filename ) = @_;
-
-    # Read the text in $filename and
-    # return:
-    #    undef if read error, or
-    #    $rinput_string = ref to string of text
-
-    # if $filename is:     Read
-    # ----------------     -----------------
-    # ARRAY  ref           array ref
-    # SCALAR ref           string ref
-    # object ref           object with 'getline' method (exit if no 'getline')
-    # '-'                  STDIN
-    # string               file named $filename
-
-    # Note that any decoding from utf8 will occur later
-
-    my $ref = ref($filename);
-    my $rinput_string;
-
-    # handle a reference
-    if ($ref) {
-        if ( $ref eq 'ARRAY' ) {
-            my $buf = join EMPTY_STRING, @{$filename};
-            $rinput_string = \$buf;
-        }
-        elsif ( $ref eq 'SCALAR' ) {
-            $rinput_string = $filename;
-        }
-        else {
-            if ( $ref->can('getline') ) {
-                my $buf = EMPTY_STRING;
-                while ( defined( my $line = $filename->getline() ) ) {
-                    $buf .= $line;
-                }
-                $rinput_string = \$buf;
-            }
-            else {
-                confess <<EOM;
-------------------------------------------------------------------------
-No 'getline' method is defined for object of class '$ref'
-Please check your call to Perl::Tidy::perltidy.  Trace follows.
-------------------------------------------------------------------------
-EOM
-            }
-        }
-    }
-
-    # handle a string
-    else {
-        if ( $filename eq '-' ) {
-            local $INPUT_RECORD_SEPARATOR = undef;
-            my $buf = <>;
-            $rinput_string = \$buf;
-        }
-        else {
-            if ( open( my $fh, '<', $filename ) ) {
-                local $INPUT_RECORD_SEPARATOR = undef;
-                my $buf = <$fh>;
-                $fh->close() || Warn("Cannot close $filename\n");
-                $rinput_string = \$buf;
-            }
-            else {
-                Warn("Cannot open $filename: $ERRNO\n");
-                return;
-            }
-        }
-    }
-
-    return $rinput_string;
-} ## end sub slurp_input_stream
 
 sub set_line_separator {
 
@@ -4143,25 +4145,25 @@ EOM
           unless $config_file;
 
         # open any config file
-        my $fh_config;
+        my $rconfig_string;
         if ($config_file) {
-            ( $fh_config, $config_file ) =
-              Perl::Tidy::streamhandle( $config_file, 'r' );
-            unless ($fh_config) {
+            $rconfig_string = slurp_stream($config_file);
+            if ( !defined($rconfig_string) ) {
                 ${$rconfig_file_chatter} .=
                   "# $config_file exists but cannot be opened\n";
             }
         }
 
         if ($saw_dump_profile) {
-            dump_config_file( $fh_config, $config_file, $rconfig_file_chatter );
+            dump_config_file( $rconfig_string, $config_file,
+                $rconfig_file_chatter );
             Exit(0);
         }
 
-        if ($fh_config) {
+        if ( defined($rconfig_string) ) {
 
             my ( $rconfig_list, $death_message ) =
-              read_config_file( $fh_config, $config_file, $rexpansion );
+              read_config_file( $rconfig_string, $config_file, $rexpansion );
             Die($death_message) if ($death_message);
 
             # process any .perltidyrc parameters right now so we can
@@ -5109,15 +5111,12 @@ sub Win_Config_Locs {
 } ## end sub Win_Config_Locs
 
 sub dump_config_file {
-    my ( $fh, $config_file, $rconfig_file_chatter ) = @_;
+    my ( $rconfig_string, $config_file, $rconfig_file_chatter ) = @_;
     print STDOUT "${$rconfig_file_chatter}";
-    if ($fh) {
+    if ($rconfig_string) {
+        my @lines = split /^/, ${$rconfig_string};
         print STDOUT "# Dump of file: '$config_file'\n";
-        while ( defined( my $line = $fh->getline() ) ) { print STDOUT $line }
-        my $ok = eval { $fh->close(); 1 };
-        if ( !$ok && DEVEL_MODE ) {
-            Fault("Could not close file handle(): $EVAL_ERROR\n");
-        }
+        while ( defined( my $line = shift @lines ) ) { print STDOUT $line }
     }
     else {
         print STDOUT "# ...no config file found\n";
@@ -5127,7 +5126,7 @@ sub dump_config_file {
 
 sub read_config_file {
 
-    my ( $fh, $config_file, $rexpansion ) = @_;
+    my ( $rconfig_string, $config_file, $rexpansion ) = @_;
     my @config_list = ();
 
     # file is bad if non-empty $death_message is returned
@@ -5136,7 +5135,8 @@ sub read_config_file {
     my $name = undef;
     my $line_no;
     my $opening_brace_line;
-    while ( defined( my $line = $fh->getline() ) ) {
+    my @lines = split /^/, ${$rconfig_string};
+    while ( defined( my $line = shift @lines ) ) {
         $line_no++;
         chomp $line;
         ( $line, $death_message ) =
@@ -5221,10 +5221,6 @@ EOM
     if ($opening_brace_line) {
         $death_message =
 "Didn't see a '}' to match the '{' at line $opening_brace_line in config file '$config_file'\n";
-    }
-    my $ok = eval { $fh->close(); 1 };
-    if ( !$ok && DEVEL_MODE ) {
-        Fault("Could not close file handle(): $EVAL_ERROR\n");
     }
     return ( \@config_list, $death_message );
 } ## end sub read_config_file
