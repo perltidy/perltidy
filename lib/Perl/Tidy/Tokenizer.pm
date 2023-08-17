@@ -3100,11 +3100,16 @@ EOM
         $container_type = EMPTY_STRING;
 
         # ATTRS: for a '{' following an attribute list, reset
-        # things to look like we just saw the sub name
+        # things to look like we just saw a sub name
         # Added 'package' (can be 'class') for --use-feature=class (rt145706)
-        if ( $statement_type =~ /^(sub|package)\b/ ) {
+        if ( substr( $statement_type, 0, 3 ) eq 'sub' ) {
             $last_nonblank_token = $statement_type;
             $last_nonblank_type  = 'i';
+            $statement_type      = EMPTY_STRING;
+        }
+        elsif ( substr( $statement_type, 0, 7 ) eq 'package' ) {
+            $last_nonblank_token = $statement_type;
+            $last_nonblank_type  = 'P';               # c250 change
             $statement_type      = EMPTY_STRING;
         }
 
@@ -5276,16 +5281,16 @@ EOM
             # this pre-token will start an output token
             push( @{$routput_token_list}, $i_tok );
 
-            # The search for the full token ends in one of 5 main end NODES
+            # The search for the full token ends in one of 5 main END NODES
 
-            #----------------------------------
-            # NODE 1: handle a whitespace token
-            #----------------------------------
+            #-----------------------
+            # END NODE 1: whitespace
+            #-----------------------
             next if ( $pre_type eq 'b' );
 
-            #-------------------------
-            # NODE 2: handle a comment
-            #-------------------------
+            #----------------------
+            # END NODE 2: a comment
+            #----------------------
             last if ( $pre_type eq '#' );
 
             # continue gathering identifier if necessary
@@ -5442,9 +5447,9 @@ EOM
             # Now we have to examine this token and decide what it is
             # and define its $type
 
-            #---------------------------
-            # NODE 3: handle a bare word
-            #---------------------------
+            #------------------------
+            # END NODE 3: a bare word
+            #------------------------
             if ( $pre_type eq 'w' ) {
                 my $is_last = $self->do_BAREWORD($is_END_or_DATA);
                 last if ($is_last);
@@ -5455,17 +5460,17 @@ EOM
             # Added '#' to fix c038 (later moved above).
             $self->[_in_attribute_list_] &&= 0;
 
-            #----------------------------------
-            # NODE 4: handle a string of digits
-            #----------------------------------
+            #-------------------------------
+            # END NODE 4: a string of digits
+            #-------------------------------
             if ( $pre_type eq 'd' ) {
                 $self->do_DIGITS();
                 next;
             }
 
-            #--------------------------------
-            # NODE 5: handle all other tokens
-            #--------------------------------
+            #-----------------------------
+            # END NODE 5: all other tokens
+            #-----------------------------
             my $code = $tokenization_code->{$tok};
             if ($code) {
                 $code->($self);
@@ -5777,8 +5782,10 @@ BEGIN {
 
     # Always expecting TERM following these types:
     # note: this is identical to '@value_requestor_type' defined later.
+    # Fix for c250: add new type 'P' for package (expecting VERSION or {}
+    # after package NAMESPACE, so expecting TERM)
     my @q = qw(
-      ; ! + x & ?  F J - p / Y : % f U ~ A G j L * . | ^ < = [ m { \ > t
+      ; ! + x & ?  F J - p / Y : % f U ~ A G j L P * . | ^ < = [ m { \ > t
       || >= != mm *= => .. !~ == && |= .= pp -= =~ += <= %= ^= x= ~~ ** << /=
       &= // >> ~. &. |. ^.
       ... **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~
@@ -5798,7 +5805,8 @@ BEGIN {
     # 'i' is currently excluded because it might be a package
     # 'q' is currently excluded because it might be a prototype
     # Fix for c030: removed '->' from this list:
-    @q = qw( -- C h R ++ ] Q <> );    ## n v q i );
+    # Fix for c250: added 'i' after new type 'P' added
+    @q = qw( -- C h R ++ ] Q <> i );    ## n v q );
     push @q, ')';
     @{op_expected_table}{@q} = (OPERATOR) x scalar(@q);
 
@@ -5891,25 +5899,13 @@ sub operator_expected {
     #---------------------------------------------
 
     # Types 'k', '}' and 'Z' depend on context
-    # Types 'i', 'n', 'v', 'q' currently also temporarily depend on context.
+    # Types 'n', 'v', 'q' also depend on context.
 
     # identifier...
-    if ( $last_nonblank_type eq 'i' ) {
-        $op_expected = OPERATOR;
-
-        # TODO: it would be cleaner to make this a special type
-        # expecting VERSION or {} after package NAMESPACE;
-        # maybe mark these words as type 'Y'?
-        if (   substr( $last_nonblank_token, 0, 7 ) eq 'package'
-            && $statement_type      =~ /^package\b/
-            && $last_nonblank_token =~ /^package\b/ )
-        {
-            $op_expected = TERM;
-        }
-    }
+    # Fix for c250: type 'i' and new type 'P' are in the hash table now
 
     # keyword...
-    elsif ( $last_nonblank_type eq 'k' ) {
+    if ( $last_nonblank_type eq 'k' ) {
         $op_expected = TERM;
         if ( $expecting_operator_token{$last_nonblank_token} ) {
             $op_expected = OPERATOR;
@@ -6264,8 +6260,16 @@ sub code_block_type {
     }
 
     # or a sub or package BLOCK
-    elsif ( ( $last_nonblank_type eq 'i' || $last_nonblank_type eq 't' )
-        && $last_nonblank_token =~ /^(sub|package)\b/ )
+    # Fixed for c250 to include new package type 'P'
+    # FIXME: this could use optimization
+    elsif (
+        (
+               $last_nonblank_type eq 'i'
+            || $last_nonblank_type eq 't'
+            || $last_nonblank_type eq 'P'
+        )
+        && $last_nonblank_token =~ /^(sub|package)\b/
+      )
     {
         return $last_nonblank_token;
     }
@@ -7586,7 +7590,7 @@ sub do_scan_package {
         my $pos  = pos($input_line);
         my $numc = $pos - $pos_beg;
         $tok  = 'package ' . substr( $input_line, $pos_beg, $numc );
-        $type = 'i';
+        $type = 'P';    # Fix for c250, previously 'i'
 
         # Now we must convert back from character position
         # to pre_token index.
@@ -10072,7 +10076,7 @@ The following additional token types are defined:
     U    user-defined function taking parameters
     G    user-defined function taking block parameter (like grep/map/eval)
     M    (unused, but reserved for subroutine definition name)
-    P    (unused, but -html uses it to label pod text)
+    P    package definition
     t    type indicater such as %,$,@,*,&,sub
     w    bare word (perhaps a subroutine call)
     i    identifier of some type (with leading %, $, @, *, &, sub, -> )
@@ -10138,8 +10142,9 @@ BEGIN {
 
     # make a hash of all valid token types for self-checking the tokenizer
     # (adding NEW_TOKENS : select a new character and add to this list)
+    # fix for c250: added new token type 'P'
     my @valid_token_types = qw#
-      A b C G L R f h Q k t w i q n p m F pp mm U j J Y Z v
+      A b C G L R f h Q k t w i q n p m F pp mm U j J Y Z v P
       { } ( ) [ ] ; + - / * | % ! x ~ = \ ? : . < > ^ &
       #;
     push( @valid_token_types, @digraphs );

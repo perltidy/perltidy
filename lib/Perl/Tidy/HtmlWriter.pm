@@ -391,12 +391,14 @@ BEGIN {
         '('  => 'p',
         ')'  => 'p',
         'M'  => 'm',
-        'P'  => 'pd',
+        'pd' => 'pd',
         'A'  => 'co',
     );
 
     # These token types will all be called identifiers for now
-    my @identifier = qw< i t U C Y Z G :: CORE::>;
+    # Fix for c250: added new type 'P', formerly 'i'
+    # ( but package statements will eventually be split into 'k' and 'i')
+    my @identifier = qw< i t U C Y Z G P :: CORE::>;
     @token_short_names{@identifier} = ('i') x scalar(@identifier);
 
     # These token types will be called 'structure'
@@ -1341,7 +1343,8 @@ sub markup_tokens {
         # into keyword 'package' and name; add to the toc,
         # and update the package stack
         #-------------------------------------------------------
-        if ( $type eq 'i' && $token =~ /^(package\s+)(\w.*)$/ ) {
+        # Fix for c250: switch from 'i' to 'P' and allow 'class' or 'package'
+        if ( $type eq 'P' && $token =~ /^(\w+\s+)(\w.*)$/ ) {
             $token = $self->markup_html_element( $1, 'k' );
             push @colored_tokens, $token;
             $token = $2;
@@ -1459,7 +1462,10 @@ sub write_line {
             $self->add_toc_item( '__DATA__', '__DATA__' );
         }
         elsif ( $line_type =~ /^POD/ ) {
-            $line_character = 'P';
+
+            # fix for c250: changed 'P' to 'pd' here and in %token_short_names
+            # to allow use of 'P' as new package token type
+            $line_character = 'pd';
             if ( $rOpts->{'pod2html'} ) {
                 my $html_pod_fh = $self->{_html_pod_fh};
                 if ( $line_type eq 'POD_START' ) {

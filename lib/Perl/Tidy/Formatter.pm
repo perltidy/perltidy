@@ -2801,10 +2801,11 @@ sub initialize_whitespace_hashes {
     # simple as adding your new letter to @spaces_both_sides, for
     # example.
 
+    # fix for c250: added space rules new package type 'P'
     my @spaces_both_sides = qw#
       + - * / % ? = . : x < > | & ^ .. << >> ** && .. || // => += -=
       .= %= x= &= |= ^= *= <> <= >= == =~ !~ /= != ... <<= >>= ~~ !~~
-      &&= ||= //= <=> A k f w F n C Y U G v
+      &&= ||= //= <=> A k f w F n C Y U G v P
       #;
 
     my @spaces_left_side = qw<
@@ -4048,6 +4049,8 @@ EOM
     # These routines and variables are involved in deciding where to break very
     # long lines.
 
+    # NEW_TOKENS must add bond strength rules
+
     my %is_good_keyword_breakpoint;
     my %is_lt_gt_le_ge;
     my %is_container_token;
@@ -4178,6 +4181,10 @@ EOM
 
         $left_bond_strength{'CORE::'}  = NOMINAL;
         $right_bond_strength{'CORE::'} = NO_BREAK;
+
+        # Fix for c250: added strengths for new type 'P'
+        $left_bond_strength{'P'}  = NOMINAL;
+        $right_bond_strength{'P'} = NOMINAL;
 
         # breaking AFTER modulus operator is ok:
         @q = qw< % >;
@@ -6442,9 +6449,10 @@ sub find_selected_packages {
     foreach my $KK ( 0 .. $Klimit ) {
         my $item = $rLL->[$KK];
         my $type = $item->[_TYPE_];
-        if ( $type ne 'i' ) {
-            next;
-        }
+
+        # fix for c250: package type has changed from 'i' to 'P'
+        next if ( $type ne 'P' );
+
         my $token = $item->[_TOKEN_];
         if (   substr( $token, 0, 7 ) eq 'package' && $token =~ /^package\s/
             || substr( $token, 0, 5 ) eq 'class' && $token =~ /^class\s/ )
@@ -8075,7 +8083,7 @@ sub dump_verbatim {
 
 my %wU;
 my %wiq;
-my %is_wit;
+my %is_witP;
 my %is_sigil;
 my %is_nonlist_keyword;
 my %is_nonlist_type;
@@ -8092,8 +8100,8 @@ BEGIN {
     @q = qw(w i q Q G C Z);
     @{wiq}{@q} = (1) x scalar(@q);
 
-    @q = qw(w i t);
-    @{is_wit}{@q} = (1) x scalar(@q);
+    @q = qw(w i t P);    # Fix for c250: added new type 'P', formerly 'i'
+    @{is_witP}{@q} = (1) x scalar(@q);
 
     @q = qw($ & % * @);
     @{is_sigil}{@q} = (1) x scalar(@q);
@@ -8632,7 +8640,7 @@ sub respace_tokens_inner_loop {
         # The following is not yet done, but could be:
         #   sub (x x x)
         #     ( $type =~ /^[wit]$/ )
-        elsif ( $is_wit{$type} ) {
+        elsif ( $is_witP{$type} ) {
 
             # index() is several times faster than a regex test with \s here
             ##   $token =~ /\s/
@@ -8688,16 +8696,6 @@ sub respace_tokens_inner_loop {
 
                     }
 
-                    # clean up spaces in package identifiers, like
-                    #   "package        Bob::Dog;"
-                    elsif ( $token =~ /^(package|class)\s/ ) {
-                        $token =~ s/\s+/ /g;
-                        $rtoken_vars->[_TOKEN_] = $token;
-
-                        $self->[_ris_special_identifier_token_]->{$token} =
-                          'package';
-                    }
-
                     # trim identifiers of trailing blanks which can occur
                     # under some unusual circumstances, such as if the
                     # identifier 'witch' has trailing blanks on input here:
@@ -8716,6 +8714,18 @@ sub respace_tokens_inner_loop {
                     {
                         $token =~ s/\s+$//g;
                         $rtoken_vars->[_TOKEN_] = $token;
+                    }
+                }
+
+                # and trim spaces in package statements (added for c250)
+                elsif ( $type eq 'P' ) {
+
+                    # clean up spaces in package identifiers, like
+                    #   "package        Bob::Dog;"
+                    if ( $token =~ s/\s+/ /g ) {
+                        $rtoken_vars->[_TOKEN_] = $token;
+                        $self->[_ris_special_identifier_token_]->{$token} =
+                          'package';
                     }
                 }
             }
@@ -18111,7 +18121,8 @@ EOM
             }
 
             # blank lines before subs except declarations and one-liners
-            elsif ( $leading_type eq 'i' ) {
+            # Fix for c250: added new type 'P'
+            elsif ( $leading_type eq 'i' || $leading_type eq 'P' ) {
                 my $special_identifier =
                   $self->[_ris_special_identifier_token_]->{$leading_token};
                 if ($special_identifier) {
