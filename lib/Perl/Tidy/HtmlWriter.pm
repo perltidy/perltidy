@@ -370,6 +370,7 @@ BEGIN {
 
     # When adding NEW_TOKENS: update this hash table
     # $type => $short_name
+    # c250: changed 'M' to 'S'
     %token_short_names = (
         '#'  => 'c',
         'n'  => 'n',
@@ -390,7 +391,7 @@ BEGIN {
         'f'  => 'sc',
         '('  => 'p',
         ')'  => 'p',
-        'M'  => 'm',
+        'S'  => 'm',
         'pd' => 'pd',
         'A'  => 'co',
     );
@@ -1321,12 +1322,13 @@ sub markup_tokens {
         # Intercept a sub name here; split it
         # into keyword 'sub' and sub name; and add an
         # entry in the toc
+        # Fix for c250: switch from 'i' to 'S'
         #-------------------------------------------------------
-        if ( $type eq 'i' && $token =~ /^(sub\s+)(\w.*)$/ ) {
+        if ( $type eq 'S' && $token =~ /^(\w+\s+)(\w.*)$/ ) {
             $token = $self->markup_html_element( $1, 'k' );
             push @colored_tokens, $token;
             $token = $2;
-            $type  = 'M';
+            $type  = 'S';
 
             # but don't include sub declarations in the toc;
             # these will have leading token types 'i;'

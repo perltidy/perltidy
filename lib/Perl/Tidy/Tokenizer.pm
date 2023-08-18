@@ -3104,7 +3104,7 @@ EOM
         # Added 'package' (can be 'class') for --use-feature=class (rt145706)
         if ( substr( $statement_type, 0, 3 ) eq 'sub' ) {
             $last_nonblank_token = $statement_type;
-            $last_nonblank_type  = 'i';
+            $last_nonblank_type  = 'S';               # c250 change
             $statement_type      = EMPTY_STRING;
         }
         elsif ( substr( $statement_type, 0, 7 ) eq 'package' ) {
@@ -5281,7 +5281,7 @@ EOM
             # this pre-token will start an output token
             push( @{$routput_token_list}, $i_tok );
 
-            # The search for the full token ends in one of 5 main END NODES
+            # The search for the full token ends in one of 5 main END NODES:
 
             #-----------------------
             # END NODE 1: whitespace
@@ -5468,9 +5468,9 @@ EOM
                 next;
             }
 
-            #-----------------------------
-            # END NODE 5: all other tokens
-            #-----------------------------
+            #------------------------------------------
+            # END NODE 5: everything else (punctuation)
+            #------------------------------------------
             my $code = $tokenization_code->{$tok};
             if ($code) {
                 $code->($self);
@@ -5784,8 +5784,9 @@ BEGIN {
     # note: this is identical to '@value_requestor_type' defined later.
     # Fix for c250: add new type 'P' for package (expecting VERSION or {}
     # after package NAMESPACE, so expecting TERM)
+    # Fix for c250: add new type 'S' for sub (not expecting operator)
     my @q = qw(
-      ; ! + x & ?  F J - p / Y : % f U ~ A G j L P * . | ^ < = [ m { \ > t
+      ; ! + x & ?  F J - p / Y : % f U ~ A G j L P S * . | ^ < = [ m { \ > t
       || >= != mm *= => .. !~ == && |= .= pp -= =~ += <= %= ^= x= ~~ ** << /=
       &= // >> ~. &. |. ^.
       ... **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~
@@ -5805,7 +5806,7 @@ BEGIN {
     # 'i' is currently excluded because it might be a package
     # 'q' is currently excluded because it might be a prototype
     # Fix for c030: removed '->' from this list:
-    # Fix for c250: added 'i' after new type 'P' added
+    # Fix for c250: added 'i' because new type 'P' was added
     @q = qw( -- C h R ++ ] Q <> i );    ## n v q );
     push @q, ')';
     @{op_expected_table}{@q} = (OPERATOR) x scalar(@q);
@@ -5902,7 +5903,8 @@ sub operator_expected {
     # Types 'n', 'v', 'q' also depend on context.
 
     # identifier...
-    # Fix for c250: type 'i' and new type 'P' are in the hash table now
+    # Fix for c250: removed coding for type 'i' because 'i' and new type 'P'
+    # are now done by hash table lookup
 
     # keyword...
     if ( $last_nonblank_type eq 'k' ) {
@@ -6260,21 +6262,19 @@ sub code_block_type {
     }
 
     # or a sub or package BLOCK
-    # Fixed for c250 to include new package type 'P'
-    # FIXME: this could use optimization
+    # Fixed for c250 to include new package type 'P', and change 'i' to 'S'
     elsif (
-        (
-               $last_nonblank_type eq 'i'
-            || $last_nonblank_type eq 't'
-            || $last_nonblank_type eq 'P'
-        )
-        && $last_nonblank_token =~ /^(sub|package)\b/
+           $last_nonblank_type eq 'P'
+        || $last_nonblank_type eq 'S'
+        || ( $last_nonblank_type eq 't'
+            && substr( $last_nonblank_token, 0, 3 ) eq 'sub' )
       )
     {
         return $last_nonblank_token;
     }
 
     # or a sub alias
+    # FIXME: see if this is really needed after the c250 update
     elsif (( $last_nonblank_type eq 'i' || $last_nonblank_type eq 't' )
         && ( $is_sub{$last_nonblank_token} ) )
     {
@@ -8670,7 +8670,7 @@ EOM
             my $pos  = pos($input_line);
             my $numc = $pos - $pos_beg;
             $tok  = 'sub ' . substr( $input_line, $pos_beg, $numc );
-            $type = 'i';
+            $type = 'S';    ## Fix for c250, was 'i';
 
             # remember the sub name in case another call is needed to
             # get the prototype
@@ -8724,7 +8724,7 @@ EOM
             # Patch part #1 to fixes cases b994 and b1053:
             # Mark an anonymous sub keyword without prototype as type 'k', i.e.
             #    'sub : lvalue { ...'
-            $type = 'i';
+            $type = 'S';    ## C250, was 'i';
             if ( $tok eq 'sub' && !$proto ) { $type = 'k' }
         }
 
@@ -10075,8 +10075,8 @@ The following additional token types are defined:
     C    user-defined constant or constant function (with void prototype = ())
     U    user-defined function taking parameters
     G    user-defined function taking block parameter (like grep/map/eval)
-    M    (unused, but reserved for subroutine definition name)
-    P    package definition
+    S    sub definition     (reported as type 'i' in older versions)
+    P    package definition (reported as type 'i' in older versions)
     t    type indicater such as %,$,@,*,&,sub
     w    bare word (perhaps a subroutine call)
     i    identifier of some type (with leading %, $, @, *, &, sub, -> )
@@ -10142,9 +10142,9 @@ BEGIN {
 
     # make a hash of all valid token types for self-checking the tokenizer
     # (adding NEW_TOKENS : select a new character and add to this list)
-    # fix for c250: added new token type 'P'
+    # fix for c250: added new token type 'P' and 'S'
     my @valid_token_types = qw#
-      A b C G L R f h Q k t w i q n p m F pp mm U j J Y Z v P
+      A b C G L R f h Q k t w i q n p m F pp mm U j J Y Z v P S
       { } ( ) [ ] ; + - / * | % ! x ~ = \ ? : . < > ^ &
       #;
     push( @valid_token_types, @digraphs );

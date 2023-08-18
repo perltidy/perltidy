@@ -2801,11 +2801,11 @@ sub initialize_whitespace_hashes {
     # simple as adding your new letter to @spaces_both_sides, for
     # example.
 
-    # fix for c250: added space rules new package type 'P'
+    # fix for c250: added space rules new package type 'P' and sub type 'S'
     my @spaces_both_sides = qw#
       + - * / % ? = . : x < > | & ^ .. << >> ** && .. || // => += -=
       .= %= x= &= |= ^= *= <> <= >= == =~ !~ /= != ... <<= >>= ~~ !~~
-      &&= ||= //= <=> A k f w F n C Y U G v P
+      &&= ||= //= <=> A k f w F n C Y U G v P S
       #;
 
     my @spaces_left_side = qw<
@@ -4183,6 +4183,8 @@ EOM
         $right_bond_strength{'CORE::'} = NO_BREAK;
 
         # Fix for c250: added strengths for new type 'P'
+        # Note: these are working okay, but may eventually need to be
+        # adjusted or even removed.
         $left_bond_strength{'P'}  = NOMINAL;
         $right_bond_strength{'P'} = NOMINAL;
 
@@ -4459,6 +4461,10 @@ EOM
         # testfile is readmail.pl
         $binary_bond_strength{'t'}{'L{'} = NO_BREAK;
         $binary_bond_strength{'i'}{'L{'} = NO_BREAK;
+
+        # Fix for c250: set strength for new 'S' to be same as 'i'
+        # testfile is test11/Hub.pm
+        $binary_bond_strength{'S'}{'L{'} = NO_BREAK;
 
         # As a defensive measure, do not break between a '(' and a
         # filehandle.  In some cases, this can cause an error.  For
@@ -8083,7 +8089,7 @@ sub dump_verbatim {
 
 my %wU;
 my %wiq;
-my %is_witP;
+my %is_witPS;
 my %is_sigil;
 my %is_nonlist_keyword;
 my %is_nonlist_type;
@@ -8100,8 +8106,8 @@ BEGIN {
     @q = qw(w i q Q G C Z);
     @{wiq}{@q} = (1) x scalar(@q);
 
-    @q = qw(w i t P);    # Fix for c250: added new type 'P', formerly 'i'
-    @{is_witP}{@q} = (1) x scalar(@q);
+    @q = qw(w i t P S);   # Fix for c250: added new types 'P', 'S', formerly 'i'
+    @{is_witPS}{@q} = (1) x scalar(@q);
 
     @q = qw($ & % * @);
     @{is_sigil}{@q} = (1) x scalar(@q);
@@ -8639,8 +8645,8 @@ sub respace_tokens_inner_loop {
         # Modify certain tokens here for whitespace
         # The following is not yet done, but could be:
         #   sub (x x x)
-        #     ( $type =~ /^[wit]$/ )
-        elsif ( $is_witP{$type} ) {
+        #     ( $type =~ /^[witPS]$/ )
+        elsif ( $is_witPS{$type} ) {
 
             # index() is several times faster than a regex test with \s here
             ##   $token =~ /\s/
@@ -8667,54 +8673,49 @@ sub respace_tokens_inner_loop {
                     }
                 }
 
-                # Trim certain spaces in identifiers
-                if ( $type eq 'i' ) {
+                # trim identifiers of trailing blanks which can occur
+                # under some unusual circumstances, such as if the
+                # identifier 'witch' has trailing blanks on input here:
+                #
+                # sub
+                # witch
+                # ()   # prototype may be on new line ...
+                # ...
+                my $ord_ch = ord( substr( $token, -1, 1 ) );
+                if (
 
-                    if ( $token =~ /$SUB_PATTERN/ ) {
+                    # quick check for possible ending space
+                    $ord_ch > 0 && ( $ord_ch < ORD_PRINTABLE_MIN
+                        || $ord_ch > ORD_PRINTABLE_MAX )
+                  )
+                {
+                    $token =~ s/\s+$//g;
+                    $rtoken_vars->[_TOKEN_] = $token;
+                }
 
-                        # -spp = 0 : no space before opening prototype paren
-                        # -spp = 1 : stable (follow input spacing)
-                        # -spp = 2 : always space before opening prototype paren
-                        if ( !defined($rOpts_space_prototype_paren)
-                            || $rOpts_space_prototype_paren == 1 )
-                        {
-                            ## default: stable
-                        }
-                        elsif ( $rOpts_space_prototype_paren == 0 ) {
-                            $token =~ s/\s+\(/\(/;
-                        }
-                        elsif ( $rOpts_space_prototype_paren == 2 ) {
-                            $token =~ s/\(/ (/;
-                        }
+                # Fixed for c250 to use 'S' for sub definitions
+                if ( $type eq 'S' ) {
 
-                        # one space max, and no tabs
-                        $token =~ s/\s+/ /g;
-                        $rtoken_vars->[_TOKEN_] = $token;
-
-                        $self->[_ris_special_identifier_token_]->{$token} =
-                          'sub';
-
-                    }
-
-                    # trim identifiers of trailing blanks which can occur
-                    # under some unusual circumstances, such as if the
-                    # identifier 'witch' has trailing blanks on input here:
-                    #
-                    # sub
-                    # witch
-                    # ()   # prototype may be on new line ...
-                    # ...
-                    my $ord_ch = ord( substr( $token, -1, 1 ) );
-                    if (
-
-                        # quick check for possible ending space
-                        $ord_ch > 0 && ( $ord_ch < ORD_PRINTABLE_MIN
-                            || $ord_ch > ORD_PRINTABLE_MAX )
-                      )
+                    # -spp = 0 : no space before opening prototype paren
+                    # -spp = 1 : stable (follow input spacing)
+                    # -spp = 2 : always space before opening prototype paren
+                    if ( !defined($rOpts_space_prototype_paren)
+                        || $rOpts_space_prototype_paren == 1 )
                     {
-                        $token =~ s/\s+$//g;
-                        $rtoken_vars->[_TOKEN_] = $token;
+                        ## default: stable
                     }
+                    elsif ( $rOpts_space_prototype_paren == 0 ) {
+                        $token =~ s/\s+\(/\(/;
+                    }
+                    elsif ( $rOpts_space_prototype_paren == 2 ) {
+                        $token =~ s/\(/ (/;
+                    }
+
+                    # one space max, and no tabs
+                    $token =~ s/\s+/ /g;
+                    $rtoken_vars->[_TOKEN_] = $token;
+
+                    $self->[_ris_special_identifier_token_]->{$token} = 'sub';
                 }
 
                 # and trim spaces in package statements (added for c250)
@@ -18121,8 +18122,8 @@ EOM
             }
 
             # blank lines before subs except declarations and one-liners
-            # Fix for c250: added new type 'P'
-            elsif ( $leading_type eq 'i' || $leading_type eq 'P' ) {
+            # Fix for c250: added new type 'P', changed 'i' to 'S'
+            elsif ( $leading_type eq 'S' || $leading_type eq 'P' ) {
                 my $special_identifier =
                   $self->[_ris_special_identifier_token_]->{$leading_token};
                 if ($special_identifier) {
@@ -21709,6 +21710,11 @@ sub break_lines_inner_loop {
     # Do not separate an isolated bare word from an opening paren.
     # Alternate Fix #2 for issue b1299.  This waits as long as possible
     # to make the decision.
+    # Note for fix #c250: to keep line breaks unchanged under -extrude when
+    # switching from 'i' to 'S' for subs, we would have to also check 'S', i.e.
+    # =~/^[Si]$/.  But this was never necessary at a sub signature, so we leave
+    # it alone and allow the new version to be different for --extrude. For a
+    # test file run perl527/signatures.t with --extrude.
     if ( $types_to_go[$i_begin] eq 'i'
         && substr( $tokens_to_go[$i_begin], 0, 1 ) =~ /\w/ )
     {
@@ -22400,7 +22406,8 @@ sub do_colon_breaks {
                 # always open comma lists not preceded by keywords,
                 # barewords, identifiers (that is, anything that doesn't
                 # look like a function call)
-                my $must_break_open = $last_nonblank_type[$dd] !~ /^[kwiU]$/;
+                # c250: added new sub identifier type 'S'
+                my $must_break_open = $last_nonblank_type[$dd] !~ /^[kwiUS]$/;
 
                 $self->table_maker(
                     {
