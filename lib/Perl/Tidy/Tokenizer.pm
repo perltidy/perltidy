@@ -5158,13 +5158,11 @@ EOM
         #   $is_END_or_DATA is true for a __END__ or __DATA__ line
 
         # start by breaking the line into pre-tokens
-        my $max_tokens_wanted = 0; # this signals pre_tokenize to get all tokens
-        ( $rtokens, $rtoken_map, $rtoken_type ) =
-          pre_tokenize( $input_line, $max_tokens_wanted );
+        ( $rtokens, $rtoken_map, $rtoken_type ) = pre_tokenize($input_line);
 
         $max_token_index = scalar( @{$rtokens} ) - 1;
         push( @{$rtokens}, SPACE, SPACE, SPACE )
-          ;                        # extra whitespace simplifies logic
+          ;    # extra whitespace simplifies logic
         push( @{$rtoken_map},  0,   0,   0 );     # shouldn't be referenced
         push( @{$rtoken_type}, 'b', 'b', 'b' );
 
@@ -9950,7 +9948,7 @@ sub pre_tokenize {
     # Input parameters:
     #  $str = string to be parsed
     #  $max_tokens_wanted > 0  to stop on reaching this many tokens.
-    #                     = 0 means get all tokens
+    #                     = undef or 0 means get all tokens
 
     # Break a string, $str, into a sequence of preliminary tokens (pre-tokens).
     # We look for these types of tokens:
@@ -9973,14 +9971,16 @@ sub pre_tokenize {
     my @token_map = (0);    # string position of start of each token
     my @type      = ();     # 'b'=whitespace, 'd'=digits, 'w'=alpha, or punct
 
-    do {
+    if ( !$max_tokens_wanted ) { $max_tokens_wanted = -1 }
+
+    while ( $max_tokens_wanted-- ) {
 
         if (
             $str =~ /\G(
-             (\s+) #     type 'b'  = whitespace - this must come before \W
-            |(\W)  #  or type=char = single-character, non-whitespace punct
-            |(\d+) #  or type 'd'  = sequence of digits - must come before \w
-            |(\w+) #  or type 'w'  = words not starting with a digit
+              (\s+) #     type 'b'  = whitespace - this must come before \W
+            | (\W)  #  or type=char = single-character, non-whitespace punct
+            | (\d+) #  or type 'd'  = sequence of digits - must come before \w
+            | (\w+) #  or type 'w'  = words not starting with a digit
             )/gcx
           )
         {
@@ -9994,8 +9994,7 @@ sub pre_tokenize {
         else {
             return ( \@tokens, \@token_map, \@type );
         }
-
-    } while ( --$max_tokens_wanted != 0 );
+    }
 
     return ( \@tokens, \@token_map, \@type );
 } ## end sub pre_tokenize
