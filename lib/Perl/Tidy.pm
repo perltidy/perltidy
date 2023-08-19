@@ -65,7 +65,6 @@ use Carp;
 use English     qw( -no_match_vars );
 use Digest::MD5 qw(md5_hex);
 use Perl::Tidy::Debugger;
-use Perl::Tidy::DevNull;
 use Perl::Tidy::Diagnostics;
 use Perl::Tidy::FileWriter;
 use Perl::Tidy::Formatter;
@@ -744,7 +743,7 @@ EOM
 
         # if the user defines a formatter, there is no output stream,
         # but we need a null stream to keep coding simple
-        $destination_stream = Perl::Tidy::DevNull->new();
+        $destination_stream = \my $tmp;
     }
 
     # see if ARGV is overridden
@@ -1838,17 +1837,19 @@ sub process_all_files {
 
             # If the source is from an array or string, then .LOG output
             # is only possible if a logfile stream is specified.  This prevents
-            # unexpected perltidy.LOG files.
+            # unexpected perltidy.LOG files.  If the stream is not defined
+            # then we will capture it in a string ref but it will not be
+            # accessible. Previously by Perl::Tidy::DevNull (fix c255);
             if ( !defined($logfile_stream) ) {
-                $logfile_stream = Perl::Tidy::DevNull->new();
+                $logfile_stream = \my $tmp;
 
                 # Likewise for .TEE and .DEBUG output
             }
             if ( !defined($teefile_stream) ) {
-                $teefile_stream = Perl::Tidy::DevNull->new();
+                $teefile_stream = \my $tmp;
             }
             if ( !defined($debugfile_stream) ) {
-                $debugfile_stream = Perl::Tidy::DevNull->new();
+                $debugfile_stream = \my $tmp;
             }
         }
         elsif ( $input_file eq '-' ) {    # '-' indicates input from STDIN

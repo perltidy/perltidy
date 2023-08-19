@@ -41,7 +41,6 @@ my $script  = 'bin/perltidy';
 my @modules = qw(
   lib/Perl/Tidy.pm
   lib/Perl/Tidy/Debugger.pm
-  lib/Perl/Tidy/DevNull.pm
   lib/Perl/Tidy/Diagnostics.pm
   lib/Perl/Tidy/FileWriter.pm
   lib/Perl/Tidy/Formatter.pm

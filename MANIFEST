@@ -37,7 +37,6 @@ INSTALL.md
 lib/Perl/Tidy.pm
 lib/Perl/Tidy.pod
 lib/Perl/Tidy/Debugger.pm
-lib/Perl/Tidy/DevNull.pm
 lib/Perl/Tidy/Diagnostics.pm
 lib/Perl/Tidy/FileWriter.pm
 lib/Perl/Tidy/Formatter.pm
@@ -97,3 +96,4 @@ t/testwide-tidy.pl.srctdy
 t/testwide-tidy.t
 t/testwide.pl.src
 t/testwide.t
+t/zero.t

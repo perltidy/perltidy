@@ -397,7 +397,6 @@ sub update_version_number {
     push @sources, "CHANGES.md";
     my @more = qw(
       Tidy/Debugger.pm
-      Tidy/DevNull.pm
       Tidy/Diagnostics.pm
       Tidy/FileWriter.pm
       Tidy/Formatter.pm
