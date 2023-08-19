@@ -1,4 +1,4 @@
-# perlcritic is a useful tool for locating potentially 'dodgy' coding.
+# perlcritic is a useful tool for locating potential code problems.
 # This file customizes it to the specific needs of Perl::Tidy.
 
 # Some useful links:
@@ -8,8 +8,10 @@
 # Example command to run a single policy on single module:
 # perlcritic --single-policy Subroutines::ProhibitSubroutinePrototypes Module.pm
 
-# I have found that using 'no critic' comments is much too troublesome, so
-# non-configurable policies are either 'on' or 'off'.  
+# Many of the policies are excellent starting points for new code, but
+# important exceptions often exist which make it impossible to use them as
+# rigid rules. I have found that using 'no critic' comments is much too
+# troublesome, so non-configurable policies are either 'on' or 'off'.
 
 # severity = 1 gives the most strict checking.
 severity = 1
@@ -90,16 +92,13 @@ max_mccabe=180
 [ControlStructures::ProhibitDeepNests]
 max_nests=9
 
-# The if-elsif sequences in perltidy have all been profiled and
-# are fine as is. Changing them would complicate the code without
-# any benefit in reduced run time or clarity.
+# There are many cases where this is not possible
 [-ControlStructures::ProhibitCascadingIfElse]
 
-# This is a reasonable policy for new code but it is not worth changing
-# debugged code for it.
+# This is a reasonable starting point but does not work well as a rigid rule.
 [-ControlStructures::ProhibitNegativeExpressionsInUnlessAndUntilConditions]
 
-# This is a good general policy but not always the best for efficiency
+# This is a good general policy but not always possible in time-critical subs
 [-Subroutines::ProhibitManyArgs]
 
 [-ClassHierarchies::ProhibitExplicitISA]
@@ -110,9 +109,6 @@ max_nests=9
 # I find that using lvalue substr much clearer than adding another arg to
 # substr.  So skip this one.
 [-BuiltinFunctions::ProhibitLvalueSubstr]
-
-# OK to do this check:
-# [-Variables::ProhibitPackageVars]
 
 # These would be okay for new code, but do not change any debugged regular
 # expressions without good reason.  It is too easy to introduce a subtle error.
@@ -135,14 +131,33 @@ max_nests=9
 [-RegularExpressions::RequireDotMatchAnything]
 [-RegularExpressions::RequireLineBoundaryMatching]
 
-# Disagree. Is '#' really harder to read than q{#}?
+# This is another one of those rules which often works but not always. Is '#'
+# really harder to read than q{#}?  And in tokenization code it is often
+# necessary to work with symbols like '{' '}' '<' and so on.  So we would need
+# q<{> q<}> q{<} and so on, which is hard on the eyes. Also, sometimes
+# perlcritic is inconsistent regarding this rule because sometimes wants to
+# apply this rule to hash keys, and sometimes not.
 [-ValuesAndExpressions::ProhibitNoisyQuotes]
 
-# In some cases a postfix control shows the logical flow best
+# In some cases a postfix control shows the logical flow most clearly.
+# For example, I find this easier to read:
+
+#    $self->weld_cuddled_blocks()
+#       if ( %{$rcuddled_block_types} );
+
+# than this:
+
+#    if ( %{$rcuddled_block_types} ) {
+#       $self->weld_cuddled_blocks()
+#    }
+
+# The extra braces just add clutter.
+
 [-ControlStructures::ProhibitPostfixControls]
 
 # Sometimes an unless statement is clearer than an if block, so why not use
 # it?  For example, I might prefer the first of these:
+
 #  return unless ($everything_is_ok);
 # vs.
 #  return if (!$everything_is_ok);
@@ -154,8 +169,9 @@ max_nests=9
 [-BuiltinFunctions::ProhibitBooleanGrep] 
 
 # The only escaped characters in Perl::Tidy are in code for detecting and
-# setting line endings ( CR and LF ).  This is fully debugged coding and 
-# best left unchanged.
+# setting line endings ( CR and LF ).  This is fully debugged coding and best
+# left unchanged. But this is a good idea and someday I might go through and
+# fix these.
 [-ValuesAndExpressions::ProhibitEscapedCharacters] 
 
 # This is a good general idea but has to be turned off because there are many
@@ -167,12 +183,13 @@ max_nests=9
 #--------------------------------------------------------------
 
 # This is a good starting rule, but occasional capitalization can be quite
-# effective or appropriate, so we have to ignore it as a general rule:
+# effective or appropriate for marking a special variable, so we have to ignore
+# it as a general rule:
 [-NamingConventions::Capitalization]
 
 # It would be nice if this option were configurable to skip STDERR and STDOUT
-# which are used by perltidy almost exclusively for debug statements.  I don't
-# think {*STDOUT} is preferable to simply STDOUT. So skip it.
+# which are used by perltidy almost exclusively for debug statements.
+# I may eventually convert to braced {*STDOUT}, but must skip it for now.
 [-InputOutput::RequireBracedFileHandleWithPrint]
 
 # PerlCritic should not suggest this policy for complex sorts because it can
