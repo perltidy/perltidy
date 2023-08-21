@@ -4,7 +4,7 @@ print $p'u'a;    # print "mooo"
 
 sub a::that {
     $p't'u = "wwoo\n";
-    return sub { print $p't'u}
+    return sub { print $p't'u }
 }
 $a'that = a'that();
 $a'that->();     # print "wwoo"

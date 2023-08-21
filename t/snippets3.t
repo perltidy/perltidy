@@ -561,7 +561,9 @@ xvals$a
 +
 0.1
 *
-yvals$a;
+yvals
+$a
+;
 # keep paren separate here:
 use
 Foo::Bar (

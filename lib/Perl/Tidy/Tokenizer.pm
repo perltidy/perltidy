@@ -2719,6 +2719,20 @@ EOM
         return;
     } ## end sub do_VERTICAL_LINE
 
+    # An identifier in possible indirect object location followed by any of
+    # these tokens: -> , ; } (plus others) is not an indirect object. Fix c257.
+    my %Z_test_hash;
+
+    BEGIN {
+        my @q = qw#
+          -> ; } ) ]
+          => =~ = == !~ || >= != *= .. && |= .= -= += <= %=
+          ^= &&= ||= //= <=>
+          #;
+        push @q, ',';
+        @{Z_test_hash}{@q} = (1) x scalar(@q);
+    }
+
     sub do_DOLLAR_SIGN {
 
         my $self = shift;
@@ -2747,11 +2761,12 @@ EOM
         {
 
             # An identifier followed by '->' is not indirect object;
-            # fixes b1175, b1176
-            my ( $next_nonblank_type, $i_next ) =
-              $self->find_next_noncomment_type( $i, $rtokens,
+            # fixes b1175, b1176. Fix c257: Likewise for other tokens like
+            # comma, semicolon, closing brace, ...
+            my ( $next_nonblank_token, $i_next ) =
+              $self->find_next_noncomment_token( $i, $rtokens,
                 $max_token_index );
-            $type = 'Z' if ( $next_nonblank_type ne '->' );
+            $type = 'Z' if ( !$Z_test_hash{$next_nonblank_token} );
         }
         return;
     } ## end sub do_DOLLAR_SIGN
@@ -8935,7 +8950,7 @@ sub find_next_nonblank_token {
     return ( $next_nonblank_token, $i );
 } ## end sub find_next_nonblank_token
 
-sub find_next_noncomment_type {
+sub find_next_noncomment_token {
     my ( $self, $i, $rtokens, $max_token_index ) = @_;
 
     # Given the current character position, look ahead past any comments
@@ -8974,7 +8989,7 @@ sub find_next_noncomment_type {
     }
 
     return ( $next_nonblank_token, $i_next );
-} ## end sub find_next_noncomment_type
+} ## end sub find_next_noncomment_token
 
 sub is_possible_numerator {
 

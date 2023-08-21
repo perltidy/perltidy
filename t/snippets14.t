@@ -711,7 +711,7 @@ exit 1;
 # with -kgb, do no break after last my
 sub next_sibling {
     my $self     = shift;
-    my $parent   = $_PARENT{ refaddr $self} or return '';
+    my $parent   = $_PARENT{ refaddr $self } or return '';
     my $key      = refaddr $self;
     my $elements = $parent->{children};
     my $position = List::MoreUtils::firstidx {
@@ -732,7 +732,7 @@ sub next_sibling {
 sub next_sibling {
 
     my $self     = shift;
-    my $parent   = $_PARENT{ refaddr $self} or return '';
+    my $parent   = $_PARENT{ refaddr $self } or return '';
     my $key      = refaddr $self;
     my $elements = $parent->{children};
     my $position = List::MoreUtils::firstidx {
