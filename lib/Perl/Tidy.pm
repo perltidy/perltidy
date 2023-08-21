@@ -127,7 +127,7 @@ sub AUTOLOAD {
     our $AUTOLOAD;
     return if ( $AUTOLOAD =~ /\bDESTROY$/ );
     my ( $pkg, $fname, $lno ) = caller();
-    print STDERR <<EOM;
+    print {*STDERR} <<EOM;
 ======================================================================
 Unexpected call to Autoload looking for sub $AUTOLOAD
 Called from package: '$pkg'  
@@ -877,7 +877,7 @@ EOM
 
     # dump from command line
     if ( $rOpts->{'dump-options'} ) {
-        print STDOUT $readable_options;
+        print {*STDOUT} $readable_options;
         Exit(0);
     }
 
@@ -2729,7 +2729,7 @@ BLINKER. Output for iteration $iter same as for $saw_md5{$digest}.
 EOM
                         $stopping_on_error ||= $convergence_log_message;
                         DEVEL_MODE
-                          && print STDERR $convergence_log_message;
+                          && print {*STDERR} $convergence_log_message;
                         $diagnostics_object->write_diagnostics(
                             $convergence_log_message)
                           if $diagnostics_object;
@@ -2760,12 +2760,12 @@ EOM
                         # convergence test above is temporarily skipped for
                         # testing.
                         if ( $iteration_of_formatter_convergence < $iter - 1 ) {
-                            print STDERR
+                            print {*STDERR}
 "STRANGE Early conv in $display_name: Stopping on it=$iter, converged in formatter on $iteration_of_formatter_convergence\n";
                         }
                     }
                     elsif ( !$stopping_on_error ) {
-                        print STDERR
+                        print {*STDERR}
 "STRANGE no conv in $display_name: stopping on it=$iter, but not converged in formatter\n";
                     }
                 }
@@ -4799,7 +4799,7 @@ DIE
 # Debug routine -- this will dump the expansion hash
 sub dump_short_names {
     my $rexpansion = shift;
-    print STDOUT <<EOM;
+    print {*STDOUT} <<EOM;
 List of short names.  This list shows how all abbreviations are
 translated into other abbreviations and, eventually, into long names.
 New abbreviations may be defined in a .perltidyrc file.  
@@ -4808,7 +4808,7 @@ For a list of all long names, use perltidy --dump-long-names (-dln).
 EOM
     foreach my $abbrev ( sort keys %{$rexpansion} ) {
         my @list = @{ $rexpansion->{$abbrev} };
-        print STDOUT "$abbrev --> @list\n";
+        print {*STDOUT} "$abbrev --> @list\n";
     }
     return;
 } ## end sub dump_short_names
@@ -5113,14 +5113,14 @@ sub Win_Config_Locs {
 
 sub dump_config_file {
     my ( $rconfig_string, $config_file, $rconfig_file_chatter ) = @_;
-    print STDOUT "${$rconfig_file_chatter}";
+    print {*STDOUT} "${$rconfig_file_chatter}";
     if ($rconfig_string) {
         my @lines = split /^/, ${$rconfig_string};
-        print STDOUT "# Dump of file: '$config_file'\n";
-        while ( defined( my $line = shift @lines ) ) { print STDOUT $line }
+        print {*STDOUT} "# Dump of file: '$config_file'\n";
+        while ( defined( my $line = shift @lines ) ) { print {*STDOUT} $line }
     }
     else {
-        print STDOUT "# ...no config file found\n";
+        print {*STDOUT} "# ...no config file found\n";
     }
     return;
 } ## end sub dump_config_file
@@ -5370,7 +5370,7 @@ EOM
 sub dump_long_names {
 
     my @names = @_;
-    print STDOUT <<EOM;
+    print {*STDOUT} <<EOM;
 # Command line long names (passed to GetOptions)
 #--------------------------------------------------
 # here is a summary of the Getopt codes:
@@ -5386,14 +5386,14 @@ sub dump_long_names {
 #--------------------------------------------------
 EOM
 
-    foreach my $name ( sort @names ) { print STDOUT "$name\n" }
+    foreach my $name ( sort @names ) { print {*STDOUT} "$name\n" }
     return;
 } ## end sub dump_long_names
 
 sub dump_defaults {
     my @defaults = @_;
-    print STDOUT "Default command line options:\n";
-    foreach my $line ( sort @defaults ) { print STDOUT "$line\n" }
+    print {*STDOUT} "Default command line options:\n";
+    foreach my $line ( sort @defaults ) { print {*STDOUT} "$line\n" }
     return;
 } ## end sub dump_defaults
 
@@ -5443,7 +5443,7 @@ sub readable_options {
 } ## end sub readable_options
 
 sub show_version {
-    print STDOUT <<"EOM";
+    print {*STDOUT} <<"EOM";
 This is perltidy, v$VERSION 
 
 Copyright 2000-2023, Steve Hancock
@@ -5459,7 +5459,7 @@ EOM
 
 sub usage {
 
-    print STDOUT <<EOF;
+    print {*STDOUT} <<EOF;
 This is perltidy version $VERSION, a perl script indenter.  Usage:
 
     perltidy [ options ] file1 file2 file3 ...

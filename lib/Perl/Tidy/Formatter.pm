@@ -67,7 +67,7 @@ sub AUTOLOAD {
     return if ( $AUTOLOAD =~ /\bDESTROY$/ );
     my ( $pkg, $fname, $lno ) = caller();
     my $my_package = __PACKAGE__;
-    print STDERR <<EOM;
+    print {*STDERR} <<EOM;
 ======================================================================
 Error detected in package '$my_package', version $VERSION
 Received unexpected AUTOLOAD call for sub '$AUTOLOAD'
@@ -3472,7 +3472,7 @@ sub set_whitespace_flags {
         if ( !defined($ws_2) ) { $ws_2 = "*" }
         if ( !defined($ws_3) ) { $ws_3 = "*" }
         if ( !defined($ws_4) ) { $ws_4 = "*" }
-        print STDOUT
+        print {*STDOUT}
 "NEW WHITE:  i=$j $str $last_type_dbg $type $ws_1 : $ws_2 : $ws_3 : $ws_4 : $ws \n";
 
         # reset for next pass
@@ -4926,7 +4926,7 @@ EOM
               && $bond_str_1 != $bond_str_2
               && $bond_str_2 != $tabulated_bond_str
               && do {
-                print STDERR
+                print {*STDOUT}
 "BOND_TABLES: ltype=$ltype rtype=$rtype $bond_str_1->$bond_str_2->$bond_str_3\n";
               };
 
@@ -5050,7 +5050,7 @@ EOM
             DEBUG_BOND && do {
                 my $str = substr( $token, 0, 15 );
                 $str .= SPACE x ( 16 - length($str) );
-                print STDOUT
+                print {*STDOUT}
 "BOND:  i=$i $str $type $next_nonblank_type depth=$total_nesting_depth strength=$bond_str_1 -> $bond_str_2 -> $bond_str_3 -> $bond_str_4 $bond_str -> $strength \n";
 
                 # reset for next pass
@@ -6790,12 +6790,12 @@ sub dump_block_summary {
     # Sort blocks and packages on starting line number
     my @sorted_lines = sort { $a->[1] <=> $b->[1] } @{$routput_lines};
 
-    print STDOUT
+    print {*STDOUT}
 "file,line,line_count,code_lines,type,name,level,max_change,block_count,mccabe_count\n";
 
     foreach my $rline_vars (@sorted_lines) {
         my $line = join( ",", @{$rline_vars} ) . "\n";
-        print STDOUT $line;
+        print {*STDOUT} $line;
     }
     return;
 } ## end sub dump_block_summary
@@ -7571,7 +7571,7 @@ lno\tci\tci_this\tci_next\tlast_type\tlast_tok\ttype\ttok\tseqno\tlevel\tpname\t
 EOM
             foreach my $line (@output_lines) {
                 chomp $line;
-                print STDERR $line, "\n";
+                print {*STDOUT} $line, "\n";
             }
         }
     }
@@ -11856,7 +11856,7 @@ EOM
         {
             if (DEBUG_WELD) {
                 $Msg .= "RULE 0: Not welding due to sheared inner parens\n";
-                print $Msg;
+                print {*STDOUT} $Msg;
             }
             next;
         }
@@ -11886,7 +11886,7 @@ EOM
                     || $iline_ic != $iline_oc )
               )
             {
-                if (DEBUG_WELD) { print $msg}
+                if (DEBUG_WELD) { print {*STDOUT} $msg }
                 next;
             }
 
@@ -12198,7 +12198,7 @@ EOM
 
             if (DEBUG_WELD) {
                 $Msg .= "Not welding due to RULE $do_not_weld_rule\n";
-                print $Msg;
+                print {*STDOUT} $Msg;
             }
 
             # Normally, a broken pair should not decrease indentation of
@@ -12219,7 +12219,7 @@ EOM
             $weld_count_this_start++;
             if (DEBUG_WELD) {
                 $Msg .= "Starting new weld\n";
-                print $Msg;
+                print {*STDOUT} $Msg;
             }
             push @welds, $item;
 
@@ -12239,7 +12239,7 @@ EOM
             $weld_count_this_start++;
             if (DEBUG_WELD) {
                 $Msg .= "Extending current weld\n";
-                print $Msg;
+                print {*STDOUT} $Msg;
             }
             unshift @{ $welds[-1] }, $inner_seqno;
             $rK_weld_right->{$Kouter_opening} = $Kinner_opening;
@@ -12425,7 +12425,7 @@ sub weld_nested_quotes {
               = $self->setup_new_weld_measurements( $Kouter_opening,
                 $Kinner_opening );
             if ( !$ok_to_weld ) {
-                if (DEBUG_WELD) { print $msg}
+                if (DEBUG_WELD) { print {*STDOUT} $msg }
                 next;
             }
 
@@ -12483,7 +12483,7 @@ sub weld_nested_quotes {
             if ($do_not_weld) {
                 if (DEBUG_WELD) {
                     $Msg .= "Not Welding QW\n";
-                    print $Msg;
+                    print {*STDOUT} $Msg;
                 }
                 next;
             }
@@ -12491,7 +12491,7 @@ sub weld_nested_quotes {
             # OK to weld
             if (DEBUG_WELD) {
                 $Msg .= "Welding QW\n";
-                print $Msg;
+                print {*STDOUT} $Msg;
             }
 
             $rK_weld_right->{$Kouter_opening} = $Kinner_opening;
@@ -13043,7 +13043,7 @@ sub break_before_list_opening_containers {
           && $rlec_count_by_seqno->{$seqno};
 
         DEBUG_BBX
-          && print STDOUT
+          && print {*STDOUT}
 "BBX: Looking at seqno=$seqno, token = $token with option=$break_option\n";
 
         # -bbx=1 = stable, try to follow input
@@ -13085,12 +13085,12 @@ sub break_before_list_opening_containers {
 
             if ( !$ok_to_break ) {
                 DEBUG_BBX
-                  && print STDOUT "Not breaking at seqno=$seqno: $Msg\n";
+                  && print {*STDOUT} "Not breaking at seqno=$seqno: $Msg\n";
                 next;
             }
 
             DEBUG_BBX
-              && print STDOUT "OK to break at seqno=$seqno: $Msg\n";
+              && print {*STDOUT} "OK to break at seqno=$seqno: $Msg\n";
 
             # Patch: turn off -xci if -bbx=2 and -lp
             # This fixes cases b1090 b1095 b1101 b1116 b1118 b1121 b1122
@@ -13112,7 +13112,7 @@ sub break_before_list_opening_containers {
         # sub insert_breaks_before_list_opening_containers
         $rbreak_before_container_by_seqno->{$seqno} = 1;
         DEBUG_BBX
-          && print STDOUT "BBX: ok to break at seqno=$seqno\n";
+          && print {*STDOUT} "BBX: ok to break at seqno=$seqno\n";
 
         # -bbxi=0: Nothing more to do if the ci value remains unchanged
         my $ci_flag = $container_indentation_options{$token};
@@ -13182,7 +13182,7 @@ sub break_before_list_opening_containers {
                 next unless ($rtype_count);
                 my $fat_comma_count = $rtype_count->{'=>'};
                 DEBUG_BBX
-                  && print STDOUT "BBX: fat comma count=$fat_comma_count\n";
+                  && print {*STDOUT} "BBX: fat comma count=$fat_comma_count\n";
                 if ( $fat_comma_count && $fat_comma_count >= 2 ) { $OK = 1 }
             }
 
@@ -13198,14 +13198,14 @@ sub break_before_list_opening_containers {
                   $self->cumulative_length_before_K($KK);
                 my $excess_length = $length - $maximum_text_length;
                 DEBUG_BBX
-                  && print STDOUT
+                  && print {*STDOUT}
 "BBX: excess=$excess_length: maximum_text_length=$maximum_text_length, length=$length, ci=$ci\n";
 
                 # OK if the net container definitely breaks on length
                 if ( $excess_length > $length_tol ) {
                     $OK = 1;
                     DEBUG_BBX
-                      && print STDOUT "BBX: excess_length=$excess_length\n";
+                      && print {*STDOUT} "BBX: excess_length=$excess_length\n";
                 }
 
                 # Otherwise skip it
@@ -13217,7 +13217,7 @@ sub break_before_list_opening_containers {
         # Part 3: Looks OK: apply -bbx=n and any related -bbxi=n flag
         #------------------------------------------------------------
 
-        DEBUG_BBX && print STDOUT "BBX: OK to break\n";
+        DEBUG_BBX && print {*STDOUT} "BBX: OK to break\n";
 
         # -bbhbi=n
         # -bbsbi=n
@@ -13594,7 +13594,7 @@ sub find_multiline_qw {
 
             # shouldn't happen
             if ( $type ne 'q' ) {
-                DEVEL_MODE && print STDERR <<EOM;
+                DEVEL_MODE && print {*STDERR} <<EOM;
 STRANGE: started multiline qw at K=$K_start_multiline_qw but didn't see q qw at K=$Kfirst\n";
 EOM
                 $K_start_multiline_qw = undef;
@@ -15773,7 +15773,7 @@ EOM
 
         DEBUG_STORE && do {
             my ( $a, $b, $c ) = caller();
-            print STDOUT
+            print {*STDOUT}
 "STORE: from $a $c: storing token $token type $type lev=$level at $max_index_to_go\n";
         };
         return;
@@ -17534,7 +17534,7 @@ EOM
 " Also set closing breakpoint corresponding to this token\n";
                 }
             }
-            print STDOUT $msg;
+            print {*STDOUT} $msg;
         };
 
         return $i_nonblank;
@@ -17645,7 +17645,7 @@ EOM
 
                 DEBUG_UNDOBP && do {
                     my ( $a, $b, $c ) = caller();
-                    print STDOUT
+                    print {*STDOUT}
 "UNDOBP: undo forced_breakpoint i=$i $forced_breakpoint_undo_count from $a $c max=$max_index_to_go\n";
                 };
             }
@@ -17847,7 +17847,7 @@ EOM
                 $output_str = join EMPTY_STRING,
                   @tokens_to_go[ 0 .. $max_index_to_go ];
             }
-            print STDERR <<EOM;
+            print {*STDOUT} <<EOM;
 grind got batch number $batch_count with $max_index_to_go tokens, last type '$type' tok='$token', text:
 $output_str
 EOM
@@ -19090,7 +19090,7 @@ sub break_equals {
         # $ri_beg = ref to array of BEGinning indexes of each line
         # $ri_end = ref to array of ENDing indexes of each line
         my ( $self, $ri_beg, $ri_end, $msg ) = @_;
-        print STDERR "----Dumping breakpoints from: $msg----\n";
+        print {*STDOUT} "----Dumping breakpoints from: $msg----\n";
         for my $n ( 0 .. @{$ri_end} - 1 ) {
             my $ibeg = $ri_beg->[$n];
             my $iend = $ri_end->[$n];
@@ -19098,9 +19098,9 @@ sub break_equals {
             foreach my $i ( $ibeg .. $iend ) {
                 $text .= $tokens_to_go[$i];
             }
-            print STDERR "$n ($ibeg:$iend) $text\n";
+            print {*STDOUT} "$n ($ibeg:$iend) $text\n";
         }
-        print STDERR "----\n";
+        print {*STDOUT} "----\n";
         return;
     } ## end sub Debug_dump_breakpoints
 
@@ -19283,22 +19283,22 @@ sub break_equals {
         my $num_sections = @{$rsections};
 
         if ( DEBUG_RECOMBINE > 1 ) {
-            print STDERR <<EOM;
+            print {*STDOUT} <<EOM;
 sections=$num_sections; nmax_sec=$nmax_section
 EOM
         }
 
         if ( DEBUG_RECOMBINE > 0 ) {
             my $max = 0;
-            print STDERR
+            print {*STDOUT}
               "-----\n$num_sections sections found for nmax=$nmax_start\n";
             foreach my $sect ( @{$rsections} ) {
                 my ( $nbeg, $nend ) = @{$sect};
                 my $num = $nend - $nbeg;
                 if ( $num > $max ) { $max = $num }
-                print STDERR "$nbeg $nend\n";
+                print {*STDOUT} "$nbeg $nend\n";
             }
-            print STDERR "max size=$max of $nmax_start lines\n";
+            print {*STDOUT} "max size=$max of $nmax_start lines\n";
         }
 
         # Loop over all sub-sections.  Note that we have to work backwards
@@ -19487,7 +19487,7 @@ EOM
 
         if (DEBUG_RECOMBINE) {
             my $ratio = sprintf "%0.3f", $rhash->{_num_compares} / $num_pairs;
-            print STDERR
+            print {*STDOUT}
 "exiting recombine_inner_loop with $nmax_last lines, opt=$rhash->{_optimization_on}, starting pairs=$num_pairs, num_compares=$rhash->{_num_compares}, ratio=$ratio\n";
         }
 
@@ -19594,7 +19594,7 @@ EOM
             my $type_ibeg_2 = $types_to_go[$ibeg_2];
 
             DEBUG_RECOMBINE > 1 && do {
-                print STDERR
+                print {*STDOUT}
 "RECOMBINE: ix=$ix iend1=$iend_1 iend2=$iend_2 n=$n nmax=$nmax if=$ibeg_1 type=$type_ibeg_1 =$tokens_to_go[$ibeg_1] next_type=$type_ibeg_2 next_tok=$tokens_to_go[$ibeg_2]\n";
             };
 
@@ -19833,7 +19833,7 @@ EOM
                 if (DEBUG_RECOMBINE) {
                     my $num_compares = $rhash->{_num_compares};
                     my $pair_count   = @ix_list;
-                    print STDERR
+                    print {*STDOUT}
 "Entering optimization phase at $num_compares compares, pair count = $pair_count\n";
                 }
             }
@@ -21600,7 +21600,7 @@ sub break_long_lines {
         }
 
         DEBUG_BREAK_LINES
-          && print STDOUT
+          && print {*STDOUT}
 "BREAK: best is i = $i_lowest strength = $lowest_strength;\nReason>> $Msg\n";
 
         $line_count++;
@@ -22125,7 +22125,7 @@ sub break_lines_inner_loop {
             }
             if ( length($ltok) > 6 ) { $ltok = substr( $ltok, 0, 8 ) }
             if ( length($rtok) > 6 ) { $rtok = substr( $rtok, 0, 8 ) }
-            print STDOUT
+            print {*STDOUT}
 "BREAK: i=$i_test imax=$imax $types_to_go[$i_test] $next_nonblank_type sp=($leading_spaces) lnext= $summed_lengths_to_go[$i_testp2] str=$strength    $ltok $rtok\n";
         };
 
@@ -24532,7 +24532,7 @@ EOM
               ( int $number_of_fields / 2 ) * $pair_width +
               ( $number_of_fields % 2 ) * $max_width;
 
-            print STDOUT
+            print {*STDOUT}
 "SPARSE:cols=$columns commas=$comma_count items:$item_count ids=$identifier_count pairwidth=$pair_width fields=$number_of_fields lines packed: $packed_lines packed_cols=$packed_columns fmtd:$formatted_lines cols /line:$columns_per_line  unused:$unused_columns fmtd:$formatted_columns sparsity=$sparsity allow=$max_allowed_sparsity\n";
 
         };
@@ -25432,7 +25432,7 @@ sub set_nobreaks {
 
         0 && do {
             my ( $a, $b, $c ) = caller();
-            print STDOUT
+            print {*STDOUT}
 "NOBREAK: forced_breakpoint $forced_breakpoint_count from $a $c with i=$i max=$max_index_to_go type=$types_to_go[$i]\n";
         };
 
@@ -26405,7 +26405,7 @@ EOM
                 DEBUG_LP && do {
                     my $tok_beg = $rLL->[$K_begin_line]->[_TOKEN_];
                     my $token   = $tokens_to_go[$ii];
-                    print STDERR <<EOM;
+                    print {*STDOUT} <<EOM;
 DEBUG_LP: Created object at tok=$token type=$type for seqno $align_seqno level=$level ci=$ci_level spaces=$space_count avail=$available_spaces kbeg=$K_begin_line tokbeg=$tok_beg lp=$lp_position_predictor
 EOM
                 };

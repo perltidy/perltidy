@@ -68,7 +68,7 @@ sub AUTOLOAD {
     return if ( $AUTOLOAD =~ /\bDESTROY$/ );
     my ( $pkg, $fname, $lno ) = caller();
     my $my_package = __PACKAGE__;
-    print STDERR <<EOM;
+    print {*STDERR} <<EOM;
 ======================================================================
 Error detected in package '$my_package', version $VERSION
 Received unexpected AUTOLOAD call for sub '$AUTOLOAD'
@@ -205,7 +205,7 @@ BEGIN {
     use constant DEBUG_TABS => 0;
 
     my $debug_warning = sub {
-        print STDOUT "VALIGN_DEBUGGING with key $_[0]\n";
+        print {*STDOUT} "VALIGN_DEBUGGING with key $_[0]\n";
         return;
     };
 
@@ -679,7 +679,7 @@ sub valign_input {
 
     DEBUG_VALIGN && do {
         my $nlines = $self->group_line_count();
-        print STDOUT
+        print {*STDOUT}
 "Entering valign_input: lines=$nlines new #fields= $jmax, leading_count=$leading_space_count, level=$level, group_level=$group_level, level_end=$level_end\n";
     };
 
@@ -954,11 +954,11 @@ sub valign_input {
     # Some old debugging stuff
     # --------------------------------------------------------------------
     DEBUG_VALIGN && do {
-        print STDOUT "exiting valign_input fields:";
+        print {*STDOUT} "exiting valign_input fields:";
         dump_array( @{$rfields} );
-        print STDOUT "exiting valign_input tokens:";
+        print {*STDOUT} "exiting valign_input tokens:";
         dump_array( @{$rtokens} );
-        print STDOUT "exiting valign_input patterns:";
+        print {*STDOUT} "exiting valign_input patterns:";
         dump_array( @{$rpatterns} );
     };
 
@@ -1127,12 +1127,12 @@ sub fix_terminal_ternary {
 
     EXPLAIN_TERNARY && do {
         local $LIST_SEPARATOR = '><';
-        print STDOUT "CURRENT FIELDS=<@{$rfields_old}>\n";
-        print STDOUT "CURRENT TOKENS=<@{$rtokens_old}>\n";
-        print STDOUT "CURRENT PATTERNS=<@{$rpatterns_old}>\n";
-        print STDOUT "UNMODIFIED FIELDS=<@{$rfields}>\n";
-        print STDOUT "UNMODIFIED TOKENS=<@{$rtokens}>\n";
-        print STDOUT "UNMODIFIED PATTERNS=<@{$rpatterns}>\n";
+        print {*STDOUT} "CURRENT FIELDS=<@{$rfields_old}>\n";
+        print {*STDOUT} "CURRENT TOKENS=<@{$rtokens_old}>\n";
+        print {*STDOUT} "CURRENT PATTERNS=<@{$rpatterns_old}>\n";
+        print {*STDOUT} "UNMODIFIED FIELDS=<@{$rfields}>\n";
+        print {*STDOUT} "UNMODIFIED TOKENS=<@{$rtokens}>\n";
+        print {*STDOUT} "UNMODIFIED PATTERNS=<@{$rpatterns}>\n";
     };
 
     # handle cases of leading colon on this line
@@ -1216,9 +1216,9 @@ sub fix_terminal_ternary {
 
     EXPLAIN_TERNARY && do {
         local $LIST_SEPARATOR = '><';
-        print STDOUT "MODIFIED TOKENS=<@tokens>\n";
-        print STDOUT "MODIFIED PATTERNS=<@patterns>\n";
-        print STDOUT "MODIFIED FIELDS=<@fields>\n";
+        print {*STDOUT} "MODIFIED TOKENS=<@tokens>\n";
+        print {*STDOUT} "MODIFIED PATTERNS=<@patterns>\n";
+        print {*STDOUT} "MODIFIED FIELDS=<@fields>\n";
     };
 
     # all ok .. update the arrays
@@ -1541,7 +1541,7 @@ sub dump_array {
 
     # debug routine to dump array contents
     local $LIST_SEPARATOR = ')(';
-    print STDOUT "(@_)\n";
+    print {*STDOUT} "(@_)\n";
     return;
 } ## end sub dump_array
 
@@ -1654,7 +1654,7 @@ sub _flush_group_lines {
     0 && do {
         my ( $a, $b, $c ) = caller();
         my $nlines = @{$rgroup_lines};
-        print STDOUT
+        print {*STDOUT}
 "APPEND0: _flush_group_lines called from $a $b $c lines=$nlines, type=$group_type \n";
     };
 
@@ -3409,7 +3409,7 @@ sub compare_patterns {
 
     EXPLAIN_COMPARE_PATTERNS
       && $return_code
-      && print STDERR "no match because $GoToMsg\n";
+      && print {*STDOUT} "no match because $GoToMsg\n";
 
     return ( $return_code, \$GoToMsg );
 

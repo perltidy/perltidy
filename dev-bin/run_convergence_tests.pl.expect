@@ -9709,7 +9709,9 @@ my $parser =
 foreach
           my $name
           (
-    param $query)
+    param
+              $query
+          )
 
 __END__
 

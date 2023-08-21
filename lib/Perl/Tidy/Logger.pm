@@ -24,7 +24,7 @@ sub AUTOLOAD {
     return if ( $AUTOLOAD =~ /\bDESTROY$/ );
     my ( $pkg, $fname, $lno ) = caller();
     my $my_package = __PACKAGE__;
-    print STDERR <<EOM;
+    print {*STDERR} <<EOM;
 ======================================================================
 Error detected in package '$my_package', version $VERSION
 Received unexpected AUTOLOAD call for sub '$AUTOLOAD'

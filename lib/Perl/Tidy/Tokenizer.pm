@@ -234,7 +234,7 @@ sub AUTOLOAD {
     return if ( $AUTOLOAD =~ /\bDESTROY$/ );
     my ( $pkg, $fname, $lno ) = caller();
     my $my_package = __PACKAGE__;
-    print STDERR <<EOM;
+    print {*STDERR} <<EOM;
 ======================================================================
 Error detected in package '$my_package', version $VERSION
 Received unexpected AUTOLOAD call for sub '$AUTOLOAD'
@@ -2387,7 +2387,7 @@ EOM
                 || $id_scan_state
                 || $context ne $context_simple )
             {
-                print STDERR <<EOM;
+                print {*STDERR} <<EOM;
 scan_simple_identifier differs from scan_identifier:
 simple:  i=$i_simple, tok=$tok_simple, type=$fast_scan_type, ident=$identifier_simple, context='$context_simple
 full:    i=$i, tok=$tok, type=$type, ident=$identifier, context='$context state=$id_scan_state
@@ -2645,7 +2645,7 @@ EOM
                 || ( $i != $i_simple && $i <= $max_token_index )
                 || $number ne $number_simple )
             {
-                print STDERR <<EOM;
+                print {*STDERR} <<EOM;
 scan_number_fast differs from scan_number:
 simple:  i=$i_simple, type=$type_simple, number=$number_simple
 full:  i=$i, type=$type, number=$number
@@ -2724,13 +2724,13 @@ EOM
     my %Z_test_hash;
 
     BEGIN {
-        my @q = qw#
+        my @qZ = qw#
           -> ; } ) ]
           => =~ = == !~ || >= != *= .. && |= .= -= += <= %=
           ^= &&= ||= //= <=>
           #;
-        push @q, ',';
-        @{Z_test_hash}{@q} = (1) x scalar(@q);
+        push @qZ, ',';
+        @{Z_test_hash}{@qZ} = (1) x scalar(@qZ);
     }
 
     sub do_DOLLAR_SIGN {
@@ -2762,7 +2762,7 @@ EOM
 
             # An identifier followed by '->' is not indirect object;
             # fixes b1175, b1176. Fix c257: Likewise for other tokens like
-            # comma, semicolon, closing brace, ...
+            # comma, semicolon, closing brace, and single space.
             my ( $next_nonblank_token, $i_next ) =
               $self->find_next_noncomment_token( $i, $rtokens,
                 $max_token_index );
@@ -5453,7 +5453,7 @@ EOM
                     $rbrace_type->[$brace_depth], $paren_depth,
                     $rparen_type->[$paren_depth],
                 );
-                print STDOUT "TOKENIZE:(@debug_list)\n";
+                print {*STDOUT} "TOKENIZE:(@debug_list)\n";
             };
 
             # We have the next token, $tok.
@@ -5903,7 +5903,7 @@ sub operator_expected {
     my $op_expected = $op_expected_table{$last_nonblank_type};
     if ( defined($op_expected) ) {
         DEBUG_OPERATOR_EXPECTED
-          && print STDOUT
+          && print {*STDOUT}
 "OPERATOR_EXPECTED: Table Lookup; returns $op_expected for last type $last_nonblank_type token $last_nonblank_token\n";
         return $op_expected;
     }
@@ -6117,7 +6117,7 @@ sub operator_expected {
     }
 
     DEBUG_OPERATOR_EXPECTED
-      && print STDOUT
+      && print {*STDOUT}
 "OPERATOR_EXPECTED: returns $op_expected for last type $last_nonblank_type token $last_nonblank_token\n";
 
     return $op_expected;
@@ -7522,7 +7522,7 @@ EOM
     }
 
     DEBUG_NSCAN && do {
-        print STDOUT
+        print {*STDOUT}
           "NSCAN: returns i=$i, tok=$tok, type=$type, state=$id_scan_state\n";
     };
     return ( $i, $tok, $type, $id_scan_state );
@@ -8524,9 +8524,9 @@ EOM
 
         DEBUG_SCAN_ID && do {
             my ( $a, $b, $c ) = caller;
-            print STDOUT
+            print {*STDOUT}
 "SCANID: called from $a $b $c with tok, i, state, identifier =$tok_begin, $i_begin, $id_scan_state_begin, $identifier_begin\n";
-            print STDOUT
+            print {*STDOUT}
 "SCANID: returned with tok, i, state, identifier =$tok, $i, $id_scan_state, $identifier\n";
         };
         return ( $i, $tok, $type, $id_scan_state, $identifier,
@@ -9700,7 +9700,7 @@ sub follow_quoted_string {
     my $quoted_string = EMPTY_STRING;
 
     0 && do {
-        print STDOUT
+        print {*STDOUT}
 "QUOTE entering with quote_pos = $quote_pos i=$i beginning_tok =$beginning_tok\n";
     };
 
@@ -10034,7 +10034,7 @@ sub show_tokens {
 
     foreach my $i ( 0 .. $num - 1 ) {
         my $len = length( $rtokens->[$i] );
-        print STDOUT "$i:$len:$rtoken_map->[$i]:$rtokens->[$i]:\n";
+        print {*STDOUT} "$i:$len:$rtoken_map->[$i]:$rtokens->[$i]:\n";
     }
     return;
 } ## end sub show_tokens

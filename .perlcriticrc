@@ -187,11 +187,6 @@ max_nests=9
 # it as a general rule:
 [-NamingConventions::Capitalization]
 
-# It would be nice if this option were configurable to skip STDERR and STDOUT
-# which are used by perltidy almost exclusively for debug statements.
-# I may eventually convert to braced {*STDOUT}, but must skip it for now.
-[-InputOutput::RequireBracedFileHandleWithPrint]
-
 # PerlCritic should not suggest this policy for complex sorts because it can
 # change program behavior when a stable sort has been assumed.  And it does not
 # even make sense for sorts on multiple keys, like this one which got flagged
