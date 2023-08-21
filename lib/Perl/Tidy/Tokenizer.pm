@@ -8888,6 +8888,17 @@ sub find_next_nonblank_token {
     # To skip past a side comment, and any subsequent block comments
     # and blank lines, call with i=$max_token_index
 
+    # Skip any ending blank (fix c258). It would be cleaner if caller passed
+    # $rtoken_map, so we could check for type 'b', and avoid a regex test, but
+    # benchmarking shows that this test does not take significant time.  So
+    # that would be a nice update but not essential.  Also note that ending
+    # blanks will not occur for text previously processed by perltidy.
+    if (   $i == $max_token_index - 1
+        && $rtokens->[$max_token_index] =~ /^\s+$/ )
+    {
+        $i++;
+    }
+
     if ( $i >= $max_token_index ) {
         if ( !peeked_ahead() ) {
             peeked_ahead(1);
