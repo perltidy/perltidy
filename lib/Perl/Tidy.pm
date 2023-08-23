@@ -1709,6 +1709,56 @@ EOM
     );
 } ## end sub get_decoded_string_buffer
 
+{ #<<<
+
+my $LF;
+my $CR;
+my $CRLF;
+
+BEGIN {
+    $LF   = chr(10);
+    $CR   = chr(13);
+    $CRLF = $CR . $LF;
+}
+
+sub get_line_separator_default {
+
+    my ( $rOpts, $input_file ) = @_;
+
+    # Get the line separator that will apply unless overridden by a
+    # --preserve-line-endings flag for a specific file
+
+    my $line_separator_default = "\n";
+
+    my $ole = $rOpts->{'output-line-ending'};
+    if ($ole) {
+        my %endings = (
+            dos  => $CRLF,
+            win  => $CRLF,
+            mac  => $CR,
+            unix => $LF,
+        );
+
+        $line_separator_default = $endings{ lc $ole };
+
+        if ( !$line_separator_default ) {
+            my $str = join SPACE, keys %endings;
+            Die(<<EOM);
+Unrecognized line ending '$ole'; expecting one of: $str
+EOM
+        }
+
+        # Check for conflict with -ple
+        if ( $rOpts->{'preserve-line-endings'} ) {
+            Warn("Ignoring -ple; conflicts with -ole\n");
+            $rOpts->{'preserve-line-endings'} = undef;
+        }
+    }
+
+    return $line_separator_default;
+
+} ## end sub get_line_separator_default
+
 sub set_line_separator {
 
     my ( $self, $rinput_string ) = @_;
@@ -1728,19 +1778,24 @@ sub set_line_separator {
     my $str = substr( ${$rinput_string}, 0, 1024 );
     if ($str) {
 
-        if ( $str =~ /([\012\015]+)/ ) {
+        if ( $str =~ m/(($CR|$LF)+)/ ) {
+
             my $test = $1;
 
             # dos
-            if ( $test =~ /^(\015\012)+$/ ) {
-                $input_line_separator = "\015\012";
+            if ( $test =~ /^($CRLF)+$/ ) {
+                $input_line_separator = $CRLF;
             }
 
             # mac
-            elsif ( $test =~ /^\015+$/ ) { $input_line_separator = "\015" }
+            elsif ( $test =~ /^($CR)+$/ && $test !~ /$LF/ ) {
+                $input_line_separator = $CR;
+            }
 
             # unix
-            elsif ( $test =~ /^\012+$/ ) { $input_line_separator = "\012" }
+            elsif ( $test =~ /^($LF)+$/ && $test !~ /$CR/ ) {
+                $input_line_separator = $LF;
+            }
 
             # unknown
             else { }
@@ -1758,15 +1813,14 @@ sub set_line_separator {
         }
 
         # patch to read raw mac files under unix, dos
-        if ( $input_line_separator ne "\n" && $input_line_separator eq "\015" )
-        {
+        if ( $input_line_separator ne "\n" && $input_line_separator eq $CR ) {
 
             # if this file is currently a single line ..
             my @lines = split /^/, ${$rinput_string};
             if ( @lines == 1 ) {
 
                 # and becomes multiple lines with the change ..
-                @lines = map { $_ . "\n" } split /\015/, ${$rinput_string};
+                @lines = map { $_ . "\n" } split /$CR/, ${$rinput_string};
                 if ( @lines > 1 ) {
 
                     # then make the change
@@ -1780,6 +1834,7 @@ sub set_line_separator {
     $self->[_line_separator_] = $line_separator;
     return $rinput_string;
 } ## end sub set_line_separator
+}
 
 sub process_all_files {
 
@@ -4611,44 +4666,6 @@ EOM
 
     return;
 } ## end sub check_options
-
-sub get_line_separator_default {
-
-    my ( $rOpts, $input_file ) = @_;
-
-    # Get the line separator that will apply unless overridden by a
-    # --preserve-line-endings flag for a specific file
-
-    my $line_separator_default = "\n";
-
-    my $ole = $rOpts->{'output-line-ending'};
-    if ($ole) {
-        my %endings = (
-            dos  => "\015\012",
-            win  => "\015\012",
-            mac  => "\015",
-            unix => "\012",
-        );
-
-        $line_separator_default = $endings{ lc $ole };
-
-        if ( !$line_separator_default ) {
-            my $str = join SPACE, keys %endings;
-            Die(<<EOM);
-Unrecognized line ending '$ole'; expecting one of: $str
-EOM
-        }
-
-        # Check for conflict with -ple
-        if ( $rOpts->{'preserve-line-endings'} ) {
-            Warn("Ignoring -ple; conflicts with -ole\n");
-            $rOpts->{'preserve-line-endings'} = undef;
-        }
-    }
-
-    return $line_separator_default;
-
-} ## end sub get_line_separator_default
 
 sub find_file_upwards {
     my ( $search_dir, $search_file ) = @_;
