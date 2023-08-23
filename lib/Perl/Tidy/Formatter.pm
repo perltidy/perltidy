@@ -5346,27 +5346,46 @@ sub make_sub_matching_pattern {
     $ASUB_PATTERN = '^sub$';          # match anonymous sub
     %matches_ASUB = ( 'sub' => 1 );
 
+    # Fix the patterns to include any sub aliases:
+    # Note that any 'sub-alias-list' has been preprocessed to
+    # be a trimmed, space-separated list which includes 'sub'
+    # for example, it might be 'sub method fun'
+    my @words;
+    my $sub_alias_list = $rOpts->{'sub-alias-list'};
+    if ($sub_alias_list) {
+        @words = split /\s+/, $sub_alias_list;
+    }
+    else {
+        push @words, 'sub';
+    }
+
+    # Also include 'method' if necessary for '--use-feature=class':
+    # - if user does NOT set 'use-feature', assume 'use-feature=class':
+    if ( !defined( $rOpts->{'use-feature'} ) ) {
+        push @words, 'method';
+    }
+
+    # - if user sets 'use-feature', then only add 'method' if
+    #   use-feature=class is set.
+    else {
+        if ( $rOpts->{'use-feature'} =~ /\bclass\b/ ) {
+            push @words, 'method';
+        }
+    }
+
     # Note (see also RT #133130): These patterns are used by
     # sub make_block_pattern, which is used for making most patterns.
     # So this sub needs to be called before other pattern-making routines.
-
-    if ( $rOpts->{'sub-alias-list'} ) {
-
-        # Note that any 'sub-alias-list' has been preprocessed to
-        # be a trimmed, space-separated list which includes 'sub'
-        # for example, it might be 'sub method fun'
+    if ( @words > 1 ) {
 
         # Two ways are provided to match an anonymous sub:
         # $ASUB_PATTERN - with a regex (old method, slow)
         # %matches_ASUB - with a hash lookup (new method, faster)
 
-        my $sub_alias_list = $rOpts->{'sub-alias-list'};
-        my @words          = split /\s+/, $sub_alias_list;
         @matches_ASUB{@words} = (1) x scalar(@words);
-
-        $sub_alias_list =~ s/\s+/\|/g;
-        $SUB_PATTERN    =~ s/sub/\($sub_alias_list\)/;
-        $ASUB_PATTERN   =~ s/sub/\($sub_alias_list\)/;
+        my $alias_list = join '|', keys %matches_ASUB;
+        $SUB_PATTERN  =~ s/sub/\($alias_list\)/;
+        $ASUB_PATTERN =~ s/sub/\($alias_list\)/;
     }
     return;
 } ## end sub make_sub_matching_pattern

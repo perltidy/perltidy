@@ -4937,11 +4937,30 @@ by listing them in the string B<s>.  To remove all of the default operators use 
 =item B<-uf=s>,   B<--use-feature=s>
 
 This flag tells perltidy to allow the syntax associated a pragma in string
-B<s>. Currently only the recognized values for the string are B<s='class'> or
-string B<s=' '>.  The default is B<--use-feature='class'>.  This enables
-perltidy to recognized the special words B<class>, B<method>, B<field>, and
-B<ADJUST>.  If this causes a conflict with other uses of these words, the
-default can be turned off with B<--use-feature=' '>.
+B<s>.  The current possible settings are:
+
+=over 4
+
+=item *
+
+B<--use-feature='class'>.  This tells perltidy to recognized the special words
+B<class>, B<method>, B<field>, and B<ADJUST> as defined for this feature.
+
+=item *
+
+B<--use-feature=' '>.  This tells perltidy not to treat words B<class>, B<method>, B<field>, B<ADJUST> specially.
+
+=item *
+
+B<--use-feature> not defined B<[DEFAULT]>. In this case perltidy will try to handle both the newer --use-feature 'class' syntax as well as some older overlapping uses, in particular for the keyword 'method'.
+
+=back
+
+Note that this parameter is independent of any B<use feature> control lines
+within a script. Perltidy does not look for or read such control lines.  This
+is because perltidy must be able to work on small chunks of code sent from an
+editor, so it cannot assume that such lines will be within the lines being
+formatted.
 
 =back
 

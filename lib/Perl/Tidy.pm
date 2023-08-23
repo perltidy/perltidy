@@ -3698,7 +3698,6 @@ sub generate_options {
       noweld-nested-containers
       recombine
       nouse-unicode-gcstring
-      use-feature=class
       valign-code
       valign-block-comments
       valign-side-comments
@@ -4520,28 +4519,14 @@ EOM
         $rOpts->{'default-tabsize'} = 8;
     }
 
-    # Check and clean up any use-feature list
-    my $saw_use_feature_class;
-    if ( $rOpts->{'use-feature'} ) {
-        my $rseen = cleanup_word_list( $rOpts, 'use-feature' );
-        $saw_use_feature_class = $rseen->{'class'};
-    }
-
     # Check and clean up any sub-alias-list
-    if (
-        defined( $rOpts->{'sub-alias-list'} )
-        && length( $rOpts->{'sub-alias-list'} )
-
-        || $saw_use_feature_class
-      )
+    if ( defined( $rOpts->{'sub-alias-list'} )
+        && length( $rOpts->{'sub-alias-list'} ) )
     {
         my @forced_words;
 
         # include 'sub' for convenience if this option is used
         push @forced_words, 'sub';
-
-        # use-feature=class requires method as a sub alias
-        push @forced_words, 'method' if ($saw_use_feature_class);
 
         cleanup_word_list( $rOpts, 'sub-alias-list', \@forced_words );
     }

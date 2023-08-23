@@ -128,6 +128,7 @@ my (
     %is_END_DATA_format_sub,
     %is_grep_alias,
     %is_sub,
+    $guess_if_method,
 );
 
 # possible values of operator_expected()
@@ -348,10 +349,27 @@ sub check_options {
         }
     }
 
+    # Set global flag to say if we have to guess if bareword 'method' is
+    # a sub when 'method' is in %is_sub. This will be true unless:
+    #   (1) the user entered 'method' as sub alias, or
+    #   (2) the user set --use-feature=class
+    # In these two cases we can assume that 'method' is a sub alias.
+    $guess_if_method = 1;
+    if ( $is_sub{'method'} ) { $guess_if_method = 0 }
+
     #------------------------------------------------
     # Update hash values for any -use-feature options
     #------------------------------------------------
-    my $use_feature_class = $rOpts->{'use-feature'} =~ /\bclass\b/;
+
+    my $use_feature_class = 1;
+    if ( $rOpts->{'use-feature'} ) {
+        if ( $rOpts->{'use-feature'} =~ /\bclass\b/ ) {
+            $guess_if_method = 0;
+        }
+        else {
+            $use_feature_class = 0;
+        }
+    }
 
     # These are the main updates for this option. There are additional
     # changes elsewhere, usually indicated with a comment 'rt145706'
@@ -375,6 +393,10 @@ sub check_options {
     # 'method' - treated like sub using the sub-alias-list option
     # Note: we must not set 'method' to be a keyword to avoid problems
     # with older uses.
+    if ($use_feature_class) {
+        $is_sub{'method'}                 = 1;
+        $is_END_DATA_format_sub{'method'} = 1;
+    }
 
     # 'field'  - added as a keyword, and works like 'my'
     $is_keyword{'field'}      = $use_feature_class;
@@ -4604,7 +4626,7 @@ EOM
             # Update for --use-feature=class (rt145706):
             # We have to be extra careful to avoid misparsing other uses of
             # 'method' in older scripts.
-            if ( $tok_kw eq 'method' ) {
+            if ( $tok_kw eq 'method' && $guess_if_method ) {
                 if (   $expecting == OPERATOR
                     || $next_nonblank_token !~ /^(\w|\:)/
                     || !$self->method_ok_here() )
