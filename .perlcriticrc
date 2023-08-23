@@ -1,4 +1,4 @@
-# perlcritic is a useful tool for locating potential code problems.
+# Perlcritic is a very useful tool for locating potential code problems.
 # This file customizes it to the specific needs of Perl::Tidy.
 
 # Some useful links:
@@ -11,7 +11,9 @@
 # Many of the policies are excellent starting points for new code, but
 # important exceptions often exist which make it impossible to use them as
 # rigid rules. I have found that using 'no critic' comments is much too
-# troublesome, so non-configurable policies are either 'on' or 'off'.
+# troublesome, so non-configurable policies which have exceptions must be
+# turned off.  This file lists the policies which must be turned off for
+# Perl::Tidy, at least for now.
 
 # severity = 1 gives the most strict checking.
 severity = 1
@@ -22,7 +24,7 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 # Following is a list of policies to be skipped for severity=4:
 #--------------------------------------------------------------
 
-# There is a localization in Tokenizer.pm that is essential
+# There is a localization in Tokenizer.pm that is essential for recursion
 [-Variables::ProhibitLocalVars] 
 
 # Immediate initialization of locals is not appropriate where used
@@ -62,7 +64,9 @@ short_subroutine_statements = 2
 # Perlcritic doesn't know that ARGV in Perl::Tidy actually is localized.
 # Localization of @ARGV could be avoided by calling GetOptionsFromArray
 # instead of GetOptions, but that is not available before perl 5.10, and
-# we want to continue supporting Perl 5.8.
+# we want to continue supporting Perl 5.8. So we have to skip this for now.
+# When the time comes to make perl 5.10 the earliest version supported,
+# this can be fixed.
 [-Variables::RequireLocalizedPunctuationVars]
 
 # Unfortunately the perlcritic coding for this policy is buggy when lines=n is
@@ -92,7 +96,7 @@ max_mccabe=180
 [ControlStructures::ProhibitDeepNests]
 max_nests=9
 
-# There are many cases where this is not possible
+# This would be nice, but there are many cases where this is really impossible.
 [-ControlStructures::ProhibitCascadingIfElse]
 
 # This is a reasonable starting point but does not work well as a rigid rule.
@@ -112,6 +116,8 @@ max_nests=9
 
 # These would be okay for new code, but do not change any debugged regular
 # expressions without good reason.  It is too easy to introduce a subtle error.
+# A problem with ReqireExtendedFormatting is that it makes things needlessly
+# complex when matching things like line feeds and carriage returns.
 [-RegularExpressions::RequireExtendedFormatting]
 [-RegularExpressions::ProhibitComplexRegexes]
 [-RegularExpressions::ProhibitUnusedCapture]
@@ -162,17 +168,6 @@ max_nests=9
 # vs.
 #  return if (!$everything_is_ok);
 [-ControlStructures::ProhibitUnlessBlocks]
-
-# The very few instances of boolean grep in Perl::Tidy are fine. Profiling
-# shows that changing them would not result in a measureable improvement in
-# speed.
-[-BuiltinFunctions::ProhibitBooleanGrep] 
-
-# The only escaped characters in Perl::Tidy are in code for detecting and
-# setting line endings ( CR and LF ).  This is fully debugged coding and best
-# left unchanged. But this is a good idea and someday I might go through and
-# fix these.
-[-ValuesAndExpressions::ProhibitEscapedCharacters] 
 
 # This is a good general idea but has to be turned off because there are many
 # cases where a number has been explained in a comment or is obvious.

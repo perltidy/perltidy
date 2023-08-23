@@ -52,7 +52,7 @@ use constant SPACE        => q{ };
 
 use Carp;
 use English    qw( -no_match_vars );
-use List::Util qw( min max );          # min, max are in Perl 5.8
+use List::Util qw( min max first );    # min, max first are in Perl 5.8
 our $VERSION = '20230701.02';
 
 # The Tokenizer will be loaded with the Formatter
@@ -25226,11 +25226,11 @@ sub study_list_complexity {
             }
         }
         else {
-            if ( grep { $_ eq 'b' } @types_to_go[ $ib .. $ie ] ) {
+            if ( first { $_ eq 'b' } @types_to_go[ $ib .. $ie ] ) {
                 $complex_item_count++;
                 $weighted_length *= 2;
             }
-            if ( grep { $_ eq '..' } @types_to_go[ $ib .. $ie ] ) {
+            if ( first { $_ eq '..' } @types_to_go[ $ib .. $ie ] ) {
                 $weighted_length += 4;
             }
         }
