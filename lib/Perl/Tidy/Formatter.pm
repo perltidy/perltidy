@@ -25604,6 +25604,11 @@ sub get_available_spaces_to_go {
             $rOpts_extended_line_up_parentheses = 0;
         }
 
+        # fix for b1459: -naws adds stress for -xlp
+        if ( $high_stress_level <= 2 && !$rOpts_add_whitespace ) {
+            $rOpts_extended_line_up_parentheses = 0;
+        }
+
         $rLP = [];
 
         # initialize the leading whitespace stack to negative levels

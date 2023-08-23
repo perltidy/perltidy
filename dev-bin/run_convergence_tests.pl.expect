@@ -7912,6 +7912,50 @@ BEGIN {
            @{ $me->{'mail_hdr_list'}
            }, );
 
+==> b1459 <==
+# S1
+my @pics=
+ grep( -f "$dir/$_"
+    &&-s "$dir/$_"
+    &&!
+    -f "$dir/$_$NO_ALBUM"
+    &&!/\Q$NOT_IMG\E$/
+    &&!/\Q$NO_ALBUM\E$/
+    &&!/\.txt$/
+    &&!/\.htaccess$/
+    &&!/~$/
+    &&$_ ne
+"$opt->{'index'}$HTML"
+    &&$_ ne $HEADER
+    &&$_ ne $FOOTER
+    &&
+
+    $_ ne$opt->{
+      'captions'},
+   @dir ) ;
+
+#S2
+my @pics=
+ grep( -f "$dir/$_"
+    &&-s "$dir/$_"
+    &&!
+    -f "$dir/$_$NO_ALBUM"
+    &&!/\Q$NOT_IMG\E$/
+    &&!/\Q$NO_ALBUM\E$/
+    &&!/\.txt$/
+    &&!/\.htaccess$/
+    &&!/~$/
+    &&$_ ne
+"$opt->{'index'}$HTML"
+    &&$_ ne $HEADER
+    &&$_ ne $FOOTER
+    &&
+
+    $_ ne$opt->{
+      'captions'},
+   @dir ) ;
+
+
 ==> b146 <==
 # State 1
 

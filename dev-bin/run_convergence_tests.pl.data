@@ -11685,6 +11685,58 @@ BEGIN {
 --want-trailing-commas='b'
 --delete-trailing-commas
 
+==> b1459.in <==
+# S1
+my @pics=
+ grep( -f "$dir/$_"
+   &&-s "$dir/$_"
+   &&!
+   -f "$dir/$_$NO_ALBUM"
+   &&!/\Q$NOT_IMG\E$/
+   &&!/\Q$NO_ALBUM\E$/
+   &&!/\.txt$/
+   &&!/\.htaccess$/
+   &&!/~$/
+   &&$_ ne
+   "$opt->{'index'}$HTML"
+   &&$_ ne $HEADER
+   &&$_ ne $FOOTER
+   &&
+
+   $_ ne$opt->{
+     'captions'},
+  @dir ) ;
+
+#S2
+my @pics=
+ grep( -f "$dir/$_"
+    &&-s "$dir/$_"
+    &&!
+    -f "$dir/$_$NO_ALBUM"
+    &&!/\Q$NOT_IMG\E$/
+    &&!/\Q$NO_ALBUM\E$/
+    &&!/\.txt$/
+    &&!/\.htaccess$/
+    &&!/~$/
+    &&$_ ne
+"$opt->{'index'}$HTML"
+    &&$_ ne $HEADER
+    &&$_ ne $FOOTER
+    &&
+
+    $_ ne
+    $opt->{'captions'},
+   @dir ) ;
+
+
+==> b1459.par <==
+--maximum-line-length=25
+--indent-columns=3
+--continuation-indentation=1
+--noadd-whitespace
+--extended-continuation-indentation
+--extended-line-up-parentheses
+
 ==> b146.in <==
 # State 1
 
