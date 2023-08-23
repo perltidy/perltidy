@@ -3114,10 +3114,10 @@ sub fileglob_to_re {
 
     # modified (corrected) from version in find2perl
     my $x = shift;
-    $x =~ s#([./^\$()])#\\$1#g;    # escape special characters
-    $x =~ s#\*#.*#g;               # '*' -> '.*'
-    $x =~ s#\?#.#g;                # '?' -> '.'
-    return "^$x\\z";               # match whole word
+    $x =~ s/([.\/^\$()])/\\$1/g;    # escape special characters
+    $x =~ s/\*/.*/g;                # '*' -> '.*'
+    $x =~ s/\?/./g;                 # '?' -> '.'
+    return "^$x\\z";                # match whole word
 } ## end sub fileglob_to_re
 
 sub make_logfile_header {
@@ -4138,7 +4138,7 @@ sub _process_command_line {
         elsif ( $i =~ /^-(pro|profile)=?$/ ) {
             Die("usage: -pro=filename or --profile=filename, no spaces\n");
         }
-        elsif ( $i =~ /^-(help|h|HELP|H|\?)$/ ) {
+        elsif ( $i =~ /^-(help|h|\?)$/i ) {
             usage();
             Exit(0);
         }

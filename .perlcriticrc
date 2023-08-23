@@ -69,11 +69,10 @@ short_subroutine_statements = 2
 # this can be fixed.
 [-Variables::RequireLocalizedPunctuationVars]
 
-# Unfortunately the perlcritic coding for this policy is buggy when lines=n is
-# specified.  For example if I use lines=n to increase 'n' above the default of
-# 9, then suddenly I get error messages for code which previously passed with
-# the default. So we have to skip this.
-[-InputOutput::RequireBriefOpen]
+# sub 'backup_method_copy' in Perl::Tidy.pm has about 25 lines between open
+# and close, largely comments, so set the limit a bit higher.
+[InputOutput::RequireBriefOpen]
+lines=30
 
 #--------------------------------------------------------------
 # Following is a list of policies to be skipped for severity=3:
@@ -114,14 +113,19 @@ max_nests=9
 # substr.  So skip this one.
 [-BuiltinFunctions::ProhibitLvalueSubstr]
 
-# These would be okay for new code, but do not change any debugged regular
-# expressions without good reason.  It is too easy to introduce a subtle error.
-# A problem with ReqireExtendedFormatting is that it makes things needlessly
-# complex when matching things like line feeds and carriage returns.
-[-RegularExpressions::RequireExtendedFormatting]
-[-RegularExpressions::ProhibitComplexRegexes]
+# There are a few of these in Tidy.pm, Formatter.pm, Tokenizer.pm that
+# could be fixed. Then these lines could be removed.
 [-RegularExpressions::ProhibitUnusedCapture]
 [-RegularExpressions::ProhibitCaptureWithoutTest]
+
+# There is one complex regex in Tokenizer.pm that should be simplified. Then
+# this line can be removed.
+[-RegularExpressions::ProhibitComplexRegexes]
+
+# A problem with ReqireExtendedFormatting is that it makes things needlessly
+# complex when matching things like line feeds and carriage returns. So
+# skip this.
+[-RegularExpressions::RequireExtendedFormatting]
 
 #--------------------------------------------------------------
 # Following is a list of policies to be skipped for severity=2:
@@ -132,8 +136,9 @@ max_nests=9
 # loss of code robustness.
 [-BuiltinFunctions::ProhibitUselessTopic]
 
-# These would be okay for new code, but do not change any debugged regular
+# These would be okay for most new code, but do not change any debugged regular
 # expressions without good reason.  It is too easy to introduce a subtle error.
+# So skip these for now.
 [-RegularExpressions::RequireDotMatchAnything]
 [-RegularExpressions::RequireLineBoundaryMatching]
 
@@ -192,13 +197,19 @@ max_nests=9
 # you have a comparison of the form $b->[*] <=> $a->[*]. So skip this.
 [-BuiltinFunctions::ProhibitReverseSortBlock]
 
-# These would be okay for new code, but do not change any debugged regular
-# expressions without good reason.  It is too easy to introduce a subtle error.
-[-RegularExpressions::ProhibitEscapedMetacharacters]
-[-RegularExpressions::ProhibitEnumeratedClasses]
-[-RegularExpressions::ProhibitUnusualDelimiters]
-[-RegularExpressions::ProhibitSingleCharAlternation]
+# There are a few of these in perltidy that should be changed.
 [-RegularExpressions::RequireBracesForMultiline]
+
+# There are too many of these in perltidy to change, and they seem fine.
+[-RegularExpressions::ProhibitEscapedMetacharacters]
+
+# As the documentation says, this policy is not for everyone!
+[-RegularExpressions::ProhibitEnumeratedClasses]
+
+# This would be okay if it did not flag alternations of mixed single and
+# multiple characters. For example, it wants to combine the 'h' and '?' here:
+#        /^-(help|h|\?)$/i
+# which would make it harder to read
 [-RegularExpressions::ProhibitSingleCharAlternation]
 
 # Disagree. Double quotes are easier to read than single quotes and allow a
