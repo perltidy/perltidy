@@ -15053,7 +15053,7 @@ EOM
 
                     # Do not insert a blank after a comment
                     # (this could be subject to a flag in the future)
-                    if ( $code_type !~ /(BC|SBC|SBCX)/ ) {
+                    if ( $code_type !~ /(?:BC|SBC|SBCX)/ ) {
                         if ( $rOpts_kgb_before == INSERT ) {
                             kgb_insert_blank_after( $ibeg - 1 );
 
@@ -31417,9 +31417,10 @@ sub add_closing_side_comment {
                 $old_csc =~ s/\s+//g;            # trim all whitespace
                 $new_csc =~ s/[\]\)\}\s]*$//;    # trim trailing structures
                 $old_csc =~ s/[\]\)\}\s]*$//;    # trim trailing structures
-                $new_csc =~ s/(\.\.\.)$//;       # trim trailing '...'
-                my $new_trailing_dots = $1;
-                $old_csc =~ s/(\.\.\.)\s*$//;    # trim trailing '...'
+
+                # trim trailing '...'
+                my $new_trailing_dots = $new_csc =~ s/\.\.\.$//;
+                $old_csc =~ s/\.\.\.\s*$//;
 
                 # Patch to handle multiple closing side comments at
                 # else and elsif's.  These have become too complicated

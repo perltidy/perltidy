@@ -2825,7 +2825,7 @@ EOM
                 # NOTE: at present, braces in something like &{ xxx }
                 # are not marked as a block, we might have a method call.
                 # Added ')' to fix case c017, something like ()()()
-                && $last_nonblank_token !~ /^([\]\}\)\&]|\-\>)/
+                && $last_nonblank_token !~ /^(?:[\]\}\)\&]|\-\>)/
               )
             {
 
@@ -4628,7 +4628,7 @@ EOM
             # 'method' in older scripts.
             if ( $tok_kw eq 'method' && $guess_if_method ) {
                 if (   $expecting == OPERATOR
-                    || $next_nonblank_token !~ /^(\w|\:)/
+                    || $next_nonblank_token !~ /^[\w\:]/
                     || !$self->method_ok_here() )
                 {
                     $self->do_UNKNOWN_BAREWORD($next_nonblank_token);
@@ -4656,7 +4656,7 @@ EOM
             #   package($x) - error
             if ( $tok_kw eq 'class' ) {
                 if (   $expecting == OPERATOR
-                    || $next_nonblank_token !~ /^(\w|\:)/
+                    || $next_nonblank_token !~ /^[\w\:]/
                     || !$self->class_ok_here() )
                 {
                     $self->do_UNKNOWN_BAREWORD($next_nonblank_token);

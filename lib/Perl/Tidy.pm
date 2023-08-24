@@ -4436,7 +4436,7 @@ sub check_options {
     # Since perltidy only encodes in utf8, problems can occur if we let it
     # decode anything else.  See discussions for issue git #83.
     my $encoding = $rOpts->{'character-encoding'};
-    if ( $encoding !~ /^\s*(guess|none|utf8|utf-8)\s*$/i ) {
+    if ( $encoding !~ /^\s*(?:guess|none|utf8|utf-8)\s*$/i ) {
         Die(<<EOM);
 --character-encoding = '$encoding' is not allowed; the options are: 'none', 'guess', 'utf8'
 EOM

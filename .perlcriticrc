@@ -113,11 +113,6 @@ max_nests=9
 # substr.  So skip this one.
 [-BuiltinFunctions::ProhibitLvalueSubstr]
 
-# There are a few of these in Tidy.pm, Formatter.pm, Tokenizer.pm that
-# could be fixed. Then these lines could be removed.
-[-RegularExpressions::ProhibitUnusedCapture]
-[-RegularExpressions::ProhibitCaptureWithoutTest]
-
 # There is one complex regex in Tokenizer.pm that should be simplified. Then
 # this line can be removed.
 [-RegularExpressions::ProhibitComplexRegexes]
