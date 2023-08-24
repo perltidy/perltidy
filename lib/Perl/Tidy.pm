@@ -4830,7 +4830,7 @@ sub check_vms_filename {
     $base =~ s/;-?\d*$//
 
       # remove explicit . version ie two dots in filename NB ^ escapes a dot
-      or $base =~ s/(          # begin capture $1
+      or $base =~ s{(          # begin capture $1
                   (?:^|[^^])\. # match a dot not preceded by a caret
                   (?:          # followed by nothing
                     |          # or
@@ -4838,7 +4838,7 @@ sub check_vms_filename {
                   )
                 )              # end capture $1
                 \.-?\d*$       # match . version number
-              /$1/x;
+              }{$1}x;
 
     # normalize filename, if there are no unescaped dots then append one
     $base .= '.' unless $base =~ /(?:^|[^^])\./;

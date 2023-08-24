@@ -162,8 +162,10 @@ max_nests=9
 #       $self->weld_cuddled_blocks()
 #    }
 
-# The extra braces just add clutter.
-
+# The first form highlights the most important thing, a sub call,
+# and the conditional is just an optimization to skip it if not needed.
+# The second form buries the important thing in braces, making it harder
+# to see what is going on.
 [-ControlStructures::ProhibitPostfixControls]
 
 # Sometimes an unless statement is clearer than an if block, so why not use
@@ -196,9 +198,6 @@ max_nests=9
 # Changing the first part requires changing the second part, so either way
 # you have a comparison of the form $b->[*] <=> $a->[*]. So skip this.
 [-BuiltinFunctions::ProhibitReverseSortBlock]
-
-# There are a few of these in perltidy that should be changed.
-[-RegularExpressions::RequireBracesForMultiline]
 
 # There are too many of these in perltidy to change, and they seem fine.
 [-RegularExpressions::ProhibitEscapedMetacharacters]

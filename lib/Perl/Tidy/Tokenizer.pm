@@ -2449,10 +2449,10 @@ EOM
 
         # TEST 1: look a valid sub NAME
         if (
-            $input_line =~ m/\G\s*
+            $input_line =~ m{\G\s*
         ((?:\w*(?:'|::))*)  # package - something that ends in :: or '
         (\w+)               # NAME    - required
-        /gcx
+        }gcx
           )
         {
             # For possible future use..
@@ -2528,10 +2528,10 @@ EOM
 
         # TEST 2: look for a valid NAME
         if (
-            $input_line =~ m/\G\s*
+            $input_line =~ m{\G\s*
         ((?:\w*(?:'|::))*)  # package - something that ends in :: or '
         (\w+)               # NAME    - required
-        /gcx
+        }gcx
           )
         {
             # For possible future use..
@@ -8661,10 +8661,10 @@ EOM
         # Look for the sub NAME if this is a SUB call
         if (
                $call_type == SUB_CALL
-            && $input_line =~ m/\G\s*
+            && $input_line =~ m{\G\s*
         ((?:\w*(?:'|::))*)  # package - something that ends in :: or '
         (\w+)               # NAME    - required
-        /gcx
+        }gcx
           )
         {
             $match   = 1;
@@ -8731,9 +8731,9 @@ EOM
         # $input_line =~ m/\G(\s*\([^\)\(\}\{\,#]*\))?  # PROTO
         my $saw_opening_paren = $input_line =~ /\G\s*\(/;
         if (
-            $input_line =~ m/\G(\s*\([^\)\(\}\{\,#A-Za-z]*\))?  # PROTO
+            $input_line =~ m{\G(\s*\([^\)\(\}\{\,#A-Za-z]*\))?  # PROTO
             (\s*:)?                              # ATTRS leading ':'
-            /gcx
+            }gcx
             && ( $1 || $2 )
           )
         {
@@ -9395,9 +9395,9 @@ EOM
         #   /\G[+-]?0(([xX][0-9a-fA-F_]+)|([0-7_]+)|([bB][01_]+))/g )
         #             (hex)               (octal)   (binary)
         if (
-            $input_line =~
+            $input_line =~ m{
 
-            /\G[+-]?0(                   # leading [signed] 0
+            \G[+-]?0(                   # leading [signed] 0
 
            # a hex float, i.e. '0x0.b17217f7d1cf78p0'
            ([xX][0-9a-fA-F_]*            # X and optional leading digits
@@ -9426,7 +9426,7 @@ EOM
            # or binary integer
            |([bB][01_]+)           # 'b' with string of binary digits 
 
-           )/gx
+           )}gx
           )
         {
             $pos = pos($input_line);
@@ -10024,12 +10024,14 @@ sub pre_tokenize {
     while ( $max_tokens_wanted-- ) {
 
         if (
-            $str =~ /\G(
-              (\s+) #     type 'b'  = whitespace - this must come before \W
-            | (\W)  #  or type=char = single-character, non-whitespace punct
-            | (\d+) #  or type 'd'  = sequence of digits - must come before \w
-            | (\w+) #  or type 'w'  = words not starting with a digit
-            )/gcx
+            $str =~ m{
+             \G(
+               (\s+) #     type 'b'  = whitespace - this must come before \W
+             | (\W)  #  or type=char = single-character, non-whitespace punct
+             | (\d+) #  or type 'd'  = sequence of digits - must come before \w
+             | (\w+) #  or type 'w'  = words not starting with a digit
+             )
+            }gcx
           )
         {
             push @tokens, $1;

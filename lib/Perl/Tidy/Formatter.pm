@@ -7778,10 +7778,10 @@ sub set_CODE_type {
             # example: '# line 42 "new_filename.plx"'
             if (
                    $no_leading_space
-                && $input_line =~ /^\#   \s*
+                && $input_line =~ m{^\#   \s*
                            line \s+ (\d+)   \s*
                            (?:\s("?)([^"]+)\2)? \s*
-                           $/x
+                           $}x
               )
             {
                 $is_static_block_comment = 1;
