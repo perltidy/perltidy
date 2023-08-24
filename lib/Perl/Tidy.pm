@@ -4138,7 +4138,7 @@ sub _process_command_line {
         elsif ( $i =~ /^-(pro|profile)=?$/ ) {
             Die("usage: -pro=filename or --profile=filename, no spaces\n");
         }
-        elsif ( $i =~ /^-(help|h|\?)$/i ) {
+        elsif ( $i =~ /^-(?: help | [ h \? ] )$/xi ) {
             usage();
             Exit(0);
         }

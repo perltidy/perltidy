@@ -1015,8 +1015,8 @@ sub get_line {
     # The first test here very significantly speeds things up, but be sure to
     # keep the regex and hash %other_line_endings the same.
     if ( $other_line_endings{ substr( $input_line, -1 ) } ) {
-        if ( $input_line =~ s/((\r|\035|\032)+)$// ) {
-            $input_line_separator = $2 . $input_line_separator;
+        if ( $input_line =~ s/([\r\035\032])+$// ) {
+            $input_line_separator = $1 . $input_line_separator;
         }
     }
 
@@ -9035,7 +9035,7 @@ sub is_possible_numerator {
             $max_token_index );
     }
 
-    if ( $next_nonblank_token =~ /(\(|\$|\w|\.|\@)/ ) {
+    if ( $next_nonblank_token =~ / [ \( \$ \w \. \@ ] /x ) {
         $is_possible_numerator = 1;
     }
     elsif ( $next_nonblank_token =~ /^\s*$/ ) {

@@ -200,12 +200,6 @@ max_nests=9
 # As the documentation says, this policy is not for everyone!
 [-RegularExpressions::ProhibitEnumeratedClasses]
 
-# This would be okay if it did not flag alternations of mixed single and
-# multiple characters. For example, it wants to combine the 'h' and '?' here:
-#        /^-(help|h|\?)$/i
-# which would make it harder to read
-[-RegularExpressions::ProhibitSingleCharAlternation]
-
 # Disagree. Double quotes are easier to read than single quotes and allow a
 # uniform style for quotes.  My editor has color coding which indicates
 # interpolation. Double quotes do not increase processing time by any
