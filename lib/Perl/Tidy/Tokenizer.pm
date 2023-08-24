@@ -22,7 +22,7 @@ use strict;
 use warnings;
 use English qw( -no_match_vars );
 
-our $VERSION = '20230701.02';
+our $VERSION = '20230701.03';
 
 use Carp;
 
