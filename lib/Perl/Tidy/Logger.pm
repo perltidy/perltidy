@@ -72,7 +72,7 @@ sub new {
         if ( -e $warning_file ) {
             unlink($warning_file)
               or Perl::Tidy::Die(
-                "couldn't unlink warning file $warning_file: $ERRNO\n");
+                "couldn't unlink warning file $warning_file: $OS_ERROR\n");
         }
     }
 
@@ -385,7 +385,7 @@ sub warning {
             ( $fh_warnings, my $filename ) =
               Perl::Tidy::streamhandle( $warning_file, 'w', $is_encoded_data );
             $fh_warnings
-              or Perl::Tidy::Die("couldn't open $filename: $ERRNO\n");
+              or Perl::Tidy::Die("couldn't open $filename: $OS_ERROR\n");
             Perl::Tidy::Warn_msg("## Please see file $filename\n")
               unless ref($warning_file);
             $self->{_fh_warnings} = $fh_warnings;
@@ -506,11 +506,13 @@ sub finish {
         if ($fh) {
             my $routput_array = $self->{_output_array};
             foreach my $line ( @{$routput_array} ) { $fh->print($line) }
-            if ( $log_file ne '-' && !ref $log_file ) {
-                my $ok = eval { $fh->close(); 1 };
-                if ( !$ok && DEVEL_MODE ) {
-                    Fault("Could not close file handle(): $EVAL_ERROR\n");
-                }
+            if (   $fh->can('close')
+                && !ref($log_file) ne '-'
+                && $log_file ne '-' )
+            {
+                $fh->close()
+                  or Perl::Tidy::Warn(
+                    "Error closing LOG file '$log_file': $OS_ERROR\n");
             }
         }
     }

@@ -16,6 +16,8 @@ use warnings;
 use Carp;
 our $VERSION = '20230701.03';
 
+use constant DEVEL_MODE => 0;
+
 sub AUTOLOAD {
 
     # Catch any undefined sub calls so that we are sure to get
@@ -23,6 +25,10 @@ sub AUTOLOAD {
     # except for a programming error.
     our $AUTOLOAD;
     return if ( $AUTOLOAD =~ /\bDESTROY$/ );
+
+    # Originally there was a dummy sub close. All calls to it should have been
+    # eliminated, but for safety we will check for them here.
+    return 1 if ( $AUTOLOAD =~ /\bclose$/ && !DEVEL_MODE );
     my ( $pkg, $fname, $lno ) = caller();
     my $my_package = __PACKAGE__;
     print {*STDERR} <<EOM;
@@ -97,6 +103,4 @@ EOM
     push @{ $self->[0] }, $msg;
     return;
 }
-sub close { return }
 1;
-

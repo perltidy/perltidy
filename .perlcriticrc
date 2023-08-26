@@ -32,18 +32,16 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 [-Variables::RequireInitializationForLocalVars] 
 
 # There is a stringy eval in Formatter.pm and Tokenizer.pm which is essential
-# for checking user input. So we have to skip this.  I would have liked
-# to mark it with a nocritic side comment, but see note above for the trouble
-# this causes.
+# for checking user input. So we have to skip this.
 [-BuiltinFunctions::ProhibitStringyEval]
 
 # Tidy.pm exports 'perltidy'. Changing this could break existing scripts.
 [-Modules::ProhibitAutomaticExportation]
 
-# 'print' and 'close' homonyms are appropriate where they are used.
+# IOScalar and IOScalarArray need to define a 'print' function
 [-Subroutines::ProhibitBuiltinHomonyms]
 
-# Nested subs are used for error handling in Tidy.pm.
+# Nested subs are needed for error handling in Tidy.pm.
 [-Subroutines::ProhibitNestedSubs]
 
 # Don't require arg unpacking for very short (possibly time-critical) subs.
@@ -66,7 +64,7 @@ short_subroutine_statements = 2
 # instead of GetOptions, but that is not available before perl 5.10, and
 # we want to continue supporting Perl 5.8. So we have to skip this for now.
 # When the time comes to make perl 5.10 the earliest version supported,
-# this can be fixed.
+# this restriction can be deleted
 [-Variables::RequireLocalizedPunctuationVars]
 
 # sub 'backup_method_copy' in Perl::Tidy.pm has about 25 lines between open
@@ -83,8 +81,8 @@ lines=30
 [-ClassHierarchies::ProhibitAutoloading]
 
 # This policy is very useful in locating complex code which might benefit from
-# simplification.  The max value has to be set rather high here because there
-# are some critical loops in Formatter.pm whose high mccabe values cannot
+# simplification.  But the max value has to be set rather high here because
+# there are some critical loops in Formatter.pm whose high mccabe values cannot
 # be reduced without significantly increasing run time.
 [Subroutines::ProhibitExcessComplexity]
 max_mccabe=180
@@ -106,15 +104,13 @@ max_nests=9
 
 [-ClassHierarchies::ProhibitExplicitISA]
 
-# These are okay where used
-[-NamingConventions::ProhibitAmbiguousNames]
-
 # I find that using lvalue substr much clearer than adding another arg to
 # substr.  So skip this one.
 [-BuiltinFunctions::ProhibitLvalueSubstr]
 
-# There is one complex regex in Tokenizer.pm that should be simplified. Then
-# this line can be removed.
+# There is one complex regex in Tokenizer.pm for scanning numbers. It is
+# well commented and easy to read, and any changes would make it harder
+# to read. So we have to skip this.
 [-RegularExpressions::ProhibitComplexRegexes]
 
 # A problem with ReqireExtendedFormatting is that it makes things needlessly
@@ -165,7 +161,6 @@ max_nests=9
 
 # Sometimes an unless statement is clearer than an if block, so why not use
 # it?  For example, I might prefer the first of these:
-
 #  return unless ($everything_is_ok);
 # vs.
 #  return if (!$everything_is_ok);
@@ -197,7 +192,7 @@ max_nests=9
 # There are too many of these in perltidy to change, and they seem fine.
 [-RegularExpressions::ProhibitEscapedMetacharacters]
 
-# As the documentation says, this policy is not for everyone!
+# As the documentation says, this policy is not for everyone
 [-RegularExpressions::ProhibitEnumeratedClasses]
 
 # Disagree. Double quotes are easier to read than single quotes and allow a
@@ -207,7 +202,8 @@ max_nests=9
 # So skip this:
 [-ValuesAndExpressions::ProhibitInterpolationOfLiterals]
 
-# These have been checked and are correct as written 
+# These have been checked and are correct as written. So this policy
+# has to be turned off.
 [-ValuesAndExpressions::RequireInterpolationOfMetachars]
 
 # Disagree: parens can add clarity and may even be essential, for example in

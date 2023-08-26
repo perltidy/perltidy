@@ -75,7 +75,7 @@ sub write_diagnostics {
 
     unless ( $self->{_write_diagnostics_count} ) {
         open( $self->{_fh}, ">", "DIAGNOSTICS" )
-          or Perl::Tidy::Die("couldn't open DIAGNOSTICS: $ERRNO\n");
+          or Perl::Tidy::Die("couldn't open DIAGNOSTICS: $OS_ERROR\n");
     }
 
     if ( defined($line_number) ) {

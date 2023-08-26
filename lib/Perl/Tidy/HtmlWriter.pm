@@ -103,7 +103,7 @@ sub new {
     ( $html_fh, my $html_filename ) =
       Perl::Tidy::streamhandle( $html_file, 'w' );
     unless ($html_fh) {
-        Perl::Tidy::Warn("can't open $html_file: $ERRNO\n");
+        Perl::Tidy::Warn("can't open $html_file: $OS_ERROR\n");
         return;
     }
     $html_file_opened = 1;
@@ -208,14 +208,6 @@ PRE_END
         _rlast_level       => \$last_level,         # brace indentation level
     }, $class;
 } ## end sub new
-
-sub close_object {
-    my ($object) = @_;
-
-    # returns true if close works, false if not
-    # failure probably means there is no close method
-    return eval { $object->close(); 1 };
-} ## end sub close_object
 
 sub add_toc_item {
 
@@ -606,10 +598,14 @@ sub write_style_sheet_file {
     my $filename = shift;
     my $fh;
     unless ( $fh = IO::File->new("> $filename") ) {
-        Perl::Tidy::Die("can't open $filename: $ERRNO\n");
+        Perl::Tidy::Die("can't open $filename: $OS_ERROR\n");
     }
     write_style_sheet_data($fh);
-    close_object($fh);
+    if ( $fh->can('close') && $filename ne '-' && !ref($filename) ) {
+        $fh->close()
+          or
+          Perl::Tidy::Warn("can't close style sheet '$filename' : $OS_ERROR\n");
+    }
     return;
 } ## end sub write_style_sheet_file
 
@@ -718,7 +714,12 @@ sub pod_to_html {
 
     # write the pod text to the temporary file
     $fh_tmp->print($pod_string);
-    $fh_tmp->close();
+
+    if ( !$fh_tmp->close() ) {
+        Perl::Tidy::Warn(
+            "unable to close temporary file $tmpfile; cannot use pod2html\n");
+        return $success_flag;
+    }
 
     # Hand off the pod to pod2html.
     # Note that we can use the same temporary filename for input and output
@@ -963,14 +964,16 @@ sub pod_to_html {
         $success_flag = 0;
     }
 
-    close_object($html_fh);
+    if ( $html_fh->can('close') ) {
+        $html_fh->close();
+    }
 
     # note that we have to unlink tmpfile before making frames
     # because the tmpfile may be one of the names used for frames
     if ( -e $tmpfile ) {
         unless ( unlink($tmpfile) ) {
             Perl::Tidy::Warn(
-                "couldn't unlink temporary file $tmpfile: $ERRNO\n");
+                "couldn't unlink temporary file $tmpfile: $OS_ERROR\n");
             $success_flag = 0;
         }
     }
@@ -1018,7 +1021,7 @@ sub make_frame {
     # 2. The current .html filename is renamed to be the contents panel
     rename( $html_filename, $src_filename )
       or Perl::Tidy::Die(
-        "Cannot rename $html_filename to $src_filename: $ERRNO\n");
+        "Cannot rename $html_filename to $src_filename: $OS_ERROR\n");
 
     # 3. Then use the original html filename for the frame
     write_frame_html(
@@ -1033,7 +1036,7 @@ sub write_toc_html {
     # write a separate html table of contents file for frames
     my ( $title, $toc_filename, $src_basename, $rtoc, $src_frame_name ) = @_;
     my $fh = IO::File->new( $toc_filename, 'w' )
-      or Perl::Tidy::Die("Cannot open $toc_filename: $ERRNO\n");
+      or Perl::Tidy::Die("Cannot open $toc_filename: $OS_ERROR\n");
     $fh->print(<<EOM);
 <html>
 <head>
@@ -1064,7 +1067,7 @@ sub write_frame_html {
     ) = @_;
 
     my $fh = IO::File->new( $frame_filename, 'w' )
-      or Perl::Tidy::Die("Cannot open $toc_basename: $ERRNO\n");
+      or Perl::Tidy::Die("Cannot open $toc_basename: $OS_ERROR\n");
 
     $fh->print(<<EOM);
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Frameset//EN"
@@ -1152,7 +1155,8 @@ sub close_html_file {
         $html_fh->print( <<"PRE_END");
 </pre>
 PRE_END
-        close_object($html_fh);
+        $html_fh->close()
+          if ( $html_fh->can('close') );
         return;
     }
 
@@ -1273,7 +1277,8 @@ END_PRE
 </body>
 </html>
 HTML_END
-    close_object($html_fh);
+    $html_fh->close()
+      if ( $html_fh->can('close') );
 
     if ( $rOpts->{'frames'} ) {
         ##my @toc = map { $_ .= "\n" } split /\n/, ${$rtoc_string};

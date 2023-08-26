@@ -240,7 +240,7 @@ EOM
     $fh = $New->( $filename, $mode );
     if ( !$fh ) {
 
-        Warn("Couldn't open file:$filename in mode:$mode : $ERRNO\n");
+        Warn("Couldn't open file:$filename in mode:$mode : $OS_ERROR\n");
 
     }
     else {
@@ -332,11 +332,11 @@ EOM
             if ( open( my $fh, '<', $filename ) ) {
                 local $INPUT_RECORD_SEPARATOR = undef;
                 my $buf = <$fh>;
-                $fh->close() || Warn("Cannot close $filename\n");
+                $fh->close() or Warn("Cannot close $filename\n");
                 $rinput_string = \$buf;
             }
             else {
-                Warn("Cannot open $filename: $ERRNO\n");
+                Warn("Cannot open $filename: $OS_ERROR\n");
                 return;
             }
         }
@@ -1196,13 +1196,13 @@ sub backup_method_copy {
     if ( -f $backup_file ) {
         unlink($backup_file)
           or Die(
-"unable to remove previous '$backup_file' for -b option; check permissions: $ERRNO\n"
+"unable to remove previous '$backup_file' for -b option; check permissions: $OS_ERROR\n"
           );
     }
 
     # Copy input file to backup
     File::Copy::copy( $input_file, $backup_file )
-      or Die("File::Copy failed trying to backup source: $ERRNO");
+      or Die("File::Copy failed trying to backup source: $OS_ERROR");
 
     # set permissions of the backup file to match the input file
     my @input_file_stat = stat($input_file);
@@ -1221,7 +1221,7 @@ sub backup_method_copy {
     # truncate the existing data.
     open( my $fout, ">", $input_file )
       || Die(
-"problem re-opening $input_file for write for -b option; check file and directory permissions: $ERRNO\n"
+"problem re-opening $input_file for write for -b option; check file and directory permissions: $OS_ERROR\n"
       );
 
     if ( $self->[_is_encoded_data_] ) {
@@ -1289,7 +1289,7 @@ EOM
         else {
             unlink($backup_file)
               or Die(
-"unable to remove backup file '$backup_file' for -b option; check permissions: $ERRNO\n"
+"unable to remove backup file '$backup_file' for -b option; check permissions: $OS_ERROR\n"
               );
         }
     }
@@ -1338,7 +1338,7 @@ sub backup_method_move {
     if ( -f $backup_name ) {
         unlink($backup_name)
           or Die(
-"unable to remove previous '$backup_name' for -b option; check permissions: $ERRNO\n"
+"unable to remove previous '$backup_name' for -b option; check permissions: $OS_ERROR\n"
           );
     }
 
@@ -1348,12 +1348,12 @@ sub backup_method_move {
     # we use copy for symlinks, move for regular files
     if ( -l $input_file ) {
         File::Copy::copy( $input_file, $backup_name )
-          or Die("File::Copy failed trying to backup source: $ERRNO");
+          or Die("File::Copy failed trying to backup source: $OS_ERROR");
     }
     else {
         rename( $input_file, $backup_name )
           or Die(
-"problem renaming $input_file to $backup_name for -b option: $ERRNO\n"
+"problem renaming $input_file to $backup_name for -b option: $OS_ERROR\n"
           );
     }
 
@@ -1363,7 +1363,7 @@ sub backup_method_move {
       Perl::Tidy::streamhandle( $input_file, 'w', $is_encoded_data );
     if ( !$fout ) {
         Die(
-"problem re-opening $input_file for write for -b option; check file and directory permissions: $ERRNO\n"
+"problem re-opening $input_file for write for -b option; check file and directory permissions: $OS_ERROR\n"
         );
     }
 
@@ -1428,7 +1428,7 @@ EOM
         else {
             unlink($backup_name)
               or Die(
-"unable to remove previous '$backup_name' for -b option; check permissions: $ERRNO\n"
+"unable to remove previous '$backup_name' for -b option; check permissions: $OS_ERROR\n"
               );
         }
     }
@@ -1999,7 +1999,8 @@ sub process_all_files {
                 my $new_path = $rOpts->{'output-path'};
                 unless ( -d $new_path ) {
                     unless ( mkdir $new_path, 0777 ) {
-                        Die("unable to create directory $new_path: $ERRNO\n");
+                        Die("unable to create directory $new_path: $OS_ERROR\n"
+                        );
                     }
                 }
                 my $path = $new_path;
@@ -2303,10 +2304,10 @@ sub write_tidy_output {
                 if ($is_encoded_data) { binmode $fh, ":raw:encoding(UTF-8)" }
                 else                  { binmode $fh }
                 $fh->print( ${$routput_string} );
-                $fh->close() || Warn("Cannot close $output_file\n");
+                $fh->close() or Die("Cannot close '$output_file': $OS_ERROR\n");
             }
             else {
-                Die("Cannot open $output_file to write: $ERRNO\n");
+                Die("Cannot open $output_file to write: $OS_ERROR\n");
             }
 
             # set output file ownership and permissions if appropriate
@@ -2576,16 +2577,17 @@ sub process_iteration_layer {
 
     # make a tee file handle if requested
     my $fh_tee;
+    my $tee_file;
     if (   $rOpts->{'tee-pod'}
         || $rOpts->{'tee-block-comments'}
         || $rOpts->{'tee-side-comments'} )
     {
-        my $tee_file = $self->[_teefile_stream_]
+        $tee_file = $self->[_teefile_stream_]
           || $fileroot . $self->make_file_extension('TEE');
         ( $fh_tee, my $tee_filename ) =
           Perl::Tidy::streamhandle( $tee_file, 'w', $is_encoded_data );
         if ( !$fh_tee ) {
-            Warn("couldn't open TEE file $tee_file: $ERRNO\n");
+            Warn("couldn't open TEE file $tee_file: $OS_ERROR\n");
         }
     }
 
@@ -2645,8 +2647,17 @@ sub process_iteration_layer {
         # being deleted.
         if ( $iter > 1 ) {
 
-            $debugger_object->close_debug_file() if ($debugger_object);
-            $fh_tee->close()                     if ($fh_tee);
+            $debugger_object->close_debug_file()
+              if ($debugger_object);
+
+            if (   $fh_tee
+                && $fh_tee->can('close')
+                && !ref($tee_file)
+                && $tee_file ne '-' )
+            {
+                $fh_tee->close()
+                  or Warn("couldn't close TEE file $tee_file: $OS_ERROR\n");
+            }
 
             $debugger_object = undef;
             $logger_object   = undef;
@@ -2831,8 +2842,17 @@ EOM
         } ## end if ( $iter < $max_iterations)
     } ## end loop over iterations for one source file
 
-    $debugger_object->close_debug_file() if $debugger_object;
-    $fh_tee->close()                     if $fh_tee;
+    $debugger_object->close_debug_file()
+      if $debugger_object;
+
+    if (   $fh_tee
+        && $fh_tee->can('close')
+        && !ref($tee_file)
+        && $tee_file ne '-' )
+    {
+        $fh_tee->close()
+          or Warn("couldn't close TEE file $tee_file: $OS_ERROR\n");
+    }
 
     # leave logger object open for additional messages
     $logger_object = $logger_object_final;
@@ -4131,7 +4151,9 @@ sub _process_command_line {
                 }
             }
             unless ( -e $config_file ) {
-                Warn("cannot find file given with -pro=$config_file: $ERRNO\n");
+                Warn(
+                    "cannot find file given with -pro=$config_file: $OS_ERROR\n"
+                );
                 $config_file = EMPTY_STRING;
             }
         }
