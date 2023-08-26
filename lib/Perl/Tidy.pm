@@ -1783,17 +1783,17 @@ sub set_line_separator {
             my $test = $1;
 
             # dos
-            if ( $test =~ /^($CRLF)+$/ ) {
+            if ( $test =~ /^($CRLF)+\z/ ) {
                 $input_line_separator = $CRLF;
             }
 
             # mac
-            elsif ( $test =~ /^($CR)+$/ && $test !~ /$LF/ ) {
+            elsif ( $test =~ /^($CR)+\z/ ) {
                 $input_line_separator = $CR;
             }
 
             # unix
-            elsif ( $test =~ /^($LF)+$/ && $test !~ /$CR/ ) {
+            elsif ( $test =~ /^($LF)+\z/ ) {
                 $input_line_separator = $LF;
             }
 
