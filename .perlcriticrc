@@ -4,16 +4,14 @@
 # Some useful links:
 # https://manpages.ubuntu.com/manpages/xenial/man1/perlcritic.1p.html
 # https://perlmaven.com/perl-critic
+# https://metacpan.org/dist/Perl-Critic/view/lib/Perl/Critic/PolicySummary.pod
 
 # Example command to run a single policy on single module:
 # perlcritic --single-policy Subroutines::ProhibitSubroutinePrototypes Module.pm
 
-# Many of the policies are excellent starting points for new code, but
-# important exceptions often exist which make it impossible to use them as
-# rigid rules. I have found that using 'no critic' comments is much too
-# troublesome, so non-configurable policies which have exceptions must be
-# turned off.  This file lists the policies which must be turned off for
-# Perl::Tidy, at least for now.
+# This file lists the policies which must be turned off for Perl::Tidy.  Many
+# of the policies are excellent starting points for new code, but important
+# exceptions often exist which make it impossible to use them as rigid rules.
 
 # severity = 1 gives the most strict checking.
 severity = 1
@@ -23,13 +21,6 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 #--------------------------------------------------------------
 # Following is a list of policies to be skipped for severity=4:
 #--------------------------------------------------------------
-
-# There is a localization in Tokenizer.pm that is essential for recursion
-[-Variables::ProhibitLocalVars] 
-
-# Immediate initialization of locals is not appropriate where used
-# in the Tokenizer.pm module
-[-Variables::RequireInitializationForLocalVars] 
 
 # There is a stringy eval in Formatter.pm and Tokenizer.pm which is essential
 # for checking user input. So we have to skip this.
