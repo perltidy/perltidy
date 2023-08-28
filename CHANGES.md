@@ -16,6 +16,23 @@
       to limit tidy operations to a limited line range.  Line numbers start
       with 1. The man pages have details.
 
+    - Some fairly rare instances of incorrect spacing have been fixed.  The
+      problem was that the tokenizer being overly conservative in marking
+      terms as possible filehandles. This cause the space after the possible
+      filehandle to be frozen to its input value in order not to introduce
+      an error in case Perl had to guess.  The problem was fixed by having the
+      tokenizer look ahead for operators which can eliminate the uncertainty.
+      To illustrate, in the following line the term ``$d`` was previouly
+      marked as a possible file handle, so no space was added after it.
+
+          print $d== 1 ? " [ON]\n" : $d ? " [$d]\n" : "\n";
+
+      In the current version, the next token is seen to be an equality, so
+      ``$d`` is marked as an ordinary identifier and normal spacing rules
+      can apply:
+
+          print $d == 1 ? " [ON]\n" : $d ? " [$d]\n" : "\n";
+
     - This version runs 7 to 10 percent faster than the previous release on
       large files, depending on options and file type.
 
