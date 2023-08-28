@@ -9,9 +9,14 @@
 # Example command to run a single policy on single module:
 # perlcritic --single-policy Subroutines::ProhibitSubroutinePrototypes Module.pm
 
-# This file lists the policies which must be turned off for Perl::Tidy.  Many
-# of the policies are excellent starting points for new code, but important
-# exceptions often exist which make it impossible to use them as rigid rules.
+# This file lists the policies which must be adjusted or deactivated for
+# Perl::Tidy.  Many of the policies are excellent starting points for new code,
+# but important exceptions often exist which make it impossible to use them as
+# rigid rules.
+
+# I have found the '## no critic' method for locally deactivating specific
+# policies with comments to be too troublesome to use. So unfortunately
+# policies are either on or off.
 
 # severity = 1 gives the most strict checking.
 severity = 1
@@ -50,12 +55,12 @@ short_subroutine_statements = 2
 # my editor uses color to make it clear if interpolation is in effect.
 [-ValuesAndExpressions::RequireQuotedHeredocTerminator]
 
-# Perlcritic doesn't know that ARGV in Perl::Tidy actually is localized.
-# Localization of @ARGV could be avoided by calling GetOptionsFromArray
-# instead of GetOptions, but that is not available before perl 5.10, and
-# we want to continue supporting Perl 5.8. So we have to skip this for now.
-# When the time comes to make perl 5.10 the earliest version supported,
-# this restriction can be deleted
+# Perlcritic doesn't seem to know that @ARGV in Perl::Tidy actually **is**
+# localized.  Localization of @ARGV could be avoided by calling
+# GetOptionsFromArray instead of GetOptions, but that is not available before
+# perl 5.10, and we want to continue supporting Perl 5.8. So we have to skip
+# this for now.  When the time comes to make perl 5.10 the earliest version
+# supported, this restriction can be deleted
 [-Variables::RequireLocalizedPunctuationVars]
 
 # sub 'backup_method_copy' in Perl::Tidy.pm has about 25 lines between open
@@ -84,7 +89,8 @@ max_mccabe=180
 [ControlStructures::ProhibitDeepNests]
 max_nests=9
 
-# This would be nice, but there are many cases where this is really impossible.
+# This would be nice, but in reality there are many cases where these cannot be
+# avoided.
 [-ControlStructures::ProhibitCascadingIfElse]
 
 # This is a reasonable starting point but does not work well as a rigid rule.

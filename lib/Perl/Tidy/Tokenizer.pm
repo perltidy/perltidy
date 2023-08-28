@@ -363,11 +363,11 @@ sub check_options {
 
     my $use_feature_class = 1;
     if ( $rOpts->{'use-feature'} ) {
-        if ( $rOpts->{'use-feature'} =~ /\bclass\b/ ) {
-            $guess_if_method = 0;
-        }
-        else {
+        if ( $rOpts->{'use-feature'} =~ /\bnoclass\b/ ) {
             $use_feature_class = 0;
+        }
+        elsif ( $rOpts->{'use-feature'} =~ /\bclass\b/ ) {
+            $guess_if_method = 0;
         }
     }
 

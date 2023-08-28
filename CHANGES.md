@@ -2,6 +2,16 @@
 
 ## 2023 07 01.03
 
+    - The syntax of the parameter --use-feature=class, or -uf=class, which
+      new in the previous release, has been changed slightly for clarity.
+      The default behavior, which occurs if this flag is not entered, is
+      to automatically try to handle both old and new uses of the keywords
+      'class', 'method', 'field', and 'ADJUST'.
+      To force these keywords to only follow the -use feature 'class' syntax,
+      enter --use-feature=class.
+      To force perltidy to ignore the -use feature 'class' syntax, enter
+      --use-feature=noclass.
+
     - Issue git #122. Added parameter -lrt=n1:n2, or --line-range-tidy=n1:n2
       to limit tidy operations to a limited line range.  Line numbers start
       with 1. The man pages have details.

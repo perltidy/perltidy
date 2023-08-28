@@ -5359,18 +5359,11 @@ sub make_sub_matching_pattern {
         push @words, 'sub';
     }
 
-    # Also include 'method' if necessary for '--use-feature=class':
-    # - if user does NOT set 'use-feature', assume 'use-feature=class':
-    if ( !defined( $rOpts->{'use-feature'} ) ) {
+    #   add 'method' unless use-feature='noclass' is set.
+    if ( !defined( $rOpts->{'use-feature'} )
+        || $rOpts->{'use-feature'} !~ /\bnoclass\b/ )
+    {
         push @words, 'method';
-    }
-
-    # - if user sets 'use-feature', then only add 'method' if
-    #   use-feature=class is set.
-    else {
-        if ( $rOpts->{'use-feature'} =~ /\bclass\b/ ) {
-            push @words, 'method';
-        }
     }
 
     # Note (see also RT #133130): These patterns are used by
