@@ -15,8 +15,7 @@
 # rigid rules.
 
 # I have found the '## no critic' method for locally deactivating specific
-# policies with comments to be too troublesome to use. So unfortunately
-# policies are either on or off.
+# policies with comments to be very troublesome to use.
 
 # severity = 1 gives the most strict checking.
 severity = 1
@@ -30,10 +29,8 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 # Tidy.pm exports 'perltidy'. Changing this could break existing scripts.
 [-Modules::ProhibitAutomaticExportation]
 
-# IOScalar and IOScalarArray need to define a 'print' function
-[-Subroutines::ProhibitBuiltinHomonyms]
-
-# Nested subs are currently needed for error handling in Tidy.pm.
+# Nested subs are currently needed for error handling in Tidy.pm. I'm not
+# sure if this can be avoided.
 [-Subroutines::ProhibitNestedSubs]
 
 # Make adjustment so that we don't require arg unpacking for very short
@@ -52,7 +49,7 @@ short_subroutine_statements = 2
 # my editor uses color to make it clear if interpolation is in effect.
 [-ValuesAndExpressions::RequireQuotedHeredocTerminator]
 
-# Perlcritic doesn't seem to know that @ARGV in Perl::Tidy actually **is**
+# Perlcritic doesn't seem to see that @ARGV in Perl::Tidy actually **is**
 # localized.  Localization of @ARGV could be avoided by calling
 # GetOptionsFromArray instead of GetOptions, but that is not available before
 # perl 5.10, and we want to continue supporting Perl 5.8. So we have to skip
@@ -69,8 +66,8 @@ lines=30
 # Following is a list of policies to be skipped for severity=3:
 #--------------------------------------------------------------
 
-# AUTOLOAD is used in perltidy to help find and debug programming errors.
-# This is very useful, so we have to skip this.
+# AUTOLOAD is used in perltidy to help find and debug programming errors rather
+# than doing autoloading.  This is very useful, so we have to skip this.
 [-ClassHierarchies::ProhibitAutoloading]
 
 # This policy is very useful in locating complex code which might benefit from
@@ -189,8 +186,8 @@ max_nests=9
 # As the documentation says, this policy is not for everyone
 [-RegularExpressions::ProhibitEnumeratedClasses]
 
-# Disagree. Double quotes are easier to read than single quotes and allow a
-# uniform style for quotes.  My editor has color coding which indicates
+# Completely Disagree. Double quotes are easier to read than single quotes and
+# allow a uniform style for quotes.  My editor has color coding which indicates
 # interpolation. Double quotes do not increase processing time by any
 # measurable amount.  Using them as default simplfies making editing changes.
 # So skip this:

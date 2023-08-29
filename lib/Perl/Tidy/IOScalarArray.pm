@@ -90,7 +90,8 @@ EOM
     return $self->[0]->[$i];
 }
 
-sub print {
+sub print    ## no critic (Subroutines::ProhibitBuiltinHomonyms)
+{
     my ( $self, $msg ) = @_;
     my $mode = $self->[1];
     if ( $mode ne 'w' ) {
