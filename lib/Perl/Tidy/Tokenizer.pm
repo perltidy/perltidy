@@ -294,16 +294,6 @@ EOM
     return;
 } ## end sub Fault
 
-sub bad_pattern {
-
-    # See if a pattern will compile. We have to use a string eval here,
-    # but it should be safe because the pattern has been constructed
-    # by this program.
-    my ($pattern) = @_;
-    my $ok = eval "'##'=~/$pattern/";
-    return !defined($ok) || $EVAL_ERROR;
-} ## end sub bad_pattern
-
 sub make_code_skipping_pattern {
     my ( $rOpts, $opt_name, $default ) = @_;
     my $param = $rOpts->{$opt_name};
@@ -313,7 +303,7 @@ sub make_code_skipping_pattern {
         Die("ERROR: the $opt_name parameter '$param' must begin with '#'\n");
     }
     my $pattern = '^\s*' . $param . '\b';
-    if ( bad_pattern($pattern) ) {
+    if ( Perl::Tidy::Formatter::bad_pattern($pattern) ) {
         Die(
 "ERROR: the $opt_name parameter '$param' causes the invalid regex '$pattern'\n"
         );

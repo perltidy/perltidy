@@ -27,20 +27,17 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 # Following is a list of policies to be skipped for severity=4:
 #--------------------------------------------------------------
 
-# There is a stringy eval in Formatter.pm and Tokenizer.pm which is essential
-# for checking user input. So we have to skip this.
-[-BuiltinFunctions::ProhibitStringyEval]
-
 # Tidy.pm exports 'perltidy'. Changing this could break existing scripts.
 [-Modules::ProhibitAutomaticExportation]
 
 # IOScalar and IOScalarArray need to define a 'print' function
 [-Subroutines::ProhibitBuiltinHomonyms]
 
-# Nested subs are needed for error handling in Tidy.pm.
+# Nested subs are currently needed for error handling in Tidy.pm.
 [-Subroutines::ProhibitNestedSubs]
 
-# Don't require arg unpacking for very short (possibly time-critical) subs.
+# Make adjustment so that we don't require arg unpacking for very short
+# (possibly time-critical) subs.
 [Subroutines::RequireArgUnpacking]
 short_subroutine_statements = 2
 

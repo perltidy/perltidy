@@ -5063,14 +5063,13 @@ EOM
 } ## end closure set_bond_strengths
 
 sub bad_pattern {
-
-    # See if a pattern will compile. We have to use a string eval here,
-    # but it should be safe because the pattern has been constructed
-    # by this program.
     my ($pattern) = @_;
-    my $ok = eval "'##'=~/$pattern/";
-    return !defined($ok) || $EVAL_ERROR;
-} ## end sub bad_pattern
+
+    # See if a pattern will compile.
+    # Note: this sub is also called from Tokenizer
+    my $regex = eval { qr/$pattern/ };
+    return $EVAL_ERROR;
+}
 
 {    ## begin closure prepare_cuddled_block_types
 
