@@ -7457,8 +7457,6 @@ sub set_ci {
         #---------------------------------
         # The next token after a ';' and label (type 'J') starts a new stmt
         # The ci after a C-style for ';' (type 'f') is handled similarly.
-        # TODO: There is type 'f' redundant coding in sub respace which can
-        # be removed if this becomes the standard routine for computing ci.
         elsif ( $type eq ';' || $type eq 'J' || $type eq 'f' ) {
             $ci_next = 0;
             if ( $is_closing_type{$last_type} ) { $ci_this = $ci_last }

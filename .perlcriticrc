@@ -15,7 +15,7 @@
 # rigid rules.
 
 # I have found the '## no critic' method for locally deactivating specific
-# policies with comments to be very troublesome to use.
+# policies to be too buggy to use.
 
 # severity = 1 gives the most strict checking.
 severity = 1
@@ -101,8 +101,10 @@ max_nests=9
 
 # There is one complex regex in Tokenizer.pm for scanning numbers. It is
 # well commented and easy to read, and any changes would make it harder
-# to read. So we have to skip this.
-[-RegularExpressions::ProhibitComplexRegexes]
+# to read. But rather than deactivate this policy, I have adjusted the
+# maximum number of characters to let this regex pass.
+[RegularExpressions::ProhibitComplexRegexes]
+max_characters=250
 
 # A problem with ReqireExtendedFormatting is that it makes things needlessly
 # complex when matching things like line feeds and carriage returns. So
