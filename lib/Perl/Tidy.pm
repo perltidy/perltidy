@@ -2067,17 +2067,21 @@ EOM
                     $msg .= " (-pbp contains -st; see manual)" if ($saw_pbp);
                     Die("$msg\n");
                 }
-                elsif ($destination_stream) {
+
+                if ($destination_stream) {
                     Die(
 "You may not specify a destination array and -o together\n"
                     );
                 }
-                elsif ( defined( $rOpts->{'output-path'} ) ) {
+
+                if ( defined( $rOpts->{'output-path'} ) ) {
                     Die("You may not specify -o and -opath together\n");
                 }
-                elsif ( defined( $rOpts->{'output-file-extension'} ) ) {
+
+                if ( defined( $rOpts->{'output-file-extension'} ) ) {
                     Die("You may not specify -o and -oext together\n");
                 }
+
                 $output_file = $rOpts->{outfile};
                 $output_name = $output_file;
 
@@ -2610,7 +2614,8 @@ sub process_iteration_layer {
         {
             $max_iterations = 1;
         }
-        elsif ( $max_iterations > 6 ) {
+
+        if ( $max_iterations > 6 ) {
             $max_iterations = 6;
         }
 
@@ -2833,6 +2838,9 @@ EOM
                     elsif ( !$stopping_on_error ) {
                         print {*STDERR}
 "STRANGE no conv in $display_name: stopping on it=$iter, but not converged in formatter\n";
+                    }
+                    else {
+                        ## looks ok
                     }
                 }
 
@@ -3608,12 +3616,15 @@ sub generate_options {
     foreach my $opt (@option_string) {
         my $long_name = $opt;
         $long_name =~ s/(!|=.*|:.*)$//;
-        unless ( defined( $option_category{$long_name} ) ) {
+        if ( !defined( $option_category{$long_name} ) ) {
             if ( $long_name =~ /^html-linked/ ) {
                 $category = 10;    # HTML options
             }
             elsif ( $long_name =~ /^pod2html/ ) {
                 $category = 11;    # Pod2html
+            }
+            else {
+                $category = 12;    # HTML properties
             }
             $option_category{$long_name} = $category_name[$category];
         }
@@ -4183,6 +4194,9 @@ sub _process_command_line {
         elsif ( $i =~ /^-(dump-token-types|dtt)$/ ) {
             Perl::Tidy::Tokenizer->dump_token_types(*STDOUT);
             Exit(0);
+        }
+        else {
+            ## no more special cases
         }
     }
 
@@ -5217,6 +5231,9 @@ sub read_config_file {
                 last;
             }
         }
+        else {
+            ## done
+        }
 
         # Now store any parameters
         if ($body) {
@@ -5267,7 +5284,7 @@ sub strip_comment {
     }
 
     # handle case of no quotes
-    elsif ( $instr !~ /['"]/ ) {
+    if ( $instr !~ /['"]/ ) {
 
         # We now require a space before the # of a side comment
         # this allows something like:

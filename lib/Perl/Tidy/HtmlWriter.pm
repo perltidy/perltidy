@@ -747,6 +747,9 @@ sub pod_to_html {
                 $kwd =~ s/^pod//;
                 push @args, "--no$kwd";
             }
+            else {
+                ## ok - not defined
+            }
         }
 
         # "flush",
@@ -1179,14 +1182,19 @@ PRE_END
     my $css_string;
     my $fh_css = Perl::Tidy::IOScalar->new( \$css_string, 'w' );
 
-    # use css linked to another file
+    # use css linked to another file,
     if ( $rOpts->{'html-linked-style-sheet'} ) {
         $fh_css->print(
             qq(<link rel="stylesheet" href="$css_linkname" type="text/css" />));
     }
 
-    # use css embedded in this file
-    elsif ( !$rOpts->{'nohtml-style-sheets'} ) {
+    # or no css,
+    elsif ( $rOpts->{'nohtml-style-sheets'} ) {
+
+    }
+
+    # or use css embedded in this file
+    else {
         $fh_css->print( <<'ENDCSS');
 <style type="text/css">
 <!--
@@ -1320,6 +1328,9 @@ sub markup_tokens {
             if ( $package ne $rpackage_stack->[ $level + 1 ] ) {
                 $self->add_toc_item( $package, 'package' );
             }
+        }
+        else {
+            ## level unchanged
         }
         ${$rlast_level} = $level;
 

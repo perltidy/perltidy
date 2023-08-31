@@ -950,6 +950,10 @@ sub valign_input {
         $self->_flush_group_lines(-1);
     }
 
+    else {
+        ##ok: no output needed
+    }
+
     # --------------------------------------------------------------------
     # Some old debugging stuff
     # --------------------------------------------------------------------
@@ -1402,6 +1406,9 @@ sub check_match {
             elsif ( $imax_align != $jlimit ) {
                 $GoToMsg = "Not all tokens match: $imax_align != $jlimit\n";
                 $return_value = NO_MATCH;
+            }
+            else {
+                ##ok: continue
             }
         }
     }
@@ -1940,6 +1947,9 @@ EOM
                 my $side_comment = $new_line->{'rfields'}->[-1];
                 end_rgroup(-1) unless ( $side_comment && $prev_comment );
             }
+            else {
+                ##ok: continue
+            }
 
             # See if the new line matches and fits the current group,
             # if it still exists. Flush the current group if not.
@@ -2004,6 +2014,10 @@ EOM
             # end the group if we know we cannot match next line.
             elsif ( $new_line->{'end_group'} ) {
                 end_rgroup(-1);
+            }
+
+            else {
+                ##ok: continue
             }
         } ## end loop over lines
 
@@ -2311,6 +2325,9 @@ sub sweep_left_to_right {
 
                 # spot to take special action on failure to move
             }
+            else {
+                ##ok: (move==0)
+            }
         }
         return;
     } ## end sub move_to_common_column
@@ -2423,21 +2440,29 @@ sub sweep_left_to_right {
                 }
 
                 # Otherwise allow some minimal padding of good alignments
-                elsif (
+                else {
 
-                    defined( $is_good_alignment_token{$raw_tok} )
+                    if (
 
-                    # We have to be careful if there are just 2 lines.  This
-                    # two-line factor allows large gaps only for 2 lines which
-                    # are simple lists with fewer items on the second line. It
-                    # gives results similar to previous versions of perltidy.
-                    && (   $lines_total > 2
-                        || $group_list_type && $jmax < $jmax_m && $top_level )
-                  )
-                {
-                    $factor += 1;
-                    if ($top_level) {
+                        defined( $is_good_alignment_token{$raw_tok} )
+
+                        # We have to be careful if there are just 2 lines.
+                        # This two-line factor allows large gaps only for 2
+                        # lines which are simple lists with fewer items on the
+                        # second line. It gives results similar to previous
+                        # versions of perltidy.
+                        && (
+                            $lines_total > 2
+                            || (   $group_list_type
+                                && $jmax < $jmax_m
+                                && $top_level )
+                        )
+                      )
+                    {
                         $factor += 1;
+                        if ($top_level) {
+                            $factor += 1;
+                        }
                     }
                 }
 
@@ -3265,6 +3290,7 @@ sub match_line_pairs {
                         if ($match_code) {
                             if    ( $match_code == 1 ) { $i_nomatch = $i }
                             elsif ( $match_code == 2 ) { $i_nomatch = 0 }
+                            else                       { }                  ##ok
                             last;
                         }
                     }
@@ -4241,6 +4267,9 @@ sub Dump_tree_groups {
             if ( $sc_term1 && $sc_term0 ) {
                 $is_marginal = $pat0 ne $pat1;
             }
+        }
+        else {
+            ##ok: (none of the above)
         }
 
         #-----------------------------------------------------
