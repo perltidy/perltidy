@@ -359,6 +359,9 @@ sub check_options {
         elsif ( $rOpts->{'use-feature'} =~ /\bclass\b/ ) {
             $guess_if_method = 0;
         }
+        else {
+            ## neither 'class' nor 'noclass' seen so use default
+        }
     }
 
     # These are the main updates for this option. There are additional
@@ -1180,6 +1183,9 @@ sub get_line {
                 "Already in code-skipping section which started at line $lno\n"
             );
         }
+        else {
+            ## ok - not a code-skipping control line
+        }
         return $line_of_tokens;
     }
 
@@ -1228,6 +1234,9 @@ sub get_line {
             $line_of_tokens->{_line_type} = 'END';
             return $line_of_tokens;
         }
+    }
+    else {
+        ## ok
     }
 
     # check for a hash-bang line if we haven't seen one
@@ -1415,6 +1424,9 @@ sub get_line {
         }
         return $line_of_tokens;
     }
+    else {
+        ## ok: not in __END__ or __DATA__
+    }
 
     # now, finally, we know that this line is type 'CODE'
     $line_of_tokens->{_line_type} = 'CODE';
@@ -1453,6 +1465,9 @@ sub get_line {
     {
         $self->[_line_start_quote_] = -1;
         $self->log_numbered_msg("End of multi-line quote or pattern\n");
+    }
+    else {
+        ## ok
     }
 
     # we are returning a line of CODE
@@ -2358,6 +2373,9 @@ EOM
                 $type           = 't';
                 $fast_scan_type = $type;
             }
+            else {
+                ## out of tricks
+            }
         }
 
         #---------------------------
@@ -2375,6 +2393,9 @@ EOM
             $fast_scan_type = $type;
             $identifier     = $tok;
             $context        = UNKNOWN_CONTEXT;
+        }
+        else {
+            ## out of tricks
         }
 
         #--------------------------------------
@@ -2855,6 +2876,9 @@ EOM
                                   "Do you mean '$last_nonblank_token->(' ?\n";
                             }
                         }
+                        else {
+                            ## no hint
+                        }
                         if ($hint) {
                             $self->interrupt_logfile();
                             $self->warning($hint);
@@ -2980,6 +3004,9 @@ EOM
         # comma following a qw list can have last token='(' but type = 'q'
         elsif ( $last_nonblank_token eq '(' && $last_nonblank_type eq '{' ) {
             $self->warning("Unexpected leading ',' after a '('\n");
+        }
+        else {
+            ## ok: no complaints needed
         }
 
         # patch for operator_expected: note if we are in the list (use.t)
@@ -3205,6 +3232,9 @@ EOM
 
             }
             $want_paren = EMPTY_STRING;
+        }
+        else {
+            ## ok: not special
         }
 
         # now identify which of the three possible types of
@@ -3448,6 +3478,9 @@ EOM
                     $type = $tok;
                     $i++;
                 }
+            }
+            else {
+                ## not multiple characters
             }
         }
         return;
@@ -3769,6 +3802,9 @@ EOM
                     $self->complain(
                         "Unconventional here-target: '$here_doc_target'\n");
                 }
+                else {
+                    ## ok: nothing to complain about
+                }
             }
             elsif ( $expecting == TERM ) {
                 unless ($saw_error) {
@@ -3785,6 +3821,11 @@ EOM
                     );
                     $self->report_definite_bug();
                 }
+            }
+
+            # target not found, expecting == UNKNOWN
+            else {
+                # assume it is a shift
             }
         }
         else {
@@ -3821,6 +3862,9 @@ EOM
                     $self->complain(
                         "Unconventional here-target: '$here_doc_target'\n");
                 }
+                else {
+                    ## ok: nothing to complain about
+                }
 
                 # Note that we put a leading space on the here quote
                 # character indicate that it may be preceded by spaces
@@ -3829,6 +3873,8 @@ EOM
                   [ $here_doc_target, $here_quote_character ];
                 $type = 'h';
             }
+
+            # target not found ..
             elsif ( $expecting == TERM ) {
                 unless ($saw_error) {
 
@@ -3844,6 +3890,11 @@ EOM
                     );
                     $self->report_definite_bug();
                 }
+            }
+
+            # Target not found, expecting==UNKNOWN
+            else {
+                ## syntax error? FIXME: probably should write error msg
             }
         }
         else {
@@ -3864,9 +3915,13 @@ EOM
 
         # '++'
         # type = 'pp' for pre-increment, '++' for post-increment
-        if    ( $expecting == TERM ) { $type = 'pp' }
-        elsif ( $expecting == UNKNOWN ) {
+        if    ( $expecting == OPERATOR ) { $type = '++' }
+        elsif ( $expecting == TERM )     { $type = 'pp' }
 
+        # handle ( $expecting == UNKNOWN )
+        else {
+
+            # look ahead ..
             my ( $next_nonblank_token, $i_next ) =
               $self->find_next_nonblank_token( $i, $rtokens, $max_token_index );
 
@@ -3904,8 +3959,13 @@ EOM
         # '--'
         # type = 'mm' for pre-decrement, '--' for post-decrement
 
-        if    ( $expecting == TERM ) { $type = 'mm' }
-        elsif ( $expecting == UNKNOWN ) {
+        if    ( $expecting == OPERATOR ) { $type = '--' }
+        elsif ( $expecting == TERM )     { $type = 'mm' }
+
+        # handle ( $expecting == UNKNOWN )
+        else {
+
+            # look ahead ..
             my ( $next_nonblank_token, $i_next ) =
               $self->find_next_nonblank_token( $i, $rtokens, $max_token_index );
 
@@ -3918,6 +3978,7 @@ EOM
 
             if ( $next_nonblank_token eq '$' ) { $type = 'mm' }
         }
+
         return;
     } ## end sub do_MINUS_MINUS
 
@@ -4243,6 +4304,9 @@ EOM
         elsif ( $tok eq 'err' ) {
             if ( $expecting != OPERATOR ) { $type = 'w' }
         }
+        else {
+            ## no special treatment needed
+        }
 
         return;
     } ## end sub do_KEYWORD
@@ -4371,6 +4435,9 @@ EOM
                 # the type the same as if the -> were not separated
                 elsif ( $last_nonblank_type ne '->' ) { $type = 'U' }
 
+                # not a special case
+                else { }
+
             }
 
             # underscore after file test operator is file handle
@@ -4404,6 +4471,9 @@ EOM
                 #  my $line = join( LD_X, map { LD_H x ( $_ + 2 ) } @$widths );
                 elsif ( $tok eq 'x' && $last_nonblank_type eq 'w' ) {
                     $type = 'x';
+                }
+                else {
+                    ## not a special case
                 }
             }
         }
@@ -5232,6 +5302,9 @@ EOM
                     elsif ( $last_nonblank_token eq 'ne' ) {
                         $self->complain("Should 'ne' be '!=' here ?\n");
                     }
+                    else {
+                        # that's all
+                    }
                 }
 
                 # fix c090, only rotate vars if a new token will be stored
@@ -5432,13 +5505,15 @@ EOM
                     }
 
                     # The only current tetragraph is the double diamond operator
-                    # and its first three characters are not a trigraph, so
+                    # and its first three characters are NOT a trigraph, so
                     # we do can do a special test for it
-                    elsif ( $test_tok eq '<<>' ) {
-                        $test_tok .= $rtokens->[ $i + 2 ];
-                        if ( $is_tetragraph{$test_tok} ) {
-                            $tok = $test_tok;
-                            $i += 2;
+                    else {
+                        if ( $test_tok eq '<<>' ) {
+                            $test_tok .= $rtokens->[ $i + 2 ];
+                            if ( $is_tetragraph{$test_tok} ) {
+                                $tok = $test_tok;
+                                $i += 2;
+                            }
                         }
                     }
                 }
@@ -5597,6 +5672,9 @@ EOM
 "unexpected character decimal $val ($type_i) in script\n"
                     );
                     $self->[_in_error_] = 1;
+                }
+                else {
+                    ## ok - valid token type other than ; and t
                 }
 
                 #----------------------------------------------------
@@ -5933,10 +6011,13 @@ sub operator_expected {
 
     # keyword...
     if ( $last_nonblank_type eq 'k' ) {
-        $op_expected = TERM;
+
+        # keywords expecting OPERATOR:
         if ( $expecting_operator_token{$last_nonblank_token} ) {
             $op_expected = OPERATOR;
         }
+
+        # keywords expecting TERM:
         elsif ( $expecting_term_token{$last_nonblank_token} ) {
 
             # Exceptions from TERM:
@@ -5963,6 +6044,12 @@ sub operator_expected {
             {
                 $op_expected = UNKNOWN;
             }
+            else {
+                $op_expected = TERM;
+            }
+        }
+        else {
+            $op_expected = TERM;
         }
     } ## end type 'k'
 
@@ -6053,7 +6140,6 @@ sub operator_expected {
     # TODO: labeled prototype words would better be given type 'A' or maybe
     # 'J'; not 'q'; or maybe mark as type 'Y'?
     elsif ( $last_nonblank_type eq 'q' ) {
-        $op_expected = OPERATOR;
         if ( $last_nonblank_token eq 'prototype' ) {
             $op_expected = TERM;
         }
@@ -6064,12 +6150,15 @@ sub operator_expected {
         elsif ( $statement_type =~ /^package\b/ ) {
             $op_expected = TERM;
         }
+
+        # everything else
+        else {
+            $op_expected = OPERATOR;
+        }
     }
 
     # file handle or similar
     elsif ( $last_nonblank_type eq 'Z' ) {
-
-        $op_expected = UNKNOWN;
 
         # angle.t
         if ( $last_nonblank_token =~ /^\w/ ) {
@@ -6120,6 +6209,11 @@ sub operator_expected {
                 );
             }
             $op_expected = OPERATOR;
+        }
+
+        # all other cases
+        else {
+            $op_expected = UNKNOWN;
         }
     }
 
@@ -6454,6 +6548,9 @@ sub decide_if_code_block {
         }
         elsif ( $pre_types[$j] eq '-' && $pre_types[ ++$j ] eq 'w' ) {
             $j++;
+        }
+        else {
+            # none of the above
         }
         if ( $j > $jbeg ) {
 
@@ -7395,6 +7492,10 @@ sub scan_bare_identifier_do {
                     $type = 'Z';
                 }
             }
+
+            # none of the above special types
+            else {
+            }
         }
 
         # Now we must convert back from character position
@@ -7561,7 +7662,7 @@ sub check_prototype {
 
                 # right curly braces of prototypes NOT ending in
                 # '&' may NOT be followed by an operator
-                elsif ( $proto !~ /\&$/ ) {
+                else {
                     $ris_block_list_function->{$package}{$subname} = 1;
                 }
             }
@@ -8743,6 +8844,8 @@ EOM
             elsif ( $call_type == PAREN_CALL ) {
                 $tok = $last_nonblank_token;
             }
+            else {
+            }
 
             $match ||= 1;
 
@@ -8873,7 +8976,9 @@ EOM
                       substr( $tok, 0, 3 ) eq 'sub' ? $tok : 'sub';
                 }
             }
-            elsif ($next_nonblank_token) {    # EOF technically ok
+
+            # something else..
+            elsif ($next_nonblank_token) {
 
                 if ( $rinput_hash->{tok} eq 'method' && $call_type == SUB_CALL )
                 {
@@ -8893,6 +8998,11 @@ EOM
                     );
                 }
             }
+
+            # EOF technically ok
+            else {
+            }
+
             check_prototype( $proto, $package, $subname );
         }
 
@@ -8956,6 +9066,9 @@ sub find_next_nonblank_token {
     elsif ( $next_nonblank_token =~ /^\s*$/ ) {
         $next_nonblank_token = $rtokens->[ ++$i ];
         return ( SPACE, $i ) unless defined($next_nonblank_token);
+    }
+    else {
+        ## at nonblank
     }
 
     # We should be at a nonblank now
@@ -9252,6 +9365,9 @@ EOM
                 $is_html_tag = 1;
                 $self->warning(
                     "looks like a markup language, continuing error checks\n");
+            }
+            else {
+                ## doesn't look like a markup tag
             }
 
             if ($is_html_tag) {
@@ -9848,6 +9964,9 @@ sub follow_quoted_string {
                 $tok = $rtokens->[ ++$i ];
                 $quoted_string .= '\\'
                   unless ( $tok eq $end_tok || $tok eq $beginning_tok );
+            }
+            else {
+                ## nothing special
             }
             $quoted_string .= $tok;
         }
