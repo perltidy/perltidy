@@ -10446,7 +10446,7 @@ sub parent_seqno_by_K {
             }
         }
     }
-    $parent_seqno = SEQ_ROOT unless ( defined($parent_seqno) );
+    $parent_seqno = SEQ_ROOT if ( !defined($parent_seqno) );
     return $parent_seqno;
 } ## end sub parent_seqno_by_K
 
@@ -15615,6 +15615,9 @@ EOM
                 }
                 return;
             }
+            else {
+                ## all ok
+            }
         }
 
         # Do not start a batch with a blank token.
@@ -15664,7 +15667,7 @@ EOM
                 }
             }
             $next_parent_seqno = SEQ_ROOT
-              unless ( defined($next_parent_seqno) );
+              if ( !defined($next_parent_seqno) );
 
             #--------------------------------------
             # End coding from sub parent_seqno_by_K
@@ -15762,12 +15765,10 @@ EOM
         $leading_spaces_to_go[$max_index_to_go] =
           $reduced_spaces_to_go[$max_index_to_go] =
           $rOpts_indent_columns * $radjusted_levels->[$Ktoken_vars];
-
-        $leading_spaces_to_go[$max_index_to_go] +=
-          $rOpts_continuation_indentation
-          if ($ci_level);
-        ## NOTE: No longer allowing ci_level > 1, so avoid multiplication
-        ## $rOpts_continuation_indentation * $ci_level
+        if ($ci_level) {
+            $leading_spaces_to_go[$max_index_to_go] +=
+              $rOpts_continuation_indentation;
+        }
 
         # Correct these values if we are starting in a continued quote
         if (   $current_line_starts_in_quote
@@ -16137,7 +16138,6 @@ EOM
         # if we do not see another elseif or an else.
         if ($looking_for_else) {
 
-            ##     /^(elsif|else)$/
             if ( !$is_elsif_else{ $rLL->[$K_first_true]->[_TOKEN_] } ) {
                 write_logfile_entry("(No else block)\n");
             }
@@ -16686,14 +16686,19 @@ EOM
                 # complain if not.
                 if ( $block_type eq 'elsif' ) {
 
-                    if ( $next_nonblank_token_type eq 'b' ) {    # end of line?
-                        $looking_for_else = 1;    # ok, check on next line
-                    }
-                    else {
-                        ##    /^(elsif|else)$/
+                    # more code on this line ? ( this is unusual )
+                    if (   $next_nonblank_token_type ne 'b'
+                        && $next_nonblank_token_type ne '#' )
+                    {
+                        # check for 'elsif' or 'else'
                         if ( !$is_elsif_else{$next_nonblank_token} ) {
-                            write_logfile_entry("No else block :(\n");
+                            write_logfile_entry("(No else block)\n");
                         }
+                    }
+
+                    # no more code on this line, so check on next line
+                    else {
+                        $looking_for_else = 1;
                     }
                 }
 
