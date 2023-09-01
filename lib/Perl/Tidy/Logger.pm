@@ -68,7 +68,7 @@ sub new {
     my $fh_warnings = $rOpts->{'standard-error-output'} ? $fh_stderr : undef;
 
     # remove any old error output file if we might write a new one
-    unless ( $fh_warnings || ref($warning_file) ) {
+    if ( !$fh_warnings && !ref($warning_file) ) {
         if ( -e $warning_file ) {
             unlink($warning_file)
               or Perl::Tidy::Die(
@@ -161,7 +161,7 @@ sub resume_logfile {
 
 sub we_are_at_the_last_line {
     my $self = shift;
-    unless ( $self->{_wrote_line_information_string} ) {
+    if ( !$self->{_wrote_line_information_string} ) {
         $self->write_logfile_entry("Last line\n\n");
     }
     $self->{_at_end_of_file} = 1;
@@ -375,7 +375,7 @@ sub warning {
     Perl::Tidy::Warn_count_bump();
 
     my $rOpts = $self->{_rOpts};
-    unless ( $rOpts->{'quiet'} ) {
+    if ( !$rOpts->{'quiet'} ) {
 
         my $warning_count   = $self->{_warning_count};
         my $fh_warnings     = $self->{_fh_warnings};

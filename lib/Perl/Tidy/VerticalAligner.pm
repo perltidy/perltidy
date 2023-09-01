@@ -1606,7 +1606,7 @@ sub _flush_comment_lines {
         $self->[_last_outdented_line_at_] =
           $last_outdented_line_at + $nlines - 1;
         my $outdented_line_count = $self->[_outdented_line_count_];
-        unless ($outdented_line_count) {
+        if ( !$outdented_line_count ) {
             $self->[_first_outdented_line_at_] = $last_outdented_line_at;
         }
         $outdented_line_count += $nlines;
@@ -5259,7 +5259,7 @@ sub get_output_line_number {
                 $self->[_last_outdented_line_at_] = $last_outdented_line_at;
 
                 my $outdented_line_count = $self->[_outdented_line_count_];
-                unless ($outdented_line_count) {
+                if ( !$outdented_line_count ) {
                     $self->[_first_outdented_line_at_] =
                       $last_outdented_line_at;
                 }

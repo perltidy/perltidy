@@ -234,7 +234,7 @@ sub set_save_logfile {
 
 sub want_blank_line {
     my $self = shift;
-    unless ( $self->[_consecutive_blank_lines_] ) {
+    if ( !$self->[_consecutive_blank_lines_] ) {
         $self->write_blank_code_line();
     }
     return;

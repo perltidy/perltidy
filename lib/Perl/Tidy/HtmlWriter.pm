@@ -102,7 +102,7 @@ sub new {
     my $html_fh;
     ( $html_fh, my $html_filename ) =
       Perl::Tidy::streamhandle( $html_file, 'w' );
-    unless ($html_fh) {
+    if ( !$html_fh ) {
         Perl::Tidy::Warn("can't open $html_file: $OS_ERROR\n");
         return;
     }
@@ -159,7 +159,7 @@ PRE_END
     my $toc_filename;
     my $src_filename;
     if ( $rOpts->{'frames'} ) {
-        unless ($extension) {
+        if ( !$extension ) {
             Perl::Tidy::Warn(
 "cannot use frames without a specified output extension; ignoring -frm\n"
             );
@@ -179,7 +179,7 @@ PRE_END
     # ----------------------------------------------------------
 
     my $title = $rOpts->{'title'};
-    unless ($title) {
+    if ( !$title ) {
         ( $title, my $path ) = fileparse($input_file);
     }
     my $toc_item_count = 0;
@@ -248,7 +248,7 @@ EOM
     };
 
     # start the table of contents on the first item
-    unless ( ${$rtoc_item_count} ) {
+    if ( !${$rtoc_item_count} ) {
 
         # but just quit if we hit EOF without any other entries
         # in this case, there will be no toc
@@ -279,7 +279,7 @@ TOC_END
     # start/stop lists of subs
     if ( $type eq 'sub' ) {
         my $package = $rpackage_stack->[ ${$rlast_level} ];
-        unless ($package) { $package = 'main' }
+        if ( !$package ) { $package = 'main' }
 
         # if we're already in a package/sub list, be sure its the right
         # package or else close it
@@ -288,7 +288,7 @@ TOC_END
         }
 
         # start a package/sub list if necessary
-        unless ( ${$rin_toc_package} ) {
+        if ( !${$rin_toc_package} ) {
             $start_package_list->( $unique_name, $package );
         }
     }
@@ -585,7 +585,7 @@ sub check_options {
         # forgets to specify the style sheet, like this:
         #    perltidy -html -css myfile1.pl myfile2.pl
         # This would cause myfile1.pl to parsed as the style sheet by GetOpts
-        unless ( -e $css_linkname ) {
+        if ( !-e $css_linkname ) {
             write_style_sheet_file($css_linkname);
         }
     }
@@ -596,8 +596,8 @@ sub check_options {
 sub write_style_sheet_file {
 
     my $filename = shift;
-    my $fh;
-    unless ( $fh = IO::File->new("> $filename") ) {
+    my $fh       = IO::File->new("> $filename");
+    if ( !$fh ) {
         Perl::Tidy::Die("can't open $filename: $OS_ERROR\n");
     }
     write_style_sheet_data($fh);
@@ -694,13 +694,13 @@ sub pod_to_html {
     my $success_flag = 0;
 
     # don't try to use pod2html if no pod
-    unless ($pod_string) {
+    if ( !$pod_string ) {
         return $success_flag;
     }
 
     # Pod::Html requires a real temporary filename
     my ( $fh_tmp, $tmpfile ) = File::Temp::tempfile();
-    unless ($fh_tmp) {
+    if ( !$fh_tmp ) {
         Perl::Tidy::Warn(
             "unable to open temporary file $tmpfile; cannot use pod2html\n");
         return $success_flag;
@@ -766,7 +766,7 @@ sub pod_to_html {
         Pod::Html::pod2html(@args);
     }
     $fh_tmp = IO::File->new( $tmpfile, 'r' );
-    unless ($fh_tmp) {
+    if ( !$fh_tmp ) {
 
         # this error shouldn't happen ... we just used this filename
         Perl::Tidy::Warn(
@@ -937,7 +937,7 @@ sub pod_to_html {
         elsif ( $line =~ /^\s*<\/body>\s*$/i ) {
             $saw_body_end = 1;
             if ( @{$rpre_string_stack} ) {
-                unless ( $self->{_pod_cut_count} > 1 ) {
+                if ( $self->{_pod_cut_count} <= 1 ) {
                     $html_print->('<hr />');
                 }
                 while ( my $rpre_string = shift( @{$rpre_string_stack} ) ) {
@@ -954,15 +954,15 @@ sub pod_to_html {
     }
 
     $success_flag = 1;
-    unless ($saw_body) {
+    if ( !$saw_body ) {
         Perl::Tidy::Warn("Did not see <body> in pod2html output\n");
         $success_flag = 0;
     }
-    unless ($saw_body_end) {
+    if ( !$saw_body_end ) {
         Perl::Tidy::Warn("Did not see </body> in pod2html output\n");
         $success_flag = 0;
     }
-    unless ($saw_index) {
+    if ( !$saw_index ) {
         Perl::Tidy::Warn("Did not find INDEX END in pod2html output\n");
         $success_flag = 0;
     }
@@ -974,7 +974,7 @@ sub pod_to_html {
     # note that we have to unlink tmpfile before making frames
     # because the tmpfile may be one of the names used for frames
     if ( -e $tmpfile ) {
-        unless ( unlink($tmpfile) ) {
+        if ( !unlink($tmpfile) ) {
             Perl::Tidy::Warn(
                 "couldn't unlink temporary file $tmpfile: $OS_ERROR\n");
             $success_flag = 0;
@@ -1136,7 +1136,7 @@ sub change_anchor_names {
             my $post = $5;
             my $href = "$filename#$name";
             $line = "$pre<a href=\"$href\" target=\"$target\">$post\n";
-            unless ($first_anchor) { $first_anchor = $href }
+            if ( !$first_anchor ) { $first_anchor = $href }
         }
     }
     return $first_anchor;
@@ -1314,14 +1314,14 @@ sub markup_tokens {
         # blocks and go out of scope when we leave the block.
         #-------------------------------------------------------
         if ( $level > ${$rlast_level} ) {
-            unless ( $rpackage_stack->[ $level - 1 ] ) {
+            if ( !$rpackage_stack->[ $level - 1 ] ) {
                 $rpackage_stack->[ $level - 1 ] = 'main';
             }
             $rpackage_stack->[$level] = $rpackage_stack->[ $level - 1 ];
         }
         elsif ( $level < ${$rlast_level} ) {
             my $package = $rpackage_stack->[$level];
-            unless ($package) { $package = 'main' }
+            if ( !$package ) { $package = 'main' }
 
             # if we change packages due to a nesting change, we
             # have to make an entry in the toc
@@ -1349,7 +1349,7 @@ sub markup_tokens {
             # but don't include sub declarations in the toc;
             # these will have leading token types 'i;'
             my $signature = join EMPTY_STRING, @{$rtoken_type};
-            unless ( $signature =~ /^i;/ ) {
+            if ( $signature !~ /^i;/ ) {
                 my $subname = $token;
                 $subname =~ s/[\s\(].*$//; # remove any attributes and prototype
                 $self->add_toc_item( $subname, 'sub' );

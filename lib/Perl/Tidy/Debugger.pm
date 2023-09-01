@@ -85,7 +85,9 @@ sub write_debug_entry {
     my $pattern   = EMPTY_STRING;
     my @next_char = ( '"', '"' );
     my $i_next    = 0;
-    unless ( $self->{_debug_file_opened} ) { $self->really_open_debug_file() }
+    if ( !$self->{_debug_file_opened} ) {
+        $self->really_open_debug_file();
+    }
     my $fh = $self->{_fh};
 
     foreach my $j ( 0 .. @{$rtoken_type} - 1 ) {

@@ -73,7 +73,7 @@ sub write_diagnostics {
     #  $msg = string describing the event
     #  $line_number = optional line number
 
-    unless ( $self->{_write_diagnostics_count} ) {
+    if ( !$self->{_write_diagnostics_count} ) {
         open( $self->{_fh}, ">", "DIAGNOSTICS" )
           or Perl::Tidy::Die("couldn't open DIAGNOSTICS: $OS_ERROR\n");
     }
