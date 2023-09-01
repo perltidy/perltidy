@@ -297,7 +297,7 @@ EOM
 sub make_code_skipping_pattern {
     my ( $rOpts, $opt_name, $default ) = @_;
     my $param = $rOpts->{$opt_name};
-    unless ($param) { $param = $default }
+    if ( !$param ) { $param = $default }
     $param =~ s/^\s*//;    # allow leading spaces to be like format-skipping
     if ( $param !~ /^#/ ) {
         Die("ERROR: the $opt_name parameter '$param' must begin with '#'\n");
@@ -912,7 +912,7 @@ EOM
         $severe_error = 1;
     }
 
-    unless ( $self->[_saw_perl_dash_w_] ) {
+    if ( !$self->[_saw_perl_dash_w_] ) {
         if ( $] < 5.006 ) {
             $self->write_logfile_entry("Suggest including '-w parameter'\n");
         }
@@ -926,7 +926,7 @@ EOM
             "Use of -P parameter for defines is discouraged\n");
     }
 
-    unless ( $self->[_saw_use_strict_] ) {
+    if ( !$self->[_saw_use_strict_] ) {
         $self->write_logfile_entry("Suggest including 'use strict;'\n");
     }
 
@@ -947,7 +947,7 @@ sub report_v_string {
 
     # warn if this version can't handle v-strings
     my ( $self, $tok ) = @_;
-    unless ( $self->[_saw_v_string_] ) {
+    if ( !$self->[_saw_v_string_] ) {
         $self->[_saw_v_string_] = $self->[_last_line_number_];
     }
     if ( $] < 5.006 ) {
@@ -3743,7 +3743,7 @@ EOM
             }
 
             else {
-                unless ( $self->error_if_expecting_TERM() ) {
+                if ( !$self->error_if_expecting_TERM() ) {
 
                     # Something like this is valid but strange:
                     # undef ^I;
@@ -3807,7 +3807,7 @@ EOM
                 }
             }
             elsif ( $expecting == TERM ) {
-                unless ($saw_error) {
+                if ( !$saw_error ) {
 
                     # shouldn't happen..arriving here implies an error in
                     # the logic in sub 'find_here_doc'
@@ -3876,7 +3876,7 @@ EOM
 
             # target not found ..
             elsif ( $expecting == TERM ) {
-                unless ($saw_error) {
+                if ( !$saw_error ) {
 
                     # shouldn't happen..arriving here implies an error in
                     # the logic in sub 'find_here_doc'
@@ -4335,12 +4335,11 @@ EOM
             # See notes in 'sub code_block_type' and
             # 'sub is_non_structural_brace'
 
-            unless (
-                $tok eq 'qw'
-                && (   $last_nonblank_token =~ /^([\]\}\&]|\-\>)/
-                    || $is_for_foreach{$want_paren} )
-              )
-            {
+            my $paren_list_possible = $tok eq 'qw'
+              && ( $last_nonblank_token =~ /^([\]\}\&]|\-\>)/
+                || $is_for_foreach{$want_paren} );
+
+            if ( !$paren_list_possible ) {
                 $self->error_if_expecting_OPERATOR();
             }
         }
@@ -4778,7 +4777,7 @@ EOM
         # Continue following a quote on a new line
         $type = $quote_type;
 
-        unless ( @{$routput_token_list} ) {    # initialize if continuation line
+        if ( !@{$routput_token_list} ) {    # initialize if continuation line
             push( @{$routput_token_list}, $i );
             $routput_token_type->[$i] = $type;
 
@@ -5320,7 +5319,7 @@ EOM
                     $last_nonblank_i              = $i_tok;
 
                     # Fix part #3 for git82: propagate type 'Z' though L-R pair
-                    unless ( $type eq 'R' && $last_nonblank_type eq 'Z' ) {
+                    if ( !( $type eq 'R' && $last_nonblank_type eq 'Z' ) ) {
                         $last_nonblank_token = $tok;
                         $last_nonblank_type  = $type;
                     }
@@ -5767,7 +5766,7 @@ EOM
                         $level_i = --$level_in_tokenizer;
 
                         if ( $level_in_tokenizer < 0 ) {
-                            unless ( $self->[_saw_negative_indentation_] ) {
+                            if ( !$self->[_saw_negative_indentation_] ) {
                                 $self->[_saw_negative_indentation_] = 1;
                                 $self->warning(
                                     "Starting negative indentation\n");
@@ -6838,9 +6837,7 @@ sub decrease_nesting_depth {
         for my $bb ( 0 .. @closing_brace_names - 1 ) {
             next if ( $bb == $aa );
 
-            unless (
-                $rdepth_array->[$aa][$bb][$cd_aa] == $rcurrent_depth->[$bb] )
-            {
+            if ( $rdepth_array->[$aa][$bb][$cd_aa] != $rcurrent_depth->[$bb] ) {
                 my $diff =
                   $rcurrent_depth->[$bb] - $rdepth_array->[$aa][$bb][$cd_aa];
 
@@ -7283,7 +7280,7 @@ sub guess_if_here_doc {
         last if ( $k >= $HERE_DOC_WINDOW );
     }
 
-    unless ($here_doc_expected) {
+    if ( !$here_doc_expected ) {
 
         if ( !defined($line) ) {
             $here_doc_expected = -1;    # hit eof without seeing target
@@ -7573,7 +7570,7 @@ sub scan_id_do {
 
         # only a '#' immediately after a '$' is not a comment
         if ( $next_nonblank_token eq '#' ) {
-            unless ( $tok eq '$' ) {
+            if ( $tok ne '$' ) {
                 $blank_line = 1;
             }
         }
@@ -7589,7 +7586,7 @@ sub scan_id_do {
     }
 
     # handle non-blank line; identifier, if any, must follow
-    unless ($blank_line) {
+    if ( !$blank_line ) {
 
         if ( $is_sub{$id_scan_state} ) {
             ( $i, $tok, $type, $id_scan_state ) = $self->do_scan_sub(
@@ -9908,10 +9905,11 @@ sub follow_quoted_string {
             }
             my $old_pos = $quote_pos;
 
-            unless ( defined($tok) && defined($end_tok) && defined($quote_pos) )
-            {
+##          NOTE: OLD Code with did nothing - leftover from debugging?
+##          unless ( defined($tok) && defined($end_tok) && defined($quote_pos) )
+##          {
 
-            }
+##          }
             $quote_pos = 1 + index( $tok, $end_tok, $quote_pos );
 
             if ( $quote_pos > 0 ) {
@@ -10087,7 +10085,7 @@ sub write_on_underline {
     my ( $underline, $pos, $pos_chr ) = @_;
 
     # check for error..shouldn't happen
-    unless ( ( $pos >= 0 ) && ( $pos <= length($underline) ) ) {
+    if ( $pos < 0 || $pos > length($underline) ) {
         return $underline;
     }
     my $excess = length($pos_chr) + $pos - length($underline);
