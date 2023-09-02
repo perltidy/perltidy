@@ -1511,7 +1511,7 @@ EOM
     # implement outdenting preferences for keywords
     %outdent_keyword = ();
     my @okw = split_words( $rOpts->{'outdent-keyword-list'} );
-    unless (@okw) {
+    if ( !@okw ) {
         @okw = qw(next last redo goto return);    # defaults
     }
 
@@ -1531,7 +1531,7 @@ EOM
     if ( defined($kpit_value) && $kpit_value != 1 ) {
         my @kpit =
           split_words( $rOpts->{'keyword-paren-inner-tightness-list'} );
-        unless (@kpit) {
+        if ( !@kpit ) {
             @kpit = qw(if elsif unless while until for foreach);    # defaults
         }
 
@@ -4969,13 +4969,13 @@ EOM
                     # for leading '.' align all but 'short' quotes; the idea
                     # is to not place something like "\n" on a single line.
                     if ( $right_key eq '.' ) {
-                        unless (
-                            $last_nonblank_type eq '.'
-                            && ( $token_length <=
-                                $rOpts_short_concatenation_item_length )
-                            && ( !$is_closing_token{$token} )
-                          )
-                        {
+
+                        my $is_short_quote = $last_nonblank_type eq '.'
+                          && ( $token_length <=
+                            $rOpts_short_concatenation_item_length )
+                          && !$is_closing_token{$token};
+
+                        if ( !$is_short_quote ) {
                             $bias{$right_key} += $delta_bias;
                         }
                     }
@@ -5223,7 +5223,7 @@ sub dump_cuddled_block_list {
     $flags .= "-ce" if ( $rOpts->{'cuddled-else'} );
     $flags .= " -cbl='$cuddled_string'";
 
-    unless ( $rOpts->{'cuddled-else'} ) {
+    if ( !$rOpts->{'cuddled-else'} ) {
         $flags .= "\nNote: You must specify -ce to generate a cuddled hash";
     }
 
@@ -5276,7 +5276,7 @@ sub make_static_block_comment_pattern {
 sub make_format_skipping_pattern {
     my ( $opt_name, $default ) = @_;
     my $param = $rOpts->{$opt_name};
-    unless ($param) { $param = $default }
+    if ( !$param ) { $param = $default }
     $param =~ s/^\s*//;
     if ( $param !~ /^#/ ) {
         Die("ERROR: the $opt_name parameter '$param' must begin with '#'\n");
@@ -6450,9 +6450,9 @@ sub find_selected_packages {
     # returns a list of all selected package statements in a file
     my @package_list;
 
-    unless ( $rdump_block_types->{'*'}
-        || $rdump_block_types->{'package'}
-        || $rdump_block_types->{'class'} )
+    if (   !$rdump_block_types->{'*'}
+        && !$rdump_block_types->{'package'}
+        && !$rdump_block_types->{'class'} )
     {
         return \@package_list;
     }
@@ -7943,7 +7943,7 @@ sub find_non_indenting_braces {
         }
         my $rK_range = $line_of_tokens->{_rK_range};
         my ( $Kfirst, $Klast ) = @{$rK_range};
-        unless ( defined($Kfirst) && $rLL->[$Klast]->[_TYPE_] eq '#' ) {
+        if ( !defined($Kfirst) || $rLL->[$Klast]->[_TYPE_] ne '#' ) {
 
             # shouldn't happen
             DEVEL_MODE && Fault("did not get a comment\n");
@@ -8008,7 +8008,7 @@ EOM
         my $rK_range  = $line_of_tokens->{_rK_range};
         my ( $Kfirst, $Klast ) = @{$rK_range};
 
-        unless ( defined($Kfirst) && $rLL->[$Klast]->[_TYPE_] eq '#' ) {
+        if ( !defined($Kfirst) || $rLL->[$Klast]->[_TYPE_] ne '#' ) {
             if (DEVEL_MODE) {
                 my $lno = $ix + 1;
                 Fault(<<EOM);
@@ -11580,19 +11580,21 @@ sub setup_new_weld_measurements {
         my $type_prev   = $rLL->[$Kprev]->[_TYPE_];
         my $type_pp     = 'b';
         if ( $Kprev >= 0 ) { $type_pp = $rLL->[ $Kprev - 1 ]->[_TYPE_] }
-        unless (
-               $type_prev =~ /^[\,\.\;]/
-            || $type_prev =~ /^[=\{\[\(\L]/
-            && ( $type_pp eq 'b' || $type_pp eq '}' || $type_first eq 'k' )
-            || $type_first =~ /^[=\,\.\;\{\[\(\L]/
-            || $type_first eq '||'
-            || (
-                $type_first eq 'k'
-                && (   $token_first eq 'if'
-                    || $token_first eq 'or' )
-            )
-          )
-        {
+
+        my $is_good_location =
+
+          $type_prev =~ /^[\,\.\;]/
+          || ( $type_prev =~ /^[=\{\[\(\L]/
+            && ( $type_pp eq 'b' || $type_pp eq '}' || $type_first eq 'k' ) )
+          || $type_first =~ /^[=\,\.\;\{\[\(\L]/
+          || $type_first eq '||'
+          || (
+            $type_first eq 'k'
+            && (   $token_first eq 'if'
+                || $token_first eq 'or' )
+          );
+
+        if ( !$is_good_location ) {
             $msg =
 "Skipping weld: poor break with -lp and ci at type_first='$type_first' type_prev='$type_prev' type_pp=$type_pp\n";
             $new_weld_ok = 0;
@@ -16084,18 +16086,20 @@ EOM
         #--------------------------------------------
         if ( $self->[_save_logfile_] ) {
 
+            my $guessed_indentation_level =
+              $line_of_tokens->{_guessed_indentation_level};
+
             # Compare input/output indentation except for:
             #  - hanging side comments
             #  - continuation lines (have unknown leading blank space)
             #  - and lines which are quotes (they may have been outdented)
-            my $guessed_indentation_level =
-              $line_of_tokens->{_guessed_indentation_level};
+            my $exception =
+                 $CODE_type eq 'HSC'
+              || $rtok_first->[_CI_LEVEL_] > 0
+              || $guessed_indentation_level == 0
+              && $rtok_first->[_TYPE_] eq 'Q';
 
-            unless ( $CODE_type eq 'HSC'
-                || $rtok_first->[_CI_LEVEL_] > 0
-                || $guessed_indentation_level == 0
-                && $rtok_first->[_TYPE_] eq 'Q' )
-            {
+            if ( !$exception ) {
                 my $input_line_number = $line_of_tokens->{_line_number};
                 $self->compare_indentation_levels( $K_first,
                     $guessed_indentation_level, $input_line_number );
@@ -16318,7 +16322,7 @@ EOM
             #   } else ...
             if ($rbrace_follower) {
                 my $token = $rtoken_vars->[_TOKEN_];
-                unless ( $rbrace_follower->{$token} ) {
+                if ( !$rbrace_follower->{$token} ) {
                     $self->end_batch() if ( $max_index_to_go >= 0 );
                 }
                 $rbrace_follower = undef;
@@ -16467,7 +16471,7 @@ EOM
                 {
 
                     # but only if allowed
-                    unless ($nobreak_BEFORE_BLOCK) {
+                    if ( !$nobreak_BEFORE_BLOCK ) {
 
                         # since we already stored this token, we must unstore it
                         $self->unstore_token_to_go();
@@ -16715,7 +16719,7 @@ EOM
                 elsif ( ( $next_nonblank_token_type eq 'b' )
                     && $rOpts_add_newlines )
                 {
-                    unless ($rbrace_follower) {
+                    if ( !$rbrace_follower ) {
                         $self->end_batch()
                           unless ( $no_internal_newlines
                             || $max_index_to_go < 0 );
@@ -17105,7 +17109,7 @@ sub starting_one_line_block {
         if ( substr( $block_type, -2, 2 ) eq '()' ) {
             $stripped_block_type = substr( $block_type, 0, -2 );
         }
-        unless ( $tokens_to_go[$i_start] eq $stripped_block_type ) {
+        if ( $tokens_to_go[$i_start] ne $stripped_block_type ) {
             return;
         }
     }
@@ -17119,7 +17123,7 @@ sub starting_one_line_block {
         if ( $types_to_go[$i_start] eq 'b' ) {
             $i_start++;
         }
-        unless ( $tokens_to_go[$i_start] eq $block_type ) {
+        if ( $tokens_to_go[$i_start] ne $block_type ) {
             return;
         }
     }
@@ -18576,7 +18580,7 @@ sub lookup_opening_indentation {
     $nline = 0 if ( $i_opening < $ri_start->[$nline] );
 
     # find the correct line
-    unless ( $i_opening > $ri_last->[-1] ) {
+    if ( $i_opening <= $ri_last->[-1] ) {
         while ( $i_opening > $ri_last->[$nline] ) { $nline++; }
     }
 
@@ -18673,7 +18677,7 @@ sub pad_array_to_go {
             # Nesting depths are set to be >=0 in sub write_line, so it should
             # not be possible to get here unless the code has a bracing error
             # which leaves a closing brace with zero nesting depth.
-            unless ( get_saw_brace_error() ) {
+            if ( !get_saw_brace_error() ) {
                 if (DEVEL_MODE) {
                     Fault(<<EOM);
 Program bug in pad_array_to_go: hit nesting error which should have been caught
@@ -20406,7 +20410,7 @@ EOM
                 }
             }
 
-            unless ( $tokens_to_go[$ibeg_2] =~ /^[\{\(\[]$/ ) {
+            if ( $tokens_to_go[$ibeg_2] !~ /^[\{\(\[]$/ ) {
                 $forced_breakpoint_to_go[$iend_1] = 0;
             }
         }
@@ -20793,7 +20797,7 @@ EOM
 
                 # keywords look best at start of lines,
                 # but combine things like "1 while"
-                unless ( $is_assignment{$type_iend_1} ) {
+                if ( !$is_assignment{$type_iend_1} ) {
                     return
                       if ( ( $type_iend_1 ne 'k' )
                         && ( $tokens_to_go[$ibeg_2] ne 'while' ) );
@@ -23950,7 +23954,7 @@ EOM
 
             my $icomma = $last_comma_index[$depth];
             if ( defined($icomma) && ( $i_opening - $icomma ) < 5 ) {
-                unless ( $forced_breakpoint_to_go[$icomma] ) {
+                if ( !$forced_breakpoint_to_go[$icomma] ) {
                     $self->set_forced_breakpoint($icomma);
                 }
             }
@@ -24524,7 +24528,7 @@ EOM
                 # NOTE: we should really use the true break count here,
                 # which can be greater if there are large terms and
                 # little space, but usually this will work well enough.
-                unless ($must_break_open) {
+                if ( !$must_break_open ) {
 
                     if ( $break_count <= 1 ) {
                         ${$rdo_not_break_apart} = 1;
@@ -24622,7 +24626,7 @@ EOM
                     $ri_ragged_break_list );
                 ++$break_count if ($use_separate_first_term);
 
-                unless ($must_break_open_container) {
+                if ( !$must_break_open_container ) {
                     if ( $break_count <= 1 ) {
                         ${$rdo_not_break_apart} = 1;
                     }
@@ -25338,7 +25342,7 @@ sub get_maximum_fields_wanted {
         $total_variation_2 = $total_variation_2[0] + $total_variation_2[1];
 
         my $factor = ( $item_count > 10 ) ? 1 : ( $item_count > 5 ) ? 0.75 : 0;
-        unless ( $total_variation_2 < $factor * $total_variation_1 ) {
+        if ( $total_variation_2 >= $factor * $total_variation_1 ) {
             $number_of_fields_best = 1;
         }
     }
@@ -30517,9 +30521,9 @@ sub set_vertical_tightness_flags {
                   min( $ovt, $self->[_rmax_vertical_tightness_]->{$seqno} );
             }
 
-            unless (
-                $ovt < 2
-                && ( $nesting_depth_to_go[ $iend_next + 1 ] !=
+            if (
+                $ovt >= 2
+                || ( $nesting_depth_to_go[ $iend_next + 1 ] ==
                     $nesting_depth_to_go[$ibeg_next] )
               )
             {

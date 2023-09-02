@@ -361,7 +361,7 @@ EOM
         my @parts = @_;
 
         # use File::Spec if we can
-        unless ($missing_file_spec) {
+        if ( !$missing_file_spec ) {
             return File::Spec->catfile(@parts);
         }
 
@@ -617,7 +617,7 @@ EOM
         my ($key) = @_;
         my $hash_ref = $input_hash{$key};
         if ( defined($hash_ref) ) {
-            unless ( ref($hash_ref) eq 'HASH' ) {
+            if ( ref($hash_ref) ne 'HASH' ) {
                 my $what = ref($hash_ref);
                 my $but_is =
                   $what ? "but is ref to $what" : "but is not a reference";
@@ -719,7 +719,7 @@ EOM
 
     # validate dump_options_type
     if ( defined($dump_options) ) {
-        unless ( defined($dump_options_type) ) {
+        if ( !defined($dump_options_type) ) {
             $dump_options_type = 'perltidyrc';
         }
         if (   $dump_options_type ne 'perltidyrc'
@@ -915,7 +915,7 @@ EOM
       $rOpts->{'encode-output-strings'} ? 'eos' : 'neos';
 
     # be sure we have a valid output format
-    unless ( exists $default_file_extension{ $rOpts->{'format'} } ) {
+    if ( !exists $default_file_extension{ $rOpts->{'format'} } ) {
         my $formats = join SPACE,
           sort map { "'" . $_ . "'" } keys %default_file_extension;
         my $fmt = $rOpts->{'format'};
@@ -1184,7 +1184,7 @@ sub backup_method_copy {
 
     my $backup_file = $input_file . $backup_extension;
 
-    unless ( -f $input_file ) {
+    if ( !-f $input_file ) {
 
         # no real file to backup ..
         # This shouldn't happen because of numerous preliminary checks
@@ -1327,7 +1327,7 @@ sub backup_method_move {
 
     my $backup_name = $input_file . $backup_extension;
 
-    unless ( -f $input_file ) {
+    if ( !-f $input_file ) {
 
         # oh, oh, no real file to backup ..
         # shouldn't happen because of numerous preliminary checks
@@ -1915,7 +1915,7 @@ sub process_all_files {
         else {
             $fileroot     = $input_file;
             $display_name = $input_file;
-            unless ( -e $input_file ) {
+            if ( !-e $input_file ) {
 
                 # file doesn't exist - check for a file glob
                 if ( $input_file =~ /([\?\*\[\{])/ ) {
@@ -1939,7 +1939,7 @@ sub process_all_files {
                 next;
             }
 
-            unless ( -f $input_file ) {
+            if ( !-f $input_file ) {
                 Warn("skipping file: $input_file: not a regular file\n");
                 next;
             }
@@ -1948,7 +1948,7 @@ sub process_all_files {
             # If for example a source file got clobbered somehow,
             # the old .tdy or .bak files might still exist so we
             # shouldn't overwrite them with zero length files.
-            unless ( -s $input_file ) {
+            if ( !-s $input_file ) {
                 Warn("skipping file: $input_file: Zero size\n");
                 next;
             }
@@ -1965,7 +1965,7 @@ sub process_all_files {
                 next;
             }
 
-            unless ( ( -T $input_file ) || $rOpts->{'force-read-binary'} ) {
+            if ( !-T $input_file && !$rOpts->{'force-read-binary'} ) {
                 Warn("skipping file: $input_file: Non-text (override with -f)\n"
                 );
                 next;
@@ -1997,15 +1997,14 @@ sub process_all_files {
 
                 my ( $base, $old_path ) = fileparse($fileroot);
                 my $new_path = $rOpts->{'output-path'};
-                unless ( -d $new_path ) {
-                    unless ( mkdir $new_path, 0777 ) {
-                        Die("unable to create directory $new_path: $OS_ERROR\n"
-                        );
-                    }
+                if ( !-d $new_path ) {
+                    mkdir( $new_path, 0777 )
+                      or
+                      Die("unable to create directory $new_path: $OS_ERROR\n");
                 }
                 my $path = $new_path;
                 $fileroot = catfile( $path, $base );
-                unless ($fileroot) {
+                if ( !$fileroot ) {
                     Die(<<EOM);
 ------------------------------------------------------------------------
 Problem combining $new_path and $base to make a filename; check -opath
@@ -2710,7 +2709,7 @@ sub process_iteration_layer {
             Die("I don't know how to do -format=$rOpts->{'format'}\n");
         }
 
-        unless ($formatter) {
+        if ( !$formatter ) {
             Die("Unable to continue with $rOpts->{'format'} formatting\n");
         }
 
@@ -4108,7 +4107,7 @@ sub _process_command_line {
         local @ARGV = ();
 
         # do not load the defaults if we are just dumping perltidyrc
-        unless ( $dump_options_type eq 'perltidyrc' ) {
+        if ( $dump_options_type ne 'perltidyrc' ) {
             for my $i ( @{$rdefaults} ) { push @ARGV, "--" . $i }
         }
         if ( !GetOptions( \%Opts, @{$roption_string} ) ) {
@@ -4161,7 +4160,7 @@ sub _process_command_line {
                     }
                 }
             }
-            unless ( -e $config_file ) {
+            if ( !-e $config_file ) {
                 Warn(
                     "cannot find file given with -pro=$config_file: $OS_ERROR\n"
                 );
@@ -4208,7 +4207,7 @@ sub _process_command_line {
     #----------------------------------------
     # read any .perltidyrc configuration file
     #----------------------------------------
-    unless ($saw_ignore_profile) {
+    if ( !$saw_ignore_profile ) {
 
         # resolve possible conflict between $perltidyrc_stream passed
         # as call parameter to perltidy and -pro=filename on command
@@ -4939,7 +4938,7 @@ sub Win_OS_Type {
 
     # If $os is undefined, the above code is out of date.  Suggested updates
     # are welcome.
-    unless ( defined $os ) {
+    if ( !defined($os) ) {
         $os = EMPTY_STRING;
 
         # Deactivated this message 20180322 because it was needlessly

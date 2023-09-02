@@ -33,8 +33,7 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 # sure if this can be avoided.
 [-Subroutines::ProhibitNestedSubs]
 
-# Make adjustment so that we don't require arg unpacking for very short
-# (possibly time-critical) subs.
+# Make an exception for very short (possibly time-critical) subs.
 [Subroutines::RequireArgUnpacking]
 short_subroutine_statements = 2
 
@@ -57,8 +56,8 @@ short_subroutine_statements = 2
 # supported, this restriction can be deleted
 [-Variables::RequireLocalizedPunctuationVars]
 
-# sub 'backup_method_copy' in Perl::Tidy.pm has about 25 lines between open
-# and close, largely comments, so set the limit a bit higher.
+# Set the line limit a bit higher for sub 'backup_method_copy' in Perl::Tidy.pm
+# which has about 25 lines between open and close, largely comments.
 [InputOutput::RequireBriefOpen]
 lines=30
 
@@ -88,6 +87,7 @@ max_nests=9
 [-ControlStructures::ProhibitCascadingIfElse]
 
 # This is a reasonable starting point but does not work well as a rigid rule.
+# So we have to turn it off.
 [-ControlStructures::ProhibitNegativeExpressionsInUnlessAndUntilConditions]
 
 # This is a good general policy but not always possible in time-critical subs
@@ -107,8 +107,7 @@ max_nests=9
 max_characters=250
 
 # A problem with ReqireExtendedFormatting is that it makes things needlessly
-# complex when matching things like line feeds and carriage returns. So
-# skip this.
+# complex when matching things like line feeds and carriage returns.
 [-RegularExpressions::RequireExtendedFormatting]
 
 #--------------------------------------------------------------
@@ -152,13 +151,6 @@ max_characters=250
 # to see what is going on.
 [-ControlStructures::ProhibitPostfixControls]
 
-# Sometimes an unless statement is clearer than an if block, so why not use
-# it?  For example, I might prefer the first of these:
-#  return unless ($everything_is_ok);
-# vs.
-#  return if (!$everything_is_ok);
-[-ControlStructures::ProhibitUnlessBlocks]
-
 # This is a good general idea but has to be turned off because there are many
 # cases where a number has been explained in a comment or is obvious.
 [-ValuesAndExpressions::ProhibitMagicNumbers]
@@ -182,7 +174,8 @@ max_characters=250
 # you have a comparison of the form $b->[*] <=> $a->[*]. So skip this.
 [-BuiltinFunctions::ProhibitReverseSortBlock]
 
-# There are too many of these in perltidy to change, and they seem fine.
+# There are too many of these in perltidy to change, and they seem fine
+# and not worth the effort of changing.
 [-RegularExpressions::ProhibitEscapedMetacharacters]
 
 # As the documentation says, this policy is not for everyone
@@ -195,8 +188,8 @@ max_characters=250
 # So skip this:
 [-ValuesAndExpressions::ProhibitInterpolationOfLiterals]
 
-# These have been checked and are correct as written. So this policy
-# has to be turned off.
+# The cases flagged by this policy are correct as written. We have to
+# skip this.
 [-ValuesAndExpressions::RequireInterpolationOfMetachars]
 
 # Disagree: parens can add clarity and may even be essential, for example in
