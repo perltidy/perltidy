@@ -22,9 +22,9 @@ severity = 1
 
 verbose = %f: [%p] %m at line %l, column %c.\n
 
-#--------------------------------------------------------------
-# Following is a list of policies to be skipped for severity=4:
-#--------------------------------------------------------------
+#---------------------------------------------------
+# Policies to be skipped or adjusted for severity=4:
+#---------------------------------------------------
 
 # Tidy.pm exports 'perltidy'. Changing this could break existing scripts.
 [-Modules::ProhibitAutomaticExportation]
@@ -61,9 +61,9 @@ short_subroutine_statements = 2
 [InputOutput::RequireBriefOpen]
 lines=30
 
-#--------------------------------------------------------------
-# Following is a list of policies to be skipped for severity=3:
-#--------------------------------------------------------------
+#---------------------------------------------------
+# Policies to be skipped or adjusted for severity=3:
+#---------------------------------------------------
 
 # AUTOLOAD is used in perltidy to help find and debug programming errors rather
 # than doing autoloading.  This is very useful, so we have to skip this.
@@ -82,8 +82,8 @@ max_mccabe=180
 [ControlStructures::ProhibitDeepNests]
 max_nests=9
 
-# This would be nice, but in reality there are many cases where these cannot be
-# avoided.
+# Agree that cascading elses are best avoided, but in reality there are a lot
+# of cases where they cannot be avoided.
 [-ControlStructures::ProhibitCascadingIfElse]
 
 # This is a reasonable starting point but does not work well as a rigid rule.
@@ -110,9 +110,9 @@ max_characters=250
 # complex when matching things like line feeds and carriage returns.
 [-RegularExpressions::RequireExtendedFormatting]
 
-#--------------------------------------------------------------
-# Following is a list of policies to be skipped for severity=2:
-#--------------------------------------------------------------
+#---------------------------------------------------
+# Policies to be skipped or adjusted for severity=2:
+#---------------------------------------------------
 
 # Disagree. In fact, following this policy caused a parsing error in Perl
 # version 5.14 at file test operators.  So skip this because it can cause
@@ -155,9 +155,9 @@ max_characters=250
 # cases where a number has been explained in a comment or is obvious.
 [-ValuesAndExpressions::ProhibitMagicNumbers]
 
-#--------------------------------------------------------------
-# Following is a list of policies to be skipped for severity=1:
-#--------------------------------------------------------------
+#---------------------------------------------------
+# Policies to be skipped or adjusted for severity=1:
+#---------------------------------------------------
 
 # This is a good starting rule, but occasional capitalization can be quite
 # effective or appropriate for marking a special variable, so we have to ignore
@@ -188,8 +188,8 @@ max_characters=250
 # So skip this:
 [-ValuesAndExpressions::ProhibitInterpolationOfLiterals]
 
-# The cases flagged by this policy are correct as written. We have to
-# skip this.
+# Allowing this policy would require adding a whole lot of needless backslash
+# characters, thereby making things much harder to read.
 [-ValuesAndExpressions::RequireInterpolationOfMetachars]
 
 # Disagree: parens can add clarity and may even be essential, for example in

@@ -3173,6 +3173,19 @@ sub set_whitespace_flags {
                 next;
             }
 
+            # space_backslash_quote; RT #123774  <<snippets/rt123774.in>>
+            # allow a space between a backslash and single or double quote
+            # to avoid fooling html formatters
+            elsif ( $type eq 'Q' ) {
+                if ( $last_type eq '\\' && $token =~ /^[\"\']/ ) {
+                    $ws =
+                       !$rOpts_space_backslash_quote      ? WS_NO
+                      : $rOpts_space_backslash_quote == 1 ? WS_OPTIONAL
+                      : $rOpts_space_backslash_quote == 2 ? WS_YES
+                      :                                     WS_YES;
+                }
+            }
+
             # retain any space between '-' and bare word
             elsif ( $type eq 'w' || $type eq 'C' ) {
                 $ws = WS_OPTIONAL if $last_type eq '-';
@@ -3185,24 +3198,11 @@ sub set_whitespace_flags {
                 $ws = WS_OPTIONAL if ( $last_type eq 'w' );
             }
 
-            # space_backslash_quote; RT #123774  <<snippets/rt123774.in>>
-            # allow a space between a backslash and single or double quote
-            # to avoid fooling html formatters
-            elsif ( $last_type eq '\\' && $type eq 'Q' && $token =~ /^[\"\']/ )
-            {
-                if ($rOpts_space_backslash_quote) {
-                    if ( $rOpts_space_backslash_quote == 1 ) {
-                        $ws = WS_OPTIONAL;
-                    }
-                    elsif ( $rOpts_space_backslash_quote == 2 ) { $ws = WS_YES }
-                    else { }    # shouldnt happen
-                }
-                else {
-                    $ws = WS_NO;
-                }
-            }
             else {
-                # ok
+                # A type $type was entered in %is_special_ws_type but
+                # there is no code block to handle it. Either remove it
+                # from the hash or add a code block to handle it.
+                DEVEL_MODE && Fault("no code to handle type $type\n");
             }
         } ## end elsif ( $is_special_ws_type{$type} ...
 
@@ -3349,7 +3349,7 @@ sub set_whitespace_flags {
                     $ws = WS_NO;
                 }
                 else {
-                    ## ok - not covered by a special '(' rule
+                    # ok - opening paren not covered by a special rule
                 }
             }
 
@@ -3359,7 +3359,7 @@ sub set_whitespace_flags {
                 $ws = WS_OPTIONAL;
             }
             else {
-                ## ok - not covered by a special rule
+                # ok - opening type not covered by a special rule
             }
 
             # keep space between 'sub' and '{' for anonymous sub definition,
@@ -3394,7 +3394,7 @@ sub set_whitespace_flags {
         } ## end elsif ( $is_opening_type{$type} ) {
 
         else {
-            ## ok - not covered by a special rule
+            # ok: $type not opening, closing, or covered by a special rule
         }
 
         # always preserve whatever space was used after a possible
@@ -4345,14 +4345,23 @@ EOM
 
         # Set bond strengths of certain keywords
         # make 'or', 'err', 'and' slightly weaker than a ','
-        $left_bond_strength{'and'}  = VERY_WEAK - 0.01;
-        $left_bond_strength{'or'}   = VERY_WEAK - 0.02;
-        $left_bond_strength{'err'}  = VERY_WEAK - 0.02;
-        $left_bond_strength{'xor'}  = VERY_WEAK - 0.01;
+        $left_bond_strength{'and'} = VERY_WEAK - 0.01;
+        $left_bond_strength{'or'}  = VERY_WEAK - 0.02;
+        $left_bond_strength{'err'} = VERY_WEAK - 0.02;
+        $left_bond_strength{'xor'} = VERY_WEAK - 0.01;
+        $left_bond_strength{'ne'}  = NOMINAL;
+        $left_bond_strength{'lt'}  = 0.9 * NOMINAL + 0.1 * STRONG;
+        $left_bond_strength{'gt'}  = 0.9 * NOMINAL + 0.1 * STRONG;
+        $left_bond_strength{'le'}  = 0.9 * NOMINAL + 0.1 * STRONG;
+        $left_bond_strength{'ge'}  = 0.9 * NOMINAL + 0.1 * STRONG;
+        $left_bond_strength{'eq'}  = NOMINAL;
+
         $right_bond_strength{'and'} = NOMINAL;
         $right_bond_strength{'or'}  = NOMINAL;
         $right_bond_strength{'err'} = NOMINAL;
         $right_bond_strength{'xor'} = NOMINAL;
+        $right_bond_strength{'ne'}  = NOMINAL;
+        $right_bond_strength{'eq'}  = NOMINAL;
 
         #---------------------------------------------------------------
         # Bond Strength BEGIN Section 2.
@@ -4644,14 +4653,10 @@ EOM
             my $bsl = $left_bond_strength{$next_nonblank_type};
 
             # define right bond strengths of certain keywords
-            if ( $type eq 'k' && defined( $right_bond_strength{$token} ) ) {
-                $bsr = $right_bond_strength{$token};
-            }
-            elsif ( $token eq 'ne' or $token eq 'eq' ) {
-                $bsr = NOMINAL;
-            }
-            else {
-                ## ok - not special
+            if ( $type eq 'k' ) {
+                if ( defined( $right_bond_strength{$token} ) ) {
+                    $bsr = $right_bond_strength{$token};
+                }
             }
 
             # set terminal bond strength to the nominal value
@@ -4676,22 +4681,11 @@ EOM
                 }
             }
 
-            # define right bond strengths of certain keywords
-            if ( $next_nonblank_type eq 'k'
-                && defined( $left_bond_strength{$next_nonblank_token} ) )
-            {
-                $bsl = $left_bond_strength{$next_nonblank_token};
-            }
-            elsif ($next_nonblank_token eq 'ne'
-                or $next_nonblank_token eq 'eq' )
-            {
-                $bsl = NOMINAL;
-            }
-            elsif ( $is_lt_gt_le_ge{$next_nonblank_token} ) {
-                $bsl = 0.9 * NOMINAL + 0.1 * STRONG;
-            }
-            else {
-                ## ok - not special
+            # define left bond strengths of certain keywords
+            if ( $next_nonblank_type eq 'k' ) {
+                if ( defined( $left_bond_strength{$next_nonblank_token} ) ) {
+                    $bsl = $left_bond_strength{$next_nonblank_token};
+                }
             }
 
             # Use the minimum of the left and right strengths.  Note: it might
@@ -6436,11 +6430,10 @@ sub find_loop_label {
                 my $token = $rLL->[$KK]->[_TOKEN_];
                 if ( $is_mccabe_logic_keyword{$token} ) { $count++ }
             }
-            elsif ( $is_mccabe_logic_operator{$type} ) {
-                $count++;
-            }
             else {
-                ## ok - not a mccabe operator
+                if ( $is_mccabe_logic_operator{$type} ) {
+                    $count++;
+                }
             }
         }
         $rmccabe_count_sum->{ $Klimit + 1 } = $count;
@@ -6488,9 +6481,8 @@ sub find_code_line_count {
 
         # Count all other special line types except pod;
         # For a list of line types see sub 'process_all_lines'
-        elsif ( $line_type !~ /^POD/ ) { $code_line_count++ }
         else {
-            ## ok - not CODE and not POD
+            if ( $line_type !~ /^POD/ ) { $code_line_count++ }
         }
 
         # Store the cumulative count using the input line index
@@ -8808,7 +8800,7 @@ sub respace_tokens_inner_loop {
                     }
                 }
                 else {
-                    ## ok
+                    # it is rare to arrive here (identifier with spaces)
                 }
             }
         }
@@ -11085,7 +11077,7 @@ sub weld_cuddled_blocks {
         if    ( $level < $last_level ) { $in_chain{$last_level} = undef }
         elsif ( $level > $last_level ) { $in_chain{$level}      = undef }
         else {
-            ## ok - level unchanged
+            ## ok - ($level == $last_level)
         }
 
         # We are only looking at code blocks
@@ -11187,7 +11179,7 @@ sub weld_cuddled_blocks {
             }
         }
         else {
-            ## ok - not a code block curly brace
+            ## ok - not a curly brace
         }
     }
     return;
@@ -12944,32 +12936,31 @@ sub whitespace_cycle_adjustment {
             if ( !@whitespace_level_stack ) {
                 push @whitespace_level_stack, $level_abs;
             }
-            elsif ( $level_abs > $whitespace_last_level ) {
-                $level = $whitespace_level_stack[-1] +
-                  ( $level_abs - $whitespace_last_level );
-
-                if (
-                    # 1 Try to break at a block brace
-                    (
-                           $level > $rOpts_whitespace_cycle
-                        && $last_nonblank_type eq '{'
-                        && $last_nonblank_token eq '{'
-                    )
-
-                    # 2 Then either a brace or bracket
-                    || (   $level > $rOpts_whitespace_cycle + 1
-                        && $last_nonblank_token =~ /^[\{\[]$/ )
-
-                    # 3 Then a paren too
-                    || $level > $rOpts_whitespace_cycle + 2
-                  )
-                {
-                    $level = 1;
-                }
-                push @whitespace_level_stack, $level;
-            }
             else {
-                ## ok - not a level change
+                if ( $level_abs > $whitespace_last_level ) {
+                    $level = $whitespace_level_stack[-1] +
+                      ( $level_abs - $whitespace_last_level );
+
+                    if (
+                        # 1 Try to break at a block brace
+                        (
+                               $level > $rOpts_whitespace_cycle
+                            && $last_nonblank_type eq '{'
+                            && $last_nonblank_token eq '{'
+                        )
+
+                        # 2 Then either a brace or bracket
+                        || (   $level > $rOpts_whitespace_cycle + 1
+                            && $last_nonblank_token =~ /^[\{\[]$/ )
+
+                        # 3 Then a paren too
+                        || $level > $rOpts_whitespace_cycle + 2
+                      )
+                    {
+                        $level = 1;
+                    }
+                    push @whitespace_level_stack, $level;
+                }
             }
             $level = $whitespace_level_stack[-1];
             $radjusted_levels->[$KK] = $level;
@@ -13478,16 +13469,15 @@ sub extended_ci {
         }
 
         # If this does not have ci, update ci if necessary and continue looking
-        elsif ( !$rLL->[$KK]->[_CI_LEVEL_] ) {
-            if ($seqno_top) {
-                $rLL->[$KK]->[_CI_LEVEL_] = 1;
-                $rseqno_controlling_my_ci->{$KK} = $seqno_top;
-                $ris_seqno_controlling_ci->{$seqno_top}++;
-            }
-            next;
-        }
         else {
-            ## ok - keep going
+            if ( !$rLL->[$KK]->[_CI_LEVEL_] ) {
+                if ($seqno_top) {
+                    $rLL->[$KK]->[_CI_LEVEL_] = 1;
+                    $rseqno_controlling_my_ci->{$KK} = $seqno_top;
+                    $ris_seqno_controlling_ci->{$seqno_top}++;
+                }
+                next;
+            }
         }
 
         # We are looking for opening container tokens with ci
@@ -14109,11 +14099,10 @@ sub is_fragile_block_type {
                     # Second rule: otherwise, look for an extra indentation
                     # level from the start and add one indentation level if
                     # found.
-                    elsif ( $level > $level_start_multiline_qw ) {
-                        $len += $rOpts_indent_columns;
-                    }
                     else {
-                        ## ok - none of the above
+                        if ( $level > $level_start_multiline_qw ) {
+                            $len += $rOpts_indent_columns;
+                        }
                     }
 
                     if ( $len > $max_prong_len ) { $max_prong_len = $len }
@@ -14339,13 +14328,13 @@ sub is_fragile_block_type {
                         $handle_len = $rOpts_indent_columns;
 
                     }
-                    elsif ( $is_handle_type{$last_nonblank_type} ) {
-                        $handle_len = $len;
-                        $handle_len += 1
-                          if ( $KK > 0 && $rLL->[ $KK - 1 ]->[_TYPE_] eq 'b' );
-                    }
                     else {
-                        ## ok
+                        if ( $is_handle_type{$last_nonblank_type} ) {
+                            $handle_len = $len;
+                            $handle_len += 1
+                              if ( $KK > 0
+                                && $rLL->[ $KK - 1 ]->[_TYPE_] eq 'b' );
+                        }
                     }
 
                     # Set a flag if the 'Interrupted List Rule' will be applied
