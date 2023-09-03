@@ -2597,7 +2597,6 @@ sub process_iteration_layer {
     # vars for iterations and convergence test
     my $max_iterations = 1;
     my $convergence_log_message;
-    my $do_convergence_test;
     my %saw_md5;
 
     # Only 'tidy' formatting can use multiple iterations
@@ -2620,7 +2619,6 @@ sub process_iteration_layer {
 
         # get starting MD5 sum for convergence test
         if ( $max_iterations > 1 ) {
-            $do_convergence_test = 1;
             my $digest = $md5_hex->( ${$rinput_string} );
             $saw_md5{$digest} = 0;
         }
@@ -2771,7 +2769,9 @@ sub process_iteration_layer {
 Stopping iterations because of severe errors.                       
 EOM
             }
-            elsif ($do_convergence_test) {
+
+            # or do convergence test
+            else {
 
                 # stop if the formatter has converged
                 $stop_now ||= defined($iteration_of_formatter_convergence);
@@ -2818,7 +2818,7 @@ EOM
                         $rstatus->{'converged'} = 1;
                     }
                 }
-            } ## end if ($do_convergence_test)
+            }
 
             if ($stop_now) {
 

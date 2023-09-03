@@ -1409,6 +1409,9 @@ sub check_options {
             $rOpts->{'closing-side-comment-interval'} = 100_000_000;
         }
     }
+    else {
+        ## ok - no -csc issues
+    }
 
     make_bli_pattern();
 
@@ -1787,6 +1790,9 @@ EOM
         initialize_line_up_parentheses_control_hash(
             $rOpts->{'line-up-parentheses-inclusion-list'}, 'lpil' );
     }
+    else {
+        ## ok - neither -lpxl nor -lpil
+    }
 
     return;
 } ## end sub check_options
@@ -2068,8 +2074,9 @@ sub initialize_line_up_parentheses_control_hash {
         }
 
         # Check for valid flag1
-        if    ( !defined($flag1) ) { $flag1 = '*' }
-        elsif ( $flag1 !~ /^[kKfFwW\*]$/ ) {
+        if ( !defined($flag1) ) { $flag1 = '*' }
+
+        if ( $flag1 !~ /^[kKfFwW\*]$/ ) {
             $msg1 .= " '$item_save'";
             next;
         }
@@ -2079,8 +2086,9 @@ sub initialize_line_up_parentheses_control_hash {
         # 1 all containers with sublists match
         # 2 all containers with sublists, code blocks or ternary operators match
         # ... this could be extended in the future
-        if    ( !defined($flag2) ) { $flag2 = 0 }
-        elsif ( $flag2 !~ /^[012]$/ ) {
+        if ( !defined($flag2) ) { $flag2 = 0 }
+
+        if ( $flag2 !~ /^[012]$/ ) {
             $msg1 .= " '$item_save'";
             next;
         }
@@ -2324,6 +2332,11 @@ EOM
     elsif ( $short_name eq 'kba' ) {
         @list = grep { !m/[\)\]\}\?\:]/ } @list;
     }
+    else {
+        Fault(<<EOM);
+Bad call arg - received short name '$short_name' but expecting 'kbb' or 'kba'
+EOM
+    }
 
     # pull out any any leading container code, like f( or *{
     # For example: 'f(' becomes flags hash entry '(' => 'f'
@@ -2369,6 +2382,9 @@ EOM
             Warn(<<EOM);
 Unknown flag '$flag' given for '$key' in '$short_name'
 EOM
+        }
+        else {
+            ## ok - no error seen
         }
 
         $rkeep_break_hash->{$key} = $flag;
@@ -3185,6 +3201,9 @@ sub set_whitespace_flags {
                     $ws = WS_NO;
                 }
             }
+            else {
+                # ok
+            }
         } ## end elsif ( $is_special_ws_type{$type} ...
 
         #---------------------------------------------------------------
@@ -3329,12 +3348,18 @@ sub set_whitespace_flags {
                 {
                     $ws = WS_NO;
                 }
+                else {
+                    ## ok - not covered by a special '(' rule
+                }
             }
 
             # patch for SWITCH/CASE: make space at ']{' optional
             # since the '{' might begin a case or when block
             elsif ( ( $token eq '{' && $type ne 'L' ) && $last_token eq ']' ) {
                 $ws = WS_OPTIONAL;
+            }
+            else {
+                ## ok - not covered by a special rule
             }
 
             # keep space between 'sub' and '{' for anonymous sub definition,
@@ -3366,7 +3391,11 @@ sub set_whitespace_flags {
                     $block_type_for_tightness{$seqno} = $last_token;
                 }
             }
-        } ## end if ( $is_opening_type{$type} ) {
+        } ## end elsif ( $is_opening_type{$type} ) {
+
+        else {
+            ## ok - not covered by a special rule
+        }
 
         # always preserve whatever space was used after a possible
         # filehandle (except _) or here doc operator
@@ -4621,6 +4650,9 @@ EOM
             elsif ( $token eq 'ne' or $token eq 'eq' ) {
                 $bsr = NOMINAL;
             }
+            else {
+                ## ok - not special
+            }
 
             # set terminal bond strength to the nominal value
             # this will cause good preceding breaks to be retained
@@ -4657,6 +4689,9 @@ EOM
             }
             elsif ( $is_lt_gt_le_ge{$next_nonblank_token} ) {
                 $bsl = 0.9 * NOMINAL + 0.1 * STRONG;
+            }
+            else {
+                ## ok - not special
             }
 
             # Use the minimum of the left and right strengths.  Note: it might
@@ -4757,6 +4792,9 @@ EOM
             elsif ( $next_nonblank_type eq '=>' ) {
                 if ( $bond_str < STRONG ) { $bond_str = STRONG }
             }
+            else {
+                ## ok - not special
+            }
 
             #---------------------------------------------------------------
             # Additional hardwired NOBREAK rules
@@ -4831,6 +4869,9 @@ EOM
                     $bond_str = NO_BREAK;
                 }
             }
+            else {
+                ## ok - not special
+            }
 
             # Breaking before a ? before a quote can cause trouble if
             # they are not separated by a blank.
@@ -4858,6 +4899,9 @@ EOM
                   if ( !$old_breakpoint_to_go[$i]
                     && substr( $next_nonblank_token, 0, 1 ) eq '/'
                     && $next_nonblank_type ne '//' );
+            }
+            else {
+                ## ok - not special
             }
 
             $bond_str_2 = $bond_str if (DEBUG_BOND);
@@ -5032,6 +5076,9 @@ EOM
                     && $is_opening_token{$token} )
                 {
                     $strength -= 1;
+                }
+                else {
+                    ## ok - not welded left or right
                 }
             }
 
@@ -5796,6 +5843,9 @@ EOM
         elsif ( $block_type =~ /$SUB_PATTERN/ ) {
             $self->[_ris_sub_block_]->{$seqno} = 1;
         }
+        else {
+            ## ok - not a sub
+        }
         return;
     } ## end sub store_block_type
 
@@ -6389,6 +6439,9 @@ sub find_loop_label {
             elsif ( $is_mccabe_logic_operator{$type} ) {
                 $count++;
             }
+            else {
+                ## ok - not a mccabe operator
+            }
         }
         $rmccabe_count_sum->{ $Klimit + 1 } = $count;
         return $rmccabe_count_sum;
@@ -6436,6 +6489,9 @@ sub find_code_line_count {
         # Count all other special line types except pod;
         # For a list of line types see sub 'process_all_lines'
         elsif ( $line_type !~ /^POD/ ) { $code_line_count++ }
+        else {
+            ## ok - not CODE and not POD
+        }
 
         # Store the cumulative count using the input line index
         $rcode_line_count->[$ix_line] = $code_line_count;
@@ -7293,6 +7349,9 @@ sub set_ci {
                             $is_logical ||=
                               $rparent->{_container_type} eq 'Logical';
                         }
+                        else {
+                            ## ok - none of the above
+                        }
                     }
 
                     #------------------------
@@ -7496,6 +7555,9 @@ sub set_ci {
             # 'next' to avoid saving last_ values for blanks and commas
             next;
         }
+        else {
+            ## ok - not a special type for ci
+        }
 
         # Save debug info if requested
         DEBUG_SET_CI && do {
@@ -7690,6 +7752,9 @@ sub set_CODE_type {
                     $input_line_no
                 );
             }
+            else {
+                ## ok - not at a format skipping control line
+            }
             $CODE_type = 'FS';
             next;
         }
@@ -7793,7 +7858,7 @@ sub set_CODE_type {
                 }
 
                 #  starting a new HSC chain?
-                elsif (
+                if (
 
                     $rOpts->{'hanging-side-comments'}    # user is allowing
                                                          # hanging side comments
@@ -8719,6 +8784,10 @@ sub respace_tokens_inner_loop {
                     elsif ( $rOpts_space_prototype_paren == 2 ) {
                         $token =~ s/\(/ (/;
                     }
+                    else {
+                        ## bad n value for -spp=n
+                        ## FIXME: this should be caught earlier
+                    }
 
                     # one space max, and no tabs
                     $token =~ s/\s+/ /g;
@@ -8737,6 +8806,9 @@ sub respace_tokens_inner_loop {
                         $self->[_ris_special_identifier_token_]->{$token} =
                           'package';
                     }
+                }
+                else {
+                    ## ok
                 }
             }
         }
@@ -8875,6 +8947,9 @@ EOM
         elsif ( $type eq 'Q' ) {
             $self->check_Q( $KK, $Kfirst, $input_line_number )
               if ( $self->[_save_logfile_] );
+        }
+        else {
+            ## ok - no special processing for this token type
         }
 
         # Store this token with possible previous blank
@@ -9037,6 +9112,9 @@ sub respace_post_loop_ops {
                 $rhas_broken_code_block->{$seqno_parent} = $line_diff;
                 $seqno_parent = $rparent_of_seqno->{$seqno_parent};
             }
+        }
+        else {
+            ## ok - none of the above
         }
     }
 
@@ -10340,8 +10418,9 @@ sub K_previous_code {
     # use the standard array unless given otherwise
     $rLL = $self->[_rLL_] unless ( defined($rLL) );
     my $Num = @{$rLL};
-    if    ( !defined($KK) ) { $KK = $Num }
-    elsif ( $KK > $Num ) {
+    if ( !defined($KK) ) { $KK = $Num }
+
+    if ( $KK > $Num ) {
 
         # This fault can be caused by a programming error in which a bad $KK is
         # given.  The caller should make the first call with KK_new=undef to
@@ -10372,8 +10451,8 @@ sub K_previous_nonblank {
     # use the standard array unless given otherwise
     $rLL = $self->[_rLL_] unless ( defined($rLL) );
     my $Num = @{$rLL};
-    if    ( !defined($KK) ) { $KK = $Num }
-    elsif ( $KK > $Num ) {
+    if ( !defined($KK) ) { $KK = $Num }
+    if ( $KK > $Num ) {
 
         # This fault can be caused by a programming error in which a bad $KK is
         # given.  The caller should make the first call with KK_new=undef to
@@ -10725,6 +10804,9 @@ sub check_for_old_break {
                         # unknown code - no match
                     }
                 }
+                else {
+                    ## ok: none of the above
+                }
             }
             if ($match) {
                 my $type = $rLL->[$KK]->[_TYPE_];
@@ -10797,6 +10879,9 @@ sub keep_old_line_breaks {
                 # Relevant cases are b977, b1215, b1270, b1303
 
                 $rbreak_container->{$seqno} = 1;
+            }
+            else {
+                ## ok: not a special case
             }
         }
     }
@@ -10999,6 +11084,9 @@ sub weld_cuddled_blocks {
 
         if    ( $level < $last_level ) { $in_chain{$last_level} = undef }
         elsif ( $level > $last_level ) { $in_chain{$level}      = undef }
+        else {
+            ## ok - level unchanged
+        }
 
         # We are only looking at code blocks
         my $token = $rtoken_vars->[_TOKEN_];
@@ -11097,6 +11185,9 @@ sub weld_cuddled_blocks {
                 }
                 else { $in_chain{$level} = undef }
             }
+        }
+        else {
+            ## ok - not a code block curly brace
         }
     }
     return;
@@ -11373,6 +11464,9 @@ sub match_paren_control_flag {
     elsif ( $flag eq 'F' ) { $match = !$is_f }
     elsif ( $flag eq 'w' ) { $match = $is_w }
     elsif ( $flag eq 'W' ) { $match = !$is_w }
+    else {
+        ## no match
+    }
     return $match;
 } ## end sub match_paren_control_flag
 
@@ -11495,6 +11589,9 @@ sub setup_new_weld_measurements {
                     }
                 }
             }
+        }
+        else {
+            ## ok
         }
     }
 
@@ -12871,6 +12968,9 @@ sub whitespace_cycle_adjustment {
                 }
                 push @whitespace_level_stack, $level;
             }
+            else {
+                ## ok - not a level change
+            }
             $level = $whitespace_level_stack[-1];
             $radjusted_levels->[$KK] = $level;
 
@@ -13385,6 +13485,9 @@ sub extended_ci {
                 $ris_seqno_controlling_ci->{$seqno_top}++;
             }
             next;
+        }
+        else {
+            ## ok - keep going
         }
 
         # We are looking for opening container tokens with ci
@@ -14009,6 +14112,9 @@ sub is_fragile_block_type {
                     elsif ( $level > $level_start_multiline_qw ) {
                         $len += $rOpts_indent_columns;
                     }
+                    else {
+                        ## ok - none of the above
+                    }
 
                     if ( $len > $max_prong_len ) { $max_prong_len = $len }
 
@@ -14238,6 +14344,9 @@ sub is_fragile_block_type {
                         $handle_len += 1
                           if ( $KK > 0 && $rLL->[ $KK - 1 ]->[_TYPE_] eq 'b' );
                     }
+                    else {
+                        ## ok
+                    }
 
                     # Set a flag if the 'Interrupted List Rule' will be applied
                     # (see sub copy_old_breakpoints).
@@ -14392,6 +14501,9 @@ EOM
                         elsif ( $collapsed_len < MIN_BLOCK_LEN ) {
                             $collapsed_len = MIN_BLOCK_LEN;
                         }
+                        else {
+                            ## ok
+                        }
                     }
 
                     # Store the result.  Some extra space, '2', allows for
@@ -14531,7 +14643,9 @@ sub is_excluded_lp {
         elsif ( $flag1 eq 'F' ) { $match_flag1 = !$is_f }
         elsif ( $flag1 eq 'w' ) { $match_flag1 = $is_w }
         elsif ( $flag1 eq 'W' ) { $match_flag1 = !$is_w }
-        ## else { no match found }
+        else {
+            ## no match
+        }
     }
 
     # See if we can exclude this based on the flag1 test...
@@ -14765,6 +14879,9 @@ sub process_all_lines {
             # fixes case c047.
             elsif ( $line_type eq 'SKIP_END' ) {
                 $file_writer_object->reset_consecutive_blank_lines();
+            }
+            else {
+                ## some other line type
             }
 
             # write unindented non-code line
@@ -15053,6 +15170,9 @@ EOM
                         elsif ( $rOpts_kgb_before == DELETE ) {
                             $self->kgb_delete_if_blank( $ibeg - 1 );
                         }
+                        else {
+                            ## == STABLE
+                        }
                     }
                 }
 
@@ -15082,6 +15202,9 @@ EOM
                         }
                         elsif ( $rOpts_kgb_after == DELETE ) {
                             $self->kgb_delete_if_blank( $iend + 1 );
+                        }
+                        else {
+                            ## == STABLE
                         }
                     }
                 }
@@ -15290,6 +15413,9 @@ EOM
 
                 # Check for deviation from PATTERN 2, single statement:
                 elsif ( $level != $level_beg ) { $self->kgb_end_group(1) }
+                else {
+                    ## no deviation
+                }
             }
 
             # Do not look for keywords in lists ( keyword 'my' can occur in
@@ -16354,6 +16480,12 @@ EOM
                         $is_closing_BLOCK     = 1;
                         $nobreak_BEFORE_BLOCK = $no_internal_newlines;
                     }
+                    else {
+                        ## error - block should be enclosed by curly brace
+                        DEVEL_MODE && Fault(<<EOM);
+block type '$block_type' has unexpected container type '$type'
+EOM
+                    }
                 }
             }
 
@@ -16370,7 +16502,7 @@ EOM
 
                 # if before last token ... do not allow breaks which would
                 # promote a side comment to a block comment
-                elsif ($Ktoken_vars == $K_last - 1
+                if (   $Ktoken_vars == $K_last - 1
                     || $Ktoken_vars == $K_last - 2
                     && $rLL->[ $K_last - 1 ]->[_TYPE_] eq 'b' )
                 {
@@ -16670,6 +16802,9 @@ EOM
                                   && !$is_excluded
                                   && $Kc - $Ktoken_vars <= 2 );
                             $rbrace_follower = undef if ($keep_going);
+                        }
+                        else {
+                            ## not an exception
                         }
                     }
                     else {
@@ -17355,6 +17490,9 @@ sub starting_one_line_block {
             # essential but helps keep newer and older formatting the same.
             $self->[_ris_short_broken_eval_block_]->{$type_sequence_j} = 1;
         }
+        else {
+            ## ok
+        }
     }
     return;
 } ## end sub starting_one_line_block
@@ -17600,6 +17738,9 @@ EOM
 
         # breaks are forced before 'if' and 'unless'
         elsif ( $is_if_unless{$token} && $type eq 'k' ) { $i-- }
+        else {
+            ## ok
+        }
 
         if ( $i >= 0 && $i <= $max_index_to_go ) {
             my $i_nonblank = ( $types_to_go[$i] ne 'b' ) ? $i : $i - 1;
@@ -17959,7 +18100,7 @@ EOM
                         push @colon_list, $type;
                     }
                 }
-                elsif ( $is_closing_sequence_token{$token} ) {
+                else {    ##  $is_closing_sequence_token{$token}
 
                     if ( $i > 0 && $self->[_rbreak_container_]->{$seqno} ) {
                         $self->set_forced_breakpoint( $i - 1 );
@@ -17987,7 +18128,7 @@ EOM
                     if ( $type eq ':' ) {
                         push @colon_list, $type;
                     }
-                } ## end elsif ( $is_closing_sequence_token...)
+                }
 
             } ## end if ($seqno)
 
@@ -18001,6 +18142,9 @@ EOM
             }
             elsif ( $type eq 'f' ) {
                 push @i_for_semicolon, $i;
+            }
+            else {
+                ## not a special type
             }
 
         } ## end for ( my $i = 0 ; $i <=...)
@@ -18069,6 +18213,9 @@ EOM
                 # quit if we see anything besides words, function, blanks
                 # at this level
                 elsif ( $types_to_go[$i] !~ /^[\(\)Gwib]$/ ) { last }
+                else {
+                    ## keep going
+                }
             }
         }
 
@@ -18137,6 +18284,9 @@ EOM
                         $blank_count = 1;
                     }
                 }
+                else {
+                    ## no blank
+                }
             }
 
             # blank lines before subs except declarations and one-liners
@@ -18164,6 +18314,11 @@ EOM
                             !$self->[_ris_short_broken_eval_block_]->{$pseqno}
                           );
                     }
+                    else {
+                        DEVEL_MODE && Fault(<<EOM);
+Found special identifier '$special_identifier', but expecting 'sub' or 'package'
+EOM
+                    }
                 }
             }
 
@@ -18179,6 +18334,9 @@ EOM
                         $blank_count = $nblanks;
                     }
                 }
+            }
+            else {
+                ## ok
             }
 
             if ($blank_count) {
@@ -18256,6 +18414,9 @@ EOM
                 }
 
             }
+        }
+        else {
+            ## ok - single token
         }
 
         my $rbond_strength_bias = [];
@@ -18693,6 +18854,9 @@ EOM
     #       /^[L\{\(\[]$/
     elsif ( $is_opening_type{ $types_to_go[$max_index_to_go] } ) {
         $nesting_depth_to_go[ $max_index_to_go + 1 ] += 1;
+    }
+    else {
+        ## must be ? or :
     }
     return;
 } ## end sub pad_array_to_go
@@ -20044,7 +20208,11 @@ EOM
 
             elsif ( $is_assignment{$type} ) {
                 ##TBD
-            } ## end assignment
+            }
+            else {
+                ## ok - not a special type
+            }
+            ## end assignment
         }
 
         # ok to combine lines
@@ -20481,6 +20649,9 @@ EOM
                 )
               );
         }
+        else {
+            ## ok - not a special type
+        }
         return ( 1, $skip_Section_3 );
     } ## end sub recombine_section_2
 
@@ -20848,6 +21019,9 @@ EOM
               );
             $forced_breakpoint_to_go[$iend_1] = 0;
         }
+        else {
+            ## ok - not a special type
+        }
         return ( 1, $bs_tweak );
     } ## end sub recombine_section_3
 
@@ -20871,8 +21045,8 @@ sub insert_final_ternary_breaks {
         my $typer = $types_to_go[$ir];
         return if ( $typel eq '?' );
         return if ( $typer eq '?' );
-        if    ( $typel eq ':' ) { $i_first_colon = $il; last; }
-        elsif ( $typer eq ':' ) { $i_first_colon = $ir; last; }
+        if ( $typel eq ':' ) { $i_first_colon = $il; last; }
+        if ( $typer eq ':' ) { $i_first_colon = $ir; last; }
     }
 
     # For long ternary chains,
@@ -21493,12 +21667,14 @@ sub break_long_lines {
             if ( $ii >= 0 && $ii <= $max_index_to_go ) {
                 $rbond_strength_to_go->[$ii] += $bias;
             }
-            elsif (DEVEL_MODE) {
-                my $KK  = $K_to_go[0];
-                my $lno = $self->[_rLL_]->[$KK]->[_LINE_INDEX_];
-                Fault(
+            else {
+                if (DEVEL_MODE) {
+                    my $KK  = $K_to_go[0];
+                    my $lno = $self->[_rLL_]->[$KK]->[_LINE_INDEX_];
+                    Fault(
 "Bad bond strength bias near line $lno: i=$ii must be between 0 and $max_index_to_go\n"
-                );
+                    );
+                }
             }
         }
     }
@@ -21593,6 +21769,9 @@ sub break_long_lines {
             elsif ( $types_to_go[$i_lowest] eq '?' ) {
                 $self->set_closing_breakpoint($i_lowest);
             }
+            else {
+                ## ok
+            }
 
             #--------------------------------------------------------
             # ?/: rule 3 : if we break at a ':' then we save
@@ -21604,6 +21783,9 @@ sub break_long_lines {
             }
             elsif ( $types_to_go[$i_lowest] eq ':' ) {
                 push @i_colon_breaks, $i_lowest;
+            }
+            else {
+                ## ok
             }
 
             # here we should set breaks for all '?'/':' pairs which are
@@ -22446,6 +22628,9 @@ sub do_colon_breaks {
                 $bp_count           = $forced_breakpoint_count - $fbc;
                 $do_not_break_apart = 0 if $must_break_open;
             }
+            else {
+                ## no real commas, nothing to do
+            }
         }
         return ( $bp_count, $do_not_break_apart );
     } ## end sub set_comma_breakpoints
@@ -22866,6 +23051,9 @@ EOM
                         {
                             $saw_good_breakpoint = 1;
                         }
+                        else {
+                            ## not a good break
+                        }
                     }
                 }
                 elsif ( $token eq 'if' || $token eq 'unless' ) {
@@ -22876,9 +23064,15 @@ EOM
                         $self->set_forced_breakpoint($i);
                     }
                 }
+                else {
+                    ## not one of: 'and' 'or' 'if' 'unless'
+                }
             }
             elsif ( $is_assignment{$type} ) {
                 $i_equals[$depth] = $i;
+            }
+            else {
+                ## not a good breakpoint type
             }
 
             #-----------------------------------------
@@ -22912,6 +23106,9 @@ EOM
                   $next_nonblank_type eq ',' || $next_nonblank_type eq '=>';
 
             }
+            else {
+                ## not a depth change
+            }
 
             #----------------------------------
             # Loop Section E: Handle this token
@@ -22920,10 +23117,31 @@ EOM
             $current_depth = $depth;
 
             # most token types can skip the rest of this loop
-            next unless ( $quick_filter{$type} );
+            next if ( !$quick_filter{$type} );
+
+            # Turn off comma alignment if we are sure that this is not a list
+            # environment.  To be safe, we will do this if we see certain
+            # non-list tokens, such as ';', '=', and also the environment is
+            # not a list.
+            ##      $type =~ /^[\;\<\>\~f]$/ || $is_assignment{$type}
+            if ( $is_non_list_type{$type} ) {
+                if ( !$self->is_in_list_by_i($i) ) {
+                    $dont_align[$depth]         = 1;
+                    $want_comma_break[$depth]   = 0;
+                    $index_before_arrow[$depth] = -1;
+
+                    # no special comma breaks in C-style 'for' terms (c154)
+                    if ( $type eq 'f' ) { $last_comma_index[$depth] = undef }
+                }
+            }
+
+            # handle any commas
+            elsif ( $type eq ',' ) {
+                $self->study_comma($comma_follows_last_closing_token);
+            }
 
             # handle comma-arrow
-            if ( $type eq '=>' ) {
+            elsif ( $type eq '=>' ) {
                 next if ( $last_nonblank_type eq '=>' );
                 next if $rOpts_break_at_old_comma_breakpoints;
                 next
@@ -22938,25 +23156,13 @@ EOM
                 $last_dot_index[$depth] = $i;
             }
 
-            # Turn off comma alignment if we are sure that this is not a list
-            # environment.  To be safe, we will do this if we see certain
-            # non-list tokens, such as ';', '=', and also the environment is
-            # not a list.
-            ##      $type =~ /^[\;\<\>\~f]$/ || $is_assignment{$type}
-            elsif ( $is_non_list_type{$type}
-                && !$self->is_in_list_by_i($i) )
-            {
-                $dont_align[$depth]         = 1;
-                $want_comma_break[$depth]   = 0;
-                $index_before_arrow[$depth] = -1;
+            else {
 
-                # no special comma breaks in C-style 'for' terms (c154)
-                if ( $type eq 'f' ) { $last_comma_index[$depth] = undef }
+                # error : no code to handle a type in %quick_filter
+                DEVEL_MODE && Fault(<<EOM);
+Missing code to handle token type '$type' which is in the quick_filter
+EOM
             }
-
-            # now just handle any commas
-            next if ( $type ne ',' );
-            $self->study_comma($comma_follows_last_closing_token);
 
         } ## end while ( ++$i <= $max_index_to_go)
 
@@ -23017,6 +23223,9 @@ EOM
             && $i_old_assignment_break < $max_index_to_go )
         {
             $saw_good_breakpoint = 1;
+        }
+        else {
+            ## not a good breakpoint
         }
 
         return $saw_good_breakpoint;
@@ -23237,6 +23446,9 @@ EOM
         }
         elsif ( $is_assignment{$next_nonblank_type} ) {
             $i_old_assignment_break = $i_next_nonblank;
+        }
+        else {
+            ## not old assignment break
         }
 
       RETURN:
@@ -23928,6 +24140,9 @@ EOM
                     {
                         $self->set_forced_breakpoint($i_prev);
                     }
+                    else {
+                        ## not a breakpoint
+                    }
                 }
             }
 
@@ -23975,6 +24190,9 @@ EOM
             # must set fake breakpoint to alert outer containers that
             # they are complex
             set_fake_breakpoint();
+        }
+        else {
+            ## do not break open
         }
 
         return;
@@ -24050,6 +24268,9 @@ sub find_token_starting_list {
             $i_opening_minus = $j;
         }
         if ( $types_to_go[$i_opening_minus] eq 'b' ) { $i_opening_minus++ }
+    }
+    else {
+        ## previous token not special
     }
 
     DEBUG_FIND_START && print <<EOM;
@@ -24529,11 +24750,9 @@ EOM
                 # which can be greater if there are large terms and
                 # little space, but usually this will work well enough.
                 if ( !$must_break_open ) {
-
-                    if ( $break_count <= 1 ) {
-                        ${$rdo_not_break_apart} = 1;
-                    }
-                    elsif ( $is_lp_formatting && !$need_lp_break_open ) {
+                    if ( $break_count <= 1
+                        || ( $is_lp_formatting && !$need_lp_break_open ) )
+                    {
                         ${$rdo_not_break_apart} = 1;
                     }
                 }
@@ -24627,10 +24846,9 @@ EOM
                 ++$break_count if ($use_separate_first_term);
 
                 if ( !$must_break_open_container ) {
-                    if ( $break_count <= 1 ) {
-                        ${$rdo_not_break_apart} = 1;
-                    }
-                    elsif ( $is_lp_formatting && !$need_lp_break_open ) {
+                    if ( $break_count <= 1
+                        || ( $is_lp_formatting && !$need_lp_break_open ) )
+                    {
                         ${$rdo_not_break_apart} = 1;
                     }
                 }
@@ -24868,6 +25086,9 @@ EOM
                         ${$rdo_not_break_apart} = 1;
                     }
                 }
+                else {
+                    ## ok
+                }
             }
         }
 
@@ -24965,6 +25186,9 @@ EOM
             && $number_of_fields_best > $number_of_fields_max )
         {
             $number_of_fields_best = $number_of_fields_max;
+        }
+        else {
+            ## ok
         }
 
         # If we are crowded and the -lp option is being used, try
@@ -25215,6 +25439,9 @@ sub study_list_complexity {
         elsif ( $types_to_go[$ib] =~ /^[w\-]$/ ) {
             $quote_count++;
         }
+        else {
+            ## ok
+        }
 
         if ( $ib eq $ie ) {
             if ( $is_quote && $tokens_to_go[$ib] =~ /\s/ ) {
@@ -25271,6 +25498,9 @@ sub study_list_complexity {
             && $weighted_length <= $definitely_simple )
         {
             pop @i_ragged_break_list;
+        }
+        else {
+            ## ok
         }
     }
 
@@ -25802,6 +26032,9 @@ sub get_available_spaces_to_go {
                 elsif ( $is_assignment{$type} ) {
                     $last_lp_equals{$total_depth} = $ii;
                 }
+                else {
+                    ## not a special type
+                }
 
                 # this token might start a new line if ..
                 if (
@@ -25987,6 +26220,9 @@ sub get_available_spaces_to_go {
                   if ( $types_to_go[$i_test] eq 'b' );
             }
             elsif ( $types_to_go[ $i_test + 1 ] eq 'b' ) { $i_test++ }
+            else {
+                ## ok
+            }
 
             my $test_position = total_line_length( $i_test, $ii );
             my $mll = $maximum_line_length_at_level[ $levels_to_go[$i_test] ];
@@ -27075,6 +27311,9 @@ EOM
                 $rvao_args->{break_alignment_before} = 1;
             }
         }
+        else {
+            ## ok - do not need to break vertical alignment here
+        }
 
         # ----------------------------------
         # define 'rvertical_tightness_flags'
@@ -27755,6 +27994,9 @@ EOM
                 # This experiment didn't work well: reason not determined
                 # if ($token ne $type) {$alignment_type .= $type}
             }
+            else {
+                ## not a special type
+            }
 
             # NOTE: This is deactivated because it causes the previous
             # if/elsif alignment to fail
@@ -27772,25 +28014,27 @@ EOM
             # We want to line up ',' and interior ';' tokens, with the added
             # space AFTER these tokens.  (Note: interior ';' is included
             # because it may occur in short blocks).
-            elsif (
+            else {
+                if (
 
-                # previous token IS one of these:
-                (
-                       $vert_last_nonblank_type eq ','
-                    || $vert_last_nonblank_type eq ';'
-                )
+                    # previous token IS one of these:
+                    (
+                           $vert_last_nonblank_type eq ','
+                        || $vert_last_nonblank_type eq ';'
+                    )
 
-                # and it follows a blank
-                && $types_to_go[ $i - 1 ] eq 'b'
+                    # and it follows a blank
+                    && $types_to_go[ $i - 1 ] eq 'b'
 
-                # and it's NOT one of these
-                && !$is_closing_token{$type}
+                    # and it's NOT one of these
+                    && !$is_closing_token{$type}
 
-                # then go ahead and align
-              )
+                    # then go ahead and align
+                  )
 
-            {
-                $alignment_type = $vert_last_nonblank_type;
+                {
+                    $alignment_type = $vert_last_nonblank_type;
+                }
             }
 
             #-----------------------
@@ -27850,17 +28094,20 @@ sub make_vertical_alignments {
         }
 
         # Strange line packing, not fatal but should not happen
-        elsif (DEVEL_MODE) {
-            my $max_line = @{$ri_first} - 1;
-            my $ibeg     = $ri_first->[0];
-            my $iend     = $ri_last->[0];
-            my $tok_b    = $tokens_to_go[$ibeg];
-            my $tok_e    = $tokens_to_go[$iend];
-            my $type_b   = $types_to_go[$ibeg];
-            my $type_e   = $types_to_go[$iend];
-            Fault(
+        else {
+
+            if (DEVEL_MODE) {
+                my $max_line = @{$ri_first} - 1;
+                my $ibeg     = $ri_first->[0];
+                my $iend     = $ri_last->[0];
+                my $tok_b    = $tokens_to_go[$ibeg];
+                my $tok_e    = $tokens_to_go[$iend];
+                my $type_b   = $types_to_go[$ibeg];
+                my $type_e   = $types_to_go[$iend];
+                Fault(
 "Strange..max_index=0 but nlines=$max_line ibeg=$ibeg tok=$tok_b type=$type_b iend=$iend tok=$tok_e type=$type_e; please check\n"
-            );
+                );
+            }
         }
     }
 
@@ -28051,7 +28298,7 @@ sub get_seqno {
                         # chain ends with previous line
                         $line_2 = $line - 1;
                     }
-                    elsif ( $lev > $lev_last ) {
+                    else {    ## ( $lev > $lev_last )
 
                         # kill chain
                         $line_1 = undef;
@@ -29075,10 +29322,13 @@ sub xlp_tweak {
                     } ## end if ( $i_mate > $i && $i_mate...)
                 } ## end if ( $is_opening_token...)
 
-                elsif ( $is_closing_type{$token} ) {
+                elsif ( $is_closing_token{$token} ) {
                     $i_depth_prev = $i;
                     $depth_prev   = $depth;
                     $depth-- if $depth > 0;
+                }
+                else {
+                    ## must be ternary
                 }
             } ## end if ( $type_sequence_to_go...)
 
@@ -29336,6 +29586,9 @@ sub xlp_tweak {
             elsif ( defined($count_max) && $count >= $count_max ) {
                 last;
             }
+            else {
+                ## continue
+            }
 
             if ( defined( $name_map{$token} ) ) {
                 $token = $name_map{$token};
@@ -29574,6 +29827,9 @@ sub make_paren_name {
                 $adjust_indentation = 3;
             }
         }
+        else {
+            ## ok
+        }
 
         #---------------------------------------------------------
         # Section 2: set indentation according to flag set above
@@ -29699,6 +29955,9 @@ sub make_paren_name {
                 elsif ( $default_adjust_indentation == 1 ) {
                     $indentation = $reduced_spaces_to_go[$i_terminal];
                     $lev         = $levels_to_go[$i_terminal];
+                }
+                else {
+                    ## ok - maybe default_adjust_indentation > 1 ?
                 }
             }
         }
@@ -29946,6 +30205,9 @@ sub make_paren_name {
                     $Kterm = $Kterm_test;
                 }
                 if ( $Kterm == $K_beg ) { $adjust_indentation = 1 }
+            }
+            else {
+                ## ok
             }
         }
 
@@ -30257,6 +30519,9 @@ sub make_paren_name {
                 elsif ( $cti == 3 ) {
                     $adjust_indentation = 3;
                 }
+                else {
+                    ## cti == 0
+                }
             }
 
             # handle option to indent blocks
@@ -30284,6 +30549,9 @@ sub make_paren_name {
               = $self->get_opening_indentation( $ibeg, $ri_first, $ri_last,
                 $rindentation_list );
             if ($is_leading) { $adjust_indentation = 2; }
+        }
+        else {
+            # not a closing type
         }
 
         return (
@@ -30756,6 +31024,9 @@ sub set_vertical_tightness_flags {
               unless ( $block_type_to_go[$ibeg_next] )
               ;    # shouldn't happen; just checking
         }
+        else {
+            ## not stackable
+        }
 
         if ($stackable) {
 
@@ -30828,6 +31099,9 @@ sub set_vertical_tightness_flags {
         $vt_seqno        = $type_sequence_to_go[$iend];
         $vt_valid_flag   = 1;
 
+    }
+    else {
+        ## none of the above
     }
 
     # get the sequence numbers of the ends of this line
@@ -31012,6 +31286,9 @@ sub set_vertical_tightness_flags {
                 $leading_block_text_length_exceeded = 1;
                 $leading_block_text .= '...';
             }
+            else {
+                ## ok
+            }
         }
         return;
     } ## end sub accumulate_block_text
@@ -31136,6 +31413,11 @@ sub set_vertical_tightness_flags {
                             # encountered a '{' for block type $block_type.
                         }
                     }
+                }
+                else {
+                    ## should not get here
+                    DEVEL_MODE
+                      && Fault("token=$token should be '{' or '}' for block\n");
                 }
             }
 
@@ -31432,6 +31714,9 @@ sub add_closing_side_comment {
                 elsif ( $block_type_to_go[$i_terminal] eq 'elsif' ) {
                     if ( $old_csc =~ /\[\s*if/ ) { $old_csc = $new_csc }
                 }
+                else {
+                    ## ok: neither else or elsif
+                }
 
                 # if old comment is contained in new comment,
                 # only compare the common part.
@@ -31512,6 +31797,9 @@ sub add_closing_side_comment {
                         }
                         $ri_last->[-1] = $iend;
                     }
+                }
+                else {
+                    ## above threshold, cannot delete
                 }
             }
 
