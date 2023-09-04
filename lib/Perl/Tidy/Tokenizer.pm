@@ -994,7 +994,7 @@ sub get_line {
 
     $self->[_line_of_text_] = $input_line;
 
-    return unless ( defined($input_line) );
+    return if ( !defined($input_line) );
 
     my $input_line_number = ++$self->[_last_line_number_];
 
@@ -1357,9 +1357,11 @@ sub get_line {
             }
             else {
                 $line_of_tokens->{_line_type} = 'POD_START';
-                $self->warning(
+                if ( !DEVEL_MODE ) {
+                    $self->warning(
 "=cut starts a pod section .. this can fool pod utilities.\n"
-                ) unless (DEVEL_MODE);
+                    );
+                }
                 $self->log_numbered_msg("Entering POD section\n");
             }
         }
@@ -2182,7 +2184,7 @@ EOM
         my ( $self, $replacement_text ) = @_;
 
         # quick check
-        return unless ( $replacement_text =~ /<</ );
+        return if ( $replacement_text !~ /<</ );
 
         $self->write_logfile_entry(
             "scanning replacement text for here-doc targets\n");
@@ -2202,7 +2204,7 @@ EOM
         );
 
         # scan the replacement text
-        1 while ( $tokenizer->get_line() );
+        while ( $tokenizer->get_line() ) { }
 
         # remove any here doc targets
         my $rht = undef;
@@ -3796,7 +3798,7 @@ EOM
                 elsif ( !$here_doc_target ) {
                     $self->warning(
                         'Use of bare << to mean <<"" is deprecated' . "\n" )
-                      unless ($here_quote_character);
+                      if ( !$here_quote_character );
                 }
                 elsif ( $here_doc_target !~ /^[A-Z_]\w+$/ ) {
                     $self->complain(
@@ -3840,8 +3842,7 @@ EOM
         my $self = shift;
 
         return
-          unless ( $i < $max_token_index )
-          ;    # here-doc not possible if end of line
+          if ( $i >= $max_token_index );  # here-doc not possible if end of line
         if ( $expecting != OPERATOR ) {
             my ( $found_target, $here_doc_target, $here_quote_character,
                 $saw_error );
@@ -6784,14 +6785,13 @@ sub is_balanced_closing_container {
 
     # cannot close if there was no opening
     my $cd_aa = $rcurrent_depth->[$aa];
-    return unless ( $cd_aa > 0 );
+    return if ( $cd_aa <= 0 );
 
     # check that any other brace types $bb contained within would be balanced
     for my $bb ( 0 .. @closing_brace_names - 1 ) {
         next if ( $bb == $aa );
         return
-          unless (
-            $rdepth_array->[$aa][$bb][$cd_aa] == $rcurrent_depth->[$bb] );
+          if ( $rdepth_array->[$aa][$bb][$cd_aa] != $rcurrent_depth->[$bb] );
     }
 
     # OK, everything will be balanced
@@ -7640,7 +7640,8 @@ EOM
 
 sub check_prototype {
     my ( $proto, $package, $subname ) = @_;
-    return unless ( defined($package) && defined($subname) );
+    return if ( !defined($package) );
+    return if ( !defined($subname) );
     if ( defined($proto) ) {
         $proto =~ s/^\s*\(\s*//;
         $proto =~ s/\s*\)$//;
@@ -8771,7 +8772,7 @@ EOM
                 my $seqno =
                   $rcurrent_sequence_number->[BRACE]
                   [ $rcurrent_depth->[BRACE] ];
-                $seqno   = 1 unless ( defined($seqno) );
+                $seqno   = 1 if ( !defined($seqno) );
                 $package = $seqno;
                 if ( $warn_if_lexical{$subname} ) {
                     $self->warning(
@@ -8931,9 +8932,11 @@ EOM
 
                         }
                         else {
-                            $self->warning(
+                            if ( !DEVEL_MODE ) {
+                                $self->warning(
 "already saw definition of 'sub $subname' in package '$package' at line $lno\n"
-                            ) unless (DEVEL_MODE);
+                                );
+                            }
                         }
                     }
                     $rsaw_function_definition->{$subname}{$package} =
@@ -9042,7 +9045,7 @@ sub find_next_nonblank_token {
 
     my $next_nonblank_token = $rtokens->[ ++$i ];
     return ( SPACE, $i )
-      unless ( defined($next_nonblank_token) && length($next_nonblank_token) );
+      if ( !defined($next_nonblank_token) || !length($next_nonblank_token) );
 
     # Quick test for nonblank ascii char. Note that we just have to
     # examine the first character here.
@@ -9961,7 +9964,7 @@ sub follow_quoted_string {
                 # retain backslash unless it hides the beginning or end token
                 $tok = $rtokens->[ ++$i ];
                 $quoted_string .= '\\'
-                  unless ( $tok eq $end_tok || $tok eq $beginning_tok );
+                  if ( $tok ne $end_tok && $tok ne $beginning_tok );
             }
             else {
                 ## nothing special

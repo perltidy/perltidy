@@ -4081,7 +4081,6 @@ EOM
     # NEW_TOKENS must add bond strength rules
 
     my %is_good_keyword_breakpoint;
-    my %is_lt_gt_le_ge;
     my %is_container_token;
 
     my %binary_bond_strength_nospace;
@@ -4099,9 +4098,6 @@ EOM
         my @q;
         @q = qw(if unless while until for foreach);
         @is_good_keyword_breakpoint{@q} = (1) x scalar(@q);
-
-        @q = qw(lt gt le ge);
-        @is_lt_gt_le_ge{@q} = (1) x scalar(@q);
 
         @q = qw/ ( [ { } ] ) /;
         @is_container_token{@q} = (1) x scalar(@q);
@@ -4349,19 +4345,15 @@ EOM
         $left_bond_strength{'or'}  = VERY_WEAK - 0.02;
         $left_bond_strength{'err'} = VERY_WEAK - 0.02;
         $left_bond_strength{'xor'} = VERY_WEAK - 0.01;
-        $left_bond_strength{'ne'}  = NOMINAL;
-        $left_bond_strength{'lt'}  = 0.9 * NOMINAL + 0.1 * STRONG;
-        $left_bond_strength{'gt'}  = 0.9 * NOMINAL + 0.1 * STRONG;
-        $left_bond_strength{'le'}  = 0.9 * NOMINAL + 0.1 * STRONG;
-        $left_bond_strength{'ge'}  = 0.9 * NOMINAL + 0.1 * STRONG;
-        $left_bond_strength{'eq'}  = NOMINAL;
 
-        $right_bond_strength{'and'} = NOMINAL;
-        $right_bond_strength{'or'}  = NOMINAL;
-        $right_bond_strength{'err'} = NOMINAL;
-        $right_bond_strength{'xor'} = NOMINAL;
-        $right_bond_strength{'ne'}  = NOMINAL;
-        $right_bond_strength{'eq'}  = NOMINAL;
+        @q = qw(ne eq);
+        @left_bond_strength{@q} = (NOMINAL) x scalar(@q);
+
+        @q = qw(lt gt le ge);
+        @left_bond_strength{@q} = ( 0.9 * NOMINAL + 0.1 * STRONG ) x scalar(@q);
+
+        @q = qw(and or err xor ne eq);
+        @right_bond_strength{@q} = (NOMINAL) x scalar(@q);
 
         #---------------------------------------------------------------
         # Bond Strength BEGIN Section 2.
@@ -5187,7 +5179,7 @@ sub bad_pattern {
             my @words = split /-+/, $string;    # allow multiple dashes
 
             # we could look for and report possible errors here...
-            next unless ( @words > 0 );
+            next if ( @words <= 0 );
 
            # allow either '-continue' or *-continue' for arbitrary starting type
             my $start = '*';
@@ -5730,7 +5722,7 @@ EOM
         # correctly.
         my ( $rtokens, $rtoken_type, $rtype_sequence, $input_line_no ) = @_;
         my $jmax = @{$rtokens} - 1;
-        return unless ( $jmax >= 0 );
+        return if ( $jmax < 0 );
         foreach my $j ( 0 .. $jmax ) {
             my $seqno = $rtype_sequence->[$j];
             my $token = $rtokens->[$j];
@@ -8006,7 +7998,7 @@ sub find_non_indenting_braces {
             DEVEL_MODE && Fault("did not get a comment\n");
             next;
         }
-        next unless ( $Klast > $Kfirst );    # maybe HSC
+        next if ( $Klast <= $Kfirst );    # maybe HSC
         my $token_sc = $rLL->[$Klast]->[_TOKEN_];
         my $K_m      = $Klast - 1;
         my $type_m   = $rLL->[$K_m]->[_TYPE_];
@@ -10337,10 +10329,11 @@ sub K_next_code {
     my ( $self, $KK, $rLL ) = @_;
 
     # return the index K of the next nonblank, non-comment token
-    return unless ( defined($KK) && $KK >= 0 );
+    return if ( !defined($KK) );
+    return if ( $KK < 0 );
 
     # use the standard array unless given otherwise
-    $rLL = $self->[_rLL_] unless ( defined($rLL) );
+    $rLL = $self->[_rLL_] if ( !defined($rLL) );
     my $Num  = @{$rLL};
     my $Knnb = $KK + 1;
     while ( $Knnb < $Num ) {
@@ -10367,18 +10360,19 @@ sub K_next_nonblank {
 
     # return the index K of the next nonblank token, or
     # return undef if none
-    return unless ( defined($KK) && $KK >= 0 );
+    return if ( !defined($KK) );
+    return if ( $KK < 0 );
 
     # The third arg allows this routine to be used on any array.  This is
     # useful in sub respace_tokens when we are copying tokens from an old $rLL
     # to a new $rLL array.  But usually the third arg will not be given and we
     # will just use the $rLL array in $self.
-    $rLL = $self->[_rLL_] unless ( defined($rLL) );
+    $rLL = $self->[_rLL_] if ( !defined($rLL) );
     my $Num  = @{$rLL};
     my $Knnb = $KK + 1;
-    return unless ( $Knnb < $Num );
+    return       if ( $Knnb >= $Num );
     return $Knnb if ( $rLL->[$Knnb]->[_TYPE_] ne 'b' );
-    return unless ( ++$Knnb < $Num );
+    return       if ( ++$Knnb >= $Num );
     return $Knnb if ( $rLL->[$Knnb]->[_TYPE_] ne 'b' );
 
     # Backup loop. Very unlikely to get here; it means we have neighboring
@@ -10455,14 +10449,14 @@ sub K_previous_nonblank {
         return;
     }
     my $Kpnb = $KK - 1;
-    return unless ( $Kpnb >= 0 );
+    return       if ( $Kpnb < 0 );
     return $Kpnb if ( $rLL->[$Kpnb]->[_TYPE_] ne 'b' );
-    return unless ( --$Kpnb >= 0 );
+    return       if ( --$Kpnb < 0 );
     return $Kpnb if ( $rLL->[$Kpnb]->[_TYPE_] ne 'b' );
 
     # Backup loop. We should not get here unless some routine
     # slipped repeated blanks into the token stream.
-    return unless ( --$Kpnb >= 0 );
+    return if ( --$Kpnb < 0 );
     while ( $Kpnb >= 0 ) {
         if ( $rLL->[$Kpnb]->[_TYPE_] ne 'b' ) { return $Kpnb }
         $Kpnb--;
@@ -10547,7 +10541,8 @@ sub is_in_list_by_i {
     # returns true if token at i is contained in a LIST
     # returns false otherwise
     my $seqno = $parent_seqno_to_go[$i];
-    return unless ( $seqno && $seqno ne SEQ_ROOT );
+    return if ( !$seqno );
+    return if ( $seqno eq SEQ_ROOT );
     if ( $self->[_ris_list_by_seqno_]->{$seqno} ) {
         return 1;
     }
@@ -10852,12 +10847,11 @@ sub keep_old_line_breaks {
             # Fix for b1120: only for parens, not braces
             elsif ( $token eq ')' ) {
                 my $Kn = $self->K_next_nonblank($Kfirst);
-                next
-                  unless ( defined($Kn)
-                    && $Kn <= $Klast
-                    && $rLL->[$Kn]->[_TYPE_] eq '->' );
+                next if ( !defined($Kn) );
+                next if ( $Kn > $Klast );
+                next if ( $rLL->[$Kn]->[_TYPE_] ne '->' );
                 my $seqno = $rLL->[$Kfirst]->[_TYPE_SEQUENCE_];
-                next unless ($seqno);
+                next if ( !$seqno );
 
                 # Note: in previous versions there was a fix here to avoid
                 # instability between conflicting -bom and -pvt or -pvtc flags.
@@ -11225,11 +11219,11 @@ sub find_nested_pairs {
           if ( $K_outer_closing < $Num
             && $rLL->[$K_outer_closing]->[_TYPE_] eq 'b' );
 
-        next unless ( $K_outer_closing < $Num );
+        next if ( $K_outer_closing >= $Num );
         my $outer_seqno = $rLL->[$K_outer_closing]->[_TYPE_SEQUENCE_];
-        next unless ($outer_seqno);
+        next if ( !$outer_seqno );
         my $token_outer_closing = $rLL->[$K_outer_closing]->[_TOKEN_];
-        next unless ( $is_closing_token{$token_outer_closing} );
+        next if ( !$is_closing_token{$token_outer_closing} );
 
         # Simple filter: No commas or semicolons in the outer container
         my $rtype_count = $self->[_rtype_count_by_seqno_]->{$outer_seqno};
@@ -11240,7 +11234,8 @@ sub find_nested_pairs {
         # Now we have to check the opening tokens.
         my $K_outer_opening = $K_opening_container->{$outer_seqno};
         my $K_inner_opening = $K_opening_container->{$inner_seqno};
-        next unless defined($K_outer_opening) && defined($K_inner_opening);
+        next if ( !defined($K_outer_opening) );
+        next if ( !defined($K_inner_opening) );
 
         my $inner_blocktype = $rblock_type_of_seqno->{$inner_seqno};
         my $outer_blocktype = $rblock_type_of_seqno->{$outer_seqno};
@@ -12456,7 +12451,7 @@ sub weld_nested_quotes {
             my $Kn = $KK + 1;
             $Kn += 1
               if ( $Kn < $Num && $rLL->[$Kn]->[_TYPE_] eq 'b' );
-            next unless ( $Kn < $Num );
+            next if ( $Kn >= $Num );
 
             my $next_token = $rLL->[$Kn]->[_TOKEN_];
             my $next_type  = $rLL->[$Kn]->[_TYPE_];
@@ -12776,7 +12771,7 @@ sub mark_short_nested_blocks {
 
         # We are only marking nested code blocks,
         # so check for a previous block on the stack
-        next unless ( @open_block_stack > 1 );
+        next if ( @open_block_stack <= 1 );
 
         # Looks OK, mark this as a short nested block
         $rshort_nested->{$type_sequence} = 1;
@@ -13802,9 +13797,8 @@ EOM
             # continue up the tree marking parent containers
             while (1) {
                 $parent_seqno = $self->[_rparent_of_seqno_]->{$parent_seqno};
-                last
-                  unless ( defined($parent_seqno)
-                    && $parent_seqno ne SEQ_ROOT );
+                last if ( !defined($parent_seqno) );
+                last if ( $parent_seqno eq SEQ_ROOT );
                 $ris_excluded_lp_container->{$parent_seqno} = 1;
             }
         }
@@ -14963,12 +14957,13 @@ EOM
         #   0 = never (delete if exist)
         #   1 = stable (keep unchanged)
         #   2 = always (insert if missing)
-        return $rhash_of_desires
-          unless $rOpts_kgb_size_min > 0
+        my $ok = $rOpts_kgb_size_min > 0
           && ( $rOpts_kgb_before != 1
             || $rOpts_kgb_after != 1
             || $rOpts_kgb_inside
             || $rOpts_kgb_delete );
+
+        return $rhash_of_desires if ( !$ok );
 
         return;
     } ## end sub kgb_initialize_options
@@ -15099,7 +15094,7 @@ EOM
 
         # delete line $i if it is blank
         my $rlines = $self->[_rlines_];
-        return unless ( $i >= 0 && $i < @{$rlines} );
+        return if ( $i < 0 || $i >= @{$rlines} );
         return if ( $rlines->[$i]->{_line_type} ne 'CODE' );
         my $code_type = $rlines->[$i]->{_code_type};
         if ( $code_type eq 'BL' ) { $rhash_of_desires->{$i} = 2; }
@@ -15237,11 +15232,11 @@ EOM
 
         # Opening container must exist and be on this line
         my $Ko = $self->[_K_opening_container_]->{$parent_seqno};
-        return unless ( defined($Ko) && $Ko > $K_first && $Ko <= $K_last );
+        return if ( !defined($Ko) || $Ko <= $K_first || $Ko > $K_last );
 
         # Verify that the closing container exists and is on a later line
         my $Kc = $self->[_K_closing_container_]->{$parent_seqno};
-        return unless ( defined($Kc) && $Kc > $K_last );
+        return if ( !defined($Kc) || $Kc <= $K_last );
 
         # That's it
         $K_closing = $Kc;
@@ -16526,11 +16521,11 @@ EOM
                 $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
 
                 $self->end_batch()
-                  unless (
-                    $no_internal_newlines
-                    || (   $rOpts_keep_interior_semicolons
-                        && $Ktoken_vars < $K_last )
-                    || ( $next_nonblank_token eq '}' )
+                  if (
+                    !$no_internal_newlines
+                    && (  !$rOpts_keep_interior_semicolons
+                        || $Ktoken_vars >= $K_last )
+                    && ( $next_nonblank_token ne '}' )
                   );
             }
 
@@ -16845,8 +16840,8 @@ EOM
                 {
                     if ( !$rbrace_follower ) {
                         $self->end_batch()
-                          unless ( $no_internal_newlines
-                            || $max_index_to_go < 0 );
+                          if (!$no_internal_newlines
+                            && $max_index_to_go >= 0 );
                     }
                 }
                 elsif ($rbrace_follower) {
@@ -16868,8 +16863,8 @@ EOM
                     }
                     else {
                         $self->end_batch()
-                          unless ( $no_internal_newlines
-                            || $max_index_to_go < 0 );
+                          if (!$no_internal_newlines
+                            && $max_index_to_go >= 0 );
                     }
 
                     $rbrace_follower = undef;
@@ -16877,8 +16872,7 @@ EOM
 
                 else {
                     $self->end_batch()
-                      unless ( $no_internal_newlines
-                        || $max_index_to_go < 0 );
+                      if ( !$no_internal_newlines && $max_index_to_go >= 0 );
                 }
 
             } ## end treatment of closing block token
@@ -17196,11 +17190,11 @@ sub starting_one_line_block {
             my $seqno = $type_sequence_to_go[$i_start];
             return unless ($seqno);
             my $K_opening = $K_opening_container->{$seqno};
-            return unless defined($K_opening);
+            return if ( !defined($K_opening) );
             my $i_opening = $i_start + ( $K_opening - $K_start );
 
             # give up if not on this line
-            return unless ( $i_opening >= 0 );
+            return if ( $i_opening < 0 );
             $i_start = $i_opening;
 
             # go back one token before the opening paren
@@ -17703,7 +17697,8 @@ EOM
         #   - the index of the token after which the break was set, or
         #   - undef if no break was set
 
-        return unless ( defined($i) && $i >= 0 );
+        return if ( !defined($i) );
+        return if ( $i < 0 );
 
         # Back up at a blank so we have a token to examine.
         # This was added to fix for cases like b932 involving an '=' break.
@@ -19139,7 +19134,7 @@ sub break_equals {
     #
     my ( $self, $ri_left, $ri_right ) = @_;
     my $nmax = @{$ri_right} - 1;
-    return unless ( $nmax >= 2 );
+    return if ( $nmax < 2 );
 
     # scan the left ends of first two lines
     my $tokbeg = EMPTY_STRING;
@@ -20439,7 +20434,7 @@ EOM
 
                 # do not recombine after a comma unless this will
                 # leave just 1 more line
-                return unless ( $n + 1 >= $nmax );
+                return if ( $n + 1 < $nmax );
 
                 # do not recombine if there is a change in
                 # indentation depth
@@ -20504,31 +20499,30 @@ EOM
                 && !$is_short_quote
                 && !$is_ternary )
             {
-                return
-                  unless (
+                my $combine_ok = (
                     (
 
                         # unless we can reduce this to two lines
                         $nmax < $n + 2
 
-                        # or three lines, the last with a leading
-                        # semicolon
-                        || (   $nmax == $n + 2
+                          # or three lines, the last with a leading
+                          # semicolon
+                          || ( $nmax == $n + 2
                             && $types_to_go[$ibeg_nmax] eq ';' )
 
-                        # or the next line ends with a here doc
-                        || $type_iend_2 eq 'h'
+                          # or the next line ends with a here doc
+                          || $type_iend_2 eq 'h'
 
-                        # or the next line ends in an open paren or
-                        # brace and the break hasn't been forced
-                        # [dima.t]
-                        || (  !$forced_breakpoint_to_go[$iend_1]
+                          # or the next line ends in an open paren or
+                          # brace and the break hasn't been forced
+                          # [dima.t]
+                          || (!$forced_breakpoint_to_go[$iend_1]
                             && $type_iend_2 eq '{' )
                     )
 
-                    # do not recombine if the two lines might align
-                    # well this is a very approximate test for this
-                    && (
+                      # do not recombine if the two lines might align
+                      # well this is a very approximate test for this
+                      && (
 
                         # RT#127633 - the leading tokens are not
                         # operators
@@ -20537,8 +20531,10 @@ EOM
                         # or they are different
                         || (   $ibeg_3 >= 0
                             && $type_ibeg_2 ne $types_to_go[$ibeg_3] )
-                    )
-                  );
+                      )
+                );
+
+                return if ( !$combine_ok );
 
                 if (
 
@@ -20606,8 +20602,7 @@ EOM
               $summed_lengths_to_go[$ibeg_2];
             my $iend_1_minus = max( $ibeg_1, iprev_to_go($iend_1) );
 
-            return
-              unless (
+            my $combine_ok = (
 
                 # ... unless there is just one and we can reduce
                 # this to two lines if we do.  For example, this
@@ -20623,10 +20618,10 @@ EOM
                 # check for 2 lines, not in a long broken '.' chain
                 ( $n == 2 && $n == $nmax && $type_iend_1 ne $type_iend_2 )
 
-                # ... or this would strand a short quote , like this
-                #                "some long quote" .
-                #                "\n";
-                || (
+                  # ... or this would strand a short quote , like this
+                  #                "some long quote" .
+                  #                "\n";
+                  || (
                        $types_to_go[$i_next_nonblank] eq 'Q'
                     && $i_next_nonblank >= $iend_2 - 2
                     && $token_lengths_to_go[$i_next_nonblank] <
@@ -20635,8 +20630,9 @@ EOM
                     #  additional constraints to fix c167
                     && (   $types_to_go[$iend_1_minus] ne 'Q'
                         || $summed_len_2 < $summed_len_1 )
-                )
-              );
+                  )
+            );
+            return if ( !$combine_ok );
         }
         else {
             ## ok - not a special type
@@ -20814,7 +20810,7 @@ EOM
                       && $types_to_go[$ii] eq ':'
                       && $levels_to_go[$ii] == $lev;
                 }
-                return unless ( $local_count > 1 );
+                return if ( $local_count <= 1 );
             }
             $forced_breakpoint_to_go[$iend_1] = 0;
         }
@@ -20827,8 +20823,7 @@ EOM
             my $summed_len_2 = $summed_lengths_to_go[ $iend_2 + 1 ] -
               $summed_lengths_to_go[$ibeg_2];
 
-            return
-              unless (
+            my $combine_ok = (
 
                 # ... unless there is just one and we can reduce
                 # this to two lines if we do.  For example, this
@@ -20843,10 +20838,10 @@ EOM
 
                 ( $n == 2 && $n == $nmax && $type_ibeg_1 ne $type_ibeg_2 )
 
-                # ... or this would strand a short quote , like this
-                #                . "some long quote"
-                #                . "\n";
-                || (
+                  # ... or this would strand a short quote , like this
+                  #                . "some long quote"
+                  #                . "\n";
+                  || (
                        $types_to_go[$i_next_nonblank] eq 'Q'
                     && $i_next_nonblank >= $iend_2 - 1
                     && $token_lengths_to_go[$i_next_nonblank] <
@@ -20865,8 +20860,10 @@ EOM
                             && $n == $nmax
                             && $this_line_is_semicolon_terminated )
                     )
-                )
-              );
+                  )
+            );
+
+            return if ( !$combine_ok );
         }
 
         # handle leading keyword..
@@ -20874,10 +20871,10 @@ EOM
 
             # handle leading "or"
             if ( $tokens_to_go[$ibeg_2] eq 'or' ) {
-                return
-                  unless (
+
+                my $combine_ok = (
                     $this_line_is_semicolon_terminated
-                    && (
+                      && (
                         $type_ibeg_1 eq '}'
                         || (
 
@@ -20892,12 +20889,14 @@ EOM
                             # then combine everything together
                             && ( $iend_2 - $ibeg_2 <= 7 )
                         )
-                    )
-                  );
+                      )
+                );
+
+                return if ( !$combine_ok );
 
                 #X: RT #81854
                 $forced_breakpoint_to_go[$iend_1] = 0
-                  unless ( $old_breakpoint_to_go[$iend_1] );
+                  if ( !$old_breakpoint_to_go[$iend_1] );
             }
 
             # handle leading 'and' and 'xor'
@@ -21095,7 +21094,7 @@ sub insert_breaks_before_list_opening_containers {
     return unless %break_before_container_types;
 
     my $nmax = @{$ri_right} - 1;
-    return unless ( $nmax >= 0 );
+    return if ( $nmax < 0 );
 
     my $rLL = $self->[_rLL_];
 
@@ -21108,7 +21107,7 @@ sub insert_breaks_before_list_opening_containers {
     for my $n ( 0 .. $nmax ) {
         my $il = $ri_left->[$n];
         my $ir = $ri_right->[$n];
-        next unless ( $ir > $il );
+        next if ( $ir <= $il );
         my $Kl       = $K_to_go[$il];
         my $Kr       = $K_to_go[$ir];
         my $Kend     = $Kr;
@@ -21135,11 +21134,11 @@ sub insert_breaks_before_list_opening_containers {
         }
 
         my $token = $rLL->[$Kend]->[_TOKEN_];
-        next unless ( $is_opening_token{$token} );
-        next unless ( $Kl < $Kend - 1 );
+        next if ( !$is_opening_token{$token} );
+        next if ( $Kl >= $Kend - 1 );
 
         my $seqno = $rLL->[$Kend]->[_TYPE_SEQUENCE_];
-        next unless ( defined($seqno) );
+        next if ( !defined($seqno) );
 
         # Use the flag which was previously set
         next unless ( $rbreak_before_container_by_seqno->{$seqno} );
@@ -21570,7 +21569,7 @@ sub undo_lp_ci {
     my $max_line = @{$ri_first} - 1;
 
     # must be multiple lines
-    return unless $max_line > $line_open;
+    return if ( $max_line <= $line_open );
 
     my $lev_start     = $levels_to_go[$i_start];
     my $ci_start_plus = 1 + $ci_levels_to_go[$i_start];
@@ -23173,16 +23172,19 @@ EOM
             # break open container...
             my $i_opening = $opening_structure_index_stack[$dd];
             if ( defined($i_opening) && $i_opening >= 0 ) {
-                $self->set_forced_breakpoint($i_opening)
-                  unless (
+
+                my $no_break = (
                     is_unbreakable_container($dd)
 
-                    # Avoid a break which would place an isolated ' or "
-                    # on a line
-                    || (   $type eq 'Q'
+                      # Avoid a break which would place an isolated ' or "
+                      # on a line
+                      || ( $type eq 'Q'
                         && $i_opening >= $max_index_to_go - 2
                         && ( $token eq "'" || $token eq '"' ) )
-                  );
+                );
+
+                $self->set_forced_breakpoint($i_opening)
+                  if ( !$no_break );
             }
         } ## end for ( my $dd = $current_depth...)
 
@@ -26802,7 +26804,7 @@ EOM
             }
             $lp_position_predictor -= $deleted_spaces;
             $spaces_needed         -= $deleted_spaces;
-            last unless ( $spaces_needed > 0 );
+            last if ( $spaces_needed <= 0 );
         }
         return;
     } ## end sub check_for_long_gnu_style_lines
@@ -28554,15 +28556,15 @@ sub get_seqno {
                         $ok_comma = $tok_next_next eq $tok_next;
                     }
 
-                    next
-                      unless (
-                           $is_assignment{ $types_to_go[$iendm] }
-                        || $ok_comma
-                        || ( $nesting_depth_to_go[$ibegm] <
+                    my $ok_pad = (
+                             $is_assignment{ $types_to_go[$iendm] }
+                          || $ok_comma
+                          || ( $nesting_depth_to_go[$ibegm] <
                             $nesting_depth_to_go[$ibeg] )
-                        || (   $types_to_go[$iendm] eq 'k'
+                          || ( $types_to_go[$iendm] eq 'k'
                             && $tokens_to_go[$iendm] eq 'return' )
-                      );
+                    );
+                    next if ( !$ok_pad );
 
                     # we will add padding before the first token
                     $ipad = $ibeg;
@@ -28647,9 +28649,9 @@ sub get_seqno {
 
                     # find any unclosed container
                     next
-                      unless ( $type_sequence_to_go[$i]
-                        && defined( $mate_index_to_go[$i] )
-                        && $mate_index_to_go[$i] > $iend );
+                      if ( !$type_sequence_to_go[$i]
+                        || !defined( $mate_index_to_go[$i] )
+                        || $mate_index_to_go[$i] <= $iend );
 
                     # find next nonblank token to pad
                     $ipad = $inext_to_go[$i];
@@ -28959,7 +28961,7 @@ sub xlp_tweak {
     my ( $self, $ri_first, $ri_last ) = @_;
 
     # Must be 2 or more lines
-    return unless ( @{$ri_first} > 1 );
+    return if ( @{$ri_first} <= 1 );
 
     # Pull indentation object from start of second line
     my $ibeg_1    = $ri_first->[1];

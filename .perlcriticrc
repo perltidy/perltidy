@@ -86,10 +86,6 @@ max_nests=9
 # of cases where they cannot be avoided.
 [-ControlStructures::ProhibitCascadingIfElse]
 
-# This is a reasonable starting point but does not work well as a rigid rule.
-# So we have to turn it off.
-[-ControlStructures::ProhibitNegativeExpressionsInUnlessAndUntilConditions]
-
 # This is a good general policy but not always possible in time-critical subs
 [-Subroutines::ProhibitManyArgs]
 
@@ -121,7 +117,6 @@ max_characters=250
 
 # These would be okay for most new code, but do not change any debugged regular
 # expressions without good reason.  It is too easy to introduce a subtle error.
-# So skip these for now.
 [-RegularExpressions::RequireDotMatchAnything]
 [-RegularExpressions::RequireLineBoundaryMatching]
 
@@ -148,8 +143,9 @@ max_characters=250
 # The first form highlights the most important thing, a sub call,
 # and the conditional is just an optimization to skip it if not needed.
 # The second form buries the important thing in braces, making it harder
-# to see what is going on.
-[-ControlStructures::ProhibitPostfixControls]
+# to see what is going on. So allow postfix 'if' and 'unless'.
+[ControlStructures::ProhibitPostfixControls]
+allow = if unless
 
 # This is a good general idea but has to be turned off because there are many
 # cases where a number has been explained in a comment or is obvious.

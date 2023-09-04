@@ -124,7 +124,7 @@ sub permanently_decrease_available_spaces {
     # flag has been set.
     my $closed = $item->get_closed();
     $item->decrease_available_spaces($deleted_spaces)
-      unless ( $available_spaces == 0 && $closed < 0 );
+      if ( $available_spaces != 0 || $closed >= 0 );
     $item->decrease_SPACES($deleted_spaces);
     $item->set_recoverable_spaces(0);
 
