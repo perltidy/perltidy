@@ -2,6 +2,29 @@
 
 ## 2023 07 01.03
 
+    - Add parameters -wme, or --warn-missing-else, and -ame,
+      or --add-missing else.  The parameter -wme tells perltidy to issue
+      a warning to the error output if an if-elsif-elsif-... chain does
+      not end in an else block.  The parameter -ame tells perltidy to
+      insert an else block at the end of such a chain if there is none.
+
+      For example, given the following snippet:
+
+        if    ( $level == 3 ) { $val = $global{'section'} }
+        elsif ( $level == 2 ) { $val = $global{'chapter'} }
+
+      # perltidy -ame
+        if    ( $level == 3 ) { $val = $global{'section'} }
+        elsif ( $level == 2 ) { $val = $global{'chapter'} }
+        else {
+            ##FIXME - added with perltidy -ame
+        }
+
+      The resulting code should be carefully reviewed, and the comment should
+      be updated as appropriate.  The comment can be changed with parameter
+      -amec=s, where 's' is the comment in the else block.  The man pages
+      have more details.
+
     - The syntax of the parameter --use-feature=class, or -uf=class, which
       new in the previous release, has been changed slightly for clarity.
       The default behavior, which occurs if this flag is not entered, is

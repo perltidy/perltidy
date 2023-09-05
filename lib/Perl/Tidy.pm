@@ -3561,6 +3561,9 @@ sub generate_options {
     ########################################
     $category = 9;    # Other controls
     ########################################
+    $add_option->( 'warn-missing-else',            'wme',  '!' );
+    $add_option->( 'add-missing-else',             'ame',  '!' );
+    $add_option->( 'add-missing-else-comment',     'amec', '=s' );
     $add_option->( 'delete-block-comments',        'dbc',  '!' );
     $add_option->( 'delete-closing-side-comments', 'dcsc', '!' );
     $add_option->( 'delete-pod',                   'dp',   '!' );

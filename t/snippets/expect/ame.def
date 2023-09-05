@@ -1,0 +1,2 @@
+    if    ( $level == 3 ) { $val = $global{'section'} }
+    elsif ( $level == 2 ) { $val = $global{'chapter'} }

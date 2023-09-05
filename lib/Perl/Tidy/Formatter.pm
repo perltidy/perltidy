@@ -231,6 +231,8 @@ my (
     $rOpts_space_prototype_paren,
     $rOpts_stack_closing_block_brace,
     $rOpts_static_block_comments,
+    $rOpts_add_missing_else,
+    $rOpts_warn_missing_else,
     $rOpts_tee_block_comments,
     $rOpts_tee_pod,
     $rOpts_tee_side_comments,
@@ -1413,6 +1415,21 @@ sub check_options {
         ## ok - no -csc issues
     }
 
+    my $comment = $rOpts->{'add-missing-else-comment'};
+    if ( !$comment ) {
+        $comment = "##FIXME - added with perltidy -ame";
+    }
+    else {
+        $comment = substr( $comment, 0, 60 );
+        $comment =~ s/^\s+//;
+        $comment =~ s/\s+$//;
+        $comment =~ s/\n/ /g;
+        if ( substr( $comment, 0, 1 ) ne '#' ) {
+            $comment = '#' . $comment;
+        }
+    }
+    $rOpts->{'add-missing-else-comment'} = $comment;
+
     make_bli_pattern();
 
     make_bl_pattern();
@@ -2490,6 +2507,8 @@ sub initialize_global_option_vars {
     $rOpts_space_prototype_paren     = $rOpts->{'space-prototype-paren'};
     $rOpts_stack_closing_block_brace = $rOpts->{'stack-closing-block-brace'};
     $rOpts_static_block_comments     = $rOpts->{'static-block-comments'};
+    $rOpts_add_missing_else          = $rOpts->{'add-missing-else'};
+    $rOpts_warn_missing_else         = $rOpts->{'warn-missing-else'};
     $rOpts_tee_block_comments        = $rOpts->{'tee-block-comments'};
     $rOpts_tee_pod                   = $rOpts->{'tee-pod'};
     $rOpts_tee_side_comments         = $rOpts->{'tee-side-comments'};
@@ -15547,7 +15566,7 @@ EOM
 
     # past stored nonblank tokens and flags
     my (
-        $K_last_nonblank_code,       $looking_for_else,
+        $K_last_nonblank_code,       $K_dangling_elsif,
         $is_static_block_comment,    $last_CODE_type,
         $last_line_had_side_comment, $next_parent_seqno,
         $next_slevel,
@@ -15556,7 +15575,7 @@ EOM
     # Called once at the start of a new file
     sub initialize_process_line_of_CODE {
         $K_last_nonblank_code       = undef;
-        $looking_for_else           = 0;
+        $K_dangling_elsif           = 0;
         $is_static_block_comment    = 0;
         $last_line_had_side_comment = 0;
         $next_parent_seqno          = SEQ_ROOT;
@@ -16023,6 +16042,44 @@ EOM
         $is_assignment_or_fat_comma{'=>'} = 1;
     }
 
+    sub add_missing_else {
+
+        # Add a missing 'else' block.
+        # $K_dangling_elsif = index of closing elsif brace not followed by else
+        my ($self) = @_;
+
+        # Make sure everything looks okay
+        if (  !$K_dangling_elsif
+            || $K_dangling_elsif < $K_first
+            || $rLL->[$K_dangling_elsif]->[_TYPE_] ne '}' )
+        {
+            DEVEL_MODE && Fault("could not find closing elsif brace\n");
+        }
+
+        my $comment = $rOpts->{'add-missing-else-comment'};
+
+        # Safety check
+        if ( substr( $comment, 0, 1 ) ne '#' ) { $comment = '#' . $comment }
+
+        # Calculate indentation
+        my $level  = $radjusted_levels->[$K_dangling_elsif];
+        my $spaces = SPACE x ( $level * $rOpts_indent_columns );
+        my $line1  = $spaces . "else {\n";
+        my $line3  = $spaces . "}\n";
+        $spaces .= SPACE x $rOpts_indent_columns;
+        my $line2 = $spaces . $comment . "\n";
+
+        # clear the output pipeline
+        $self->flush();
+
+        my $file_writer_object = $self->[_file_writer_object_];
+
+        $file_writer_object->write_code_line($line1);
+        $file_writer_object->write_code_line($line2);
+        $file_writer_object->write_code_line($line3);
+        return;
+    }
+
     sub process_line_of_CODE {
 
         my ( $self, $my_line_of_tokens ) = @_;
@@ -16248,15 +16305,7 @@ EOM
         # Handle all other lines ...
         #---------------------------
 
-        # If we just saw the end of an elsif block, write nag message
-        # if we do not see another elseif or an else.
-        if ($looking_for_else) {
-
-            if ( !$is_elsif_else{ $rLL->[$K_first_true]->[_TOKEN_] } ) {
-                write_logfile_entry("(No else block)\n");
-            }
-            $looking_for_else = 0;
-        }
+        $K_dangling_elsif = 0;
 
         # This is a good place to kill incomplete one-line blocks
         if ( $max_index_to_go >= 0 ) {
@@ -16392,6 +16441,10 @@ EOM
                     $old_breakpoint_to_go[$max_index_to_go] = 1;
                 }
             }
+        }
+
+        if ( $K_dangling_elsif && $rOpts_add_missing_else ) {
+            $self->add_missing_else();
         }
 
         return;
@@ -16816,12 +16869,41 @@ EOM
                         # check for 'elsif' or 'else'
                         if ( !$is_elsif_else{$next_nonblank_token} ) {
                             write_logfile_entry("(No else block)\n");
+
+                            # Note that we cannot add a missing else block
+                            # in this case because more code follows the
+                            # closing elsif brace on the same line.
+                            if ( $rOpts_warn_missing_else && !DEVEL_MODE ) {
+                                my $lno =
+                                  $rLL->[$Ktoken_vars]->[_LINE_INDEX_] + 1;
+                                warning("$lno: No else block\n");
+                            }
                         }
                     }
 
                     # no more code on this line, so check on next line
                     else {
-                        $looking_for_else = 1;
+                        my $K_next = $self->K_next_code($K_last);
+                        if (   !defined($K_next)
+                            || $rLL->[$K_next]->[_TYPE_] ne 'k'
+                            || !$is_elsif_else{ $rLL->[$K_next]->[_TOKEN_] } )
+                        {
+                            $K_dangling_elsif = $Ktoken_vars;
+                            write_logfile_entry("(No else block)\n");
+                            if ( $rOpts_warn_missing_else && !DEVEL_MODE ) {
+                                my $lno =
+                                  $rLL->[$Ktoken_vars]->[_LINE_INDEX_] + 1;
+                                if ($rOpts_add_missing_else) {
+                                    warning(
+                                        "$lno: Adding missing else block\n");
+                                }
+                                else {
+                                    warning(
+"$lno: No else block (use -ame to add one)\n"
+                                    );
+                                }
+                            }
+                        }
                     }
                 }
 

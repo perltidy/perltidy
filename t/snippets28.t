@@ -14,6 +14,8 @@
 #11 xbt.xbt3
 #12 lrt.def
 #13 lrt.lrt
+#14 ame.ame
+#15 ame.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -31,6 +33,7 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
+        'ame'    => "--add-missing-else",
         'def'    => "",
         'git116' => "-viu",
         'lrt'    => "--line-range-tidy=2:3",
@@ -48,6 +51,11 @@ BEGIN {
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'ame' => <<'----------',
+    if    ( $level == 3 ) { $val = $global{'section'} }
+    elsif ( $level == 2 ) { $val = $global{'chapter'} }
+----------
 
         'git116' => <<'----------',
 print "Tried to add: @ResolveRPM\n" if ( @ResolveRPM and !$Quiet );
@@ -335,6 +343,27 @@ sub hello {
 }
 =cut
 #13...........
+        },
+
+        'ame.ame' => {
+            source => "ame",
+            params => "ame",
+            expect => <<'#14...........',
+    if    ( $level == 3 ) { $val = $global{'section'} }
+    elsif ( $level == 2 ) { $val = $global{'chapter'} }
+    else {
+        ##FIXME - added with perltidy -ame
+    }
+#14...........
+        },
+
+        'ame.def' => {
+            source => "ame",
+            params => "def",
+            expect => <<'#15...........',
+    if    ( $level == 3 ) { $val = $global{'section'} }
+    elsif ( $level == 2 ) { $val = $global{'chapter'} }
+#15...........
         },
     };
 

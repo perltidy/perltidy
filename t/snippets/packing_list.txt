@@ -537,3 +537,5 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
+../snippets28.t	ame.ame
+../snippets28.t	ame.def
