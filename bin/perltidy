@@ -3861,18 +3861,17 @@ commas are removed.
 
 =head2 Missing Else Blocks
 
-One defensive programming technique is to require every B<if-elsif-> chain be
-terminated with an B<else> block, even if it is not strictly required,
+One defensive programming technique is to require that every B<if-elsif->
+chain be terminated with an B<else> block, even though it is not required,
 to insure that there are no holes in the logic.
 
-For example, consider the following snippet from an actual program:
+For example, consider the following snippet: 
 
     if    ( $level == 3 ) { $val = $global{'section'} }
     elsif ( $level == 2 ) { $val = $global{'chapter'} }
 
 What if the variable B<$level> is neither 2 nor 3?  Maybe the original
-programmer knew that this was okay, but a new programmer might not be sure
-sure.
+programmer knew that this was okay, but a new programmer might be unsure.
 
 Perltidy has always written this information in its B<LOG> file (search for
 B<No else block>).  But a problem is that you have to turn on the log file and
@@ -3884,11 +3883,13 @@ or both.
 
 =item B<-wme>,  B<--warn-missing-else>
 
-This flag tells perltidy to issue a warning if a program is missing a terminal B<else> block.
+This flag tells perltidy to issue a warning if a program is missing a terminal B<else> block.  The default is not to issue such warnings.
 
 =item B<-ame>,  B<--add-missing-else>
 
-This flag tells perltidy to output an empty else block wherever a program is missing a terminal B<else> block.
+This flag tells perltidy to output an empty else block wherever a program is
+missing a terminal B<else> block.  To get a warning when this is done you can
+also set B<-wme>.  The default is not to add missing else blocks.
 
 =item B<-amec=s>,  B<--add-missing-else-comment=s>
 
@@ -3900,23 +3901,24 @@ This string is an optional side comment which will be placed within a new empty 
 
 For example, on the above example we get
 
-    # perltidy -ame
+    # perltidy -ame -wme
     if    ( $level == 3 ) { $val = $global{'section'} }
     elsif ( $level == 2 ) { $val = $global{'chapter'} }
     else {
         ##FIXME - added with perltidy -ame
     }
 
-The comment should be changed appropriately after the code is inspected. For
-example, we might decide that it fine as is:
+Any B<##FIXME> comments should be changed appropriately after the code is
+inspected. For example, we might decide that it fine as is, and just leave
+a note for the next programmer:
 
     if    ( $level == 3 ) { $val = $global{'section'} }
     elsif ( $level == 2 ) { $val = $global{'chapter'} }
     else {
-        # ok - ignore other level values are safely ignored
+        # ok - other $level values can be safely ignored
     }
 
-Or maybe it is a potential problem:
+Or maybe it should never happen:
 
     if    ( $level == 3 ) { $val = $global{'section'} }
     elsif ( $level == 2 ) { $val = $global{'chapter'} }
@@ -3926,7 +3928,6 @@ Or maybe it is a potential problem:
 
 Note that this operation cannot be undone, so be careful to inspect the new
 code carefully.
-
 
 =head2 Retaining or Ignoring Existing Line Breaks
 
@@ -5868,7 +5869,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20230701.03
+This man page documents perltidy version 20230701.04
 
 =head1 BUG REPORTS
 

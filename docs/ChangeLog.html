@@ -1,5 +1,65 @@
 <h1>Perltidy Change Log</h1>
 
+<h2>2023 07 01.04</h2>
+
+<pre><code>- Add parameters -wme, or --warn-missing-else, and -ame,
+  or --add-missing else.  The parameter -wme tells perltidy to issue
+  a warning to the error output if an if-elsif-elsif-... chain does
+  not end in an else block.  The parameter -ame tells perltidy to
+  insert an else block at the end of such a chain if there is none.
+
+  For example, given the following snippet:
+
+    if    ( $level == 3 ) { $val = $global{'section'} }
+    elsif ( $level == 2 ) { $val = $global{'chapter'} }
+
+  # perltidy -ame
+    if    ( $level == 3 ) { $val = $global{'section'} }
+    elsif ( $level == 2 ) { $val = $global{'chapter'} }
+    else {
+        ##FIXME - added with perltidy -ame
+    }
+
+  The resulting code should be carefully reviewed, and the comment should
+  be updated as appropriate.  The comment can be changed with parameter
+  -amec=s, where 's' is the comment in the else block.  The man pages
+  have more details.
+
+- The syntax of the parameter --use-feature=class, or -uf=class, which
+  new in the previous release, has been changed slightly for clarity.
+  The default behavior, which occurs if this flag is not entered, is
+  to automatically try to handle both old and new uses of the keywords
+  'class', 'method', 'field', and 'ADJUST'.
+  To force these keywords to only follow the -use feature 'class' syntax,
+  enter --use-feature=class.
+  To force perltidy to ignore the -use feature 'class' syntax, enter
+  --use-feature=noclass.
+
+- Issue git #122. Added parameter -lrt=n1:n2, or --line-range-tidy=n1:n2
+  to limit tidy operations to a limited line range.  Line numbers start
+  with 1. The man pages have details.
+
+- Some fairly rare instances of incorrect spacing have been fixed.  The
+  problem was that the tokenizer being overly conservative in marking
+  terms as possible filehandles. This cause the space after the possible
+  filehandle to be frozen to its input value in order not to introduce
+  an error in case Perl had to guess.  The problem was fixed by having the
+  tokenizer look ahead for operators which can eliminate the uncertainty.
+  To illustrate, in the following line the term ``$d`` was previouly
+  marked as a possible file handle, so no space was added after it.
+
+      print $d== 1 ? " [ON]\n" : $d ? " [$d]\n" : "\n";
+
+  In the current version, the next token is seen to be an equality, so
+  ``$d`` is marked as an ordinary identifier and normal spacing rules
+  can apply:
+
+      print $d == 1 ? " [ON]\n" : $d ? " [$d]\n" : "\n";
+
+- This version runs 7 to 10 percent faster than the previous release on
+  large files, depending on options and file type.
+</code></pre>
+
 <h2>2023 07 01</h2>
 
 <pre><code>- Issue git #121. Added parameters -xbt, or --extended-block-tightness,

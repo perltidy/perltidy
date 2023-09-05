@@ -28,12 +28,14 @@
       <li><a href="#Whitespace-Control">Whitespace Control</a></li>
       <li><a href="#Comment-Controls">Comment Controls</a></li>
       <li><a href="#Skipping-Selected-Sections-of-Code">Skipping Selected Sections of Code</a></li>
+      <li><a href="#Formatting-a-Limited-Range-of-Lines">Formatting a Limited Range of Lines</a></li>
       <li><a href="#Line-Break-Control">Line Break Control</a></li>
       <li><a href="#Controlling-Breaks-at-Braces-Parens-and-Square-Brackets">Controlling Breaks at Braces, Parens, and Square Brackets</a></li>
       <li><a href="#Welding">Welding</a></li>
       <li><a href="#Breaking-Before-or-After-Operators">Breaking Before or After Operators</a></li>
       <li><a href="#Controlling-List-Formatting">Controlling List Formatting</a></li>
       <li><a href="#Adding-and-Deleting-Commas">Adding and Deleting Commas</a></li>
+      <li><a href="#Missing-Else-Blocks">Missing Else Blocks</a></li>
       <li><a href="#Retaining-or-Ignoring-Existing-Line-Breaks">Retaining or Ignoring Existing Line Breaks</a></li>
       <li><a href="#Blank-Line-Control">Blank Line Control</a></li>
       <li><a href="#Styles">Styles</a></li>
@@ -1285,7 +1287,7 @@
           &amp;&amp; ( $a-&gt;{&#39;title&#39;} eq $b-&gt;{&#39;title&#39;} )
           &amp;&amp; ( $a-&gt;{&#39;href&#39;} eq $b-&gt;{&#39;href&#39;} ) );</code></pre>
 
-<p>Note that this is considered to be a different operation from &quot;vertical alignment&quot; because space at just one line is being adjusted, whereas in &quot;vertical alignment&quot; the spaces at all lines are being adjusted. So it sort of a local version of vertical alignment.</p>
+<p>Note that this is considered to be a different operation from &quot;vertical alignment&quot; because space at just one line is being adjusted, whereas in &quot;vertical alignment&quot; the spaces at all lines are being adjusted. So it is sort of a local version of vertical alignment.</p>
 
 <p>Here is an example involving a ternary operator:</p>
 
@@ -1771,6 +1773,27 @@
 <dd>
 
 <p>This may be used to change the ending comment for a <b>--code-skipping</b> section, and its use is similar to the <b>-fse=string</b>. The default is equivalent to -cse=&#39;#&gt;&gt;V&#39;.</p>
+
+</dd>
+</dl>
+
+<h2 id="Formatting-a-Limited-Range-of-Lines">Formatting a Limited Range of Lines</h2>
+
+<p>A command <b>--line-range-tidy=n1:n2</b> is available to process just a selected range of lines of an input stream with perltidy. This command is mainly of interest for programming interactive code editors. When it is used, the entire input stream is read but just the selected range of lines of the input file are processed by the perltidy tokenizer and formatter, and then the stream is reassembled for output. The selected lines need to contain a complete statement or balanced container. Otherwise, a syntax error will occur and the code will not be tidied. There are a couple of limitations on the use of this command: (1) it may not be applied to multiple files, and (2) it only applies to code tidying and not, for example, html formatting.</p>
+
+<dl>
+
+<dt id="lrt-n1:n2---line-range-tidy-n1:n2"><b>-lrt=n1:n2</b>, <b>--line-range-tidy=n1:n2</b></dt>
+<dd>
+
+<p>The range of lines is specified by integers <b>n1</b> and <b>n2</b>, where <b>n1</b> is the first line number to be formatted (start counting with 1) and <b>n2</b> is the last line number to be formatted. If <b>n2</b> is not given, or exceeds the actual number of lines, then formatting continues to the end of the file.</p>
+
+<p>Examples:</p>
+
+<pre><code>  -line-range-tidy=43:109      # tidy lines 43 through 109
+  -line-range-tidy=&#39; 43 : 109&#39; # tidy lines 43 through 109 (spaces ok in quotes)
+  -line-range-tidy=1:          # tidy all lines
+  -line-range-tidy=0:90        # ERROR (n1 must be &gt;= 1)</code></pre>
 
 </dd>
 </dl>
@@ -2361,9 +2384,7 @@
 
 <p>One limitation is that any line length limit still applies and can cause long welded sections to be broken into multiple lines.</p>
 
-<p>Another limitation is that an opening symbol which delimits quoted text cannot be included in a welded pair. This is because quote delimiters are treated specially in perltidy.</p>
-
-<p>Finally, the stacking of containers defined by this flag have priority over any other container stacking flags. This is because any welding is done first.</p>
+<p>Also, the stacking of containers defined by this flag have priority over any other container stacking flags. This is because any welding is done first.</p>
 
 </dd>
 <dt id="wfc---weld-fat-comma"><b>-wfc</b>, <b>--weld-fat-comma </b></dt>
@@ -3040,6 +3061,70 @@
 
 </dd>
 </dl>
+
+<h2 id="Missing-Else-Blocks">Missing Else Blocks</h2>
+
+<p>One defensive programming technique is to require that every <b>if-elsif-</b> chain be terminated with an <b>else</b> block, even though it is not required, to insure that there are no holes in the logic.</p>
+
+<p>For example, consider the following snippet:</p>
+
+<pre><code>    if    ( $level == 3 ) { $val = $global{&#39;section&#39;} }
+    elsif ( $level == 2 ) { $val = $global{&#39;chapter&#39;} }</code></pre>
+
+<p>What if the variable <b>$level</b> is neither 2 nor 3? Maybe the original programmer knew that this was okay, but a new programmer might be unsure.</p>
+
+<p>Perltidy has always written this information in its <b>LOG</b> file (search for <b>No else block</b>). But a problem is that you have to turn on the log file and look for it. The parameters in this section can either issue a warning if an <b>else</b> is missing, or even insert an empty <b>else</b> block where one is missing, or both.</p>
+
+<dl>
+
+<dt id="wme---warn-missing-else"><b>-wme</b>, <b>--warn-missing-else</b></dt>
+<dd>
+
+<p>This flag tells perltidy to issue a warning if a program is missing a terminal <b>else</b> block. The default is not to issue such warnings.</p>
+
+</dd>
+<dt id="ame---add-missing-else"><b>-ame</b>, <b>--add-missing-else</b></dt>
+<dd>
+
+<p>This flag tells perltidy to output an empty else block wherever a program is missing a terminal <b>else</b> block. To get a warning when this is done you can also set <b>-wme</b>. The default is not to add missing else blocks.</p>
+
+</dd>
+<dt id="amec-s---add-missing-else-comment-s"><b>-amec=s</b>, <b>--add-missing-else-comment=s</b></dt>
+<dd>
+
+<p>This string is an optional side comment which will be placed within a new empty else block. The default is:</p>
+
+<pre><code>    -amec=&#39;##FIXME - added with perltidy -ame&#39;</code></pre>
+
+</dd>
+</dl>
+
+<p>For example, on the above example we get</p>
+
+<pre><code>    # perltidy -ame -wme
+    if    ( $level == 3 ) { $val = $global{&#39;section&#39;} }
+    elsif ( $level == 2 ) { $val = $global{&#39;chapter&#39;} }
+    else {
+        ##FIXME - added with perltidy -ame
+    }</code></pre>
+
+<p>Any <b>##FIXME</b> comments should be changed appropriately after the code is inspected. For example, we might decide that it fine as is, and just leave a note for the next programmer:</p>
+
+<pre><code>    if    ( $level == 3 ) { $val = $global{&#39;section&#39;} }
+    elsif ( $level == 2 ) { $val = $global{&#39;chapter&#39;} }
+    else {
+        # ok - other $level values can be safely ignored
+    }</code></pre>
+
+<p>Or maybe it should never happen:</p>
+
+<pre><code>    if    ( $level == 3 ) { $val = $global{&#39;section&#39;} }
+    elsif ( $level == 2 ) { $val = $global{&#39;chapter&#39;} }
+    else {
+        die(&quot;unexpected value of level=$level\n);
+    }</code></pre>
+
+<p>Note that this operation cannot be undone, so be careful to inspect the new code carefully.</p>
 
 <h2 id="Retaining-or-Ignoring-Existing-Line-Breaks">Retaining or Ignoring Existing Line Breaks</h2>
 
@@ -3908,7 +3993,22 @@
 <dt id="uf-s---use-feature-s"><b>-uf=s</b>, <b>--use-feature=s</b></dt>
 <dd>
 
-<p>This flag tells perltidy to allow the syntax associated a pragma in string <b>s</b>. Currently only the recognized values for the string are <b>s=&#39;class&#39;</b> or string <b>s=&#39; &#39;</b>. The default is <b>--use-feature=&#39;class&#39;</b>. This enables perltidy to recognized the special words <b>class</b>, <b>method</b>, <b>field</b>, and <b>ADJUST</b>. If this causes a conflict with other uses of these words, the default can be turned off with <b>--use-feature=&#39; &#39;</b>.</p>
+<p>This flag tells perltidy to allow or disallow the syntax associated a pragma in string <b>s</b>. The current possible settings are:</p>
+
+<ul>
+
+<li><p><b>--use-feature=&#39;class&#39;</b>. This tells perltidy to recognized the special words <b>class</b>, <b>method</b>, <b>field</b>, and <b>ADJUST</b> as defined for this feature.</p>
+
+</li>
+<li><p><b>--use-feature=&#39;noclass&#39;</b>. This tells perltidy <b>not</b> to treat words <b>class</b>, <b>method</b>, <b>field</b>, <b>ADJUST</b> specially.</p>
+
+</li>
+<li><p><b>Neither of these</b> (<b>--use-feature</b> not defined). This is the DEFAULT and recommended setting. In this case perltidy will try to automatically handle both the newer --use-feature &#39;class&#39; syntax as well as some conflicting uses of some of these special words by exisiting modules.</p>
+
+</li>
+</ul>
+
+<p>Note that this parameter is independent of any <b>use feature</b> control lines within a script. Perltidy does not look for or read such control lines. This is because perltidy must be able to work on small chunks of code sent from an editor, so it cannot assume that such lines will be within the lines being formatted.</p>
 
 </dd>
 </dl>
@@ -4491,7 +4591,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20230701</p>
+<p>This man page documents perltidy version 20230701.04</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

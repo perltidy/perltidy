@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2023 07 01.03
+## 2023 07 01.04
 
     - Add parameters -wme, or --warn-missing-else, and -ame,
       or --add-missing else.  The parameter -wme tells perltidy to issue
