@@ -8788,8 +8788,8 @@ sub respace_tokens_inner_loop {
                         $token =~ s/\(/ (/;
                     }
                     else {
-                        ## bad n value for -spp=n
-                        ## FIXME: this should be caught earlier
+                        # bad n value for -spp=n
+                        # just use the default
                     }
 
                     # one space max, and no tabs

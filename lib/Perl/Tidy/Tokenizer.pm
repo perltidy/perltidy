@@ -3770,13 +3770,6 @@ EOM
         my $self = shift;
 
         # '<<' = maybe a here-doc?
-
-##      This check removed because it could be a deprecated here-doc with
-##      no specified target.  See example in log 16 Sep 2020.
-##            return
-##              unless ( $i < $max_token_index )
-##              ;          # here-doc not possible if end of line
-
         if ( $expecting != OPERATOR ) {
             my ( $found_target, $here_doc_target, $here_quote_character,
                 $saw_error );
@@ -3895,7 +3888,7 @@ EOM
 
             # Target not found, expecting==UNKNOWN
             else {
-                ## syntax error? FIXME: probably should write error msg
+                $self->warning("didn't find here doc target after '<<~'\n");
             }
         }
         else {
@@ -6390,14 +6383,6 @@ sub code_block_type {
       )
     {
         return $last_nonblank_token;
-    }
-
-    # or a sub alias
-    # FIXME: see if this is really needed after the c250 update
-    elsif (( $last_nonblank_type eq 'i' || $last_nonblank_type eq 't' )
-        && ( $is_sub{$last_nonblank_token} ) )
-    {
-        return 'sub';
     }
 
     elsif ( $statement_type =~ /^(sub|package)\b/ ) {
@@ -9908,11 +9893,6 @@ sub follow_quoted_string {
             }
             my $old_pos = $quote_pos;
 
-##          NOTE: OLD Code with did nothing - leftover from debugging?
-##          unless ( defined($tok) && defined($end_tok) && defined($quote_pos) )
-##          {
-
-##          }
             $quote_pos = 1 + index( $tok, $end_tok, $quote_pos );
 
             if ( $quote_pos > 0 ) {
