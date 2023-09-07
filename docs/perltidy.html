@@ -2990,7 +2990,7 @@
 
 <li><p>For the implementation of these parameters, a <b>list</b> is basically taken to be a container of items (parens, square brackets, or braces), which is not a code block, with one or more commas. These parameters only apply to something that fits this definition of a list.</p>
 
-<p>Note that a paren-less list of parameters is not a list by this definition, so these parameters have no effect on a peren-less list.</p>
+<p>Note that a paren-less list of parameters is not a list by this definition, so these parameters have no effect on a paren-less list.</p>
 
 <p>Another consequence is that if the only comma in a list is deleted, then it cannot later be added back with these parameters because the container no longer fits this definition of a list. For example, given</p>
 
@@ -3064,67 +3064,73 @@
 
 <h2 id="Missing-Else-Blocks">Missing Else Blocks</h2>
 
-<p>One defensive programming technique is to require that every <b>if-elsif-</b> chain be terminated with an <b>else</b> block, even though it is not required, to insure that there are no holes in the logic.</p>
+<p>A defensive programming technique is to require that every <b>if-elsif-</b> chain be terminated with an <b>else</b> block, even though it is not strictly required. This helps insure that there are no holes in the logic.</p>
 
 <p>For example, consider the following snippet:</p>
 
-<pre><code>    if    ( $level == 3 ) { $val = $global{&#39;section&#39;} }
-    elsif ( $level == 2 ) { $val = $global{&#39;chapter&#39;} }</code></pre>
+<pre><code>    my $type = get_cards();
+    if    ( $type = 1 ) { action(&quot;hold &#39;em&quot;) }
+    elsif ( $type = 2 ) { action(&quot;fold &#39;em&quot;) }
+    elsif ( $type = 3 ) { action(&quot;walk away&quot;) }</code></pre>
 
-<p>What if the variable <b>$level</b> is neither 2 nor 3? Maybe the original programmer knew that this was okay, but a new programmer might be unsure.</p>
+<p>What if the variable <b>$type</b> is some other value? It might have been obvious that this was okay when the code was first written, but it might not be so clear when the code is reviewed a few years later. A terminal <b>else</b> block with a comment would help clarify things.</p>
 
-<p>Perltidy has always written this information in its <b>LOG</b> file (search for <b>No else block</b>). But a problem is that you have to turn on the log file and look for it. The parameters in this section can either issue a warning if an <b>else</b> is missing, or even insert an empty <b>else</b> block where one is missing, or both.</p>
+<p>The parameters in this section can help by either issuing a warning if an <b>else</b> is missing, or even inserting an empty <b>else</b> block where one is missing, or both.</p>
 
 <dl>
 
 <dt id="wme---warn-missing-else"><b>-wme</b>, <b>--warn-missing-else</b></dt>
 <dd>
 
-<p>This flag tells perltidy to issue a warning if a program is missing a terminal <b>else</b> block. The default is not to issue such warnings.</p>
+<p>This flag tells perltidy to issue a warning if a program is missing a terminal <b>else</b> block. The default is not to issue such a warning.</p>
 
 </dd>
 <dt id="ame---add-missing-else"><b>-ame</b>, <b>--add-missing-else</b></dt>
 <dd>
 
-<p>This flag tells perltidy to output an empty else block wherever a program is missing a terminal <b>else</b> block. To get a warning when this is done you can also set <b>-wme</b>. The default is not to add missing else blocks.</p>
+<p>This flag tells perltidy to output an empty else block wherever a program is missing a terminal <b>else</b> block. To get a warning when this is done you should also set <b>-wme</b>. The default is not to add missing else blocks.</p>
 
 </dd>
 <dt id="amec-s---add-missing-else-comment-s"><b>-amec=s</b>, <b>--add-missing-else-comment=s</b></dt>
 <dd>
 
-<p>This string is an optional side comment which will be placed within a new empty else block. The default is:</p>
+<p>This string is a side comment which will be written to highlight a new empty else block. The default is:</p>
 
 <pre><code>    -amec=&#39;##FIXME - added with perltidy -ame&#39;</code></pre>
 
 </dd>
 </dl>
 
-<p>For example, on the above example we get</p>
+<p>For example, on the above example we can add a missing else and also get a warning notice with:</p>
 
 <pre><code>    # perltidy -ame -wme
-    if    ( $level == 3 ) { $val = $global{&#39;section&#39;} }
-    elsif ( $level == 2 ) { $val = $global{&#39;chapter&#39;} }
+    my $type = get_cards();
+    if    ( $type == 1 ) { action(&quot;hold &#39;em&quot;) }
+    elsif ( $type == 2 ) { action(&quot;fold &#39;em&quot;) }
+    elsif ( $type == 3 ) { action(&quot;walk away&quot;) }
     else {
         ##FIXME - added with perltidy -ame
     }</code></pre>
 
-<p>Any <b>##FIXME</b> comments should be changed appropriately after the code is inspected. For example, we might decide that it fine as is, and just leave a note for the next programmer:</p>
+<p>Any <b>##FIXME</b> comments created in this way should be reviewed and changed appropriately. For example, one might decide that the code fine as is, and just change the comment to indicate that nothing has been overlooked:</p>
 
-<pre><code>    if    ( $level == 3 ) { $val = $global{&#39;section&#39;} }
-    elsif ( $level == 2 ) { $val = $global{&#39;chapter&#39;} }
+<pre><code>    my $type = get_cards();
+    if    ( $type == 1 ) { action(&quot;hold &#39;em&quot;) }
+    elsif ( $type == 2 ) { action(&quot;fold &#39;em&quot;) }
+    elsif ( $type == 3 ) { action(&quot;walk away&quot;) }
     else {
-        # ok - other $level values can be safely ignored
+        # ok - no worries
     }</code></pre>
 
-<p>Or maybe it should never happen:</p>
+<p>Or maybe a deeper analysis reveals that something was missed:</p>
 
-<pre><code>    if    ( $level == 3 ) { $val = $global{&#39;section&#39;} }
-    elsif ( $level == 2 ) { $val = $global{&#39;chapter&#39;} }
-    else {
-        die(&quot;unexpected value of level=$level\n);
-    }</code></pre>
+<pre><code>    my $type = get_cards();
+    if    ( $type == 1 ) { action(&quot;hold &#39;em&quot;) }
+    elsif ( $type == 2 ) { action(&quot;fold &#39;em&quot;) }
+    elsif ( $type == 3 ) { action(&quot;walk away&quot;) }
+    else                 { action(&quot;run&quot;) }</code></pre>
 
-<p>Note that this operation cannot be undone, so be careful to inspect the new code carefully.</p>
+<p>Sometimes it turns out that the else block should not reachable, in which case an error exit might be appropriate. In any case, having the <b>else</b> block can improve code maintainability.</p>
 
 <h2 id="Retaining-or-Ignoring-Existing-Line-Breaks">Retaining or Ignoring Existing Line Breaks</h2>
 
@@ -4496,24 +4502,24 @@
 
 <p>The following list shows all short parameter names which allow a prefix &#39;n&#39; to produce the negated form:</p>
 
-<pre><code> D      anl    asbl   asc    ast    asu    atc    atnl   aws    b
- baa    baao   bar    bbao   bbb    bbc    bbs    bl     bli    boa
- boc    bok    bol    bom    bos    bot    cblx   ce     conv   cpb
- cs     csc    cscb   cscw   dac    dbc    dbs    dcbl   dcsc   ddf
- dln    dnl    dop    dp     dpro   drc    dsc    dsm    dsn    dtc
- dtt    dwic   dwls   dwrs   dws    eos    f      fpva   frm    fs
- fso    gcs    hbc    hbcm   hbco   hbh    hbhh   hbi    hbj    hbk
- hbm    hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv    hbw
- hent   hic    hicm   hico   hih    hihh   hii    hij    hik    him
- hin    hip    hipd   hipu   hiq    his    hisc   hiv    hiw    hsc
- html   ibc    icb    icp    iob    ipc    isbc   iscl   kgb    kgbd
- kgbi   kis    lal    log    lop    lp     lsl    mem    nib    ohbr
- okw    ola    olc    oll    olq    opr    opt    osbc   osbr   otr
- ple    pod    pvl    q      sac    sbc    sbl    scbb   schb   scp
- scsb   sct    se     sfp    sfs    skp    sob    sobb   sohb   sop
- sosb   sot    ssc    st     sts    t      tac    tbc    toc    tp
- tqw    trp    ts     tsc    tso    vbc    vc     viu    vmll   vsc
- w      wfc    wn     x      xbt    xci    xlp    xs</code></pre>
+<pre><code> D      ame    anl    asbl   asc    ast    asu    atc    atnl   aws
+ b      baa    baao   bar    bbao   bbb    bbc    bbs    bl     bli
+ boa    boc    bok    bol    bom    bos    bot    cblx   ce     conv
+ cpb    cs     csc    cscb   cscw   dac    dbc    dbs    dcbl   dcsc
+ ddf    dln    dnl    dop    dp     dpro   drc    dsc    dsm    dsn
+ dtc    dtt    dwic   dwls   dwrs   dws    eos    f      fpva   frm
+ fs     fso    gcs    hbc    hbcm   hbco   hbh    hbhh   hbi    hbj
+ hbk    hbm    hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv
+ hbw    hent   hic    hicm   hico   hih    hihh   hii    hij    hik
+ him    hin    hip    hipd   hipu   hiq    his    hisc   hiv    hiw
+ hsc    html   ibc    icb    icp    iob    ipc    isbc   iscl   kgb
+ kgbd   kgbi   kis    lal    log    lop    lp     lsl    mem    nib
+ ohbr   okw    ola    olc    oll    olq    opr    opt    osbc   osbr
+ otr    ple    pod    pvl    q      sac    sbc    sbl    scbb   schb
+ scp    scsb   sct    se     sfp    sfs    skp    sob    sobb   sohb
+ sop    sosb   sot    ssc    st     sts    t      tac    tbc    toc
+ tp     tqw    trp    ts     tsc    tso    vbc    vc     viu    vmll
+ vsc    w      wfc    wme    wn     x      xbt    xci    xlp    xs</code></pre>
 
 <p>Equivalently, the prefix &#39;no&#39; or &#39;no-&#39; on the corresponding long names may be used.</p>
 
@@ -4591,7 +4597,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20230701.04</p>
+<p>This man page documents perltidy version 20230909</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

@@ -22,7 +22,7 @@ use strict;
 use warnings;
 use English qw( -no_match_vars );
 
-our $VERSION = '20230701.04';
+our $VERSION = '20230909';
 
 use Carp;
 
@@ -125,6 +125,7 @@ my (
     $code_skipping_pattern_begin,
     $code_skipping_pattern_end,
     $rOpts_code_skipping,
+    $rOpts_code_skipping_begin,
     %is_END_DATA_format_sub,
     %is_grep_alias,
     %is_sub,
@@ -409,7 +410,8 @@ sub check_options {
         @{is_grep_alias}{@q} = (1) x scalar(@q);
     }
 
-    $rOpts_code_skipping = $rOpts->{'code-skipping'};
+    $rOpts_code_skipping       = $rOpts->{'code-skipping'};
+    $rOpts_code_skipping_begin = $rOpts->{'code-skipping-begin'};
     $code_skipping_pattern_begin =
       make_code_skipping_pattern( $rOpts, 'code-skipping-begin', '#<<V' );
     $code_skipping_pattern_end =
@@ -5160,17 +5162,35 @@ EOM
                 $input_line = EMPTY_STRING;
             }
 
-            $is_END_or_DATA = substr( $input_line, 0, 1 ) eq '_'
-              && $input_line =~ /^__(END|DATA)__\s*$/;
         }
 
-        # Optimize for a full-line comment.
         if ( !$in_quote ) {
+
+            # Optimize handling of a blank line
+            if ( !length($input_line) ) {
+                $line_of_tokens->{_line_type}        = 'CODE';
+                $line_of_tokens->{_rtokens}          = [];
+                $line_of_tokens->{_rtoken_type}      = [];
+                $line_of_tokens->{_rlevels}          = [];
+                $line_of_tokens->{_rci_levels}       = [];
+                $line_of_tokens->{_rblock_type}      = [];
+                $line_of_tokens->{_nesting_tokens_0} = $nesting_token_string;
+                $line_of_tokens->{_nesting_blocks_0} = $nesting_block_string;
+                return;
+            }
+
+            # Check comments
             if ( substr( $input_line, 0, 1 ) eq '#' ) {
 
                 # and check for skipped section
-                if (   $rOpts_code_skipping
-                    && $input_line =~ /$code_skipping_pattern_begin/ )
+                if (
+                    (
+                        substr( $input_line, 0, 4 ) eq '#<<V'
+                        || $rOpts_code_skipping_begin
+                    )
+                    && $rOpts_code_skipping
+                    && $input_line =~ /$code_skipping_pattern_begin/
+                  )
                 {
                     $self->[_in_skipped_] = $self->[_last_line_number_];
                     return;
@@ -5188,17 +5208,11 @@ EOM
                 return;
             }
 
-            # Optimize handling of a blank line
-            if ( !length($input_line) ) {
-                $line_of_tokens->{_line_type}        = 'CODE';
-                $line_of_tokens->{_rtokens}          = [];
-                $line_of_tokens->{_rtoken_type}      = [];
-                $line_of_tokens->{_rlevels}          = [];
-                $line_of_tokens->{_rci_levels}       = [];
-                $line_of_tokens->{_rblock_type}      = [];
-                $line_of_tokens->{_nesting_tokens_0} = $nesting_token_string;
-                $line_of_tokens->{_nesting_blocks_0} = $nesting_block_string;
-                return;
+            # Look for __END__ or __DATA__ lines
+            if ( substr( $input_line, 0, 1 ) eq '_'
+                && $input_line =~ /^__(END|DATA)__\s*$/ )
+            {
+                $is_END_or_DATA = 1;
             }
         }
 

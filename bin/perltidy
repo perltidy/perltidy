@@ -3768,7 +3768,7 @@ block, with one or more commas.  These parameters only apply to something that
 fits this definition of a list.
 
 Note that a paren-less list of parameters is not a list by this definition, so
-these parameters have no effect on a peren-less list.
+these parameters have no effect on a paren-less list.
 
 Another consequence is that if the only comma in a list is deleted, then it
 cannot later be added back with these parameters because the container no
@@ -3861,73 +3861,82 @@ commas are removed.
 
 =head2 Missing Else Blocks
 
-One defensive programming technique is to require that every B<if-elsif->
-chain be terminated with an B<else> block, even though it is not required,
-to insure that there are no holes in the logic.
+A defensive programming technique is to require that every B<if-elsif-> chain
+be terminated with an B<else> block, even though it is not strictly required.
+This helps insure that there are no holes in the logic.
 
-For example, consider the following snippet: 
+For example, consider the following snippet:
 
-    if    ( $level == 3 ) { $val = $global{'section'} }
-    elsif ( $level == 2 ) { $val = $global{'chapter'} }
+    my $type = get_cards();
+    if    ( $type = 1 ) { action("hold 'em") }
+    elsif ( $type = 2 ) { action("fold 'em") }
+    elsif ( $type = 3 ) { action("walk away") }
 
-What if the variable B<$level> is neither 2 nor 3?  Maybe the original
-programmer knew that this was okay, but a new programmer might be unsure.
+What if the variable B<$type> is some other value?  It might have been obvious
+that this was okay when the code was first written, but it might not be so
+clear when the code is reviewed a few years later.  A terminal B<else> block
+with a comment would help clarify things.
 
-Perltidy has always written this information in its B<LOG> file (search for
-B<No else block>).  But a problem is that you have to turn on the log file and
-look for it. The parameters in this section can either issue a warning if an
-B<else> is missing, or even insert an empty B<else> block where one is missing,
-or both.
+The parameters in this section can help by either issuing a warning if an
+B<else> is missing, or even inserting an empty B<else> block where one is
+missing, or both.
 
 =over 4
 
 =item B<-wme>,  B<--warn-missing-else>
 
-This flag tells perltidy to issue a warning if a program is missing a terminal B<else> block.  The default is not to issue such warnings.
+This flag tells perltidy to issue a warning if a program is missing a terminal B<else> block.  The default is not to issue such a warning.
 
 =item B<-ame>,  B<--add-missing-else>
 
 This flag tells perltidy to output an empty else block wherever a program is
-missing a terminal B<else> block.  To get a warning when this is done you can
-also set B<-wme>.  The default is not to add missing else blocks.
+missing a terminal B<else> block.  To get a warning when this is done you
+should also set B<-wme>.  The default is not to add missing else blocks.
 
 =item B<-amec=s>,  B<--add-missing-else-comment=s>
 
-This string is an optional side comment which will be placed within a new empty else block. The default is:
+This string is a side comment which will be written to highlight a
+new empty else block. The default is:
 
     -amec='##FIXME - added with perltidy -ame'
 
 =back
 
-For example, on the above example we get
+For example, on the above example we can add a missing else and also get
+a warning notice with:
 
     # perltidy -ame -wme
-    if    ( $level == 3 ) { $val = $global{'section'} }
-    elsif ( $level == 2 ) { $val = $global{'chapter'} }
+    my $type = get_cards();
+    if    ( $type == 1 ) { action("hold 'em") }
+    elsif ( $type == 2 ) { action("fold 'em") }
+    elsif ( $type == 3 ) { action("walk away") }
     else {
         ##FIXME - added with perltidy -ame
     }
 
-Any B<##FIXME> comments should be changed appropriately after the code is
-inspected. For example, we might decide that it fine as is, and just leave
-a note for the next programmer:
+Any B<##FIXME> comments created in this way should be reviewed and changed
+appropriately. For example, one might decide that the code fine as is, and just
+change the comment to indicate that nothing has been overlooked:
 
-    if    ( $level == 3 ) { $val = $global{'section'} }
-    elsif ( $level == 2 ) { $val = $global{'chapter'} }
+    my $type = get_cards();
+    if    ( $type == 1 ) { action("hold 'em") }
+    elsif ( $type == 2 ) { action("fold 'em") }
+    elsif ( $type == 3 ) { action("walk away") }
     else {
-        # ok - other $level values can be safely ignored
+        # ok - no worries
     }
 
-Or maybe it should never happen:
+Or maybe a deeper analysis reveals that something was missed:
 
-    if    ( $level == 3 ) { $val = $global{'section'} }
-    elsif ( $level == 2 ) { $val = $global{'chapter'} }
-    else {
-        die("unexpected value of level=$level\n);
-    }
+    my $type = get_cards();
+    if    ( $type == 1 ) { action("hold 'em") }
+    elsif ( $type == 2 ) { action("fold 'em") }
+    elsif ( $type == 3 ) { action("walk away") }
+    else                 { action("run") }
 
-Note that this operation cannot be undone, so be careful to inspect the new
-code carefully.
+Sometimes it turns out that the else block should not reachable, in which case
+an error exit might be appropriate. In any case, having the B<else> block can
+improve code maintainability.
 
 =head2 Retaining or Ignoring Existing Line Breaks
 
@@ -5753,24 +5762,24 @@ dot is added, and the backup file will be F<somefile.pl~>  .
 The following list shows all short parameter names which allow a prefix
 'n' to produce the negated form:
 
- D      anl    asbl   asc    ast    asu    atc    atnl   aws    b
- baa    baao   bar    bbao   bbb    bbc    bbs    bl     bli    boa
- boc    bok    bol    bom    bos    bot    cblx   ce     conv   cpb
- cs     csc    cscb   cscw   dac    dbc    dbs    dcbl   dcsc   ddf
- dln    dnl    dop    dp     dpro   drc    dsc    dsm    dsn    dtc
- dtt    dwic   dwls   dwrs   dws    eos    f      fpva   frm    fs
- fso    gcs    hbc    hbcm   hbco   hbh    hbhh   hbi    hbj    hbk
- hbm    hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv    hbw
- hent   hic    hicm   hico   hih    hihh   hii    hij    hik    him
- hin    hip    hipd   hipu   hiq    his    hisc   hiv    hiw    hsc
- html   ibc    icb    icp    iob    ipc    isbc   iscl   kgb    kgbd
- kgbi   kis    lal    log    lop    lp     lsl    mem    nib    ohbr
- okw    ola    olc    oll    olq    opr    opt    osbc   osbr   otr
- ple    pod    pvl    q      sac    sbc    sbl    scbb   schb   scp
- scsb   sct    se     sfp    sfs    skp    sob    sobb   sohb   sop
- sosb   sot    ssc    st     sts    t      tac    tbc    toc    tp
- tqw    trp    ts     tsc    tso    vbc    vc     viu    vmll   vsc
- w      wfc    wn     x      xbt    xci    xlp    xs
+ D      ame    anl    asbl   asc    ast    asu    atc    atnl   aws
+ b      baa    baao   bar    bbao   bbb    bbc    bbs    bl     bli
+ boa    boc    bok    bol    bom    bos    bot    cblx   ce     conv
+ cpb    cs     csc    cscb   cscw   dac    dbc    dbs    dcbl   dcsc
+ ddf    dln    dnl    dop    dp     dpro   drc    dsc    dsm    dsn
+ dtc    dtt    dwic   dwls   dwrs   dws    eos    f      fpva   frm
+ fs     fso    gcs    hbc    hbcm   hbco   hbh    hbhh   hbi    hbj
+ hbk    hbm    hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv
+ hbw    hent   hic    hicm   hico   hih    hihh   hii    hij    hik
+ him    hin    hip    hipd   hipu   hiq    his    hisc   hiv    hiw
+ hsc    html   ibc    icb    icp    iob    ipc    isbc   iscl   kgb
+ kgbd   kgbi   kis    lal    log    lop    lp     lsl    mem    nib
+ ohbr   okw    ola    olc    oll    olq    opr    opt    osbc   osbr
+ otr    ple    pod    pvl    q      sac    sbc    sbl    scbb   schb
+ scp    scsb   sct    se     sfp    sfs    skp    sob    sobb   sohb
+ sop    sosb   sot    ssc    st     sts    t      tac    tbc    toc
+ tp     tqw    trp    ts     tsc    tso    vbc    vc     viu    vmll
+ vsc    w      wfc    wme    wn     x      xbt    xci    xlp    xs
 
 Equivalently, the prefix 'no' or 'no-' on the corresponding long names may be
 used.
@@ -5869,7 +5878,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20230701.04
+This man page documents perltidy version 20230909
 
 =head1 BUG REPORTS
 
