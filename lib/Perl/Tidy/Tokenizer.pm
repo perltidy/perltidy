@@ -4501,7 +4501,7 @@ EOM
 
     sub do_BAREWORD {
 
-        my ( $self, $is_END_or_DATA ) = @_;
+        my ($self) = @_;
 
         # handle a bareword token:
         # returns
@@ -4553,11 +4553,14 @@ EOM
         }
 
         # Quote a word followed by => operator
-        # unless the word __END__ or __DATA__ and the only word on
-        # the line.
-        elsif ( !$is_END_or_DATA
-            && $next_nonblank_token eq '='
-            && $rtokens->[ $i_next + 1 ] eq '>' )
+        elsif (
+            ( $next_nonblank_token eq '=' && $rtokens->[ $i_next + 1 ] eq '>' )
+
+            # unless the word is __END__ or __DATA__ and is the only word on
+            # the line.
+            && ( !defined( $is_END_DATA{$tok_kw} )
+                || $input_line !~ /^\s*__(END|DATA)__\s*$/ )
+          )
         {
             $self->do_QUOTED_BAREWORD();
         }
@@ -4737,7 +4740,7 @@ EOM
         # It simplifies things to give these type ';', so that when we
         # start rescanning we will be expecting a token of type TERM.
         # We will switch to type 'k' before outputting the tokens.
-        elsif ( $is_END_DATA{$tok_kw} ) {
+        elsif ( defined( $is_END_DATA{$tok_kw} ) ) {
             $type = ';';    # make tokenizer look for TERM next
 
             # Remember that we are in one of these three sections
@@ -5112,11 +5115,6 @@ EOM
 
         chomp $input_line;
 
-        # Set a flag to indicate if we might be at an __END__ or __DATA__ line
-        # This will be used below to avoid quoting a bare word followed by
-        # a fat comma.
-        my $is_END_or_DATA;
-
         # Reinitialize the multi-line quote flag
         if ( $in_quote && $quote_type eq 'Q' ) {
             $line_of_tokens->{_starting_in_quote} = 1;
@@ -5207,13 +5205,6 @@ EOM
                 $line_of_tokens->{_nesting_blocks_0} = $nesting_block_string;
                 return;
             }
-
-            # Look for __END__ or __DATA__ lines
-            if ( substr( $input_line, 0, 1 ) eq '_'
-                && $input_line =~ /^__(END|DATA)__\s*$/ )
-            {
-                $is_END_or_DATA = 1;
-            }
         }
 
         # update the copy of the line for use in error messages
@@ -5239,7 +5230,7 @@ EOM
         $indent_flag     = 0;
         $peeked_ahead    = 0;
 
-        $self->tokenizer_main_loop($is_END_or_DATA);
+        $self->tokenizer_main_loop();
 
         #-----------------------------------------------
         # all done tokenizing this line ...
@@ -5252,14 +5243,11 @@ EOM
 
     sub tokenizer_main_loop {
 
-        my ( $self, $is_END_or_DATA ) = @_;
+        my ($self) = @_;
 
         #---------------------------------
         # Break one input line into tokens
         #---------------------------------
-
-        # Input parameter:
-        #   $is_END_or_DATA is true for a __END__ or __DATA__ line
 
         # start by breaking the line into pre-tokens
         ( $rtokens, $rtoken_map, $rtoken_type ) = pre_tokenize($input_line);
@@ -5558,7 +5546,7 @@ EOM
             # END NODE 3: a bare word
             #------------------------
             if ( $pre_type eq 'w' ) {
-                my $is_last = $self->do_BAREWORD($is_END_or_DATA);
+                my $is_last = $self->do_BAREWORD();
                 last if ($is_last);
                 next;
             }
