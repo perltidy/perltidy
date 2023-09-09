@@ -4559,7 +4559,7 @@ EOM
             # unless the word is __END__ or __DATA__ and is the only word on
             # the line.
             && ( !defined( $is_END_DATA{$tok_kw} )
-                || $input_line !~ /^\s*__(END|DATA)__\s*$/ )
+                || $input_line !~ /^\s*__(?:END|DATA)__\s*$/ )
           )
         {
             $self->do_QUOTED_BAREWORD();
@@ -10077,7 +10077,7 @@ sub write_on_underline {
     if ( $excess > 0 ) {
         $pos_chr = substr( $pos_chr, 0, length($pos_chr) - $excess );
     }
-    substr( $underline, $pos, length($pos_chr) ) = $pos_chr;
+    substr( $underline, $pos, length($pos_chr), $pos_chr );
     return ($underline);
 } ## end sub write_on_underline
 

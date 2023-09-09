@@ -5582,7 +5582,7 @@ sub valign_output_step_D {
               int( $leading_space_count / $rOpts_entab_leading_whitespace );
             my $leading_string = "\t" x $tab_count . SPACE x $space_count;
             if ( $line =~ /^\s{$leading_space_count,$leading_space_count}/ ) {
-                substr( $line, 0, $leading_space_count ) = $leading_string;
+                substr( $line, 0, $leading_space_count, $leading_string );
             }
             else {
 
@@ -5617,7 +5617,7 @@ sub valign_output_step_D {
                 $leading_string .= ( SPACE x $space_count );
             }
             if ( $line =~ /^\s{$leading_space_count,$leading_space_count}/ ) {
-                substr( $line, 0, $leading_space_count ) = $leading_string;
+                substr( $line, 0, $leading_space_count, $leading_string );
             }
             else {
 

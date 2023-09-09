@@ -91,10 +91,6 @@ max_nests=9
 
 [-ClassHierarchies::ProhibitExplicitISA]
 
-# I find that using lvalue substr much clearer than adding another arg to
-# substr.  So skip this one.
-[-BuiltinFunctions::ProhibitLvalueSubstr]
-
 # There is one complex regex in Tokenizer.pm for scanning numbers. It is
 # well commented and easy to read, and any changes would make it harder
 # to read. But rather than deactivate this policy, I have adjusted the
