@@ -124,8 +124,22 @@ my (
     # INITIALIZER: sub check_options
     $code_skipping_pattern_begin,
     $code_skipping_pattern_end,
+
     $rOpts_code_skipping,
     $rOpts_code_skipping_begin,
+    $rOpts_starting_indentation_level,
+    $rOpts_indent_columns,
+    $rOpts_look_for_hash_bang,
+    $rOpts_look_for_autoloader,
+    $rOpts_look_for_selfloader,
+    $rOpts_trim_qw,
+    $rOpts_extended_syntax,
+    $rOpts_continuation_indentation,
+    $rOpts_outdent_labels,
+    $rOpts_maximum_level_errors,
+    $rOpts_maximum_unexpected_errors,
+
+    $tabsize,
     %is_END_DATA_format_sub,
     %is_grep_alias,
     %is_sub,
@@ -170,12 +184,6 @@ BEGIN {
         _line_start_quote_                   => $i++,
         _starting_level_                     => $i++,
         _know_starting_level_                => $i++,
-        _tabsize_                            => $i++,
-        _indent_columns_                     => $i++,
-        _look_for_hash_bang_                 => $i++,
-        _trim_qw_                            => $i++,
-        _continuation_indentation_           => $i++,
-        _outdent_labels_                     => $i++,
         _last_line_number_                   => $i++,
         _saw_perl_dash_P_                    => $i++,
         _saw_perl_dash_w_                    => $i++,
@@ -200,12 +208,8 @@ BEGIN {
         _nearly_matched_here_target_at_      => $i++,
         _line_of_text_                       => $i++,
         _rlower_case_labels_at_              => $i++,
-        _extended_syntax_                    => $i++,
         _maximum_level_                      => $i++,
         _true_brace_error_count_             => $i++,
-        _rOpts_maximum_level_errors_         => $i++,
-        _rOpts_maximum_unexpected_errors_    => $i++,
-        _rOpts_logfile_                      => $i++,
         _rOpts_                              => $i++,
         _rinput_lines_                       => $i++,
         _input_line_index_next_              => $i++,
@@ -410,8 +414,36 @@ sub check_options {
         @{is_grep_alias}{@q} = (1) x scalar(@q);
     }
 
-    $rOpts_code_skipping       = $rOpts->{'code-skipping'};
-    $rOpts_code_skipping_begin = $rOpts->{'code-skipping-begin'};
+    $rOpts_starting_indentation_level = $rOpts->{'starting-indentation-level'};
+    $rOpts_indent_columns             = $rOpts->{'indent-columns'};
+    $rOpts_look_for_hash_bang         = $rOpts->{'look-for-hash-bang'};
+    $rOpts_look_for_autoloader        = $rOpts->{'look-for-autoloader'};
+    $rOpts_look_for_selfloader        = $rOpts->{'look-for-selfloader'};
+    $rOpts_trim_qw                    = $rOpts->{'trim-qw'};
+    $rOpts_extended_syntax            = $rOpts->{'extended-syntax'};
+    $rOpts_continuation_indentation   = $rOpts->{'continuation-indentation'};
+    $rOpts_outdent_labels             = $rOpts->{'outdent-labels'};
+    $rOpts_maximum_level_errors       = $rOpts->{'maximum-level-errors'};
+    $rOpts_maximum_unexpected_errors  = $rOpts->{'maximum-unexpected-errors'};
+    $rOpts_code_skipping              = $rOpts->{'code-skipping'};
+    $rOpts_code_skipping_begin        = $rOpts->{'code-skipping-begin'};
+
+    # In the Tokenizer, --indent-columns is just used for guessing old
+    # indentation, and must be positive.  If -i=0 is used for this run (which
+    # is possible) we'll just guess that the old run used 4 spaces per level.
+    if ( !$rOpts_indent_columns ) { $rOpts_indent_columns = 4 }
+
+    # Define $tabsize, the number of spaces per tab for use in
+    # guessing the indentation of source lines with leading tabs.
+    # Assume same as for this run if tabs are used, otherwise assume
+    # a default value, typically 8
+    $tabsize =
+        $rOpts->{'entab-leading-whitespace'}
+      ? $rOpts->{'entab-leading-whitespace'}
+      : $rOpts->{'tabs'} ? $rOpts->{'indent-columns'}
+      :                    $rOpts->{'default-tabsize'};
+    if ( !$tabsize ) { $tabsize = 8 }
+
     $code_skipping_pattern_begin =
       make_code_skipping_pattern( $rOpts, 'code-skipping-begin', '#<<V' );
     $code_skipping_pattern_end =
@@ -424,22 +456,13 @@ sub new {
 
     my ( $class, @args ) = @_;
 
-    # Note: 'tabs' and 'indent_columns' are temporary and should be
-    # removed asap
     my %defaults = (
         source_object        => undef,
         debugger_object      => undef,
         diagnostics_object   => undef,
         logger_object        => undef,
         starting_level       => undef,
-        indent_columns       => 4,
-        tabsize              => 8,
-        look_for_hash_bang   => 0,
-        trim_qw              => 1,
-        look_for_autoloader  => 1,
-        look_for_selfloader  => 1,
         starting_line_number => 1,
-        extended_syntax      => 0,
         rOpts                => {},
     );
     my %args = ( %defaults, @args );
@@ -506,12 +529,6 @@ EOM
     $self->[_line_start_quote_]         = -1;
     $self->[_starting_level_]           = $args{starting_level};
     $self->[_know_starting_level_]      = defined( $args{starting_level} );
-    $self->[_tabsize_]                  = $args{tabsize};
-    $self->[_indent_columns_]           = $args{indent_columns};
-    $self->[_look_for_hash_bang_]       = $args{look_for_hash_bang};
-    $self->[_trim_qw_]                  = $args{trim_qw};
-    $self->[_continuation_indentation_] = $args{continuation_indentation};
-    $self->[_outdent_labels_]           = $args{outdent_labels};
     $self->[_last_line_number_]         = $args{starting_line_number} - 1;
     $self->[_saw_perl_dash_P_]          = 0;
     $self->[_saw_perl_dash_w_]          = 0;
@@ -519,8 +536,8 @@ EOM
     $self->[_saw_v_string_]             = 0;
     $self->[_saw_brace_error_]          = 0;
     $self->[_hit_bug_]                  = 0;
-    $self->[_look_for_autoloader_]      = $args{look_for_autoloader};
-    $self->[_look_for_selfloader_]      = $args{look_for_selfloader};
+    $self->[_look_for_autoloader_]      = $rOpts_look_for_autoloader;
+    $self->[_look_for_selfloader_]      = $rOpts_look_for_selfloader;
     $self->[_saw_autoloader_]           = 0;
     $self->[_saw_selfloader_]           = 0;
     $self->[_saw_hash_bang_]            = 0;
@@ -536,18 +553,9 @@ EOM
     $self->[_nearly_matched_here_target_at_]      = undef;
     $self->[_line_of_text_]                       = EMPTY_STRING;
     $self->[_rlower_case_labels_at_]              = undef;
-    $self->[_extended_syntax_]                    = $args{extended_syntax};
     $self->[_maximum_level_]                      = 0;
     $self->[_true_brace_error_count_]             = 0;
-    $self->[_rOpts_maximum_level_errors_] = $rOpts->{'maximum-level-errors'};
-    $self->[_rOpts_maximum_unexpected_errors_] =
-      $rOpts->{'maximum-unexpected-errors'};
-    $self->[_rOpts_logfile_] = $rOpts->{'logfile'};
-    $self->[_rOpts_]         = $rOpts;
-
-    # These vars are used for guessing indentation and must be positive
-    $self->[_tabsize_]        = 8 if ( !$self->[_tabsize_] );
-    $self->[_indent_columns_] = 4 if ( !$self->[_indent_columns_] );
+    $self->[_rOpts_]                              = $rOpts;
 
     bless $self, $class;
 
@@ -790,8 +798,8 @@ sub report_tokenization_errors {
         $logger_object->set_last_input_line_number($last_line_number);
     }
 
-    my $maxle = $self->[_rOpts_maximum_level_errors_];
-    my $maxue = $self->[_rOpts_maximum_unexpected_errors_];
+    my $maxle = $rOpts_maximum_level_errors;
+    my $maxue = $rOpts_maximum_unexpected_errors;
     $maxle = 1 unless defined($maxle);
     $maxue = 0 unless defined($maxue);
 
@@ -822,7 +830,7 @@ EOM
         $severe_error = 1;
     }
 
-    if ( $self->[_look_for_hash_bang_]
+    if ( $rOpts_look_for_hash_bang
         && !$self->[_saw_hash_bang_] )
     {
         $self->warning(
@@ -1266,7 +1274,7 @@ sub get_line {
                    $last_nonblank_block_type
                 && $last_nonblank_block_type eq 'BEGIN'
             )
-            && !$self->[_look_for_hash_bang_]
+            && !$rOpts_look_for_hash_bang
 
             # Try to avoid giving a false alarm at a simple comment.
             # These look like valid hash-bang lines:
@@ -1306,7 +1314,7 @@ sub get_line {
     }
 
     # wait for a hash-bang before parsing if the user invoked us with -x
-    if ( $self->[_look_for_hash_bang_]
+    if ( $rOpts_look_for_hash_bang
         && !$self->[_saw_hash_bang_] )
     {
         $line_of_tokens->{_line_type} = 'SYSTEM';
@@ -1495,7 +1503,7 @@ sub find_starting_indentation_level {
     }
 
     # if we know there is a hash_bang line, the level must be zero
-    elsif ( $self->[_look_for_hash_bang_] ) {
+    elsif ($rOpts_look_for_hash_bang) {
         $self->[_know_starting_level_] = 1;
     }
 
@@ -1573,22 +1581,17 @@ sub guess_old_indentation_level {
 
         # If there are leading tabs, we use the tab scheme for this run, if
         # any, so that the code will remain stable when editing.
-        if ($1) { $spaces += length($1) * $self->[_tabsize_] }
+        if ($1) { $spaces += length($1) * $tabsize }
 
         if ($2) { $spaces += length($2) }
 
         # correct for outdented labels
-        if ( $3 && $self->[_outdent_labels_] ) {
-            $spaces += $self->[_continuation_indentation_];
+        if ( $3 && $rOpts_outdent_labels ) {
+            $spaces += $rOpts_continuation_indentation;
         }
     }
 
-    # compute indentation using the value of -i for this run.
-    # If -i=0 is used for this run (which is possible) it doesn't matter
-    # what we do here but we'll guess that the old run used 4 spaces per level.
-    my $indent_columns = $self->[_indent_columns_];
-    $indent_columns = 4 if ( !$indent_columns );
-    $level          = int( $spaces / $indent_columns );
+    $level = int( $spaces / $rOpts_indent_columns );
     return ($level);
 } ## end sub guess_old_indentation_level
 
@@ -3205,7 +3208,7 @@ EOM
                 }
             }
             else {
-                if ( $self->[_extended_syntax_] ) {
+                if ($rOpts_extended_syntax) {
 
                     # we append a trailing () to mark this as an unknown
                     # block type.  This allows perltidy to format some
@@ -4347,7 +4350,7 @@ EOM
         # of leading and trailing whitespace.  So they are given a
         # separate type, 'q', unless requested otherwise.
         $type =
-          ( $tok eq 'qw' && $self->[_trim_qw_] )
+          ( $tok eq 'qw' && $rOpts_trim_qw )
           ? 'q'
           : 'Q';
         $quote_type = $type;
@@ -5143,15 +5146,12 @@ EOM
                         ord( substr( $untrimmed_input_line, 0, 1 ) ) == ORD_TAB
                         && $untrimmed_input_line =~ /^(\t+)/ )
                     {
-                        my $tabsize = $self->[_tabsize_];
                         $spaces += length($1) * ( $tabsize - 1 );
                     }
 
                     # Calculate a guessed level for nonblank lines to avoid
-                    # calls to sub guess_old_indentation_level()
-                    my $indent_columns = $self->[_indent_columns_];
                     $line_of_tokens->{_guessed_indentation_level} =
-                      int( $spaces / $indent_columns );
+                      int( $spaces / $rOpts_indent_columns );
                 }
             }
             else {
@@ -5159,7 +5159,6 @@ EOM
                 # line has all blank characters
                 $input_line = EMPTY_STRING;
             }
-
         }
 
         if ( !$in_quote ) {

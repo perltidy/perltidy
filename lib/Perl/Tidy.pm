@@ -497,7 +497,6 @@ BEGIN {
         _prefilter_                => $i++,
         _rOpts_                    => $i++,
         _saw_pbp_                  => $i++,
-        _tabsize_                  => $i++,
         _teefile_stream_           => $i++,
         _user_formatter_           => $i++,
         _input_copied_verbatim_    => $i++,
@@ -2566,7 +2565,6 @@ sub process_iteration_layer {
     my $length_function    = $self->[_length_function_];
     my $logger_object      = $self->[_logger_object_];
     my $rOpts              = $self->[_rOpts_];
-    my $tabsize            = $self->[_tabsize_];
     my $user_formatter     = $self->[_user_formatter_];
 
     # make a debugger object if requested
@@ -2719,19 +2717,8 @@ sub process_iteration_layer {
             logger_object      => $logger_object,
             debugger_object    => $debugger_object,
             diagnostics_object => $diagnostics_object,
-            tabsize            => $tabsize,
             rOpts              => $rOpts,
-
-            starting_level      => $rOpts->{'starting-indentation-level'},
-            indent_columns      => $rOpts->{'indent-columns'},
-            look_for_hash_bang  => $rOpts->{'look-for-hash-bang'},
-            look_for_autoloader => $rOpts->{'look-for-autoloader'},
-            look_for_selfloader => $rOpts->{'look-for-selfloader'},
-            trim_qw             => $rOpts->{'trim-qw'},
-            extended_syntax     => $rOpts->{'extended-syntax'},
-
-            continuation_indentation => $rOpts->{'continuation-indentation'},
-            outdent_labels           => $rOpts->{'outdent-labels'},
+            starting_level     => $rOpts->{'starting-indentation-level'},
         );
 
         #---------------------------------
@@ -4653,16 +4640,6 @@ EOM
     if ( $rOpts->{'freeze-whitespace'} ) {
         $rOpts->{'logical-padding'} = 0;
     }
-
-    # Define $tabsize, the number of spaces per tab for use in
-    # guessing the indentation of source lines with leading tabs.
-    # Assume same as for this run if tabs are used, otherwise assume
-    # a default value, typically 8
-    $self->[_tabsize_] =
-        $rOpts->{'entab-leading-whitespace'}
-      ? $rOpts->{'entab-leading-whitespace'}
-      : $rOpts->{'tabs'} ? $rOpts->{'indent-columns'}
-      :                    $rOpts->{'default-tabsize'};
 
     # Define the default line ending, before any -ple option is applied
     $self->[_line_separator_default_] = get_line_separator_default($rOpts);
