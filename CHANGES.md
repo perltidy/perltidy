@@ -1,5 +1,10 @@
 # Perltidy Change Log
 
+## 2023 09 12
+
+    - Fix for git #124: remove a syntax error check which could cause
+      an incorrect error message when List::Gather::gather was used.
+
 ## 2023 09 09
 
     - Added new parameters -wme, or --warn-missing-else, and -ame,

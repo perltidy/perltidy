@@ -16,6 +16,7 @@
 #13 lrt.lrt
 #14 ame.ame
 #15 ame.def
+#16 git124.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -62,6 +63,17 @@ print "Tried to add: @ResolveRPM\n" if ( @ResolveRPM and !$Quiet );
 print "Would need: @DepList\n" if ( @DepList and !$Quiet );
 print "RPM Output:\n" unless $Quiet;
 print join( "\n", @RPMOutput ) . "\n" unless $Quiet;
+----------
+
+        'git124' => <<'----------',
+sub git124 {
+    return [
+        gather while ( my $foo = $bar->foobar )
+        {
+            ...;
+        }
+    ];
+}
 ----------
 
         'lrt' => <<'----------',
@@ -364,6 +376,21 @@ sub hello {
     if    ( $level == 3 ) { $val = $global{'section'} }
     elsif ( $level == 2 ) { $val = $global{'chapter'} }
 #15...........
+        },
+
+        'git124.def' => {
+            source => "git124",
+            params => "def",
+            expect => <<'#16...........',
+sub git124 {
+    return [
+        gather while ( my $foo = $bar->foobar )
+        {
+            ...;
+        }
+    ];
+}
+#16...........
         },
     };
 

@@ -1,0 +1,8 @@
+sub git124 {
+    return [
+        gather while ( my $foo = $bar->foobar )
+        {
+            ...;
+        }
+    ];
+}

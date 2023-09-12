@@ -22,7 +22,7 @@ use strict;
 use warnings;
 use English qw( -no_match_vars );
 
-our $VERSION = '20230909';
+our $VERSION = '20230912';
 
 use Carp;
 
@@ -3199,8 +3199,12 @@ EOM
                 if ( defined($rvars) ) {
                     my ( $type_lp, $want_brace ) = @{$rvars};
 
-                    # Now verify that this is not a trailing form
-                    if ( !$want_brace ) {
+                    # OLD: Now verify that this is not a trailing form
+                    # FIX for git #124: we have to skip this check because
+                    # the 'gather' keyword of List::Gather can operate on
+                    # a full statement, so it isn't possible to be sure
+                    # this is a trailing form.
+                    if ( 0 && !$want_brace ) {
                         $self->warning(
 "syntax error at ') {', unexpected '{' after closing ')' of a trailing '$last_nonblank_token'\n"
                         );
