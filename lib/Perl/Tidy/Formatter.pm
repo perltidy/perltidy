@@ -6975,7 +6975,7 @@ sub set_ci {
         my $seqno_nn = $rLL->[$Knn]->[_TYPE_SEQUENCE_];
         return unless ($seqno_nn);
         my $K_nno = $K_opening_container->{$seqno_nn};
-        return unless $K_nno && $K_nno == $Knn;
+        return unless ( $K_nno && $K_nno == $Knn );
         my $block_type = $rblock_type_of_seqno->{$seqno_nn};
 
         if ($block_type) {
@@ -7340,9 +7340,9 @@ sub set_ci {
                             foreach ( 0 .. 2 ) {
                                 $Km = $self->K_previous_code($Km);
                                 last unless defined($Km);
-                                last unless $rLL->[$Km]->[_TYPE_] eq 'k';
+                                last unless ( $rLL->[$Km]->[_TYPE_] eq 'k' );
                                 my $tok = $rLL->[$Km]->[_TOKEN_];
-                                next if $tok eq 'my';
+                                next if ( $tok eq 'my' );
                                 $is_logical ||=
                                   ( $tok eq 'for' || $tok eq 'foreach' );
                                 last;
@@ -11773,7 +11773,7 @@ sub weld_nested_containers {
     my $rnested_pairs = $self->find_nested_pairs();
 
     # Return unless there are nested pairs to weld
-    return unless defined($rnested_pairs) && @{$rnested_pairs};
+    return unless ( defined($rnested_pairs) && @{$rnested_pairs} );
 
     # NOTE: It would be nice to apply RULE 5 right here by deleting unwanted
     # pairs.  But it isn't clear if this is possible because we don't know
@@ -12474,14 +12474,14 @@ sub weld_nested_quotes {
 
             my $next_token = $rLL->[$Kn]->[_TOKEN_];
             my $next_type  = $rLL->[$Kn]->[_TYPE_];
-            next
-              unless ( ( $next_type eq 'q' || $next_type eq 'Q' )
-                && substr( $next_token, 0, 1 ) eq 'q' );
+            my $is_quote   = ( ( $next_type eq 'q' || $next_type eq 'Q' )
+                  && substr( $next_token, 0, 1 ) eq 'q' );
+            next unless ($is_quote);
 
             # The token before the closing container must also be a quote
             my $Kouter_closing = $K_closing_container->{$outer_seqno};
             my $Kinner_closing = $self->K_previous_nonblank($Kouter_closing);
-            next unless $rLL->[$Kinner_closing]->[_TYPE_] eq $next_type;
+            next unless ( $rLL->[$Kinner_closing]->[_TYPE_] eq $next_type );
 
             # This is an inner opening container
             my $Kinner_opening = $Kn;
@@ -12854,7 +12854,7 @@ sub clip_adjusted_levels {
     # Negative levels can occur in files with brace errors.
     my ($self) = @_;
     my $radjusted_levels = $self->[_radjusted_levels_];
-    return unless defined($radjusted_levels) && @{$radjusted_levels};
+    return unless ( defined($radjusted_levels) && @{$radjusted_levels} );
     my $min = min( @{$radjusted_levels} );    # fast check for min
     if ( $min < 0 ) {
 
@@ -13758,10 +13758,10 @@ EOM
             my ( $Kbeg, $Kend ) = @{$rKrange};
 
             # require isolated closing token
-            my $token_end = $rLL->[$Kend]->[_TOKEN_];
-            next
-              unless ( length($token_end) == 1
-                && ( $is_closing_token{$token_end} || $token_end eq '>' ) );
+            my $token_end           = $rLL->[$Kend]->[_TOKEN_];
+            my $is_isolated_closing = length($token_end) == 1
+              && ( $is_closing_token{$token_end} || $token_end eq '>' );
+            next unless ($is_isolated_closing);
 
             # require isolated opening token
             my $token_beg = $rLL->[$Kbeg]->[_TOKEN_];
@@ -20449,17 +20449,17 @@ EOM
                 $skip_Section_3 ||= 1;
             }
 
-            return
-              unless (
+            my $keep_going = (
                 $skip_Section_3
 
-                # handle '.' and '?' specially below
-                || ( $type_ibeg_2 =~ /^[\.\?]$/ )
+                  # handle '.' and '?' specially below
+                  || ( $type_ibeg_2 =~ /^[\.\?]$/ )
 
-                # fix for c054 (unusual -pbp case)
-                || $type_ibeg_2 eq '=='
+                  # fix for c054 (unusual -pbp case)
+                  || $type_ibeg_2 eq '=='
+            );
 
-              );
+            return unless ($keep_going);
         }
 
         elsif ( $type_iend_1 eq '{' ) {
@@ -20484,7 +20484,7 @@ EOM
               if ( $levels_to_go[$ibeg_1] ne $levels_to_go[$ibeg_2] );
 
             # do not recombine unless next line ends in :
-            return unless $type_iend_2 eq ':';
+            return unless ( $type_iend_2 eq ':' );
         }
 
         # for lines ending in a comma...
@@ -20502,10 +20502,12 @@ EOM
             if (   $type_ibeg_1 eq '}'
                 && $type_ibeg_2 eq 'i' )
             {
-                return
-                  unless ( ( $ibeg_1 == ( $iend_1 - 1 ) )
-                    && ( $iend_2 == ( $ibeg_2 + 1 ) )
-                    && $this_line_is_semicolon_terminated );
+                my $combine_ok =
+                  (      ( $ibeg_1 == ( $iend_1 - 1 ) )
+                      && ( $iend_2 == ( $ibeg_2 + 1 ) )
+                      && $this_line_is_semicolon_terminated );
+
+                return if ( !$combine_ok );
 
                 # override breakpoint
                 $forced_breakpoint_to_go[$iend_1] = 0;
@@ -21001,17 +21003,15 @@ EOM
                 #           if !$this->{Parents}{$_}
                 #           or $this->{Parents}{$_} eq $_;
                 #
-                return
-                  unless (
-                    $this_line_is_semicolon_terminated
-                    && (
+                my $combine_ok = $this_line_is_semicolon_terminated
+                  && (
 
-                        # following 'if' or 'unless' or 'or'
-                        $type_ibeg_1 eq 'k'
-                        && (   $is_if_unless{ $tokens_to_go[$ibeg_1] }
-                            || $tokens_to_go[$ibeg_1] eq 'or' )
-                    )
+                    # following 'if' or 'unless' or 'or'
+                    $type_ibeg_1 eq 'k'
+                    && (   $is_if_unless{ $tokens_to_go[$ibeg_1] }
+                        || $tokens_to_go[$ibeg_1] eq 'or' )
                   );
+                return if ( !$combine_ok );
             }
 
             # handle leading "if" and "unless"
@@ -21022,15 +21022,12 @@ EOM
                 #      if ( $lang !~ /${l}$/i );
                 # into:
                 #    next if ( $lang !~ /${l}$/i );
-                return
-                  unless (
-                    $this_line_is_semicolon_terminated
+                my $combine_ok = $this_line_is_semicolon_terminated
 
-                    #  previous line begins with 'and' or 'or'
-                    && $type_ibeg_1 eq 'k'
-                    && $is_and_or{ $tokens_to_go[$ibeg_1] }
-
-                  );
+                  #  previous line begins with 'and' or 'or'
+                  && $type_ibeg_1 eq 'k'
+                  && $is_and_or{ $tokens_to_go[$ibeg_1] };
+                return if ( !$combine_ok );
             }
 
             # handle all other leading keywords
@@ -21054,39 +21051,36 @@ EOM
 
             # maybe looking at something like:
             # unless $TEXTONLY || $item =~ m%</?(hr>|p>|a|img)%i;
+            my $combine_ok = $this_line_is_semicolon_terminated
 
-            return
-              unless (
-                $this_line_is_semicolon_terminated
+              # previous line begins with an 'if' or 'unless'
+              # keyword
+              && $type_ibeg_1 eq 'k'
+              && $is_if_unless{ $tokens_to_go[$ibeg_1] };
 
-                # previous line begins with an 'if' or 'unless'
-                # keyword
-                && $type_ibeg_1 eq 'k'
-                && $is_if_unless{ $tokens_to_go[$ibeg_1] }
-
-              );
+            return if ( !$combine_ok );
         }
 
         # handle line with leading = or similar
         elsif ( $is_assignment{$type_ibeg_2} ) {
             return unless ( $n == 1 || $n == $nmax );
             return if ( $old_breakpoint_to_go[$iend_1] );
-            return
-              unless (
+            my $combine_ok = (
 
-                # unless we can reduce this to two lines
+                # if we can reduce this to two lines
                 $nmax == 2
 
-                # or three lines, the last with a leading semicolon
-                || ( $nmax == 3 && $types_to_go[$ibeg_nmax] eq ';' )
+                  # or three lines, the last with a leading semicolon
+                  || ( $nmax == 3 && $types_to_go[$ibeg_nmax] eq ';' )
 
-                # or the next line ends with a here doc
-                || $type_iend_2 eq 'h'
+                  # or the next line ends with a here doc
+                  || $type_iend_2 eq 'h'
 
-                # or this is a short line ending in ;
-                || (   $n == $nmax
+                  # or this is a short line ending in ;
+                  || ( $n == $nmax
                     && $this_line_is_semicolon_terminated )
-              );
+            );
+            return if ( !$combine_ok );
             $forced_breakpoint_to_go[$iend_1] = 0;
         }
         else {
@@ -24531,7 +24525,7 @@ EOM
             else {
                 $skipped_count = 0;
                 my $i_tc = $ri_term_comma->[ $j - 1 ];
-                last unless defined $i_tc;
+                last unless defined($i_tc);
                 $self->set_forced_breakpoint($i_tc);
             }
         }
@@ -26423,8 +26417,8 @@ EOM
                     my $total_depth = $nesting_depth_to_go[$ii];
                     $comma_count = $lp_comma_count{$total_depth};
                     $arrow_count = $lp_arrow_count{$total_depth};
-                    $comma_count = 0 unless $comma_count;
-                    $arrow_count = 0 unless $arrow_count;
+                    $comma_count = 0 if ( !defined($comma_count) );
+                    $arrow_count = 0 if ( !defined($arrow_count) );
                 }
 
                 $lp_object->set_comma_count($comma_count);
@@ -27393,11 +27387,14 @@ EOM
         # ----------------------------------
         # These flags tell the vertical aligner if/when to combine consecutive
         # lines, based on the user input parameters.
-        $rvao_args->{rvertical_tightness_flags} =
-          $self->set_vertical_tightness_flags( $n, $n_last_line, $ibeg, $iend,
-            $ri_first, $ri_last, $ending_in_quote, $closing_side_comment )
-          unless ( $is_block_comment
-            || $self->[_no_vertical_tightness_flags_] );
+        if (   !$is_block_comment
+            && !$self->[_no_vertical_tightness_flags_] )
+        {
+            $rvao_args->{rvertical_tightness_flags} =
+              $self->set_vertical_tightness_flags( $n, $n_last_line, $ibeg,
+                $iend,
+                $ri_first, $ri_last, $ending_in_quote, $closing_side_comment );
+        }
 
         # ----------------------------------
         # define 'is_terminal_ternary'  flag
@@ -31086,16 +31083,15 @@ sub set_vertical_tightness_flags {
 
             # avoid instability of combo -bom and -sct; b1179
             my $seq_next = $type_sequence_to_go[$ibeg_next];
+            my $bom = $seq_next && $self->[_rbreak_container_]->{$seq_next};
             $stackable = $stack_closing_token{$token_beg_next}
-              unless ( $block_type_to_go[$ibeg_next]
-                || $seq_next && $self->[_rbreak_container_]->{$seq_next} );
+              unless ( $block_type_to_go[$ibeg_next] || $bom );
         }
         elsif ($is_opening_token{$token_end}
             && $is_opening_token{$token_beg_next} )
         {
             $stackable = $stack_opening_token{$token_beg_next}
-              unless ( $block_type_to_go[$ibeg_next] )
-              ;    # shouldn't happen; just checking
+              unless ( $block_type_to_go[$ibeg_next] );    # shouldn't happen
         }
         else {
             ## not stackable
@@ -31667,7 +31663,7 @@ sub set_vertical_tightness_flags {
 
             # push it back plus the mate to the newest character
             # unless they balance each other.
-            $csc = $csc . $top . $matching_char{$char} unless $top eq $char;
+            $csc = $csc . $top . $matching_char{$char} unless ( $top eq $char );
         }
 
         # return the balanced string

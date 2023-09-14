@@ -9890,7 +9890,7 @@ sub follow_quoted_string {
 
                     # retain backslash unless it hides the end token
                     $quoted_string .= $tok
-                      unless $rtokens->[ $i + 1 ] eq $end_tok;
+                      unless ( $rtokens->[ $i + 1 ] eq $end_tok );
                     $quote_pos++;
                     last if ( $i >= $max_token_index );
                     $tok = $rtokens->[ ++$i ];

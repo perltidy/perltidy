@@ -3026,7 +3026,7 @@ sub compare_string_buffers {
     my $leno = defined($rbufo) ? length( ${$rbufo} ) : 0;
     my $msg =
       "Input  file length is $leni chars\nOutput file length is $leno chars\n";
-    return $msg unless $leni && $leno;
+    return $msg unless ( $leni && $leno );
     my @aryi = split /^/, ${$rbufi};
     my @aryo = split /^/, ${$rbufo};
     my ( $linei,  $lineo );
@@ -4856,7 +4856,7 @@ sub check_vms_filename {
               }{$1}x;
 
     # normalize filename, if there are no unescaped dots then append one
-    $base .= '.' unless $base =~ /(?:^|[^^])\./;
+    $base .= '.' unless ( $base =~ /(?:^|[^^])\./ );
 
     # if we don't already have an extension then we just append the extension
     my $separator = ( $base =~ /\.$/ ) ? EMPTY_STRING : "_";
@@ -4876,7 +4876,7 @@ sub Win_OS_Type {
 
     my $rpending_complaint = shift;
     my $os                 = EMPTY_STRING;
-    return $os unless $OSNAME =~ /win32|dos/i;    # is it a MS box?
+    return $os unless ( $OSNAME =~ /win32|dos/i );    # is it a MS box?
 
     # Systems built from Perl source may not have Win32.pm
     # But probably have Win32::GetOSVersion() anyway so the

@@ -979,11 +979,11 @@ sub join_hanging_comment {
     my $jmax = $new_line->{'jmax'};
 
     # must be 2 fields
-    return 0 unless $jmax == 1;
+    return 0 unless ( $jmax == 1 );
     my $rtokens = $new_line->{'rtokens'};
 
     # the second field must be a comment
-    return 0 unless $rtokens->[0] eq '#';
+    return 0 unless ( $rtokens->[0] eq '#' );
     my $rfields = $new_line->{'rfields'};
 
     # the first field must be empty
@@ -3992,7 +3992,7 @@ sub Dump_tree_groups {
     local $LIST_SEPARATOR = ')(';
     foreach my $item ( @{$rgroup} ) {
         my @fix = @{$item};
-        foreach my $val (@fix) { $val = "undef" unless defined $val; }
+        foreach my $val (@fix) { $val = "undef" unless defined($val); }
         $fix[4] = "...";
         print "(@fix)\n";
     }
