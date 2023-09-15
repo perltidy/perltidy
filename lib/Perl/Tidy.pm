@@ -165,9 +165,14 @@ sub streamhandle {
     # Case 2. Not given, or an empty string: unencoded binary data is being
     # transferred, set binary mode for files and for stdin.
 
-    # NOTE: sub slurp_stream is now preferred for reading.
-
     my ( $filename, $mode, $is_encoded_data ) = @_;
+
+    # sub slurp_stream is preferred for reading (for efficiency).
+    if ( $mode ne 'w' && $mode ne 'W' ) {
+        if ( DEVEL_MODE || ( $mode ne 'r' && $mode ne 'R' ) ) {
+            Fault("streamhandle called in unexpected mode '$mode'\n");
+        }
+    }
 
     my $ref = ref($filename);
     my $New;
@@ -1219,7 +1224,7 @@ sub backup_method_copy {
     # Open the original input file for writing ... opening with ">" will
     # truncate the existing data.
     open( my $fout, ">", $input_file )
-      || Die(
+      or Die(
 "problem re-opening $input_file for write for -b option; check file and directory permissions: $OS_ERROR\n"
       );
 
@@ -1357,13 +1362,13 @@ sub backup_method_move {
     }
 
     # Open a file with the original input file name for writing ...
-    my $is_encoded_data = $self->[_is_encoded_data_];
-    my ( $fout, $iname ) =
-      Perl::Tidy::streamhandle( $input_file, 'w', $is_encoded_data );
-    if ( !$fout ) {
-        Die(
+    open( my $fout, ">", $input_file )
+      or Die(
 "problem re-opening $input_file for write for -b option; check file and directory permissions: $OS_ERROR\n"
-        );
+      );
+
+    if ( $self->[_is_encoded_data_] ) {
+        binmode $fout, ":raw:encoding(UTF-8)";
     }
 
     # Now copy the formatted output to it..
