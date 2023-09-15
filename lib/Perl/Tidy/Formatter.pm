@@ -284,14 +284,24 @@ my (
 
     # INITIALIZER: sub check_options
     $controlled_comma_style,
+    %tightness,
+
+    #  INITIALIZER: initialize_old_breakpoint_controls
     %keep_break_before_type,
     %keep_break_after_type,
-    %outdent_keyword,
-    %keyword_paren_inner_tightness,
+
+    # INITIALIZER: initialize_container_indentation_options
     %container_indentation_options,
-    %tightness,
+
+    # INITIALIZER: sub initialize_lp_part1
     %line_up_parentheses_control_hash,
     $line_up_parentheses_control_is_lxpl,
+
+    # INITIALIZER: sub outdent_keyword
+    %outdent_keyword,
+
+    # INITIALIZER: sub initialize_keyword_paren_inner_tightness
+    %keyword_paren_inner_tightness,
 
     # These can be modified by grep-alias-list
     # INITIALIZER: sub initialize_grep_and_friends
@@ -1253,7 +1263,7 @@ sub check_token_array {
             $logger_object->warning( $msg, $msg_line_number );
         }
         return;
-    }
+    } ## end sub warning
 
     sub complain {
         my ( $msg, $msg_line_number ) = @_;
@@ -1362,9 +1372,18 @@ sub check_options {
     # and to configure the control hashes to them.
     $rOpts = shift;
 
-    $controlled_comma_style = 0;
-
     initialize_whitespace_hashes();
+
+    if ( $rOpts->{'dump-want-left-space'} ) {
+        dump_want_left_space(*STDOUT);
+        Exit(0);
+    }
+
+    if ( $rOpts->{'dump-want-right-space'} ) {
+        dump_want_right_space(*STDOUT);
+        Exit(0);
+    }
+
     initialize_bond_strength_hashes();
 
     # This function must be called early to get hashes with grep initialized
@@ -1373,62 +1392,18 @@ sub check_options {
     # Make needed regex patterns for matching text.
     # NOTE: sub_matching_patterns must be made first because later patterns use
     # them; see RT #133130.
-    make_sub_matching_pattern();    # must be first pattern made
+    make_sub_matching_pattern();    # MUST BE FIRST pattern made
     make_static_block_comment_pattern();
     make_static_side_comment_pattern();
-    make_closing_side_comment_prefix();
-    make_closing_side_comment_list_pattern();
     $format_skipping_pattern_begin =
       make_format_skipping_pattern( 'format-skipping-begin', '#<<<' );
     $format_skipping_pattern_end =
       make_format_skipping_pattern( 'format-skipping-end', '#>>>' );
     make_non_indenting_brace_pattern();
 
-    # If closing side comments ARE selected, then we can safely
-    # delete old closing side comments unless closing side comment
-    # warnings are requested.  This is a good idea because it will
-    # eliminate any old csc's which fall below the line count threshold.
-    # We cannot do this if warnings are turned on, though, because we
-    # might delete some text which has been added.  So that must
-    # be handled when comments are created.  And we cannot do this
-    # with -io because -csc will be skipped altogether.
-    if ( $rOpts->{'closing-side-comments'} ) {
-        if (   !$rOpts->{'closing-side-comment-warnings'}
-            && !$rOpts->{'indent-only'} )
-        {
-            $rOpts->{'delete-closing-side-comments'} = 1;
-        }
-    }
+    initialize_closing_side_comments();
 
-    # If closing side comments ARE NOT selected, but warnings ARE
-    # selected and we ARE DELETING csc's, then we will pretend to be
-    # adding with a huge interval.  This will force the comments to be
-    # generated for comparison with the old comments, but not added.
-    elsif ( $rOpts->{'closing-side-comment-warnings'} ) {
-        if ( $rOpts->{'delete-closing-side-comments'} ) {
-            $rOpts->{'delete-closing-side-comments'}  = 0;
-            $rOpts->{'closing-side-comments'}         = 1;
-            $rOpts->{'closing-side-comment-interval'} = 100_000_000;
-        }
-    }
-    else {
-        ## ok - no -csc issues
-    }
-
-    my $comment = $rOpts->{'add-missing-else-comment'};
-    if ( !$comment ) {
-        $comment = "##FIXME - added with perltidy -ame";
-    }
-    else {
-        $comment = substr( $comment, 0, 60 );
-        $comment =~ s/^\s+//;
-        $comment =~ s/\s+$//;
-        $comment =~ s/\n/ /g;
-        if ( substr( $comment, 0, 1 ) ne '#' ) {
-            $comment = '#' . $comment;
-        }
-    }
-    $rOpts->{'add-missing-else-comment'} = $comment;
+    initialize_missing_else_comment();
 
     make_bli_pattern();
 
@@ -1447,70 +1422,9 @@ sub check_options {
         Exit(0);
     }
 
-    # -xlp implies -lp
-    if ( $rOpts->{'extended-line-up-parentheses'} ) {
-        $rOpts->{'line-up-parentheses'} ||= 1;
-    }
+    initialize_lp_part1();
 
-    if ( $rOpts->{'line-up-parentheses'} ) {
-
-        if (   $rOpts->{'indent-only'}
-            || !$rOpts->{'add-newlines'}
-            || !$rOpts->{'delete-old-newlines'} )
-        {
-            Warn(<<EOM);
------------------------------------------------------------------------
-Conflict: -lp  conflicts with -io, -fnl, -nanl, or -ndnl; ignoring -lp
-    
-The -lp indentation logic requires that perltidy be able to coordinate
-arbitrarily large numbers of line breakpoints.  This isn't possible
-with these flags.
------------------------------------------------------------------------
-EOM
-            $rOpts->{'line-up-parentheses'}          = 0;
-            $rOpts->{'extended-line-up-parentheses'} = 0;
-        }
-
-        if ( $rOpts->{'whitespace-cycle'} ) {
-            Warn(<<EOM);
-Conflict: -wc cannot currently be used with the -lp option; ignoring -wc
-EOM
-            $rOpts->{'whitespace-cycle'} = 0;
-        }
-    }
-
-    # At present, tabs are not compatible with the line-up-parentheses style
-    # (it would be possible to entab the total leading whitespace
-    # just prior to writing the line, if desired).
-    if ( $rOpts->{'line-up-parentheses'} && $rOpts->{'tabs'} ) {
-        Warn(<<EOM);
-Conflict: -t (tabs) cannot be used with the -lp  option; ignoring -t; see -et.
-EOM
-        $rOpts->{'tabs'} = 0;
-    }
-
-    # Likewise, tabs are not compatible with outdenting..
-    if ( $rOpts->{'outdent-keywords'} && $rOpts->{'tabs'} ) {
-        Warn(<<EOM);
-Conflict: -t (tabs) cannot be used with the -okw options; ignoring -t; see -et.
-EOM
-        $rOpts->{'tabs'} = 0;
-    }
-
-    if ( $rOpts->{'outdent-labels'} && $rOpts->{'tabs'} ) {
-        Warn(<<EOM);
-Conflict: -t (tabs) cannot be used with the -ola  option; ignoring -t; see -et.
-EOM
-        $rOpts->{'tabs'} = 0;
-    }
-
-    if ( !$rOpts->{'space-for-semicolon'} ) {
-        $want_left_space{'f'} = -1;
-    }
-
-    if ( $rOpts->{'space-terminal-semicolon'} ) {
-        $want_left_space{';'} = 1;
-    }
+    check_tabs();
 
     # We should put an upper bound on any -sil=n value. Otherwise enormous
     # files could be created by mistake.
@@ -1528,158 +1442,25 @@ EOM
         if ( !$_ || $_ <= 0 ) { $_ = 1 }
     }
 
-    # implement outdenting preferences for keywords
-    %outdent_keyword = ();
-    my @okw = split_words( $rOpts->{'outdent-keyword-list'} );
-    if ( !@okw ) {
-        @okw = qw(next last redo goto return);    # defaults
-    }
+    initialize_outdent_keyword();
 
-    # FUTURE: if not a keyword, assume that it is an identifier
-    foreach (@okw) {
-        if ( Perl::Tidy::Tokenizer::is_keyword($_) ) {
-            $outdent_keyword{$_} = 1;
-        }
-        else {
-            Warn("ignoring '$_' in -okwl list; not a perl keyword");
-        }
-    }
-
-    # setup hash for -kpit option
-    %keyword_paren_inner_tightness = ();
-    my $kpit_value = $rOpts->{'keyword-paren-inner-tightness'};
-    if ( defined($kpit_value) && $kpit_value != 1 ) {
-        my @kpit =
-          split_words( $rOpts->{'keyword-paren-inner-tightness-list'} );
-        if ( !@kpit ) {
-            @kpit = qw(if elsif unless while until for foreach);    # defaults
-        }
-
-        # we will allow keywords and user-defined identifiers
-        foreach (@kpit) {
-            $keyword_paren_inner_tightness{$_} = $kpit_value;
-        }
-    }
-
-    # implement user whitespace preferences
-    if ( my @q = split_words( $rOpts->{'want-left-space'} ) ) {
-        @want_left_space{@q} = (1) x scalar(@q);
-    }
-
-    if ( my @q = split_words( $rOpts->{'want-right-space'} ) ) {
-        @want_right_space{@q} = (1) x scalar(@q);
-    }
-
-    if ( my @q = split_words( $rOpts->{'nowant-left-space'} ) ) {
-        @want_left_space{@q} = (-1) x scalar(@q);
-    }
-
-    if ( my @q = split_words( $rOpts->{'nowant-right-space'} ) ) {
-        @want_right_space{@q} = (-1) x scalar(@q);
-    }
-    if ( $rOpts->{'dump-want-left-space'} ) {
-        dump_want_left_space(*STDOUT);
-        Exit(0);
-    }
-
-    if ( $rOpts->{'dump-want-right-space'} ) {
-        dump_want_right_space(*STDOUT);
-        Exit(0);
-    }
+    initialize_keyword_paren_inner_tightness();
 
     initialize_space_after_keyword();
 
     initialize_extended_block_tightness_list();
 
+    # The flag '$controlled_comma_style' will be set if the user
+    # entered any of -wbb=',' -wba=',' -kbb=',' -kba=','
+    # see sub 'initialize_token_break_preferences',
+    # and sub 'initialize_old_breakpoint_controls'
+    $controlled_comma_style = 0;
     initialize_token_break_preferences();
+    initialize_old_breakpoint_controls();
 
-    #--------------------------------------------------------------
-    # The combination -lp -iob -vmll -bbx=2 can be unstable (b1266)
-    #--------------------------------------------------------------
-    # The -vmll and -lp parameters do not really work well together.
-    # To avoid instabilities, we will change any -bbx=2 to -bbx=1 (stable).
-    # NOTE: we could make this more precise by looking at any exclusion
-    # flags for -lp, and allowing -bbx=2 for excluded types.
-    if (   $rOpts->{'variable-maximum-line-length'}
-        && $rOpts->{'ignore-old-breakpoints'}
-        && $rOpts->{'line-up-parentheses'} )
-    {
-        my @changed;
-        foreach my $key ( keys %break_before_container_types ) {
-            if ( $break_before_container_types{$key} == 2 ) {
-                $break_before_container_types{$key} = 1;
-                push @changed, $key;
-            }
-        }
-        if (@changed) {
+    initialize_lp_part2();
 
-            # we could write a warning here
-        }
-    }
-
-    #-----------------------------------------------------------
-    # The combination -lp -vmll can be unstable if -ci<2 (b1267)
-    #-----------------------------------------------------------
-    # The -vmll and -lp parameters do not really work well together.
-    # This is a very crude fix for an unusual parameter combination.
-    if (   $rOpts->{'variable-maximum-line-length'}
-        && $rOpts->{'line-up-parentheses'}
-        && $rOpts->{'continuation-indentation'} < 2 )
-    {
-        $rOpts->{'continuation-indentation'} = 2;
-        ##Warn("Increased -ci=n to n=2 for stability with -lp and -vmll\n");
-    }
-
-    #-----------------------------------------------------------
-    # The combination -lp -vmll -atc -dtc can be unstable
-    #-----------------------------------------------------------
-    # This fixes b1386 b1387 b1388 which had -wtc='b'
-    # Updated to to include any -wtc to fix b1426
-    if (   $rOpts->{'variable-maximum-line-length'}
-        && $rOpts->{'line-up-parentheses'}
-        && $rOpts->{'add-trailing-commas'}
-        && $rOpts->{'delete-trailing-commas'}
-        && $rOpts->{'want-trailing-commas'} )
-    {
-        $rOpts->{'delete-trailing-commas'} = 0;
-## Issuing a warning message causes trouble with test cases, and this combo is
-## so rare that it is unlikely to not occur in practice. So skip warning.
-##        Warn(
-##"The combination -vmll -lp -atc -dtc can be unstable; turning off -dtc\n"
-##        );
-    }
-
-    %container_indentation_options = ();
-    foreach my $pair (
-        [ 'break-before-hash-brace-and-indent',     '{' ],
-        [ 'break-before-square-bracket-and-indent', '[' ],
-        [ 'break-before-paren-and-indent',          '(' ],
-      )
-    {
-        my ( $key, $tok ) = @{$pair};
-        my $opt = $rOpts->{$key};
-        if ( defined($opt) && $opt > 0 && $break_before_container_types{$tok} )
-        {
-
-            # (1) -lp is not compatible with opt=2, silently set to opt=0
-            # (2) opt=0 and 2 give same result if -i=-ci; but opt=0 is faster
-            # (3) set opt=0 if -i < -ci (can be unstable, case b1355)
-            if ( $opt == 2 ) {
-                if (
-                    $rOpts->{'line-up-parentheses'}
-                    || ( $rOpts->{'indent-columns'} <=
-                        $rOpts->{'continuation-indentation'} )
-                  )
-                {
-                    $opt = 0;
-                }
-            }
-            $container_indentation_options{$tok} = $opt;
-        }
-    }
-
-    $right_bond_strength{'{'} = WEAK;
-    $left_bond_strength{'{'}  = VERY_STRONG;
+    initialize_container_indentation_options();
 
     # make -l=0 equal to -l=infinite
     if ( !$rOpts->{'maximum-line-length'} ) {
@@ -1701,83 +1482,6 @@ EOM
         ']' => $rOpts->{'square-bracket-tightness'},
     );
 
-    if ( $rOpts->{'ignore-old-breakpoints'} ) {
-
-        my @conflicts;
-        if ( $rOpts->{'break-at-old-method-breakpoints'} ) {
-            $rOpts->{'break-at-old-method-breakpoints'} = 0;
-            push @conflicts, '--break-at-old-method-breakpoints (-bom)';
-        }
-        if ( $rOpts->{'break-at-old-comma-breakpoints'} ) {
-            $rOpts->{'break-at-old-comma-breakpoints'} = 0;
-            push @conflicts, '--break-at-old-comma-breakpoints (-boc)';
-        }
-        if ( $rOpts->{'break-at-old-semicolon-breakpoints'} ) {
-            $rOpts->{'break-at-old-semicolon-breakpoints'} = 0;
-            push @conflicts, '--break-at-old-semicolon-breakpoints (-bos)';
-        }
-        if ( $rOpts->{'keep-old-breakpoints-before'} ) {
-            $rOpts->{'keep-old-breakpoints-before'} = EMPTY_STRING;
-            push @conflicts, '--keep-old-breakpoints-before (-kbb)';
-        }
-        if ( $rOpts->{'keep-old-breakpoints-after'} ) {
-            $rOpts->{'keep-old-breakpoints-after'} = EMPTY_STRING;
-            push @conflicts, '--keep-old-breakpoints-after (-kba)';
-        }
-
-        if (@conflicts) {
-            my $msg = join( "\n  ",
-" Conflict: These conflicts with --ignore-old-breakponts (-iob) will be turned off:",
-                @conflicts )
-              . "\n";
-            Warn($msg);
-        }
-
-        # Note: These additional parameters are made inactive by -iob.
-        # They are silently turned off here because they are on by default.
-        # We would generate unexpected warnings if we issued a warning.
-        $rOpts->{'break-at-old-keyword-breakpoints'}   = 0;
-        $rOpts->{'break-at-old-logical-breakpoints'}   = 0;
-        $rOpts->{'break-at-old-ternary-breakpoints'}   = 0;
-        $rOpts->{'break-at-old-attribute-breakpoints'} = 0;
-    }
-
-    %keep_break_before_type = ();
-    initialize_keep_old_breakpoints( $rOpts->{'keep-old-breakpoints-before'},
-        'kbb', \%keep_break_before_type );
-
-    %keep_break_after_type = ();
-    initialize_keep_old_breakpoints( $rOpts->{'keep-old-breakpoints-after'},
-        'kba', \%keep_break_after_type );
-
-    # Modify %keep_break_before and %keep_break_after to avoid conflicts
-    # with %want_break_before; fixes b1436.
-    # This became necessary after breaks for some tokens were converted
-    # from hard to soft (see b1433).
-    # We could do this for all tokens, but to minimize changes to existing
-    # code we currently only do this for the soft break tokens.
-    foreach my $key ( keys %keep_break_before_type ) {
-        if (   defined( $want_break_before{$key} )
-            && !$want_break_before{$key}
-            && $is_soft_keep_break_type{$key} )
-        {
-            $keep_break_after_type{$key} = $keep_break_before_type{$key};
-            delete $keep_break_before_type{$key};
-        }
-    }
-    foreach my $key ( keys %keep_break_after_type ) {
-        if (   defined( $want_break_before{$key} )
-            && $want_break_before{$key}
-            && $is_soft_keep_break_type{$key} )
-        {
-            $keep_break_before_type{$key} = $keep_break_after_type{$key};
-            delete $keep_break_after_type{$key};
-        }
-    }
-
-    $controlled_comma_style ||= $keep_break_before_type{','};
-    $controlled_comma_style ||= $keep_break_after_type{','};
-
     initialize_global_option_vars();
 
     initialize_line_length_vars();    # after 'initialize_global_option_vars'
@@ -1787,29 +1491,6 @@ EOM
     initialize_weld_nested_exclusion_rules();
 
     initialize_weld_fat_comma_rules();
-
-    %line_up_parentheses_control_hash    = ();
-    $line_up_parentheses_control_is_lxpl = 1;
-    my $lpxl = $rOpts->{'line-up-parentheses-exclusion-list'};
-    my $lpil = $rOpts->{'line-up-parentheses-inclusion-list'};
-    if ( $lpxl && $lpil ) {
-        Warn( <<EOM );
-You entered values for both -lpxl=s and -lpil=s; the -lpil list will be ignored
-EOM
-    }
-    if ($lpxl) {
-        $line_up_parentheses_control_is_lxpl = 1;
-        initialize_line_up_parentheses_control_hash(
-            $rOpts->{'line-up-parentheses-exclusion-list'}, 'lpxl' );
-    }
-    elsif ($lpil) {
-        $line_up_parentheses_control_is_lxpl = 0;
-        initialize_line_up_parentheses_control_hash(
-            $rOpts->{'line-up-parentheses-inclusion-list'}, 'lpil' );
-    }
-    else {
-        ## ok - neither -lpxl nor -lpil
-    }
 
     return;
 } ## end sub check_options
@@ -2186,6 +1867,47 @@ sub initialize_space_after_keyword {
     return;
 } ## end sub initialize_space_after_keyword
 
+sub initialize_outdent_keyword {
+
+    # implement outdenting preferences for keywords
+    %outdent_keyword = ();
+    my @okw = split_words( $rOpts->{'outdent-keyword-list'} );
+    if ( !@okw ) {
+        @okw = qw(next last redo goto return);    # defaults
+    }
+
+    # FUTURE: if not a keyword, assume that it is an identifier
+    foreach (@okw) {
+        if ( Perl::Tidy::Tokenizer::is_keyword($_) ) {
+            $outdent_keyword{$_} = 1;
+        }
+        else {
+            Warn("ignoring '$_' in -okwl list; not a perl keyword");
+        }
+    }
+    return;
+} ## end sub initialize_outdent_keyword
+
+sub initialize_keyword_paren_inner_tightness {
+
+    # setup hash for -kpit option
+    %keyword_paren_inner_tightness = ();
+    my $kpit_value = $rOpts->{'keyword-paren-inner-tightness'};
+    if ( defined($kpit_value) && $kpit_value != 1 ) {
+        my @kpit =
+          split_words( $rOpts->{'keyword-paren-inner-tightness-list'} );
+        if ( !@kpit ) {
+            @kpit = qw(if elsif unless while until for foreach);    # defaults
+        }
+
+        # we will allow keywords and user-defined identifiers
+        foreach (@kpit) {
+            $keyword_paren_inner_tightness{$_} = $kpit_value;
+        }
+    }
+    return;
+} ## end sub initialize_keyword_paren_inner_tightness
+
 sub initialize_extended_block_tightness_list {
 
     # Setup the control hash for --extended-block-tightness
@@ -2326,6 +2048,274 @@ sub initialize_token_break_preferences {
     }
     return;
 } ## end sub initialize_token_break_preferences
+
+sub initialize_lp_part1 {
+
+    # -xlp implies -lp
+    if ( $rOpts->{'extended-line-up-parentheses'} ) {
+        $rOpts->{'line-up-parentheses'} ||= 1;
+    }
+
+    if ( $rOpts->{'line-up-parentheses'} ) {
+
+        if (   $rOpts->{'indent-only'}
+            || !$rOpts->{'add-newlines'}
+            || !$rOpts->{'delete-old-newlines'} )
+        {
+            Warn(<<EOM);
+-----------------------------------------------------------------------
+Conflict: -lp  conflicts with -io, -fnl, -nanl, or -ndnl; ignoring -lp
+
+The -lp indentation logic requires that perltidy be able to coordinate
+arbitrarily large numbers of line breakpoints.  This isn't possible
+with these flags.
+-----------------------------------------------------------------------
+EOM
+            $rOpts->{'line-up-parentheses'}          = 0;
+            $rOpts->{'extended-line-up-parentheses'} = 0;
+        }
+
+        if ( $rOpts->{'whitespace-cycle'} ) {
+            Warn(<<EOM);
+Conflict: -wc cannot currently be used with the -lp option; ignoring -wc
+EOM
+            $rOpts->{'whitespace-cycle'} = 0;
+        }
+    }
+
+    %line_up_parentheses_control_hash    = ();
+    $line_up_parentheses_control_is_lxpl = 1;
+    my $lpxl = $rOpts->{'line-up-parentheses-exclusion-list'};
+    my $lpil = $rOpts->{'line-up-parentheses-inclusion-list'};
+    if ( $lpxl && $lpil ) {
+        Warn( <<EOM );
+You entered values for both -lpxl=s and -lpil=s; the -lpil list will be ignored
+EOM
+    }
+    if ($lpxl) {
+        $line_up_parentheses_control_is_lxpl = 1;
+        initialize_line_up_parentheses_control_hash(
+            $rOpts->{'line-up-parentheses-exclusion-list'}, 'lpxl' );
+    }
+    elsif ($lpil) {
+        $line_up_parentheses_control_is_lxpl = 0;
+        initialize_line_up_parentheses_control_hash(
+            $rOpts->{'line-up-parentheses-inclusion-list'}, 'lpil' );
+    }
+    else {
+        ## ok - neither -lpxl nor -lpil
+    }
+
+    return;
+} ## end sub initialize_lp_part1
+
+sub check_tabs {
+
+    # At present, tabs are not compatible with the line-up-parentheses style
+    # (it would be possible to entab the total leading whitespace
+    # just prior to writing the line, if desired).
+    if ( $rOpts->{'line-up-parentheses'} && $rOpts->{'tabs'} ) {
+        Warn(<<EOM);
+Conflict: -t (tabs) cannot be used with the -lp  option; ignoring -t; see -et.
+EOM
+        $rOpts->{'tabs'} = 0;
+    }
+
+    # tabs are not compatible with outdenting..
+    if ( $rOpts->{'outdent-keywords'} && $rOpts->{'tabs'} ) {
+        Warn(<<EOM);
+Conflict: -t (tabs) cannot be used with the -okw options; ignoring -t; see -et.
+EOM
+        $rOpts->{'tabs'} = 0;
+    }
+
+    if ( $rOpts->{'outdent-labels'} && $rOpts->{'tabs'} ) {
+        Warn(<<EOM);
+Conflict: -t (tabs) cannot be used with the -ola  option; ignoring -t; see -et.
+EOM
+        $rOpts->{'tabs'} = 0;
+    }
+
+    return;
+} ## end sub check_tabs
+
+sub initialize_lp_part2 {
+
+    # TODO: try to merge with sub initialize_lp_part1
+
+    #--------------------------------------------------------------
+    # The combination -lp -iob -vmll -bbx=2 can be unstable (b1266)
+    #--------------------------------------------------------------
+    # The -vmll and -lp parameters do not really work well together.
+    # To avoid instabilities, we will change any -bbx=2 to -bbx=1 (stable).
+    # NOTE: we could make this more precise by looking at any exclusion
+    # flags for -lp, and allowing -bbx=2 for excluded types.
+    if (   $rOpts->{'variable-maximum-line-length'}
+        && $rOpts->{'ignore-old-breakpoints'}
+        && $rOpts->{'line-up-parentheses'} )
+    {
+        my @changed;
+        foreach my $key ( keys %break_before_container_types ) {
+            if ( $break_before_container_types{$key} == 2 ) {
+                $break_before_container_types{$key} = 1;
+                push @changed, $key;
+            }
+        }
+        if (@changed) {
+
+            # we could write a warning here
+        }
+    }
+
+    #-----------------------------------------------------------
+    # The combination -lp -vmll can be unstable if -ci<2 (b1267)
+    #-----------------------------------------------------------
+    # The -vmll and -lp parameters do not really work well together.
+    # This is a very crude fix for an unusual parameter combination.
+    if (   $rOpts->{'variable-maximum-line-length'}
+        && $rOpts->{'line-up-parentheses'}
+        && $rOpts->{'continuation-indentation'} < 2 )
+    {
+        $rOpts->{'continuation-indentation'} = 2;
+        ##Warn("Increased -ci=n to n=2 for stability with -lp and -vmll\n");
+    }
+
+    #-----------------------------------------------------------
+    # The combination -lp -vmll -atc -dtc can be unstable
+    #-----------------------------------------------------------
+    # This fixes b1386 b1387 b1388 which had -wtc='b'
+    # Updated to to include any -wtc to fix b1426
+    if (   $rOpts->{'variable-maximum-line-length'}
+        && $rOpts->{'line-up-parentheses'}
+        && $rOpts->{'add-trailing-commas'}
+        && $rOpts->{'delete-trailing-commas'}
+        && $rOpts->{'want-trailing-commas'} )
+    {
+        $rOpts->{'delete-trailing-commas'} = 0;
+## Issuing a warning message causes trouble with test cases, and this combo is
+## so rare that it is unlikely to not occur in practice. So skip warning.
+##        Warn(
+##"The combination -vmll -lp -atc -dtc can be unstable; turning off -dtc\n"
+##        );
+    }
+
+    return;
+} ## end sub initialize_lp_part2
+
+sub initialize_container_indentation_options {
+
+    %container_indentation_options = ();
+    foreach my $pair (
+        [ 'break-before-hash-brace-and-indent',     '{' ],
+        [ 'break-before-square-bracket-and-indent', '[' ],
+        [ 'break-before-paren-and-indent',          '(' ],
+      )
+    {
+        my ( $key, $tok ) = @{$pair};
+        my $opt = $rOpts->{$key};
+        if ( defined($opt) && $opt > 0 && $break_before_container_types{$tok} )
+        {
+
+            # (1) -lp is not compatible with opt=2, silently set to opt=0
+            # (2) opt=0 and 2 give same result if -i=-ci; but opt=0 is faster
+            # (3) set opt=0 if -i < -ci (can be unstable, case b1355)
+            if ( $opt == 2 ) {
+                if (
+                    $rOpts->{'line-up-parentheses'}
+                    || ( $rOpts->{'indent-columns'} <=
+                        $rOpts->{'continuation-indentation'} )
+                  )
+                {
+                    $opt = 0;
+                }
+            }
+            $container_indentation_options{$tok} = $opt;
+        }
+    }
+    return;
+} ## end sub initialize_container_indentation_options
+
+sub initialize_old_breakpoint_controls {
+
+    if ( $rOpts->{'ignore-old-breakpoints'} ) {
+
+        my @conflicts;
+        if ( $rOpts->{'break-at-old-method-breakpoints'} ) {
+            $rOpts->{'break-at-old-method-breakpoints'} = 0;
+            push @conflicts, '--break-at-old-method-breakpoints (-bom)';
+        }
+        if ( $rOpts->{'break-at-old-comma-breakpoints'} ) {
+            $rOpts->{'break-at-old-comma-breakpoints'} = 0;
+            push @conflicts, '--break-at-old-comma-breakpoints (-boc)';
+        }
+        if ( $rOpts->{'break-at-old-semicolon-breakpoints'} ) {
+            $rOpts->{'break-at-old-semicolon-breakpoints'} = 0;
+            push @conflicts, '--break-at-old-semicolon-breakpoints (-bos)';
+        }
+        if ( $rOpts->{'keep-old-breakpoints-before'} ) {
+            $rOpts->{'keep-old-breakpoints-before'} = EMPTY_STRING;
+            push @conflicts, '--keep-old-breakpoints-before (-kbb)';
+        }
+        if ( $rOpts->{'keep-old-breakpoints-after'} ) {
+            $rOpts->{'keep-old-breakpoints-after'} = EMPTY_STRING;
+            push @conflicts, '--keep-old-breakpoints-after (-kba)';
+        }
+
+        if (@conflicts) {
+            my $msg = join( "\n  ",
+" Conflict: These conflicts with --ignore-old-breakponts (-iob) will be turned off:",
+                @conflicts )
+              . "\n";
+            Warn($msg);
+        }
+
+        # Note: These additional parameters are made inactive by -iob.
+        # They are silently turned off here because they are on by default.
+        # We would generate unexpected warnings if we issued a warning.
+        $rOpts->{'break-at-old-keyword-breakpoints'}   = 0;
+        $rOpts->{'break-at-old-logical-breakpoints'}   = 0;
+        $rOpts->{'break-at-old-ternary-breakpoints'}   = 0;
+        $rOpts->{'break-at-old-attribute-breakpoints'} = 0;
+    }
+
+    %keep_break_before_type = ();
+    initialize_keep_old_breakpoints( $rOpts->{'keep-old-breakpoints-before'},
+        'kbb', \%keep_break_before_type );
+
+    %keep_break_after_type = ();
+    initialize_keep_old_breakpoints( $rOpts->{'keep-old-breakpoints-after'},
+        'kba', \%keep_break_after_type );
+
+    # Modify %keep_break_before and %keep_break_after to avoid conflicts
+    # with %want_break_before; fixes b1436.
+    # This became necessary after breaks for some tokens were converted
+    # from hard to soft (see b1433).
+    # We could do this for all tokens, but to minimize changes to existing
+    # code we currently only do this for the soft break tokens.
+    foreach my $key ( keys %keep_break_before_type ) {
+        if (   defined( $want_break_before{$key} )
+            && !$want_break_before{$key}
+            && $is_soft_keep_break_type{$key} )
+        {
+            $keep_break_after_type{$key} = $keep_break_before_type{$key};
+            delete $keep_break_before_type{$key};
+        }
+    }
+    foreach my $key ( keys %keep_break_after_type ) {
+        if (   defined( $want_break_before{$key} )
+            && $want_break_before{$key}
+            && $is_soft_keep_break_type{$key} )
+        {
+            $keep_break_before_type{$key} = $keep_break_after_type{$key};
+            delete $keep_break_after_type{$key};
+        }
+    }
+
+    $controlled_comma_style ||= $keep_break_before_type{','};
+    $controlled_comma_style ||= $keep_break_after_type{','};
+
+    return;
+} ## end sub initialize_old_breakpoint_controls
 
 use constant DEBUG_KB => 0;
 
@@ -2934,6 +2924,33 @@ sub initialize_whitespace_hashes {
 
     $binary_ws_rules{'w'}{'('} = WS_NO;
     $binary_ws_rules{'w'}{'{'} = WS_YES;
+
+    # user controls
+    if ( !$rOpts->{'space-for-semicolon'} ) {
+        $want_left_space{'f'} = -1;
+    }
+
+    if ( $rOpts->{'space-terminal-semicolon'} ) {
+        $want_left_space{';'} = 1;
+    }
+
+    # implement user whitespace preferences
+    if ( my @q = split_words( $rOpts->{'want-left-space'} ) ) {
+        @want_left_space{@q} = (1) x scalar(@q);
+    }
+
+    if ( my @q = split_words( $rOpts->{'want-right-space'} ) ) {
+        @want_right_space{@q} = (1) x scalar(@q);
+    }
+
+    if ( my @q = split_words( $rOpts->{'nowant-left-space'} ) ) {
+        @want_left_space{@q} = (-1) x scalar(@q);
+    }
+
+    if ( my @q = split_words( $rOpts->{'nowant-right-space'} ) ) {
+        @want_right_space{@q} = (-1) x scalar(@q);
+    }
+
     return;
 
 } ## end sub initialize_whitespace_hashes
@@ -4387,6 +4404,9 @@ EOM
         @q = qw(and or err xor ne eq);
         @right_bond_strength{@q} = (NOMINAL) x scalar(@q);
 
+        $right_bond_strength{'{'} = WEAK;
+        $left_bond_strength{'{'}  = VERY_STRONG;
+
         #---------------------------------------------------------------
         # Bond Strength BEGIN Section 2.
         # Set binary rules for bond strengths between certain token types.
@@ -5134,7 +5154,7 @@ sub bad_pattern {
     # Note: this sub is also called from Tokenizer
     my $regex = eval { qr/$pattern/ };
     return $EVAL_ERROR;
-}
+} ## end sub bad_pattern
 
 {    ## begin closure prepare_cuddled_block_types
 
@@ -5393,6 +5413,65 @@ sub make_closing_side_comment_list_pattern {
     }
     return;
 } ## end sub make_closing_side_comment_list_pattern
+
+sub initialize_closing_side_comments {
+
+    make_closing_side_comment_prefix();
+    make_closing_side_comment_list_pattern();
+
+    # If closing side comments ARE selected, then we can safely
+    # delete old closing side comments unless closing side comment
+    # warnings are requested.  This is a good idea because it will
+    # eliminate any old csc's which fall below the line count threshold.
+    # We cannot do this if warnings are turned on, though, because we
+    # might delete some text which has been added.  So that must
+    # be handled when comments are created.  And we cannot do this
+    # with -io because -csc will be skipped altogether.
+    if ( $rOpts->{'closing-side-comments'} ) {
+        if (   !$rOpts->{'closing-side-comment-warnings'}
+            && !$rOpts->{'indent-only'} )
+        {
+            $rOpts->{'delete-closing-side-comments'} = 1;
+        }
+    }
+
+    # If closing side comments ARE NOT selected, but warnings ARE
+    # selected and we ARE DELETING csc's, then we will pretend to be
+    # adding with a huge interval.  This will force the comments to be
+    # generated for comparison with the old comments, but not added.
+    elsif ( $rOpts->{'closing-side-comment-warnings'} ) {
+        if ( $rOpts->{'delete-closing-side-comments'} ) {
+            $rOpts->{'delete-closing-side-comments'}  = 0;
+            $rOpts->{'closing-side-comments'}         = 1;
+            $rOpts->{'closing-side-comment-interval'} = 100_000_000;
+        }
+    }
+    else {
+        ## ok - no -csc issues
+    }
+
+    return;
+} ## end sub initialize_closing_side_comments
+
+sub initialize_missing_else_comment {
+
+    my $comment = $rOpts->{'add-missing-else-comment'};
+    if ( !$comment ) {
+        $comment = "##FIXME - added with perltidy -ame";
+    }
+    else {
+        $comment = substr( $comment, 0, 60 );
+        $comment =~ s/^\s+//;
+        $comment =~ s/\s+$//;
+        $comment =~ s/\n/ /g;
+        if ( substr( $comment, 0, 1 ) ne '#' ) {
+            $comment = '#' . $comment;
+        }
+    }
+    $rOpts->{'add-missing-else-comment'} = $comment;
+
+    return;
+} ## end sub initialize_missing_else_comment
 
 sub make_sub_matching_pattern {
 
@@ -11069,7 +11148,7 @@ sub cumulative_length_before_K {
     # token before the token at index $KK.
     my $rLL = $self->[_rLL_];
     return ( $KK <= 0 ) ? 0 : $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
-}
+} ## end sub cumulative_length_before_K
 
 sub weld_cuddled_blocks {
     my ($self) = @_;
@@ -16139,7 +16218,7 @@ EOM
         $file_writer_object->write_code_line($line2);
         $file_writer_object->write_code_line($line3);
         return;
-    }
+    } ## end sub add_missing_else
 
     sub process_line_of_CODE {
 
@@ -18714,7 +18793,7 @@ EOM
         # the index of the previous nonblank token.
         return $i - 1 > 0
           && $types_to_go[ $i - 1 ] eq 'b' ? $i - 2 : $i - 1;
-    }
+    } ## end sub iprev_to_go
 
     sub unmask_phantom_token {
         my ( $self, $iend ) = @_;
