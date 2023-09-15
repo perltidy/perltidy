@@ -1,5 +1,11 @@
 # Perltidy Change Log
 
+## 2023 09 12.01
+
+    - Fix problem c269, in which the new -ame parameter could incorrectly
+      emit an else block when two elsif blocks were separated by a hanging
+      side comment (a very rare situation).
+
 ## 2023 09 12
 
     - Fix for git #124: remove a syntax error check which could cause

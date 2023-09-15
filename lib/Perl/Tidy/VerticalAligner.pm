@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use Carp;
 use English qw( -no_match_vars );
-our $VERSION = '20230912';
+our $VERSION = '20230912.01';
 use Perl::Tidy::VerticalAligner::Alignment;
 use Perl::Tidy::VerticalAligner::Line;
 
