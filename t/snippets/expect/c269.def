@@ -1,0 +1,11 @@
+if ($xxxxx) {
+    $file = "$xxxxx";
+}
+elsif ($yyyyyy) {
+    $file = "$yyyyy";
+}    # side comment
+     # hanging side comment
+elsif ($zzzzz) {
+
+    # comment
+}

@@ -10481,8 +10481,15 @@ sub K_next_code {
             Fault("Undefined entry for k=$Knnb") if (DEVEL_MODE);
             return;
         }
-        if (   $rLL->[$Knnb]->[_TYPE_] ne 'b'
-            && $rLL->[$Knnb]->[_TYPE_] ne '#' )
+        my $type = $rLL->[$Knnb]->[_TYPE_];
+        if (
+               $type ne 'b'
+            && $type ne '#'
+
+            # c269: a zero-length q is a blank before hanging side comment
+            && ( $type ne 'q'
+                || length( $rLL->[$Knnb]->[_TOKEN_] ) )
+          )
         {
             return $Knnb;
         }
@@ -10496,6 +10503,8 @@ sub K_next_nonblank {
 
     # return the index K of the next nonblank token, or
     # return undef if none
+    # NOTE: does not skip over the leading type 'q' of a hanging side comment
+    # (use K_next_code)
     return if ( !defined($KK) );
     return if ( $KK < 0 );
 
@@ -10554,8 +10563,15 @@ sub K_previous_code {
     }
     my $Kpnb = $KK - 1;
     while ( $Kpnb >= 0 ) {
-        if (   $rLL->[$Kpnb]->[_TYPE_] ne 'b'
-            && $rLL->[$Kpnb]->[_TYPE_] ne '#' )
+        my $type = $rLL->[$Kpnb]->[_TYPE_];
+        if (
+               $type ne 'b'
+            && $type ne '#'
+
+            # c269: a zero-length q is a blank before hanging side comment
+            && ( $type ne 'q'
+                || length( $rLL->[$Kpnb]->[_TOKEN_] ) )
+          )
         {
             return $Kpnb;
         }
@@ -10568,6 +10584,8 @@ sub K_previous_nonblank {
 
     # return index of previous nonblank token before item K;
     # Call with $KK=undef to start search at the top of the array
+    # NOTE: does not skip over the leading type 'q' of a hanging side comment
+    # (use K_previous_code)
     my ( $self, $KK, $rLL ) = @_;
 
     # use the standard array unless given otherwise

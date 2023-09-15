@@ -399,6 +399,7 @@
 ../snippets28.t	lrt.lrt
 ../snippets28.t	ame.ame
 ../snippets28.t	ame.def
+../snippets28.t	git124.def
 ../snippets3.t	ce_wn1.ce_wn
 ../snippets3.t	ce_wn1.def
 ../snippets3.t	colin.colin
@@ -539,4 +540,5 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets28.t	git124.def
+../snippets28.t	c269.c269
+../snippets28.t	c269.def

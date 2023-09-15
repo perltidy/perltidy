@@ -17,6 +17,8 @@
 #14 ame.ame
 #15 ame.def
 #16 git124.def
+#17 c269.c269
+#18 c269.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -35,6 +37,7 @@ BEGIN {
     ###########################################
     $rparams = {
         'ame'    => "--add-missing-else",
+        'c269'   => "-ame",
         'def'    => "",
         'git116' => "-viu",
         'lrt'    => "--line-range-tidy=2:3",
@@ -56,6 +59,20 @@ BEGIN {
         'ame' => <<'----------',
     if    ( $level == 3 ) { $val = $global{'section'} }
     elsif ( $level == 2 ) { $val = $global{'chapter'} }
+----------
+
+        'c269' => <<'----------',
+if ($xxxxx) {
+    $file = "$xxxxx";
+}
+elsif ($yyyyyy) {
+    $file = "$yyyyy";
+}    # side comment
+     # hanging side comment
+elsif ($zzzzz) {
+
+    # comment
+}
 ----------
 
         'git116' => <<'----------',
@@ -391,6 +408,45 @@ sub git124 {
     ];
 }
 #16...........
+        },
+
+        'c269.c269' => {
+            source => "c269",
+            params => "c269",
+            expect => <<'#17...........',
+if ($xxxxx) {
+    $file = "$xxxxx";
+}
+elsif ($yyyyyy) {
+    $file = "$yyyyy";
+}    # side comment
+     # hanging side comment
+elsif ($zzzzz) {
+
+    # comment
+}
+else {
+    ##FIXME - added with perltidy -ame
+}
+#17...........
+        },
+
+        'c269.def' => {
+            source => "c269",
+            params => "def",
+            expect => <<'#18...........',
+if ($xxxxx) {
+    $file = "$xxxxx";
+}
+elsif ($yyyyyy) {
+    $file = "$yyyyy";
+}    # side comment
+     # hanging side comment
+elsif ($zzzzz) {
+
+    # comment
+}
+#18...........
         },
     };
 
