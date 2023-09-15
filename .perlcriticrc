@@ -1,22 +1,18 @@
-# Perlcritic is a very useful tool for locating potential code problems.
-# This file customizes it to the specific needs of Perl::Tidy.
+# This file is used for running Perl::Critic on Perl::Tidy modules.  Many of
+# the policies are excellent starting points for new code, but important
+# exceptions often exist which make it impossible to use them as rigid rules.
+
+# I have found the '## no critic' method for locally deactivating specific
+# policies to be far too troublesome to use.  So policies without fine tuning
+# controls have to either be 'on' or 'off'.
 
 # Some useful links:
+# https://metacpan.org/dist/Perl-Critic/view/lib/Perl/Critic/PolicySummary.pod
 # https://manpages.ubuntu.com/manpages/xenial/man1/perlcritic.1p.html
 # https://perlmaven.com/perl-critic
-# https://metacpan.org/dist/Perl-Critic/view/lib/Perl/Critic/PolicySummary.pod
 
 # Example command to run a single policy on single module:
 # perlcritic --single-policy Subroutines::ProhibitSubroutinePrototypes Module.pm
-
-# This file lists the policies which must be adjusted or deactivated for
-# Perl::Tidy.  Many of the policies are excellent starting points for new code,
-# but important exceptions often exist which make it impossible to use them as
-# rigid rules.
-
-# I have found the '## no critic' method for locally deactivating specific
-# policies to be too buggy to use.  So policies without fine tuning controls
-# have to either be 'on' or 'off'.
 
 # severity = 1 gives the most strict checking.
 severity = 1
@@ -38,15 +34,15 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 [Subroutines::RequireArgUnpacking]
 short_subroutine_statements = 2
 
-# Completely Disagree: The advantages of 'use constant' greatly outweigh the
-# few disadvantages.  Perl::Tidy relies heavily on constants for efficient and
-# robust coding of array indexes and for compiling out debug code, and to
-# avoid autovivication problems that would occur if hashes were used instead.
+# Disagree: The advantages of 'use constant' greatly outweigh the few
+# disadvantages.  Perl::Tidy relies heavily on constants for efficient and
+# robust coding of array indexes and for compiling out debug code, and to avoid
+# autovivication problems that would occur if hashes were used instead.
 [-ValuesAndExpressions::ProhibitConstantPragma]
 
-# Completely Disagree: adding quotes on here doc terminators causes needless
-# "line noise" in the source code.  Almost always the default works.  Besides,
-# my editor uses color to make it clear if interpolation is in effect.
+# Disagree: adding quotes on here doc terminators causes needless "line noise"
+# in the source code.  Almost always the default works.  Besides, my editor
+# uses color to make it clear if interpolation is in effect.
 [-ValuesAndExpressions::RequireQuotedHeredocTerminator]
 
 # Perlcritic doesn't seem to see that @ARGV in Perl::Tidy actually **is**
@@ -126,7 +122,7 @@ max_characters=250
 [-ValuesAndExpressions::ProhibitNoisyQuotes]
 
 # postfix 'if' is good if it highlights control flow
-# postfix 'unless' is likewise good but must be simple, without negative terms
+# postfix 'unless' is likewise good if simple and without negative terms
 [ControlStructures::ProhibitPostfixControls]
 allow = if unless
 
@@ -160,7 +156,7 @@ allow = if unless
 # As the documentation says, this policy is not for everyone
 [-RegularExpressions::ProhibitEnumeratedClasses]
 
-# Completely Disagree. Double quotes are easier to read than single quotes and
+# Disagree. Double quotes are easier to read than single quotes and
 # allow a uniform style for quotes.  My editor has color coding which indicates
 # interpolation. Double quotes do not increase processing time by any
 # measurable amount.  Using them as default simplfies making editing changes.
@@ -175,8 +171,7 @@ allow = if unless
 # ternary expressions. There is little to be gained by omitting them.
 [-CodeLayout::ProhibitParensWithBuiltins] 
 
-# This is OK if we exclude 'print'. Most of the 'print' statements
-# in perltidy are for error reporting, and it does not help to add
-# more extra error checks on top of them. 
+# Exclude 'print' statements, which are mainly used for debug statements
+# and error reporting.
 [InputOutput::RequireCheckedSyscalls]
 exclude_functions = print

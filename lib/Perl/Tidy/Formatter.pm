@@ -2256,7 +2256,10 @@ EOM
 
 sub initialize_token_break_preferences {
 
-    # implement user break preferences
+    # Initialize these global hashes defining break preferences:
+    # %want_break_before
+    # %break_before_container_types
+
     my $break_after = sub {
         my @toks = @_;
         foreach my $tok (@toks) {
@@ -3785,10 +3788,15 @@ EOM
 
         # Essential whitespace means whitespace which cannot be safely deleted
         # without risking the introduction of a syntax error.
-        # We are given three tokens and their types:
-        # ($tokenl, $typel) is the token to the left of the space in question
-        # ($tokenr, $typer) is the token to the right of the space in question
-        # ($tokenll, $typell) is previous nonblank token to the left of $tokenl
+
+        # Given: three tokens and their types:
+        # ($tokenll, $typell) = previous nonblank token to the left of $tokenl
+        # ($tokenl, $typel)   = the token to the left of the space in question
+        # ($tokenr, $typer)   = the token to the right of the space in question
+
+        # Return:
+        #   true  if whitespace is needed
+        #   false if whitespace may be deleted
         #
         # Note1: This routine should almost never need to be changed.  It is
         # for avoiding syntax problems rather than for formatting.
@@ -3839,6 +3847,11 @@ EOM
         my $token_joined         = $tokenl . $tokenr;
         my $tokenl_is_dash       = $tokenl eq '-';
 
+        #-------------------
+        # Must do full check
+        #-------------------
+
+        # This long logical expression gives the result
         my $result =
 
           # never combine two bare words or numbers
@@ -7692,14 +7705,22 @@ sub set_CODE_type {
     # 'VER' = VERSION statement
     # ''    = ordinary line of code with no restrictions
 
+    #--------------------
+    # Loop over all lines
+    #--------------------
     my $ix_line = -1;
     foreach my $line_of_tokens ( @{$rlines} ) {
         $ix_line++;
         my $line_type = $line_of_tokens->{_line_type};
 
         my $last_CODE_type = $CODE_type;
+
+        # Set default to be ordinary code
         $CODE_type = EMPTY_STRING;
 
+        #-------------------------------------
+        # This is only for lines marked 'CODE'
+        #-------------------------------------
         if ( $line_type ne 'CODE' ) {
             next;
         }
@@ -7716,7 +7737,9 @@ sub set_CODE_type {
             else                { $has_side_comment = 1 }
         }
 
+        #-----------------------------------------------------------
         # Write line verbatim if we are in a formatting skip section
+        #-----------------------------------------------------------
         if ($In_format_skipping_section) {
 
             # Note: extra space appended to comment simplifies pattern matching
@@ -7762,7 +7785,9 @@ sub set_CODE_type {
             next;
         }
 
-        # Check for a continued quote..
+        #----------------------------
+        # Check for a continued quote
+        #----------------------------
         if ( $line_of_tokens->{_starting_in_quote} ) {
 
             # A line which is entirely a quote or pattern must go out
@@ -7777,7 +7802,9 @@ sub set_CODE_type {
             }
         }
 
+        #-------------------------------------------------
         # See if we are entering a formatting skip section
+        #-------------------------------------------------
         if (
             $is_block_comment
 
@@ -7803,13 +7830,17 @@ sub set_CODE_type {
             $jmax--;
         }
 
-        # blank line..
+        #-----------
+        # Blank line
+        #-----------
         if ( $jmax < 0 ) {
             $CODE_type = 'BL';
             next;
         }
 
-        # Handle comments
+        #---------
+        # Comments
+        #---------
         if ($is_block_comment) {
 
             # see if this is a static block comment (starts with ## by default)
@@ -7917,8 +7948,9 @@ sub set_CODE_type {
             }
         }
 
-        # End of comments. Handle a line of normal code:
-
+        #-------------------------
+        # Other special code types
+        #-------------------------
         if ($rOpts_indent_only) {
             $CODE_type = 'IO';
             next;
@@ -8974,6 +9006,12 @@ sub respace_post_loop_ops {
 
     my ($self) = @_;
 
+    # We have just completed the 'respace' operation, in which we have made
+    # a pass through all tokens and set the whitespace between tokens to be
+    # according to user settings.  The new tokens have been placed in the new
+    # token list '$rLL_new'. Now we have to go through this new list and
+    # define some indexes which allow quick access into it.
+
     # Walk backwards through the tokens, making forward links to sequence items.
     if ( @{$rLL_new} ) {
         my $KNEXT;
@@ -9195,11 +9233,11 @@ sub store_token {
     # Store one token during respace operations
     #------------------------------------------
 
-    # Input parameter:
-    #  if defined => reference to a token
-    #  if undef   => make and store a blank space
+    # Optional input parameter: '$item'
+    #  if defined => reference to a token to be stored
+    #  otherwise  => make and store a blank space
 
-    # NOTE: called once per token so coding efficiency is critical.
+    # NOTE: this sub is called once per token so coding efficiency is critical.
 
     # If no arg, then make and store a blank space
     if ( !$item ) {
@@ -11199,11 +11237,17 @@ sub weld_cuddled_blocks {
 } ## end sub weld_cuddled_blocks
 
 sub find_nested_pairs {
-    my $self = shift;
+
+    my ($self) = @_;
 
     # This routine is called once per file to do preliminary work needed for
     # the --weld-nested option.  This information is also needed for adding
     # semicolons.
+
+    # Returns:
+    #   \@nested_pairs = ref to a list in which each item is a ref to
+    #   to the sequence numbers of two nested containers:
+    #        [ $seqno_inner, $seqno_outer ]
 
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
@@ -11402,6 +11446,10 @@ sub find_nested_pairs {
         }
         next;
     }
+
+    #------------------------------------
+    # Make the final list of nested pairs
+    #------------------------------------
 
     # The weld routine expects the pairs in order in the form
     #   [$seqno_inner, $seqno_outer]
@@ -12997,7 +13045,7 @@ sub break_before_list_opening_containers {
 
     my ($self) = @_;
 
-    # This routine is called once per batch to implement parameters
+    # This routine is called once per batch to implement parameters:
     # --break-before-hash-brace=n and similar -bbx=n flags
     #    and their associated indentation flags:
     # --break-before-hash-brace-and-indent and similar -bbxi=n
@@ -13033,8 +13081,15 @@ sub break_before_list_opening_containers {
         $length_tol *= 2;
     }
 
+    #-------------------------------------------------------
+    # These arrays are used to mark the affected containers:
+    #-------------------------------------------------------
     my $rbreak_before_container_by_seqno = {};
     my $rwant_reduced_ci                 = {};
+
+    #------------------------------
+    # Main loop over all containers
+    #------------------------------
     foreach my $seqno ( keys %{$K_opening_container} ) {
 
         #----------------------------------------------------------------
@@ -13370,9 +13425,13 @@ sub break_before_list_opening_containers {
         $rLL->[$KK]->[_CI_LEVEL_] = $ci if ( $ci >= 0 );
     }
 
+    #------------------
+    # Store the results
+    #------------------
     $self->[_rbreak_before_container_by_seqno_] =
       $rbreak_before_container_by_seqno;
     $self->[_rwant_reduced_ci_] = $rwant_reduced_ci;
+
     return;
 } ## end sub break_before_list_opening_containers
 
@@ -14294,6 +14353,8 @@ sub is_fragile_block_type {
     sub xlp_collapse_lengths_inner_loop {
 
         my ( $self, $iline, $K_begin_loop, $K_terminal, $K_last ) = @_;
+
+        # Loop over all tokens on a line for sub xlp_collapse_lengths
 
         my $rLL                 = $self->[_rLL_];
         my $K_closing_container = $self->[_K_closing_container_];
@@ -19745,11 +19806,16 @@ EOM
     sub recombine_inner_loop {
         my ( $self, $rhash ) = @_;
 
-        # This is the inner loop of the recombine operation. We look at all of
-        # the remaining joints in this section and select the best joint to be
-        # recombined.  If a recombination is made, the number of lines
-        # in this section will be reduced by one.
+        # This is the inner loop of the recombine operation. We are working on
+        # a sequence of multiple lines. We look at each pair of lines and
+        # decide if formatting would be improved if the pair were joined
+        # into a single line. If there are multiple of such possible
+        # recombinations, we select the best.  If a recombination is made,
+        # the number of lines in this group of lines will be reduced by one.
+        # See comments in the calling routine for further explanation.
 
+        # Input:
+        #    $rhash has parameters controlling this recombine operation
         # Returns: nothing
 
         my $rK_weld_right = $self->[_rK_weld_right_];
@@ -19768,7 +19834,7 @@ EOM
         my $ix_best = 0;
         my $num_bs  = 0;
 
-        # The range of lines in this group is $nbeg to $nstop
+        # The index range of lines in this group is $nbeg to $nstop
         my $nmax       = @{$ri_end} - 1;
         my $nstop      = $nmax - $rhash->{_num_freeze};
         my $num_joints = $nstop - $nbeg;
@@ -20290,7 +20356,9 @@ EOM
         my ( $ri_beg, $ri_end, $n, $this_line_is_semicolon_terminated ) = @_;
 
         # Recombine Section 2:
-        # Examine token at $iend_1 (right end of first line of pair)
+        # We are comparing two lines to see if they should be combined
+        # into a single line. This sub examines the token '$iend_1' in
+        # the following diagram (right end of first line of pair):
 
         # Here are Indexes of the endpoint tokens of the two lines:
         #
@@ -20779,7 +20847,9 @@ EOM
         my ( $ri_beg, $ri_end, $n, $this_line_is_semicolon_terminated ) = @_;
 
         # Recombine Section 3:
-        # Examine token at $ibeg_2 (right end of first line of pair)
+        # We are comparing two lines to see if they should be combined
+        # into a single line. This sub examines the token '$ibeg_2' in
+        # the following diagram (left end of second line of pair):
 
         # Here are Indexes of the endpoint tokens of the two lines:
         #
@@ -23232,9 +23302,11 @@ EOM
 
         #-------------------------------------------
         # END of loop over all tokens in this batch
-        # Now set breaks for any unfinished lists ..
         #-------------------------------------------
 
+        #----------------------------------------
+        # Now set breaks for any unfinished lists
+        #----------------------------------------
         foreach my $dd ( reverse( $minimum_depth .. $current_depth ) ) {
 
             $interrupted_list[$dd]   = 1;
@@ -23264,11 +23336,11 @@ EOM
             }
         } ## end for ( my $dd = $current_depth...)
 
-        #----------------------------------------
-        # Return the flag '$saw_good_breakpoint'.
-        #----------------------------------------
-        # This indicates if the input file had some good breakpoints.  This
-        # flag will be used to force a break in a line shorter than the
+        #------------------------------------------------
+        # Set the return the flag '$saw_good_breakpoint'.
+        #------------------------------------------------
+        # This flag indicates if the input file had some good breakpoints.
+        # It will be used to force a break in a line shorter than the
         # allowed line length.
         if ( $has_old_logical_breakpoints[$current_depth] ) {
             $saw_good_breakpoint = 1;
@@ -24670,6 +24742,7 @@ EOM
         my $interrupted         = $rhash_IN->{interrupted};
         my $rdo_not_break_apart = $rhash_IN->{rdo_not_break_apart};
         my $must_break_open     = $rhash_IN->{must_break_open};
+
 ## NOTE: these input vars from caller use the values from rhash_A (see above):
 ##      my $item_count          = $rhash_IN->{item_count};
 ##      my $identifier_count    = $rhash_IN->{identifier_count};
@@ -26382,6 +26455,10 @@ sub get_available_spaces_to_go {
     sub lp_decreasing_depth {
         my ( $self, $ii ) = @_;
 
+        # This is called by sub set_lp_indentation for a token at index $ii
+        # which has a lower nesting depth compared to the previous token.
+        # We have to update the stack variables for the new indentation.
+
         my $rLL = $self->[_rLL_];
 
         my $level    = $levels_to_go[$ii];
@@ -26492,6 +26569,10 @@ EOM
 
     sub lp_increasing_depth {
         my ( $self, $ii ) = @_;
+
+        # This is called by sub set_lp_indentation for a token at index $ii
+        # which has an increasing nesting depth compared to the previous token.
+        # We have to update the stack variables for the new indentation.
 
         my $rLL = $self->[_rLL_];
 
@@ -27698,7 +27779,9 @@ EOM
         # $ralignment_type_to_go->[$i] equal to those tokens at which we would
         # accept vertical alignment.
 
-        # Initialize closure (and return) variables:
+        #----------------------------
+        # Initialize return variables
+        #----------------------------
         $ralignment_type_to_go   = [];
         $ralignment_counts       = [];
         $ralignment_hash_by_line = [];
@@ -30225,6 +30308,13 @@ sub make_paren_name {
 
         # Determine indentation adjustment for a line with a leading closing
         # token - i.e. one of these:     ) ] } :
+
+        # Returns:
+        #   adjust_indentation flag:
+        #       0 - do not adjust
+        #       1 - outdent
+        #       2 - vertically align with opening token
+        #       3 - indent
 
         my (
             $self,    #
