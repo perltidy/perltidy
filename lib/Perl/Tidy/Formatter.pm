@@ -293,7 +293,7 @@ my (
     # INITIALIZER: initialize_container_indentation_options
     %container_indentation_options,
 
-    # INITIALIZER: sub initialize_lp_part1
+    # INITIALIZER: sub initialize_line_up_parentheses
     %line_up_parentheses_control_hash,
     $line_up_parentheses_control_is_lxpl,
 
@@ -1422,7 +1422,7 @@ sub check_options {
         Exit(0);
     }
 
-    initialize_lp_part1();
+    initialize_line_up_parentheses();
 
     check_tabs();
 
@@ -1457,8 +1457,6 @@ EOM
     $controlled_comma_style = 0;
     initialize_token_break_preferences();
     initialize_old_breakpoint_controls();
-
-    initialize_lp_part2();
 
     initialize_container_indentation_options();
 
@@ -2046,10 +2044,34 @@ sub initialize_token_break_preferences {
     for ( $rOpts->{'break-before-paren'} ) {
         $break_before_container_types{'('} = $_ if $_ && $_ > 0;
     }
+
+    #--------------------------------------------------------------
+    # The combination -lp -iob -vmll -bbx=2 can be unstable (b1266)
+    #--------------------------------------------------------------
+    # The -vmll and -lp parameters do not really work well together.
+    # To avoid instabilities, we will change any -bbx=2 to -bbx=1 (stable).
+    # NOTE: we could make this more precise by looking at any exclusion
+    # flags for -lp, and allowing -bbx=2 for excluded types.
+    if (   $rOpts->{'variable-maximum-line-length'}
+        && $rOpts->{'ignore-old-breakpoints'}
+        && $rOpts->{'line-up-parentheses'} )
+    {
+        my @changed;
+        foreach my $key ( keys %break_before_container_types ) {
+            if ( $break_before_container_types{$key} == 2 ) {
+                $break_before_container_types{$key} = 1;
+                push @changed, $key;
+            }
+        }
+        if (@changed) {
+
+            # we could write a warning here
+        }
+    }
     return;
 } ## end sub initialize_token_break_preferences
 
-sub initialize_lp_part1 {
+sub initialize_line_up_parentheses {
 
     # -xlp implies -lp
     if ( $rOpts->{'extended-line-up-parentheses'} ) {
@@ -2080,90 +2102,6 @@ EOM
 Conflict: -wc cannot currently be used with the -lp option; ignoring -wc
 EOM
             $rOpts->{'whitespace-cycle'} = 0;
-        }
-    }
-
-    %line_up_parentheses_control_hash    = ();
-    $line_up_parentheses_control_is_lxpl = 1;
-    my $lpxl = $rOpts->{'line-up-parentheses-exclusion-list'};
-    my $lpil = $rOpts->{'line-up-parentheses-inclusion-list'};
-    if ( $lpxl && $lpil ) {
-        Warn( <<EOM );
-You entered values for both -lpxl=s and -lpil=s; the -lpil list will be ignored
-EOM
-    }
-    if ($lpxl) {
-        $line_up_parentheses_control_is_lxpl = 1;
-        initialize_line_up_parentheses_control_hash(
-            $rOpts->{'line-up-parentheses-exclusion-list'}, 'lpxl' );
-    }
-    elsif ($lpil) {
-        $line_up_parentheses_control_is_lxpl = 0;
-        initialize_line_up_parentheses_control_hash(
-            $rOpts->{'line-up-parentheses-inclusion-list'}, 'lpil' );
-    }
-    else {
-        ## ok - neither -lpxl nor -lpil
-    }
-
-    return;
-} ## end sub initialize_lp_part1
-
-sub check_tabs {
-
-    # At present, tabs are not compatible with the line-up-parentheses style
-    # (it would be possible to entab the total leading whitespace
-    # just prior to writing the line, if desired).
-    if ( $rOpts->{'line-up-parentheses'} && $rOpts->{'tabs'} ) {
-        Warn(<<EOM);
-Conflict: -t (tabs) cannot be used with the -lp  option; ignoring -t; see -et.
-EOM
-        $rOpts->{'tabs'} = 0;
-    }
-
-    # tabs are not compatible with outdenting..
-    if ( $rOpts->{'outdent-keywords'} && $rOpts->{'tabs'} ) {
-        Warn(<<EOM);
-Conflict: -t (tabs) cannot be used with the -okw options; ignoring -t; see -et.
-EOM
-        $rOpts->{'tabs'} = 0;
-    }
-
-    if ( $rOpts->{'outdent-labels'} && $rOpts->{'tabs'} ) {
-        Warn(<<EOM);
-Conflict: -t (tabs) cannot be used with the -ola  option; ignoring -t; see -et.
-EOM
-        $rOpts->{'tabs'} = 0;
-    }
-
-    return;
-} ## end sub check_tabs
-
-sub initialize_lp_part2 {
-
-    # TODO: try to merge with sub initialize_lp_part1
-
-    #--------------------------------------------------------------
-    # The combination -lp -iob -vmll -bbx=2 can be unstable (b1266)
-    #--------------------------------------------------------------
-    # The -vmll and -lp parameters do not really work well together.
-    # To avoid instabilities, we will change any -bbx=2 to -bbx=1 (stable).
-    # NOTE: we could make this more precise by looking at any exclusion
-    # flags for -lp, and allowing -bbx=2 for excluded types.
-    if (   $rOpts->{'variable-maximum-line-length'}
-        && $rOpts->{'ignore-old-breakpoints'}
-        && $rOpts->{'line-up-parentheses'} )
-    {
-        my @changed;
-        foreach my $key ( keys %break_before_container_types ) {
-            if ( $break_before_container_types{$key} == 2 ) {
-                $break_before_container_types{$key} = 1;
-                push @changed, $key;
-            }
-        }
-        if (@changed) {
-
-            # we could write a warning here
         }
     }
 
@@ -2199,8 +2137,61 @@ sub initialize_lp_part2 {
 ##        );
     }
 
+    %line_up_parentheses_control_hash    = ();
+    $line_up_parentheses_control_is_lxpl = 1;
+    my $lpxl = $rOpts->{'line-up-parentheses-exclusion-list'};
+    my $lpil = $rOpts->{'line-up-parentheses-inclusion-list'};
+    if ( $lpxl && $lpil ) {
+        Warn( <<EOM );
+You entered values for both -lpxl=s and -lpil=s; the -lpil list will be ignored
+EOM
+    }
+    if ($lpxl) {
+        $line_up_parentheses_control_is_lxpl = 1;
+        initialize_line_up_parentheses_control_hash(
+            $rOpts->{'line-up-parentheses-exclusion-list'}, 'lpxl' );
+    }
+    elsif ($lpil) {
+        $line_up_parentheses_control_is_lxpl = 0;
+        initialize_line_up_parentheses_control_hash(
+            $rOpts->{'line-up-parentheses-inclusion-list'}, 'lpil' );
+    }
+    else {
+        ## ok - neither -lpxl nor -lpil
+    }
+
     return;
-} ## end sub initialize_lp_part2
+} ## end sub initialize_line_up_parentheses
+
+sub check_tabs {
+
+    # At present, tabs are not compatible with the line-up-parentheses style
+    # (it would be possible to entab the total leading whitespace
+    # just prior to writing the line, if desired).
+    if ( $rOpts->{'line-up-parentheses'} && $rOpts->{'tabs'} ) {
+        Warn(<<EOM);
+Conflict: -t (tabs) cannot be used with the -lp  option; ignoring -t; see -et.
+EOM
+        $rOpts->{'tabs'} = 0;
+    }
+
+    # tabs are not compatible with outdenting..
+    if ( $rOpts->{'outdent-keywords'} && $rOpts->{'tabs'} ) {
+        Warn(<<EOM);
+Conflict: -t (tabs) cannot be used with the -okw options; ignoring -t; see -et.
+EOM
+        $rOpts->{'tabs'} = 0;
+    }
+
+    if ( $rOpts->{'outdent-labels'} && $rOpts->{'tabs'} ) {
+        Warn(<<EOM);
+Conflict: -t (tabs) cannot be used with the -ola  option; ignoring -t; see -et.
+EOM
+        $rOpts->{'tabs'} = 0;
+    }
+
+    return;
+} ## end sub check_tabs
 
 sub initialize_container_indentation_options {
 
