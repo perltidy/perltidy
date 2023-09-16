@@ -293,7 +293,7 @@ my (
     # INITIALIZER: initialize_container_indentation_options
     %container_indentation_options,
 
-    # INITIALIZER: sub initialize_line_up_parentheses
+    # INITIALIZER: sub initialize_lpxl_lpil
     %line_up_parentheses_control_hash,
     $line_up_parentheses_control_is_lxpl,
 
@@ -1490,6 +1490,8 @@ EOM
 
     initialize_weld_fat_comma_rules();
 
+    initialize_lpxl_lpil();
+
     return;
 } ## end sub check_options
 
@@ -1730,6 +1732,33 @@ sub initialize_weld_fat_comma_rules {
     # this generalization would be.
     return;
 } ## end sub initialize_weld_fat_comma_rules
+
+sub initialize_lpxl_lpil {
+
+    %line_up_parentheses_control_hash    = ();
+    $line_up_parentheses_control_is_lxpl = 1;
+    my $lpxl = $rOpts->{'line-up-parentheses-exclusion-list'};
+    my $lpil = $rOpts->{'line-up-parentheses-inclusion-list'};
+    if ( $lpxl && $lpil ) {
+        Warn( <<EOM );
+You entered values for both -lpxl=s and -lpil=s; the -lpil list will be ignored
+EOM
+    }
+    if ($lpxl) {
+        $line_up_parentheses_control_is_lxpl = 1;
+        initialize_line_up_parentheses_control_hash(
+            $rOpts->{'line-up-parentheses-exclusion-list'}, 'lpxl' );
+    }
+    elsif ($lpil) {
+        $line_up_parentheses_control_is_lxpl = 0;
+        initialize_line_up_parentheses_control_hash(
+            $rOpts->{'line-up-parentheses-inclusion-list'}, 'lpil' );
+    }
+    else {
+        ## ok - neither -lpxl nor -lpil
+    }
+    return;
+}
 
 sub initialize_line_up_parentheses_control_hash {
     my ( $str, $opt_name ) = @_;
@@ -2135,29 +2164,6 @@ EOM
 ##        Warn(
 ##"The combination -vmll -lp -atc -dtc can be unstable; turning off -dtc\n"
 ##        );
-    }
-
-    %line_up_parentheses_control_hash    = ();
-    $line_up_parentheses_control_is_lxpl = 1;
-    my $lpxl = $rOpts->{'line-up-parentheses-exclusion-list'};
-    my $lpil = $rOpts->{'line-up-parentheses-inclusion-list'};
-    if ( $lpxl && $lpil ) {
-        Warn( <<EOM );
-You entered values for both -lpxl=s and -lpil=s; the -lpil list will be ignored
-EOM
-    }
-    if ($lpxl) {
-        $line_up_parentheses_control_is_lxpl = 1;
-        initialize_line_up_parentheses_control_hash(
-            $rOpts->{'line-up-parentheses-exclusion-list'}, 'lpxl' );
-    }
-    elsif ($lpil) {
-        $line_up_parentheses_control_is_lxpl = 0;
-        initialize_line_up_parentheses_control_hash(
-            $rOpts->{'line-up-parentheses-inclusion-list'}, 'lpil' );
-    }
-    else {
-        ## ok - neither -lpxl nor -lpil
     }
 
     return;
@@ -27846,6 +27852,8 @@ EOM
         @is_vertical_alignment_keyword{@q} = (1) x scalar(@q);
     } ## end BEGIN
 
+    # These are the main return variables. They are closure variables
+    # for efficient access by sub .._token_loop needs.
     my $ralignment_type_to_go;
     my $ralignment_counts;
     my $ralignment_hash_by_line;
@@ -27986,16 +27994,19 @@ EOM
     sub set_vertical_alignment_markers_token_loop {
         my ( $self, $line, $ibeg, $iend ) = @_;
 
-        # Set vertical alignment markers for the tokens on one line
-        # of the current output batch. This is done by updating the
-        # three closure variables:
-        #   $ralignment_type_to_go
-        #   $ralignment_counts
-        #   $ralignment_hash_by_line
-
         # Input parameters:
         #   $line = index of this line in the current batch
         #   $ibeg, $iend = index range of tokens to check in the _to_go arrays
+
+        # Task:
+        # Set vertical alignment markers for the tokens on one line
+        # of the current output batch. This is done by updating the
+        # three closure variables needed by sub 'make_alignment_patterns':
+        #  $ralignment_type_to_go - alignment type of tokens, like '=', if any
+        #  $ralignment_counts - number of alignment tokens in the line
+        #  $ralignment_hash - this contains all of the alignments for this
+        #    line.  It is not yet used but is available for future coding in
+        #    case there is a need to do a preliminary scan of alignment tokens.
 
         my $level_beg = $levels_to_go[$ibeg];
         my $token_beg = $tokens_to_go[$ibeg];
@@ -30397,15 +30408,30 @@ sub make_paren_name {
         # Determine indentation adjustment for a line with a leading closing
         # token - i.e. one of these:     ) ] } :
 
+        # The indentation adjustment is found by checking all user controls,
+        # which are sometimes in conflict.  So the logic is rather complex.
+
         # Returns:
-        #   adjust_indentation flag:
+        #  Flags giving the indentation to use for this line:
+
+        #   $adjust_indentation,
         #       0 - do not adjust
         #       1 - outdent
         #       2 - vertically align with opening token
         #       3 - indent
+        #   $default_adjust_indentation
+        #       a default in case $adjust_indentation cannot be used
+        #
+        # Also returns info about the indentation of the opening token,
+        # obtained from sub 'get_opening_indentation':
+
+        #   $opening_indentation,
+        #   $opening_offset,
+        #   $is_leading,
+        #   $opening_exists,
 
         my (
-            $self,    #
+            $self,
 
             $ibeg,
             $iend,
@@ -30431,6 +30457,7 @@ sub make_paren_name {
         my $seqno_beg           = $type_sequence_to_go[$ibeg];
         my $is_closing_type_beg = $is_closing_type{$type_beg};
 
+        # Return variables:
         my (
             $opening_indentation, $opening_offset,
             $is_leading,          $opening_exists
