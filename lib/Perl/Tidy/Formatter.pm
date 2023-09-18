@@ -7195,7 +7195,12 @@ sub set_ci {
                         # Be sure container has a level jump
                         my $level_KK = $rLL->[$KK]->[_LEVEL_];
                         my $level_Kc = $rLL->[$Kc]->[_LEVEL_];
-                        if ( $level_Kc < $level_KK ) {
+
+                        # And be sure this is not a hanging side comment
+                        my $CODE_type = $rlines->[$lx]->{_code_type};
+                        my $is_HSC    = $CODE_type && $CODE_type eq 'HSC';
+
+                        if ( $level_Kc < $level_KK && !$is_HSC ) {
                             $ci_this = 0;
                         }
                     }
@@ -8579,44 +8584,6 @@ sub respace_tokens {
             # 'SBCX'=Static Block Comment Without Leading Space
             # 'VER'=VERSION statement
             # '' or (undefined) - no restrictions
-
-            # For a hanging side comment we insert an empty quote before
-            # the comment so that it becomes a normal side comment and
-            # will be aligned by the vertical aligner
-            if ( $CODE_type eq 'HSC' ) {
-
-                # Safety Check: This must be a line with one token (a comment)
-                my $rvars_Kfirst = $rLL->[$Kfirst];
-                if ( $Kfirst == $Klast && $rvars_Kfirst->[_TYPE_] eq '#' ) {
-
-                    # Note that even if the flag 'noadd-whitespace' is set, we
-                    # will make an exception here and allow a blank to be
-                    # inserted to push the comment to the right.  We can think
-                    # of this as an adjustment of indentation rather than
-                    # whitespace between tokens. This will also prevent the
-                    # hanging side comment from getting converted to a block
-                    # comment if whitespace gets deleted, as for example with
-                    # the -extrude and -mangle options.
-                    my $rcopy =
-                      copy_token_as_type( $rvars_Kfirst, 'q', EMPTY_STRING );
-                    $self->store_token($rcopy);
-                    $rcopy = copy_token_as_type( $rvars_Kfirst, 'b', SPACE );
-                    $self->store_token($rcopy);
-                    $self->store_token($rvars_Kfirst);
-                    next;
-                }
-                else {
-
-                    # This line was mis-marked by sub scan_comment.  Catch in
-                    # DEVEL_MODE, otherwise try to repair and keep going.
-                    Fault(
-                        "Program bug. A hanging side comment has been mismarked"
-                    ) if (DEVEL_MODE);
-
-                    $CODE_type = EMPTY_STRING;
-                    $line_of_tokens->{_code_type} = $CODE_type;
-                }
-            }
 
             # Copy tokens unchanged
             foreach my $KK ( $Kfirst .. $Klast ) {
@@ -10479,15 +10446,7 @@ sub K_next_code {
             return;
         }
         my $type = $rLL->[$Knnb]->[_TYPE_];
-        if (
-               $type ne 'b'
-            && $type ne '#'
-
-            # c269: a zero-length q is a blank before hanging side comment
-            && ( $type ne 'q'
-                || length( $rLL->[$Knnb]->[_TOKEN_] ) )
-          )
-        {
+        if ( $type ne 'b' && $type ne '#' ) {
             return $Knnb;
         }
         $Knnb++;
@@ -10561,14 +10520,8 @@ sub K_previous_code {
     my $Kpnb = $KK - 1;
     while ( $Kpnb >= 0 ) {
         my $type = $rLL->[$Kpnb]->[_TYPE_];
-        if (
-               $type ne 'b'
-            && $type ne '#'
-
-            # c269: a zero-length q is a blank before hanging side comment
-            && ( $type ne 'q'
-                || length( $rLL->[$Kpnb]->[_TOKEN_] ) )
-          )
+        if (   $type ne 'b'
+            && $type ne '#' )
         {
             return $Kpnb;
         }
@@ -16295,8 +16248,10 @@ EOM
 
         my ( $is_block_comment, $has_side_comment );
         if ( $rLL->[$K_last]->[_TYPE_] eq '#' ) {
-            if   ( $K_last == $K_first ) { $is_block_comment = 1 }
-            else                         { $has_side_comment = 1 }
+            if ( $K_last == $K_first && $CODE_type ne 'HSC' ) {
+                $is_block_comment = 1;
+            }
+            else { $has_side_comment = 1 }
         }
 
         my $is_static_block_comment_without_leading_space =
@@ -18246,25 +18201,38 @@ EOM
               $lp_object_count_this_batch = $self->set_lp_indentation();
         }
 
-        #-----------------------------------------------------------
-        # Shortcut for block comments. But not for block comments
-        # with lp because they must use the lp corrector step below.
-        #-----------------------------------------------------------
+        #-----------------------------
+        # Shortcut for block comments.
+        #-----------------------------
+
+        my $is_HSC;
+
         if (  !$max_index_to_go
-            && $types_to_go[0] eq '#'
-            && !$lp_object_count_this_batch )
+            && $types_to_go[0] eq '#' )
         {
-            my $ibeg = 0;
-            $this_batch->[_ri_first_] = [$ibeg];
-            $this_batch->[_ri_last_]  = [$ibeg];
 
-            $self->convey_batch_to_vertical_aligner();
+            # But not for block comments with lp because they must use the lp
+            # corrector step below.
+            # And not for hanging side comments.
 
-            my $level = $levels_to_go[$ibeg];
-            $self->[_last_line_leading_type_]  = $types_to_go[$ibeg];
-            $self->[_last_line_leading_level_] = $level;
-            $nonblank_lines_at_depth[$level]   = 1;
-            return;
+            my $batch_CODE_type = $this_batch->[_batch_CODE_type_];
+            $is_HSC = $batch_CODE_type && $batch_CODE_type eq 'HSC';
+
+            if (   !$is_HSC
+                && !$lp_object_count_this_batch )
+            {
+                my $ibeg = 0;
+                $this_batch->[_ri_first_] = [$ibeg];
+                $this_batch->[_ri_last_]  = [$ibeg];
+
+                $self->convey_batch_to_vertical_aligner();
+
+                my $level = $levels_to_go[$ibeg];
+                $self->[_last_line_leading_type_]  = $types_to_go[$ibeg];
+                $self->[_last_line_leading_level_] = $level;
+                $nonblank_lines_at_depth[$level]   = 1;
+                return;
+            }
         }
 
         #-------------
@@ -18572,7 +18540,7 @@ EOM
         # update blank line variables and count number of consecutive
         # non-blank, non-comment lines at this level
         if (   $leading_level == $last_line_leading_level
-            && $leading_type ne '#'
+            && ( $leading_type ne '#' || $is_HSC )
             && defined( $nonblank_lines_at_depth[$leading_level] ) )
         {
             $nonblank_lines_at_depth[$leading_level]++;
@@ -18581,7 +18549,7 @@ EOM
             $nonblank_lines_at_depth[$leading_level] = 1;
         }
 
-        $self->[_last_line_leading_type_]  = $leading_type;
+        $self->[_last_line_leading_type_]  = $is_HSC ? 'q' : $leading_type;
         $self->[_last_line_leading_level_] = $leading_level;
 
         #--------------------------
@@ -27287,10 +27255,14 @@ sub convey_batch_to_vertical_aligner {
     my $token_beg_next = $tokens_to_go[$ibeg_next];
 
     my $rindentation_list = [0];    # ref to indentations for each line
-    my ( $cscw_block_comment, $closing_side_comment, $is_block_comment );
+    my ( $cscw_block_comment, $closing_side_comment, $is_block_comment,
+        $is_HSC );
 
-    if ( !$max_index_to_go && $type_beg_next eq '#' ) {
-        $is_block_comment = 1;
+    if (  !$max_index_to_go
+        && $type_beg_next eq '#' )
+    {
+        if ( $batch_CODE_type && $batch_CODE_type eq 'HSC' ) { $is_HSC = 1 }
+        else { $is_block_comment = 1 }
     }
 
     if ($rOpts_closing_side_comments) {
@@ -27325,19 +27297,30 @@ sub convey_batch_to_vertical_aligner {
     # ----------------------------------------------------------
     my $rline_alignments;
 
+    # Quick handling of lines with a single tokens
     if ( !$max_index_to_go ) {
 
-        # Optional shortcut for single token ...
+        # Hanging side comment
+        if ($is_HSC) {
+            $rline_alignments = make_HSC_vertical_alignments();
+        }
+
+        # All Other single tokens
         # = [ [ $rtokens, $rfields, $rpatterns, $rfield_lengths ] ];
-        $rline_alignments = [
-            [
-                [],
-                [ $tokens_to_go[0] ],
-                [ $types_to_go[0] ],
-                [ $summed_lengths_to_go[1] - $summed_lengths_to_go[0] ],
-            ]
-        ];
+        else {
+
+            $rline_alignments = [
+                [
+                    [],
+                    [ $tokens_to_go[0] ],
+                    [ $types_to_go[0] ],
+                    [ $summed_lengths_to_go[1] - $summed_lengths_to_go[0] ],
+                ]
+            ];
+        }
     }
+
+    # Multiple tokens
     else {
         $rline_alignments =
           $self->make_vertical_alignments( $ri_first, $ri_last );
@@ -28328,6 +28311,54 @@ EOM
     } ## end sub set_vertical_alignment_markers_token_loop
 
 } ## end closure set_vertical_alignment_markers
+
+sub make_HSC_vertical_alignments {
+
+    # This is the alignment for a hanging side comment
+    # Originally, a hanging side comment line was constructed as three tokens:
+    #    type 'q' with zero length,
+    #    type 'b' with length 1
+    #    type '#' with the text of the comment
+    # In this way, the comment became a true side comment through all of the
+    # tokenization operations. However, this caused a problem (c269) with subs
+    # K_next_* and K_previous_*, which would stop at the 'q' token.  Rather
+    # than change those to skip an empty 'q', the hanging side comment was
+    # left as a block comment but the line was marked as 'HSC'. Only when
+    # we make the vertical alignments, right here, do we need to construct
+    # the artificial 'q', 'b', '#' sequence for the vertical aligner.
+    my $rline_alignments;
+
+    # - For the specific combination -vc -nvsc, we put all side comments
+    #   at fixed locations. Note that we will lose hanging side comment
+    #   alignments. Otherwise, hsc's can move to strange locations.
+    # - For -nvc -nvsc we make all side comments vertical alignments
+    #   because the vertical aligner will check for -nvsc and be able
+    #   to reduce the final padding to the side comments for long lines.
+    #   and keep hanging side comments aligned.
+    if ( !$rOpts_valign_side_comments && $rOpts_valign_code ) {
+        my $pad_spaces = $rOpts->{'minimum-space-to-comment'};
+        $rline_alignments = [
+            [
+
+                [],
+                [ SPACE x $pad_spaces . $tokens_to_go[0] ],
+                ['q'],
+                [ 2 + $summed_lengths_to_go[1] - $summed_lengths_to_go[0] ],
+            ]
+        ];
+    }
+    else {
+        $rline_alignments = [
+            [
+                ['#'],
+                [ SPACE, $tokens_to_go[0] ],
+                [ 'qb',  '#' ],
+                [ 1,     $summed_lengths_to_go[1] - $summed_lengths_to_go[0] ],
+            ]
+        ];
+    }
+    return $rline_alignments;
+}
 
 sub make_vertical_alignments {
     my ( $self, $ri_first, $ri_last ) = @_;
