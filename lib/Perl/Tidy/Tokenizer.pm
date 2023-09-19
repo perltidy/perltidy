@@ -1194,7 +1194,7 @@ sub get_line {
             );
         }
         else {
-            ## ok - not a code-skipping control line
+            # not a code-skipping control line
         }
         return $line_of_tokens;
     }
@@ -1246,7 +1246,7 @@ sub get_line {
         }
     }
     else {
-        ## ok
+        # not a special control line
     }
 
     # check for a hash-bang line if we haven't seen one
@@ -1437,7 +1437,7 @@ sub get_line {
         return $line_of_tokens;
     }
     else {
-        ## ok: not in __END__ or __DATA__
+        # not in __END__ or __DATA__
     }
 
     # now, finally, we know that this line is type 'CODE'
@@ -1464,8 +1464,6 @@ sub get_line {
     if ( $self->[_in_quote_]
         and ( $self->[_line_start_quote_] < 0 ) )
     {
-
-        #if ( ( my $quote_target = get_quote_target() ) !~ /^\s*$/ ) {
         if ( ( my $quote_target = $self->[_quote_target_] ) !~ /^\s*$/ ) {
             $self->[_line_start_quote_] = $input_line_number;
             $self->log_numbered_msg(
@@ -1479,7 +1477,7 @@ sub get_line {
         $self->log_numbered_msg("End of multi-line quote or pattern\n");
     }
     else {
-        ## ok
+        # not at the edge of a quote
     }
 
     # we are returning a line of CODE
@@ -3013,7 +3011,7 @@ EOM
             $self->warning("Unexpected leading ',' after a '('\n");
         }
         else {
-            ## ok: no complaints needed
+            # no complaints about the comma
         }
 
         # patch for operator_expected: note if we are in the list (use.t)
@@ -3245,7 +3243,7 @@ EOM
             $want_paren = EMPTY_STRING;
         }
         else {
-            ## ok: not special
+            # not special
         }
 
         # now identify which of the three possible types of
@@ -3807,7 +3805,7 @@ EOM
                         "Unconventional here-target: '$here_doc_target'\n");
                 }
                 else {
-                    ## ok: nothing to complain about
+                    # nothing to complain about
                 }
             }
             elsif ( $expecting == TERM ) {
@@ -3866,7 +3864,7 @@ EOM
                         "Unconventional here-target: '$here_doc_target'\n");
                 }
                 else {
-                    ## ok: nothing to complain about
+                    # nothing to complain about
                 }
 
                 # Note that we put a leading space on the here quote
@@ -5672,7 +5670,7 @@ EOM
                     $self->[_in_error_] = 1;
                 }
                 else {
-                    ## ok - valid token type other than ; and t
+                    # valid token type other than ; and t
                 }
 
                 #----------------------------------------------------
@@ -7993,7 +7991,7 @@ sub do_scan_package {
                           "Space in identifier, following $identifier\n";
                     }
                     else {
-                        ## ok: silently accept space after '$' and '@' sigils
+                        # silently accept space after '$' and '@' sigils
                     }
                 }
             }

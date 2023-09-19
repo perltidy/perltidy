@@ -1755,7 +1755,7 @@ EOM
             $rOpts->{'line-up-parentheses-inclusion-list'}, 'lpil' );
     }
     else {
-        ## ok - neither -lpxl nor -lpil
+        # neither -lpxl nor -lpil specified
     }
     return;
 }
@@ -2391,7 +2391,7 @@ Unknown flag '$flag' given for '$key' in '$short_name'
 EOM
         }
         else {
-            ## ok - no error seen
+            # no error seen
         }
 
         $rkeep_break_hash->{$key} = $flag;
@@ -4828,7 +4828,7 @@ EOM
                 if ( $bond_str < STRONG ) { $bond_str = STRONG }
             }
             else {
-                ## ok - not special
+                # no applicable hardwired change
             }
 
             #---------------------------------------------------------------
@@ -4905,7 +4905,7 @@ EOM
                 }
             }
             else {
-                ## ok - not special
+                # no hardwired rule applies
             }
 
             # Breaking before a ? before a quote can cause trouble if
@@ -4936,7 +4936,7 @@ EOM
                     && $next_nonblank_type ne '//' );
             }
             else {
-                ## ok - not special
+                # no special NO_BREAK rule applies
             }
 
             $bond_str_2 = $bond_str if (DEBUG_BOND);
@@ -5113,7 +5113,7 @@ EOM
                     $strength -= 1;
                 }
                 else {
-                    ## ok - not welded left or right
+                    # not welded left or right
                 }
             }
 
@@ -5444,7 +5444,7 @@ sub initialize_closing_side_comments {
         }
     }
     else {
-        ## ok - no -csc issues
+        # no -csc flags
     }
 
     return;
@@ -5938,7 +5938,7 @@ EOM
             $self->[_ris_sub_block_]->{$seqno} = 1;
         }
         else {
-            ## ok - not a sub
+            # not a sub type
         }
         return;
     } ## end sub store_block_type
@@ -7447,7 +7447,7 @@ sub set_ci {
                               $rparent->{_container_type} eq 'Logical';
                         }
                         else {
-                            ## ok - none of the above
+                            # does not look like a logical paren
                         }
                     }
 
@@ -7640,20 +7640,8 @@ sub set_ci {
             }
         }
 
-        #---------------------------------
-        # Section 8. Hanging side comments
-        #---------------------------------
-        # Treat hanging side comments like blanks
-        elsif ( $type eq 'q' && $token eq EMPTY_STRING ) {
-            $ci_next = $ci_this;
-
-            $rtoken_K->[_CI_LEVEL_] = $ci_this;
-
-            # 'next' to avoid saving last_ values for blanks and commas
-            next;
-        }
         else {
-            ## ok - not a special type for ci
+            # not a special ci type
         }
 
         # Save debug info if requested
@@ -7860,7 +7848,7 @@ sub set_CODE_type {
                 );
             }
             else {
-                ## ok - not at a format skipping control line
+                # not at a format skipping control line
             }
             $CODE_type = 'FS';
             next;
@@ -9027,7 +9015,7 @@ EOM
               if ( $self->[_save_logfile_] );
         }
         else {
-            ## ok - no special processing for this token type
+            # no special processing for this token type
         }
 
         # Store this token with possible previous blank
@@ -9198,7 +9186,7 @@ sub respace_post_loop_ops {
             }
         }
         else {
-            ## ok - none of the above
+            # nothing special to do for this container token
         }
     }
 
@@ -10896,7 +10884,7 @@ sub check_for_old_break {
                     }
                 }
                 else {
-                    ## ok: none of the above
+                    # no match
                 }
             }
             if ($match) {
@@ -10971,7 +10959,7 @@ sub keep_old_line_breaks {
                 $rbreak_container->{$seqno} = 1;
             }
             else {
-                ## ok: not a special case
+                # not a special case
             }
         }
     }
@@ -11175,7 +11163,7 @@ sub weld_cuddled_blocks {
         if    ( $level < $last_level ) { $in_chain{$last_level} = undef }
         elsif ( $level > $last_level ) { $in_chain{$level}      = undef }
         else {
-            ## ok - ($level == $last_level)
+            # ok - level unchanged
         }
 
         # We are only looking at code blocks
@@ -11277,7 +11265,7 @@ sub weld_cuddled_blocks {
             }
         }
         else {
-            ## ok - not a curly brace
+            # not a curly brace
         }
     }
     return;
@@ -11692,7 +11680,7 @@ sub setup_new_weld_measurements {
             }
         }
         else {
-            ## ok
+            # do not need to backup
         }
     }
 
@@ -14612,7 +14600,7 @@ EOM
                             $collapsed_len = MIN_BLOCK_LEN;
                         }
                         else {
-                            ## ok
+                            # none of these rules applies
                         }
                     }
 
@@ -17666,7 +17654,7 @@ sub starting_one_line_block {
             $self->[_ris_short_broken_eval_block_]->{$type_sequence_j} = 1;
         }
         else {
-            ## ok
+            # ok
         }
     }
     return;
@@ -17915,7 +17903,7 @@ EOM
         # breaks are forced before 'if' and 'unless'
         elsif ( $is_if_unless{$token} && $type eq 'k' ) { $i-- }
         else {
-            ## ok
+            # do not break before
         }
 
         if ( $i >= 0 && $i <= $max_index_to_go ) {
@@ -18525,7 +18513,7 @@ EOM
                 }
             }
             else {
-                ## ok
+                # no blank line needed
             }
 
             if ($blank_count) {
@@ -18605,7 +18593,7 @@ EOM
             }
         }
         else {
-            ## ok - single token
+            # single balanced token
         }
 
         my $rbond_strength_bias = [];
@@ -20404,7 +20392,7 @@ EOM
                 ##TBD
             }
             else {
-                ## ok - not a special type
+                # not a special type
             }
             ## end assignment
         }
@@ -20849,7 +20837,7 @@ EOM
             return if ( !$combine_ok );
         }
         else {
-            ## ok - not a special type
+            # not a special type
         }
         return ( 1, $skip_Section_3 );
     } ## end sub recombine_section_2
@@ -21216,7 +21204,7 @@ EOM
             $forced_breakpoint_to_go[$iend_1] = 0;
         }
         else {
-            ## ok - not a special type
+            # not a special type
         }
         return ( 1, $bs_tweak );
     } ## end sub recombine_section_3
@@ -21966,7 +21954,7 @@ sub break_long_lines {
                 $self->set_closing_breakpoint($i_lowest);
             }
             else {
-                ## ok
+                # not at a '?'
             }
 
             #--------------------------------------------------------
@@ -21981,7 +21969,7 @@ sub break_long_lines {
                 push @i_colon_breaks, $i_lowest;
             }
             else {
-                ## ok
+                # not at a ':'
             }
 
             # here we should set breaks for all '?'/':' pairs which are
@@ -25289,7 +25277,7 @@ EOM
                     }
                 }
                 else {
-                    ## ok
+                    # break
                 }
             }
         }
@@ -25390,7 +25378,7 @@ EOM
             $number_of_fields_best = $number_of_fields_max;
         }
         else {
-            ## ok
+            # no change
         }
 
         # If we are crowded and the -lp option is being used, try
@@ -25642,7 +25630,7 @@ sub study_list_complexity {
             $quote_count++;
         }
         else {
-            ## ok
+            # not a quote
         }
 
         if ( $ib eq $ie ) {
@@ -25702,7 +25690,7 @@ sub study_list_complexity {
             pop @i_ragged_break_list;
         }
         else {
-            ## ok
+            # ok as is
         }
     }
 
@@ -26423,7 +26411,7 @@ sub get_available_spaces_to_go {
             }
             elsif ( $types_to_go[ $i_test + 1 ] eq 'b' ) { $i_test++ }
             else {
-                ## ok
+                # ok - no change needed
             }
 
             my $test_position = total_line_length( $i_test, $ii );
@@ -27537,7 +27525,7 @@ EOM
             }
         }
         else {
-            ## ok - do not need to break vertical alignment here
+            # ok - do not need to break vertical alignment here
         }
 
         # ----------------------------------
@@ -28315,6 +28303,54 @@ EOM
 sub make_HSC_vertical_alignments {
 
     # This is the alignment for a hanging side comment
+    my $rline_alignments;
+
+    #--------------------------------------
+    # Case 1: no alignments if -naws is set
+    #--------------------------------------
+    if ( !$rOpts_add_whitespace ) {
+
+        # Nothing to do if we are not allowed to add whitespace
+        my $pad_spaces = $rOpts->{'minimum-space-to-comment'};
+        $rline_alignments = [
+            [
+                [], [ SPACE . $tokens_to_go[0] ],
+                ['#'],
+                [ 1 + $summed_lengths_to_go[1] - $summed_lengths_to_go[0] ],
+            ]
+        ];
+    }
+
+    #-----------------------
+    # Case 2: -nvsc flag set
+    #-----------------------
+    # - For the specific combination -vc -nvsc, we put all side comments
+    #   at fixed locations. Note that we will lose hanging side comment
+    #   alignments. Otherwise, hsc's can move to strange locations.
+    # - For -nvc -nvsc we make all side comments vertical alignments
+    #   because the vertical aligner will check for -nvsc and be able
+    #   to reduce the final padding to the side comments for long lines.
+    #   and keep hanging side comments aligned.
+    elsif ( !$rOpts_valign_side_comments && $rOpts_valign_code ) {
+        my $pad_spaces = $rOpts->{'minimum-space-to-comment'};
+        $rline_alignments = [
+            [
+
+                [],
+                [ SPACE x $pad_spaces . $tokens_to_go[0] ],
+                ['q'],
+                [
+                    $pad_spaces +
+                      $summed_lengths_to_go[1] -
+                      $summed_lengths_to_go[0]
+                ],
+            ]
+        ];
+    }
+
+    #--------------------------------------
+    # Case 3: Normal case of no constraints
+    #--------------------------------------
     # Originally, a hanging side comment line was constructed as three tokens:
     #    type 'q' with zero length,
     #    type 'b' with length 1
@@ -28326,27 +28362,6 @@ sub make_HSC_vertical_alignments {
     # left as a block comment but the line was marked as 'HSC'. Only when
     # we make the vertical alignments, right here, do we need to construct
     # the artificial 'q', 'b', '#' sequence for the vertical aligner.
-    my $rline_alignments;
-
-    # - For the specific combination -vc -nvsc, we put all side comments
-    #   at fixed locations. Note that we will lose hanging side comment
-    #   alignments. Otherwise, hsc's can move to strange locations.
-    # - For -nvc -nvsc we make all side comments vertical alignments
-    #   because the vertical aligner will check for -nvsc and be able
-    #   to reduce the final padding to the side comments for long lines.
-    #   and keep hanging side comments aligned.
-    if ( !$rOpts_valign_side_comments && $rOpts_valign_code ) {
-        my $pad_spaces = $rOpts->{'minimum-space-to-comment'};
-        $rline_alignments = [
-            [
-
-                [],
-                [ SPACE x $pad_spaces . $tokens_to_go[0] ],
-                ['q'],
-                [ 2 + $summed_lengths_to_go[1] - $summed_lengths_to_go[0] ],
-            ]
-        ];
-    }
     else {
         $rline_alignments = [
             [
@@ -28357,6 +28372,7 @@ sub make_HSC_vertical_alignments {
             ]
         ];
     }
+
     return $rline_alignments;
 }
 
@@ -30111,7 +30127,7 @@ sub make_paren_name {
             }
         }
         else {
-            ## ok
+            # leading token not special
         }
 
         #---------------------------------------------------------
@@ -30240,7 +30256,7 @@ sub make_paren_name {
                     $lev         = $levels_to_go[$i_terminal];
                 }
                 else {
-                    ## ok - maybe default_adjust_indentation > 1 ?
+                    # shouldn't happen - default_adjust_indentation is 0 or 1
                 }
             }
         }
@@ -30513,7 +30529,7 @@ sub make_paren_name {
                 if ( $Kterm == $K_beg ) { $adjust_indentation = 1 }
             }
             else {
-                ## ok
+                # no change in ci needed
             }
         }
 
@@ -31550,13 +31566,13 @@ sub set_vertical_tightness_flags {
                     $rOpts_closing_side_comment_maximum_text
                 )
 
-               # UNLESS: we are adding a closing paren before the brace we seek.
-               # This is an attempt to avoid situations where the ... to be
-               # added are longer than the omitted right paren, as in:
+                # UNLESS: we are adding a closing paren before the brace we
+                # seek.  This is an attempt to avoid situations where the ...
+                # to be added are longer than the omitted right paren, as in:
 
-             #   foreach my $item (@a_rather_long_variable_name_here) {
-             #      &whatever;
-             #   } ## end foreach my $item (@a_rather_long_variable_name_here...
+                #foreach my $item (@a_rather_long_variable_name_here) {
+                #   &whatever;
+                #} ## end foreach my $item (@a_rather_long_variable_name_here...
 
                 || (
                     $tokens_to_go[$i] eq ')'
@@ -31592,7 +31608,7 @@ sub set_vertical_tightness_flags {
                 $leading_block_text .= '...';
             }
             else {
-                ## ok
+                # not enough space to add text
             }
         }
         return;
@@ -32020,7 +32036,7 @@ sub add_closing_side_comment {
                     if ( $old_csc =~ /\[\s*if/ ) { $old_csc = $new_csc }
                 }
                 else {
-                    ## ok: neither else or elsif
+                    # neither else or elsif
                 }
 
                 # if old comment is contained in new comment,
