@@ -1162,7 +1162,8 @@ my ( $template, $borrowernumber, $cookie ) =
 ==> b1020 <==
 # S1
 {
- return(self->_testStrand($other,$so)and not((
+ return(
+        self->_testStrand($other,$so)and not((
                   $self->start()>$other->end()
                 or$self->end()<$other->start()
         ))
@@ -7976,6 +7977,22 @@ sub bubba {
             ( $return, $val ) =
                   exec_stmt ( $i_cond->[ 1 ] );
         } } }
+
+==> b1460 <==
+  # S1;
+  diag "Connected to "
+        . inet_ntoa (
+                     ( unpack_sockaddr_in (
+                             getpeername(T)
+                     ) )[1] ) . "\n";
+
+  # S2
+  diag "Connected to "
+        . inet_ntoa (
+                     ( unpack_sockaddr_in (
+                             getpeername(T)
+                     ) )[1] ) . "\n";
+
 
 ==> b148 <==
 # state 1

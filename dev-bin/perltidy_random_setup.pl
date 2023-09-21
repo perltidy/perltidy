@@ -1306,7 +1306,13 @@ EOM
           code-skipping-begin
           code-skipping-end
           line-range-tidy
+
+          vertical-tightness
+          vertical-tightness-closing
         );
+
+        # Added vertical-tightness and vertical-tightness-closing because
+        # they are expansions. They should not be among the options. (c271)
 
         my %skip;
         @skip{@q} = (1) x scalar(@q);

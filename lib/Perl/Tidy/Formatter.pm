@@ -31286,12 +31286,24 @@ sub set_vertical_tightness_flags {
             # requested
             my $ovt = $opening_vertical_tightness{$token_end};
 
-            # Turn off the -vt flag if the next line ends in a weld.
-            # This avoids an instability with one-line welds (fixes b1183).
-            my $type_end_next = $types_to_go[$iend_next];
-            $ovt = 0
-              if ( $self->[_rK_weld_left_]->{ $K_to_go[$iend_next] }
-                && $is_closing_type{$type_end_next} );
+            # if we are in -lp and the next line ends in a weld..
+            if (   $rOpts_line_up_parentheses
+                && $self->[_rK_weld_left_]->{ $K_to_go[$iend_next] } )
+            {
+                my $type_end_next = $types_to_go[$iend_next];
+
+                # Turn off -vt if the next line ends in a closing token. This
+                # avoids an instability with one-line welds (b1183).
+                if ( $is_closing_type{$type_end_next} ) {
+                    $ovt = 0;
+                }
+
+                # Turn off -vt if the next line ends in an opening token. This
+                # avoids an instability (b1460).
+                elsif ( $is_opening_type{$type_end_next} ) {
+                    $ovt = 0;
+                }
+            }
 
             # The flag '_rbreak_container_' avoids conflict of -bom and -pt=1
             # or -pt=2; fixes b1270. See similar patch above for $cvt.

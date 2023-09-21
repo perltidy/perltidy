@@ -11790,6 +11790,33 @@ sub bubba {
 --vertical-tightness=2
 --weld-nested-containers
 
+==> b1460.in <==
+# S1;
+  diag "Connected to "
+        . inet_ntoa (( unpack_sockaddr_in (
+                            getpeername (T)
+                     ) )[1] ) . "\n" ;
+
+# S2
+  diag "Connected to "
+        . inet_ntoa (
+                      (unpack_sockaddr_in (
+                            getpeername (T)
+                       )
+                      )[1] ) . "\n" ;
+
+
+==> b1460.par <==
+--continuation-indentation=6
+--extended-line-up-parentheses
+--indent-columns=1
+--maximum-line-length=43
+--space-function-paren
+--stack-closing-paren
+--stack-opening-paren
+--vertical-tightness=2
+--weld-nested-containers
+
 ==> b148.in <==
 # state 1
 @yydgoto=(
