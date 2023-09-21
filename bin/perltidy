@@ -5408,6 +5408,12 @@ a few symbols for special block types, as follows:
    +    - any nested inner block loop
    package - any package or class
    closure - any nameless block
+   elsif3  - an if-elsif-..-else chain with 3 or more elsif's (3 is arbitrary, see below)
+
+A chain of B<if-elsif-...> blocks may be reported as a single line item by entering the word B<elsif> with an appended integer, as indicated by the last item in
+this list. The integer indicates the number of B<elsif> blocks required for
+a chain to be reported. If you use this, you may want to also use B<-dbl=n>,
+with a smaller number of lines B<n> than the default.
 
 In addition, specific block loop types which are nested in other loops can be
 selected by adding a B<+> after the block name. (Nested loops are sometimes
@@ -5441,6 +5447,11 @@ are inner loops.
 This selects every block and package.
 
     perltidy -dbs -dbl=1 -dbt='* closure' somefile.pl >blocks.csv
+
+=item *
+This selects every if-chain which contains 2 or more B<elsif> blocks:
+
+    perltidy -dbs -dbl=1 -dbt='elsif2' somefile.pl >blocks.csv
 
 =back
 

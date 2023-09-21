@@ -2,6 +2,11 @@
 
 ## 2023 09 12.01
 
+    - The dump-block-summary option can report an if-elsif-elsif-.. chain
+      as a single line item with the notation -dbt='elsif3', for example,
+      where the '3' is an integer which specifies the minimum number of elsif
+      blocks required for a chain to be reported. The manual has details.
+
     - Fix problem c269, in which the new -ame parameter could incorrectly
       emit an else block when two elsif blocks were separated by a hanging
       side comment (a very rare situation).

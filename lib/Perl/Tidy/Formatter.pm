@@ -6691,9 +6691,12 @@ sub find_selected_packages {
 
 sub find_selected_blocks {
 
-    my ( $self, $rdump_block_types ) = @_;
+    my ( $self, $rdump_block_types, $rlevel_info ) = @_;
 
     # Find blocks needed for --dump-block-summary
+    # Given:
+    #   $rdump_block_types = hash of user selected block types
+    #   $rlevel_info = info on max depth of blocks
     # Returns:
     #  $rslected_blocks = ref to a list of information on the selected blocks
 
@@ -6706,9 +6709,6 @@ sub find_selected_blocks {
     my $ris_sub_block        = $self->[_ris_sub_block_];
 
     my $dump_all_types = $rdump_block_types->{'*'};
-
-    # Get level variation info for code blocks
-    my $rlevel_info = $self->find_level_info();
 
     my @selected_blocks;
 
@@ -6850,6 +6850,192 @@ EOM
     return \@selected_blocks;
 } ## end sub find_selected_blocks
 
+sub find_if_chains {
+
+    my ( $self, $rdump_block_types, $rlevel_info ) = @_;
+
+    # Find if-chains for --dump-block-summary
+
+    # Given:
+    #   $rdump_block_types = ref to hash with user block type selections
+    #   $rlevel_info = info on max depth of blocks
+    # Returns:
+    #  $rslected_blocks = ref to a list of information on the selected blocks
+
+    my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
+
+    # For example, 'elsif4' means all if-chains with 4 or more 'elsif's
+    my @selected_blocks;
+
+    # See if user requested any if-chains
+    # allow 'elsif3' or 'elsif+3'
+    my @elsif_d = grep { /^elsif\+?\d+$/ } keys %{$rdump_block_types};
+    if ( !@elsif_d ) { return \@selected_blocks }
+
+    # In case of multiple selections, use the minimum
+    my $elsif_count_min;
+    foreach my $word (@elsif_d) {
+        if ( $word =~ /(\d+)$/ ) {
+            my $num = $1;
+            if ( !defined($elsif_count_min) || $elsif_count_min > $num ) {
+                $elsif_count_min = $num;
+            }
+        }
+    }
+
+    # Loop over blocks
+    foreach my $seqno ( keys %{$rblock_type_of_seqno} ) {
+
+        my $block_type = $rblock_type_of_seqno->{$seqno};
+
+        # Must be 'if' or 'unless'
+        next unless ( $block_type eq 'if' || $block_type eq 'unless' );
+
+        # Collect info for this if-chain
+        my $rif_chain =
+          $self->follow_if_chain( $seqno, $rlevel_info, $elsif_count_min );
+        next unless ($rif_chain);
+
+        push @selected_blocks, $rif_chain;
+    }
+    return \@selected_blocks;
+}
+
+sub follow_if_chain {
+    my ( $self, $seqno_if, $rlevel_info, $elsif_count_min ) = @_;
+
+    # Follow a chain of if-elsif-elsif-...-else blocks.
+
+    # Given:
+    #   $seqno_if = sequence number of an 'if' block
+    #   $rlevel_info = hash of block level information
+    #   $elsif_min_count = minimum number of 'elsif' blocks wanted
+    # Return:
+    #   nothing if number of 'elsif' blocks is less than $elsif_count_min
+    #   ref to block info hash otherwise
+
+    my $rLL                  = $self->[_rLL_];
+    my $K_opening_container  = $self->[_K_opening_container_];
+    my $K_closing_container  = $self->[_K_closing_container_];
+    my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
+
+    # Verify that seqno is an 'if' or 'unless'
+    my $block_type = $rblock_type_of_seqno->{$seqno_if};
+    if ( $block_type ne 'if' && $block_type ne 'unless' ) {
+        Fault(
+"Bad call: expecting block type 'if' or 'unless' but got '$block_type' for seqno=$seqno_if\n"
+        );
+        return;
+    }
+
+    # save sequence numbers in the chain for debugging
+    my @seqno_list;
+
+    # Loop to follow the chain
+    my $max_change  = 0;
+    my $block_count = 0;
+    my $elsif_count = 0;
+
+    my $seqno = $seqno_if;
+    while ($seqno) {
+        push @seqno_list, $seqno;
+
+        # Update info for this block
+        my $block_type = $rblock_type_of_seqno->{$seqno};
+        if ( $block_type eq 'elsif' ) { $elsif_count++ }
+        my $item = $rlevel_info->{$seqno};
+        if ( defined($item) ) {
+            my $starting_depth = $item->{starting_depth};
+            my $maximum_depth  = $item->{maximum_depth};
+            $block_count += $item->{block_count};
+            my $mxc = $maximum_depth - $starting_depth + 1;
+            if ( $mxc > $max_change ) { $max_change = $mxc }
+        }
+
+        # Chain ends if this is an 'else' block
+        last if ( $block_type eq 'else' );
+
+        # Look at the token following the closing brace
+        my $Kc  = $K_closing_container->{$seqno};
+        my $K_k = $self->K_next_code($Kc);
+        last unless defined($K_k);
+        my $type_k  = $rLL->[$K_k]->[_TYPE_];
+        my $token_k = $rLL->[$K_k]->[_TOKEN_];
+
+        # Chain ends unless we arrive at keyword 'elsif' or 'else'
+        last
+          unless ( $type_k eq 'k'
+            && ( $token_k eq 'elsif' || $token_k eq 'else' ) );
+
+        # Handle 'else' : next token be the opening block brace
+        if ( $token_k eq 'else' ) {
+
+            #     } else  {
+            #     ^  ^    ^
+            #     Kc |    |
+            #        K_k Ko
+
+            my $Ko = $self->K_next_code($K_k);
+            last unless defined($Ko);
+            $seqno = $rLL->[$Ko]->[_TYPE_SEQUENCE_];
+            if ( $seqno && $rblock_type_of_seqno->{$seqno} eq 'else' ) {
+                next;
+            }
+
+            # Shouldn't happen unless file has an error
+            last;
+        }
+
+        # Handle 'elsif':
+
+        #     } elsif ( $something ) {
+        #     ^  ^    ^            ^ ^
+        #     Kc |    |            | |
+        #        K_k  Kpo        Kpc Ko
+
+        # hop over the elsif parens
+        my $kpo = $self->K_next_code($K_k);
+        last unless defined($kpo);
+        my $seqno_p = $rLL->[$kpo]->[_TYPE_SEQUENCE_];
+        last unless ( $seqno_p && $rLL->[$kpo]->[_TOKEN_] eq '(' );
+        my $Kpc = $K_closing_container->{$seqno_p};
+        last unless defined($Kpc);
+
+        # should be at the opening elsif brace
+        my $Ko = $self->K_next_code($Kpc);
+        last unless defined($Ko);
+        $seqno = $rLL->[$Ko]->[_TYPE_SEQUENCE_];
+        if ( $seqno && $rblock_type_of_seqno->{$seqno} eq 'elsif' ) {
+            next;
+        }
+
+        # Shouldn't happen unless file has an error
+        last;
+    }
+
+    # check count
+    return unless ( $elsif_count >= $elsif_count_min );
+
+    # Store the chain
+    my $K_opening = $K_opening_container->{$seqno_if};
+    my $K_closing = $K_closing_container->{$seqno};
+    my $lx_open   = $rLL->[$K_opening]->[_LINE_INDEX_];
+    my $level     = $rLL->[$K_opening]->[_LEVEL_];
+
+    my $rchain = {
+        K_opening   => $K_opening,
+        K_closing   => $K_closing,
+        line_start  => $lx_open + 1,
+        name        => "elsif+$elsif_count",
+        type        => "if-chain",
+        level       => $level,
+        max_change  => $max_change,
+        block_count => $block_count,
+    };
+
+    return $rchain;
+}
+
 sub dump_block_summary {
     my ($self) = @_;
 
@@ -6871,13 +7057,25 @@ sub dump_block_summary {
     my %dump_block_types;
     @{dump_block_types}{@list} = (1) x scalar(@list);
 
+    # Get level variation info for code blocks
+    my $rlevel_info = $self->find_level_info();
+
     # Get block info
-    my $rselected_blocks = $self->find_selected_blocks( \%dump_block_types );
+    my $rselected_blocks =
+      $self->find_selected_blocks( \%dump_block_types, $rlevel_info );
+
+    # Get if-chains
+    my $rselected_if_chains =
+      $self->find_if_chains( \%dump_block_types, $rlevel_info );
 
     # Get package info
     my $rpackage_list = $self->find_selected_packages( \%dump_block_types );
 
-    return if ( !@{$rselected_blocks} && !@{$rpackage_list} );
+    # merge
+    my @all_blocks =
+      ( @{$rselected_blocks}, @{$rselected_if_chains}, @{$rpackage_list} );
+
+    return unless (@all_blocks);
 
     my $input_stream_name = get_input_stream_name();
 
@@ -6894,9 +7092,9 @@ sub dump_block_summary {
 
     my $rLL = $self->[_rLL_];
 
-    # merge blocks and packages, add various counts, filter and print to STDOUT
+    # add various counts, filter and print to STDOUT
     my $routput_lines = [];
-    foreach my $item ( @{$rselected_blocks}, @{$rpackage_list} ) {
+    foreach my $item (@all_blocks) {
 
         my $K_opening = $item->{K_opening};
         my $K_closing = $item->{K_closing};
