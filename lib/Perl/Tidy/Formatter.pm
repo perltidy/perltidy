@@ -6941,7 +6941,7 @@ sub follow_if_chain {
         push @seqno_list, $seqno;
 
         # Update info for this block
-        my $block_type = $rblock_type_of_seqno->{$seqno};
+        $block_type = $rblock_type_of_seqno->{$seqno};
         if ( $block_type eq 'elsif' ) { $elsif_count++ }
         my $item = $rlevel_info->{$seqno};
         if ( defined($item) ) {
@@ -7014,7 +7014,7 @@ sub follow_if_chain {
     }
 
     # check count
-    return unless ( $elsif_count >= $elsif_count_min );
+    return if ( $elsif_count < $elsif_count_min );
 
     # Store the chain
     my $K_opening = $K_opening_container->{$seqno_if};

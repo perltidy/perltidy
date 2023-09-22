@@ -120,6 +120,7 @@ my (
     %is_keyword,
     %is_my_our_state,
     %is_package,
+    %matching_end_token,
 
     # INITIALIZER: sub check_options
     $code_skipping_pattern_begin,
@@ -5609,7 +5610,11 @@ EOM
 
         $self->[_in_quote_] = $in_quote;
         $self->[_quote_target_] =
-          $in_quote ? matching_end_token($quote_character) : EMPTY_STRING;
+            $in_quote
+          ? $matching_end_token{$quote_character}
+              ? $matching_end_token{$quote_character}
+              : $quote_character
+          : EMPTY_STRING;
         $self->[_rhere_target_list_] = $rhere_target_list;
 
         return;
@@ -9781,6 +9786,17 @@ sub do_quote {
     );
 } ## end sub do_quote
 
+# Some possible non-word quote delimiters, for preliminary checking
+my %is_punct_char;
+
+BEGIN {
+
+    my @q = qw# / " ' { } ( ) [ ] < > ; + - * | % ! x ~ = ? : . ^ & #;
+    push @q, '#';
+    push @q, ',';
+    @is_punct_char{@q} = (1) x scalar(@q);
+}
+
 sub follow_quoted_string {
 
     # scan for a specific token, skipping escaped characters
@@ -9820,12 +9836,20 @@ sub follow_quoted_string {
 "QUOTE entering with quote_pos = $quote_pos i=$i beginning_tok =$beginning_tok\n";
     };
 
-    # get the corresponding end token
-    if ( $beginning_tok !~ /^\s*$/ ) {
-        $end_tok = matching_end_token($beginning_tok);
+    # for a non-blank token, get the corresponding end token
+    if (
+        $is_punct_char{$beginning_tok}
+        || ( length($beginning_tok)
+            && $beginning_tok !~ /^\s+$/ )
+      )
+    {
+        $end_tok =
+            $matching_end_token{$beginning_tok}
+          ? $matching_end_token{$beginning_tok}
+          : $beginning_tok;
     }
 
-    # a blank token means we must find and use the first non-blank one
+    # for a blank token, find and use the first non-blank one
     else {
         my $allow_quote_comments = ( $i < 0 ) ? 1 : 0; # i<0 means we saw a <cr>
 
@@ -9847,7 +9871,10 @@ sub follow_quoted_string {
                         $beginning_tok = $tok;
                         $quote_pos     = 0;
                     }
-                    $end_tok     = matching_end_token($beginning_tok);
+                    $end_tok =
+                        $matching_end_token{$beginning_tok}
+                      ? $matching_end_token{$beginning_tok}
+                      : $beginning_tok;
                     $quote_depth = 1;
                     last;
                 }
@@ -9869,7 +9896,7 @@ sub follow_quoted_string {
     # Case 1 (rare): loop for case of alphanumeric quote delimiter..
     # "quote_pos" is the position the current word to begin searching
     #----------------------------------------------------------------
-    if ( $beginning_tok =~ /\w/ ) {
+    if ( !$is_punct_char{$beginning_tok} && $beginning_tok =~ /\w/ ) {
 
         # Note this because it is not recommended practice except
         # for obfuscated perl contests
@@ -10155,29 +10182,6 @@ sub show_tokens {
     }
     return;
 } ## end sub show_tokens
-
-{    ## closure for sub matching end token
-    my %matching_end_token;
-
-    BEGIN {
-        %matching_end_token = (
-            '{' => '}',
-            '(' => ')',
-            '[' => ']',
-            '<' => '>',
-        );
-    } ## end BEGIN
-
-    sub matching_end_token {
-
-        # return closing character for a pattern
-        my $beginning_token = shift;
-        if ( $matching_end_token{$beginning_token} ) {
-            return $matching_end_token{$beginning_token};
-        }
-        return ($beginning_token);
-    } ## end sub matching_end_token
-}
 
 sub dump_token_types {
     my ( $class, $fh ) = @_;
@@ -10917,5 +10921,12 @@ BEGIN {
     #  __DATA__ __END__
 
     @is_keyword{@Keywords} = (1) x scalar(@Keywords);
+
+    %matching_end_token = (
+        '{' => '}',
+        '(' => ')',
+        '[' => ']',
+        '<' => '>',
+    );
 } ## end BEGIN
 1;

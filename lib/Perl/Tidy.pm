@@ -3480,25 +3480,29 @@ sub generate_options {
     $add_option->( 'stack-opening-hash-brace',                'sohb',  '!' );
     $add_option->( 'stack-opening-paren',                     'sop',   '!' );
     $add_option->( 'stack-opening-square-bracket',            'sosb',  '!' );
-    $add_option->( 'vertical-tightness',                      'vt',    '=i' );
-    $add_option->( 'vertical-tightness-closing',              'vtc',   '=i' );
-    $add_option->( 'want-break-after',                        'wba',   '=s' );
-    $add_option->( 'want-break-before',                       'wbb',   '=s' );
-    $add_option->( 'break-after-all-operators',               'baao',  '!' );
-    $add_option->( 'break-before-all-operators',              'bbao',  '!' );
-    $add_option->( 'keep-interior-semicolons',                'kis',   '!' );
-    $add_option->( 'one-line-block-semicolons',               'olbs',  '=i' );
-    $add_option->( 'one-line-block-nesting',                  'olbn',  '=i' );
-    $add_option->( 'one-line-block-exclusion-list',           'olbxl', '=s' );
-    $add_option->( 'break-before-hash-brace',                 'bbhb',  '=i' );
-    $add_option->( 'break-before-hash-brace-and-indent',      'bbhbi', '=i' );
-    $add_option->( 'break-before-square-bracket',             'bbsb',  '=i' );
-    $add_option->( 'break-before-square-bracket-and-indent',  'bbsbi', '=i' );
-    $add_option->( 'break-before-paren',                      'bbp',   '=i' );
-    $add_option->( 'break-before-paren-and-indent',           'bbpi',  '=i' );
-    $add_option->( 'brace-left-list',                         'bll',   '=s' );
-    $add_option->( 'brace-left-exclusion-list',               'blxl',  '=s' );
-    $add_option->( 'break-after-labels',                      'bal',   '=i' );
+
+    # FIXME: --vt and --vtc are actually expansions now, so these two lines
+    # should eventually be removed.
+    $add_option->( 'vertical-tightness',         'vt',  '=i' );
+    $add_option->( 'vertical-tightness-closing', 'vtc', '=i' );
+
+    $add_option->( 'want-break-after',                       'wba',   '=s' );
+    $add_option->( 'want-break-before',                      'wbb',   '=s' );
+    $add_option->( 'break-after-all-operators',              'baao',  '!' );
+    $add_option->( 'break-before-all-operators',             'bbao',  '!' );
+    $add_option->( 'keep-interior-semicolons',               'kis',   '!' );
+    $add_option->( 'one-line-block-semicolons',              'olbs',  '=i' );
+    $add_option->( 'one-line-block-nesting',                 'olbn',  '=i' );
+    $add_option->( 'one-line-block-exclusion-list',          'olbxl', '=s' );
+    $add_option->( 'break-before-hash-brace',                'bbhb',  '=i' );
+    $add_option->( 'break-before-hash-brace-and-indent',     'bbhbi', '=i' );
+    $add_option->( 'break-before-square-bracket',            'bbsb',  '=i' );
+    $add_option->( 'break-before-square-bracket-and-indent', 'bbsbi', '=i' );
+    $add_option->( 'break-before-paren',                     'bbp',   '=i' );
+    $add_option->( 'break-before-paren-and-indent',          'bbpi',  '=i' );
+    $add_option->( 'brace-left-list',                        'bll',   '=s' );
+    $add_option->( 'brace-left-exclusion-list',              'blxl',  '=s' );
+    $add_option->( 'break-after-labels',                     'bal',   '=i' );
 
     # This was an experiment mentioned in git #78, originally named -bopl. I
     # expanded it to also open logical blocks, based on git discussion #100,
