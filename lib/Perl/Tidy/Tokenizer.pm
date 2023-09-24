@@ -2825,7 +2825,9 @@ EOM
             $want_brace     = $want_paren;
             $want_paren     = EMPTY_STRING;
         }
-        elsif ( $statement_type =~ /^sub\b/ ) {
+        elsif ( substr( $statement_type, 0, 3 ) eq 'sub'
+            && $statement_type =~ /^sub\b/ )
+        {
             $container_type = $statement_type;
         }
         else {
@@ -2981,7 +2983,9 @@ EOM
 
         # restore statement type as 'sub' at closing paren of a signature
         # so that a subsequent ':' is identified as an attribute
-        if ( $container_type =~ /^sub\b/ ) {
+        if ( substr( $container_type, 0, 3 ) eq 'sub'
+            && $container_type =~ /^sub\b/ )
+        {
             $statement_type = $container_type;
         }
 
@@ -4116,7 +4120,7 @@ EOM
             $type      = 'U';
             $prototype = $ruser_function_prototype->{$current_package}{$tok};
         }
-        elsif ( $tok =~ /^v\d+$/ ) {
+        elsif ( substr( $tok, 0, 1 ) eq 'v' && $tok =~ /^v\d+$/ ) {
             $type = 'v';
             $self->report_v_string($tok);
         }
@@ -7327,8 +7331,15 @@ sub scan_bare_identifier_do {
     #   A::
     #   ::A
     #   A'B
-    if ( $input_line =~ m/\G\s*((?:\w*(?:'|::)))*(?:(?:->)?(\w+))?/gc ) {
-
+    if (
+        $input_line =~ m{
+         \G\s*                # start at pos
+         ( (?:\w*(?:'|::)) )* # $1 = maybe package name like A:: A::B:: or A'
+         (?:(?:->)?           #      maybe followed by '->'
+         (\w+))?              # $2 = maybe followed by sub name
+        }gcx
+      )
+    {
         my $pos  = pos($input_line);
         my $numc = $pos - $pos_beg;
         $tok = substr( $input_line, $pos_beg, $numc );
@@ -7367,7 +7378,7 @@ sub scan_bare_identifier_do {
 
             # check for v-string with leading 'v' type character
             # (This seems to have precedence over filehandle, type 'Y')
-            if ( $tok =~ /^v\d[_\d]*$/ ) {
+            if ( substr( $tok, 0, 1 ) eq 'v' && $tok =~ /^v\d[_\d]*$/ ) {
 
                 # we only have the first part - something like 'v101' -
                 # look for more

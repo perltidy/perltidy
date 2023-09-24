@@ -22239,6 +22239,13 @@ sub break_long_lines {
 use constant TINY_BIAS => 0.0001;
 use constant MAX_BIAS  => 0.001;
 
+my %is_dot_and_or;
+
+BEGIN {
+    my @q = qw( . && || );
+    @is_dot_and_or{@q} = (1) x scalar(@q);
+}
+
 sub break_lines_inner_loop {
 
     #-----------------------------------------------------------------
@@ -22247,7 +22254,7 @@ sub break_lines_inner_loop {
     #-----------------------------------------------------------------
 
     my (
-        $self,    #
+        $self,
 
         $i_begin,
         $i_last_break,
@@ -22256,7 +22263,6 @@ sub break_lines_inner_loop {
         $line_count,
         $rbond_strength_to_go,
         $saw_good_break,
-
     ) = @_;
 
     # Given:
@@ -22430,7 +22436,8 @@ sub break_lines_inner_loop {
             && ( $nesting_depth_to_go[$i_begin] >
                 $nesting_depth_to_go[$i_next_nonblank] )
             && (
-                $next_nonblank_type =~ /^(\.|\&\&|\|\|)$/
+                ## /^(\.|\&\&|\|\|)$/
+                $is_dot_and_or{$next_nonblank_type}
                 || (
                     $next_nonblank_type eq 'k'
 
@@ -28991,9 +28998,9 @@ sub get_seqno {
             $tok_next  = $tokens_to_go[$ibeg_next];
             $type_next = $types_to_go[$ibeg_next];
 
-            $has_leading_op_next = ( $tok_next =~ /^\w/ )
-              ? $is_chain_operator{$tok_next}      # + - * / : ? && ||
-              : $is_chain_operator{$type_next};    # and, or
+            $has_leading_op_next = ( $type_next eq 'k' )
+              ? $is_chain_operator{$tok_next}      # and, or
+              : $is_chain_operator{$type_next};    # + - * / : ? && ||
 
             next unless ($has_leading_op_next);
 
