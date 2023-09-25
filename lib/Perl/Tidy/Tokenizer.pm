@@ -6098,6 +6098,10 @@ sub operator_expected {
         return $op_expected;
     }
 
+    DEBUG_OPERATOR_EXPECTED
+      && print {*STDOUT}
+"OPERATOR_EXPECTED: in hardwired table for last type $last_nonblank_type token $last_nonblank_token\n";
+
     #---------------------------------------------
     # Section 2: Handle special cases if necessary
     #---------------------------------------------
@@ -6109,7 +6113,9 @@ sub operator_expected {
     # Fix for c250: removed coding for type 'i' because 'i' and new type 'P'
     # are now done by hash table lookup
 
-    # keyword...
+    #--------------------
+    # Section 2A: keyword
+    #--------------------
     if ( $last_nonblank_type eq 'k' ) {
 
         # keywords expecting TERM:
@@ -6126,7 +6132,7 @@ sub operator_expected {
                     $last_nonblank_token}
               )
             {
-                $op_expected = OPERATOR;
+                return OPERATOR;
             }
 
             # Patch to allow a ? following 'split' to be a deprecated pattern
@@ -6134,27 +6140,27 @@ sub operator_expected {
             # from the list
             # %is_keyword_rejecting_question_as_pattern_delimiter. This patch
             # will force perltidy to guess.
-            elsif ($tok eq '?'
+            if (   $tok eq '?'
                 && $last_nonblank_token eq 'split' )
             {
-                $op_expected = UNKNOWN;
+                return UNKNOWN;
             }
-            else {
-                $op_expected = TERM;
-            }
+
+            return TERM;
         }
 
         # keywords expecting OPERATOR:
-        elsif ( $expecting_operator_token{$last_nonblank_token} ) {
-            $op_expected = OPERATOR;
+        if ( $expecting_operator_token{$last_nonblank_token} ) {
+            return OPERATOR;
         }
 
-        else {
-            $op_expected = TERM;
-        }
+        return TERM;
+
     } ## end type 'k'
 
-    # closing container token...
+    #------------------------------------
+    # Section 2B: Closing container token
+    #------------------------------------
 
     # Note that the actual token for type '}' may also be a ')'.
 
@@ -6165,22 +6171,21 @@ sub operator_expected {
     #       $a = do { BLOCK } / 2;
     # the $last_nonblank_token is 'do' when $last_nonblank_type eq '}'.
 
-    elsif ( $last_nonblank_type eq '}' ) {
-        $op_expected = UNKNOWN;
+    if ( $last_nonblank_type eq '}' ) {
 
         # handle something after 'do' and 'eval'
         if ( $is_block_operator{$last_nonblank_token} ) {
 
             # something like $a = do { BLOCK } / 2;
-            $op_expected = OPERATOR;    # block mode following }
+            return OPERATOR;    # block mode following }
         }
 
         #       $last_nonblank_token =~ /^(\)|\$|\-\>)/
-        elsif ( $is_paren_dollar{ substr( $last_nonblank_token, 0, 1 ) }
+        if ( $is_paren_dollar{ substr( $last_nonblank_token, 0, 1 ) }
             || substr( $last_nonblank_token, 0, 2 ) eq '->' )
         {
-            $op_expected = OPERATOR;
-            if ( $last_nonblank_token eq '$' ) { $op_expected = UNKNOWN }
+            if ( $last_nonblank_token eq '$' ) { return UNKNOWN }
+            return OPERATOR;
         }
 
         # Check for smartmatch operator before preceding brace or square
@@ -6189,8 +6194,8 @@ sub operator_expected {
         #
         # qr/3/ ~~ ['1234'] ? 1 : 0;
         # map { $_ ~~ [ '0', '1' ] ? 'x' : 'o' } @a;
-        elsif ( $last_nonblank_token eq '~~' ) {
-            $op_expected = OPERATOR;
+        if ( $last_nonblank_token eq '~~' ) {
+            return OPERATOR;
         }
 
         # A right brace here indicates the end of a simple block.  All
@@ -6198,87 +6203,88 @@ sub operator_expected {
         # block operator keywords have been given those keywords as
         # "last_nonblank_token" and caught above.  (This statement is order
         # dependent, and must come after checking $last_nonblank_token).
-        else {
 
-            # patch for dor.t (defined or).
-            if (   $tok eq '/'
-                && $next_type eq '/'
-                && $last_nonblank_token eq ']' )
-            {
-                $op_expected = OPERATOR;
-            }
-
-            # Patch for RT #116344: misparse a ternary operator after an
-            # anonymous hash, like this:
-            #   return ref {} ? 1 : 0;
-            # The right brace should really be marked type 'R' in this case,
-            # and it is safest to return an UNKNOWN here. Expecting a TERM will
-            # cause the '?' to always be interpreted as a pattern delimiter
-            # rather than introducing a ternary operator.
-            elsif ( $tok eq '?' ) {
-                $op_expected = UNKNOWN;
-            }
-            else {
-                $op_expected = TERM;
-            }
+        # patch for dor.t (defined or).
+        if (   $tok eq '/'
+            && $next_type eq '/'
+            && $last_nonblank_token eq ']' )
+        {
+            return OPERATOR;
         }
+
+        # Patch for RT #116344: misparse a ternary operator after an
+        # anonymous hash, like this:
+        #   return ref {} ? 1 : 0;
+        # The right brace should really be marked type 'R' in this case,
+        # and it is safest to return an UNKNOWN here. Expecting a TERM will
+        # cause the '?' to always be interpreted as a pattern delimiter
+        # rather than introducing a ternary operator.
+        if ( $tok eq '?' ) {
+            return UNKNOWN;
+        }
+        return TERM;
+
     } ## end type '}'
 
-    # number or v-string...
+    #-------------------------------
+    # Section 2C: number or v-string
+    #-------------------------------
     # An exception is for VERSION numbers a 'use' statement. It has the format
     #     use Module VERSION LIST
     # We could avoid this exception by writing a special sub to parse 'use'
     # statements and perhaps mark these numbers with a new type V (for VERSION)
     ##elsif ( $last_nonblank_type =~ /^[nv]$/ ) {
-    elsif ( $is_n_v{$last_nonblank_type} ) {
-        $op_expected = OPERATOR;
+    if ( $is_n_v{$last_nonblank_type} ) {
         if ( $statement_type eq 'use' ) {
-            $op_expected = UNKNOWN;
+            return UNKNOWN;
         }
+        return OPERATOR;
     }
 
-    # quote...
+    #---------------------
+    # Section 2D: qw quote
+    #---------------------
     # TODO: labeled prototype words would better be given type 'A' or maybe
     # 'J'; not 'q'; or maybe mark as type 'Y'?
-    elsif ( $last_nonblank_type eq 'q' ) {
+    if ( $last_nonblank_type eq 'q' ) {
         if ( $last_nonblank_token eq 'prototype' ) {
-            $op_expected = TERM;
+            return TERM;
         }
 
         # update for --use-feature=class (rt145706):
         # Look for class VERSION after possible attribute, as in
         #    class Example::Subclass : isa(Example::Base) 1.345 { ... }
-        elsif ( $statement_type =~ /^package\b/ ) {
-            $op_expected = TERM;
+        if ( $statement_type =~ /^package\b/ ) {
+            return TERM;
         }
 
         # everything else
-        else {
-            $op_expected = OPERATOR;
-        }
+        return OPERATOR;
     }
 
-    # file handle or similar
-    elsif ( $last_nonblank_type eq 'Z' ) {
+    #-----------------------------------
+    # Section 2E: file handle or similar
+    #-----------------------------------
+    if ( $last_nonblank_type eq 'Z' ) {
 
         # angle.t
         if ( $last_nonblank_token =~ /^\w/ ) {
-            $op_expected = UNKNOWN;
+            return UNKNOWN;
         }
 
         # Exception to weird parsing rules for 'x(' ... see case b1205:
         # In something like 'print $vv x(...' the x is an operator;
         # Likewise in 'print $vv x$ww' the x is an operator (case b1207)
         # otherwise x follows the weird parsing rules.
-        elsif ( $tok eq 'x' && $next_type =~ /^[\(\$\@\%]$/ ) {
-            $op_expected = OPERATOR;
+        if ( $tok eq 'x' && $next_type =~ /^[\(\$\@\%]$/ ) {
+            return OPERATOR;
         }
 
         # The 'weird parsing rules' of next section do not work for '<' and '?'
         # It is best to mark them as unknown.  Test case:
         #  print $fh <DATA>;
-        elsif ( $is_weird_parsing_rule_exception{$tok} ) {
-            $op_expected = UNKNOWN;
+        if ( $is_weird_parsing_rule_exception{$tok} ) {
+            return UNKNOWN;
         }
 
         # For possible file handle like "$a", Perl uses weird parsing rules.
@@ -6291,15 +6297,15 @@ sub operator_expected {
         #    print $fh &xsi_protos(@mods);
         #    my $x = new $CompressClass *FH;
         #    print $OUT +( $count % 15 ? ", " : "\n\t" );
-        elsif ($blank_after_Z
+        if (   $blank_after_Z
             && $next_type ne 'b' )
         {
-            $op_expected = TERM;
+            return TERM;
         }
 
         # Note that '?' and '<' have been moved above
         # ( $tok =~ /^([x\/\+\-\*\%\&\.\?\<]|\>\>)$/ ) {
-        elsif ( $tok =~ /^([x\/\+\-\*\%\&\.]|\>\>)$/ ) {
+        if ( $tok =~ /^([x\/\+\-\*\%\&\.]|\>\>)$/ ) {
 
             # Do not complain in 'use' statements, which have special syntax.
             # For example, from RT#130344:
@@ -6309,25 +6315,18 @@ sub operator_expected {
 "operator in possible indirect object location not recommended\n"
                 );
             }
-            $op_expected = OPERATOR;
+            return OPERATOR;
         }
 
         # all other cases
-        else {
-            $op_expected = UNKNOWN;
-        }
+
+        return UNKNOWN;
     }
 
-    # anything else...
-    else {
-        $op_expected = UNKNOWN;
-    }
-
-    DEBUG_OPERATOR_EXPECTED
-      && print {*STDOUT}
-"OPERATOR_EXPECTED: returns $op_expected for last type $last_nonblank_type token $last_nonblank_token\n";
-
-    return $op_expected;
+    #--------------------------
+    # Section 2F: anything else
+    #--------------------------
+    return UNKNOWN;
 
 } ## end sub operator_expected
 
