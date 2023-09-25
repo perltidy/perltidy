@@ -9159,10 +9159,11 @@ EOM
         # check for a qw quote
         elsif ( $type eq 'q' ) {
 
-            # trim blanks from right of qw quotes
-            # (To avoid trimming qw quotes use -ntqw; the tokenizer handles
-            # this)
-            $token =~ s/\s*$//;
+            # Trim spaces from right of qw quotes.  Also trim from the left for
+            # safety (the tokenizer should have done this).
+            # To avoid trimming qw quotes use -ntqw; this causes the
+            # tokenizer to set them as type 'Q' instead of 'q'.
+            $token =~ s/^ \s+ | \s+ $//x;
             $rtoken_vars->[_TOKEN_] = $token;
             if ( $self->[_save_logfile_] && $token =~ /\t/ ) {
                 $self->note_embedded_tab($input_line_number);

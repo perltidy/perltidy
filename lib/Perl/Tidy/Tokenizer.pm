@@ -20,15 +20,17 @@
 package Perl::Tidy::Tokenizer;
 use strict;
 use warnings;
-use English qw( -no_match_vars );
+use English    qw( -no_match_vars );
+use List::Util qw( min max );          # min, max first are in Perl 5.8
 
 our $VERSION = '20230912.01';
 
 use Carp;
 
-use constant DEVEL_MODE   => 0;
-use constant EMPTY_STRING => q{};
-use constant SPACE        => q{ };
+use constant USE_FAST_TRIM => 1;
+use constant DEVEL_MODE    => 0;
+use constant EMPTY_STRING  => q{};
+use constant SPACE         => q{ };
 
 # Decimal values of some ascii characters for quick checks
 use constant ORD_TAB           => 9;
@@ -214,6 +216,7 @@ BEGIN {
         _rOpts_                              => $i++,
         _rinput_lines_                       => $i++,
         _input_line_index_next_              => $i++,
+        _rleading_space_char_count_          => $i++,
     };
 } ## end BEGIN
 
@@ -598,6 +601,7 @@ sub make_source_array {
     my $rinput_lines = [];
 
     my $rsource = ref($line_source_object);
+    my $source_string;
 
     if ( !$rsource ) {
 
@@ -610,12 +614,14 @@ EOM
 
     # handle an ARRAY ref
     elsif ( $rsource eq 'ARRAY' ) {
-        $rinput_lines = $line_source_object;
+        $rinput_lines  = $line_source_object;
+        $source_string = join( EMPTY_STRING, @{$line_source_object} );
     }
 
     # handle a SCALAR ref
     elsif ( $rsource eq 'SCALAR' ) {
-        my @lines = split /^/, ${$line_source_object};
+        $source_string = ${$line_source_object};
+        my @lines = split /^/, $source_string;
         $rinput_lines = \@lines;
     }
 
@@ -624,10 +630,48 @@ EOM
         while ( my $line = $line_source_object->get_line() ) {
             push( @{$rinput_lines}, $line );
         }
+        $source_string = join( EMPTY_STRING, @{$rinput_lines} );
     }
 
-    $self->[_rinput_lines_]          = $rinput_lines;
-    $self->[_input_line_index_next_] = 0;
+    # Optional optimization. It is much faster to find leading whitespace on
+    # the whole input file than line-by-line.  If we define an array @spaces
+    # with the count of leading space characters for each line, they will be
+    # used. If @spaces is an empty array, spaces will be found line-by-line in
+    # sub 'tokenize_this_line'.
+    my @spaces;
+    if (USE_FAST_TRIM) {
+
+        # we remove all whitespace from left, but stop at a newline
+        $source_string =~ s/^ [^\S\n]+ //gxm;
+        my @trimmed_lines = split /^/, $source_string;
+
+        # The change in line length gives the number of space characters
+        if ( @trimmed_lines == @{$rinput_lines} ) {
+            my $i = -1;
+            foreach my $line (@trimmed_lines) {
+                push @spaces, length( $rinput_lines->[ ++$i ] ) - length($line);
+            }
+
+            # Be sure there are no negative spaces (shouldn't happen)
+            my $min_space = List::Util::min(@spaces);
+            if ( defined($min_space) && $min_space < 0 ) {
+
+                # shouldn't happen - safely continue with undefined spaces
+                DEVEL_MODE
+                  && $self->Fault(
+                    "Expecting min spaces >=0 but is $min_space\n");
+                @spaces = ();
+            }
+        }
+        else {
+            # Shouldn't happen - safely continue with undefined spaces
+            DEVEL_MODE && $self->Fault("line counts differ\n");
+        }
+    }
+
+    $self->[_rinput_lines_]              = $rinput_lines;
+    $self->[_rleading_space_char_count_] = \@spaces;
+    $self->[_input_line_index_next_]     = 0;
     return;
 } ## end sub make_source_array
 
@@ -996,9 +1040,12 @@ sub get_line {
 
     # get the next line from the input array
     my $input_line;
-    my $rinput_lines = $self->[_rinput_lines_];
+    my $leading_space_char_count;
     my $line_index   = $self->[_input_line_index_next_];
+    my $rinput_lines = $self->[_rinput_lines_];
     if ( $line_index < @{$rinput_lines} ) {
+        $leading_space_char_count =
+          $self->[_rleading_space_char_count_]->[$line_index];
         $input_line = $rinput_lines->[ $line_index++ ];
         $self->[_input_line_index_next_] = $line_index;
     }
@@ -1021,10 +1068,15 @@ sub get_line {
     if ( $other_line_endings{ substr( $input_line, -1 ) } ) {
         if ( $input_line =~ s/([\r\035\032])+$// ) {
             $input_line_separator = $1 . $input_line_separator;
+
+            # This could make the old leading space count incorrect, so the
+            # safe thing to do is to make it undef. This will cause the slow
+            # method to be used to find the leading space.
+            $leading_space_char_count = undef;
         }
     }
 
-    # for backwards compatibility we keep the line text terminated with
+    # For backwards compatibility we keep the line text terminated with
     # a newline character
     $input_line .= "\n";
     $self->[_line_of_text_] = $input_line;
@@ -1061,6 +1113,7 @@ sub get_line {
     my $line_of_tokens = {
         _line_type                 => 'EOF',
         _line_text                 => $input_line,
+        _leading_space_char_count  => $leading_space_char_count,
         _line_number               => $input_line_number,
         _guessed_indentation_level => 0,
         _curly_brace_depth         => $brace_depth,
@@ -1073,7 +1126,6 @@ sub get_line {
 ##      _rlevels                   => undef,
 ##      _rblock_type               => undef,
 ##      _rtype_sequence            => undef,
-##      _rci_levels                => undef,
 ##      _starting_in_quote         => 0,
 ##      _ending_in_quote           => 0,
     };
@@ -5097,7 +5149,7 @@ EOM
   # -----------------------------------------------------------------------
 
         my ( $self, $line_of_tokens ) = @_;
-        my ($untrimmed_input_line) = $line_of_tokens->{_line_text};
+        my $untrimmed_input_line = $line_of_tokens->{_line_text};
 
         # Extract line number for use in error messages
         $input_line_number = $line_of_tokens->{_line_number};
@@ -5122,31 +5174,86 @@ EOM
         }
 
         $input_line = $untrimmed_input_line;
-
         chomp $input_line;
 
         # Reinitialize the multi-line quote flag
         if ( $in_quote && $quote_type eq 'Q' ) {
             $line_of_tokens->{_starting_in_quote} = 1;
         }
+
+        # Trim start of this line unless we are continuing a quoted line.
+        # Do not trim end because we might end in a quote (test: deken4.pl)
+        # Perl::Tidy::Formatter will delete needless trailing blanks
         else {
             $line_of_tokens->{_starting_in_quote} = 0;
 
-            # Trim start of this line unless we are continuing a quoted line.
-            # Do not trim end because we might end in a quote (test: deken4.pl)
-            # Perl::Tidy::Formatter will delete needless trailing blanks
             if ( !length($input_line) ) {
 
                 # line is empty
             }
-            elsif ( $input_line =~ m/\S/g ) {
+            else {
 
-                # There are $spaces blank characters before a nonblank character
-                my $spaces = pos($input_line) - 1;
+                # Trim the leading spaces..
+
+                #----------------------------------------------
+                # Option 1: Use saved leading spaces if defined
+                #----------------------------------------------
+                my $spaces = $line_of_tokens->{_leading_space_char_count};
+                if ( defined($spaces) ) {
+
+                    if ( $spaces >= length($input_line) ) {
+
+                        # line has all blank characters
+                        $input_line = EMPTY_STRING;
+                        $spaces     = 0;
+                    }
+                }
+
+                #----------------------------------------------------------
+                # Option 2: Otherwise, find leading whitespace with a regex
+                #----------------------------------------------------------
+                else {
+
+                    # otherwise use slow method
+                    if ( $input_line =~ m/\S/g ) {
+
+                        # line has non-space with possible leading spaces
+                        $spaces = pos($input_line) - 1;
+                    }
+                    else {
+
+                        # line has all blank characters
+                        $input_line = EMPTY_STRING;
+                        $spaces     = 0;
+                    }
+                }
+
+                # Any leading whitespace?
                 if ( $spaces > 0 ) {
 
-                    # Trim the leading spaces
+                    if (DEVEL_MODE) {
+                        my $leading_space = substr( $input_line, 0, $spaces );
+                        if ( $leading_space =~ /\S/ ) {
+                            $self->Fault(<<EOM);
+space count $spaces caused non-whitespace in trimmed leading string: '$leading_space'
+Untrimmed line is:
+$untrimmed_input_line
+EOM
+                        }
+                    }
+
+                    # Trim the line
                     $input_line = substr( $input_line, $spaces );
+
+                    if (DEVEL_MODE) {
+                        if ( $input_line =~ /^\s/ ) {
+                            $self->Fault(<<EOM);
+space count $spaces caused whitespace in trimmed line: '$input_line'
+Untrimmed line is:
+$untrimmed_input_line
+EOM
+                        }
+                    }
 
                     # Find actual space count if there are leading tabs
                     if (
@@ -5161,11 +5268,6 @@ EOM
                       int( $spaces / $rOpts_indent_columns );
                 }
             }
-            else {
-
-                # line has all blank characters
-                $input_line = EMPTY_STRING;
-            }
         }
 
         if ( !$in_quote ) {
@@ -5176,7 +5278,6 @@ EOM
                 $line_of_tokens->{_rtokens}          = [];
                 $line_of_tokens->{_rtoken_type}      = [];
                 $line_of_tokens->{_rlevels}          = [];
-                $line_of_tokens->{_rci_levels}       = [];
                 $line_of_tokens->{_rblock_type}      = [];
                 $line_of_tokens->{_nesting_tokens_0} = $nesting_token_string;
                 $line_of_tokens->{_nesting_blocks_0} = $nesting_block_string;
@@ -5205,7 +5306,6 @@ EOM
                 $line_of_tokens->{_rtokens}          = [$input_line];
                 $line_of_tokens->{_rtoken_type}      = ['#'];
                 $line_of_tokens->{_rlevels}          = [$level_in_tokenizer];
-                $line_of_tokens->{_rci_levels}       = [0];
                 $line_of_tokens->{_rblock_type}      = [EMPTY_STRING];
                 $line_of_tokens->{_nesting_tokens_0} = $nesting_token_string;
                 $line_of_tokens->{_nesting_blocks_0} = $nesting_block_string;
@@ -5855,17 +5955,12 @@ EOM
             }
         }
 
-        # NOTE: This routine returns ci=0. Eventually '_rci_levels' can be
-        # removed. The ci values are computed later by sub Formatter::set_ci.
-        my @ci_levels = (0) x scalar(@levels);
-
         # Wrap up this line of tokens for shipping to the Formatter
         $line_of_tokens->{_rtoken_type}    = \@token_type;
         $line_of_tokens->{_rtokens}        = \@tokens;
         $line_of_tokens->{_rblock_type}    = \@block_type;
         $line_of_tokens->{_rtype_sequence} = \@type_sequence;
         $line_of_tokens->{_rlevels}        = \@levels;
-        $line_of_tokens->{_rci_levels}     = \@ci_levels;
 
         return;
     } ## end sub tokenizer_wrapup_line
@@ -6017,13 +6112,8 @@ sub operator_expected {
     # keyword...
     if ( $last_nonblank_type eq 'k' ) {
 
-        # keywords expecting OPERATOR:
-        if ( $expecting_operator_token{$last_nonblank_token} ) {
-            $op_expected = OPERATOR;
-        }
-
         # keywords expecting TERM:
-        elsif ( $expecting_term_token{$last_nonblank_token} ) {
+        if ( $expecting_term_token{$last_nonblank_token} ) {
 
             # Exceptions from TERM:
 
@@ -6053,6 +6143,12 @@ sub operator_expected {
                 $op_expected = TERM;
             }
         }
+
+        # keywords expecting OPERATOR:
+        elsif ( $expecting_operator_token{$last_nonblank_token} ) {
+            $op_expected = OPERATOR;
+        }
+
         else {
             $op_expected = TERM;
         }
