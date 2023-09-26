@@ -5231,11 +5231,15 @@ EOM
                 # Any leading whitespace?
                 if ( $spaces > 0 ) {
 
+                    # Verify that the leading whitespace is all whitespace
                     if (DEVEL_MODE) {
+
+                        # A change must have been made to the line text after
+                        # $spaces was calculated
                         my $leading_space = substr( $input_line, 0, $spaces );
                         if ( $leading_space =~ /\S/ ) {
                             $self->Fault(<<EOM);
-space count $spaces caused non-whitespace in trimmed leading string: '$leading_space'
+space count $spaces caused non-whitespace in trimmed leading string: '$leading_space' at line number $input_line_number
 Untrimmed line is:
 $untrimmed_input_line
 EOM
@@ -5244,16 +5248,6 @@ EOM
 
                     # Trim the line
                     $input_line = substr( $input_line, $spaces );
-
-                    if (DEVEL_MODE) {
-                        if ( $input_line =~ /^\s/ ) {
-                            $self->Fault(<<EOM);
-space count $spaces caused whitespace in trimmed line: '$input_line'
-Untrimmed line is:
-$untrimmed_input_line
-EOM
-                        }
-                    }
 
                     # Find actual space count if there are leading tabs
                     if (
@@ -5266,6 +5260,16 @@ EOM
                     # Calculate a guessed level for nonblank lines to avoid
                     $line_of_tokens->{_guessed_indentation_level} =
                       int( $spaces / $rOpts_indent_columns );
+                }
+                elsif ($spaces) {
+
+                    # Negative space count - should never happen
+                    DEVEL_MODE && $self->Fault(<<EOM);
+                            $self->Fault(<<EOM);
+unexpected negative space count $spaces
+For untrimmed line at line number $input_line_number :
+$untrimmed_input_line
+EOM
                 }
             }
         }
@@ -5357,6 +5361,29 @@ EOM
 
         # start by breaking the line into pre-tokens
         ( $rtokens, $rtoken_map, $rtoken_type ) = pre_tokenize($input_line);
+
+        # Verify that all leading whitespace has been trimmed
+        # except for quotes of type 'Q' (c273).
+        if (   @{$rtokens}
+            && $rtoken_type->[0] eq 'b'
+            && !( $in_quote && $quote_type eq 'Q' ) )
+        {
+
+            # Shouldn't happen if calling sub did trim operation correctly.
+            DEVEL_MODE && $self->Fault(<<EOM);
+leading blank at line
+$input_line
+EOM
+
+            # Fix by removing the leading blank token.  This fix has been
+            # tested and works correctly even if no whitespaces was trimmed.
+            # But it is an inefficient way to do things because, for example,
+            # it forces all comments to be processed by sub pre_tokenize.
+            # And it may cause indented code-skipping comments to be missed.
+            shift @{$rtokens};
+            shift @{$rtoken_map};
+            shift @{$rtoken_type};
+        }
 
         $max_token_index = scalar( @{$rtokens} ) - 1;
         push( @{$rtokens}, SPACE, SPACE, SPACE )
