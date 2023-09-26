@@ -206,6 +206,7 @@ BEGIN {
         _debugger_object_                    => $i++,
         _diagnostics_object_                 => $i++,
         _logger_object_                      => $i++,
+        _save_logfile_                       => $i++,
         _unexpected_error_count_             => $i++,
         _started_looking_for_here_target_at_ => $i++,
         _nearly_matched_here_target_at_      => $i++,
@@ -488,6 +489,8 @@ sub Perl::Tidy::Tokenizer::new received a 'source_object' parameter which is not
 EOM
     }
 
+    my $logger_object = $args{logger_object};
+
     # Tokenizer state data is as follows:
     # _rhere_target_list_    reference to list of here-doc targets
     # _here_doc_target_      the target string for a here document
@@ -551,7 +554,7 @@ EOM
     $self->[_started_tokenizing_]       = 0;
     $self->[_debugger_object_]          = $args{debugger_object};
     $self->[_diagnostics_object_]       = $args{diagnostics_object};
-    $self->[_logger_object_]            = $args{logger_object};
+    $self->[_logger_object_]            = $logger_object;
     $self->[_unexpected_error_count_]   = 0;
     $self->[_started_looking_for_here_target_at_] = 0;
     $self->[_nearly_matched_here_target_at_]      = undef;
@@ -560,6 +563,8 @@ EOM
     $self->[_maximum_level_]                      = 0;
     $self->[_true_brace_error_count_]             = 0;
     $self->[_rOpts_]                              = $rOpts;
+    $self->[_save_logfile_] =
+      $logger_object ? $logger_object->get_save_logfile : 0;
 
     bless $self, $class;
 
@@ -1113,13 +1118,11 @@ sub get_line {
     my $line_of_tokens = {
         _line_type                 => 'EOF',
         _line_text                 => $input_line,
-        _leading_space_char_count  => $leading_space_char_count,
         _line_number               => $input_line_number,
         _guessed_indentation_level => 0,
         _curly_brace_depth         => $brace_depth,
         _square_bracket_depth      => $square_bracket_depth,
         _paren_depth               => $paren_depth,
-        _quote_character           => EMPTY_STRING,
 ## Skip these needless initializations for efficiency:
 ##      _rtoken_type               => undef,
 ##      _rtokens                   => undef,
@@ -1391,7 +1394,7 @@ sub get_line {
     #        _in_skipped_
     #        _in_pod_
     #        _in_quote_
-    $self->tokenize_this_line($line_of_tokens);
+    $self->tokenize_this_line( $line_of_tokens, $leading_space_char_count );
 
     # Now finish defining the return structure and return it
     $line_of_tokens->{_ending_in_quote} = $self->[_in_quote_];
@@ -5148,7 +5151,18 @@ EOM
   #
   # -----------------------------------------------------------------------
 
-        my ( $self, $line_of_tokens ) = @_;
+        # This routine tokenizes one line. The results are stored in
+        # the hash ref '$line_of_tokens'.
+
+        # Given:
+        #   $line_of_tokens = ref to hash of values being filled for this line
+        #   $leading_space_char_count
+        #        = number of leading space characters on this line, or
+        #        = undef if not availailable
+        # Returns:
+        #   nothing
+
+        my ( $self, $line_of_tokens, $leading_space_char_count ) = @_;
         my $untrimmed_input_line = $line_of_tokens->{_line_text};
 
         # Extract line number for use in error messages
@@ -5198,7 +5212,7 @@ EOM
                 #----------------------------------------------
                 # Option 1: Use saved leading spaces if defined
                 #----------------------------------------------
-                my $spaces = $line_of_tokens->{_leading_space_char_count};
+                my $spaces = $leading_space_char_count;
                 if ( defined($spaces) ) {
 
                     if ( $spaces >= length($input_line) ) {
@@ -5249,17 +5263,22 @@ EOM
                     # Trim the line
                     $input_line = substr( $input_line, $spaces );
 
-                    # Find actual space count if there are leading tabs
-                    if (
-                        ord( substr( $untrimmed_input_line, 0, 1 ) ) == ORD_TAB
-                        && $untrimmed_input_line =~ /^(\t+)/ )
-                    {
-                        $spaces += length($1) * ( $tabsize - 1 );
-                    }
+                    # defined 'guessed_indentation_level' if logfile to be saved
+                    if ( $self->[_save_logfile_] ) {
 
-                    # Calculate a guessed level for nonblank lines to avoid
-                    $line_of_tokens->{_guessed_indentation_level} =
-                      int( $spaces / $rOpts_indent_columns );
+                        # Find actual space count if there are leading tabs
+                        if (
+                            ord( substr( $untrimmed_input_line, 0, 1 ) ) ==
+                            ORD_TAB
+                            && $untrimmed_input_line =~ /^(\t+)/ )
+                        {
+                            $spaces += length($1) * ( $tabsize - 1 );
+                        }
+
+                        # Calculate a guessed level for nonblank lines to avoid
+                        $line_of_tokens->{_guessed_indentation_level} =
+                          int( $spaces / $rOpts_indent_columns );
+                    }
                 }
                 elsif ($spaces) {
 

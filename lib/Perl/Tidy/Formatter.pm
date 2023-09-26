@@ -1206,7 +1206,6 @@ sub check_token_array {
           _line_text
           _line_type
           _paren_depth
-          _quote_character
           _rK_range
           _square_bracket_depth
           _starting_in_quote
@@ -5955,7 +5954,6 @@ EOM
           _line_text
           _line_type
           _paren_depth
-          _quote_character
           _square_bracket_depth
           _starting_in_quote
         );
