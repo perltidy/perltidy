@@ -1809,28 +1809,39 @@ sub set_line_separator {
         else { }
     }
 
-    # Now change the line separator if requested
     if ( defined($input_line_separator) ) {
 
+        # Remember the input line separator if needed
         if ( $rOpts->{'preserve-line-endings'} ) {
             $line_separator = $input_line_separator;
         }
 
-        # patch to read raw mac files under unix, dos
-        if ( $input_line_separator ne "\n" && $input_line_separator eq $CR ) {
-
-            # if this file is currently a single line ..
+        # Convert line endings to "\n" for processing if necessary.
+        if ( $input_line_separator ne "\n" ) {
             my @lines = split /^/, ${$rinput_string};
-            if ( @lines == 1 ) {
 
-                # and becomes multiple lines with the change ..
-                @lines = map { $_ . "\n" } split /$CR/, ${$rinput_string};
-                if ( @lines > 1 ) {
+            # try to convert CR to \n
+            if ( $input_line_separator eq $CR ) {
 
-                    # then make the change
-                    my $buf = join EMPTY_STRING, @lines;
-                    $rinput_string = \$buf;
+                # if this file is currently a single line ..
+                if ( @lines == 1 ) {
+
+                    # and becomes multiple lines with the change ..
+                    @lines = map { $_ . "\n" } split /$CR/, ${$rinput_string};
+                    if ( @lines > 1 ) {
+
+                        # then make the change
+                        my $buf = join EMPTY_STRING, @lines;
+                        $rinput_string = \$buf;
+                    }
                 }
+            }
+
+            # convert CR-LF to LF
+            elsif ( ( $input_line_separator eq $CRLF ) && ( "\n" eq $LF ) ) {
+                foreach my $line (@lines) { $line =~ s/$CRLF$/\n/ }
+                my $buf = join EMPTY_STRING, @lines;
+                $rinput_string = \$buf;
             }
         }
     }
