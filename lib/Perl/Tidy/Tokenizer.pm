@@ -27,10 +27,9 @@ our $VERSION = '20230912.01';
 
 use Carp;
 
-use constant USE_FAST_TRIM => 1;
-use constant DEVEL_MODE    => 0;
-use constant EMPTY_STRING  => q{};
-use constant SPACE         => q{ };
+use constant DEVEL_MODE   => 0;
+use constant EMPTY_STRING => q{};
+use constant SPACE        => q{ };
 
 # Decimal values of some ascii characters for quick checks
 use constant ORD_TAB           => 9;
@@ -217,7 +216,7 @@ BEGIN {
         _rOpts_                              => $i++,
         _rinput_lines_                       => $i++,
         _input_line_index_next_              => $i++,
-        _rleading_space_char_count_          => $i++,
+        _rtrimmed_input_lines_               => $i++,
     };
 } ## end BEGIN
 
@@ -638,45 +637,32 @@ EOM
         $source_string = join( EMPTY_STRING, @{$rinput_lines} );
     }
 
-    # Optional optimization. It is much faster to find leading whitespace on
-    # the whole input file than line-by-line.  If we define an array @spaces
-    # with the count of leading space characters for each line, they will be
-    # used. If @spaces is an empty array, spaces will be found line-by-line in
-    # sub 'tokenize_this_line'.
-    my @spaces;
-    if (USE_FAST_TRIM) {
+    # Get trimmed lines. It is much faster to strip leading whitespace from
+    # the whole input file at once than line-by-line.
 
-        # we remove all whitespace from left, but stop at a newline
-        $source_string =~ s/^ [^\S\n]+ //gxm;
-        my @trimmed_lines = split /^/, $source_string;
+    # Remove all whitespace from left, but stop at a newline,
+    my @trimmed_lines;
+    $source_string =~ s/^ [^\S\n]+ //gxm;
+    @trimmed_lines = split /^/, $source_string;
 
-        # The change in line length gives the number of space characters
-        if ( @trimmed_lines == @{$rinput_lines} ) {
-            my $i = -1;
-            foreach my $line (@trimmed_lines) {
-                push @spaces, length( $rinput_lines->[ ++$i ] ) - length($line);
-            }
+    # then remove the newlines.
+    for (@trimmed_lines) { chomp }
 
-            # Be sure there are no negative spaces (shouldn't happen)
-            my $min_space = List::Util::min(@spaces);
-            if ( defined($min_space) && $min_space < 0 ) {
+    # Safety check - be sure the number of lines has not changed
+    if ( @trimmed_lines != @{$rinput_lines} ) {
 
-                # shouldn't happen - safely continue with undefined spaces
-                DEVEL_MODE
-                  && $self->Fault(
-                    "Expecting min spaces >=0 but is $min_space\n");
-                @spaces = ();
-            }
-        }
-        else {
-            # Shouldn't happen - safely continue with undefined spaces
-            DEVEL_MODE && $self->Fault("line counts differ\n");
-        }
+        # Shouldn't happen - die in DEVEL_MODE and fix
+        DEVEL_MODE
+          && $self->Fault("trimmed/untrimmed line counts differ\n");
+
+        # But we can safely continue with undefined trimmed lines.  They will
+        # be detected and fixed later.
+        @trimmed_lines = ();
     }
 
-    $self->[_rinput_lines_]              = $rinput_lines;
-    $self->[_rleading_space_char_count_] = \@spaces;
-    $self->[_input_line_index_next_]     = 0;
+    $self->[_rinput_lines_]          = $rinput_lines;
+    $self->[_rtrimmed_input_lines_]  = \@trimmed_lines;
+    $self->[_input_line_index_next_] = 0;
     return;
 } ## end sub make_source_array
 
@@ -1045,13 +1031,12 @@ sub get_line {
 
     # get the next line from the input array
     my $input_line;
-    my $leading_space_char_count;
+    my $trimmed_input_line;
     my $line_index   = $self->[_input_line_index_next_];
     my $rinput_lines = $self->[_rinput_lines_];
     if ( $line_index < @{$rinput_lines} ) {
-        $leading_space_char_count =
-          $self->[_rleading_space_char_count_]->[$line_index];
-        $input_line = $rinput_lines->[ $line_index++ ];
+        $trimmed_input_line = $self->[_rtrimmed_input_lines_]->[$line_index];
+        $input_line         = $rinput_lines->[ $line_index++ ];
         $self->[_input_line_index_next_] = $line_index;
     }
 
@@ -1074,10 +1059,10 @@ sub get_line {
         if ( $input_line =~ s/([\r\035\032])+$// ) {
             $input_line_separator = $1 . $input_line_separator;
 
-            # This could make the old leading space count incorrect, so the
-            # safe thing to do is to make it undef. This will cause the slow
-            # method to be used to find the leading space.
-            $leading_space_char_count = undef;
+            # This could make the trimmed input line incorrect, so the
+            # safe thing to do is to make it undef to force it to be
+            # recomputed later.
+            $trimmed_input_line = undef;
         }
     }
 
@@ -1394,7 +1379,8 @@ sub get_line {
     #        _in_skipped_
     #        _in_pod_
     #        _in_quote_
-    $self->tokenize_this_line( $line_of_tokens, $leading_space_char_count );
+
+    $self->tokenize_this_line( $line_of_tokens, $trimmed_input_line );
 
     # Now finish defining the return structure and return it
     $line_of_tokens->{_ending_in_quote} = $self->[_in_quote_];
@@ -5095,10 +5081,6 @@ EOM
   # can use your editor to search for the string "NEW_TOKENS" to find the
   # appropriate sections to change):
   #
-  # *. Try to talk somebody else into doing it!  If not, ..
-  #
-  # *. Make a backup of your current version in case things don't work out!
-  #
   # *. Think of a new, unused character for the token type, and add to
   # the array @valid_token_types in the BEGIN section of this package.
   # For example, I used 'v' for v-strings.
@@ -5156,13 +5138,13 @@ EOM
 
         # Given:
         #   $line_of_tokens = ref to hash of values being filled for this line
-        #   $leading_space_char_count
-        #        = number of leading space characters on this line, or
-        #        = undef if not availailable
+        #   $trimmed_input_line
+        #        = the input line without leading whitespace, and chomped, OR
+        #        = undef if not available
         # Returns:
         #   nothing
 
-        my ( $self, $line_of_tokens, $leading_space_char_count ) = @_;
+        my ( $self, $line_of_tokens, $trimmed_input_line ) = @_;
         my $untrimmed_input_line = $line_of_tokens->{_line_text};
 
         # Extract line number for use in error messages
@@ -5187,99 +5169,34 @@ EOM
             }
         }
 
-        $input_line = $untrimmed_input_line;
-        chomp $input_line;
-
-        # Reinitialize the multi-line quote flag
+        # Use untrimmed line if we are continuing in a type 'Q' quote
         if ( $in_quote && $quote_type eq 'Q' ) {
             $line_of_tokens->{_starting_in_quote} = 1;
+            $input_line = $untrimmed_input_line;
+            chomp $input_line;
         }
 
-        # Trim start of this line unless we are continuing a quoted line.
+        # Trim start of this line if we are not continuing a quoted line.
         # Do not trim end because we might end in a quote (test: deken4.pl)
         # Perl::Tidy::Formatter will delete needless trailing blanks
         else {
             $line_of_tokens->{_starting_in_quote} = 0;
 
-            if ( !length($input_line) ) {
+            # Use the pre-computed trimmed line if it is defined
+            $input_line = $trimmed_input_line;
 
-                # line is empty
+            # but fix if $trimmed_input_line is not defined
+            if ( !defined($input_line) ) {
+                $input_line = $untrimmed_input_line;
+                $input_line =~ s/^\s+//;
+                chomp $input_line;
             }
-            else {
 
-                # Trim the leading spaces..
-
-                #----------------------------------------------
-                # Option 1: Use saved leading spaces if defined
-                #----------------------------------------------
-                my $spaces = $leading_space_char_count;
-                if ( defined($spaces) ) {
-
-                    if ( $spaces >= length($input_line) ) {
-
-                        # line has all blank characters
-                        $input_line = EMPTY_STRING;
-                        $spaces     = 0;
-                    }
-                }
-
-                #----------------------------------------------------------
-                # Option 2: Otherwise, find leading whitespace with a regex
-                #----------------------------------------------------------
-                else {
-
-                    # otherwise use slow method
-                    if ( $input_line =~ m/\S/g ) {
-
-                        # line has non-space with possible leading spaces
-                        $spaces = pos($input_line) - 1;
-                    }
-                    else {
-
-                        # line has all blank characters
-                        $input_line = EMPTY_STRING;
-                        $spaces     = 0;
-                    }
-                }
-
-                # Any leading whitespace?
-                if ( $spaces > 0 ) {
-
-                    # Verify that the leading whitespace is all whitespace
-                    if (DEVEL_MODE) {
-
-                        # A change must have been made to the line text after
-                        # $spaces was calculated
-                        my $leading_space = substr( $input_line, 0, $spaces );
-                        if ( $leading_space =~ /\S/ ) {
-                            $self->Fault(<<EOM);
-space count $spaces caused non-whitespace in trimmed leading string: '$leading_space' at line number $input_line_number
-Untrimmed line is:
-$untrimmed_input_line
-EOM
-                        }
-                    }
-
-                    # Trim the line
-                    $input_line = substr( $input_line, $spaces );
-
-                    # set 'guessed_indentation_level' if logfile to be saved
-                    if ( $self->[_save_logfile_] ) {
-                        my $guess = $self->guess_old_indentation_level(
-                            $untrimmed_input_line);
-                        $line_of_tokens->{_guessed_indentation_level} = $guess;
-                    }
-                }
-                elsif ($spaces) {
-
-                    # Negative space count - should never happen
-                    DEVEL_MODE && $self->Fault(<<EOM);
-                            $self->Fault(<<EOM);
-unexpected negative space count $spaces
-For untrimmed line at line number $input_line_number :
-$untrimmed_input_line
-EOM
-                }
+            # define 'guessed_indentation_level' if logfile to be saved
+            if ( $self->[_save_logfile_] && length($input_line) ) {
+                my $guess =
+                  $self->guess_old_indentation_level($untrimmed_input_line);
+                $line_of_tokens->{_guessed_indentation_level} = $guess;
             }
         }
 
