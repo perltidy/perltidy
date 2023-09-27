@@ -5263,21 +5263,11 @@ EOM
                     # Trim the line
                     $input_line = substr( $input_line, $spaces );
 
-                    # defined 'guessed_indentation_level' if logfile to be saved
+                    # set 'guessed_indentation_level' if logfile to be saved
                     if ( $self->[_save_logfile_] ) {
-
-                        # Find actual space count if there are leading tabs
-                        if (
-                            ord( substr( $untrimmed_input_line, 0, 1 ) ) ==
-                            ORD_TAB
-                            && $untrimmed_input_line =~ /^(\t+)/ )
-                        {
-                            $spaces += length($1) * ( $tabsize - 1 );
-                        }
-
-                        # Calculate a guessed level for nonblank lines to avoid
-                        $line_of_tokens->{_guessed_indentation_level} =
-                          int( $spaces / $rOpts_indent_columns );
+                        my $guess = $self->guess_old_indentation_level(
+                            $untrimmed_input_line);
+                        $line_of_tokens->{_guessed_indentation_level} = $guess;
                     }
                 }
                 elsif ($spaces) {
