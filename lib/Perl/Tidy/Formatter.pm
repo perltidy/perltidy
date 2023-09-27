@@ -6220,7 +6220,7 @@ EOM
 
         # Values needed by Logger
         $line_of_tokens->{_level_0}    = $rlevels->[0];
-        $line_of_tokens->{_ci_level_0} = 0;    # sub set_ci will fix this
+        $line_of_tokens->{_ci_level_0} = 0;               # fix later
         $line_of_tokens->{_nesting_blocks_0} =
           $line_of_tokens_old->{_nesting_blocks_0};
         $line_of_tokens->{_nesting_tokens_0} =
@@ -7888,18 +7888,6 @@ EOM
     #----------------------
     # Post-loop operations:
     #----------------------
-
-    # if the logfile is saved, we need to save the leading ci of
-    # each old line of code.
-    if ( $self->[_save_logfile_] ) {
-        foreach my $line_of_tokens ( @{$rlines} ) {
-            my $line_type = $line_of_tokens->{_line_type};
-            next if ( $line_type ne 'CODE' );
-            my ( $Kfirst, $Klast ) = @{ $line_of_tokens->{_rK_range} };
-            next if ( !defined($Kfirst) );
-            $line_of_tokens->{_ci_level_0} = $rLL->[$Kfirst]->[_CI_LEVEL_];
-        }
-    }
 
     if (DEBUG_SET_CI) {
         my @output_lines;
@@ -15122,6 +15110,18 @@ sub process_all_lines {
                 # Let logger see all non-blank lines of code. This is a slow
                 # operation so we avoid it if it is not going to be saved.
                 if ( $save_logfile && $logger_object ) {
+
+                    # get updated indentation levels
+                    my $rK_range = $line_of_tokens->{_rK_range};
+                    my ( $K_first, $K_last ) = @{$rK_range};
+                    if ( defined($K_first) ) {
+                        my $level_0 = $self->[_radjusted_levels_]->[$K_first];
+                        my $ci_level_0 =
+                          $self->[_rLL_]->[$K_first]->[_CI_LEVEL_];
+                        $line_of_tokens->{_level_0}    = $level_0;
+                        $line_of_tokens->{_ci_level_0} = $ci_level_0;
+                    }
+
                     $logger_object->black_box( $line_of_tokens,
                         $vertical_aligner_object->get_output_line_number );
                 }
