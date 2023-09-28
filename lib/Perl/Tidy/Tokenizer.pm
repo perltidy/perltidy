@@ -20,8 +20,7 @@
 package Perl::Tidy::Tokenizer;
 use strict;
 use warnings;
-use English    qw( -no_match_vars );
-use List::Util qw( min max );          # min, max first are in Perl 5.8
+use English qw( -no_match_vars );
 
 our $VERSION = '20230912.01';
 
@@ -1158,8 +1157,7 @@ sub get_line {
         # check for error of extra whitespace
         # note for PERL6: leading whitespace is allowed
         else {
-            $candidate_target =~ s/\s*$//;
-            $candidate_target =~ s/^\s*//;
+            $candidate_target =~ s/^ \s+ | \s+ $//x;
             if ( $candidate_target eq $here_doc_target ) {
                 $self->[_nearly_matched_here_target_at_] = $input_line_number;
             }
@@ -5021,95 +5019,6 @@ EOM
 
     sub tokenize_this_line {
 
-  # This routine breaks a line of perl code into tokens which are of use in
-  # indentation and reformatting.  One of my goals has been to define tokens
-  # such that a newline may be inserted between any pair of tokens without
-  # changing or invalidating the program. This version comes close to this,
-  # although there are necessarily a few exceptions which must be caught by
-  # the formatter.  Many of these involve the treatment of bare words.
-  #
-  # The tokens and their types are returned in arrays.  See previous
-  # routine for their names.
-  #
-  # See also the array "valid_token_types" in the BEGIN section for an
-  # up-to-date list.
-  #
-  # To simplify things, token types are either a single character, or they
-  # are identical to the tokens themselves.
-  #
-  # As a debugging aid, the -D flag creates a file containing a side-by-side
-  # comparison of the input string and its tokenization for each line of a file.
-  # This is an invaluable debugging aid.
-  #
-  # In addition to tokens, and some associated quantities, the tokenizer
-  # also returns flags indication any special line types.  These include
-  # quotes, here_docs, formats.
-  #
-  # -----------------------------------------------------------------------
-  #
-  # How to add NEW_TOKENS:
-  #
-  # New token types will undoubtedly be needed in the future both to keep up
-  # with changes in perl and to help adapt the tokenizer to other applications.
-  #
-  # Here are some notes on the minimal steps.  I wrote these notes while
-  # adding the 'v' token type for v-strings, which are things like version
-  # numbers 5.6.0, and ip addresses, and will use that as an example.  ( You
-  # can use your editor to search for the string "NEW_TOKENS" to find the
-  # appropriate sections to change):
-  #
-  # *. Think of a new, unused character for the token type, and add to
-  # the array @valid_token_types in the BEGIN section of this package.
-  # For example, I used 'v' for v-strings.
-  #
-  # *. Implement coding to recognize the $type of the token in this routine.
-  # This is the hardest part, and is best done by imitating or modifying
-  # some of the existing coding.  For example, to recognize v-strings, I
-  # patched 'sub scan_bare_identifier' to recognize v-strings beginning with
-  # 'v' and 'sub scan_number' to recognize v-strings without the leading 'v'.
-  #
-  # *. Update sub operator_expected.  This update is critically important but
-  # the coding is trivial.  Look at the comments in that routine for help.
-  # For v-strings, which should behave like numbers, I just added 'v' to the
-  # regex used to handle numbers and strings (types 'n' and 'Q').
-  #
-  # *. Implement a 'bond strength' rule in sub set_bond_strengths in
-  # Perl::Tidy::Formatter for breaking lines around this token type.  You can
-  # skip this step and take the default at first, then adjust later to get
-  # desired results.  For adding type 'v', I looked at sub bond_strength and
-  # saw that number type 'n' was using default strengths, so I didn't do
-  # anything.  I may tune it up someday if I don't like the way line
-  # breaks with v-strings look.
-  #
-  # *. Implement a 'whitespace' rule in sub set_whitespace_flags in
-  # Perl::Tidy::Formatter.  For adding type 'v', I looked at this routine
-  # and saw that type 'n' used spaces on both sides, so I just added 'v'
-  # to the array @spaces_both_sides.
-  #
-  # *. Update HtmlWriter package so that users can colorize the token as
-  # desired.  This is quite easy; see comments identified by 'NEW_TOKENS' in
-  # that package.  For v-strings, I initially chose to use a default color
-  # equal to the default for numbers, but it might be nice to change that
-  # eventually.
-  #
-  # *. Update comments in Perl::Tidy::Tokenizer::dump_token_types.
-  #
-  # *. Run lots and lots of debug tests.  Start with special files designed
-  # to test the new token type.  Run with the -D flag to create a .DEBUG
-  # file which shows the tokenization.  When these work ok, test as many old
-  # scripts as possible.  Start with all of the '.t' files in the 'test'
-  # directory of the distribution file.  Compare .tdy output with previous
-  # version and updated version to see the differences.  Then include as
-  # many more files as possible. My own technique has been to collect a huge
-  # number of perl scripts (thousands!) into one directory and run perltidy
-  # *, then run diff between the output of the previous version and the
-  # current version.
-  #
-  # *. For another example, search for the smartmatch operator '~~'
-  # with your editor to see where updates were made for it.
-  #
-  # -----------------------------------------------------------------------
-
         # This routine tokenizes one line. The results are stored in
         # the hash ref '$line_of_tokens'.
 
@@ -5127,9 +5036,9 @@ EOM
         # Extract line number for use in error messages
         $input_line_number = $line_of_tokens->{_line_number};
 
-        #----------------------------
-        # Check for pod documentation
-        #----------------------------
+        #-------------------------------------
+        # Check for start of pod documentation
+        #-------------------------------------
         if ( substr( $untrimmed_input_line, 0, 1 ) eq '='
             && $untrimmed_input_line =~ /^=[A-Za-z_]/ )
         {
@@ -5148,9 +5057,9 @@ EOM
             }
         }
 
-        #------------------------
-        # Trim leading whitespace
-        #------------------------
+        #--------------------------
+        # Trim leading whitespace ?
+        #--------------------------
         # Use untrimmed line if we are continuing in a type 'Q' quote
         if ( $in_quote && $quote_type eq 'Q' ) {
             $line_of_tokens->{_starting_in_quote} = 1;
@@ -5164,10 +5073,10 @@ EOM
         else {
             $line_of_tokens->{_starting_in_quote} = 0;
 
-            # Use the pre-computed trimmed line if it is defined
+            # Use the pre-computed trimmed line if defined (most efficient)
             $input_line = $trimmed_input_line;
 
-            # but fix if $trimmed_input_line is not defined
+            # otherwise trim the raw input line (much less efficient)
             if ( !defined($input_line) ) {
                 $input_line = $untrimmed_input_line;
                 $input_line =~ s/^\s+//;
@@ -5175,7 +5084,7 @@ EOM
 
             chomp $input_line;
 
-            # define 'guessed_indentation_level' if logfile to be saved
+            # define 'guessed_indentation_level' if logfile will be saved
             if ( $self->[_save_logfile_] && length($input_line) ) {
                 my $guess =
                   $self->guess_old_indentation_level($untrimmed_input_line);
@@ -5227,9 +5136,9 @@ EOM
             return;
         }
 
-        #---------------
-        # All other code
-        #---------------
+        #-------------------------------------
+        # Loop to find all tokens on this line
+        #-------------------------------------
 
         # Update the copy of the line for use in error messages
         # This must be exactly what we give the pre_tokenizer
@@ -5254,13 +5163,11 @@ EOM
         $indent_flag     = 0;
         $peeked_ahead    = 0;
 
-        # Loop to find all tokens
         $self->tokenizer_main_loop();
 
-        #-----------------------------------------------
-        # All done tokenizing this line ...
-        # now prepare the final list of tokens and types
-        #-----------------------------------------------
+        #-------------------------------------------------
+        # Done tokenizing this line ... package the result
+        #-------------------------------------------------
         $self->tokenizer_wrapup_line($line_of_tokens);
 
         return;
@@ -5270,11 +5177,10 @@ EOM
 
         my ($self) = @_;
 
-        #---------------------------------
         # Break one input line into tokens
-        #---------------------------------
+        # We are working on closure variables.
 
-        # start by breaking the line into pre-tokens
+        # Start by breaking the line into pre-tokens
         ( $rtokens, $rtoken_map, $rtoken_type ) = pre_tokenize($input_line);
 
         # Verify that all leading whitespace has been trimmed
@@ -5422,7 +5328,9 @@ EOM
             # this pre-token will start an output token
             push( @{$routput_token_list}, $i_tok );
 
-            # The search for the full token ends in one of 5 main END NODES:
+            #---------------------------------------------------
+            # The token search leads to one of 5 main END NODES:
+            #---------------------------------------------------
 
             #-----------------------
             # END NODE 1: whitespace
@@ -5586,9 +5494,8 @@ EOM
                 print {*STDOUT} "TOKENIZE:(@debug_list)\n";
             };
 
-            # We have the next token, $tok.
-            # Now we have to examine this token and decide what it is
-            # and define its $type
+            # The next token is '$tok'.
+            # Now we have to define its '$type'
 
             #------------------------
             # END NODE 3: a bare word
@@ -10312,6 +10219,94 @@ END_OF_LIST
 
     return;
 } ## end sub dump_token_types
+
+#------------------
+# About Token Types
+#------------------
+
+# The array "valid_token_types" in the BEGIN section has an up-to-date list
+# of token types.  Sub 'dump_token_types' should be kept up to date with
+# token types.
+
+# Ideally, tokens are the smallest pieces of text
+# such that a newline may be inserted between any pair of tokens without
+# changing or invalidating the program. This version comes close to this,
+# although there are necessarily a few exceptions which must be caught by
+# the formatter.  Many of these involve the treatment of bare words.
+#
+# To simplify things, token types are either a single character, or they
+# are identical to the tokens themselves.
+#
+# As a debugging aid, the -D flag creates a file containing a side-by-side
+# comparison of the input string and its tokenization for each line of a file.
+# This is an invaluable debugging aid.
+#
+# In addition to tokens, and some associated quantities, the tokenizer
+# also returns flags indication any special line types.  These include
+# quotes, here_docs, formats.
+#
+#------------------
+# Adding NEW_TOKENS
+#------------------
+#
+# Here are some notes on the minimal steps.  I wrote these notes while
+# adding the 'v' token type for v-strings, which are things like version
+# numbers 5.6.0, and ip addresses, and will use that as an example.  ( You
+# can use your editor to search for the string "NEW_TOKENS" to find the
+# appropriate sections to change):
+
+# *. For another example, search for the smartmatch operator '~~'
+# with your editor to see where updates were made for it.
+
+# *. For another example, search for the string 'c250', which shows
+# locations where changes for new types 'P' and 'S' were made.
+
+# *. Think of a new, unused character for the token type, and add to
+# the array @valid_token_types in the BEGIN section of this package.
+# For example, I used 'v' for v-strings.
+#
+# *. Implement coding to recognize the $type of the token in this routine.
+# This is the hardest part, and is best done by imitating or modifying
+# some of the existing coding.  For example, to recognize v-strings, I
+# patched 'sub scan_bare_identifier' to recognize v-strings beginning with
+# 'v' and 'sub scan_number' to recognize v-strings without the leading 'v'.
+#
+# *. Update sub operator_expected.  This update is critically important but
+# the coding is trivial.  Look at the comments in that routine for help.
+# For v-strings, which should behave like numbers, I just added 'v' to the
+# regex used to handle numbers and strings (types 'n' and 'Q').
+#
+# *. Implement a 'bond strength' rule in sub set_bond_strengths in
+# Perl::Tidy::Formatter for breaking lines around this token type.  You can
+# skip this step and take the default at first, then adjust later to get
+# desired results.  For adding type 'v', I looked at sub bond_strength and
+# saw that number type 'n' was using default strengths, so I didn't do
+# anything.  I may tune it up someday if I don't like the way line
+# breaks with v-strings look.
+#
+# *. Implement a 'whitespace' rule in sub set_whitespace_flags in
+# Perl::Tidy::Formatter.  For adding type 'v', I looked at this routine
+# and saw that type 'n' used spaces on both sides, so I just added 'v'
+# to the array @spaces_both_sides.
+#
+# *. Update HtmlWriter package so that users can colorize the token as
+# desired.  This is quite easy; see comments identified by 'NEW_TOKENS' in
+# that package.  For v-strings, I initially chose to use a default color
+# equal to the default for numbers, but it might be nice to change that
+# eventually.
+#
+# *. Update comments in Perl::Tidy::Tokenizer::dump_token_types.
+#
+# *. Run lots and lots of debug tests.  Start with special files designed
+# to test the new token type.  Run with the -D flag to create a .DEBUG
+# file which shows the tokenization.  When these work ok, test as many old
+# scripts as possible.  Start with all of the '.t' files in the 'test'
+# directory of the distribution file.  Compare .tdy output with previous
+# version and updated version to see the differences.  Then include as
+# many more files as possible. My own technique has been to collect a huge
+# number of perl scripts (thousands!) into one directory and run perltidy
+# *, then run diff between the output of the previous version and the
+# current version.
 
 BEGIN {
 
