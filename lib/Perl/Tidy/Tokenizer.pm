@@ -100,6 +100,7 @@ my (
     %is_keyword_taking_optional_arg,
     %is_q_qq_qw_qx_qr_s_y_tr_m,
     %is_q_qq_qx_qr_s_y_tr_m,
+    %quote_modifiers,
     %is_semicolon_or_t,
     %is_sort_map_grep,
     %is_sort_map_grep_eval_do,
@@ -2153,28 +2154,6 @@ EOM
     push @q, ',';
     @is_list_end_type{@q} = (1) x scalar(@q);
 
-    # original ref: camel 3 p 147,
-    # but perl may accept undocumented flags
-    # perl 5.10 adds 'p' (preserve)
-    # Perl version 5.22 added 'n'
-    # From http://perldoc.perl.org/perlop.html we have
-    # /PATTERN/msixpodualngc or m?PATTERN?msixpodualngc
-    # s/PATTERN/REPLACEMENT/msixpodualngcer
-    # y/SEARCHLIST/REPLACEMENTLIST/cdsr
-    # tr/SEARCHLIST/REPLACEMENTLIST/cdsr
-    # qr/STRING/msixpodualn
-    my %quote_modifiers = (
-        's'  => '[msixpodualngcer]',
-        'y'  => '[cdsr]',
-        'tr' => '[cdsr]',
-        'm'  => '[msixpodualngc]',
-        'qr' => '[msixpodualn]',
-        'q'  => EMPTY_STRING,
-        'qq' => EMPTY_STRING,
-        'qw' => EMPTY_STRING,
-        'qx' => EMPTY_STRING,
-    );
-
     # table showing how many quoted things to look for after quote operator..
     # s, y, tr have 2 (pattern and replacement)
     # others have 1 (pattern only)
@@ -3168,7 +3147,7 @@ EOM
         if ($is_pattern) {
             $in_quote                = 1;
             $type                    = 'Q';
-            $allowed_quote_modifiers = '[msixpodualngc]';
+            $allowed_quote_modifiers = $quote_modifiers{'m'};
         }
         else {    # not a pattern; check for a /= token
 
@@ -3491,7 +3470,7 @@ EOM
         if ($is_pattern) {
             $in_quote                = 1;
             $type                    = 'Q';
-            $allowed_quote_modifiers = '[msixpodualngc]';
+            $allowed_quote_modifiers = $quote_modifiers{'m'};
         }
         else {
             ( $type_sequence, $indent_flag ) =
@@ -9231,9 +9210,13 @@ sub is_possible_numerator {
         my $is_pattern = 0;
 
         my $next_token = $rtokens->[ $i + 1 ];
-        if ( $next_token =~ /^[msixpodualgc]/ ) {
+
+        # skip a possible quote modifier
+        my $possible_modifiers = $quote_modifiers{'m'};
+        if ( $next_token =~ /^$possible_modifiers/ ) {
             $i++;
-        }    # skip possible modifier
+        }
+
         my ( $next_nonblank_token, $i_next ) =
           $self->find_next_nonblank_token( $i, $rtokens, $max_token_index );
 
@@ -10741,6 +10724,29 @@ BEGIN {
     # Note added 'qw' here
     @q = qw(q qq qw qx qr s y tr m);
     @is_q_qq_qw_qx_qr_s_y_tr_m{@q} = (1) x scalar(@q);
+
+    # Quote modifiers:
+    # original ref: camel 3 p 147,
+    # but perl may accept undocumented flags
+    # perl 5.10 adds 'p' (preserve)
+    # Perl version 5.22 added 'n'
+    # From http://perldoc.perl.org/perlop.html we have
+    # /PATTERN/msixpodualngc or m?PATTERN?msixpodualngc
+    # s/PATTERN/REPLACEMENT/msixpodualngcer
+    # y/SEARCHLIST/REPLACEMENTLIST/cdsr
+    # tr/SEARCHLIST/REPLACEMENTLIST/cdsr
+    # qr/STRING/msixpodualn
+    %quote_modifiers = (
+        's'  => '[msixpodualngcer]',
+        'y'  => '[cdsr]',
+        'tr' => '[cdsr]',
+        'm'  => '[msixpodualngc]',
+        'qr' => '[msixpodualn]',
+        'q'  => EMPTY_STRING,
+        'qq' => EMPTY_STRING,
+        'qw' => EMPTY_STRING,
+        'qx' => EMPTY_STRING,
+    );
 
     # Note: 'class' will be added by sub check_options if -use-feature=class
     @q = qw(package);
