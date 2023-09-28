@@ -641,23 +641,21 @@ EOM
     # Get trimmed lines. It is much faster to strip leading whitespace from
     # the whole input file at once than line-by-line.
 
-    # Remove all whitespace from left, but stop at a newline,
-    my @trimmed_lines;
+    # Remove leading whitespace except newlines
     $source_string =~ s/^ [^\S\n]+ //gxm;
-    @trimmed_lines = split /^/, $source_string;
 
-    # then remove the newlines.
-    for (@trimmed_lines) { chomp }
+    # Then break the string into lines
+    my @trimmed_lines = split /^/, $source_string;
 
-    # Safety check - be sure the number of lines has not changed
+    # Safety check - a change in number of lines would be a disaster
     if ( @trimmed_lines != @{$rinput_lines} ) {
 
         # Shouldn't happen - die in DEVEL_MODE and fix
         DEVEL_MODE
           && $self->Fault("trimmed/untrimmed line counts differ\n");
 
-        # But we can safely continue with undefined trimmed lines.  They will
-        # be detected and fixed later.
+        # Otherwise we can safely continue with undefined trimmed lines.  They
+        # will be detected and fixed later.
         @trimmed_lines = ();
     }
 
@@ -5118,7 +5116,7 @@ EOM
         # Given:
         #   $line_of_tokens = ref to hash of values being filled for this line
         #   $trimmed_input_line
-        #        = the input line without leading whitespace, and chomped, OR
+        #        = the input line without leading whitespace, OR
         #        = undef if not available
         # Returns:
         #   nothing
@@ -5129,7 +5127,9 @@ EOM
         # Extract line number for use in error messages
         $input_line_number = $line_of_tokens->{_line_number};
 
+        #----------------------------
         # Check for pod documentation
+        #----------------------------
         if ( substr( $untrimmed_input_line, 0, 1 ) eq '='
             && $untrimmed_input_line =~ /^=[A-Za-z_]/ )
         {
@@ -5148,6 +5148,9 @@ EOM
             }
         }
 
+        #------------------------
+        # Trim leading whitespace
+        #------------------------
         # Use untrimmed line if we are continuing in a type 'Q' quote
         if ( $in_quote && $quote_type eq 'Q' ) {
             $line_of_tokens->{_starting_in_quote} = 1;
@@ -5168,8 +5171,9 @@ EOM
             if ( !defined($input_line) ) {
                 $input_line = $untrimmed_input_line;
                 $input_line =~ s/^\s+//;
-                chomp $input_line;
             }
+
+            chomp $input_line;
 
             # define 'guessed_indentation_level' if logfile to be saved
             if ( $self->[_save_logfile_] && length($input_line) ) {
@@ -5179,50 +5183,55 @@ EOM
             }
         }
 
-        if ( !$in_quote ) {
-
-            # Optimize handling of a blank line
-            if ( !length($input_line) ) {
-                $line_of_tokens->{_line_type}        = 'CODE';
-                $line_of_tokens->{_rtokens}          = [];
-                $line_of_tokens->{_rtoken_type}      = [];
-                $line_of_tokens->{_rlevels}          = [];
-                $line_of_tokens->{_rblock_type}      = [];
-                $line_of_tokens->{_nesting_tokens_0} = $nesting_token_string;
-                $line_of_tokens->{_nesting_blocks_0} = $nesting_block_string;
-                return;
-            }
-
-            # Check comments
-            if ( substr( $input_line, 0, 1 ) eq '#' ) {
-
-                # and check for skipped section
-                if (
-                    (
-                        substr( $input_line, 0, 4 ) eq '#<<V'
-                        || $rOpts_code_skipping_begin
-                    )
-                    && $rOpts_code_skipping
-                    && $input_line =~ /$code_skipping_pattern_begin/
-                  )
-                {
-                    $self->[_in_skipped_] = $self->[_last_line_number_];
-                    return;
-                }
-
-                # Optional fast processing of a block comment
-                $line_of_tokens->{_line_type}        = 'CODE';
-                $line_of_tokens->{_rtokens}          = [$input_line];
-                $line_of_tokens->{_rtoken_type}      = ['#'];
-                $line_of_tokens->{_rlevels}          = [$level_in_tokenizer];
-                $line_of_tokens->{_rblock_type}      = [EMPTY_STRING];
-                $line_of_tokens->{_nesting_tokens_0} = $nesting_token_string;
-                $line_of_tokens->{_nesting_blocks_0} = $nesting_block_string;
-                return;
-            }
+        #------------
+        # Blank lines
+        #------------
+        if ( !length($input_line) ) {
+            $line_of_tokens->{_line_type}        = 'CODE';
+            $line_of_tokens->{_rtokens}          = [];
+            $line_of_tokens->{_rtoken_type}      = [];
+            $line_of_tokens->{_rlevels}          = [];
+            $line_of_tokens->{_rblock_type}      = [];
+            $line_of_tokens->{_nesting_tokens_0} = $nesting_token_string;
+            $line_of_tokens->{_nesting_blocks_0} = $nesting_block_string;
+            return;
         }
 
-        # update the copy of the line for use in error messages
+        #---------
+        # Comments
+        #---------
+        if ( !$in_quote && substr( $input_line, 0, 1 ) eq '#' ) {
+
+            # and check for skipped section
+            if (
+                (
+                    substr( $input_line, 0, 4 ) eq '#<<V'
+                    || $rOpts_code_skipping_begin
+                )
+                && $rOpts_code_skipping
+                && $input_line =~ /$code_skipping_pattern_begin/
+              )
+            {
+                $self->[_in_skipped_] = $self->[_last_line_number_];
+                return;
+            }
+
+            # Optional fast processing of a block comment
+            $line_of_tokens->{_line_type}        = 'CODE';
+            $line_of_tokens->{_rtokens}          = [$input_line];
+            $line_of_tokens->{_rtoken_type}      = ['#'];
+            $line_of_tokens->{_rlevels}          = [$level_in_tokenizer];
+            $line_of_tokens->{_rblock_type}      = [EMPTY_STRING];
+            $line_of_tokens->{_nesting_tokens_0} = $nesting_token_string;
+            $line_of_tokens->{_nesting_blocks_0} = $nesting_block_string;
+            return;
+        }
+
+        #---------------
+        # All other code
+        #---------------
+
+        # Update the copy of the line for use in error messages
         # This must be exactly what we give the pre_tokenizer
         $self->[_line_of_text_] = $input_line;
 
@@ -5245,10 +5254,11 @@ EOM
         $indent_flag     = 0;
         $peeked_ahead    = 0;
 
+        # Loop to find all tokens
         $self->tokenizer_main_loop();
 
         #-----------------------------------------------
-        # all done tokenizing this line ...
+        # All done tokenizing this line ...
         # now prepare the final list of tokens and types
         #-----------------------------------------------
         $self->tokenizer_wrapup_line($line_of_tokens);
