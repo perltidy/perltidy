@@ -9058,7 +9058,7 @@ sub respace_tokens_inner_loop {
                     }
                 }
                 else {
-                    # it is rare to arrive here (identifier with spaces)
+                    # Could be something like '* STDERR' or '$ debug'
                 }
             }
         }
@@ -9149,7 +9149,7 @@ EOM
             # safety (the tokenizer should have done this).
             # To avoid trimming qw quotes use -ntqw; this causes the
             # tokenizer to set them as type 'Q' instead of 'q'.
-            $token =~ s/^ \s+ | \s+ $//x;
+            $token =~ s/^ \s+ | \s+ $//gx;
             $rtoken_vars->[_TOKEN_] = $token;
             if ( $self->[_save_logfile_] && $token =~ /\t/ ) {
                 $self->note_embedded_tab($input_line_number);
@@ -10560,22 +10560,18 @@ sub copy_token_as_type {
     # slightly modifying an existing token.
     my ( $rold_token, $type, $token ) = @_;
     if ( !defined($token) ) {
-        if ( $type eq 'b' ) {
-            $token = SPACE;
-        }
-        elsif ( $type eq 'q' ) {
-            $token = EMPTY_STRING;
-        }
-        elsif ( $type eq '->' ) {
-            $token = '->';
-        }
-        elsif ( $type eq ';' ) {
-            $token = ';';
-        }
-        elsif ( $type eq ',' ) {
-            $token = ',';
-        }
-        else {
+
+        $token =
+            $type eq 'b'  ? SPACE
+          : $type eq 'q'  ? EMPTY_STRING
+          : $type eq '->' ? $type
+          : $type eq ';'  ? $type
+          : $type eq ','  ? $type
+          :                 undef;
+
+        if ( !defined($token) ) {
+
+            $token = $type;
 
             # Unexpected type ... this sub will work as long as both $token and
             # $type are defined, but we should catch any unexpected types during
@@ -10586,8 +10582,6 @@ sub 'copy_token_as_type' received token type '$type' but expects just one of: 'b
 EOM
             }
 
-            # Shouldn't get here
-            $token = $type;
         }
     }
 
@@ -14806,7 +14800,7 @@ EOM
                     }
                 }
 
-                # it is a ternary - no special processing for these yet
+                # it is a ternary or input file is unbalanced
                 else {
 
                 }

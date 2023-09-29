@@ -5190,8 +5190,8 @@ sub read_config_file {
         #     name { body }   or  name {   or    name { body
         # See rules in perltidy's perldoc page
         # Section: Other Controls - Creating a new abbreviation
-        if ( $line =~ /^((\w+)\s*\{)(.*)?$/ ) {
-            ( $name, $body ) = ( $2, $3 );
+        if ( $line =~ /^(?: (\w+) \s* \{ ) (.*)? $/x ) {
+            ( $name, $body ) = ( $1, $2 );
 
             # Cannot start new abbreviation unless old abbreviation is complete
             last if ($opening_brace_line);

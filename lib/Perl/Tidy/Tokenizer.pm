@@ -1,17 +1,28 @@
 #####################################################################
 #
-# The Perl::Tidy::Tokenizer package is essentially a filter which
-# reads lines of perl source code from a source object and provides
-# corresponding tokenized lines through its get_line() method.  Lines
-# flow from the source_object to the caller like this:
+# Perl::Tidy::Tokenizer reads a source and breaks it into a stream of tokens
 #
-# source_object --> Tokenizer -->  calling routine
-#   get_line()      get_line()     line_of_tokens
+# Usage:
+#
+#   STEP 1: initialize or re-initialze Tokenizer with user options
+#     Perl::Tidy::Tokenizer::check_options($rOpts);
+#
+#   STEP 2: create a tokenizer for a specific input source object
+#     my $tokenizer = Perl::Tidy::Tokenizer->new(
+#         source_object      => $source,
+#         ...
+#     );
+#
+#   STEP 3: get and process each tokenized 'line' (a hash ref of token info)
+#    while ( my $line = $tokenizer->get_line() ) {
+#        $formatter->write_line($line);
+#    }
+#
+#   STEP 4: report errors
+#    my $severe_error = $tokenizer->report_tokenization_errors();
 #
 # The source object can be a STRING ref, an ARRAY ref, or an object with a
 # get_line() method which supplies one line (a character string) perl call.
-# The Tokenizer returns a reference to a data structure 'line_of_tokens'
-# containing one tokenized line for each call to its get_line() method.
 #
 # NOTE: This is not a real class.  Only one tokenizer my be used.
 #
@@ -631,6 +642,8 @@ EOM
 
     # handle an object - must have a get_line method
     else {
+
+        # This will die if user's object does have a 'get_line' method
         while ( my $line = $line_source_object->get_line() ) {
             push( @{$rinput_lines}, $line );
         }
@@ -1157,7 +1170,7 @@ sub get_line {
         # check for error of extra whitespace
         # note for PERL6: leading whitespace is allowed
         else {
-            $candidate_target =~ s/^ \s+ | \s+ $//x;
+            $candidate_target =~ s/^ \s+ | \s+ $//gx;    # trim both ends
             if ( $candidate_target eq $here_doc_target ) {
                 $self->[_nearly_matched_here_target_at_] = $input_line_number;
             }
