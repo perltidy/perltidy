@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2023 09 12.01
+## 2023 09 12.02
 
     - The dump-block-summary option can report an if-elsif-elsif-.. chain
       as a single line item with the notation -dbt='elsif3', for example,
