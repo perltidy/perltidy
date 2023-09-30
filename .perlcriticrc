@@ -69,7 +69,8 @@ lines=30
 # This policy is very useful in locating complex code which might benefit from
 # simplification.  But the max value has to be set rather high here because
 # there are some critical loops in Formatter.pm whose high mccabe values cannot
-# be reduced without significantly increasing run time.
+# be reduced without significantly increasing run time. Note that a complete
+# list of mccabe numbers can be obtained with perltidy -dbs file.pl >file.csv
 [Subroutines::ProhibitExcessComplexity]
 max_mccabe=180
 
