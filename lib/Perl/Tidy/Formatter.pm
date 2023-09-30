@@ -2,6 +2,28 @@
 #
 # The Perl::Tidy::Formatter package adds indentation, whitespace, and
 # line breaks to the token stream
+
+# Usage Outline:
+#
+#   STEP 1: initialize or re-initialze Formatter with user options
+#     Perl::Tidy::Formatter::check_options($rOpts);
+#
+#   STEP 2: crate a tokenizer for the source stream
+#
+#   STEP 3: create a formatter for the destination stream
+#     my $formatter = Perl::Tidy::Formatter->new(
+#         ...
+#         sink_object        => $destination,
+#         ...
+#     );
+#
+#   STEP 4: process each input line (see sub Perl::Tidy::process_single_case)
+#     while ( my $line = $tokenizer->get_line() ) {
+#       $formatter->write_line($line);
+#     }
+#
+#   STEP 4: finish formatting
+#     $formatter->finish_formatting($severe_error);
 #
 #####################################################################
 
@@ -11552,7 +11574,15 @@ sub find_nested_pairs {
         # Count the number of nonblank characters separating them.
         # Note: the $nonblank_count includes the inner opening container
         # but not the outer opening container, so it will be >= 1.
-        if ( $K_diff < 0 ) { next }    # Shouldn't happen
+        if ( $K_diff < 0 ) {
+
+            # Shouldn't happen
+            DEVEL_MODE
+              && Fault(
+"unexpected negative index diff=$K_diff = Kio-Koo =$K_inner_opening - $K_outer_opening"
+              );
+            next;
+        }
         my $nonblank_count = 0;
         my $type;
         my $is_name;
