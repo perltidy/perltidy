@@ -2066,14 +2066,12 @@ sub prepare_for_a_new_file {
             $rtokens->[$i] = $tok_0;
             return 1;
         }
-        else {
 
-            # Shouldn't get here
-            if (DEVEL_MODE) {
-                $self->Fault(<<EOM);
+        # Shouldn't get here - bad call parameters
+        if (DEVEL_MODE) {
+            $self->Fault(<<EOM);
 While working near line number $input_line_number, bad arg '$tok' passed to sub split_pretoken()
 EOM
-            }
         }
         return;
     } ## end sub split_pretoken
