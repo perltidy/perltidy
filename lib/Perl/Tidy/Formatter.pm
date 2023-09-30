@@ -10559,31 +10559,6 @@ sub copy_token_as_type {
     # This provides a quick way to create a new token by
     # slightly modifying an existing token.
     my ( $rold_token, $type, $token ) = @_;
-    if ( !defined($token) ) {
-
-        $token =
-            $type eq 'b'  ? SPACE
-          : $type eq 'q'  ? EMPTY_STRING
-          : $type eq '->' ? $type
-          : $type eq ';'  ? $type
-          : $type eq ','  ? $type
-          :                 undef;
-
-        if ( !defined($token) ) {
-
-            $token = $type;
-
-            # Unexpected type ... this sub will work as long as both $token and
-            # $type are defined, but we should catch any unexpected types during
-            # development.
-            if (DEVEL_MODE) {
-                Fault(<<EOM);
-sub 'copy_token_as_type' received token type '$type' but expects just one of: 'b' 'q' '->' or ';'
-EOM
-            }
-
-        }
-    }
 
     my @rnew_token = @{$rold_token};
     $rnew_token[_TYPE_]          = $type;
@@ -31302,6 +31277,10 @@ sub set_vertical_tightness_flags {
                 # avoids an instability (b1460).
                 elsif ( $is_opening_type{$type_end_next} ) {
                     $ovt = 0;
+                }
+
+                # neither opening nor closing
+                else {
                 }
             }
 

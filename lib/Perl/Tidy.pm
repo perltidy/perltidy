@@ -1843,6 +1843,11 @@ sub set_line_separator {
                 my $buf = join EMPTY_STRING, @lines;
                 $rinput_string = \$buf;
             }
+
+            # unknown line ending scheme - leave it alone and let the tokenizer
+            # deal with it
+            else {
+            }
         }
     }
 
