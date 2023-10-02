@@ -5186,7 +5186,7 @@ sub read_config_file {
           strip_comment( $line, $config_file, $line_no );
         last if ($death_message);
         next unless $line;
-        $line =~ s/^\s*(.*?)\s*$/$1/;    # trim both ends
+        $line =~ s/^ \s+ | \s+ $//gx;    # trim both ends
         next unless $line;
 
         my $body = $line;

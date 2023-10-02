@@ -2,7 +2,7 @@
 #
 # Perl::Tidy::Tokenizer reads a source and breaks it into a stream of tokens
 #
-# Usage:
+# Usage Outline:
 #
 #   STEP 1: initialize or re-initialze Tokenizer with user options
 #     Perl::Tidy::Tokenizer::check_options($rOpts);
@@ -318,7 +318,7 @@ sub make_code_skipping_pattern {
     my ( $rOpts, $opt_name, $default ) = @_;
     my $param = $rOpts->{$opt_name};
     if ( !$param ) { $param = $default }
-    $param =~ s/^\s*//;    # allow leading spaces to be like format-skipping
+    $param =~ s/^\s+//;    # allow leading spaces to be like format-skipping
     if ( $param !~ /^#/ ) {
         Die("ERROR: the $opt_name parameter '$param' must begin with '#'\n");
     }
@@ -1141,7 +1141,7 @@ sub get_line {
         # Handle <<~ targets, which are indicated here by a leading space on
         # the here quote character
         if ( $here_quote_character =~ /^\s/ ) {
-            $candidate_target =~ s/^\s*//;
+            $candidate_target =~ s/^\s+//;
         }
         if ( $candidate_target eq $here_doc_target ) {
             $self->[_nearly_matched_here_target_at_] = undef;
@@ -6899,7 +6899,7 @@ sub peek_ahead_for_n_nonblank_pre_tokens {
     my ( $rpre_tokens, $rmap, $rpre_types );
 
     while ( $line = $self->peek_ahead( $i++ ) ) {
-        $line =~ s/^\s*//;                 # trim leading blanks
+        $line =~ s/^\s+//;                 # trim leading blanks
         next if ( length($line) <= 0 );    # skip blank
         next if ( $line =~ /^#/ );         # skip comment
         ( $rpre_tokens, $rmap, $rpre_types ) =
@@ -6918,7 +6918,7 @@ sub peek_ahead_for_nonblank_token {
     my $i = 0;
 
     while ( $line = $self->peek_ahead( $i++ ) ) {
-        $line =~ s/^\s*//;                 # trim leading blanks
+        $line =~ s/^\s+//;                 # trim leading blanks
         next if ( length($line) <= 0 );    # skip blank
         next if ( $line =~ /^#/ );         # skip comment
 
@@ -9981,7 +9981,7 @@ sub write_error_indicator_pair {
       make_numbered_line( $line_number, $input_line, $pos );
     $underline = write_on_underline( $underline, $pos - $offset, $carrat );
     $self->warning( $numbered_line . "\n" );
-    $underline =~ s/\s*$//;
+    $underline =~ s/\s+$//;
     $self->warning( $underline . "\n" );
     return;
 } ## end sub write_error_indicator_pair

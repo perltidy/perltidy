@@ -5354,7 +5354,7 @@ sub make_static_block_comment_pattern {
     # allow the user to change it
     if ( $rOpts->{'static-block-comment-prefix'} ) {
         my $prefix = $rOpts->{'static-block-comment-prefix'};
-        $prefix =~ s/^\s*//;
+        $prefix =~ s/^\s+//;
         my $pattern = $prefix;
 
         # user may give leading caret to force matching left comments only
@@ -5380,7 +5380,7 @@ sub make_format_skipping_pattern {
     my ( $opt_name, $default ) = @_;
     my $param = $rOpts->{$opt_name};
     if ( !$param ) { $param = $default }
-    $param =~ s/^\s*//;
+    $param =~ s/^\s+//;
     if ( $param !~ /^#/ ) {
         Die("ERROR: the $opt_name parameter '$param' must begin with '#'\n");
     }
@@ -5404,7 +5404,7 @@ sub make_non_indenting_brace_pattern {
     # allow the user to change it
     if ( $rOpts->{'non-indenting-brace-prefix'} ) {
         my $prefix = $rOpts->{'non-indenting-brace-prefix'};
-        $prefix =~ s/^\s*//;
+        $prefix =~ s/^\s+//;
         if ( $prefix !~ /^#/ ) {
             Die("ERROR: the -nibp parameter '$prefix' must begin with '#'\n");
         }
@@ -5751,7 +5751,7 @@ sub make_static_side_comment_pattern {
     # allow the user to change it
     if ( $rOpts->{'static-side-comment-prefix'} ) {
         my $prefix = $rOpts->{'static-side-comment-prefix'};
-        $prefix =~ s/^\s*//;
+        $prefix =~ s/^\s+//;
         my $pattern = '^' . $prefix;
         if ( bad_pattern($pattern) ) {
             Die(
@@ -32225,7 +32225,7 @@ sub add_closing_side_comment {
         $token = balance_csc_text($token)
           if $rOpts->{'closing-side-comments-balanced'};
 
-        $token =~ s/\s*$//;    # trim any trailing whitespace
+        $token =~ s/\s+$//;    # trim any trailing whitespace
 
         # handle case of existing closing side comment
         if ($have_side_comment) {

@@ -194,7 +194,7 @@ sub black_box {
         $structural_indentation_level = 0
           if ( $structural_indentation_level < 0 );
         $self->{_last_input_line_written} = $input_line_number;
-        ( my $out_str = $input_line ) =~ s/^\s*//;
+        ( my $out_str = $input_line ) =~ s/^\s+//;
         chomp $out_str;
 
         $out_str = ( '.' x $structural_indentation_level ) . $out_str;
