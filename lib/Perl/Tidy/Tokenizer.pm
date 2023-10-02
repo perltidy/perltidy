@@ -9003,35 +9003,33 @@ sub find_next_nonblank_token {
     }
 
     my $next_nonblank_token = $rtokens->[ ++$i ];
+
+    # Any more tokens?
     return ( SPACE, $i )
       if ( !defined($next_nonblank_token) || !length($next_nonblank_token) );
 
-    # Quick test for nonblank ascii char. Note that we just have to
-    # examine the first character here.
+    # Skip over whitespace
     my $ord = ord( substr( $next_nonblank_token, 0, 1 ) );
-    if (   $ord >= ORD_PRINTABLE_MIN
-        && $ord <= ORD_PRINTABLE_MAX )
+    if (
+
+        ( $ord <= ORD_PRINTABLE_MIN || $ord >= ORD_PRINTABLE_MAX )
+
+        # Quick test for ascii space or tab
+        && (
+            ( $ord == ORD_SPACE || $ord == ORD_TAB )
+
+            # Slow test to for something else identified as whitespace
+            || $next_nonblank_token =~ /^\s+$/
+        )
+      )
     {
-        return ( $next_nonblank_token, $i );
-    }
-
-    # Quick test to skip over an ascii space or tab
-    elsif ( $ord == ORD_SPACE || $ord == ORD_TAB ) {
         $next_nonblank_token = $rtokens->[ ++$i ];
         return ( SPACE, $i ) unless defined($next_nonblank_token);
-    }
-
-    # Slow test to skip over something else identified as whitespace
-    elsif ( $next_nonblank_token =~ /^\s*$/ ) {
-        $next_nonblank_token = $rtokens->[ ++$i ];
-        return ( SPACE, $i ) unless defined($next_nonblank_token);
-    }
-    else {
-        ## at nonblank
     }
 
     # We should be at a nonblank now
     return ( $next_nonblank_token, $i );
+
 } ## end sub find_next_nonblank_token
 
 sub find_next_noncomment_token {
