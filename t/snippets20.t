@@ -179,9 +179,13 @@ lc( $self->mime_attr('content-type')
         || $self->{MIH_DefaultType}
         || 'text/plain' );
 
+if (1) { ... }
+
 # Padding can also remove spaces; here the space after the '(' is lost:
-elsif ( $statement_type =~ /^sub\b/
+elsif ($statement_type =~ /^sub\b/
     || $paren_type[$paren_depth] =~ /^sub\b/ )
+{
+}
 ----------
 
         'outdent' => <<'----------',
@@ -663,9 +667,13 @@ lc(      $self->mime_attr('content-type')
       || $self->{MIH_DefaultType}
       || 'text/plain' );
 
+if (1) { ... }
+
 # Padding can also remove spaces; here the space after the '(' is lost:
 elsif ($statement_type =~ /^sub\b/
     || $paren_type[$paren_depth] =~ /^sub\b/ )
+{
+}
 #19...........
         },
     };

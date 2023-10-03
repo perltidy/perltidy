@@ -41,6 +41,9 @@ use constant DEVEL_MODE   => 0;
 use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };
 
+# Parent sequence number of tree of containers; must be 1
+use constant SEQ_ROOT => 1;
+
 # Decimal values of some ascii characters for quick checks
 use constant ORD_TAB           => 9;
 use constant ORD_SPACE         => 32;
@@ -1715,7 +1718,7 @@ sub prepare_for_a_new_file {
     $total_depth              = 0;
     $rtotal_depth             = [];
     $rcurrent_sequence_number = [];
-    $next_sequence_number     = 2;    # The value 1 is reserved for SEQ_ROOT
+    $next_sequence_number     = SEQ_ROOT + 1;
 
     $rparen_type                     = [];
     $rparen_semicolon_count          = [];
@@ -4289,35 +4292,50 @@ EOM
             $statement_type = $tok;
         }
 
-        # Check for misplaced 'elsif' and 'else', but allow isolated
-        # else or elsif blocks to be formatted.  This is indicated
-        # by a last noblank token of ';'
+        # Check for unexpected 'elsif'
         elsif ( $tok eq 'elsif' ) {
             if (
-                $last_nonblank_token ne ';'
 
                 ## !~ /^(if|elsif|unless)$/
-                && !$is_if_elsif_unless{$last_nonblank_block_type}
+                !$is_if_elsif_unless{$last_nonblank_block_type}
+
+                # Allow isolated blocks of any kind during editing
+                # by checking for a last noblank token of ';' and no
+                # sequence numbers having been issued (c272). The check
+                # on sequence number is not perfect but good enough.
+                && !(
+                       $last_nonblank_token eq ';'
+                    && $next_sequence_number == SEQ_ROOT + 1
+                )
+
               )
             {
                 $self->warning(
                     "expecting '$tok' to follow one of 'if|elsif|unless'\n");
             }
         }
+
+        # Check for unexpected 'else'
         elsif ( $tok eq 'else' ) {
 
             # patched for SWITCH/CASE
             if (
-                $last_nonblank_token ne ';'
 
                 ## !~ /^(if|elsif|unless|case|when)$/
-                && !$is_if_elsif_unless_case_when{$last_nonblank_block_type}
+                !$is_if_elsif_unless_case_when{$last_nonblank_block_type}
 
                 # patch to avoid an unwanted error message for
                 # the case of a parenless 'case' (RT 105484):
                 # switch ( 1 ) { case x { 2 } else { } }
                 ## !~ /^(if|elsif|unless|case|when)$/
                 && !$is_if_elsif_unless_case_when{$statement_type}
+
+                # Allow isolated blocks of any kind during editing (c272)
+                && !(
+                       $last_nonblank_token eq ';'
+                    && $next_sequence_number == SEQ_ROOT + 1
+                )
+
               )
             {
                 $self->warning(
