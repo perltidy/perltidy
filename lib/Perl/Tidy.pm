@@ -639,10 +639,6 @@ EOM
     %input_hash = ( %defaults, %input_hash );
     my $argv               = $input_hash{'argv'};
     my $destination_stream = $input_hash{'destination'};
-    my $errorfile_stream   = $input_hash{'errorfile'};
-    my $logfile_stream     = $input_hash{'logfile'};
-    my $teefile_stream     = $input_hash{'teefile'};
-    my $debugfile_stream   = $input_hash{'debugfile'};
     my $perltidyrc_stream  = $input_hash{'perltidyrc'};
     my $source_stream      = $input_hash{'source'};
     my $stderr_stream      = $input_hash{'stderr'};

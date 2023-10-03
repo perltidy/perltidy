@@ -438,10 +438,6 @@ sub write_diagnostics {
         return;
     }
 
-    sub get_logger_object {
-        return $logger_object;
-    }
-
     sub get_input_stream_name {
         my $input_stream_name = EMPTY_STRING;
         if ($logger_object) {
