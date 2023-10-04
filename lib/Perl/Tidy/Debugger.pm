@@ -30,10 +30,9 @@ sub really_open_debug_file {
     my $self            = shift;
     my $debug_file      = $self->{_debug_file};
     my $is_encoded_data = $self->{_is_encoded_data};
-    my ( $fh, $filename ) =
-      Perl::Tidy::streamhandle( $debug_file, 'w', $is_encoded_data );
+    my $fh = Perl::Tidy::streamhandle( $debug_file, 'w', $is_encoded_data );
     if ( !$fh ) {
-        Perl::Tidy::Warn("can't open $debug_file: $OS_ERROR\n");
+        Perl::Tidy::Warn("can't open debug file '$debug_file'\n");
     }
     $self->{_debug_file_opened} = 1;
     $self->{_fh}                = $fh;

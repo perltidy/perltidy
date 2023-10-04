@@ -98,15 +98,12 @@ sub new {
     my $html_toc_extension = $args{html_toc_extension};
     my $html_src_extension = $args{html_src_extension};
 
-    my $html_file_opened = 0;
-    my $html_fh;
-    ( $html_fh, my $html_filename ) =
-      Perl::Tidy::streamhandle( $html_file, 'w' );
+    my $html_fh = Perl::Tidy::streamhandle( $html_file, 'w' );
     if ( !$html_fh ) {
-        Perl::Tidy::Warn("can't open $html_file: $OS_ERROR\n");
+        Perl::Tidy::Warn("can't open html file '$html_file'\n");
         return;
     }
-    $html_file_opened = 1;
+    my $html_file_opened = 1;
 
     if ( !$input_file || $input_file eq '-' || ref($input_file) ) {
         $input_file = "NONAME";

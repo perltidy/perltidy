@@ -157,17 +157,16 @@ sub streamhandle {
     #                      (check for 'print' method for 'w' mode)
     #                      (check for 'getline' method for 'r' mode)
 
-    # An optional flag $is_encoded_data may be given, as follows:
-
-    # Case 1. Any non-empty string: encoded data is being transferred, set
-    # encoding to be utf8 for files and for stdin.
-
-    # Case 2. Not given, or an empty string: unencoded binary data is being
-    # transferred, set binary mode for files and for stdin.
+    # An optional flag '$is_encoded_data' may be given, as follows:
+    # - true: encoded data is being transferred,
+    #    set encoding to be utf8 for files and for stdin.
+    # - false: unencoded binary data is being transferred,
+    #    set binary mode for files and for stdin.
 
     my ( $filename, $mode, $is_encoded_data ) = @_;
 
-    # sub slurp_stream is preferred for reading (for efficiency).
+    # Note: mode 'r' works but is no longer used.
+    # Use sub stream_slurp instead for mode 'r' (for efficiency).
     if ( $mode ne 'w' && $mode ne 'W' ) {
         if ( DEVEL_MODE || ( $mode ne 'r' && $mode ne 'R' ) ) {
             Fault("streamhandle called in unexpected mode '$mode'\n");
@@ -178,7 +177,9 @@ sub streamhandle {
     my $New;
     my $fh;
 
+    #-------------------
     # handle a reference
+    #-------------------
     if ($ref) {
         if ( $ref eq 'ARRAY' ) {
             $New = sub { Perl::Tidy::IOScalarArray->new( $filename, $mode ) };
@@ -233,7 +234,9 @@ EOM
         }
     }
 
+    #----------------
     # handle a string
+    #----------------
     else {
         if ( $filename eq '-' ) {
             $New = sub { $mode eq 'w' ? *STDOUT : *STDIN }
@@ -242,41 +245,46 @@ EOM
             $New = sub { IO::File->new( $filename, $mode ) };
         }
     }
+
+    #--------------
+    # Open the file
+    #--------------
     $fh = $New->( $filename, $mode );
+
     if ( !$fh ) {
-
-        Warn("Couldn't open file:$filename in mode:$mode : $OS_ERROR\n");
-
+        Warn("Couldn't open file:'$filename' in mode:$mode : $OS_ERROR\n");
     }
+
+    #------------
+    # Set binmode
+    #------------
     else {
-
-        # Case 1: handle encoded data
-        if ($is_encoded_data) {
-            if ( ref($fh) eq 'IO::File' ) {
-                ## binmode object call not available in older perl versions
-                ## $fh->binmode(":raw:encoding(UTF-8)");
-                binmode $fh, ":raw:encoding(UTF-8)";
-            }
-            elsif ( $filename eq '-' ) {
-                binmode STDOUT, ":raw:encoding(UTF-8)";
-            }
-            else {
-                # shouldn't happen
-            }
+        if ( ref($fh) eq 'IO::File' ) {
+            ## binmode object call not available in older perl versions
+            ## $fh->binmode(":raw:encoding(UTF-8)");
+            if ($is_encoded_data) { binmode $fh, ":raw:encoding(UTF-8)"; }
+            else                  { binmode $fh }
         }
-
-        # Case 2: handle unencoded data
+        elsif ( $filename eq '-' ) {
+            if ($is_encoded_data) { binmode STDOUT, ":raw:encoding(UTF-8)"; }
+            else                  { binmode STDOUT }
+        }
         else {
-            if    ( ref($fh) eq 'IO::File' ) { binmode $fh }
-            elsif ( $filename eq '-' )       { binmode STDOUT }
-            else                             { }    # shouldn't happen
+
+            # shouldn't get here
+            if (DEVEL_MODE) {
+                my $ref_fh = ref($fh);
+                Fault(<<EOM);
+unexpected streamhandle state for file='$filename' mode='$mode' ref(fh)=$ref_fh
+EOM
+            }
         }
     }
 
-    return $fh, ( $ref or $filename );
+    return $fh;
 } ## end sub streamhandle
 
-sub slurp_stream {
+sub stream_slurp {
 
     my ($filename) = @_;
 
@@ -348,7 +356,7 @@ EOM
     }
 
     return $rinput_string;
-} ## end sub slurp_stream
+} ## end sub stream_slurp
 
 {    ## begin closure for sub catfile
 
@@ -647,8 +655,7 @@ EOM
     my $postfilter         = $input_hash{'postfilter'};
 
     if ($stderr_stream) {
-        ( $fh_stderr, my $stderr_file ) =
-          Perl::Tidy::streamhandle( $stderr_stream, 'w' );
+        $fh_stderr = Perl::Tidy::streamhandle( $stderr_stream, 'w' );
         if ( !$fh_stderr ) {
             croak <<EOM;
 ------------------------------------------------------------------------
@@ -1525,7 +1532,7 @@ sub get_decoded_string_buffer {
 
     my $rOpts = $self->[_rOpts_];
 
-    my $rinput_string = slurp_stream($input_file);
+    my $rinput_string = stream_slurp($input_file);
     return unless ( defined($rinput_string) );
 
     $rinput_string = $self->set_line_separator($rinput_string);
@@ -2602,8 +2609,7 @@ sub process_iteration_layer {
     {
         $tee_file = $self->[_teefile_stream_]
           || $fileroot . $self->make_file_extension('TEE');
-        ( $fh_tee, my $tee_filename ) =
-          Perl::Tidy::streamhandle( $tee_file, 'w', $is_encoded_data );
+        $fh_tee = Perl::Tidy::streamhandle( $tee_file, 'w', $is_encoded_data );
         if ( !$fh_tee ) {
             Warn("couldn't open TEE file $tee_file: $OS_ERROR\n");
         }
@@ -4248,7 +4254,7 @@ EOM
         # open any config file
         my $rconfig_string;
         if ($config_file) {
-            $rconfig_string = slurp_stream($config_file);
+            $rconfig_string = stream_slurp($config_file);
             if ( !defined($rconfig_string) ) {
                 ${$rconfig_file_chatter} .=
                   "# $config_file exists but cannot be opened\n";

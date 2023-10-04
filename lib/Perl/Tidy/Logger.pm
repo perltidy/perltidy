@@ -382,11 +382,12 @@ sub warning {
         my $is_encoded_data = $self->{_is_encoded_data};
         if ( !$fh_warnings ) {
             my $warning_file = $self->{_warning_file};
-            ( $fh_warnings, my $filename ) =
+            $fh_warnings =
               Perl::Tidy::streamhandle( $warning_file, 'w', $is_encoded_data );
-            $fh_warnings
-              or Perl::Tidy::Die("couldn't open $filename: $OS_ERROR\n");
-            Perl::Tidy::Warn_msg("## Please see file $filename\n")
+            if ( !$fh_warnings ) {
+                Perl::Tidy::Die("couldn't open warning file '$warning_file'\n");
+            }
+            Perl::Tidy::Warn_msg("## Please see file $warning_file\n")
               unless ref($warning_file);
             $self->{_fh_warnings} = $fh_warnings;
             $fh_warnings->print("Perltidy version is $Perl::Tidy::VERSION\n");
@@ -501,9 +502,11 @@ sub finish {
 
     if ($save_logfile) {
         my $is_encoded_data = $self->{_is_encoded_data};
-        my ( $fh, $filename ) =
-          Perl::Tidy::streamhandle( $log_file, 'w', $is_encoded_data );
-        if ($fh) {
+        my $fh = Perl::Tidy::streamhandle( $log_file, 'w', $is_encoded_data );
+        if ( !$fh ) {
+            Perl::Tidy::Warn("unable to open log file '$log_file'\n");
+        }
+        else {
             my $routput_array = $self->{_output_array};
             foreach my $line ( @{$routput_array} ) { $fh->print($line) }
             if (   $fh->can('close')
