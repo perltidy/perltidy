@@ -5876,8 +5876,27 @@ EOM
 
                 # Save starting seqno to identify sequence method:
                 # New method starts with 2 and has continuous numbering
-                # Old method starts with >2 and may have gaps
-                if ( !defined($initial_seqno) ) { $initial_seqno = $seqno }
+                # Old method (NOT USED) starts with >2 and may have gaps
+                if ( !defined($initial_seqno) ) {
+                    $initial_seqno = $seqno;
+
+                    # Be sure that sequence numbers start with 2. If not,
+                    # there is a programming error in the tokenizer.
+                    if ( $initial_seqno ne 2 ) {
+                        Fault(<<EOM);
+Expecting initial sequence number of 2 but got '$initial_seqno'
+EOM
+                    }
+
+                    # Be sure the root sequence number is 1. This is set
+                    # as a constant at the top of this module.
+                    if ( SEQ_ROOT ne 1 ) {
+                        my $SEQ_ROOT = SEQ_ROOT;
+                        Fault(<<EOM);
+The constant SEQ_ROOT has been changed from 1 to '$SEQ_ROOT'.
+EOM
+                    }
+                }
 
                 if ( $is_opening_sequence_token{$token} ) {
 
