@@ -82,6 +82,7 @@ use constant DEVEL_MODE   => 0;
 use constant DIAGNOSTICS  => 0;
 use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };
+use constant CONST_1024   => 1024;    # bytes per kb; 2**10
 
 use vars qw{
   $VERSION
@@ -99,6 +100,26 @@ use IO::File;
 use File::Basename;
 use File::Copy;
 use File::Temp qw(tempfile);
+
+# perl stat function index names, based on
+#    https://perldoc.perl.org/functions/stat
+use constant {
+    _dev_     => 0,     # device number of filesystem
+    _ino_     => 1,     # inode number
+    _mode_    => 2,     # file mode  (type and permissions)
+    _nlink_   => 3,     # number of (hard) links to the file
+    _uid_     => 4,     # numeric user ID of file's owner
+    _gid_     => 5,     # numeric group ID of file's owner
+    _rdev_    => 6,     # the device identifier (special files only)
+    _size_    => 7,     # total size of file, in bytes
+    _atime_   => 8,     # last access time in seconds since the epoch
+    _mtime_   => 9,     # last modify time in seconds since the epoch
+    _ctime_   => 10,    # inode change time in seconds since the epoch (*)
+    _blksize_ => 11,    # preferred I/O size in bytes for interacting with
+                        # the file (may vary from file to file)
+    _blocks_  => 12,    # actual number of system-specific blocks allocated
+                        # on disk (often, but not always, 512 bytes each)
+};
 
 BEGIN {
 
@@ -1218,7 +1239,7 @@ sub backup_method_copy {
         $in_place_modify );
 
     # set the modification time of the copy to the original value (rt#145999)
-    my ( $read_time, $write_time ) = @input_file_stat[ 8, 9 ];
+    my ( $read_time, $write_time ) = @input_file_stat[ _atime_, _mtime_ ];
     if ( defined($write_time) ) {
         utime( $read_time, $write_time, $backup_file )
           || Warn("error setting times for backup file '$backup_file'\n");
@@ -1399,7 +1420,7 @@ EOM
         $in_place_modify );
 
     # Keep original modification time if no change (rt#145999)
-    my ( $read_time, $write_time ) = @input_file_stat[ 8, 9 ];
+    my ( $read_time, $write_time ) = @input_file_stat[ _atime_, _mtime_ ];
     if ( !$self->[_input_output_difference_] && defined($write_time) ) {
         utime( $read_time, $write_time, $input_file )
           || Warn("error setting times for '$input_file'\n");
@@ -1444,6 +1465,11 @@ EOM
 
 } ## end sub backup_method_move
 
+# masks for file permissions
+use constant OCT_777  => oct(777);     # All users (O+G+W) + r/w/x bits
+use constant OCT_7777 => oct(7777);    # Same + suid/sgid/sbit
+use constant OCT_600  => oct(600);     # Owner RW permission
+
 sub set_output_file_permissions {
 
     my ( $self, $output_file, $rinput_file_stat, $in_place_modify ) = @_;
@@ -1453,9 +1479,10 @@ sub set_output_file_permissions {
     #  $rinput_file_stat = the result of stat($input_file)
     #  $in_place_modify  = true if --backup-and-modify-in-place is set
 
-    my ( $mode_i, $uid_i, $gid_i ) = @{$rinput_file_stat}[ 2, 4, 5 ];
-    my ( $uid_o, $gid_o ) = ( stat($output_file) )[ 4, 5 ];
-    my $input_file_permissions  = $mode_i & oct(7777);
+    my ( $mode_i, $uid_i, $gid_i ) =
+      @{$rinput_file_stat}[ _mode_, _uid_, _gid_ ];
+    my ( $uid_o, $gid_o ) = ( stat($output_file) )[ _uid_, _gid_ ];
+    my $input_file_permissions  = $mode_i & OCT_7777;
     my $output_file_permissions = $input_file_permissions;
 
     #rt128477: avoid inconsistent owner/group and suid/sgid
@@ -1472,7 +1499,7 @@ sub set_output_file_permissions {
         else {
 
             # owner or group differ: do not copy suid and sgid
-            $output_file_permissions = $mode_i & oct(777);
+            $output_file_permissions = $mode_i & OCT_777;
             if ( $input_file_permissions != $output_file_permissions ) {
                 Warn(
 "Unable to copy setuid and/or setgid bits for output file '$output_file'\n"
@@ -1496,7 +1523,7 @@ sub set_output_file_permissions {
     # assumption that a previous backup can be unlinked even if
     # not writable.
     if ( !$in_place_modify ) {
-        $output_file_permissions |= oct(600);
+        $output_file_permissions |= OCT_600;
     }
 
     if ( !chmod( $output_file_permissions, $output_file ) ) {
@@ -1782,7 +1809,7 @@ sub set_line_separator {
 
     # Limit the search to a reasonable number of characters, in case we
     # have a weird file
-    my $str = substr( ${$rinput_string}, 0, 1024 );
+    my $str = substr( ${$rinput_string}, 0, CONST_1024 );
     if ($str) {
 
         if ( $str =~ m/(($CR|$LF)+)/ ) {
@@ -1979,7 +2006,7 @@ sub process_all_files {
             # And avoid formatting extremely large files. Since perltidy reads
             # files into memory, trying to process an extremely large file
             # could cause system problems.
-            my $size_in_mb = ( -s $input_file ) / ( 1024 * 1024 );
+            my $size_in_mb = ( -s $input_file ) / ( CONST_1024 * CONST_1024 );
             if ( $size_in_mb > $rOpts->{'maximum-file-size-mb'} ) {
                 $size_in_mb = sprintf( "%0.1f", $size_in_mb );
                 Warn(
@@ -2021,7 +2048,7 @@ sub process_all_files {
                 my ( $base, $old_path ) = fileparse($fileroot);
                 my $new_path = $rOpts->{'output-path'};
                 if ( !-d $new_path ) {
-                    mkdir( $new_path, 0777 )
+                    mkdir($new_path)    # Default MODE is 0777
                       or
                       Die("unable to create directory $new_path: $OS_ERROR\n");
                 }
@@ -2561,6 +2588,10 @@ EOM
     return $routput_string;
 }
 
+# For safety, set an upper bound on number of iterations before stopping.
+# The average number of iterations is 2. No known cases exceed 5.
+use constant ITERATION_LIMIT => 6;
+
 sub process_iteration_layer {
 
     my ( $self, $rinput_string ) = @_;
@@ -2634,8 +2665,8 @@ sub process_iteration_layer {
             $max_iterations = 1;
         }
 
-        if ( $max_iterations > 6 ) {
-            $max_iterations = 6;
+        if ( $max_iterations > ITERATION_LIMIT ) {
+            $max_iterations = ITERATION_LIMIT;
         }
 
         # get starting MD5 sum for convergence test
