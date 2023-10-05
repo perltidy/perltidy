@@ -1562,6 +1562,17 @@ sub get_decoded_string_buffer {
     my $rinput_string = stream_slurp($input_file);
     return unless ( defined($rinput_string) );
 
+    # Note that we could have a zero size input string here if it
+    # arrived from standard input or from a string ref. For example
+    # 'perltidy <null.pl'.  If we issue a warning and stop, as we would
+    # for a zero length file ('perltidy null.pl'), then we could cause
+    # a call to the perltidy module to mis-behave as a filter. So we will
+    # process this as any other file in this case without any warning (c286).
+    if ( !length( ${$rinput_string} ) ) {
+
+        # zero length, but keep going
+    }
+
     $rinput_string = $self->set_line_separator($rinput_string);
 
     my $encoding_in              = EMPTY_STRING;
