@@ -44,11 +44,18 @@ use constant SPACE        => q{ };
 # Parent sequence number of tree of containers; must be 1
 use constant SEQ_ROOT => 1;
 
+# Defaults for guessing old indentation
+use constant INDENT_COLUMNS_DEFAULT => 4;
+use constant TAB_SIZE_DEFAULT       => 8;
+
 # Decimal values of some ascii characters for quick checks
 use constant ORD_TAB           => 9;
 use constant ORD_SPACE         => 32;
 use constant ORD_PRINTABLE_MIN => 33;
 use constant ORD_PRINTABLE_MAX => 126;
+
+# A limit on message length when problems are detected
+use constant LONG_MESSAGE => 256;
 
 # GLOBAL VARIABLES which change during tokenization:
 # These could also be stored in $self but it is more convenient and
@@ -204,7 +211,6 @@ BEGIN {
         _saw_perl_dash_P_                    => $i++,
         _saw_perl_dash_w_                    => $i++,
         _saw_use_strict_                     => $i++,
-        _saw_v_string_                       => $i++,
         _saw_brace_error_                    => $i++,
         _hit_bug_                            => $i++,
         _look_for_autoloader_                => $i++,
@@ -292,7 +298,7 @@ sub Fault {
     my $input_stream_name;
     if ( !ref($self) ) {
         $msg = "Fault not called as a method - please fix\n";
-        if ( $self && length($self) < 200 ) { $msg .= $self }
+        if ( $self && length($self) < LONG_MESSAGE ) { $msg .= $self }
         $self              = undef;
         $input_stream_name = "(UNKNOWN)";
     }
@@ -449,7 +455,9 @@ sub check_options {
     # In the Tokenizer, --indent-columns is just used for guessing old
     # indentation, and must be positive.  If -i=0 is used for this run (which
     # is possible) we'll just guess that the old run used 4 spaces per level.
-    if ( !$rOpts_indent_columns ) { $rOpts_indent_columns = 4 }
+    if ( !$rOpts_indent_columns ) {
+        $rOpts_indent_columns = INDENT_COLUMNS_DEFAULT;
+    }
 
     # Define $tabsize, the number of spaces per tab for use in
     # guessing the indentation of source lines with leading tabs.
@@ -460,7 +468,7 @@ sub check_options {
       ? $rOpts->{'entab-leading-whitespace'}
       : $rOpts->{'tabs'} ? $rOpts->{'indent-columns'}
       :                    $rOpts->{'default-tabsize'};
-    if ( !$tabsize ) { $tabsize = 8 }
+    if ( !$tabsize ) { $tabsize = TAB_SIZE_DEFAULT }
 
     $code_skipping_pattern_begin =
       make_code_skipping_pattern( $rOpts, 'code-skipping-begin', '#<<V' );
@@ -553,7 +561,6 @@ EOM
     $self->[_saw_perl_dash_P_]          = 0;
     $self->[_saw_perl_dash_w_]          = 0;
     $self->[_saw_use_strict_]           = 0;
-    $self->[_saw_v_string_]             = 0;
     $self->[_saw_brace_error_]          = 0;
     $self->[_hit_bug_]                  = 0;
     $self->[_look_for_autoloader_]      = $rOpts_look_for_autoloader;
@@ -983,12 +990,7 @@ EOM
     }
 
     if ( !$self->[_saw_perl_dash_w_] ) {
-        if ( $] < 5.006 ) {
-            $self->write_logfile_entry("Suggest including '-w parameter'\n");
-        }
-        else {
-            $self->write_logfile_entry("Suggest including 'use warnings;'\n");
-        }
+        $self->write_logfile_entry("Suggest including 'use warnings;'\n");
     }
 
     if ( $self->[_saw_perl_dash_P_] ) {
@@ -1012,21 +1014,6 @@ EOM
     }
     return $severe_error;
 } ## end sub report_tokenization_errors
-
-sub report_v_string {
-
-    # warn if this version can't handle v-strings
-    my ( $self, $tok ) = @_;
-    if ( !$self->[_saw_v_string_] ) {
-        $self->[_saw_v_string_] = $self->[_last_line_number_];
-    }
-    if ( $] < 5.006 ) {
-        $self->warning(
-"Found v-string '$tok' but v-strings are not implemented in your version of perl; see Camel 3 book ch 2\n"
-        );
-    }
-    return;
-} ## end sub report_v_string
 
 sub is_valid_token_type {
     my ($type) = @_;
@@ -4162,7 +4149,6 @@ EOM
         }
         elsif ( substr( $tok, 0, 1 ) eq 'v' && $tok =~ /^v\d+$/ ) {
             $type = 'v';
-            $self->report_v_string($tok);
         }
         else {
 
@@ -7371,9 +7357,6 @@ sub scan_bare_identifier_do {
                     $tok  = substr( $input_line, $pos_beg, $numc );
                 }
                 $type = 'v';
-
-                # warn if this version can't handle v-strings
-                $self->report_v_string($tok);
             }
 
             elsif ( $ris_constant->{$package}{$sub_name} ) {
@@ -9478,7 +9461,6 @@ EOM
         my $numc = $pos - $pos_beg;
         $number = substr( $input_line, $pos_beg, $numc );
         $type   = 'v';
-        $self->report_v_string($number);
     }
 
     # handle octal, hex, binary

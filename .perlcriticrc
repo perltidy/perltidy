@@ -130,6 +130,7 @@ allow = if unless
 # This is a good in general but has to be turned off here because there are
 # many cases where a number has been explained in a comment or is obvious.
 [-ValuesAndExpressions::ProhibitMagicNumbers]
+# allowed_values = -2 -1 0 1 2
 
 #---------------------------------------------------
 # Policies to be skipped or adjusted for severity=1:
