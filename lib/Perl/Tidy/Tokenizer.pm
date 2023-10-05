@@ -657,7 +657,7 @@ EOM
     # the whole input file at once than line-by-line.
 
     # Add a terminal newline if needed to keep line count unchanged (c283)
-    if ( $source_string !~ /\n$/ ) { $source_string .= "\n" }
+    if ( $source_string && $source_string !~ /\n$/ ) { $source_string .= "\n" }
 
     # Remove leading whitespace except newlines
     $source_string =~ s/^ [^\S\n]+ //gxm;
@@ -669,8 +669,11 @@ EOM
     if ( @trimmed_lines != @{$rinput_lines} ) {
 
         # Shouldn't happen - die in DEVEL_MODE and fix
+        my $ntr = @trimmed_lines;
+        my $utr = @{$rinput_lines};
         DEVEL_MODE
-          && $self->Fault("trimmed/untrimmed line counts differ\n");
+          && $self->Fault(
+            "trimmed / untrimmed line counts differ: $ntr / $utr\n");
 
         # Otherwise we can safely continue with undefined trimmed lines.  They
         # will be detected and fixed later.
