@@ -656,8 +656,12 @@ EOM
     # Get trimmed lines. It is much faster to strip leading whitespace from
     # the whole input file at once than line-by-line.
 
-    # Add a terminal newline if needed to keep line count unchanged (c283)
-    if ( $source_string && $source_string !~ /\n$/ ) { $source_string .= "\n" }
+    # Add a terminal newline if needed to keep line count unchanged:
+    # - avoids problem of losing a last line which is just \r and no \n  (c283)
+    # - but check input line count to avoid adding line to an empty file (c286)
+    if ( @{$rinput_lines} && $source_string !~ /\n$/ ) {
+        $source_string .= "\n";
+    }
 
     # Remove leading whitespace except newlines
     $source_string =~ s/^ [^\S\n]+ //gxm;
