@@ -1,12 +1,12 @@
 # git22: Preserve function signature on a single line
 # This behavior is controlled by 'sub weld_signature_parens'
 
-sub foo ( $x, $y = "abcd" ) {
+sub foo( $x, $y = "abcd" ) {
     $x . $y;
 }
 
 # do not break after closing do brace
-sub foo ( $x, $y = do { {} }, $z = 42, $w = do { "abcd" } ) {
+sub foo( $x, $y = do { {} }, $z = 42, $w = do { "abcd" } ) {
     $x . $y . $z;
 }
 

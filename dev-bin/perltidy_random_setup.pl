@@ -1165,6 +1165,7 @@ EOM
             'keyword-group-blanks-after'  => [ 0, 2 ],
 
             'space-prototype-paren' => [ 0, 2 ],
+            'space-signature-paren' => [ 0, 2 ],
             'break-after-labels'    => [ 0, 2 ],
 
             'want-trailing-commas' => [ '0', '*', 'm', 'b', 'h', 'i', ' ' ],

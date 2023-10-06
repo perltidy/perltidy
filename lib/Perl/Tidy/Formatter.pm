@@ -251,6 +251,7 @@ my (
     $rOpts_recombine,
     $rOpts_short_concatenation_item_length,
     $rOpts_space_prototype_paren,
+    $rOpts_space_signature_paren,
     $rOpts_stack_closing_block_brace,
     $rOpts_static_block_comments,
     $rOpts_add_missing_else,
@@ -2512,6 +2513,7 @@ sub initialize_global_option_vars {
     $rOpts_short_concatenation_item_length =
       $rOpts->{'short-concatenation-item-length'};
     $rOpts_space_prototype_paren     = $rOpts->{'space-prototype-paren'};
+    $rOpts_space_signature_paren     = $rOpts->{'space-signature-paren'};
     $rOpts_stack_closing_block_brace = $rOpts->{'stack-closing-block-brace'};
     $rOpts_static_block_comments     = $rOpts->{'static-block-comments'};
     $rOpts_add_missing_else          = $rOpts->{'add-missing-else'};
@@ -3035,6 +3037,27 @@ sub set_whitespace_flags {
 
     my %is_for_foreach = ( 'for' => 1, 'foreach' => 1 );
 
+    # function to return $ws for a signature paren following a sub
+    my $ws_signature_paren = sub {
+        my ($jj) = @_;
+        my $ws;
+        if ( $rOpts_space_signature_paren == 1 ) {
+
+            # is the previous token a blank?
+            my $have_blank = $rLL->[ $jj - 1 ]->[_TYPE_] eq 'b';
+
+            # or a newline?
+            $have_blank ||=
+              $rLL->[$jj]->[_LINE_INDEX_] != $rLL->[ $jj - 1 ]->[_LINE_INDEX_];
+
+            $ws = $have_blank ? WS_YES : WS_NO;
+        }
+        else {
+            $ws = $rOpts_space_signature_paren == 0 ? WS_NO : WS_YES;
+        }
+        return $ws;
+    };
+
     my $last_token = SPACE;
     my $last_type  = 'b';
 
@@ -3330,12 +3353,18 @@ sub set_whitespace_flags {
 
                 # Space between keyword and '('
                 elsif ( $last_type eq 'k' ) {
-                    $ws = WS_NO
-                      unless ( $rOpts_space_keyword_paren
-                        || $space_after_keyword{$last_token} );
 
-                    # Set inside space flag if requested
-                    set_container_ws_by_keyword( $last_token, $seqno );
+                    if ( $last_token eq 'sub' ) {
+                        $ws = $ws_signature_paren->($j);
+                    }
+                    else {
+                        $ws = WS_NO
+                          unless ( $rOpts_space_keyword_paren
+                            || $space_after_keyword{$last_token} );
+
+                        # Set inside space flag if requested
+                        set_container_ws_by_keyword( $last_token, $seqno );
+                    }
                 }
 
                 # Space between function and '('
@@ -3401,8 +3430,14 @@ sub set_whitespace_flags {
                 {
                     $ws = WS_NO;
                 }
+
+                # a paren after a sub definition starts signature
+                elsif ( $last_type eq 'S' ) {
+                    $ws = $ws_signature_paren->($j);
+                }
+
                 else {
-                    # ok - opening paren not covered by a special rule
+                    # no special rule for this opening paren type
                 }
             }
 
@@ -3418,7 +3453,10 @@ sub set_whitespace_flags {
             # keep space between 'sub' and '{' for anonymous sub definition,
             # be sure type = 'k' (added for c140)
             if ( $type eq '{' ) {
-                if ( $last_token eq 'sub' && $last_type eq 'k' ) {
+                if (   $last_token eq 'sub'
+                    && $last_type eq 'k'
+                    && $token ne '(' )
+                {
                     $ws = WS_YES;
                 }
 

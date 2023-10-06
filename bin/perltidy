@@ -1599,6 +1599,28 @@ applying the different options would be:
         sub usage();    # n=1 [default; follows input]
         sub usage ();   # n=2 [space]
 
+=item B<-ssp=n>  or B<--space-signature-paren=n>
+
+This flag is analogous to the previous except that it applies to the space before the opening paren of a sub B<signature> rather than a sub B<prototype>.
+
+For example, consider the following line:
+
+      sub circle( $xc, $yc, $rad )
+
+This space before the opening paren can be controlled with integer B<n> which
+may have the value 0, 1, or 2 with these meanings:
+
+    -ssp=0 means no space before the paren
+    -ssp=1 means follow the example of the source code [DEFAULT]
+    -ssp=2 means always put a space before the paren
+
+The default is B<-ssp=1>, meaning that will be a space in the output if, and only if, there is one in the input.  Given the above line of code, the result of
+applying the different options would be:
+
+    sub circle( $xc, $yc, $rad )   # n=0 [no space]
+    sub circle( $xc, $yc, $rad )   # n=1 [default; same as input]
+    sub circle ( $xc, $yc, $rad )  # n=2 [space]
+
 =item B<-kpit=n> or B<--keyword-paren-inner-tightness=n>
 
 The space inside of an opening paren, which itself follows a certain keyword,

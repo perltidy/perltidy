@@ -19,6 +19,7 @@
 #16 git124.def
 #17 c269.c269
 #18 c269.def
+#19 git125.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -91,6 +92,11 @@ sub git124 {
         }
     ];
 }
+----------
+
+        'git125' => <<'----------',
+sub Add ( $x, $y );
+sub Sub( $x, $y );
 ----------
 
         'lrt' => <<'----------',
@@ -447,6 +453,15 @@ elsif ($zzzzz) {
     # comment
 }
 #18...........
+        },
+
+        'git125.def' => {
+            source => "git125",
+            params => "def",
+            expect => <<'#19...........',
+sub Add ( $x, $y );
+sub Sub( $x, $y );
+#19...........
         },
     };
 

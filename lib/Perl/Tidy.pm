@@ -3463,6 +3463,7 @@ sub generate_options {
     $add_option->( 'want-right-space',                          'wrs',   '=s' );
     $add_option->( 'want-trailing-commas',                      'wtc',   '=s' );
     $add_option->( 'space-prototype-paren',                     'spp',   '=i' );
+    $add_option->( 'space-signature-paren',                     'ssp',   '=i' );
     $add_option->( 'valign-code',                               'vc',    '!' );
     $add_option->( 'valign-block-comments',                     'vbc',   '!' );
     $add_option->( 'valign-side-comments',                      'vsc',   '!' );
@@ -3735,6 +3736,7 @@ sub generate_options {
         'keyword-group-blanks-after'  => [ 0, 2 ],
 
         'space-prototype-paren' => [ 0, 2 ],
+        'space-signature-paren' => [ 0, 2 ],
         'break-after-labels'    => [ 0, 2 ],
     );
 
@@ -3849,6 +3851,7 @@ sub generate_options {
       space-for-semicolon
       space-backslash-quote=1
       space-prototype-paren=1
+      space-signature-paren=1
       square-bracket-tightness=1
       square-bracket-vertical-tightness-closing=0
       square-bracket-vertical-tightness=0

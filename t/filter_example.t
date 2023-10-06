@@ -48,7 +48,8 @@ ENDE
 my $output;
 my $stderr_string;
 my $errorfile_string;
-my $params = "";
+# -ssp=2 is needed to keep formatting unchanged with new -ssp parameter
+my $params = "-ssp=2";
 my $err    = Perl::Tidy::perltidy(
 
     #argv => '-npro',  # fix for RT#127679, avoid reading unwanted .perltidyrc
