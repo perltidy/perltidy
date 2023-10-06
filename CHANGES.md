@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2023 09 12.02
+## 2023 09 12.03
 
     - Added flag --space-signature-paren=n, or -ssp=n (issue git #125).
       This flag works the same as the existing flag --space-prototype-paren=n
@@ -18,7 +18,8 @@
         sub circle ( $xc, $yc, $rad );  # n=2 [space]
 
       The spacing in previous versions of perltidy corresponded to n=2 (always
-      a space). The new default value, n=1, will produce a space if and only if       there was a space in the input text.
+      a space). The new default value, n=1, will produce a space if and only
+      if there was a space in the input text.
 
     - The dump-block-summary option can report an if-elsif-elsif-.. chain
       as a single line item with the notation -dbt='elsif3', for example,
