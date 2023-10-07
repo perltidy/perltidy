@@ -2391,7 +2391,7 @@ sub write_tidy_output {
 
     return;
 
-} ## end sub write_tidied_output
+} ## end sub write_tidy_output
 
 sub process_filter_layer {
 
@@ -2572,6 +2572,13 @@ EOM
         $routput_string = \$output_string;
     }
 
+    #-----------------------------------------
+    # handle a '--noadd-terminal-newline' flag
+    #-----------------------------------------
+    if ($chomp_terminal_newline) {
+        chomp ${$routput_string};
+    }
+
     #-------------------------------------------------------------
     # handle --preserve-line-endings or -output-line-endings flags
     #-------------------------------------------------------------
@@ -2582,22 +2589,19 @@ EOM
         my $line_separator = $self->[_line_separator_];
         my @output_lines   = split /^/, ${$routput_string};
         foreach my $line (@output_lines) {
-            chomp $line;
-            $line .= $line_separator;
+
+            # must check chomp because last line might not have a newline
+            # if --noadd-terminal-newline is also set (c283)
+            if ( chomp $line ) {
+                $line .= $line_separator;
+            }
         }
         my $output_string = join EMPTY_STRING, @output_lines;
         $routput_string = \$output_string;
     }
 
-    #-----------------------------------------
-    # handle a '--noadd-terminal-newline' flag
-    #-----------------------------------------
-    if ($chomp_terminal_newline) {
-        chomp ${$routput_string};
-    }
-
     return $routput_string;
-}
+} ## end sub process_filter_layer
 
 # For safety, set an upper bound on number of iterations before stopping.
 # The average number of iterations is 2. No known cases exceed 5.
