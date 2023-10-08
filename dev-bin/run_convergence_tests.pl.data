@@ -11817,6 +11817,20 @@ sub bubba {
 --vertical-tightness=2
 --weld-nested-containers
 
+==> b1461.in <==
+        $C_sigmas = sub { [
+            $a3::COMMON, $a3::Offset{lcount} + 47 ] };
+
+        $C_sigmas = sub
+        { [ $a3::COMMON, $a3::Offset{lcount} + 47 ] };
+
+==> b1461.par <==
+--maximum-line-length=68
+--continuation-indentation=9
+--weld-nested-containers
+--want-break-before='='
+--opening-anonymous-sub-brace-on-new-line
+
 ==> b148.in <==
 # state 1
 @yydgoto=(

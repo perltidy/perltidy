@@ -7994,6 +7994,13 @@ sub bubba {
                      ) )[1] ) . "\n";
 
 
+==> b1461 <==
+        $C_sigmas = sub
+        { [ $a3::COMMON, $a3::Offset{lcount} + 47 ] };
+
+        $C_sigmas = sub
+        { [ $a3::COMMON, $a3::Offset{lcount} + 47 ] };
+
 ==> b148 <==
 # state 1
 @yydgoto=(
