@@ -17070,8 +17070,12 @@ EOM
                     # Remember the type of token just before the
                     # opening brace.  It would be more general to use
                     # a stack, but this will work for one-line blocks.
-                    $one_line_block_type =
-                      $types_to_go[$index_start_one_line_block];
+                    # c1461 fix
+                    my $Ko  = $self->[_K_opening_container_]->{$type_sequence};
+                    my $Kom = $self->K_previous_nonblank($Ko);
+                    if ( defined($Kom) ) {
+                        $one_line_block_type = $rLL->[$Kom]->[_TYPE_];
+                    }
 
                     # we have to actually make it by removing tentative
                     # breaks that were set within it
@@ -17567,8 +17571,6 @@ sub starting_one_line_block {
         return;
     }
 
-    my $len_assignment = 0;
-
     my $ris_bli_container = $self->[_ris_bli_container_];
     my $is_bli            = $ris_bli_container->{$type_sequence_j};
 
@@ -17642,13 +17644,7 @@ sub starting_one_line_block {
             if ( $types_to_go[$i_eq] eq 'b' && $i_eq > 0 ) { $i_eq--; }
             my $type_eq = $types_to_go[$i_eq];
             if ( $is_assignment{$type_eq} && $want_break_before{$type_eq} ) {
-
-                # We need to keep i_start unchanged because later logic will
-                # look at the block type of $i_start.  So rather than change
-                # i_start we will define a tolerance.
-                # ( summed_lengths_to_go = length from start of token )
-                $len_assignment = $summed_lengths_to_go[$i_start] -
-                  $summed_lengths_to_go[$i_eq];
+                $i_start = $i_eq;
             }
         }
     }
@@ -17726,9 +17722,6 @@ sub starting_one_line_block {
       $rLL->[$Kj]->[_CUMULATIVE_LENGTH_];
 
     my $excess = $pos + 1 + $container_length - $maximum_line_length;
-
-    # include length of a preceding assignment which will be on this line
-    $excess += $len_assignment;
 
     # Add a small tolerance for welded tokens (case b901)
     if ( $total_weld_count && $self->is_welded_at_seqno($type_sequence_j) ) {
