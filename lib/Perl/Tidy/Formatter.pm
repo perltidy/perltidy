@@ -612,6 +612,7 @@ BEGIN {
         _rmax_vertical_tightness_          => $i++,
 
         _no_vertical_tightness_flags_ => $i++,
+        _last_vt_type_                => $i++,
 
         _LAST_SELF_INDEX_ => $i - 1,
     };
@@ -1082,6 +1083,7 @@ sub new {
     $self->[_rmax_vertical_tightness_]          = {};
 
     $self->[_no_vertical_tightness_flags_] = 0;
+    $self->[_last_vt_type_]                = 0;
 
     # This flag will be updated later by a call to get_save_logfile()
     $self->[_save_logfile_] = defined($logger_object);
@@ -5920,7 +5922,7 @@ EOM
 
                     # Be sure that sequence numbers start with 2. If not,
                     # there is a programming error in the tokenizer.
-                    if ( $initial_seqno ne 2 ) {
+                    if ( $initial_seqno != 2 ) {
                         Fault(<<EOM);
 Expecting initial sequence number of 2 but got '$initial_seqno'
 EOM
@@ -5928,7 +5930,7 @@ EOM
 
                     # Be sure the root sequence number is 1. This is set
                     # as a constant at the top of this module.
-                    if ( SEQ_ROOT ne 1 ) {
+                    if ( SEQ_ROOT != 1 ) {
                         my $SEQ_ROOT = SEQ_ROOT;
                         Fault(<<EOM);
 The constant SEQ_ROOT has been changed from 1 to '$SEQ_ROOT'.
@@ -13134,16 +13136,13 @@ sub special_indentation_adjustments {
     # adjustments on top of those levels.  It would be nicer to have the
     # weld routines also use this adjustment, but that gets complicated
     # when we combine -gnu -wn and also have some welded quotes.
-    my $Klimit           = $self->[_Klimit_];
-    my $rLL              = $self->[_rLL_];
-    my $radjusted_levels = $self->[_radjusted_levels_];
-
-    return unless ( defined($Klimit) );
+    my $rLL = $self->[_rLL_];
+    return unless ( @{$rLL} );
 
     # Initialize the adjusted levels to be the structural levels
-    foreach my $KK ( 0 .. $Klimit ) {
-        $radjusted_levels->[$KK] = $rLL->[$KK]->[_LEVEL_];
-    }
+    my @adjusted_levels;
+    foreach ( @{$rLL} ) { push @adjusted_levels, $_->[_LEVEL_] }
+    $self->[_radjusted_levels_] = \@adjusted_levels;
 
     # First set adjusted levels for any non-indenting braces.
     $self->do_non_indenting_braces();
@@ -31728,9 +31727,21 @@ sub set_vertical_tightness_flags {
         else { $vt_seqno_end = EMPTY_STRING }
     }
 
-    if ( !defined($vt_seqno) ) { $vt_seqno = EMPTY_STRING }
+    # Optional simple return if this line is not involved in vertical
+    # tightness, for efficiency.
+    my $last_vt_type = $self->[_last_vt_type_];
+    $self->[_last_vt_type_] = $vt_type;
+    if (   !$vt_type
+        && !$vt_seqno_beg
+        && !$vt_seqno_end
+        && !$last_vt_type )
+    {
+        return;
+    }
 
-    my $rvertical_tightness_flags = {
+    # Otherwise, return the full data structure
+    if ( !defined($vt_seqno) ) { $vt_seqno = EMPTY_STRING }
+    return {
         _vt_type         => $vt_type,
         _vt_opening_flag => $vt_opening_flag,
         _vt_closing_flag => $vt_closing_flag,
@@ -31742,7 +31753,6 @@ sub set_vertical_tightness_flags {
         _vt_max_lines    => $vt_max_lines,
     };
 
-    return ($rvertical_tightness_flags);
 } ## end sub set_vertical_tightness_flags
 
 ##########################################################
