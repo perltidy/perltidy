@@ -5546,40 +5546,41 @@ sub add_leading_tabs {
 
     # Given:
     #   $line = the line of text to be written, without any tabs
-    #   $leading_whitespace = number of leading blank spaces**
+    #   $leading_whitespace = expected number of leading blank spaces
     #   $level = indentation level (needed for -t)
 
     # Return:
     #   $line = the line with possible leading tabs
 
-    # If $leading_space_count is zero, then this routine must not
-    # be called because we might be in a quote of some kind
-    if ( $leading_space_count <= 0 ) {
-        DEVEL_MODE && Fault(<<EOM);
-should not be here with leading space count = $leading_space_count 
-EOM
-        return $line;
-    }
-
     my $trimmed_line = $line;
     $trimmed_line =~ s/^ [^\S\n]+ //gxm;
-    my $leading_space_count_test = length($line) - length($trimmed_line);
 
-    # Skip tabbing if actual whitespace is less than expected
-    if ( $leading_space_count_test < $leading_space_count ) {
-        DEBUG_TABS
-          && warning(<<EOM);
+    # Check for discrepancy in actual leading white spaces with estimate
+    if ( length($line) != length($trimmed_line) + $leading_space_count ) {
+
+        # If $leading_space_count is zero, then this routine must not
+        # be called because we might be in a quote of some kind
+        if ( $leading_space_count <= 0 ) {
+            DEVEL_MODE && Fault(<<EOM);
+should not be here with leading space count = $leading_space_count 
+EOM
+            return $line;
+        }
+
+        my $leading_space_count_test = length($line) - length($trimmed_line);
+
+        # Skip tabbing if actual whitespace is less than expected
+        if ( $leading_space_count_test < $leading_space_count ) {
+            DEBUG_TABS
+              && warning(<<EOM);
 Error entabbing: expected count=$leading_space_count but only found $leading_space_count_test for line:
 '$line'
 EOM
-        return $line;
-    }
+            return $line;
+        }
 
-    # OK to use actual whitespace if it exceeds prediction.
-    # Patch 12-nov-2018 based on report from Glenn. Extra padding was
-    # not correctly entabbed, nor were side comments: Increase leading
-    # space count for a padded line to get correct tabbing
-    if ( $leading_space_count_test > $leading_space_count ) {
+        # Use actual whitespace if it exceeds prediction. This mainly
+        # occurs at hanging side comments.
         $leading_space_count = $leading_space_count_test;
     }
 
