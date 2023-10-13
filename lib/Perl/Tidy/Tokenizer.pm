@@ -41,6 +41,8 @@ use constant DEVEL_MODE   => 0;
 use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };
 
+{ #<<< A non-indenting brace to contain all lexical variables
+
 # Parent sequence number of tree of containers; must be 1
 use constant SEQ_ROOT => 1;
 
@@ -11018,4 +11020,6 @@ BEGIN {
         '<' => '>',
     );
 } ## end BEGIN
+
+} ## end package Perl::Tidy::Tokenizer
 1;

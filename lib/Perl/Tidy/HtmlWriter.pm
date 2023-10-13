@@ -15,6 +15,8 @@ use File::Basename;
 use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };
 
+{ #<<< A non-indenting brace to contain all lexical variables
+
 # class variables
 my (
 
@@ -1543,4 +1545,6 @@ EOM
     $html_pre_fh->print("$html_line\n");
     return;
 } ## end sub write_line
+
+} ## end package Perl::Tidy::HtmlWriter
 1;
