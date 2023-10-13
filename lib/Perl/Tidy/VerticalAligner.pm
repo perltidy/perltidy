@@ -11,6 +11,8 @@ use constant DEVEL_MODE   => 0;
 use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };
 
+{ #<<< A non-indenting brace to contain all lexical variables
+
 # The Perl::Tidy::VerticalAligner package collects output lines and
 # attempts to line up certain common tokens, such as => and #, which are
 # identified by the calling routine.
@@ -168,15 +170,7 @@ BEGIN {
         _logger_object_      => $i++,
         _diagnostics_object_ => $i++,
 
-        _rOpts_                             => $i++,
-        _rOpts_indent_columns_              => $i++,
-        _rOpts_tabs_                        => $i++,
-        _rOpts_entab_leading_whitespace_    => $i++,
-        _rOpts_fixed_position_side_comment_ => $i++,
-        _rOpts_minimum_space_to_comment_    => $i++,
-        _rOpts_valign_code_                 => $i++,
-        _rOpts_valign_block_comments_       => $i++,
-        _rOpts_valign_side_comments_        => $i++,
+        _rOpts_ => $i++,
 
         _last_level_written_            => $i++,
         _last_side_comment_column_      => $i++,
@@ -217,6 +211,17 @@ my (
 
     %valign_control_hash,
     $valign_control_default,
+
+    $rOpts_indent_columns,
+    $rOpts_tabs,
+    $rOpts_entab_leading_whitespace,
+    $rOpts_fixed_position_side_comment,
+    $rOpts_minimum_space_to_comment,
+    $rOpts_valign_code,
+    $rOpts_valign_block_comments,
+    $rOpts_valign_side_comments,
+
+    $require_tabs,
 
 );
 
@@ -270,6 +275,21 @@ sub check_options {
             $valign_control_hash{'#'} = 1;
         }
     }
+
+    # Initialize some global options
+    $rOpts_indent_columns           = $rOpts->{'indent-columns'};
+    $rOpts_tabs                     = $rOpts->{'tabs'};
+    $rOpts_entab_leading_whitespace = $rOpts->{'entab-leading-whitespace'};
+    $require_tabs = ( $rOpts_tabs || $rOpts_entab_leading_whitespace )
+      && $rOpts_indent_columns > 0;
+
+    $rOpts_fixed_position_side_comment =
+      $rOpts->{'fixed-position-side-comment'};
+
+    $rOpts_minimum_space_to_comment = $rOpts->{'minimum-space-to-comment'};
+    $rOpts_valign_code              = $rOpts->{'valign-code'};
+    $rOpts_valign_block_comments    = $rOpts->{'valign-block-comments'};
+    $rOpts_valign_side_comments     = $rOpts->{'valign-side-comments'};
 
     return;
 } ## end sub check_options
@@ -336,21 +356,9 @@ sub new {
     $self->[_logger_object_]      = $args{logger_object};
     $self->[_diagnostics_object_] = $args{diagnostics_object};
 
-    # shortcuts to user options
+    # shortcut to user options
     my $rOpts = $args{rOpts};
-
-    $self->[_rOpts_]                = $rOpts;
-    $self->[_rOpts_indent_columns_] = $rOpts->{'indent-columns'};
-    $self->[_rOpts_tabs_]           = $rOpts->{'tabs'};
-    $self->[_rOpts_entab_leading_whitespace_] =
-      $rOpts->{'entab-leading-whitespace'};
-    $self->[_rOpts_fixed_position_side_comment_] =
-      $rOpts->{'fixed-position-side-comment'};
-    $self->[_rOpts_minimum_space_to_comment_] =
-      $rOpts->{'minimum-space-to-comment'};
-    $self->[_rOpts_valign_code_]           = $rOpts->{'valign-code'};
-    $self->[_rOpts_valign_block_comments_] = $rOpts->{'valign-block-comments'};
-    $self->[_rOpts_valign_side_comments_]  = $rOpts->{'valign-side-comments'};
+    $self->[_rOpts_] = $rOpts;
 
     # Batch of lines being collected
     $self->[_rgroup_lines_]                = [];
@@ -733,10 +741,10 @@ sub valign_input {
         || (   $group_maximum_line_length
             && $maximum_line_length != $group_maximum_line_length )
         || $is_outdented
-        || ( $is_block_comment && !$self->[_rOpts_valign_block_comments_] )
+        || ( $is_block_comment && !$rOpts_valign_block_comments )
         || (   !$is_block_comment
-            && !$self->[_rOpts_valign_side_comments_]
-            && !$self->[_rOpts_valign_code_] )
+            && !$rOpts_valign_side_comments
+            && !$rOpts_valign_code )
       )
     {
 
@@ -1554,7 +1562,6 @@ sub level_change {
     # leading spaces
     my ( $self, $leading_space_count, $diff, $level ) = @_;
 
-    my $rOpts_indent_columns = $self->[_rOpts_indent_columns_];
     if ($rOpts_indent_columns) {
         my $olev =
           int( ( $leading_space_count + $diff ) / $rOpts_indent_columns );
@@ -4477,7 +4484,7 @@ sub is_good_side_comment_column {
 
     return $FORGET
       if ( $line_diff > $short_diff
-        || !$self->[_rOpts_valign_side_comments_] );
+        || !$rOpts_valign_side_comments );
 
     # RULE3: Forget a side comment if this line is at lower level and
     # ends a block
@@ -4626,7 +4633,7 @@ sub align_side_comments {
             next if ( $jmax <= 0 );
 
             # but if this doesn't work, give up and use the minimum space
-            my $min_move = $self->[_rOpts_minimum_space_to_comment_] - 1;
+            my $min_move = $rOpts_minimum_space_to_comment - 1;
             if ( $move > $avail ) {
                 $move = $min_move;
             }
@@ -4773,17 +4780,16 @@ sub valign_output_step_A {
             $pad =
               ( $j < $maximum_field_index )
               ? 0
-              : $self->[_rOpts_minimum_space_to_comment_] - 1;
+              : $rOpts_minimum_space_to_comment - 1;
         }
 
         # if the -fpsc flag is set, move the side comment to the selected
         # column if and only if it is possible, ignoring constraints on
         # line length and minimum space to comment
-        if (   $self->[_rOpts_fixed_position_side_comment_]
+        if (   $rOpts_fixed_position_side_comment
             && $j == $maximum_field_index )
         {
-            my $newpad =
-              $pad + $self->[_rOpts_fixed_position_side_comment_] - $col - 1;
+            my $newpad = $pad + $rOpts_fixed_position_side_comment - $col - 1;
             if ( $newpad >= 0 ) { $pad = $newpad; }
         }
 
@@ -5532,6 +5538,101 @@ sub get_output_line_number {
 # CODE SECTION 9: Output Step D
 ###############################
 
+sub add_leading_tabs {
+
+    my ( $line, $leading_space_count, $level ) = @_;
+
+    # Convert leading whitespace to use tabs if -et or -t are set
+
+    # Given:
+    #   $line = the line of text to be written, without any tabs
+    #   $leading_whitespace = number of leading blank spaces**
+    #   $level = indentation level (needed for -t)
+
+    # Return:
+    #   $line = the line with possible leading tabs
+
+    # If $leading_space_count is zero, then this routine must not
+    # be called because we might be in a quote of some kind
+    if ( $leading_space_count <= 0 ) {
+        DEVEL_MODE && Fault(<<EOM);
+should not be here with leading space count = $leading_space_count 
+EOM
+        return $line;
+    }
+
+    my $trimmed_line = $line;
+    $trimmed_line =~ s/^ [^\S\n]+ //gxm;
+    my $leading_space_count_test = length($line) - length($trimmed_line);
+
+    # Skip tabbing if actual whitespace is less than expected
+    if ( $leading_space_count_test < $leading_space_count ) {
+        DEBUG_TABS
+          && warning(<<EOM);
+Error entabbing: expected count=$leading_space_count but only found $leading_space_count_test for line:
+'$line'
+EOM
+        return $line;
+    }
+
+    # OK to use actual whitespace if it exceeds prediction.
+    # Patch 12-nov-2018 based on report from Glenn. Extra padding was
+    # not correctly entabbed, nor were side comments: Increase leading
+    # space count for a padded line to get correct tabbing
+    if ( $leading_space_count_test > $leading_space_count ) {
+        $leading_space_count = $leading_space_count_test;
+    }
+
+    #----------------------------------
+    # Handle --entab-leading-whitespace
+    #----------------------------------
+    if ($rOpts_entab_leading_whitespace) {
+
+        my $space_count =
+          $leading_space_count % $rOpts_entab_leading_whitespace;
+        my $tab_count =
+          int( $leading_space_count / $rOpts_entab_leading_whitespace );
+        my $leading_string = "\t" x $tab_count . SPACE x $space_count;
+        $line = $leading_string . $trimmed_line;
+    }
+
+    #-----------------------------------------------
+    # Handle -t (one tab per level; not recommended)
+    #-----------------------------------------------
+    elsif ( $rOpts_tabs && $level ) {
+
+        my $leading_string = ( "\t" x $level );
+        my $space_count = $leading_space_count - $level * $rOpts_indent_columns;
+
+        # shouldn't happen:
+        if ( $space_count < 0 ) {
+
+            # But it could be an outdented comment
+            if ( $line !~ /^\s*#/ ) {
+                DEBUG_TABS
+                  && warning(
+"Error entabbing in valign_output_step_D: for level=$level count=$leading_space_count\n"
+                  );
+            }
+            $leading_string = ( SPACE x $leading_space_count );
+        }
+        else {
+            $leading_string .= ( SPACE x $space_count );
+        }
+        $line = $leading_string . $trimmed_line;
+    }
+
+    # nothing to do; we should have skipped a call to this sub
+    else {
+        if (DEVEL_MODE) {
+            Fault(
+"in tab sub but neither -t nor -et set: check flag 'require_tabs'\n"
+            );
+        }
+    }
+    return $line;
+}
+
 sub valign_output_step_D {
 
     #----------------------------------------------------------------
@@ -5542,90 +5643,11 @@ sub valign_output_step_D {
 
     my ( $self, $line, $leading_space_count, $level, $Kend ) = @_;
 
-    # The line is currently correct if there is no tabbing (recommended!)
-    # We may have to lop off some leading spaces and replace with tabs.
-    if ( $leading_space_count > 0 ) {
-
-        my $rOpts_indent_columns = $self->[_rOpts_indent_columns_];
-        my $rOpts_tabs           = $self->[_rOpts_tabs_];
-        my $rOpts_entab_leading_whitespace =
-          $self->[_rOpts_entab_leading_whitespace_];
-
-        # Nothing to do if no tabs
-        if ( !( $rOpts_tabs || $rOpts_entab_leading_whitespace )
-            || $rOpts_indent_columns <= 0 )
-        {
-
-            # nothing to do
-        }
-
-        # Handle entab option
-        elsif ($rOpts_entab_leading_whitespace) {
-
-            # Patch 12-nov-2018 based on report from Glenn. Extra padding was
-            # not correctly entabbed, nor were side comments: Increase leading
-            # space count for a padded line to get correct tabbing
-            if ( $line =~ /^(\s+)(.*)$/ ) {
-                my $spaces = length($1);
-                if ( $spaces > $leading_space_count ) {
-                    $leading_space_count = $spaces;
-                }
-            }
-
-            my $space_count =
-              $leading_space_count % $rOpts_entab_leading_whitespace;
-            my $tab_count =
-              int( $leading_space_count / $rOpts_entab_leading_whitespace );
-            my $leading_string = "\t" x $tab_count . SPACE x $space_count;
-            if ( $line =~ /^\s{$leading_space_count,$leading_space_count}/ ) {
-                substr( $line, 0, $leading_space_count, $leading_string );
-            }
-            else {
-
-                # shouldn't happen - program error counting whitespace
-                # - skip entabbing
-                DEBUG_TABS
-                  && warning(
-"Error entabbing in valign_output_step_D: expected count=$leading_space_count\n"
-                  );
-            }
-        }
-
-        # Handle option of one tab per level
-        else {
-            my $leading_string = ( "\t" x $level );
-            my $space_count =
-              $leading_space_count - $level * $rOpts_indent_columns;
-
-            # shouldn't happen:
-            if ( $space_count < 0 ) {
-
-                # But it could be an outdented comment
-                if ( $line !~ /^\s*#/ ) {
-                    DEBUG_TABS
-                      && warning(
-"Error entabbing in valign_output_step_D: for level=$level count=$leading_space_count\n"
-                      );
-                }
-                $leading_string = ( SPACE x $leading_space_count );
-            }
-            else {
-                $leading_string .= ( SPACE x $space_count );
-            }
-            if ( $line =~ /^\s{$leading_space_count,$leading_space_count}/ ) {
-                substr( $line, 0, $leading_space_count, $leading_string );
-            }
-            else {
-
-                # shouldn't happen - program error counting whitespace
-                # we'll skip entabbing
-                DEBUG_TABS
-                  && warning(
-"Error entabbing in valign_output_step_D: expected count=$leading_space_count\n"
-                  );
-            }
-        }
+    # Convert leading whitespace to use tabs if requested.
+    if ( $require_tabs && $leading_space_count > 0 ) {
+        $line = add_leading_tabs( $line, $leading_space_count, $level );
     }
+
     my $file_writer_object = $self->[_file_writer_object_];
     $file_writer_object->write_code_line( $line . "\n", $Kend );
 
@@ -5659,4 +5681,6 @@ sub report_anything_unusual {
     }
     return;
 } ## end sub report_anything_unusual
+
+} ## end package Perl::Tidy::VerticalAligner
 1;
