@@ -4102,6 +4102,8 @@ q(wbb=% + - * / x != == >= <= =~ !~ < > | & = **= += *= &= <<= &&= -= /= |= >>= 
 
 } ## end sub generate_options
 
+{ #<<< closure process_command_line
+
 # Memoize process_command_line. Given same @ARGV passed in, return same
 # values and same @ARGV back.
 # This patch was supplied by Jonathan Swartz Nov 2012 and significantly speeds
@@ -4136,6 +4138,7 @@ sub process_command_line {
         return _process_command_line(@q);
     }
 } ## end sub process_command_line
+} ## end closure process_command_line
 
 # (note the underscore here)
 sub _process_command_line {
