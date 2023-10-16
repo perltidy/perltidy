@@ -1,6 +1,15 @@
 #####################################################################
 #
-# the Perl::Tidy::FileWriter class writes the output file
+# The Perl::Tidy::FileWriter class writes the output file created
+# by the formatter. It receives each output line and performs some
+# important monitoring services. These include:
+#
+# - Verifying that lines do not go out with tokens in the wrong order
+# - Checking for obvious iteration convergence when all output tokens
+#   match all input tokens
+# - Keeping track of consecutive blank and non-blank lines
+# - Looking for line lengths which exceed the maximum requested length
+# - Reporting results to the log file
 #
 #####################################################################
 
@@ -11,6 +20,12 @@ our $VERSION = '20230912.03';
 
 use constant DEVEL_MODE   => 0;
 use constant EMPTY_STRING => q{};
+
+# A limit on message length when a fault is detected
+use constant LONG_MESSAGE => 256;
+
+# Maximum number of little messages; probably need not be changed.
+use constant MAX_NAG_MESSAGES => 6;
 
 sub AUTOLOAD {
 
@@ -37,11 +52,6 @@ sub DESTROY {
 
     # required to avoid call to AUTOLOAD in some versions of perl
 }
-
-my $input_stream_name = EMPTY_STRING;
-
-# Maximum number of little messages; probably need not be changed.
-use constant MAX_NAG_MESSAGES => 6;
 
 BEGIN {
 
@@ -70,6 +80,7 @@ BEGIN {
         _K_last_arrival_              => $i++,
         _save_logfile_                => $i++,
         _routput_string_              => $i++,
+        _input_stream_name_           => $i++,
     };
 } ## end BEGIN
 
@@ -80,7 +91,7 @@ sub Die {
 }
 
 sub Fault {
-    my ($msg) = @_;
+    my ( $self, $msg ) = @_;
 
     # This routine is called for errors that really should not occur
     # except if there has been a bug introduced by a recent program change.
@@ -90,6 +101,18 @@ sub Fault {
     my ( $package1, $filename1, $line1, $subroutine1 ) = caller(1);
     my ( $package2, $filename2, $line2, $subroutine2 ) = caller(2);
     my $pkg = __PACKAGE__;
+
+    # Catch potential error of Fault not called as a method
+    my $input_stream_name;
+    if ( !ref($self) ) {
+        $input_stream_name = "(UNKNOWN)";
+        $msg               = "Fault not called as a method - please fix\n";
+        if ( $self && length($self) < LONG_MESSAGE ) { $msg .= $self }
+        $self = undef;
+    }
+    else {
+        $input_stream_name = $self->[_input_stream_name_];
+    }
 
     Die(<<EOM);
 ==============================================================================
@@ -152,7 +175,7 @@ sub new {
     # '$line_sink_object' is a SCALAR ref which receives the lines.
     my $ref = ref($line_sink_object);
     if ( !$ref ) {
-        Fault("FileWriter expects line_sink_object to be a ref\n");
+        $self->Fault("FileWriter expects line_sink_object to be a ref\n");
     }
     elsif ( $ref eq 'SCALAR' ) {
         $self->[_routput_string_] = $line_sink_object;
@@ -160,17 +183,17 @@ sub new {
     else {
         my $str = $ref;
         if ( length($str) > 63 ) { $str = substr( $str, 0, 60 ) . '...' }
-        Fault(<<EOM);
+        $self->Fault(<<EOM);
 FileWriter expects 'line_sink_object' to be ref to SCALAR but it is ref to:
 $str
 EOM
     }
 
-    # save input stream name for local error messages
-    $input_stream_name = EMPTY_STRING;
+    my $input_stream_name = EMPTY_STRING;
     if ($logger_object) {
         $input_stream_name = $logger_object->get_input_stream_name();
     }
+    $self->[_input_stream_name_] = $input_stream_name;
 
     bless $self, $class;
     return $self;
@@ -340,7 +363,6 @@ sub write_code_line {
             }
 
             my $msg = <<EOM;
-While operating on input stream with name: '$input_stream_name'
 Lines have arrived out of order in sub 'write_code_line'
 as detected by token index K=$K arriving after index K=$K_prev in the following line:
 $str
@@ -348,7 +370,7 @@ This is probably due to a recent programming change and needs to be fixed.
 EOM
 
             # Always die during development, this needs to be fixed
-            if (DEVEL_MODE) { Fault($msg) }
+            if (DEVEL_MODE) { $self->Fault($msg) }
 
             # Otherwise warn if string is not empty (added for b1378)
             $self->warning($msg) if ( length($str) );
