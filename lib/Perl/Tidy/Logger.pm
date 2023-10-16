@@ -173,10 +173,14 @@ use constant MAX_PRINTED_CHARS => 35;
 
 sub black_box {
     my ( $self, $line_of_tokens, $output_line_number ) = @_;
+
+    # This routine saves information comparing the indentation of input
+    # and output lines when a detailed logfile is requested.
+    # This was very useful during the initial development of perltidy.
+
     my $input_line        = $line_of_tokens->{_line_text};
     my $input_line_number = $line_of_tokens->{_line_number};
 
-    # save line information in case we have to write a logfile message
     $self->{_line_of_tokens}                = $line_of_tokens;
     $self->{_output_line_number}            = $output_line_number;
     $self->{_wrote_line_information_string} = 0;
