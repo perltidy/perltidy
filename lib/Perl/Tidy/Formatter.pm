@@ -6666,6 +6666,213 @@ sub find_code_line_count {
     return $rcode_line_count;
 } ## end sub find_code_line_count
 
+# A constant to limit backward searches
+use constant MANY_TOKENS => 100;
+
+sub count_sub_args {
+    my ( $self, $seqno_block ) = @_;
+
+    # Given:
+    #   $seqno_block = sequence number of a sub block
+    # Return:
+    #   - the number of args to a sub for display by dump-block-summary, or
+    #   - '*' if the number cannot be determined in a simple way
+    #   - undef to deactivate this option (no count will be displayed)
+
+    my $rLL             = $self->[_rLL_];
+    my $K_opening_block = $self->[_K_opening_container_]->{$seqno_block};
+
+    # Scan backward from the opening brace to find the keyword 'sub'
+    my $Kt_min = $K_opening_block - MANY_TOKENS;
+    if ( $Kt_min < 0 ) { $Kt_min = 0 }
+    my $K_sub;
+    foreach my $Kt ( reverse( $Kt_min .. $K_opening_block ) ) {
+        my $token = $rLL->[$Kt]->[_TOKEN_];
+        my $type  = $rLL->[$Kt]->[_TYPE_];
+        if (
+            substr( $token, 0, 3 ) eq 'sub'
+            && (   $type eq 'S'
+                || $type eq 'k'
+                || $type eq 'i' )
+          )
+        {
+            $K_sub = $Kt;
+            last;
+        }
+    }
+
+    # Give up if not found - may be an enormously long signature?
+    return '*' unless defined($K_sub);
+
+    # Normally we will search for args within the block braces
+    my $seqno = $seqno_block;
+
+    # But check for a signature list, and if found then search it instead
+    my $Ksub_p = $self->K_next_code($K_sub);
+    if (   $rLL->[$Ksub_p]->[_TYPE_SEQUENCE_]
+        && $rLL->[$Ksub_p]->[_TOKEN_] eq '(' )
+    {
+        # Switch to searching the signature container. We will get the
+        # count when we arrive at the closing token.
+        $seqno = $rLL->[$Ksub_p]->[_TYPE_SEQUENCE_];
+    }
+
+    my $K_opening = $self->[_K_opening_container_]->{$seqno};
+    my $K_closing = $self->[_K_closing_container_]->{$seqno};
+    return '*' unless defined($K_closing);
+
+    my $seqno_current = $seqno;
+    my $level_opening = $rLL->[$K_opening]->[_LEVEL_];
+
+    my @seqno_stack;
+    push @seqno_stack, $seqno_current;
+
+    my %arg_count_by_seqno;
+    $arg_count_by_seqno{$seqno_current} = 0;
+
+    my @K_nonblank;
+
+    # Count number of 'shift;' at the top level
+    my $shift_count = 0;
+
+    # Scan the container looking for args. Note that we need to include
+    # the closing token to allow the signature search to finish correctly.
+    foreach my $KK ( $K_opening + 1 .. $K_closing ) {
+
+        my $type = $rLL->[$KK]->[_TYPE_];
+        next if ( $type eq 'b' );
+        next if ( $type eq '#' );
+        push @K_nonblank, $KK;
+
+        my $token = $rLL->[$KK]->[_TOKEN_];
+        if ( $type eq 'i' ) {
+
+            if ( $token eq '@_' ) {
+                my $level = $rLL->[$KK]->[_LEVEL_];
+
+                # Give up upon finding @_ at a lower level
+                return '*' unless ( $level == $level_opening + 1 );
+
+                my $K_m    = @K_nonblank > 2 ? $K_nonblank[-2] : $K_opening;
+                my $type_m = $rLL->[$K_m]->[_TYPE_];
+                if ( $type_m eq '=' ) {
+                    my $K_mm = @K_nonblank > 3 ? $K_nonblank[-3] : $K_opening;
+                    my $type_mm  = $rLL->[$K_mm]->[_TYPE_];
+                    my $token_mm = $rLL->[$K_mm]->[_TOKEN_];
+                    my $seqno_mm = $rLL->[$K_mm]->[_TYPE_SEQUENCE_];
+                    if ( $seqno_mm && $token_mm eq ')' ) {
+
+                        # End search in an arg list. Include any shift count,
+                        # plus 1 since we counted separating commas.
+                        # Note: this counts items with sigils % @ as just 1
+                        # An alternative would be to return '*' if they exist
+                        return $shift_count + $arg_count_by_seqno{$seqno_mm} +
+                          1;
+                    }
+
+                    # Give up if = @_ is not preceded by a simple list
+                    return '*';
+                }
+            }
+
+            # Give up if we find an indexed ref to $_[..]
+            elsif ( length($token) >= 5 && substr( $token, 0, 3 ) eq '$_[' ) {
+                return '*';
+            }
+
+            else {
+                # continue search
+            }
+        }
+
+        elsif ( $token eq 'shift' && $type eq 'k' ) {
+
+            # look for 'shift;' and count as 1 arg
+            my $Kp     = $self->K_next_code($KK);
+            my $type_p = defined($Kp) ? $rLL->[$Kp]->[_TYPE_] : ';';
+            if ( $type_p eq ';' || $is_closing_type{$type_p} ) {
+                my $level = $rLL->[$KK]->[_LEVEL_];
+
+                # Give up on lower level shifts
+                return '*' unless ( $level == $level_opening + 1 );
+
+                $shift_count++;
+
+                # Do not count leading '$self=shift' or '$class=shift'
+                if ( $shift_count == 1 ) {
+                    my $Km  = $K_nonblank[-2];
+                    my $K_m = @K_nonblank > 2 ? $K_nonblank[-2] : $K_opening;
+                    my $token_m = $rLL->[$K_m]->[_TOKEN_];
+                    if ( $token_m eq '$self' || $token_m eq '$class' ) {
+                        $shift_count--;
+                    }
+                }
+            }
+        }
+
+        # count commas separating args in a list
+        elsif ( $type eq ',' ) {
+            $arg_count_by_seqno{$seqno_current} += 1;
+        }
+
+        # Check for a container boundary
+        elsif ( $rLL->[$KK]->[_TYPE_SEQUENCE_] ) {
+            if ( $is_opening_type{$type} ) {
+
+                $seqno_current = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+
+                # End search if we reach a sub declearation within this sub
+                if (   $self->[_ris_sub_block_]->{$seqno_current}
+                    || $self->[_ris_asub_block_]->{$seqno_current} )
+                {
+                    return $shift_count;
+                }
+
+                $arg_count_by_seqno{$seqno_current} = 0;
+
+                # subtract 1 if first token in list is '$self' or '$class'
+                my $K_p = $self->K_next_code($KK);
+                return '*' unless defined($K_p);
+                my $token_p = $rLL->[$K_p]->[_TOKEN_];
+                if ( $token_p eq '$self' || $token_p eq '$class' ) {
+                    $arg_count_by_seqno{$seqno_current} = -1;
+                }
+
+                push @seqno_stack, $seqno_current;
+            }
+            elsif ( $is_closing_type{$type} ) {
+
+                # Reduce the comma count if we find a trailing comma
+                if ( @K_nonblank > 2 ) {
+                    my $Km = $K_nonblank[-2];
+                    if ( $rLL->[$Km]->[_TYPE_] eq ',' ) {
+                        $arg_count_by_seqno{$seqno_current} -= 1;
+                    }
+                }
+
+                # Check for an arg count defined by a signature
+                my $seq = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+                if ( $seq eq $seqno && $seq ne $seqno_block ) {
+
+                    # End signature search
+                    return $arg_count_by_seqno{$seqno_current} + 1;
+                }
+
+                pop @seqno_stack;
+                $seqno_current = $seqno_stack[-1];
+            }
+            else {
+                # ignore ternary
+            }
+        }
+        else {
+            # continue search
+        }
+    }
+    return $shift_count;
+
+} ## end sub count_sub_args
+
 sub find_selected_packages {
 
     my ( $self, $rdump_block_types ) = @_;
@@ -6864,6 +7071,8 @@ EOM
                     last;
                 }
             }
+            my $count = $self->count_sub_args($seqno);
+            if ( defined($count) ) { $type .= '(' . $count . ')' }
         }
         elsif ( $ris_sub_block->{$seqno}
             && ( $dump_all_types || $rdump_block_types->{'sub'} ) )
@@ -6877,6 +7086,8 @@ EOM
             my @parts = split /\s+/, $block_type;
             $name = $parts[1];
             $name =~ s/\(.*$//;
+            my $count = $self->count_sub_args($seqno);
+            if ( defined($count) ) { $type .= '(' . $count . ')' }
         }
         elsif (
             $block_type =~ /^(package|class)\b/

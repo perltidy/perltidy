@@ -2,6 +2,12 @@
 
 ## 2023 09 12.03
 
+    - The --dump-block-summary (-dbs) option now includes the number of sub
+      args in the 'type' column. For example, 'sub(9)' indicates a sub
+      with 9 args.  Subs whose arg count cannot easily be determined are
+      indicated as 'sub(*)'. The count does not include a leading '$self'
+      or '$class' arg.
+
     - Added flag --space-signature-paren=n, or -ssp=n (issue git #125).
       This flag works the same as the existing flag --space-prototype-paren=n
       except that it applies to the space before the opening paren of a sub
