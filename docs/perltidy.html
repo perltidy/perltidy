@@ -1242,6 +1242,28 @@
         sub usage ();   # n=2 [space]</code></pre>
 
 </dd>
+<dt id="ssp-n-or---space-signature-paren-n"><b>-ssp=n</b> or <b>--space-signature-paren=n</b></dt>
+<dd>
+
+<p>This flag is analogous to the previous except that it applies to the space before the opening paren of a sub <b>signature</b> rather than a sub <b>prototype</b>.</p>
+
+<p>For example, consider the following line:</p>
+
+<pre><code>      sub circle( $xc, $yc, $rad )</code></pre>
+
+<p>This space before the opening paren can be controlled with integer <b>n</b> which may have the value 0, 1, or 2 with these meanings:</p>
+
+<pre><code>    -ssp=0 means no space before the paren
+    -ssp=1 means follow the example of the source code [DEFAULT]
+    -ssp=2 means always put a space before the paren</code></pre>
+
+<p>The default is <b>-ssp=1</b>, meaning that will be a space in the output if, and only if, there is one in the input. Given the above line of code, the result of applying the different options would be:</p>
+
+<pre><code>    sub circle( $xc, $yc, $rad )   # n=0 [no space]
+    sub circle( $xc, $yc, $rad )   # n=1 [default; same as input]
+    sub circle ( $xc, $yc, $rad )  # n=2 [space]</code></pre>
+
+</dd>
 <dt id="kpit-n-or---keyword-paren-inner-tightness-n"><b>-kpit=n</b> or <b>--keyword-paren-inner-tightness=n</b></dt>
 <dd>
 
@@ -4230,9 +4252,11 @@
 
 <p>This feature was developed to help identify complex sections of code as an aid in refactoring. The McCabe complexity measure follows the definition used by Perl::Critic. By default the table contains these values for subroutines, but the user may request them for any or all blocks of code or packages. For blocks which are loops nested within loops, a postfix &#39;+&#39; to the <code>type</code> is added to indicate possible code complexity. Although the table does not otherwise indicate which blocks are nested in other blocks, this can be determined by computing and comparing the block ending line numbers.</p>
 
+<p>For subroutines, the number of call arguments (args) is listed in parentheses in the <code>type</code> column. For example, <code>sub(9)</code> indicates a sub with 9 args. Subroutines whose arg count cannot easily be determined are indicated as <code>sub(*)</code>. The count does not include a leading variable named <b>$self</b> or <b>$class</b>.</p>
+
 <p>By default the table lists subroutines with more than 20 <code>code_lines</code>, but this can be changed with the following two parameters:</p>
 
-<p><b>--dump-block-minimum-lines=n</b>, or <b>-dbl=n</b>, where <b>n</b> is the minimum number of <code>code_lines</code> to be included. The default is <b>-n=20</b>. Note that <code>code_lines</code> is the number of lines excluding and comments, blanks and pod.</p>
+<p><b>--dump-block-minimum-lines=n</b>, or <b>-dbl=n</b>, where <b>n</b> is the minimum number of <code>code_lines</code> to be included. The default is <b>-n=20</b>. Note that <code>code_lines</code> is the number of lines excluding comments, blanks and pod.</p>
 
 <p><b>--dump-block-types=s</b>, or <b>-dbt=s</b>, where string <b>s</b> is a list of block types to be included. The type of a block is either the name of the perl builtin keyword for that block (such as <b>sub if elsif else for foreach ..</b>) or the word immediately before the opening brace. In addition, there are a few symbols for special block types, as follows:</p>
 
@@ -4242,7 +4266,10 @@
    *    - any block except nameless blocks
    +    - any nested inner block loop
    package - any package or class
-   closure - any nameless block</code></pre>
+   closure - any nameless block
+   elsif3  - an if-elsif-..-else chain with 3 or more elsif&#39;s (3 is arbitrary, see below)</code></pre>
+
+<p>A chain of <b>if-elsif-...</b> blocks may be reported as a single line item by entering the word <b>elsif</b> with an appended integer, as indicated by the last item in this list. The integer indicates the number of <b>elsif</b> blocks required for a chain to be reported. If you use this, you may want to also use <b>-dbl=n</b>, with a smaller number of lines <b>n</b> than the default.</p>
 
 <p>In addition, specific block loop types which are nested in other loops can be selected by adding a <b>+</b> after the block name. (Nested loops are sometimes good candidates for restructuring).</p>
 
@@ -4270,6 +4297,11 @@
 <li><p>This selects every block and package.</p>
 
 <pre><code>    perltidy -dbs -dbl=1 -dbt=&#39;* closure&#39; somefile.pl &gt;blocks.csv</code></pre>
+
+</li>
+<li><p>This selects every if-chain which contains 2 or more <b>elsif</b> blocks:</p>
+
+<pre><code>    perltidy -dbs -dbl=1 -dbt=&#39;elsif2&#39; somefile.pl &gt;blocks.csv</code></pre>
 
 </li>
 </ul>
@@ -4597,7 +4629,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20230912</p>
+<p>This man page documents perltidy version 20230912.04</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

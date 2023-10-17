@@ -75,7 +75,7 @@ use constant SPACE        => q{ };
 use Carp;
 use English    qw( -no_match_vars );
 use List::Util qw( min max first );    # min, max first are in Perl 5.8
-our $VERSION = '20230912.03';
+our $VERSION = '20230912.04';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -6843,14 +6843,12 @@ sub count_sub_args {
                         my $type_p  = $rLL->[$K_p]->[_TYPE_];
                         my $token_p = $rLL->[$K_p]->[_TOKEN_];
 
-                        if (   $type_p eq 'k'
-                            && $token_p =~ /^(my|our|local)$/ )
-                        {
+                        if ( $type_p eq 'k' && $is_my_our_local{$token_p} ) {
                             next;
                         }
 
-                        if (   $type_p eq 'i'
-                            && $token_p =~ /^\$(self|class)$/ )
+                        if ( $type_p eq 'i'
+                            && ( $token_p eq '$self' || $token_p eq '$class' ) )
                         {
                             $arg_count_by_seqno{$seqno_current} = -1;
                             $saw_self = 1;

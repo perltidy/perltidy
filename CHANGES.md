@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2023 09 12.03
+## 2023 09 12.04
 
     - The --dump-block-summary (-dbs) option now includes the number of sub
       args in the 'type' column. For example, 'sub(9)' indicates a sub
