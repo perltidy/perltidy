@@ -6734,6 +6734,7 @@ sub count_sub_args {
 
     # Count number of 'shift;' at the top level
     my $shift_count = 0;
+    my $saw_self;
 
     # Scan the container looking for args. Note that we need to include
     # the closing token to allow the signature search to finish correctly.
@@ -6799,12 +6800,15 @@ sub count_sub_args {
                 $shift_count++;
 
                 # Do not count leading '$self=shift' or '$class=shift'
-                if ( $shift_count == 1 ) {
-                    my $Km  = $K_nonblank[-2];
-                    my $K_m = @K_nonblank > 2 ? $K_nonblank[-2] : $K_opening;
+                #                        |   |   |
+                #   $K_nonblank[?] :    -3  -2  -1
+                if ( $shift_count == 1 && !$saw_self ) {
+                    my $Km  = $K_nonblank[-3];
+                    my $K_m = @K_nonblank > 3 ? $K_nonblank[-3] : $K_opening;
                     my $token_m = $rLL->[$K_m]->[_TOKEN_];
                     if ( $token_m eq '$self' || $token_m eq '$class' ) {
                         $shift_count--;
+                        $saw_self = 1;
                     }
                 }
             }
@@ -6830,12 +6834,30 @@ sub count_sub_args {
 
                 $arg_count_by_seqno{$seqno_current} = 0;
 
-                # subtract 1 if first token in list is '$self' or '$class'
-                my $K_p = $self->K_next_code($KK);
-                return '*' unless defined($K_p);
-                my $token_p = $rLL->[$K_p]->[_TOKEN_];
-                if ( $token_p eq '$self' || $token_p eq '$class' ) {
-                    $arg_count_by_seqno{$seqno_current} = -1;
+                # subtract 1 if first arg is (my|our) ? ($self|$class)
+                if ( !$shift_count && !$saw_self ) {
+                    my $K_p = $KK;
+                    for ( 1 .. 2 ) {
+                        $K_p = $self->K_next_code($K_p);
+                        return '*' unless defined($K_p);
+                        my $type_p  = $rLL->[$K_p]->[_TYPE_];
+                        my $token_p = $rLL->[$K_p]->[_TOKEN_];
+
+                        if (   $type_p eq 'k'
+                            && $token_p =~ /^(my|our|local)$/ )
+                        {
+                            next;
+                        }
+
+                        if (   $type_p eq 'i'
+                            && $token_p =~ /^\$(self|class)$/ )
+                        {
+                            $arg_count_by_seqno{$seqno_current} = -1;
+                            $saw_self = 1;
+                            last;
+                        }
+                        last;
+                    }
                 }
 
                 push @seqno_stack, $seqno_current;

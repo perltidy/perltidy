@@ -5410,12 +5410,18 @@ added to indicate possible code complexity.  Although the table does not
 otherwise indicate which blocks are nested in other blocks, this can be
 determined by computing and comparing the block ending line numbers.
 
+For subroutines, the number of call arguments (args) is listed in parentheses
+in the C<type> column. For example, C<sub(9)> indicates a sub with 9 args.
+Subroutines whose arg count cannot easily be determined are indicated
+as C<sub(*)>.  The count does not include a leading variable named
+B<$self> or B<$class>.
+
 By default the table lists subroutines with more than 20 C<code_lines>, but
 this can be changed with the following two parameters:
 
 B<--dump-block-minimum-lines=n>, or B<-dbl=n>, where B<n> is the minimum
 number of C<code_lines> to be included. The default is B<-n=20>.  Note that
-C<code_lines> is the number of lines excluding and comments, blanks and pod.
+C<code_lines> is the number of lines excluding comments, blanks and pod.
 
 B<--dump-block-types=s>, or B<-dbt=s>, where string B<s> is a list of block
 types to be included.  The type of a block is either the name of the perl
