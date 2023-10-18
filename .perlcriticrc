@@ -30,14 +30,15 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 # sure if this can be avoided.
 [-Subroutines::ProhibitNestedSubs]
 
-# Make an exception for very short (possibly time-critical) subs.
+# Make an exception for very short time-critical subs.
 [Subroutines::RequireArgUnpacking]
 short_subroutine_statements = 2
 
 # Disagree: The advantages of 'use constant' greatly outweigh the few
-# disadvantages.  Perl::Tidy relies heavily on constants for efficient and
-# robust coding of array indexes and for compiling out debug code, and to avoid
-# autovivication problems that would occur if hashes were used instead.
+# disadvantages.  Perl::Tidy relies heavily on constants
+#  -for efficient and robust coding of array indexes,
+#  -for avoiding autovivication issues if hashes were used instead,
+#  -and for eliminating debug code during compilation.
 [-ValuesAndExpressions::ProhibitConstantPragma]
 
 # Disagree: adding quotes on here doc terminators causes needless "line noise"

@@ -8,6 +8,7 @@
 package Perl::Tidy::IndentationItem;
 use strict;
 use warnings;
+
 our $VERSION = '20230912.04';
 
 BEGIN {
@@ -149,14 +150,17 @@ sub tentatively_decrease_available_spaces {
     return $deleted_spaces;
 } ## end sub tentatively_decrease_available_spaces
 
+# time-critical sub
 sub get_spaces {
     return $_[0]->[_spaces_];
 }
 
 sub get_standard_spaces {
-    return $_[0]->[_standard_spaces_];
+    my $self = shift;
+    return $self->[_standard_spaces_];
 }
 
+# time-critical sub
 sub get_marked {
     return $_[0]->[_marked_];
 }
@@ -170,7 +174,8 @@ sub set_marked {
 } ## end sub set_marked
 
 sub get_available_spaces {
-    return $_[0]->[_available_spaces_];
+    my $self = shift;
+    return $self->[_available_spaces_];
 }
 
 sub decrease_SPACES {
@@ -191,11 +196,13 @@ sub decrease_available_spaces {
 } ## end sub decrease_available_spaces
 
 sub get_align_seqno {
-    return $_[0]->[_align_seqno_];
+    my $self = shift;
+    return $self->[_align_seqno_];
 }
 
 sub get_recoverable_spaces {
-    return $_[0]->[_recoverable_spaces_];
+    my $self = shift;
+    return $self->[_recoverable_spaces_];
 }
 
 sub set_recoverable_spaces {
@@ -215,11 +222,13 @@ sub increase_recoverable_spaces {
 } ## end sub increase_recoverable_spaces
 
 sub get_ci_level {
-    return $_[0]->[_ci_level_];
+    my $self = shift;
+    return $self->[_ci_level_];
 }
 
 sub get_level {
-    return $_[0]->[_level_];
+    my $self = shift;
+    return $self->[_level_];
 }
 
 sub get_spaces_level_ci {
@@ -228,15 +237,18 @@ sub get_spaces_level_ci {
 }
 
 sub get_lp_item_index {
-    return $_[0]->[_lp_item_index_];
+    my $self = shift;
+    return $self->[_lp_item_index_];
 }
 
 sub get_K_begin_line {
-    return $_[0]->[_K_begin_line_];
+    my $self = shift;
+    return $self->[_K_begin_line_];
 }
 
 sub get_K_extra_space {
-    return $_[0]->[_K_extra_space_];
+    my $self = shift;
+    return $self->[_K_extra_space_];
 }
 
 sub set_have_child {
@@ -248,7 +260,8 @@ sub set_have_child {
 } ## end sub set_have_child
 
 sub get_have_child {
-    return $_[0]->[_have_child_];
+    my $self = shift;
+    return $self->[_have_child_];
 }
 
 sub set_arrow_count {
@@ -260,7 +273,8 @@ sub set_arrow_count {
 } ## end sub set_arrow_count
 
 sub get_arrow_count {
-    return $_[0]->[_arrow_count_];
+    my $self = shift;
+    return $self->[_arrow_count_];
 }
 
 sub set_comma_count {
@@ -272,7 +286,8 @@ sub set_comma_count {
 } ## end sub set_comma_count
 
 sub get_comma_count {
-    return $_[0]->[_comma_count_];
+    my $self = shift;
+    return $self->[_comma_count_];
 }
 
 sub set_closed {
@@ -284,6 +299,7 @@ sub set_closed {
 } ## end sub set_closed
 
 sub get_closed {
-    return $_[0]->[_closed_];
+    my $self = shift;
+    return $self->[_closed_];
 }
 1;

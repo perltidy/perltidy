@@ -2,16 +2,17 @@ package Perl::Tidy::VerticalAligner;
 use strict;
 use warnings;
 use Carp;
-use English qw( -no_match_vars );
+
+{ #<<< A non-indenting brace to contain all lexical variables
+
 our $VERSION = '20230912.04';
+use English qw( -no_match_vars );
 use Perl::Tidy::VerticalAligner::Alignment;
 use Perl::Tidy::VerticalAligner::Line;
 
 use constant DEVEL_MODE   => 0;
 use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };
-
-{ #<<< A non-indenting brace to contain all lexical variables
 
 # The Perl::Tidy::VerticalAligner package collects output lines and
 # attempts to line up certain common tokens, such as => and #, which are
@@ -199,7 +200,8 @@ BEGIN {
     use constant DEBUG_TABS => 0;
 
     my $debug_warning = sub {
-        print {*STDOUT} "VALIGN_DEBUGGING with key $_[0]\n";
+        my $msg = shift;
+        print {*STDOUT} "VALIGN_DEBUGGING with key $msg\n";
         return;
     };
 
@@ -423,7 +425,8 @@ sub initialize_for_new_group {
 } ## end sub initialize_for_new_group
 
 sub group_line_count {
-    return +@{ $_[0]->[_rgroup_lines_] };
+    my $self = shift;
+    return +@{ $self->[_rgroup_lines_] };
 }
 
 # interface to Perl::Tidy::Diagnostics routines
@@ -4872,11 +4875,13 @@ sub combine_fields {
 
 sub get_output_line_number {
 
+    # Return the output line number to external modules.
     # The output line number reported to a caller =
     # the number of items still in the buffer +
     # the number of items written.
-    return $_[0]->group_line_count() +
-      $_[0]->[_file_writer_object_]->get_output_line_number();
+    my $self = shift;
+    return $self->group_line_count() +
+      $self->[_file_writer_object_]->get_output_line_number();
 } ## end sub get_output_line_number
 
 ###############################

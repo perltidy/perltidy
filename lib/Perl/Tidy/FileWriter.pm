@@ -226,24 +226,29 @@ sub get_convergence_check {
 } ## end sub get_convergence_check
 
 sub get_output_line_number {
-    return $_[0]->[_output_line_number_];
+    my $self = shift;
+    return $self->[_output_line_number_];
 }
 
 sub decrement_output_line_number {
-    $_[0]->[_output_line_number_]--;
+    my $self = shift;
+    $self->[_output_line_number_]--;
     return;
 }
 
 sub get_consecutive_nonblank_lines {
-    return $_[0]->[_consecutive_nonblank_lines_];
+    my $self = shift;
+    return $self->[_consecutive_nonblank_lines_];
 }
 
 sub get_consecutive_blank_lines {
-    return $_[0]->[_consecutive_blank_lines_];
+    my $self = shift;
+    return $self->[_consecutive_blank_lines_];
 }
 
 sub reset_consecutive_blank_lines {
-    $_[0]->[_consecutive_blank_lines_] = 0;
+    my $self = shift;
+    $self->[_consecutive_blank_lines_] = 0;
     return;
 }
 
