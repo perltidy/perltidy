@@ -6666,6 +6666,99 @@ sub find_code_line_count {
     return $rcode_line_count;
 } ## end sub find_code_line_count
 
+sub count_list_args {
+    my ( $self, $rarg_list ) = @_;
+
+    my $seqno        = $rarg_list->{seqno};
+    my $is_signature = $rarg_list->{is_signature};
+    my $shift_count  = $is_signature ? 0 : $rarg_list->{shift_count};
+    my $saw_self     = $is_signature ? 0 : $rarg_list->{saw_self};
+
+    # Given:
+    #   $seqno        = sequence number of a list for counting items
+    #   $is_signature = true if this is a sub signature list
+    #   $shift_count  = starting number of '$var=shift;' items to include
+    #   $saw_self     = true if there was previous '$self=shift;'
+
+    # Return:
+    #   - the number of args, or
+    #   - '*' if the number cannot be determined in a simple way
+    #   - '*' if the list contains non-scalar items
+
+    # Method:
+    #   - the basic idea is to count commas within the parens
+    #   - for non-signature lists, do not count an initial
+    #     '$self' or '$class' variable
+
+    my $rLL = $self->[_rLL_];
+
+    return '*' unless ( defined($seqno) );
+    my $K_opening = $self->[_K_opening_container_]->{$seqno};
+    my $K_closing = $self->[_K_closing_container_]->{$seqno};
+    return '*' unless ( defined($K_closing) );
+
+    my $level_opening = $rLL->[$K_opening]->[_LEVEL_];
+    my $arg_count     = $shift_count;
+
+    #--------------------------------------------------------
+    # Main loop to scan the container looking for list items.
+    #--------------------------------------------------------
+    foreach my $KK ( $K_opening + 1 .. $K_closing - 1 ) {
+
+        my $type = $rLL->[$KK]->[_TYPE_];
+        next if ( $type eq 'b' );
+        next if ( $type eq '#' );
+
+        # Only look at top-level tokens
+        my $level = $rLL->[$K_opening]->[_LEVEL_];
+        next if ( $level > $level_opening + 1 );
+
+        my $token = $rLL->[$KK]->[_TOKEN_];
+
+        # handle identifiers
+        if ( $type eq 'i' ) {
+            my $sigil = substr( $token, 0, 1 );
+
+            # Give up if we find list sigils
+            if ( $sigil eq '%' || $sigil eq '@' ) { return '*' }
+
+            elsif ($sigil eq '$'
+                && !$is_signature
+                && !$saw_self
+                && !$arg_count
+                && ( $token eq '$self' || $token eq '$class' ) )
+            {
+                $saw_self = 1;
+                $arg_count -= 1;
+            }
+
+            # Give up if we find an indexed ref to $_[..]
+            elsif ( length($token) >= 5 && substr( $token, 0, 3 ) eq '$_[' ) {
+                return '*';
+            }
+
+            else {
+                # continue search
+            }
+        }
+
+        # handle commas: count commas separating args in a list
+        elsif ( $type eq ',' ) {
+            $arg_count++;
+        }
+
+        else {
+            # continue search
+        }
+    }
+
+    # Increase the count by 1 if the list does not have a trailing comma
+    my $K_last = $self->K_previous_code($K_closing);
+    if ( $rLL->[$K_last]->[_TYPE_] ne ',' ) { $arg_count++ }
+    return $arg_count;
+
+} ## end sub count_list_args
+
 # A constant to limit backward searches
 use constant MANY_TOKENS => 100;
 
@@ -6674,15 +6767,20 @@ sub count_sub_args {
 
     # Given:
     #   $seqno_block = sequence number of a sub block
+
     # Return:
     #   - the number of args to a sub for display by dump-block-summary, or
     #   - '*' if the number cannot be determined in a simple way
     #   - undef to deactivate this option (no count will be displayed)
 
+    # Just return '*' upon encountering anything unusual.
+
     my $rLL             = $self->[_rLL_];
     my $K_opening_block = $self->[_K_opening_container_]->{$seqno_block};
 
+    #---------------------------------------------------------------
     # Scan backward from the opening brace to find the keyword 'sub'
+    #---------------------------------------------------------------
     my $Kt_min = $K_opening_block - MANY_TOKENS;
     if ( $Kt_min < 0 ) { $Kt_min = 0 }
     my $K_sub;
@@ -6704,76 +6802,87 @@ sub count_sub_args {
     # Give up if not found - may be an enormously long signature?
     return '*' unless defined($K_sub);
 
-    # Normally we will search for args within the block braces
-    my $seqno = $seqno_block;
-
-    # But check for a signature list, and if found then search it instead
+    #---------------------------------------
+    # Check for and process a signature list
+    #---------------------------------------
     my $Ksub_p = $self->K_next_code($K_sub);
     if (   $rLL->[$Ksub_p]->[_TYPE_SEQUENCE_]
         && $rLL->[$Ksub_p]->[_TOKEN_] eq '(' )
     {
         # Switch to searching the signature container. We will get the
         # count when we arrive at the closing token.
-        $seqno = $rLL->[$Ksub_p]->[_TYPE_SEQUENCE_];
+        my $seqno     = $rLL->[$Ksub_p]->[_TYPE_SEQUENCE_];
+        my $arg_count = $self->count_list_args(
+            {
+                seqno        => $seqno,
+                is_signature => 1,
+            }
+        );
+        return $arg_count;
     }
 
+    #------------------------------------------------------------
+    # Otherwise look for =shift; and =@_; within sub block braces
+    #------------------------------------------------------------
+    my $seqno     = $seqno_block;
     my $K_opening = $self->[_K_opening_container_]->{$seqno};
     my $K_closing = $self->[_K_closing_container_]->{$seqno};
     return '*' unless defined($K_closing);
 
-    my $seqno_current = $seqno;
     my $level_opening = $rLL->[$K_opening]->[_LEVEL_];
-
-    my @seqno_stack;
-    push @seqno_stack, $seqno_current;
-
-    my %arg_count_by_seqno;
-    $arg_count_by_seqno{$seqno_current} = 0;
-
-    my @K_nonblank;
 
     # Count number of 'shift;' at the top level
     my $shift_count = 0;
     my $saw_self;
 
-    # Scan the container looking for args. Note that we need to include
-    # the closing token to allow the signature search to finish correctly.
-    foreach my $KK ( $K_opening + 1 .. $K_closing ) {
+    foreach my $KK ( $K_opening + 1 .. $K_closing - 1 ) {
 
         my $type = $rLL->[$KK]->[_TYPE_];
         next if ( $type eq 'b' );
         next if ( $type eq '#' );
-        push @K_nonblank, $KK;
 
         my $token = $rLL->[$KK]->[_TOKEN_];
         if ( $type eq 'i' ) {
 
+            #--------------
+            # look for '@_'
+            #--------------
             if ( $token eq '@_' ) {
                 my $level = $rLL->[$KK]->[_LEVEL_];
 
                 # Give up upon finding @_ at a lower level
                 return '*' unless ( $level == $level_opening + 1 );
 
-                my $K_m    = @K_nonblank > 2 ? $K_nonblank[-2] : $K_opening;
+                # Look back for ' = @_'
+                my $K_m = $self->K_previous_code($KK);
+                return '*' unless defined($K_m);
                 my $type_m = $rLL->[$K_m]->[_TYPE_];
-                if ( $type_m eq '=' ) {
-                    my $K_mm = @K_nonblank > 3 ? $K_nonblank[-3] : $K_opening;
-                    my $type_mm  = $rLL->[$K_mm]->[_TYPE_];
-                    my $token_mm = $rLL->[$K_mm]->[_TOKEN_];
-                    my $seqno_mm = $rLL->[$K_mm]->[_TYPE_SEQUENCE_];
-                    if ( $seqno_mm && $token_mm eq ')' ) {
+                return '*' unless ( $type_m eq '=' );
 
-                        # End search in an arg list. Include any shift count,
-                        # plus 1 since we counted separating commas.
-                        # Note: this counts items with sigils % @ as just 1
-                        # An alternative would be to return '*' if they exist
-                        return $shift_count + $arg_count_by_seqno{$seqno_mm} +
-                          1;
-                    }
+                # Look back for ' ) = @_'
+                my $K_mm = $self->K_previous_code($K_m);
+                return '*' unless defined($K_mm);
+                my $type_mm  = $rLL->[$K_mm]->[_TYPE_];
+                my $token_mm = $rLL->[$K_mm]->[_TOKEN_];
+                my $seqno_mm = $rLL->[$K_mm]->[_TYPE_SEQUENCE_];
 
-                    # Give up if = @_ is not preceded by a simple list
-                    return '*';
+                #------------------------------------
+                # Count args in the list ( ... ) = @_;
+                #------------------------------------
+                if ( $seqno_mm && $token_mm eq ')' ) {
+                    my $arg_count = $self->count_list_args(
+                        {
+                            seqno        => $seqno_mm,
+                            is_signature => 0,
+                            shift_count  => $shift_count,
+                            saw_self     => $saw_self,
+                        }
+                    );
+                    return $arg_count;
                 }
+
+                # Give up if = @_ is not preceded by a simple list
+                return '*';
             }
 
             # Give up if we find an indexed ref to $_[..]
@@ -6786,6 +6895,9 @@ sub count_sub_args {
             }
         }
 
+        #-------------------
+        # look for '=shift;'
+        #-------------------
         elsif ( $token eq 'shift' && $type eq 'k' ) {
 
             # look for 'shift;' and count as 1 arg
@@ -6799,90 +6911,42 @@ sub count_sub_args {
 
                 $shift_count++;
 
-                # Do not count leading '$self=shift' or '$class=shift'
-                #                        |   |   |
-                #   $K_nonblank[?] :    -3  -2  -1
+                # Do not count leading '$self = shift' or '$class = shift'
+                #                        |    |   |
+                #                    $K_mm  $K_m  $KK
                 if ( $shift_count == 1 && !$saw_self ) {
-                    my $Km  = $K_nonblank[-3];
-                    my $K_m = @K_nonblank > 3 ? $K_nonblank[-3] : $K_opening;
-                    my $token_m = $rLL->[$K_m]->[_TOKEN_];
-                    if ( $token_m eq '$self' || $token_m eq '$class' ) {
-                        $shift_count--;
-                        $saw_self = 1;
+                    my $K_m = $self->K_previous_code($KK);
+                    return '*' unless ( defined($K_m) );
+                    my $type_m = $rLL->[$K_m]->[_TYPE_];
+                    if ( $type_m eq '=' ) {
+
+                        my $K_mm = $self->K_previous_code($K_m);
+                        return '*' unless defined($K_mm);
+                        my $type_mm  = $rLL->[$K_mm]->[_TYPE_];
+                        my $token_mm = $rLL->[$K_mm]->[_TOKEN_];
+                        if ( $token_mm eq '$self' || $token_mm eq '$class' ) {
+                            $shift_count--;
+                            $saw_self = 1;
+                        }
                     }
                 }
             }
-        }
-
-        # count commas separating args in a list
-        elsif ( $type eq ',' ) {
-            $arg_count_by_seqno{$seqno_current} += 1;
         }
 
         # Check for a container boundary
         elsif ( $rLL->[$KK]->[_TYPE_SEQUENCE_] ) {
             if ( $is_opening_type{$type} ) {
 
-                $seqno_current = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+                my $seqno_test = $rLL->[$KK]->[_TYPE_SEQUENCE_];
 
+                #----------------------------------------------------------
                 # End search if we reach a sub declearation within this sub
-                if (   $self->[_ris_sub_block_]->{$seqno_current}
-                    || $self->[_ris_asub_block_]->{$seqno_current} )
+                #----------------------------------------------------------
+                if (   $self->[_ris_sub_block_]->{$seqno_test}
+                    || $self->[_ris_asub_block_]->{$seqno_test} )
                 {
                     return $shift_count;
                 }
-
-                $arg_count_by_seqno{$seqno_current} = 0;
-
-                # subtract 1 if first arg is (my|our) ? ($self|$class)
-                if ( !$shift_count && !$saw_self ) {
-                    my $K_p = $KK;
-                    for ( 1 .. 2 ) {
-                        $K_p = $self->K_next_code($K_p);
-                        return '*' unless defined($K_p);
-                        my $type_p  = $rLL->[$K_p]->[_TYPE_];
-                        my $token_p = $rLL->[$K_p]->[_TOKEN_];
-
-                        if ( $type_p eq 'k' && $is_my_our_local{$token_p} ) {
-                            next;
-                        }
-
-                        if ( $type_p eq 'i'
-                            && ( $token_p eq '$self' || $token_p eq '$class' ) )
-                        {
-                            $arg_count_by_seqno{$seqno_current} = -1;
-                            $saw_self = 1;
-                            last;
-                        }
-                        last;
-                    }
-                }
-
-                push @seqno_stack, $seqno_current;
-            }
-            elsif ( $is_closing_type{$type} ) {
-
-                # Reduce the comma count if we find a trailing comma
-                if ( @K_nonblank > 2 ) {
-                    my $Km = $K_nonblank[-2];
-                    if ( $rLL->[$Km]->[_TYPE_] eq ',' ) {
-                        $arg_count_by_seqno{$seqno_current} -= 1;
-                    }
-                }
-
-                # Check for an arg count defined by a signature
-                my $seq = $rLL->[$KK]->[_TYPE_SEQUENCE_];
-                if ( $seq eq $seqno && $seq ne $seqno_block ) {
-
-                    # End signature search
-                    return $arg_count_by_seqno{$seqno_current} + 1;
-                }
-
-                pop @seqno_stack;
-                $seqno_current = $seqno_stack[-1];
-            }
-            else {
-                # ignore ternary
             }
         }
         else {
