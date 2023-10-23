@@ -82,10 +82,13 @@ $fh_out->print($hash_bang);
 # then copy all modules
 my $changed_count;
 foreach my $module (@modules) {
+    my @non_ascii;
+    my $lno=0;
     my $fh_module;
     open( $fh_module, '<', $module )
       or die "can't open my module file '$module' : $!\n";
     while (<$fh_module>) {
+        $lno++;
         last if /^\s*__END__\s*$/;
         my $line = $_;
         if (   $Opts{'D'}
@@ -101,8 +104,25 @@ EOM
         }
 
         $fh_out->print($line) unless $line =~ /^use Perl::Tidy/;
+
+        if ( $line =~ /[^[:ascii:]]/g ) {
+            my $pos = pos($line);
+            push @non_ascii, [ $lno, $pos ];
+        }
     }
     $fh_module->close();
+
+    if (@non_ascii) {
+        my $num = @non_ascii;
+        my ( $lno_first, $pos_first ) = @{ $non_ascii[0] };
+        print STDERR <<EOM;
+==============================================================================
+Warning: Found $num non-ascii characters in module: $module
+First at line $lno_first near character $pos_first
+Please avoid non-ascii characters in the perltidy source.
+==============================================================================
+EOM
+    }
 }
 
 # then, copy the rest of the script except for the 'use PerlTidy' statement
