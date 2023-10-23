@@ -85,8 +85,10 @@ max_nests=9
 # of cases where they cannot be avoided.
 [-ControlStructures::ProhibitCascadingIfElse]
 
-# This is a good general policy but not always possible in time-critical subs
-[-Subroutines::ProhibitManyArgs]
+# This is a good general policy but the default max of 5 args is not always
+# possible in time-critical subs.
+[Subroutines::ProhibitManyArgs]
+max_arguments = 12
 
 [-ClassHierarchies::ProhibitExplicitISA]
 
@@ -123,8 +125,8 @@ max_characters=250
 # apply this rule to hash keys, and sometimes not.
 [-ValuesAndExpressions::ProhibitNoisyQuotes]
 
-# postfix 'if' is good if it highlights control flow
-# postfix 'unless' is likewise good if simple and without negative terms
+# postfix 'if' is okay if it highlights control flow
+# postfix 'unless' is likewise okay if simple and without negative terms
 [ControlStructures::ProhibitPostfixControls]
 allow = if unless
 

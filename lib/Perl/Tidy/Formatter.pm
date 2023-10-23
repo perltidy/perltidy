@@ -3790,6 +3790,7 @@ EOM
     my %essential_whitespace_filter_r2;
     my %is_type_with_space_before_bareword;
     my %is_special_variable_char;
+    my %is_digit_char;
 
     BEGIN {
 
@@ -3853,6 +3854,9 @@ EOM
           qw{ ? A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ \ ] ^ _ };
         @{is_special_variable_char}{@q} = (1) x scalar(@q);
 
+        @q = qw( 0 1 2 3 4 5 6 7 8 9 );
+        @is_digit_char{@q} = (1) x scalar(@q);
+
     } ## end BEGIN
 
     sub is_essential_whitespace {
@@ -3913,7 +3917,9 @@ EOM
             return;
         }
 
-        my $tokenr_is_bareword   = $tokenr =~ /^\w/ && $tokenr !~ /^\d/;
+        my $tokenr_leading_ch    = substr( $tokenr, 0, 1 );
+        my $tokenr_leading_ch2   = substr( $tokenr, 0, 2 );
+        my $tokenr_is_bareword   = $tokenr =~ /^[^\d\W]/;
         my $tokenr_is_open_paren = $tokenr eq '(';
         my $token_joined         = $tokenl . $tokenr;
         my $tokenl_is_dash       = $tokenl eq '-';
@@ -3934,8 +3940,17 @@ EOM
           #            my $size=-s::SINK if $file;  <==OK but we won't do it
           # don't join something like: for bla::bla:: abc
           # example is "%overload:: and" in files Dumpvalue.pm or colonbug.pl
-          (      ( $tokenl =~ /([\'\w]|\:\:)$/ && $typel ne 'CORE::' )
-              && ( $tokenr =~ /^([\'\w]|\:\:)/ ) )
+          (
+            (
+                ## ( $tokenr =~ /^([\'\w]|\:\:)/ )
+                     $tokenr_is_bareword
+                  || $is_digit_char{$tokenr_leading_ch}
+                  || $tokenr_leading_ch eq "'"
+                  || $tokenr_leading_ch2 eq '::'
+            )
+
+              && ( $tokenl =~ /([\'\w]|\:\:)$/ && $typel ne 'CORE::' )
+          )
 
           # do not combine a number with a concatenation dot
           # example: pom.caputo:
@@ -4003,7 +4018,7 @@ EOM
           || $typel eq 'w' && ( $tokenr eq '-' || $typer eq 'Q' )
 
           # perl is very fussy about spaces before <<
-          || substr( $tokenr, 0, 2 ) eq '<<'
+          || $tokenr_leading_ch2 eq '<<'
 
           # avoid combining tokens to create new meanings. Example:
           #     $a+ +$b must not become $a++$b
@@ -4012,7 +4027,7 @@ EOM
 
           # another example: do not combine these two &'s:
           #     allow_options & &OPT_EXECCGI
-          || $is_digraph{ $tokenl . substr( $tokenr, 0, 1 ) }
+          || $is_digraph{ $tokenl . $tokenr_leading_ch }
 
           # retain any space after possible filehandle
           # (testfiles prnterr1.t with --extrude and mangle.t with --mangle)
@@ -4063,19 +4078,20 @@ EOM
           || (
             $tokenl eq 'my'
 
-            && substr( $tokenr, 0, 1 ) eq '$'
+            && $tokenr_leading_ch eq '$'
 
             #  /^(for|foreach)$/
             && $is_for_foreach{$tokenll}
           )
 
-          # Keep space after like $^ if needed to avoid forming a different
+          # Keep space after $^ if needed to avoid forming a different
           # special variable (issue c068). For example:
           #       my $aa = $^ ? "none" : "ok";
+          # The problem is that '$^?' is a valid special variable
           || ( $typel eq 'i'
             && length($tokenl) == 2
             && substr( $tokenl, 1, 1 ) eq '^'
-            && $is_special_variable_char{ substr( $tokenr, 0, 1 ) } )
+            && $is_special_variable_char{$tokenr_leading_ch} )
 
           # We must be sure that a space between a ? and a quoted string
           # remains if the space before the ? remains.  [Loca.pm, lockarea]
@@ -9158,16 +9174,14 @@ sub respace_tokens {
         # because comments may disappear.
         # Note that we must do this even if --noadd-whitespace is set
         if ( $last_line_type eq 'CODE' ) {
-            my $type_next  = $rLL->[$Kfirst]->[_TYPE_];
-            my $token_next = $rLL->[$Kfirst]->[_TOKEN_];
             if (
                 is_essential_whitespace(
                     $last_last_nonblank_code_token,
                     $last_last_nonblank_code_type,
                     $last_nonblank_code_token,
                     $last_nonblank_code_type,
-                    $token_next,
-                    $type_next,
+                    $rLL->[$Kfirst]->[_TOKEN_],
+                    $rLL->[$Kfirst]->[_TYPE_],
                 )
               )
             {
@@ -30519,7 +30533,7 @@ sub make_paren_name {
     sub get_final_indentation {
 
         my (
-            $self,    #
+            $self,
 
             $ibeg,
             $iend,
