@@ -8242,7 +8242,6 @@ sub do_scan_package {
         my $self = shift;
 
         # Starting sub call after seeing an '&'
-
         if ( $tok =~ /^[\$\w]/ ) {    # alphanumeric ..
             $id_scan_state = $scan_state_COLON;    # now need ::
             $saw_alpha     = 1;
@@ -8278,9 +8277,10 @@ sub do_scan_package {
 
                 # Special variable (c066)
                 $identifier .= $tok;
-                $type = '&';
+                $type = 'i';
 
-                # There may be one more character, not a space, after the ^
+                # To be a special $^ variable, there may be one more character,
+                # not a space, after the ^
                 my $next1 = $rtokens->[ $i + 1 ];
                 my $chr   = substr( $next1, 0, 1 );
                 if ( $is_special_variable_char{$chr} ) {
@@ -8296,7 +8296,9 @@ sub do_scan_package {
                 }
                 else {
 
-                    # it is &^
+                    # It is &^.  This is parsed by perl as a call to sub '^',
+                    # even though it would be difficult to create a sub '^'.
+                    # So we mark it as an identifier (c068).
                     $id_scan_state = EMPTY_STRING;
                 }
             }

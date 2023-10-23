@@ -123,6 +123,15 @@ index?#sc#
 ;#sc#
 }#sc#
 
+==> c068.in <==
+my $var  = $^;
+my @list = @^;
+my %hash = %^;
+my $glob = *^;
+my $call = &^;
+my $aa   = $^ ? "defined" : "not defined";
+my $bb   = &^ ? "none"    : "ok";
+
 ==> c103.in <==
 print $l<3? $_ : $l & 4 ? --$_ ? $_ : "No more" : $l & 3 ? $_ > 1 ? "if one of those" : "if that" : "e", " cop", $_ ^ 1 ? "ies " : "y ", $l ^ 3 ? $l & 2 ? "w" : $l & 4 ? "z" : "y" : "x";
 print STDERR < BLABLA>;    # ok prints the word 'BLABLA'
