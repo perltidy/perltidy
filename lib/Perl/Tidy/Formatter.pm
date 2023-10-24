@@ -25972,16 +25972,16 @@ EOM
         {
             ( $number_of_fields, $number_of_fields_best, $columns ) =
               $self->lp_table_fix(
-
-                $columns,
-                $i_first_comma,
-                $max_width,
-                $number_of_fields,
-                $number_of_fields_best,
-                $odd_or_even,
-                $pair_width,
-                $ritem_lengths,
-
+                {
+                    columns               => $columns,
+                    i_first_comma         => $i_first_comma,
+                    max_width             => $max_width,
+                    number_of_fields      => $number_of_fields,
+                    number_of_fields_best => $number_of_fields_best,
+                    odd_or_even           => $odd_or_even,
+                    pair_width            => $pair_width,
+                    ritem_lengths         => $ritem_lengths,
+                }
               );
         }
 
@@ -26082,20 +26082,16 @@ EOM
 
         # try to undo some -lp indentation to improve table formatting
 
-        my (
+        my ( $self, $rcall_hash ) = @_;
 
-            $self,    #
-
-            $columns,
-            $i_first_comma,
-            $max_width,
-            $number_of_fields,
-            $number_of_fields_best,
-            $odd_or_even,
-            $pair_width,
-            $ritem_lengths,
-
-        ) = @_;
+        my $columns               = $rcall_hash->{columns};
+        my $i_first_comma         = $rcall_hash->{i_first_comma};
+        my $max_width             = $rcall_hash->{max_width};
+        my $number_of_fields      = $rcall_hash->{number_of_fields};
+        my $number_of_fields_best = $rcall_hash->{number_of_fields_best};
+        my $odd_or_even           = $rcall_hash->{odd_or_even};
+        my $pair_width            = $rcall_hash->{pair_width};
+        my $ritem_lengths         = $rcall_hash->{ritem_lengths};
 
         my $available_spaces =
           $self->get_available_spaces_to_go($i_first_comma);
@@ -28115,9 +28111,18 @@ EOM
             && !$self->[_no_vertical_tightness_flags_] )
         {
             $rvao_args->{rvertical_tightness_flags} =
-              $self->set_vertical_tightness_flags( $n, $n_last_line, $ibeg,
+              $self->set_vertical_tightness_flags(
+
+                $n,
+                $n_last_line,
+                $ibeg,
                 $iend,
-                $ri_first, $ri_last, $ending_in_quote, $closing_side_comment );
+                $ri_first,
+                $ri_last,
+                $ending_in_quote,
+                $closing_side_comment
+
+              );
         }
 
         # ----------------------------------
@@ -29013,9 +29018,13 @@ sub make_vertical_alignments {
         my $iend = $ri_last->[$line];
 
         my $rtok_fld_pat_len = $self->make_alignment_patterns(
-            $ibeg, $iend, $ralignment_type_to_go,
+
+            $ibeg,
+            $iend,
+            $ralignment_type_to_go,
             $ralignment_counts->[$line],
             $ralignment_hash_by_line->[$line]
+
         );
         push @{$rline_alignments}, $rtok_fld_pat_len;
     }
@@ -29973,9 +29982,16 @@ sub xlp_tweak {
 
     sub make_alignment_patterns {
 
-        my ( $self, $ibeg, $iend, $ralignment_type_to_go, $alignment_count,
-            $ralignment_hash )
-          = @_;
+        my (
+            $self,
+
+            $ibeg,
+            $iend,
+            $ralignment_type_to_go,
+            $alignment_count,
+            $ralignment_hash
+
+        ) = @_;
 
         #------------------------------------------------------------------
         # This sub creates arrays of vertical alignment info for one output
@@ -31156,8 +31172,15 @@ sub make_paren_name {
                 $opening_indentation, $opening_offset,
                 $is_leading,          $opening_exists
               )
-              = $self->get_opening_indentation( $ibeg_weld_fix, $ri_first,
-                $ri_last, $rindentation_list, $seqno_qw_closing );
+              = $self->get_opening_indentation(
+
+                $ibeg_weld_fix,
+                $ri_first,
+                $ri_last,
+                $rindentation_list,
+                $seqno_qw_closing
+
+              );
 
             # Patch for rt144979, part 1. Coordinated with part 2.
             # Do not undo ci for a cuddled closing brace control; it
@@ -31489,8 +31512,16 @@ sub get_opening_indentation {
     #    which matches the token at index $i_opening
     #   -and its offset (number of columns) from the start of the line
     #
-    my ( $self, $i_closing, $ri_first, $ri_last, $rindentation_list, $qw_seqno )
-      = @_;
+    my (
+        $self,
+
+        $i_closing,
+        $ri_first,
+        $ri_last,
+        $rindentation_list,
+        $qw_seqno
+
+    ) = @_;
 
     # first, see if the opening token is in the current batch
     my $i_opening = $mate_index_to_go[$i_closing];
@@ -31571,9 +31602,19 @@ sub examine_vertical_tightness_flags {
 
 sub set_vertical_tightness_flags {
 
-    my ( $self, $n, $n_last_line, $ibeg, $iend, $ri_first, $ri_last,
-        $ending_in_quote, $closing_side_comment )
-      = @_;
+    my (
+        $self,
+
+        $n,
+        $n_last_line,
+        $ibeg,
+        $iend,
+        $ri_first,
+        $ri_last,
+        $ending_in_quote,
+        $closing_side_comment
+
+    ) = @_;
 
     # Define vertical tightness controls for the nth line of a batch.
     # Note: do not call this sub for a block comment or if
