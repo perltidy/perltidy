@@ -1044,23 +1044,23 @@ EOM
     # loop to process all files
     #--------------------------
     $self->process_all_files(
+        {
+            rinput_hash => \%input_hash,
+            rfiles      => \@Arg_files,
 
-        \%input_hash,
-        \@Arg_files,
+            # filename stuff...
+            source_stream             => $source_stream,
+            output_extension          => $output_extension,
+            forbidden_file_extensions => $forbidden_file_extensions,
+            in_place_modify           => $in_place_modify,
+            backup_extension          => $backup_extension,
+            delete_backup             => $delete_backup,
 
-        # filename stuff...
-        $source_stream,
-        $output_extension,
-        $forbidden_file_extensions,
-        $in_place_modify,
-        $backup_extension,
-        $delete_backup,
-
-        # logfile stuff...
-        $logfile_header,
-        $rpending_complaint,
-        $rpending_logfile_message,
-
+            # logfile stuff...
+            logfile_header           => $logfile_header,
+            rpending_complaint       => $rpending_complaint,
+            rpending_logfile_message => $rpending_logfile_message,
+        }
     );
 
     #-----
@@ -1899,24 +1899,19 @@ sub set_line_separator {
 
 sub process_all_files {
 
-    my (
+    my ( $self, $rcall_hash ) = @_;
 
-        $self,
-        $rinput_hash,
-        $rfiles,
-
-        $source_stream,
-        $output_extension,
-        $forbidden_file_extensions,
-        $in_place_modify,
-        $backup_extension,
-        $delete_backup,
-
-        $logfile_header,
-        $rpending_complaint,
-        $rpending_logfile_message,
-
-    ) = @_;
+    my $rinput_hash               = $rcall_hash->{rinput_hash};
+    my $rfiles                    = $rcall_hash->{rfiles};
+    my $source_stream             = $rcall_hash->{source_stream};
+    my $output_extension          = $rcall_hash->{output_extension};
+    my $forbidden_file_extensions = $rcall_hash->{forbidden_file_extensions};
+    my $in_place_modify           = $rcall_hash->{in_place_modify};
+    my $backup_extension          = $rcall_hash->{backup_extension};
+    my $delete_backup             = $rcall_hash->{delete_backup};
+    my $logfile_header            = $rcall_hash->{logfile_header};
+    my $rpending_complaint        = $rcall_hash->{rpending_complaint};
+    my $rpending_logfile_message  = $rcall_hash->{rpending_logfile_message};
 
     # This routine is the main loop to process all files.
     # Total formatting is done with these layers of subroutines:
@@ -2261,14 +2256,14 @@ EOM
         if ( $rOpts->{'format'} eq 'tidy' && defined($routput_string) ) {
 
             $self->write_tidy_output(
-
-                $routput_string,
-
-                \@input_file_stat,
-                $in_place_modify,
-                $input_file,
-                $backup_extension,
-                $delete_backup,
+                {
+                    routput_string   => $routput_string,
+                    rinput_file_stat => \@input_file_stat,
+                    in_place_modify  => $in_place_modify,
+                    input_file       => $input_file,
+                    backup_extension => $backup_extension,
+                    delete_backup    => $delete_backup,
+                }
             );
         }
 
@@ -2283,17 +2278,14 @@ sub write_tidy_output {
 
     # Write tidied output in '$routput_string' to its final destination
 
-    my (
-        $self,
+    my ( $self, $rcall_hash ) = @_;
 
-        $routput_string,
-
-        $rinput_file_stat,
-        $in_place_modify,
-        $input_file,
-        $backup_extension,
-        $delete_backup,
-    ) = @_;
+    my $routput_string   = $rcall_hash->{routput_string};
+    my $rinput_file_stat = $rcall_hash->{rinput_file_stat};
+    my $in_place_modify  = $rcall_hash->{in_place_modify};
+    my $input_file       = $rcall_hash->{input_file};
+    my $backup_extension = $rcall_hash->{backup_extension};
+    my $delete_backup    = $rcall_hash->{delete_backup};
 
     my $rOpts           = $self->[_rOpts_];
     my $is_encoded_data = $self->[_is_encoded_data_];
@@ -2612,7 +2604,7 @@ sub process_iteration_layer {
     my ( $self, $rinput_string ) = @_;
 
     # This is the iteration layer of processing.
-    # Do all formatting, iterating if requested, on the source string $buf.
+    # Do all formatting, iterating if requested, on the source $rinput_string
     # Output depends on format type:
     #   For 'tidy' formatting, output goes to sink object
     #   For 'html' formatting, output goes to the ultimate destination

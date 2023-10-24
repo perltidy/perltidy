@@ -794,9 +794,16 @@ sub valign_input {
     my $j_terminal_match;
 
     if ( $is_terminal_ternary && @{$rgroup_lines} ) {
-        $j_terminal_match =
-          fix_terminal_ternary( $rgroup_lines->[-1], $rfields, $rtokens,
-            $rpatterns, $rfield_lengths, $group_level, );
+        $j_terminal_match = fix_terminal_ternary(
+            {
+                old_line       => $rgroup_lines->[-1],
+                rfields        => $rfields,
+                rtokens        => $rtokens,
+                rpatterns      => $rpatterns,
+                rfield_lengths => $rfield_lengths,
+                group_level    => $group_level,
+            }
+        );
         $jmax = @{$rfields} - 1;
     }
 
@@ -811,10 +818,15 @@ sub valign_input {
         && @{$rgroup_lines}
         && $is_balanced_line )
     {
-
-        $j_terminal_match =
-          fix_terminal_else( $rgroup_lines->[-1], $rfields, $rtokens,
-            $rpatterns, $rfield_lengths );
+        $j_terminal_match = fix_terminal_else(
+            {
+                old_line       => $rgroup_lines->[-1],
+                rfields        => $rfields,
+                rtokens        => $rtokens,
+                rpatterns      => $rpatterns,
+                rfield_lengths => $rfield_lengths,
+            }
+        );
         $jmax = @{$rfields} - 1;
     }
 
@@ -1077,9 +1089,14 @@ sub fix_terminal_ternary {
     #
     # returns the index of the terminal question token, if any
 
-    my ( $old_line, $rfields, $rtokens, $rpatterns, $rfield_lengths,
-        $group_level )
-      = @_;
+    my ($rcall_hash) = @_;
+
+    my $old_line       = $rcall_hash->{old_line};
+    my $rfields        = $rcall_hash->{rfields};
+    my $rtokens        = $rcall_hash->{rtokens};
+    my $rpatterns      = $rcall_hash->{rpatterns};
+    my $rfield_lengths = $rcall_hash->{rfield_lengths};
+    my $group_level    = $rcall_hash->{group_level};
 
     return if ( !$old_line );
     use constant EXPLAIN_TERNARY => 0;
@@ -1253,7 +1270,13 @@ sub fix_terminal_else {
     #
     # returns a positive value if the else block should be indented
     #
-    my ( $old_line, $rfields, $rtokens, $rpatterns, $rfield_lengths ) = @_;
+    my ($rcall_hash) = @_;
+
+    my $old_line       = $rcall_hash->{old_line};
+    my $rfields        = $rcall_hash->{rfields};
+    my $rtokens        = $rcall_hash->{rtokens};
+    my $rpatterns      = $rcall_hash->{rpatterns};
+    my $rfield_lengths = $rcall_hash->{rfield_lengths};
 
     return if ( !$old_line );
     my $jmax = @{$rfields} - 1;
@@ -2258,8 +2281,16 @@ sub sweep_left_to_right {
     #------------------------------
     # Step 3: Execute the task list
     #------------------------------
-    do_left_to_right_sweep( $rlines, $rgroups, \@todo, \%max_move, $short_pad,
-        $group_level );
+    do_left_to_right_sweep(
+        {
+            rlines      => $rlines,
+            rgroups     => $rgroups,
+            rtodo       => \@todo,
+            rmax_move   => \%max_move,
+            short_pad   => $short_pad,
+            group_level => $group_level
+        }
+    );
     return;
 } ## end sub sweep_left_to_right
 
@@ -2308,9 +2339,17 @@ sub sweep_left_to_right {
         # This is a sub called by sub do_left_to_right_sweep to
         # move the alignment column of token $itok to $col_want for a
         # sequence of groups.
-        my ( $rlines, $rgroups, $rmax_move, $ngb, $nge, $itok, $col_want,
-            $raw_tok )
-          = @_;
+        my ($rcall_hash) = @_;
+
+        my $rlines    = $rcall_hash->{rlines};
+        my $rgroups   = $rcall_hash->{rgroups};
+        my $rmax_move = $rcall_hash->{rmax_move};
+        my $ngb       = $rcall_hash->{ngb};
+        my $nge       = $rcall_hash->{nge};
+        my $itok      = $rcall_hash->{itok};
+        my $col_want  = $rcall_hash->{col_want};
+        my $raw_tok   = $rcall_hash->{raw_tok};
+
         return if ( !defined($ngb) || $nge <= $ngb );
         foreach my $ng ( $ngb .. $nge ) {
 
@@ -2340,8 +2379,15 @@ sub sweep_left_to_right {
     } ## end sub move_to_common_column
 
     sub do_left_to_right_sweep {
-        my ( $rlines, $rgroups, $rtodo, $rmax_move, $short_pad, $group_level )
-          = @_;
+
+        my ($rcall_hash) = @_;
+
+        my $rlines      = $rcall_hash->{rlines};
+        my $rgroups     = $rcall_hash->{rgroups};
+        my $rtodo       = $rcall_hash->{rtodo};
+        my $rmax_move   = $rcall_hash->{rmax_move};
+        my $short_pad   = $rcall_hash->{short_pad};
+        my $group_level = $rcall_hash->{group_level};
 
         # $blocking_level[$nj is the level at a match failure between groups
         # $ng-1 and $ng
@@ -2503,8 +2549,16 @@ sub sweep_left_to_right {
                     }
 
                     move_to_common_column(
-                        $rlines, $rgroups, $rmax_move, $ng_first,
-                        $ng - 1, $itok,    $col_want,  $raw_tok
+                        {
+                            rlines    => $rlines,
+                            rgroups   => $rgroups,
+                            rmax_move => $rmax_move,
+                            ngb       => $ng_first,
+                            nge       => $ng - 1,
+                            itok      => $itok,
+                            col_want  => $col_want,
+                            raw_tok   => $raw_tok,
+                        }
                     );
                     $ng_first        = $ng;
                     $col_want        = $col;
@@ -2525,10 +2579,18 @@ sub sweep_left_to_right {
 
             if ( $ng_end > $ng_first ) {
                 move_to_common_column(
-                    $rlines, $rgroups, $rmax_move, $ng_first,
-                    $ng_end, $itok,    $col_want,  $raw_tok
+                    {
+                        rlines    => $rlines,
+                        rgroups   => $rgroups,
+                        rmax_move => $rmax_move,
+                        ngb       => $ng_first,
+                        nge       => $ng_end,
+                        itok      => $itok,
+                        col_want  => $col_want,
+                        raw_tok   => $raw_tok,
+                    }
                 );
-            } ## end loop over groups for one task
+            }
         } ## end loop over tasks
 
         return;
@@ -3291,9 +3353,16 @@ sub match_line_pairs {
                     if ( $pat_m ne $pat ) {
                         my $pad =
                           $rfield_lengths->[$i] - $rfield_lengths_m->[$i];
-                        my ( $match_code, $rmsg ) =
-                          compare_patterns( $group_level,
-                            $tok, $tok_m, $pat, $pat_m, $pad );
+                        my ( $match_code, $rmsg ) = compare_patterns(
+                            {
+                                group_level => $group_level,
+                                tok         => $tok,
+                                tok_m       => $tok_m,
+                                pat         => $pat,
+                                pat_m       => $pat_m,
+                                pad         => $pad
+                            }
+                        );
                         if ($match_code) {
                             if    ( $match_code == 1 ) { $i_nomatch = $i }
                             elsif ( $match_code == 2 ) { $i_nomatch = 0 }
@@ -3332,7 +3401,14 @@ sub match_line_pairs {
 
 sub compare_patterns {
 
-    my ( $group_level, $tok, $tok_m, $pat, $pat_m, $pad ) = @_;
+    my ($rcall_hash) = @_;
+
+    my $group_level = $rcall_hash->{group_level};
+    my $tok         = $rcall_hash->{tok};
+    my $tok_m       = $rcall_hash->{tok_m};
+    my $pat         = $rcall_hash->{pat};
+    my $pat_m       = $rcall_hash->{pat_m};
+    my $pad         = $rcall_hash->{pad};
 
     # helper routine for sub match_line_pairs to decide if patterns in two
     # lines match well enough..Given
