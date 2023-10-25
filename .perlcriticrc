@@ -86,9 +86,12 @@ max_nests=9
 [-ControlStructures::ProhibitCascadingIfElse]
 
 # This is a good general policy but the default max of 5 args is not always
-# possible in time-critical subs.
+# possible in time-critical subs. Two subs in perltidy have 10 args.
+# When large numbers of args cannot be avoided, it works well to format them
+# with one arg per line, and no trailing comma.
 [Subroutines::ProhibitManyArgs]
-max_arguments = 12
+max_arguments = 10
+skip_object = 1
 
 [-ClassHierarchies::ProhibitExplicitISA]
 
