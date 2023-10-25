@@ -5856,7 +5856,11 @@ EOM
                 push( @tokens, substr( $input_line, $offset, $numc ) );
                 $offset += $numc;
 
-                if ( DEVEL_MODE && $numc <= 0 ) {
+                # programming note: it is most efficient to 'next' out of
+                # a critical loop like this as early as possible. So instead
+                # of 'if ( DEVEL_MODE && $numc < 0 )' we should write:
+                next unless DEVEL_MODE;
+                if ( $numc <= 0 ) {
 
                     # Should not happen unless @{$rtoken_map} is corrupted
                     $self->Fault(
