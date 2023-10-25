@@ -2269,9 +2269,16 @@ EOM
 
     sub scan_bare_identifier {
         my $self = shift;
-        ( $i, $tok, $type, $prototype ) =
-          $self->scan_bare_identifier_do( $input_line, $i, $tok, $type,
-            $prototype, $rtoken_map, $max_token_index );
+        ( $i, $tok, $type, $prototype ) = $self->scan_bare_identifier_do(
+
+            $input_line,
+            $i,
+            $tok,
+            $type,
+            $prototype,
+            $rtoken_map,
+            $max_token_index
+        );
         return;
     } ## end sub scan_bare_identifier
 
@@ -2280,12 +2287,24 @@ EOM
         my $self = shift;
 
         (
-            $i, $tok, $type, $id_scan_state, $identifier,
+
+            $i,
+            $tok,
+            $type,
+            $id_scan_state,
+            $identifier,
             my $split_pretoken_flag
-          )
-          = $self->scan_complex_identifier( $i, $id_scan_state, $identifier,
-            $rtokens, $max_token_index, $expecting,
-            $rparen_type->[$paren_depth] );
+
+        ) = $self->scan_complex_identifier(
+
+            $i,
+            $id_scan_state,
+            $identifier,
+            $rtokens,
+            $max_token_index,
+            $expecting,
+            $rparen_type->[$paren_depth]
+        );
 
         # Check for signal to fix a special variable adjacent to a keyword,
         # such as '$^One$0'.
@@ -2624,9 +2643,15 @@ EOM
 
     sub scan_id {
         my $self = shift;
-        ( $i, $tok, $type, $id_scan_state ) =
-          $self->scan_id_do( $input_line, $i, $tok, $rtokens, $rtoken_map,
-            $id_scan_state, $max_token_index );
+        ( $i, $tok, $type, $id_scan_state ) = $self->scan_id_do(
+
+            $input_line,
+            $i, $tok,
+            $rtokens,
+            $rtoken_map,
+            $id_scan_state,
+            $max_token_index
+        );
         return;
     } ## end sub scan_id
 
@@ -2735,8 +2760,17 @@ EOM
         my $self = shift;
         if ( $expecting == TERM ) {
             if ( $really_want_term{$last_nonblank_type} ) {
-                $self->report_unexpected( $tok, "term", $i_tok,
-                    $last_nonblank_i, $rtoken_map, $rtoken_type, $input_line );
+                $self->report_unexpected(
+                    {
+                        found           => $tok,
+                        expecting       => "term",
+                        i_tok           => $i_tok,
+                        last_nonblank_i => $last_nonblank_i,
+                        rpretoken_map   => $rtoken_map,
+                        rpretoken_type  => $rtoken_type,
+                        input_line      => $input_line
+                    }
+                );
                 return 1;
             }
         }
@@ -2748,8 +2782,17 @@ EOM
         my ( $self, $thing ) = @_;
         if ( $expecting == OPERATOR ) {
             if ( !defined($thing) ) { $thing = $tok }
-            $self->report_unexpected( $thing, "operator", $i_tok,
-                $last_nonblank_i, $rtoken_map, $rtoken_type, $input_line );
+            $self->report_unexpected(
+                {
+                    found           => $thing,
+                    expecting       => "operator",
+                    i_tok           => $i_tok,
+                    last_nonblank_i => $last_nonblank_i,
+                    rpretoken_map   => $rtoken_map,
+                    rpretoken_type  => $rtoken_type,
+                    input_line      => $input_line
+                }
+            );
             if ( $i_tok == 0 ) {
                 $self->interrupt_logfile();
                 $self->warning("Missing ';' or ',' above?\n");
@@ -6559,9 +6602,15 @@ sub report_unexpected {
 
     # report unexpected token type and show where it is
     # USES GLOBAL VARIABLES: (none)
-    my ( $self, $found, $expecting, $i_tok, $last_nonblank_i, $rpretoken_map,
-        $rpretoken_type, $input_line )
-      = @_;
+    my ( $self, $rcall_hash ) = @_;
+
+    my $found           = $rcall_hash->{found};
+    my $expecting       = $rcall_hash->{expecting};
+    my $i_tok           = $rcall_hash->{i_tok};
+    my $last_nonblank_i = $rcall_hash->{last_nonblank_i};
+    my $rpretoken_map   = $rcall_hash->{rpretoken_map};
+    my $rpretoken_type  = $rcall_hash->{rpretoken_type};
+    my $input_line      = $rcall_hash->{input_line};
 
     if ( ++$self->[_unexpected_error_count_] <= MAX_NAG_MESSAGES ) {
         my $msg = "found $found where $expecting expected";
@@ -7283,9 +7332,19 @@ sub scan_bare_identifier_do {
     # USES GLOBAL VARIABLES: $current_package, $last_nonblank_token,
     # $last_nonblank_type, $rparen_type, $paren_depth
 
-    my ( $self, $input_line, $i, $tok, $type, $prototype, $rtoken_map,
-        $max_token_index )
-      = @_;
+    my (
+
+        $self,
+
+        $input_line,
+        $i,
+        $tok,
+        $type,
+        $prototype,
+        $rtoken_map,
+        $max_token_index
+
+    ) = @_;
     my $i_begin = $i;
     my $package = undef;
 
@@ -7507,9 +7566,19 @@ sub scan_id_do {
     # not the last nonblank token on the line, the identifier is
     # scanned and handled and a value of '' is returned.
 
-    my ( $self, $input_line, $i, $tok, $rtokens, $rtoken_map, $id_scan_state,
-        $max_token_index )
-      = @_;
+    my (
+
+        $self,
+
+        $input_line,
+        $i,
+        $tok,
+        $rtokens,
+        $rtoken_map,
+        $id_scan_state,
+        $max_token_index
+
+    ) = @_;
     use constant DEBUG_NSCAN => 0;
     my $type = EMPTY_STRING;
     my ( $i_beg, $pos_beg );
@@ -7577,9 +7646,18 @@ sub scan_id_do {
         }
 
         elsif ( $is_package{$id_scan_state} ) {
-            ( $i, $tok, $type ) =
-              $self->do_scan_package( $input_line, $i, $i_beg, $tok, $type,
-                $rtokens, $rtoken_map, $max_token_index );
+            ( $i, $tok, $type ) = $self->do_scan_package(
+                {
+                    input_line      => $input_line,
+                    i               => $i,
+                    i_beg           => $i_beg,
+                    tok             => $tok,
+                    type            => $type,
+                    rtokens         => $rtokens,
+                    rtoken_map      => $rtoken_map,
+                    max_token_index => $max_token_index
+                }
+            );
             $id_scan_state = EMPTY_STRING;
         }
 
@@ -7667,11 +7745,17 @@ sub do_scan_package {
     # character and at least three components.
     # reference http://perldoc.perl.org/functions/package.html
 
-    my (
-        $self,    $input_line, $i,
-        $i_beg,   $tok,        $type,
-        $rtokens, $rtoken_map, $max_token_index
-    ) = @_;
+    my ( $self, $rcall_hash ) = @_;
+
+    my $input_line      = $rcall_hash->{input_line};
+    my $i               = $rcall_hash->{i};
+    my $i_beg           = $rcall_hash->{i_beg};
+    my $tok             = $rcall_hash->{tok};
+    my $type            = $rcall_hash->{type};
+    my $rtokens         = $rcall_hash->{rtokens};
+    my $rtoken_map      = $rcall_hash->{rtoken_map};
+    my $max_token_index = $rcall_hash->{max_token_index};
+
     my $package = undef;
     my $pos_beg = $rtoken_map->[$i_beg];
     pos($input_line) = $pos_beg;
@@ -8366,8 +8450,15 @@ sub do_scan_package {
         # files are processed, causing an error.
 
         (
-            my $self, $i, $id_scan_state, $identifier, $rtokens,
-            $max_token_index, $expecting, $container_type
+            my $self,
+
+            $i,
+            $id_scan_state,
+            $identifier,
+            $rtokens,
+            $max_token_index,
+            $expecting,
+            $container_type
         ) = @_;
 
         # return flag telling caller to split the pretoken
@@ -8614,8 +8705,16 @@ EOM
             print {*STDOUT}
 "SCANID: returned with tok, i, state, identifier =$tok, $i, $id_scan_state, $identifier\n";
         };
-        return ( $i, $tok, $type, $id_scan_state, $identifier,
-            $split_pretoken_flag );
+
+        return (
+
+            $i,
+            $tok,
+            $type,
+            $id_scan_state,
+            $identifier,
+            $split_pretoken_flag
+        );
     } ## end sub scan_complex_identifier
 } ## end closure for sub scan_complex_identifier
 
@@ -8688,17 +8787,17 @@ EOM
         # $rsaw_function_definition,
         # $statement_type
 
-        my ( $self, $rinput_hash ) = @_;
+        my ( $self, $rcall_hash ) = @_;
 
-        my $input_line      = $rinput_hash->{input_line};
-        my $i               = $rinput_hash->{i};
-        my $i_beg           = $rinput_hash->{i_beg};
-        my $tok             = $rinput_hash->{tok};
-        my $type            = $rinput_hash->{type};
-        my $rtokens         = $rinput_hash->{rtokens};
-        my $rtoken_map      = $rinput_hash->{rtoken_map};
-        my $id_scan_state   = $rinput_hash->{id_scan_state};
-        my $max_token_index = $rinput_hash->{max_token_index};
+        my $input_line      = $rcall_hash->{input_line};
+        my $i               = $rcall_hash->{i};
+        my $i_beg           = $rcall_hash->{i_beg};
+        my $tok             = $rcall_hash->{tok};
+        my $type            = $rcall_hash->{type};
+        my $rtokens         = $rcall_hash->{rtokens};
+        my $rtoken_map      = $rcall_hash->{rtoken_map};
+        my $id_scan_state   = $rcall_hash->{id_scan_state};
+        my $max_token_index = $rcall_hash->{max_token_index};
 
         my $i_entry = $i;
 
@@ -8954,7 +9053,7 @@ EOM
             # something else..
             elsif ($next_nonblank_token) {
 
-                if ( $rinput_hash->{tok} eq 'method' && $call_type == SUB_CALL )
+                if ( $rcall_hash->{tok} eq 'method' && $call_type == SUB_CALL )
                 {
                     # For a method call, silently ignore this error (rt145706)
                     # to avoid needless warnings. Example which can produce it:
