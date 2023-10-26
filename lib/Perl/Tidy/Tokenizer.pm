@@ -5856,25 +5856,42 @@ EOM
                 push( @tokens, substr( $input_line, $offset, $numc ) );
                 $offset += $numc;
 
-                # programming note: it is most efficient to 'next' out of
+                # programming note: it seems most efficient to 'next' out of
                 # a critical loop like this as early as possible. So instead
-                # of 'if ( DEVEL_MODE && $numc < 0 )' we should write:
+                # of 'if ( DEVEL_MODE && $numc < 0 )' we write:
                 next unless DEVEL_MODE;
-                if ( $numc <= 0 ) {
+                next if ( $numc > 0 );
 
-                    # Should not happen unless @{$rtoken_map} is corrupted
-                    $self->Fault(
-                        "number of characters is '$numc' but should be >0\n");
-                }
+                # Should not happen unless @{$rtoken_map} is corrupted
+                $self->Fault(
+                    "number of characters is '$numc' but should be >0\n");
             }
 
             # Form and store the final token of this line
             my $numc = length($input_line) - $offset;
             push( @tokens, substr( $input_line, $offset, $numc ) );
 
-            if ( DEVEL_MODE && $numc <= 0 ) {
-                $self->Fault(
-                    "Number of Characters is '$numc' but should be >0\n");
+            if (DEVEL_MODE) {
+                if ( $numc <= 0 ) {
+
+                    # check '$rtoken_map' and '$routput_token_list'
+                    $self->Fault(
+                        "Number of Characters is '$numc' but should be >0\n");
+                }
+
+                # Make sure we didn't gain or lose any characters
+                my $test_line = join EMPTY_STRING, @tokens;
+                if ( $test_line ne $input_line ) {
+                    my $len_input = length($input_line);
+                    my $len_test  = length($test_line);
+
+                    # check '$rtoken_map' and '$routput_token_list'
+                    Fault(<<EOM);
+Reconstruted line difers from input; input_length=$len_input test_length=$len_test
+input:'$input_line'
+test :'$test_line'
+EOM
+                }
             }
         }
 
@@ -7165,11 +7182,24 @@ sub guess_if_pattern_or_division {
         my $quote_pos       = 0;
         my $quoted_string;
         (
-            $i, $in_quote, $quote_character, $quote_pos, $quote_depth,
+
+            $i,
+            $in_quote,
+            $quote_character,
+            $quote_pos,
+            $quote_depth,
             $quoted_string
           )
-          = $self->follow_quoted_string( $ibeg, $in_quote, $rtokens,
-            $quote_character, $quote_pos, $quote_depth, $max_token_index );
+          = $self->follow_quoted_string(
+
+            $ibeg,
+            $in_quote,
+            $rtokens,
+            $quote_character,
+            $quote_pos,
+            $quote_depth,
+            $max_token_index
+          );
 
         if ($in_quote) {
 
@@ -9725,11 +9755,24 @@ sub find_here_doc {
         my $quoted_string;
 
         (
-            $i, $in_quote, $here_quote_character, $quote_pos, $quote_depth,
+
+            $i,
+            $in_quote,
+            $here_quote_character,
+            $quote_pos,
+            $quote_depth,
             $quoted_string
           )
-          = $self->follow_quoted_string( $i_next_nonblank, $in_quote, $rtokens,
-            $here_quote_character, $quote_pos, $quote_depth, $max_token_index );
+          = $self->follow_quoted_string(
+
+            $i_next_nonblank,
+            $in_quote,
+            $rtokens,
+            $here_quote_character,
+            $quote_pos,
+            $quote_depth,
+            $max_token_index
+          );
 
         if ($in_quote) {    # didn't find end of quote, so no target found
             $i = $ibeg;
@@ -9830,11 +9873,24 @@ sub do_quote {
     if ( $in_quote == 2 ) {    # two quotes/quoted_string_1s to follow
         my $ibeg = $i;
         (
-            $i, $in_quote, $quote_character, $quote_pos, $quote_depth,
+
+            $i,
+            $in_quote,
+            $quote_character,
+            $quote_pos,
+            $quote_depth,
             $quoted_string
           )
-          = $self->follow_quoted_string( $ibeg, $in_quote, $rtokens,
-            $quote_character, $quote_pos, $quote_depth, $max_token_index );
+          = $self->follow_quoted_string(
+
+            $ibeg,
+            $in_quote,
+            $rtokens,
+            $quote_character,
+            $quote_pos,
+            $quote_depth,
+            $max_token_index
+          );
         $quoted_string_2 .= $quoted_string;
         if ( $in_quote == 1 ) {
             if ( $quote_character =~ /[\{\[\<\(]/ ) { $i++; }
@@ -9848,11 +9904,24 @@ sub do_quote {
     if ( $in_quote == 1 ) {    # one (more) quote to follow
         my $ibeg = $i;
         (
-            $i, $in_quote, $quote_character, $quote_pos, $quote_depth,
+
+            $i,
+            $in_quote,
+            $quote_character,
+            $quote_pos,
+            $quote_depth,
             $quoted_string
           )
-          = $self->follow_quoted_string( $ibeg, $in_quote, $rtokens,
-            $quote_character, $quote_pos, $quote_depth, $max_token_index );
+          = $self->follow_quoted_string(
+
+            $ibeg,
+            $in_quote,
+            $rtokens,
+            $quote_character,
+            $quote_pos,
+            $quote_depth,
+            $max_token_index
+          );
         $quoted_string_1 .= $quoted_string;
         if ( $in_quote == 1 ) {
             $quoted_string_1 .= "\n";
