@@ -5618,8 +5618,11 @@ EOM
             $last_nonblank_container_type = $container_type;
             $last_nonblank_type_sequence  = $type_sequence;
 
-            $last_nonblank_token = $tok;
-            $last_nonblank_type  = $type;
+            # Fix part #4 for git82: propagate type 'Z' though L-R pair
+            if ( !( $type eq 'R' && $last_nonblank_type eq 'Z' ) ) {
+                $last_nonblank_token = $tok;
+                $last_nonblank_type  = $type;
+            }
         }
 
         # reset indentation level if necessary at a sub or package
@@ -7143,12 +7146,12 @@ sub guess_if_pattern_or_division {
     my ( $self, $i, $rtokens, $rtoken_map, $max_token_index ) = @_;
     my $is_pattern = 0;
     my $msg        = "guessing that / after $last_nonblank_token starts a ";
+    my $ibeg       = $i;
 
     if ( $i >= $max_token_index ) {
         $msg .= "division (no end to pattern found on the line)\n";
     }
     else {
-        my $ibeg = $i;
         my $divide_possible =
           $self->is_possible_numerator( $i, $rtokens, $max_token_index );
 
@@ -7171,9 +7174,10 @@ sub guess_if_pattern_or_division {
         #
         # Spacing rule: a space before the slash but not after the slash
         # usually indicates a pattern.  We can use this to break ties.
-
-        my $is_pattern_by_spacing =
-          ( $i > 1 && $next_token !~ m/^\s/ && $rtokens->[ $i - 2 ] =~ m/^\s/ );
+        # Note: perl seems to take a newline as a space in this rule (c243)
+        my $space_before          = $i < 2 || $rtokens->[ $i - 2 ] =~ m/^\s/;
+        my $space_after           = $next_token                    =~ m/^\s/;
+        my $is_pattern_by_spacing = $space_before && !$space_after;
 
         # look for a possible ending / on this line..
         my $in_quote        = 1;
