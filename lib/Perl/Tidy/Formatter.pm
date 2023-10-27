@@ -13453,6 +13453,8 @@ sub special_indentation_adjustments {
     foreach ( @{$rLL} ) { push @adjusted_levels, $_->[_LEVEL_] }
     $self->[_radjusted_levels_] = \@adjusted_levels;
 
+    my $min_starting_level = min(@adjusted_levels);
+
     # First set adjusted levels for any non-indenting braces.
     $self->do_non_indenting_braces();
 
@@ -13470,8 +13472,8 @@ sub special_indentation_adjustments {
     $self->extended_ci()
       if ($rOpts_extended_continuation_indentation);
 
-    # Now clip any adjusted levels to be non-negative
-    $self->clip_adjusted_levels();
+    # Now clip any starting or adjusted levels to be non-negative
+    $self->clip_adjusted_levels($min_starting_level);
 
     return;
 } ## end sub special_indentation_adjustments
@@ -13479,8 +13481,18 @@ sub special_indentation_adjustments {
 sub clip_adjusted_levels {
 
     # Replace any negative adjusted levels with zero.
-    # Negative levels can occur in files with brace errors.
-    my ($self) = @_;
+    # Negative levels can only occur in files with brace errors.
+    my ( $self, $min_starting_level ) = @_;
+
+    # Clip the original _LEVEL_ values to zero if necessary
+    my $rLL = $self->[_rLL_];
+    if ( $min_starting_level < 0 ) {
+        foreach my $item ( @{$rLL} ) {
+            if ( $item->[_LEVEL_] < 0 ) { $item->[_LEVEL_] = 0 }
+        }
+    }
+
+    # Clip the adjusted levels to zero if necessary
     my $radjusted_levels = $self->[_radjusted_levels_];
     return unless ( defined($radjusted_levels) && @{$radjusted_levels} );
     my $min = min( @{$radjusted_levels} );    # fast check for min
@@ -13489,6 +13501,7 @@ sub clip_adjusted_levels {
         # slow loop, but rarely needed
         foreach ( @{$radjusted_levels} ) { $_ = 0 if ( $_ < 0 ) }
     }
+
     return;
 } ## end sub clip_adjusted_levels
 
@@ -16459,10 +16472,6 @@ EOM
 
             $next_slevel = $rdepth_of_opening_seqno->[$next_parent_seqno] + 1;
         }
-
-        # Clip levels to zero if there are level errors in the file.
-        # We had to wait until now for reasons explained in sub 'write_line'.
-        if ( $level < 0 ) { $level = 0 }
 
         # Safety check that length is defined. This is slow and should not be
         # needed now, so just do it in DEVEL_MODE to check programming changes.
