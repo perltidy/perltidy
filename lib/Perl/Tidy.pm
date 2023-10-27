@@ -4538,6 +4538,13 @@ sub check_options {
 EOM
     }
 
+    my $sil = $rOpts->{'starting-indentation-level'};
+    if ( defined($sil) && $sil < 0 ) {
+        Die(<<EOM);
+--starting-indentation-level=$sil not possible; it should be non-negative
+EOM
+    }
+
     # Since -vt, -vtc, and -cti are abbreviations, but under
     # msdos, an unquoted input parameter like vtc=1 will be
     # seen as 2 parameters, vtc and 1, so the abbreviations
