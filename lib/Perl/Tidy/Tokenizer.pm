@@ -5087,6 +5087,13 @@ EOM
 
     use constant DEBUG_TOKENIZE => 0;
 
+    my %is_arrow_or_Z;
+
+    BEGIN {
+        my @qZ = qw( -> Z );
+        @{is_arrow_or_Z}{@qZ} = (1) x scalar(@qZ);
+    }
+
     sub tokenize_this_line {
 
         # This routine tokenizes one line. The results are stored in
@@ -5337,25 +5344,36 @@ EOM
                     $last_nonblank_container_type = $container_type;
                     $last_nonblank_type_sequence  = $type_sequence;
                     $last_nonblank_i              = $i_tok;
-
-                    # Fix part #3 for git82: propagate type 'Z' though L-R pair
-                    if ( !( $type eq 'R' && $last_nonblank_type eq 'Z' ) ) {
-                        $last_nonblank_token = $tok;
-                        $last_nonblank_type  = $type;
-                    }
+                    $last_nonblank_token          = $tok;
+                    $last_nonblank_type           = $type;
                 }
 
-                # Patch for c030: Fix things in case a '->' got separated from
-                # the subsequent identifier by a side comment.  We need the
-                # last_nonblank_token to have a leading -> to avoid triggering
-                # an operator expected error message at the next '('. See also
-                # fix for git #63.
-                if ( $last_last_nonblank_token eq '->' ) {
-                    if (   $last_nonblank_type eq 'w'
-                        || $last_nonblank_type eq 'i' )
-                    {
-                        $last_nonblank_token = '->' . $last_nonblank_token;
-                        $last_nonblank_type  = 'i';
+                # Check for patches
+                if ( $is_arrow_or_Z{$last_last_nonblank_type} ) {
+
+                    # Patch for c030: Fix things in case a '->' got separated
+                    # from the subsequent identifier by a side comment.  We
+                    # need the last_nonblank_token to have a leading -> to
+                    # avoid triggering an operator expected error message at
+                    # the next '('. See also fix for git #63.
+                    if ( $last_last_nonblank_type eq '->' ) {
+                        if (   $last_nonblank_type eq 'w'
+                            || $last_nonblank_type eq 'i' )
+                        {
+                            $last_nonblank_token = '->' . $last_nonblank_token;
+                            $last_nonblank_type  = 'i';
+                        }
+                    }
+
+                    # Fix part #3 for git82: propagate type 'Z' though L-R pair
+                    elsif ( $last_last_nonblank_type eq 'Z' ) {
+                        if ( $last_nonblank_type eq 'R' ) {
+                            $last_nonblank_type  = $last_last_nonblank_type;
+                            $last_nonblank_token = $last_last_nonblank_token;
+                        }
+                    }
+                    else {
+                        # No other patches
                     }
                 }
             }
@@ -5617,12 +5635,8 @@ EOM
             $last_nonblank_block_type     = $block_type;
             $last_nonblank_container_type = $container_type;
             $last_nonblank_type_sequence  = $type_sequence;
-
-            # Fix part #4 for git82: propagate type 'Z' though L-R pair
-            if ( !( $type eq 'R' && $last_nonblank_type eq 'Z' ) ) {
-                $last_nonblank_token = $tok;
-                $last_nonblank_type  = $type;
-            }
+            $last_nonblank_token          = $tok;
+            $last_nonblank_type           = $type;
         }
 
         # reset indentation level if necessary at a sub or package
