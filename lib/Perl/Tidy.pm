@@ -1573,6 +1573,21 @@ sub get_decoded_string_buffer {
         # zero length, but keep going
     }
 
+    # Check size of strings arriving from the standard input. These
+    # could not be checked until now.
+    if ( $input_file eq '-' ) {
+        my $size_in_mb =
+          length( ${$rinput_string} ) / ( CONST_1024 * CONST_1024 );
+        my $maximum_file_size_mb = $rOpts->{'maximum-file-size-mb'};
+        if ( $size_in_mb > $maximum_file_size_mb ) {
+            $size_in_mb = sprintf( "%0.1f", $size_in_mb );
+            Warn(
+"skipping file: <stdin>: size $size_in_mb MB exceeds limit $maximum_file_size_mb; use -maxfs=i to change\n"
+            );
+            return;
+        }
+    }
+
     $rinput_string = $self->set_line_separator($rinput_string);
 
     my $encoding_in              = EMPTY_STRING;
@@ -2013,10 +2028,11 @@ sub process_all_files {
             # files into memory, trying to process an extremely large file
             # could cause system problems.
             my $size_in_mb = ( -s $input_file ) / ( CONST_1024 * CONST_1024 );
-            if ( $size_in_mb > $rOpts->{'maximum-file-size-mb'} ) {
+            my $maximum_file_size_mb = $rOpts->{'maximum-file-size-mb'};
+            if ( $size_in_mb > $maximum_file_size_mb ) {
                 $size_in_mb = sprintf( "%0.1f", $size_in_mb );
                 Warn(
-"skipping file: $input_file: size $size_in_mb MB exceeds limit $rOpts->{'maximum-file-size-mb'}; use -mfs=i to change\n"
+"skipping file: $input_file: size $size_in_mb MB exceeds limit $maximum_file_size_mb; use -maxfs=i to change\n"
                 );
                 next;
             }

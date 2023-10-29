@@ -5343,7 +5343,10 @@ MB for example would be
 
   perltidy -maxfs=20
 
-This only applies to files specified by filename on the command line.
+This length test is applied to named files before they are read into memory.
+It is applied to files arriving from standard input after they are read into
+memory. It is not applied to character strings arriving by a call to the
+Perl::Tidy module.
 
 B<--maximum-level-errors=n> or B<-maxle=n> specifies the maximum number of
 indentation level errors are allowed before perltidy skips formatting and just
