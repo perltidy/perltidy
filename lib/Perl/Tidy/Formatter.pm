@@ -481,7 +481,6 @@ BEGIN {
         _CI_LEVEL_          => $i++,
         _CUMULATIVE_LENGTH_ => $i++,
         _LINE_INDEX_        => $i++,
-        _KNEXT_SEQ_ITEM_    => $i++,
         _LEVEL_             => $i++,
         _TOKEN_             => $i++,
         _TOKEN_LENGTH_      => $i++,
@@ -504,8 +503,9 @@ BEGIN {
         _Klimit_                    => $i++,
         _rdepth_of_opening_seqno_   => $i++,
         _rSS_                       => $i++,
-        _Iss_opening_               => $i++,
-        _Iss_closing_               => $i++,
+        _rI_opening_                => $i++,
+        _rI_closing_                => $i++,
+        _rK_next_seqno_by_K_        => $i++,
         _rblock_type_of_seqno_      => $i++,
         _ris_asub_block_            => $i++,
         _ris_sub_block_             => $i++,
@@ -513,7 +513,7 @@ BEGIN {
         _K_closing_container_       => $i++,
         _K_opening_ternary_         => $i++,
         _K_closing_ternary_         => $i++,
-        _K_first_seq_item_          => $i++,
+        _rK_sequenced_token_list_   => $i++,
         _rtype_count_by_seqno_      => $i++,
         _ris_function_call_paren_   => $i++,
         _rlec_count_by_seqno_       => $i++,
@@ -962,17 +962,19 @@ sub new {
     $self->[_K_closing_container_] = {};
     $self->[_K_opening_ternary_]   = {};
     $self->[_K_closing_ternary_]   = {};
-    $self->[_K_first_seq_item_]    = undef; # K of first token with a sequence #
+
+    # A list of index K of sequenced tokens to allow loops over all
+    $self->[_rK_sequenced_token_list_] = [];
 
     # 'rSS' is the 'Signed Sequence' list, a continuous list of all sequence
     # numbers with + or - indicating opening or closing. This list represents
     # the entire container tree and is invariant under reformatting.  It can be
     # used to quickly travel through the tree.  Indexes in the rSS array begin
-    # with '$I' by convention.  The 'Iss' arrays give the indexes in this list
-    # of opening and closing sequence numbers.
-    $self->[_rSS_]         = [];
-    $self->[_Iss_opening_] = [];
-    $self->[_Iss_closing_] = [];
+    # with '$I' by convention.
+    $self->[_rSS_]                = [];
+    $self->[_rI_opening_]         = [];
+    $self->[_rI_closing_]         = [];
+    $self->[_rK_next_seqno_by_K_] = [];
 
     # Arrays to help traverse the tree
     $self->[_rdepth_of_opening_seqno_] = [];
@@ -6270,7 +6272,7 @@ EOM
                 }
 
                 if ( $sign > 0 ) {
-                    $self->[_Iss_opening_]->[$seqno] = @{$rSS};
+                    $self->[_rI_opening_]->[$seqno] = @{$rSS};
 
                     # For efficiency, we find the maximum level of
                     # opening tokens of any type.  The actual maximum
@@ -6283,7 +6285,7 @@ EOM
                         $self->[_maximum_level_at_line_] = $line_index + 1;
                     }
                 }
-                else { $self->[_Iss_closing_]->[$seqno] = @{$rSS} }
+                else { $self->[_rI_closing_]->[$seqno] = @{$rSS} }
                 push @{$rSS}, $sign * $seqno;
 
             }
@@ -6292,7 +6294,6 @@ EOM
             # remaining token variables will be added later as follows:
             #  _TOKEN_LENGTH_      is added by sub store_token
             #  _CUMULATIVE_LENGTH_ is added by sub store_token
-            #  _KNEXT_SEQ_ITEM_    is added by sub respace_post_loop_ops
             #  _CI_LEVEL_          is added by sub set_ci
             # So all token variables are available for use after sub set_ci.
 
@@ -6530,6 +6531,7 @@ sub find_level_info {
             }
         }
     } ## end TREE_LOOP
+
     return \%level_info;
 } ## end sub find_level_info
 
@@ -8922,6 +8924,7 @@ my $rblock_type_of_seqno;
 
 my $K_opening_container;
 my $K_closing_container;
+my @K_sequenced_token_list;
 
 my %K_first_here_doc_by_seqno;
 
@@ -9009,6 +9012,8 @@ sub initialize_respace_tokens_closure {
     # set_whitespace_flags, which needs these.
     $K_opening_container = $self->[_K_opening_container_] = {};
     $K_closing_container = $self->[_K_closing_container_] = {};
+
+    @K_sequenced_token_list = ();
 
     return;
 
@@ -9614,15 +9619,19 @@ sub respace_post_loop_ops {
     # token list '$rLL_new'. Now we have to go through this new list and
     # define some indexes which allow quick access into it.
 
-    # Walk backwards through the tokens, making forward links to sequence items.
-    if ( @{$rLL_new} ) {
-        my $KNEXT;
-        foreach my $KK ( reverse( 0 .. @{$rLL_new} - 1 ) ) {
-            $rLL_new->[$KK]->[_KNEXT_SEQ_ITEM_] = $KNEXT;
-            if ( $rLL_new->[$KK]->[_TYPE_SEQUENCE_] ) { $KNEXT = $KK }
+    return unless ( @{$rLL_new} );
+
+    # Setup array for finding the next sequence number after any token
+    my $rK_next_seqno_by_K = [];
+    my $K_last             = 0;
+    foreach my $K (@K_sequenced_token_list) {
+        foreach my $KK ( $K_last .. $K - 1 ) {
+            $rK_next_seqno_by_K->[$KK] = $K;
         }
-        $self->[_K_first_seq_item_] = $KNEXT;
+        $K_last = $K;
     }
+    $self->[_rK_next_seqno_by_K_]      = $rK_next_seqno_by_K;
+    $self->[_rK_sequenced_token_list_] = \@K_sequenced_token_list;
 
     # Find and remember lists by sequence number
     foreach my $seqno ( keys %{$K_opening_container} ) {
@@ -9976,6 +9985,9 @@ sub store_token {
 
             # This will be the index of this item in the new array
             my $KK_new = @{$rLL_new};
+
+            # remember new K of sequence tokens
+            push @K_sequenced_token_list, $KK_new;
 
             if ( $is_opening_token{$token} ) {
 
@@ -11127,7 +11139,7 @@ sub parent_seqno_by_K {
         $parent_seqno = $self->[_rparent_of_seqno_]->{$type_sequence};
     }
     else {
-        my $Kt = $rLL->[$KK]->[_KNEXT_SEQ_ITEM_];
+        my $Kt = $self->[_rK_next_seqno_by_K_]->[$KK];
         if ( defined($Kt) ) {
             $type_sequence = $rLL->[$Kt]->[_TYPE_SEQUENCE_];
             my $type = $rLL->[$Kt]->[_TYPE_];
@@ -11676,10 +11688,7 @@ sub weld_cuddled_blocks {
 
     # loop over structure items to find cuddled pairs
     my $level = 0;
-    my $KNEXT = $self->[_K_first_seq_item_];
-    while ( defined($KNEXT) ) {
-        my $KK = $KNEXT;
-        $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
+    foreach my $KK ( @{ $self->[_rK_sequenced_token_list_] } ) {
         my $rtoken_vars   = $rLL->[$KK];
         my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
         if ( !$type_sequence ) {
@@ -11687,8 +11696,8 @@ sub weld_cuddled_blocks {
 
             # A fault here implies that an error was made in the little loop at
             # the bottom of sub 'respace_tokens' which set the values of
-            # _KNEXT_SEQ_ITEM_.  Or an error has been introduced in the
-            # loop control lines above.
+            # _rK_sequenced_token_list_.  Or an error has been introduced in
+            # the loop control lines above.
             Fault("sequence = $type_sequence not defined at K=$KK")
               if (DEVEL_MODE);
             next;
@@ -11831,6 +11840,7 @@ sub find_nested_pairs {
     my $K_opening_container  = $self->[_K_opening_container_];
     my $K_closing_container  = $self->[_K_closing_container_];
     my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
+    my $rK_next_seqno_by_K   = $self->[_rK_next_seqno_by_K_];
 
     # We define an array of pairs of nested containers
     my @nested_pairs;
@@ -11880,7 +11890,7 @@ sub find_nested_pairs {
 
         # Verify that the inner opening token is the next container after the
         # outer opening token.
-        my $K_io_check = $rLL->[$K_outer_opening]->[_KNEXT_SEQ_ITEM_];
+        my $K_io_check = $rK_next_seqno_by_K->[$K_outer_opening];
         next unless defined($K_io_check);
         if ( $K_io_check != $K_inner_opening ) {
 
@@ -11906,7 +11916,7 @@ sub find_nested_pairs {
             next unless defined($seqno_signature);
             my $K_signature_closing = $K_closing_container->{$seqno_signature};
             next unless defined($K_signature_closing);
-            my $K_test = $rLL->[$K_signature_closing]->[_KNEXT_SEQ_ITEM_];
+            my $K_test = $rK_next_seqno_by_K->[$K_signature_closing];
             next
               unless ( defined($K_test) && $K_test == $K_inner_opening );
 
@@ -12156,8 +12166,9 @@ sub setup_new_weld_measurements {
     #   $starting_lentot = starting cumulative length
     #   $msg = diagnostic message for debugging
 
-    my $rLL    = $self->[_rLL_];
-    my $rlines = $self->[_rlines_];
+    my $rLL                = $self->[_rLL_];
+    my $rlines             = $self->[_rlines_];
+    my $rK_next_seqno_by_K = $self->[_rK_next_seqno_by_K_];
 
     my $starting_level;
     my $starting_ci;
@@ -12206,8 +12217,7 @@ sub setup_new_weld_measurements {
             # the previous line in length calculations.  This check added to
             # fix case b1174 which had a '?' on the line
             my $no_previous_seq_item = $Kref == $Kouter_opening
-              || $rLL->[$Kref]->[_KNEXT_SEQ_ITEM_] == $Kouter_opening;
-
+              || $rK_next_seqno_by_K->[$Kref] == $Kouter_opening;
             if ( $no_previous_seq_item
                 && substr( $type_prev, 0, 1 ) eq '=' )
             {
@@ -12237,7 +12247,7 @@ sub setup_new_weld_measurements {
     # Also look for a ')' at the same level and, if found, use it.
     # This fixes case b1224.
     if ( $Kref < $Kouter_opening ) {
-        my $Knext    = $rLL->[$Kref]->[_KNEXT_SEQ_ITEM_];
+        my $Knext    = $rK_next_seqno_by_K->[$Kref];
         my $level_oo = $rLL->[$Kouter_opening]->[_LEVEL_];
         while ( $Knext < $Kouter_opening ) {
             if ( $rLL->[$Knext]->[_LEVEL_] == $level_oo ) {
@@ -12248,7 +12258,7 @@ sub setup_new_weld_measurements {
                     last;
                 }
             }
-            $Knext = $rLL->[$Knext]->[_KNEXT_SEQ_ITEM_];
+            $Knext = $rK_next_seqno_by_K->[$Knext];
         }
     }
 
@@ -12394,6 +12404,7 @@ sub weld_nested_containers {
     my $rlines                  = $self->[_rlines_];
     my $K_opening_container     = $self->[_K_opening_container_];
     my $K_closing_container     = $self->[_K_closing_container_];
+    my $rK_next_seqno_by_K      = $self->[_rK_next_seqno_by_K_];
     my $rblock_type_of_seqno    = $self->[_rblock_type_of_seqno_];
     my $ris_asub_block          = $self->[_ris_asub_block_];
     my $rmax_vertical_tightness = $self->[_rmax_vertical_tightness_];
@@ -12747,7 +12758,7 @@ EOM
 
                     # Then do not weld if no other containers between inner
                     # opening and closing.
-                    my $Knext_seq_item = $inner_opening->[_KNEXT_SEQ_ITEM_];
+                    my $Knext_seq_item = $rK_next_seqno_by_K->[$Kinner_opening];
                     if ( $Knext_seq_item == $Kinner_closing ) {
                         $do_not_weld_rule = 1;
                     }
@@ -13047,16 +13058,16 @@ sub weld_nested_quotes {
     my $rflags = $weld_nested_exclusion_rules{'q'};
     return if ( defined($rflags) && defined( $rflags->[1] ) );
 
-    my $rK_weld_left  = $self->[_rK_weld_left_];
-    my $rK_weld_right = $self->[_rK_weld_right_];
-
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
     my $Num = @{$rLL};
 
-    my $K_opening_container = $self->[_K_opening_container_];
-    my $K_closing_container = $self->[_K_closing_container_];
-    my $rlines              = $self->[_rlines_];
+    my $rK_weld_left            = $self->[_rK_weld_left_];
+    my $rK_weld_right           = $self->[_rK_weld_right_];
+    my $K_opening_container     = $self->[_K_opening_container_];
+    my $K_closing_container     = $self->[_K_closing_container_];
+    my $rK_sequenced_token_list = $self->[_rK_sequenced_token_list_];
+    my $rlines                  = $self->[_rlines_];
 
     my $starting_lentot;
     my $maximum_text_length;
@@ -13076,10 +13087,7 @@ sub weld_nested_quotes {
       1 + max( $rOpts_indent_columns, $rOpts_continuation_indentation );
 
     # look for single qw quotes nested in containers
-    my $KNEXT = $self->[_K_first_seq_item_];
-    while ( defined($KNEXT) ) {
-        my $KK = $KNEXT;
-        $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
+    foreach my $KK ( @{$rK_sequenced_token_list} ) {
         my $rtoken_vars = $rLL->[$KK];
         my $outer_seqno = $rtoken_vars->[_TYPE_SEQUENCE_];
         if ( !$outer_seqno ) {
@@ -13087,7 +13095,7 @@ sub weld_nested_quotes {
 
             # A fault here implies that an error was made in the little loop at
             # the bottom of sub 'respace_tokens' which set the values of
-            # _KNEXT_SEQ_ITEM_.  Or an error has been introduced in the
+            # rK_sequenced_token_list.  Or an error has been introduced in the
             # loop control lines above.
             Fault("sequence = $outer_seqno not defined at K=$KK")
               if (DEVEL_MODE);
@@ -13324,12 +13332,13 @@ sub mark_short_nested_blocks {
 
     return unless ( $rOpts->{'one-line-block-nesting'} );
 
-    my $K_opening_container  = $self->[_K_opening_container_];
-    my $K_closing_container  = $self->[_K_closing_container_];
-    my $rbreak_container     = $self->[_rbreak_container_];
-    my $ris_broken_container = $self->[_ris_broken_container_];
-    my $rshort_nested        = $self->[_rshort_nested_];
-    my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
+    my $K_opening_container     = $self->[_K_opening_container_];
+    my $K_closing_container     = $self->[_K_closing_container_];
+    my $rbreak_container        = $self->[_rbreak_container_];
+    my $ris_broken_container    = $self->[_ris_broken_container_];
+    my $rshort_nested           = $self->[_rshort_nested_];
+    my $rblock_type_of_seqno    = $self->[_rblock_type_of_seqno_];
+    my $rK_sequenced_token_list = $self->[_rK_sequenced_token_list_];
 
     # Variables needed for estimating line lengths
     my $maximum_text_length;
@@ -13348,10 +13357,7 @@ sub mark_short_nested_blocks {
     # loop over all containers
     my @open_block_stack;
     my $iline = -1;
-    my $KNEXT = $self->[_K_first_seq_item_];
-    while ( defined($KNEXT) ) {
-        my $KK = $KNEXT;
-        $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
+    foreach my $KK ( @{$rK_sequenced_token_list} ) {
         my $rtoken_vars   = $rLL->[$KK];
         my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
         if ( !$type_sequence ) {
@@ -13359,7 +13365,7 @@ sub mark_short_nested_blocks {
 
             # A fault here implies that an error was made in the little loop at
             # the bottom of sub 'respace_tokens' which set the values of
-            # _KNEXT_SEQ_ITEM_.  Or an error has been introduced in the
+            # $rK_sequenced_token_list.  Or an error has been introduced in the
             # loop control lines above.
             Fault("sequence = $type_sequence not defined at K=$KK")
               if (DEVEL_MODE);
@@ -14067,12 +14073,17 @@ sub extended_ci {
     my %available_space;
 
     # Loop over all opening container tokens
-    my $K_opening_container = $self->[_K_opening_container_];
-    my $K_closing_container = $self->[_K_closing_container_];
+    my $K_opening_container     = $self->[_K_opening_container_];
+    my $K_closing_container     = $self->[_K_closing_container_];
+    my $rK_next_seqno_by_K      = $self->[_rK_next_seqno_by_K_];
+    my $rK_sequenced_token_list = $self->[_rK_sequenced_token_list_];
     my @seqno_stack;
     my $seqno_top;
     my $KLAST;
-    my $KNEXT = $self->[_K_first_seq_item_];
+
+    # TODO: This loop can probably be rewritten in a simpler way using
+    # the list @{$rK_sequenced_token_list}
+    my $KNEXT = $rK_sequenced_token_list->[0];
 
     # The following variable can be used to allow a little extra space to
     # avoid blinkers.  A value $len_tol = 20 fixed the following
@@ -14112,7 +14123,7 @@ sub extended_ci {
 
         $KLAST = $KNEXT;
         my $KK = $KNEXT;
-        $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
+        $KNEXT = $rK_next_seqno_by_K->[$KNEXT];
 
         my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
 
@@ -14669,6 +14680,7 @@ sub is_fragile_block_type {
         my $rlines                     = $self->[_rlines_];
         my $rcollapsed_length_by_seqno = $self->[_rcollapsed_length_by_seqno_];
         my $rtype_count_by_seqno       = $self->[_rtype_count_by_seqno_];
+        my $rK_next_seqno_by_K         = $self->[_rK_next_seqno_by_K_];
 
         my $K_start_multiline_qw;
         my $level_start_multiline_qw = 0;
@@ -14809,7 +14821,7 @@ sub is_fragile_block_type {
                         && !$has_comment )
                     {
                         my $seqno_end = $rLL->[$K_terminal]->[_TYPE_SEQUENCE_];
-                        my $Kc_test   = $rLL->[$K_terminal]->[_KNEXT_SEQ_ITEM_];
+                        my $Kc_test   = $rK_next_seqno_by_K->[$K_terminal];
 
                         # We are looking for a short broken remnant on the next
                         # line; something like the third line here (b1408):
@@ -16446,7 +16458,7 @@ EOM
                 $next_parent_seqno = $rparent_of_seqno->{$seqno};
             }
             else {
-                my $Kt = $rLL->[$Ktoken_vars]->[_KNEXT_SEQ_ITEM_];
+                my $Kt = $self->[_rK_next_seqno_by_K_]->[$Ktoken_vars];
                 if ( defined($Kt) ) {
                     my $type_sequence_t = $rLL->[$Kt]->[_TYPE_SEQUENCE_];
                     my $type_t          = $rLL->[$Kt]->[_TYPE_];
@@ -19848,10 +19860,12 @@ EOM
         my $type_1 = $types_to_go[$i1];
         my $rbreak = ( $type_1 ne ':' ) ? $ris_break_token : $ris_comma_token;
 
+        my $rK_next_seqno_by_K = $self->[_rK_next_seqno_by_K_];
+
         # Fast preliminary loop to verify that tokens are in the same container
         my $KK = $K1;
         while (1) {
-            $KK = $rLL->[$KK]->[_KNEXT_SEQ_ITEM_];
+            $KK = $rK_next_seqno_by_K->[$KK];
             last if !defined($KK);
             last if ( $KK >= $K2 );
             my $ii      = $i1 + $KK - $K1;
@@ -27801,10 +27815,11 @@ sub convey_batch_to_vertical_aligner {
     #   logical constructions
     # - send the line to the vertical aligner
 
-    my $rLL               = $self->[_rLL_];
-    my $Klimit            = $self->[_Klimit_];
-    my $ris_list_by_seqno = $self->[_ris_list_by_seqno_];
-    my $this_batch        = $self->[_this_batch_];
+    my $rLL                = $self->[_rLL_];
+    my $Klimit             = $self->[_Klimit_];
+    my $ris_list_by_seqno  = $self->[_ris_list_by_seqno_];
+    my $this_batch         = $self->[_this_batch_];
+    my $rK_next_seqno_by_K = $self->[_rK_next_seqno_by_K_];
 
     my $do_not_pad              = $this_batch->[_do_not_pad_];
     my $starting_in_quote       = $this_batch->[_starting_in_quote_];
@@ -28181,14 +28196,14 @@ EOM
                 # );
                 $is_terminal_ternary = 1;
 
-                my $KP = $rLL->[$Kbeg]->[_KNEXT_SEQ_ITEM_];
+                my $KP = $rK_next_seqno_by_K->[$Kbeg];
                 while ( defined($KP) && $KP <= $Kend ) {
                     my $type_KP = $rLL->[$KP]->[_TYPE_];
                     if ( $type_KP eq '?' || $type_KP eq ':' ) {
                         $is_terminal_ternary = 0;
                         last;
                     }
-                    $KP = $rLL->[$KP]->[_KNEXT_SEQ_ITEM_];
+                    $KP = $rK_next_seqno_by_K->[$KP];
                 }
             }
             $rvao_args->{is_terminal_ternary} = $is_terminal_ternary;
