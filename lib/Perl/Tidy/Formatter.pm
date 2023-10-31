@@ -3451,7 +3451,7 @@ sub set_whitespace_flags {
                 $ws = WS_OPTIONAL;
             }
             else {
-                # ok - opening type not covered by a special rule
+                # opening type not covered by a special rule
             }
 
             # keep space between 'sub' and '{' for anonymous sub definition,
@@ -3489,7 +3489,7 @@ sub set_whitespace_flags {
         } ## end elsif ( $is_opening_type{$type} ) {
 
         else {
-            # ok: $type not opening, closing, or covered by a special rule
+            # $type not opening, closing, or covered by a special rule
         }
 
         # always preserve whatever space was used after a possible
@@ -9622,16 +9622,43 @@ sub respace_post_loop_ops {
     return unless ( @{$rLL_new} );
 
     # Setup array for finding the next sequence number after any token
-    my $rK_next_seqno_by_K = [];
-    my $K_last             = 0;
+    my @K_next_seqno_by_K;
+    my $K_last = 0;
     foreach my $K (@K_sequenced_token_list) {
-        foreach my $KK ( $K_last .. $K - 1 ) {
-            $rK_next_seqno_by_K->[$KK] = $K;
-        }
+        push @K_next_seqno_by_K, ($K) x ( $K - $K_last );
         $K_last = $K;
     }
-    $self->[_rK_next_seqno_by_K_]      = $rK_next_seqno_by_K;
+
+    # Note: here is the slow way to do the above loop (100 ms)
+    ## foreach my $KK ( $K_last .. $K - 1 ) {
+    ##     $K_next_seqno_by_K[$KK] = $K;
+    ## }
+
+    # This is faster (63 ms)
+    ## my @q = ( $K_last .. $K - 1 );
+    ## @K_next_seqno_by_K[@q] = ($K) x scalar(@q);
+
+    # The push method above is fastest, at 37 ms in my benchmark.
+
+    $self->[_rK_next_seqno_by_K_]      = \@K_next_seqno_by_K;
     $self->[_rK_sequenced_token_list_] = \@K_sequenced_token_list;
+
+    # Verify that arrays @K_sequenced_token_list and @{$rSS} are parallel
+    # arrays, meaning that they have a common array index 'I'. This index maybe
+    # be found by seqno with rI_container and rI_closing.
+    if (DEVEL_MODE) {
+        my $num_rSS  = @{ $self->[_rSS_] };
+        my $num_Kseq = @K_sequenced_token_list;
+
+        # If this error occurs, we have gained or lost one or more of the
+        # sequenced tokens received from the tokenizer. This should never
+        # happen.
+        if ( $num_rSS != $num_Kseq ) {
+            Fault(<<EOM);
+num_rSS= $num_rSS != num_Kseq=$num_Kseq
+EOM
+        }
+    }
 
     # Find and remember lists by sequence number
     foreach my $seqno ( keys %{$K_opening_container} ) {
@@ -11712,7 +11739,7 @@ sub weld_cuddled_blocks {
         if    ( $level < $last_level ) { $in_chain{$last_level} = undef }
         elsif ( $level > $last_level ) { $in_chain{$level}      = undef }
         else {
-            # ok - level unchanged
+            # level unchanged
         }
 
         # We are only looking at code blocks
@@ -14075,15 +14102,10 @@ sub extended_ci {
     # Loop over all opening container tokens
     my $K_opening_container     = $self->[_K_opening_container_];
     my $K_closing_container     = $self->[_K_closing_container_];
-    my $rK_next_seqno_by_K      = $self->[_rK_next_seqno_by_K_];
     my $rK_sequenced_token_list = $self->[_rK_sequenced_token_list_];
     my @seqno_stack;
     my $seqno_top;
-    my $KLAST;
-
-    # TODO: This loop can probably be rewritten in a simpler way using
-    # the list @{$rK_sequenced_token_list}
-    my $KNEXT = $rK_sequenced_token_list->[0];
+    my $K_last;
 
     # The following variable can be used to allow a little extra space to
     # avoid blinkers.  A value $len_tol = 20 fixed the following
@@ -14094,7 +14116,7 @@ sub extended_ci {
     # be used to minimize the chance of a blinker.
     my $len_tol = 0;
 
-    while ( defined($KNEXT) ) {
+    foreach my $KK ( @{$rK_sequenced_token_list} ) {
 
         # Fix all tokens up to the next sequence item if we are changing CI
         if ($seqno_top) {
@@ -14102,7 +14124,7 @@ sub extended_ci {
             my $is_list = $ris_list_by_seqno->{$seqno_top};
             my $space   = $available_space{$seqno_top};
             my $count   = 0;
-            foreach my $Kt ( $KLAST + 1 .. $KNEXT - 1 ) {
+            foreach my $Kt ( $K_last + 1 .. $KK - 1 ) {
 
                 next if ( $rLL->[$Kt]->[_CI_LEVEL_] );
 
@@ -14121,9 +14143,7 @@ sub extended_ci {
             $ris_seqno_controlling_ci->{$seqno_top} += $count;
         }
 
-        $KLAST = $KNEXT;
-        my $KK = $KNEXT;
-        $KNEXT = $rK_next_seqno_by_K->[$KNEXT];
+        $K_last = $KK;
 
         my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
 
@@ -16460,18 +16480,16 @@ EOM
             else {
                 my $Kt = $self->[_rK_next_seqno_by_K_]->[$Ktoken_vars];
                 if ( defined($Kt) ) {
-                    my $type_sequence_t = $rLL->[$Kt]->[_TYPE_SEQUENCE_];
-                    my $type_t          = $rLL->[$Kt]->[_TYPE_];
 
                     # if next container token is closing, it is the parent seqno
-                    if ( $is_closing_type{$type_t} ) {
-                        $next_parent_seqno = $type_sequence_t;
+                    if ( $is_closing_type{ $rLL->[$Kt]->[_TYPE_] } ) {
+                        $next_parent_seqno = $rLL->[$Kt]->[_TYPE_SEQUENCE_];
                     }
 
                     # otherwise we want its parent container
                     else {
                         $next_parent_seqno =
-                          $rparent_of_seqno->{$type_sequence_t};
+                          $rparent_of_seqno->{ $rLL->[$Kt]->[_TYPE_SEQUENCE_] };
                     }
                 }
             }
@@ -27008,7 +27026,7 @@ sub get_available_spaces_to_go {
             }
             elsif ( $types_to_go[ $i_test + 1 ] eq 'b' ) { $i_test++ }
             else {
-                # ok - no change needed
+                # no change needed
             }
 
             my $test_position = total_line_length( $i_test, $ii );
@@ -27815,11 +27833,10 @@ sub convey_batch_to_vertical_aligner {
     #   logical constructions
     # - send the line to the vertical aligner
 
-    my $rLL                = $self->[_rLL_];
-    my $Klimit             = $self->[_Klimit_];
-    my $ris_list_by_seqno  = $self->[_ris_list_by_seqno_];
-    my $this_batch         = $self->[_this_batch_];
-    my $rK_next_seqno_by_K = $self->[_rK_next_seqno_by_K_];
+    my $rLL               = $self->[_rLL_];
+    my $Klimit            = $self->[_Klimit_];
+    my $ris_list_by_seqno = $self->[_ris_list_by_seqno_];
+    my $this_batch        = $self->[_this_batch_];
 
     my $do_not_pad              = $this_batch->[_do_not_pad_];
     my $starting_in_quote       = $this_batch->[_starting_in_quote_];
@@ -28123,7 +28140,7 @@ EOM
             }
         }
         else {
-            # ok - do not need to break vertical alignment here
+            # do not need to break vertical alignment here
         }
 
         # ----------------------------------
@@ -28196,7 +28213,8 @@ EOM
                 # );
                 $is_terminal_ternary = 1;
 
-                my $KP = $rK_next_seqno_by_K->[$Kbeg];
+                my $rK_next_seqno_by_K = $self->[_rK_next_seqno_by_K_];
+                my $KP                 = $rK_next_seqno_by_K->[$Kbeg];
                 while ( defined($KP) && $KP <= $Kend ) {
                     my $type_KP = $rLL->[$KP]->[_TYPE_];
                     if ( $type_KP eq '?' || $type_KP eq ':' ) {
