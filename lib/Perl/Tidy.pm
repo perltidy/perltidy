@@ -4554,6 +4554,16 @@ sub check_options {
 EOM
     }
 
+    # do not allow negative --indent-columns
+    if ( $rOpts->{'indent-columns'} < 0 ) {
+        $rOpts->{'indent-columns'} = 0;
+    }
+
+    # negative ci is currently allowed provided that ci+i is not negative
+    if ( $rOpts->{'continuation-indentation'} < -$rOpts->{'indent-columns'} ) {
+        $rOpts->{'continuation-indentation'} = -$rOpts->{'indent-columns'};
+    }
+
     my $sil = $rOpts->{'starting-indentation-level'};
     if ( defined($sil) && $sil < 0 ) {
         Die(<<EOM);

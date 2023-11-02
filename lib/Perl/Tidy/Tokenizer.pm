@@ -1638,7 +1638,10 @@ sub guess_old_indentation_level {
         if ($2) { $spaces += length($2) }
 
         # correct for outdented labels
-        if ( $3 && $rOpts_outdent_labels ) {
+        if (   $3
+            && $rOpts_outdent_labels
+            && $rOpts_continuation_indentation > 0 )
+        {
             $spaces += $rOpts_continuation_indentation;
         }
     }
