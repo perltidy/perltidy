@@ -15681,6 +15681,15 @@ EOM
 
         return $rhash_of_desires if ( !$ok );
 
+        # The following parameter combination can be unstable (c302):
+        if (   $rOpts_kgb_size_max
+            && $rOpts_kgb_after == INSERT
+            && $rOpts_kgb_before == DELETE )
+        {
+            # We reset kgb_before=STABLE to fix and continue
+            $rOpts_kgb_before = STABLE;
+        }
+
         return;
     } ## end sub kgb_initialize_options
 

@@ -11386,3 +11386,21 @@ s/^([^\t]*)(\t+)/$1.(" " x ((length($2)<<3)-(length($1)&7)))/e )
             . '(&make_deferred_wrapper(1).$cmd.'
             . "\"$padding\""
             . '.$args.&make_deferred_wrapper(0),$_)}' . "\n";
+
+==> c302 <==
+use strict;
+use warnings;
+
+use Params::Validate qw(:all);
+
+use PVTests;
+use Test::More 0.88;
+my $String = 'foo';    # blank after this opens and closes
+
+my $Foo  = bless \$v1, 'Foo';
+my $Bar  = bless \$v2, 'Bar';
+my $Baz  = bless \$v3, 'Baz';
+my $Quux = bless \$v4, 'Quux';
+my $v1;
+my ( $v1, $v2, $v3, $v4 );
+
