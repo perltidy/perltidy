@@ -229,7 +229,7 @@ else {
 ###################
 
 if ( $Opts{s} ) {
-    dump_parameter_frequency($rdata_files); 
+    dump_parameter_frequency($rdata_files);
     exit 1;
 }
 
@@ -368,8 +368,8 @@ sub run_test_cases {
         my @output_history;
         for ( my $iteration = 1 ; $iteration <= $iteration_max ; $iteration++ )
         {
-	    # FIXME: remove the -irc flag below when several test cases
-	    # are corrected to avoid out-of-bounds integer flags
+            # FIXME: remove the -irc flag below when several test cases
+            # are corrected to avoid out-of-bounds integer flags
             my $err = Perl::Tidy::perltidy(
                 source      => \$source,
                 destination => \$output,
@@ -541,13 +541,14 @@ sub read_data_to_hash {
     }
 
     my $dstring = get_string($db_fname);
-    my @lines   = split /\n/, $dstring;
+    my @lines   = split /^/, $dstring;
     my $lines   = @lines;
     my $fname   = "";
     my $lno     = 0;
     my $string;
 
     foreach my $line (@lines) {
+        chomp $line;
         $lno++;
         if ( $line =~ /^==>\s*([\w\.]+)\s*<==/ ) {
             if ($string) {
