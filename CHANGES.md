@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2023 09 12.04
+## 2023 09 12.05
 
     - All parameters taking integer values are now checked for
       out-of-range values before processing starts. When a
