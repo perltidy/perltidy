@@ -663,6 +663,7 @@ sub get_num {
     #   - to make 20 random profiles
 
     my @parameters;
+    my $rinteger_option_range;
 
     sub get_parameters {
 
@@ -682,6 +683,44 @@ sub get_num {
         unlink $tmpnam if ( -e $tmpnam );
         return \@parameters;
     }
+
+    sub get_integer_option_range {
+
+        # get integer ranges
+        use File::Temp qw(tempfile);
+        my ( $fout, $tmpnam ) = File::Temp::tempfile();
+        if ( !$fout ) { die "cannot get tempfile\n" }
+        my %integer_option_range;
+        system "perltidy --dump-integer-option-range>$tmpnam";
+        open( IN, "<", $tmpnam ) || die "cannot open $tmpnam: $!\n";
+        while ( my $line = <IN> ) {
+            next if $line =~ /#/;
+            chomp $line;
+            $line =~ s/\s+//g;
+            my ( $opt, $min, $max, $default ) = split /,/, $line;
+            foreach ( $min, $max, $default ) {
+                if ( $_ eq 'undef' ) { $_ = undef }
+            }
+            $integer_option_range{$opt} = [ $min, $max, $default ];
+        }
+        close IN;
+        unlink $tmpnam if ( -e $tmpnam );
+        return \%integer_option_range;
+    }
+
+    sub dump_integer_option_range {
+        my ($rinteger_option_range) = @_;
+        print {*STDOUT} "Option, min, max, default\n";
+        foreach my $key ( sort keys %{$rinteger_option_range} ) {
+            my ( $min, $max, $default ) = @{ $rinteger_option_range->{$key} };
+            foreach ( $min, $max, $default ) {
+                $_ = 'undef' unless defined($_);
+            }
+            print {*STDOUT} "$key, $min, $max, $default\n";
+        }
+        return;
+    } ## end sub dump_integer_option-range
+
 
     BEGIN {
 
@@ -991,8 +1030,10 @@ sub get_num {
             @parameters = @{$rparameters_current};
             print STDERR "Updating perltidy parameters....\n";
         }
-    }
 
+	$rinteger_option_range = get_integer_option_range();
+
+    }
     sub make_profiles {
         my $nfiles_old = @{$rprofiles};
         my $case       = 0;
@@ -1363,6 +1404,21 @@ EOM
                     $line   = "--$name=$string";
                 }
                 elsif ( $flag eq '=i' ) {
+
+                    # Override old options with new integer options
+                    if ( defined($rinteger_option_range) ) {
+                        my $irange = $rinteger_option_range->{$name};
+                        if ( defined($irange) ) {
+                            my ( $min, $max, $def ) = @{$irange};
+                            if ( !defined($min) ) { $min = 0 }
+                            if ( !defined($max) ) {
+                                if ( defined($rrange) ) { $max = $rrange->[1] }
+                                if ( !defined($max) )   { $max = 100; }
+                            }
+                            $rrange = [ $min, $max ];
+                        }
+                    }
+
                     my $int;
                     if ( !$rrange ) {
                         $rrange = [ 0, 100 ];

@@ -5395,12 +5395,11 @@ EOM
             my $pre_tok  = $tok  = $rtokens->[$i];      # get the next pre-token
             my $pre_type = $type = $rtoken_type->[$i];  # and type
 
-            # remember the starting index of this token; we will be updating $i
-            $i_tok = $i;
-
             # re-initialize various flags for the next output token
             (
 
+                # remember the starting index of this token; we will update $i
+                $i_tok,
                 $block_type,
                 $container_type,
                 $type_sequence,
@@ -5409,6 +5408,7 @@ EOM
               )
               = (
 
+                $i,
                 EMPTY_STRING,
                 EMPTY_STRING,
                 EMPTY_STRING,
@@ -5597,9 +5597,9 @@ EOM
                 next;
             }
 
-            # Turn off attribute list on first non-blank, non-bareword.
-            # Added '#' to fix c038 (later moved above).
-            $self->[_in_attribute_list_] &&= 0;
+            # Turn off attribute list on first non-blank, non-bareword,
+            # and non-comment (added to fix c038)
+            $self->[_in_attribute_list_] = 0;
 
             #-------------------------------
             # END NODE 4: a string of digits

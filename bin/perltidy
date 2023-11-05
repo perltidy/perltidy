@@ -511,6 +511,8 @@ produce one tab for each indentation level and and one for each continuation
 indentation level.  You may want to coordinate the value of B<n> with what your
 display software assumes for the spacing of a tab.
 
+The default is not to use this, which can also be indicated using B<-et=0>.
+
 =item B<-t>,   B<--tabs>
 
 This flag causes one leading tab character to be inserted for each level
@@ -5294,6 +5296,8 @@ string.
 
 B<--dump-defaults> or B<-ddf> will write the default option set to standard output and quit
 
+B<--dump-integer-option-range> or B<-dior> will write a list of comma-separated values. Each line contains the name of an integer option along with its minimum, maximum, and default values.
+
 B<--dump-profile> or B<-dpro>  will write the name of the current
 configuration file and its contents to standard output and quit.
 
@@ -5510,6 +5514,22 @@ perltidy will usually avoid starting a new line with a bareword, because
 this might cause problems if C<use strict> is active.
 
 There is no way to override these rules.
+
+=item B<Handling errors in options which take integer values>
+
+Many of the input parameters take integer values. Before processing
+begins, a check is made to see if any of these integer parameters exceed
+their valid ranges.  The default behavior when a range is exceeded is to
+write a warning message and reset the value to its default setting. This
+default behavior can be changed with the parameter
+B<--integer-range-check=n>, or B<-irc=n>, as follows:
+
+    n=0  skip check completely (for stress-testing perltidy only)
+    n=1  reset bad values to defaults but do not issue a warning
+    n=2  reset bad values to defaults and issue warning [DEFAULT]
+    n=3  stop if any values are out of bounds
+
+The values B<n=0> and B<n=1> are mainly useful for testing purposes.
 
 =back
 

@@ -13482,8 +13482,7 @@ sub special_indentation_adjustments {
     return unless ( @{$rLL} );
 
     # Initialize the adjusted levels to be the structural levels
-    my @adjusted_levels;
-    foreach ( @{$rLL} ) { push @adjusted_levels, $_->[_LEVEL_] }
+    my @adjusted_levels = map { $_->[_LEVEL_] } @{$rLL};
     $self->[_radjusted_levels_] = \@adjusted_levels;
 
     my $min_starting_level = min(@adjusted_levels);

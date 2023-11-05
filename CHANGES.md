@@ -2,6 +2,21 @@
 
 ## 2023 09 12.04
 
+    - All parameters taking integer values are now checked for
+      out-of-range values before processing starts. When a
+      minimum or maximum range is exceeded, the new default
+      behavior is to write a warning message, reset the
+      value to its default setting, and continue.  If this default
+      behavior causes a problem, it can be changed with the new
+      parameter B<--integer-range-check=n>, or B<-irc=n>, as follows:
+
+        n=0  skip check completely (for stress-testing perltidy only)
+        n=1  reset bad values to defaults but do not issue a warning
+        n=2  reset bad values to defaults and issue a warning [DEFAULT]
+        n=3  stop immediately if any values are out of bounds
+
+      The settings n=0 and n=1 are mainly useful for testing purposes.
+
     - The --dump-block-summary (-dbs) option now includes the number of sub
       args in the 'type' column. For example, 'sub(9)' indicates a sub
       with 9 args.  Subs whose arg count cannot easily be determined are

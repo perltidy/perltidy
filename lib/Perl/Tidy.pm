@@ -836,7 +836,7 @@ EOM
     # get command line options
     #-------------------------
     my ( $rOpts, $config_file, $rraw_options, $roption_string,
-        $rexpansion, $roption_category, $roption_range )
+        $rexpansion, $roption_category, $roption_range, $rinteger_option_range )
       = process_command_line(
         $perltidyrc_stream,  $is_Windows, $Windows_type,
         $rpending_complaint, $dump_options_type,
@@ -923,8 +923,15 @@ EOM
     #----------------------------------------
     # check parameters and their interactions
     #----------------------------------------
-    $self->check_options( $is_Windows, $Windows_type, $rpending_complaint,
-        $num_files );
+    $self->check_options(
+
+        $is_Windows,
+        $Windows_type,
+        $rpending_complaint,
+        $num_files,
+        $rinteger_option_range
+
+    );
 
     if ($user_formatter) {
         $rOpts->{'format'} = 'user';
@@ -3286,6 +3293,7 @@ sub generate_options {
     my %option_category = ();
     my %option_range    = ();
     my $rexpansion      = \%expansion;
+    my %integer_option_range;
 
     # names of categories in manual
     # leading integers will allow sorting
@@ -3654,6 +3662,7 @@ sub generate_options {
     $add_option->( 'dump-block-types',                'dbt',   '=s' );
     $add_option->( 'dump-cuddled-block-list',         'dcbl',  '!' );
     $add_option->( 'dump-defaults',                   'ddf',   '!' );
+    $add_option->( 'dump-integer-option-range',       'dior',  '!' );
     $add_option->( 'dump-long-names',                 'dln',   '!' );
     $add_option->( 'dump-options',                    'dop',   '!' );
     $add_option->( 'dump-profile',                    'dpro',  '!' );
@@ -3673,6 +3682,7 @@ sub generate_options {
     $add_option->( 'maximum-file-size-mb',            'maxfs', '=i' );
     $add_option->( 'maximum-level-errors',            'maxle', '=i' );
     $add_option->( 'maximum-unexpected-errors',       'maxue', '=i' );
+    $add_option->( 'integer-range-check',             'irc',   '=i' );
 
     #---------------------------------------------------------------------
 
@@ -3700,60 +3710,6 @@ sub generate_options {
             $option_category{$long_name} = $category_name[$category];
         }
     }
-
-    #---------------------------------------
-    # Assign valid ranges to certain options
-    #---------------------------------------
-    # In the future, these may be used to make preliminary checks
-    # hash keys are long names
-    # If key or value is undefined:
-    #   strings may have any value
-    #   integer ranges are >=0
-    # If value is defined:
-    #   value is [qw(any valid words)] for strings
-    #   value is [min, max] for integers
-    #   if min is undefined, there is no lower limit
-    #   if max is undefined, there is no upper limit
-    # Parameters not listed here have defaults
-    %option_range = (
-        'format'                        => [ 'tidy', 'html', 'user' ],
-        'output-line-ending'            => [ 'dos',  'win',  'mac', 'unix' ],
-        'space-backslash-quote'         => [ 0,      2 ],
-        'block-brace-tightness'         => [ 0,      2 ],
-        'keyword-paren-inner-tightness' => [ 0,      2 ],
-        'brace-tightness'               => [ 0,      2 ],
-        'paren-tightness'               => [ 0,      2 ],
-        'square-bracket-tightness'      => [ 0,      2 ],
-
-        'block-brace-vertical-tightness'            => [ 0, 2 ],
-        'brace-follower-vertical-tightness'         => [ 0, 2 ],
-        'brace-vertical-tightness'                  => [ 0, 2 ],
-        'brace-vertical-tightness-closing'          => [ 0, 2 ],
-        'paren-vertical-tightness'                  => [ 0, 2 ],
-        'paren-vertical-tightness-closing'          => [ 0, 2 ],
-        'square-bracket-vertical-tightness'         => [ 0, 2 ],
-        'square-bracket-vertical-tightness-closing' => [ 0, 2 ],
-        'vertical-tightness'                        => [ 0, 2 ],
-        'vertical-tightness-closing'                => [ 0, 2 ],
-
-        'closing-brace-indentation'          => [ 0, 3 ],
-        'closing-paren-indentation'          => [ 0, 3 ],
-        'closing-square-bracket-indentation' => [ 0, 3 ],
-        'closing-token-indentation'          => [ 0, 3 ],
-
-        'closing-side-comment-else-flag' => [ 0, 2 ],
-        'comma-arrow-breakpoints'        => [ 0, 5 ],
-
-        'keyword-group-blanks-before' => [ 0, 2 ],
-        'keyword-group-blanks-after'  => [ 0, 2 ],
-
-        'space-prototype-paren' => [ 0, 2 ],
-        'space-signature-paren' => [ 0, 2 ],
-        'break-after-labels'    => [ 0, 2 ],
-    );
-
-    # Note: we could actually allow negative ci if someone really wants it:
-    # $option_range{'continuation-indentation'} = [ undef, undef ];
 
     #------------------------------------------------------------------
     # DEFAULTS: Assign default values to the above options here, except
@@ -3818,6 +3774,7 @@ sub generate_options {
       hanging-side-comments
       indent-block-comments
       indent-columns=4
+      integer-range-check=2
       iterations=1
       keep-old-blank-lines=1
       keyword-paren-inner-tightness=1
@@ -3877,10 +3834,216 @@ sub generate_options {
       format-skipping
       default-tabsize=8
 
+      whitespace-cycle=0
+      entab-leading-whitespace=0
+      blank-lines-before-closing-block=0
+      blank-lines-after-opening-block=0
+
       pod2html
       html-table-of-contents
       html-entities
     );
+
+    #---------------------------------------
+    # Assign valid ranges to certain options
+    #---------------------------------------
+    # In the future, these may be used to make preliminary checks
+    # hash keys are long names
+    # If key or value is undefined:
+    #   strings may have any value
+    #   integer ranges are >=0
+    # If value is defined:
+    #   value is [qw(any valid words)] for strings
+    #   value is [min, max] for integers
+    #   if min is undefined, there is no lower limit
+    #   if max is undefined, there is no upper limit
+    # Parameters not listed here have defaults
+    %option_range = (
+        'format'                        => [ 'tidy', 'html', 'user' ],
+        'output-line-ending'            => [ 'dos',  'win',  'mac', 'unix' ],
+        'space-backslash-quote'         => [ 0,      2 ],
+        'block-brace-tightness'         => [ 0,      2 ],
+        'keyword-paren-inner-tightness' => [ 0,      2 ],
+        'brace-tightness'               => [ 0,      2 ],
+        'paren-tightness'               => [ 0,      2 ],
+        'square-bracket-tightness'      => [ 0,      2 ],
+
+        'block-brace-vertical-tightness'            => [ 0, 2 ],
+        'brace-follower-vertical-tightness'         => [ 0, 2 ],
+        'brace-vertical-tightness'                  => [ 0, 2 ],
+        'brace-vertical-tightness-closing'          => [ 0, 3 ],
+        'paren-vertical-tightness'                  => [ 0, 2 ],
+        'paren-vertical-tightness-closing'          => [ 0, 3 ],
+        'square-bracket-vertical-tightness'         => [ 0, 2 ],
+        'square-bracket-vertical-tightness-closing' => [ 0, 3 ],
+        'vertical-tightness'                        => [ 0, 2 ],
+        'vertical-tightness-closing'                => [ 0, 3 ],
+
+        'closing-brace-indentation'          => [ 0, 3 ],
+        'closing-paren-indentation'          => [ 0, 3 ],
+        'closing-square-bracket-indentation' => [ 0, 3 ],
+        'closing-token-indentation'          => [ 0, 3 ],
+
+        'closing-side-comment-else-flag' => [ 0, 2 ],
+        'comma-arrow-breakpoints'        => [ 0, 5 ],
+
+        'keyword-group-blanks-before' => [ 0, 2 ],
+        'keyword-group-blanks-after'  => [ 0, 2 ],
+
+        'space-prototype-paren' => [ 0, 2 ],
+        'space-signature-paren' => [ 0, 2 ],
+        'break-after-labels'    => [ 0, 2 ],
+    );
+
+    # Valid [min,max] ranges of all integer options (type '=i').  This hash is
+    # replacing %option_range, above, for use by sub 'check_options'
+    %integer_option_range = (
+        'blank-lines-after-opening-block'           => [ 0, undef ],
+        'blank-lines-before-closing-block'          => [ 0, undef ],
+        'blank-lines-before-packages'               => [ 0, undef ],
+        'blank-lines-before-subs'                   => [ 0, undef ],
+        'block-brace-tightness'                     => [ 0, 2 ],
+        'block-brace-vertical-tightness'            => [ 0, 2 ],
+        'brace-follower-vertical-tightness'         => [ 0, 2 ],
+        'brace-tightness'                           => [ 0, 2 ],
+        'brace-vertical-tightness'                  => [ 0, 2 ],
+        'brace-vertical-tightness-closing'          => [ 0, 3 ],
+        'break-after-labels'                        => [ 0, 2 ],
+        'break-before-hash-brace'                   => [ 0, 3 ],
+        'break-before-hash-brace-and-indent'        => [ 0, 2 ],
+        'break-before-paren'                        => [ 0, 3 ],
+        'break-before-paren-and-indent'             => [ 0, 2 ],
+        'break-before-square-bracket'               => [ 0, 3 ],
+        'break-before-square-bracket-and-indent'    => [ 0, 2 ],
+        'closing-brace-indentation'                 => [ 0, 3 ],
+        'closing-paren-indentation'                 => [ 0, 3 ],
+        'closing-side-comment-else-flag'            => [ 0, 2 ],
+        'closing-side-comment-interval'             => [ 0, undef ],
+        'closing-side-comment-maximum-text'         => [ 0, undef ],
+        'closing-square-bracket-indentation'        => [ 0, 3 ],
+        'closing-token-indentation'                 => [ 0, 3 ],
+        'comma-arrow-breakpoints'                   => [ 0, 5 ],
+        'continuation-indentation'                  => [ 0, undef ],
+        'cuddled-break-option'                      => [ 0, 2 ],
+        'default-tabsize'                           => [ 0, undef ],
+        'dump-block-minimum-lines'                  => [ 0, undef ],
+        'entab-leading-whitespace'                  => [ 0, undef ],
+        'fixed-position-side-comment'               => [ 0, undef ],
+        'indent-columns'                            => [ 0, undef ],
+        'integer-range-check'                       => [ 0, 3 ],
+        'iterations'                                => [ 0, undef ],
+        'keep-old-blank-lines'                      => [ 0, 2 ],
+        'keyword-group-blanks-after'                => [ 0, 2 ],
+        'keyword-group-blanks-before'               => [ 0, 2 ],
+        'keyword-group-blanks-repeat-count'         => [ 0, undef ],
+        'keyword-paren-inner-tightness'             => [ 0, 2 ],
+        'long-block-line-count'                     => [ 0, undef ],
+        'maximum-consecutive-blank-lines'           => [ 0, undef ],
+        'maximum-fields-per-table'                  => [ 0, undef ],
+        'maximum-file-size-mb'                      => [ 0, undef ],
+        'maximum-level-errors'                      => [ 0, undef ],
+        'maximum-line-length'                       => [ 0, undef ],
+        'maximum-unexpected-errors'                 => [ 0, undef ],
+        'minimum-space-to-comment'                  => [ 0, undef ],
+        'one-line-block-nesting'                    => [ 0, 1 ],
+        'one-line-block-semicolons'                 => [ 0, 2 ],
+        'paren-tightness'                           => [ 0, 2 ],
+        'paren-vertical-tightness'                  => [ 0, 2 ],
+        'paren-vertical-tightness-closing'          => [ 0, 3 ],
+        'short-concatenation-item-length'           => [ 0, undef ],
+        'space-backslash-quote'                     => [ 0, 2 ],
+        'space-prototype-paren'                     => [ 0, 2 ],
+        'space-signature-paren'                     => [ 0, 2 ],
+        'square-bracket-tightness'                  => [ 0, 2 ],
+        'square-bracket-vertical-tightness'         => [ 0, 2 ],
+        'square-bracket-vertical-tightness-closing' => [ 0, 3 ],
+        'starting-indentation-level'                => [ 0, undef ],
+        'vertical-tightness'                        => [ 0, 2 ],
+        'vertical-tightness-closing'                => [ 0, 3 ],
+        'whitespace-cycle'                          => [ 0, undef ],
+    );
+
+    # Enter default values into the integer option range table
+    foreach my $opt (@defaults) {
+        if ( $opt =~ /^(.*)=(\d+)$/ ) {
+            my $key = $1;
+            my $def = $2;
+            if ( defined( $integer_option_range{$key} ) ) {
+                $integer_option_range{$key}[2] = $def;
+            }
+        }
+    }
+
+    # Enter special values which have undef as the default.
+    # Note that cti, vt, and vtc are aliases which are included to work
+    # around an old problem with msdos (see note in check_options).
+    foreach my $key (
+        qw(
+        closing-token-indentation
+        vertical-tightness
+        vertical-tightness-closing
+        fixed-position-side-comment
+        starting-indentation-level
+        )
+      )
+    {
+        if ( defined( $integer_option_range{$key} )
+            && @{ $integer_option_range{$key} } < 3 )
+        {
+            $integer_option_range{$key}[2] = undef;
+        }
+    }
+
+    # Verify that only integers of type =i are in the above list during
+    # development. This will guard against spelling errors.
+    if (DEVEL_MODE) {
+        my %option_flag;
+        my $msg = EMPTY_STRING;
+        foreach my $opt (@option_string) {
+            my $key  = $opt;
+            my $flag = EMPTY_STRING;
+            if ( $key =~ /(.*)(!|=.*|:.*)$/ ) {
+                $key  = $1;
+                $flag = $2;
+            }
+            $option_flag{$key} = $flag;
+        }
+
+        # Be sure all keys of %integer_option_range have option type '=i'
+        foreach my $opt ( keys %integer_option_range ) {
+            my $flag = $option_flag{$opt};
+            if ( !defined($flag) ) { $flag = EMPTY_STRING }
+            if ( $flag ne '=i' ) {
+
+                # If this fault occurs, one of the items in the previous hash
+                # is not type =i, possibly due to incorrect spelling.
+                $msg .=
+"Option '$opt' has an entry in '%integer_option_range' but is not an integer\n";
+            }
+        }
+
+        # Be sure all '=i' options are in %integer_option_range. This is not
+        # strictly necessary but helps insure that nothing was missed.
+        foreach my $opt ( keys %option_flag ) {
+            my $flag = $option_flag{$opt};
+            next if ( $flag ne '=i' );
+            if ( !defined( $integer_option_range{$opt} ) ) {
+                $msg .=
+"Integer option '$opt' is needs an entry in '%integer_option_range'\n";
+            }
+        }
+
+        # look for integer options without default values
+        foreach my $opt ( keys %integer_option_range ) {
+            if ( @{ $integer_option_range{$opt} } < 3 ) {
+                $msg .= "Integer option '$opt' does not have a default value\n";
+            }
+        }
+
+        if ($msg) {
+            Fault($msg);
+        }
+    }
 
     #-----------------------------------------------------------------------
     # Define abbreviations which will be expanded into the above primitives.
@@ -4103,10 +4266,8 @@ q(wbb=% + - * / x != == >= <= =~ !~ < > | & = **= += *= &= <<= &&= -= /= |= >>= 
 
     # Uncomment next line to dump all expansions for debugging:
     # dump_short_names(\%expansion);
-    return (
-        \@option_string,   \@defaults, \%expansion,
-        \%option_category, \%option_range
-    );
+    return ( \@option_string, \@defaults, \%expansion, \%option_category,
+        \%option_range, \%integer_option_range, );
 
 } ## end sub generate_options
 
@@ -4171,10 +4332,9 @@ sub _process_command_line {
     }
     else { $glc = undef }
 
-    my (
-        $roption_string,   $rdefaults, $rexpansion,
-        $roption_category, $roption_range
-    ) = generate_options();
+    my ( $roption_string, $rdefaults, $rexpansion,
+        $roption_category, $roption_range, $rinteger_option_range, )
+      = generate_options();
 
     #--------------------------------------------------------------
     # set the defaults by passing the above list through GetOptions
@@ -4257,6 +4417,10 @@ sub _process_command_line {
         }
         elsif ( $i =~ /^-(dump-defaults|ddf)$/ ) {
             dump_defaults( @{$rdefaults} );
+            Exit(0);
+        }
+        elsif ( $i =~ /^-(dump-integer-option-range|dior)$/ ) {
+            dump_integer_option_range($rinteger_option_range);
             Exit(0);
         }
         elsif ( $i =~ /^-(dump-long-names|dln)$/ ) {
@@ -4378,6 +4542,7 @@ EOM
                     qw{
                     dump-cuddled-block-list
                     dump-defaults
+                    dump-integer-option_range
                     dump-long-names
                     dump-options
                     dump-profile
@@ -4421,7 +4586,8 @@ EOM
     }
 
     return ( \%Opts, $config_file, \@raw_options, $roption_string,
-        $rexpansion, $roption_category, $roption_range );
+        $rexpansion, $roption_category, $roption_range,
+        $rinteger_option_range );
 } ## end sub _process_command_line
 
 sub make_grep_alias_string {
@@ -4534,8 +4700,16 @@ sub cleanup_word_list {
 
 sub check_options {
 
-    my ( $self, $is_Windows, $Windows_type, $rpending_complaint, $num_files ) =
-      @_;
+    my (
+        $self,
+
+        $is_Windows,
+        $Windows_type,
+        $rpending_complaint,
+        $num_files,
+        $rinteger_option_range
+
+    ) = @_;
 
     # $num_files = number of files to be processed, for error checks
 
@@ -4554,29 +4728,65 @@ sub check_options {
 EOM
     }
 
-    # do not allow negative --indent-columns
-    if ( $rOpts->{'indent-columns'} < 0 ) {
-        $rOpts->{'indent-columns'} = 0;
+    my $integer_range_check = $rOpts->{'integer-range-check'};
+    if (   !defined($integer_range_check)
+        || $integer_range_check < 0
+        || $integer_range_check > 3 )
+    {
+        $integer_range_check = 2;
     }
 
-    # negative ci is currently allowed provided that ci+i is not negative
-    if ( $rOpts->{'continuation-indentation'} < -$rOpts->{'indent-columns'} ) {
-        $rOpts->{'continuation-indentation'} = -$rOpts->{'indent-columns'};
+    # Check for integer values out of bounds as follows:
+    #  $integer_range_check=
+    #    0 => skip check completely (for stress-testing perltidy only)
+    #    1 => quietly reset bad values to defaults
+    #    2 => issue warning and reset bad values defaults [DEFAULT]
+    #    3 => stop if any values are out of bounds
+    if ($integer_range_check) {
+        my $Error_message;
+        foreach my $opt ( keys %{$rinteger_option_range} ) {
+            my $range = $rinteger_option_range->{$opt};
+            next unless defined($range);
+            my ( $min, $max, $default ) = @{$range};
+
+            my $val = $rOpts->{$opt};
+            if ( defined($min) && defined($val) && $val < $min ) {
+                $Error_message .= "--$opt=$val but should be >= $min";
+                if ( $integer_range_check < 3 ) {
+                    $rOpts->{$opt} = $default;
+                    my $def = defined($default) ? $default : 'undef';
+                    $Error_message .= "; using default $def";
+                }
+                $Error_message .= "\n";
+            }
+            if ( defined($max) && defined($val) && $val > $max ) {
+                $Error_message .= "--$opt=$val but should be <= $max";
+                if ( $integer_range_check < 3 ) {
+                    $rOpts->{$opt} = $default;
+                    my $def = defined($default) ? $default : 'undef';
+                    $Error_message .= "; using default $def";
+                }
+                $Error_message .= "\n";
+            }
+        }
+        if ($Error_message) {
+            if ( $integer_range_check == 1 ) {
+                ## no warning
+            }
+            elsif ( $integer_range_check == 2 ) {
+                Warn($Error_message);
+            }
+            else {
+                Die($Error_message);
+            }
+        }
     }
 
-    my $sil = $rOpts->{'starting-indentation-level'};
-    if ( defined($sil) && $sil < 0 ) {
-        Die(<<EOM);
---starting-indentation-level=$sil not possible; it should be non-negative
-EOM
-    }
-
-    # Since -vt, -vtc, and -cti are abbreviations, but under
+    # Note that -vt, -vtc, and -cti are abbreviations. But under
     # msdos, an unquoted input parameter like vtc=1 will be
     # seen as 2 parameters, vtc and 1, so the abbreviations
     # won't be seen.  Therefore, we will catch them here if
     # they get through.
-
     if ( defined $rOpts->{'vertical-tightness'} ) {
         my $vt = $rOpts->{'vertical-tightness'};
         $rOpts->{'paren-vertical-tightness'}          = $vt;
@@ -5513,6 +5723,19 @@ EOM
     foreach my $name ( sort @names ) { print {*STDOUT} "$name\n" }
     return;
 } ## end sub dump_long_names
+
+sub dump_integer_option_range {
+    my ($rinteger_option_range) = @_;
+    print {*STDOUT} "Option, min, max, default\n";
+    foreach my $key ( sort keys %{$rinteger_option_range} ) {
+        my ( $min, $max, $default ) = @{ $rinteger_option_range->{$key} };
+        foreach ( $min, $max, $default ) {
+            $_ = 'undef' unless defined($_);
+        }
+        print {*STDOUT} "$key, $min, $max, $default\n";
+    }
+    return;
+} ## end sub dump_integer_option-range
 
 sub dump_defaults {
     my @defaults = @_;
