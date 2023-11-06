@@ -861,8 +861,7 @@ sub pod_to_html {
             if ($toc_string) {
                 $html_print->("<hr />\n") if $rOpts->{'frames'};
                 $html_print->("<h2>Code Index:</h2>\n");
-                ##my @toc = map { $_ .= "\n" } split /\n/, $toc_string;
-                my @toc_st = map { $_ . "\n" } split /\n/, $toc_string;
+                my @toc_st = split /^/, $toc_string;
                 $html_print->(@toc_st);
             }
             $in_toc   = EMPTY_STRING;
@@ -886,8 +885,7 @@ sub pod_to_html {
                 if ($toc_string) {
                     $html_print->("<hr />\n") if $rOpts->{'frames'};
                     $html_print->("<h2>Code Index:</h2>\n");
-                    ##my @toc = map { $_ .= "\n" } split /\n/, $toc_string;
-                    my @toc_st = map { $_ . "\n" } split /\n/, $toc_string;
+                    my @toc_st = split /^/, $toc_string;
                     $html_print->(@toc_st);
                 }
                 $in_toc   = EMPTY_STRING;
@@ -1310,8 +1308,7 @@ HTML_END
       if ( $html_fh->can('close') );
 
     if ( $rOpts->{'frames'} ) {
-        ##my @toc = map { $_ .= "\n" } split /\n/, ${$rtoc_string};
-        my @toc = map { $_ . "\n" } split /\n/, ${$rtoc_string};
+        my @toc = split /^/, ${$rtoc_string};
         $self->make_frame( \@toc );
     }
     return;

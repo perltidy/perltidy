@@ -64,17 +64,9 @@ EOM
 
         # Convert a scalar to an array.
         # This avoids looking for "\n" on each call to getline
-        #
-        # NOTES: The -1 count is needed to avoid loss of trailing blank lines
-        # (which might be important in a DATA section).
         my @array;
         if ( $rscalar && ${$rscalar} ) {
-
-            #@array = map { $_ .= "\n" } split /\n/, ${$rscalar}, -1;
-            @array = map { $_ . "\n" } split /\n/, ${$rscalar}, -1;
-
-            # remove possible extra blank line introduced with split
-            if ( @array && $array[-1] eq "\n" ) { pop @array }
+            @array = split /^/, ${$rscalar};
         }
         my $i_next = 0;
         return bless [ \@array, $mode, $i_next ], $package;
