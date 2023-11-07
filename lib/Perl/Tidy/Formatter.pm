@@ -11288,104 +11288,102 @@ EOM
     my $iline = -1;
     foreach my $line_of_tokens ( @{$rlines} ) {
         $iline++;
-        my $line_type = $line_of_tokens->{_line_type};
-        if ( $line_type eq 'CODE' ) {
+        next if ( $line_of_tokens->{_line_type} ne 'CODE' );
 
-            # Get the old number of tokens on this line
-            my $rK_range_old = $line_of_tokens->{_rK_range};
-            my ( $Kfirst_old, $Klast_old ) = @{$rK_range_old};
-            my $Kdiff_old = 0;
-            if ( defined($Kfirst_old) ) {
-                $Kdiff_old = $Klast_old - $Kfirst_old;
-            }
+        # Get the old number of tokens on this line
+        my $rK_range_old = $line_of_tokens->{_rK_range};
+        my ( $Kfirst_old, $Klast_old ) = @{$rK_range_old};
+        my $Kdiff_old = 0;
+        if ( defined($Kfirst_old) ) {
+            $Kdiff_old = $Klast_old - $Kfirst_old;
+        }
 
-            # Find the range of NEW K indexes for the line:
-            # $Kfirst = index of first token on line
-            # $Klast  = index of last token on line
-            my ( $Kfirst, $Klast );
+        # Find the range of NEW K indexes for the line:
+        # $Kfirst = index of first token on line
+        # $Klast  = index of last token on line
+        my ( $Kfirst, $Klast );
 
-            my $Knext_beg = $Knext;    # this will be $Kfirst if we find tokens
+        my $Knext_beg = $Knext;    # this will be $Kfirst if we find tokens
 
-            # Optimization: Although the actual K indexes may be completely
-            # changed after respacing, the number of tokens on any given line
-            # will often be nearly unchanged.  So we will see if we can start
-            # our search by guessing that the new line has the same number
-            # of tokens as the old line.
-            my $Knext_guess = $Knext + $Kdiff_old;
-            if (   $Knext_guess > $Knext
-                && $Knext_guess < $Kmax
-                && $rLL->[$Knext_guess]->[_LINE_INDEX_] <= $iline )
-            {
+        # Optimization: Although the actual K indexes may be completely
+        # changed after respacing, the number of tokens on any given line
+        # will often be nearly unchanged.  So we will see if we can start
+        # our search by guessing that the new line has the same number
+        # of tokens as the old line.
+        my $Knext_guess = $Knext + $Kdiff_old;
+        if (   $Knext_guess > $Knext
+            && $Knext_guess < $Kmax
+            && $rLL->[$Knext_guess]->[_LINE_INDEX_] <= $iline )
+        {
 
-                # the guess is good, so we can start our search here
-                $Knext = $Knext_guess + 1;
-            }
+            # the guess is good, so we can start our search here
+            $Knext = $Knext_guess + 1;
+        }
 
-            while ($Knext <= $Kmax
-                && $rLL->[$Knext]->[_LINE_INDEX_] <= $iline )
-            {
-                $Knext++;
-            }
+        while ($Knext <= $Kmax
+            && $rLL->[$Knext]->[_LINE_INDEX_] <= $iline )
+        {
+            $Knext++;
+        }
 
-            if ( $Knext > $Knext_beg ) {
+        if ( $Knext > $Knext_beg ) {
 
-                $Klast = $Knext - 1;
+            $Klast = $Knext - 1;
 
-                # Delete any terminal blank token
-                if ( $rLL->[$Klast]->[_TYPE_] eq 'b' ) { $Klast -= 1 }
+            # Delete any terminal blank token
+            if ( $rLL->[$Klast]->[_TYPE_] eq 'b' ) { $Klast -= 1 }
 
-                if ( $Klast < $Knext_beg ) {
-                    $Klast = undef;
-                }
-                else {
-
-                    $Kfirst = $Knext_beg;
-
-                    # Save ranges of non-comment code. This will be used by
-                    # sub keep_old_line_breaks.
-                    if ( $rLL->[$Kfirst]->[_TYPE_] ne '#' ) {
-                        push @Krange_code_without_comments, [ $Kfirst, $Klast ];
-                    }
-
-                    # Only save ending K indexes of code types which are blank
-                    # or 'VER'.  These will be used for a convergence check.
-                    # See related code in sub 'convey_batch_to_vertical_aligner'
-                    my $CODE_type = $line_of_tokens->{_code_type};
-                    if (  !$CODE_type
-                        || $CODE_type eq 'VER' )
-                    {
-                        push @Klast_valign_code, $Klast;
-                    }
-                }
-            }
-
-            # It is only safe to trim the actual line text if the input
-            # line had a terminal blank token. Otherwise, we may be
-            # in a quote.
-            if ( $line_of_tokens->{_ended_in_blank_token} ) {
-                $line_of_tokens->{_line_text} =~ s/\s+$//;
-            }
-            $line_of_tokens->{_rK_range} = [ $Kfirst, $Klast ];
-
-            # Deleting semicolons can create new empty code lines
-            # which should be marked as blank
-            if ( !defined($Kfirst) ) {
-                my $CODE_type = $line_of_tokens->{_code_type};
-                if ( !$CODE_type ) {
-                    $line_of_tokens->{_code_type} = 'BL';
-                }
+            if ( $Klast < $Knext_beg ) {
+                $Klast = undef;
             }
             else {
 
-                #---------------------------------------------------
-                # save indexes of all lines with a 'q' at either end
-                # for later use by sub find_multiline_qw
-                #---------------------------------------------------
-                if (   $rLL->[$Kfirst]->[_TYPE_] eq 'q'
-                    || $rLL->[$Klast]->[_TYPE_] eq 'q' )
-                {
-                    push @{$rqw_lines}, $iline;
+                $Kfirst = $Knext_beg;
+
+                # Save ranges of non-comment code. This will be used by
+                # sub keep_old_line_breaks.
+                if ( $rLL->[$Kfirst]->[_TYPE_] ne '#' ) {
+                    push @Krange_code_without_comments, [ $Kfirst, $Klast ];
                 }
+
+                # Only save ending K indexes of code types which are blank
+                # or 'VER'.  These will be used for a convergence check.
+                # See related code in sub 'convey_batch_to_vertical_aligner'
+                my $CODE_type = $line_of_tokens->{_code_type};
+                if (  !$CODE_type
+                    || $CODE_type eq 'VER' )
+                {
+                    push @Klast_valign_code, $Klast;
+                }
+            }
+        }
+
+        # It is only safe to trim the actual line text if the input
+        # line had a terminal blank token. Otherwise, we may be
+        # in a quote.
+        if ( $line_of_tokens->{_ended_in_blank_token} ) {
+            $line_of_tokens->{_line_text} =~ s/\s+$//;
+        }
+        $line_of_tokens->{_rK_range} = [ $Kfirst, $Klast ];
+
+        # Deleting semicolons can create new empty code lines
+        # which should be marked as blank
+        if ( !defined($Kfirst) ) {
+            my $CODE_type = $line_of_tokens->{_code_type};
+            if ( !$CODE_type ) {
+                $line_of_tokens->{_code_type} = 'BL';
+            }
+        }
+        else {
+
+            #---------------------------------------------------
+            # save indexes of all lines with a 'q' at either end
+            # for later use by sub find_multiline_qw
+            #---------------------------------------------------
+            if (   $rLL->[$Kfirst]->[_TYPE_] eq 'q'
+                || $rLL->[$Klast]->[_TYPE_] eq 'q' )
+            {
+                push @{$rqw_lines}, $iline;
             }
         }
     }
@@ -16712,24 +16710,27 @@ EOM
         return;
     } ## end sub flush_vertical_aligner
 
-    # flush is called to output any tokens in the pipeline, so that
-    # an alternate source of lines can be written in the correct order
     sub flush {
         my ( $self, $CODE_type_flush ) = @_;
 
-        # end the current batch with 1 exception
+        # sub flush is called to output any tokens in the pipeline, so that
+        # an alternate source of lines can be written in the correct order
 
         $index_start_one_line_block = undef;
 
-        # Exception: if we are flushing within the code stream only to insert
-        # blank line(s), then we can keep the batch intact at a weld. This
-        # improves formatting of -ce.  See test 'ce1.ce'
-        if ( $CODE_type_flush && $CODE_type_flush eq 'BL' ) {
-            $self->end_batch() if ( $max_index_to_go >= 0 );
-        }
+        # End the current batch, if it holds any tokens, with 1 exception
+        if ( $max_index_to_go >= 0 ) {
 
-        # otherwise, we have to shut things down completely.
-        else { $self->flush_batch_of_CODE() }
+            # Exception: if we are flushing within the code stream only to
+            # insert blank line(s), then we can keep the batch intact at a
+            # weld. This improves formatting of -ce.  See test 'ce1.ce'
+            if ( $CODE_type_flush && $CODE_type_flush eq 'BL' ) {
+                $self->end_batch();
+            }
+
+            # otherwise, we have to shut things down completely.
+            else { $self->flush_batch_of_CODE() }
+        }
 
         $self->flush_vertical_aligner();
         return;

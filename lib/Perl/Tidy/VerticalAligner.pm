@@ -398,7 +398,8 @@ sub flush {
     # push things out the pipeline...
 
     # push out any current group lines
-    $self->_flush_group_lines();
+    $self->_flush_group_lines()
+      if ( @{ $self->[_rgroup_lines_] } );
 
     # then anything left in the cache of step_B
     $self->_flush_step_B_cache();
@@ -751,7 +752,8 @@ sub valign_input {
       )
     {
 
-        $self->_flush_group_lines( $level - $group_level );
+        $self->_flush_group_lines( $level - $group_level )
+          if ( @{ $self->[_rgroup_lines_] } );
 
         $group_level                         = $level;
         $self->[_group_level_]               = $group_level;
@@ -779,7 +781,8 @@ sub valign_input {
             return;
         }
         else {
-            $self->_flush_group_lines();
+            $self->_flush_group_lines()
+              if ( @{ $self->[_rgroup_lines_] } );
         }
     }
 
@@ -845,7 +848,8 @@ sub valign_input {
             if (   $rgroup_lines->[0]->{'jmax'} > 1
                 || $self->[_zero_count_] > 3 )
             {
-                $self->_flush_group_lines();
+                $self->_flush_group_lines()
+                  if ( @{ $self->[_rgroup_lines_] } );
 
                 # Update '$rgroup_lines' - it will become a ref to empty array.
                 # This allows avoiding a call to get_group_line_count below.
@@ -959,14 +963,16 @@ sub valign_input {
 
     # output this group if it ends in a terminal else or ternary line
     if ( defined($j_terminal_match) ) {
-        $self->_flush_group_lines();
+        $self->_flush_group_lines()
+          if ( @{ $self->[_rgroup_lines_] } );
     }
 
     # Force break after jump to lower level
     elsif ($level_end < $level
         || $is_closing_token{ substr( $rfields->[0], 0, 1 ) } )
     {
-        $self->_flush_group_lines(-1);
+        $self->_flush_group_lines(-1)
+          if ( @{ $self->[_rgroup_lines_] } );
     }
 
     else {
