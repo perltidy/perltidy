@@ -31699,17 +31699,6 @@ sub set_vertical_tightness_flags {
     # continually increase if we allowed it when the -fws flag is set.
     # See case b499 for an example.
 
-    # Define these values...
-    my $vt_type         = 0;
-    my $vt_opening_flag = 0;
-    my $vt_closing_flag = 0;
-    my $vt_seqno        = 0;
-    my $vt_valid_flag   = 0;
-    my $vt_seqno_beg    = 0;
-    my $vt_seqno_end    = 0;
-    my $vt_min_lines    = 0;
-    my $vt_max_lines    = 0;
-
     # Uses these global parameters:
     #   $rOpts_block_brace_tightness
     #   $rOpts_block_brace_vertical_tightness
@@ -31721,6 +31710,35 @@ sub set_vertical_tightness_flags {
     #   %stack_closing_token
     #   %stack_opening_token
 
+    # Define these values for each vertical tightness type:
+    my (
+
+        $vt_type,
+        $vt_opening_flag,
+        $vt_closing_flag,
+        $vt_seqno,
+        $vt_valid_flag,
+        $vt_min_lines,
+        $vt_max_lines
+    );
+
+    # get the sequence numbers of the ends of this line
+    my $vt_seqno_beg = $type_sequence_to_go[$ibeg];
+    if ( !$vt_seqno_beg ) {
+        if ( $types_to_go[$ibeg] eq 'q' ) {
+            $vt_seqno_beg = $self->get_seqno( $ibeg, $ending_in_quote );
+        }
+        else { $vt_seqno_beg = EMPTY_STRING }
+    }
+
+    my $vt_seqno_end = $type_sequence_to_go[$iend];
+    if ( !$vt_seqno_end ) {
+        if ( $types_to_go[$iend] eq 'q' ) {
+            $vt_seqno_end = $self->get_seqno( $iend, $ending_in_quote );
+        }
+        else { $vt_seqno_end = EMPTY_STRING }
+    }
+
     #--------------------------------------------------------------
     # Vertical Tightness Flags Section 1:
     # Handle Lines 1 .. n-1 but not the last line
@@ -31728,6 +31746,13 @@ sub set_vertical_tightness_flags {
     # too, so we won't consider the last line.
     #--------------------------------------------------------------
     if ( $n < $n_last_line ) {
+
+        # NOTE: Section 1 has 4 sub-sections: 1a, 1b, 1c, and 1d.  The logic to
+        # reach any of these end states is complex, and it is possible but very
+        # unlikely that more than one of these end states could be reached.
+        # The current logic is to keep going and use the last such state.
+        # There are currently no known instances where multiple end states can
+        # be reached, but it is something to be aware of when making changes.
 
         #--------------------------------------------------------------
         # Vertical Tightness Flags Section 1a:
@@ -31811,8 +31836,12 @@ sub set_vertical_tightness_flags {
 
                 $vt_type         = 1;
                 $vt_opening_flag = $ovt;
+                $vt_closing_flag = 0;
                 $vt_seqno        = $type_sequence_to_go[$iend];
                 $vt_valid_flag   = $valid_flag;
+                $vt_min_lines    = 0;
+                $vt_max_lines    = 0;
+
             }
         }
 
@@ -31928,6 +31957,7 @@ sub set_vertical_tightness_flags {
                     }
 
                     $vt_type         = 2;
+                    $vt_opening_flag = 0;
                     $vt_closing_flag = $tightness{$token_next} == 2 ? 0 : 1;
                     $vt_seqno        = $type_sequence_to_go[$ibeg_next];
                     $vt_valid_flag   = $valid_flag;
@@ -31995,9 +32025,12 @@ sub set_vertical_tightness_flags {
             my $spaces = ( $types_to_go[ $ibeg_next - 1 ] eq 'b' ) ? 1 : 0;
 
             $vt_type         = 2;
+            $vt_opening_flag = 0;
             $vt_closing_flag = $spaces;
             $vt_seqno        = $type_sequence_to_go[$ibeg_next];
             $vt_valid_flag   = 1;
+            $vt_min_lines    = 0;
+            $vt_max_lines    = 0;
         }
 
         #--------------------------------------------------------------
@@ -32058,10 +32091,12 @@ sub set_vertical_tightness_flags {
                 my $spaces = ( $types_to_go[ $ibeg_next - 1 ] eq 'b' ) ? 1 : 0;
 
                 $vt_type         = 2;
+                $vt_opening_flag = 0;
                 $vt_closing_flag = $spaces;
                 $vt_seqno        = $type_sequence_to_go[$ibeg_next];
                 $vt_valid_flag   = 1;
-
+                $vt_min_lines    = 0;
+                $vt_max_lines    = 0;
             }
         }
     }
@@ -32080,8 +32115,11 @@ sub set_vertical_tightness_flags {
     {
         $vt_type         = 3;
         $vt_opening_flag = $rOpts_block_brace_vertical_tightness;
+        $vt_closing_flag = 0;
         $vt_seqno        = 0;
         $vt_valid_flag   = 1;
+        $vt_min_lines    = 0;
+        $vt_max_lines    = 0;
     }
 
     #--------------------------------------------------------------
@@ -32102,56 +32140,56 @@ sub set_vertical_tightness_flags {
         my $spaces = $rOpts_block_brace_tightness == 2 ? 0 : 1;
 
         $vt_type         = 4;
+        $vt_opening_flag = 0;
         $vt_closing_flag = $spaces;
         $vt_seqno        = $type_sequence_to_go[$iend];
         $vt_valid_flag   = 1;
-
+        $vt_min_lines    = 0;
+        $vt_max_lines    = 0;
     }
     else {
-        ## none of the above
+        # no -vt flags apply
     }
 
-    # get the sequence numbers of the ends of this line
-    $vt_seqno_beg = $type_sequence_to_go[$ibeg];
-    if ( !$vt_seqno_beg ) {
-        if ( $types_to_go[$ibeg] eq 'q' ) {
-            $vt_seqno_beg = $self->get_seqno( $ibeg, $ending_in_quote );
-        }
-        else { $vt_seqno_beg = EMPTY_STRING }
-    }
-
-    $vt_seqno_end = $type_sequence_to_go[$iend];
-    if ( !$vt_seqno_end ) {
-        if ( $types_to_go[$iend] eq 'q' ) {
-            $vt_seqno_end = $self->get_seqno( $iend, $ending_in_quote );
-        }
-        else { $vt_seqno_end = EMPTY_STRING }
-    }
-
-    # Optional simple return if this line is not involved in vertical
-    # tightness, for efficiency.
     my $last_vt_type = $self->[_last_vt_type_];
     $self->[_last_vt_type_] = $vt_type;
-    if (   !$vt_type
-        && !$vt_seqno_beg
-        && !$vt_seqno_end
-        && !$last_vt_type )
-    {
-        return;
+
+    if ( !$vt_type ) {
+
+        # Make a simple return if this line is not involved in vertical
+        # tightness at all.
+        if (   !$vt_seqno_beg
+            && !$vt_seqno_end
+            && !$last_vt_type )
+        {
+            return;
+        }
+
+        $vt_type         = 0;
+        $vt_opening_flag = 0;
+        $vt_closing_flag = 0;
+        $vt_seqno        = 0;
+        $vt_valid_flag   = 0;
+        $vt_min_lines    = 0;
+        $vt_max_lines    = 0;
+    }
+    else {
+
+        # guard against undefined sequence numbers pulled from _to_go
+        if ( !defined($vt_seqno) ) { $vt_seqno = 0 }
     }
 
-    # Otherwise, return the full data structure
-    if ( !defined($vt_seqno) ) { $vt_seqno = EMPTY_STRING }
+    # return the full data structure
     return {
         _vt_type         => $vt_type,
         _vt_opening_flag => $vt_opening_flag,
         _vt_closing_flag => $vt_closing_flag,
         _vt_seqno        => $vt_seqno,
         _vt_valid_flag   => $vt_valid_flag,
-        _vt_seqno_beg    => $vt_seqno_beg,
-        _vt_seqno_end    => $vt_seqno_end,
         _vt_min_lines    => $vt_min_lines,
         _vt_max_lines    => $vt_max_lines,
+        _vt_seqno_beg    => $vt_seqno_beg,
+        _vt_seqno_end    => $vt_seqno_end,
     };
 
 } ## end sub set_vertical_tightness_flags
