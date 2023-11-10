@@ -547,7 +547,6 @@ BEGIN {
         _vertical_aligner_object_   => $i++,
         _logger_object_             => $i++,
         _radjusted_levels_          => $i++,
-        _this_batch_                => $i++,
 
         _ris_special_identifier_token_    => $i++,
         _last_output_short_opening_token_ => $i++,
@@ -622,7 +621,7 @@ BEGIN {
 
     # Index names for batch variables.
     # Do not combine with other BEGIN blocks (c101).
-    # These are stored in _this_batch_, which is a sub-array of $self.
+    # These are stored in sub grind var $this_batch
     my $i = 0;
     use constant {
         _starting_in_quote_          => $i++,
@@ -637,7 +636,6 @@ BEGIN {
         _batch_CODE_type_            => $i++,
         _ri_starting_one_line_block_ => $i++,
         _runmatched_opening_indexes_ => $i++,
-        _lp_object_count_this_batch_ => $i++,
     };
 } ## end BEGIN
 
@@ -1018,9 +1016,6 @@ sub new {
     $self->[_file_writer_object_]      = $file_writer_object;
     $self->[_vertical_aligner_object_] = $vertical_aligner_object;
     $self->[_logger_object_]           = $logger_object;
-
-    # Reference to the batch being processed
-    $self->[_this_batch_] = [];
 
     # Memory of processed text...
     $self->[_ris_special_identifier_token_]    = {};
@@ -16624,47 +16619,40 @@ EOM
         # This must be the only call to grind_batch_of_CODE()
         my ($self) = @_;
 
-        # If a batch has been started ...
-        if ( $max_index_to_go >= 0 ) {
+        return if ( $max_index_to_go < 0 );
 
-            # Create an array to hold variables for this batch
-            my $this_batch = [];
+        # Create an array to hold variables for this batch
+        my $this_batch = [];
 
-            $this_batch->[_starting_in_quote_] = 1 if ($starting_in_quote);
-            $this_batch->[_ending_in_quote_]   = 1 if ($ending_in_quote);
+        $this_batch->[_starting_in_quote_] = 1 if ($starting_in_quote);
+        $this_batch->[_ending_in_quote_]   = 1 if ($ending_in_quote);
 
-            if ( $CODE_type || $last_CODE_type ) {
-                $this_batch->[_batch_CODE_type_] =
-                    $K_to_go[$max_index_to_go] >= $K_first
-                  ? $CODE_type
-                  : $last_CODE_type;
-            }
-
-            $last_line_had_side_comment =
-              ( $max_index_to_go > 0 && $types_to_go[$max_index_to_go] eq '#' );
-
-            # The flag $is_static_block_comment applies to the line which just
-            # arrived. So it only applies if we are outputting that line.
-            if ( $is_static_block_comment && !$last_line_had_side_comment ) {
-                $this_batch->[_is_static_block_comment_] =
-                  $K_to_go[0] == $K_first;
-            }
-
-            $this_batch->[_ri_starting_one_line_block_] =
-              $ri_starting_one_line_block;
-
-            $self->[_this_batch_] = $this_batch;
-
-            #-------------------
-            # process this batch
-            #-------------------
-            $self->grind_batch_of_CODE();
-
-            # Done .. this batch is history
-            $self->[_this_batch_] = undef;
-
-            initialize_batch_variables();
+        if ( $CODE_type || $last_CODE_type ) {
+            $this_batch->[_batch_CODE_type_] =
+                $K_to_go[$max_index_to_go] >= $K_first
+              ? $CODE_type
+              : $last_CODE_type;
         }
+
+        $last_line_had_side_comment =
+          ( $max_index_to_go > 0 && $types_to_go[$max_index_to_go] eq '#' );
+
+        # The flag $is_static_block_comment applies to the line which just
+        # arrived. So it only applies if we are outputting that line.
+        if ( $is_static_block_comment && !$last_line_had_side_comment ) {
+            $this_batch->[_is_static_block_comment_] = $K_to_go[0] == $K_first;
+        }
+
+        $this_batch->[_ri_starting_one_line_block_] =
+          $ri_starting_one_line_block;
+
+        #-------------------
+        # process this batch
+        #-------------------
+        $self->grind_batch_of_CODE($this_batch);
+
+        # Done .. this batch is history
+        initialize_batch_variables();
 
         return;
     } ## end sub flush_batch_of_CODE
@@ -18756,14 +18744,13 @@ EOM
 
     sub grind_batch_of_CODE {
 
-        my ($self) = @_;
+        my ( $self, $this_batch ) = @_;
 
         #-----------------------------------------------------------------
         # This sub directs the formatting of one complete batch of tokens.
         # The tokens of the batch are in the '_to_go' arrays.
         #-----------------------------------------------------------------
 
-        my $this_batch = $self->[_this_batch_];
         $this_batch->[_peak_batch_size_] = $peak_batch_size;
         $this_batch->[_batch_count_]     = ++$batch_count;
 
@@ -18804,8 +18791,8 @@ EOM
 
         my $lp_object_count_this_batch;
         if ($rOpts_line_up_parentheses) {
-            $this_batch->[_lp_object_count_this_batch_] =
-              $lp_object_count_this_batch = $self->set_lp_indentation();
+            $lp_object_count_this_batch =
+              $self->set_lp_indentation($this_batch);
         }
 
         #-----------------------------
@@ -18832,7 +18819,7 @@ EOM
                 $this_batch->[_ri_first_] = [$ibeg];
                 $this_batch->[_ri_last_]  = [$ibeg];
 
-                $self->convey_batch_to_vertical_aligner();
+                $self->convey_batch_to_vertical_aligner($this_batch);
 
                 my $level = $levels_to_go[$ibeg];
                 $self->[_last_line_leading_type_]  = $types_to_go[$ibeg];
@@ -19334,20 +19321,21 @@ EOM
             }
         }
 
+        # The batch has now been divided into lines
+        $this_batch->[_ri_first_] = $ri_first;
+        $this_batch->[_ri_last_]  = $ri_last;
+
         #-------------------
         # -lp corrector step
         #-------------------
         if ($lp_object_count_this_batch) {
-            $self->correct_lp_indentation( $ri_first, $ri_last );
+            $self->correct_lp_indentation($this_batch);
         }
 
         #--------------------
         # ship this batch out
         #--------------------
-        $this_batch->[_ri_first_] = $ri_first;
-        $this_batch->[_ri_last_]  = $ri_last;
-
-        $self->convey_batch_to_vertical_aligner();
+        $self->convey_batch_to_vertical_aligner($this_batch);
 
         #-------------------------------------------------------------------
         # Write requested number of blank lines after an opening block brace
@@ -22022,7 +22010,10 @@ sub correct_lp_indentation {
     # predictor is usually good, but sometimes stumbles.  The corrector
     # tries to patch things up once the actual opening paren locations
     # are known.
-    my ( $self, $ri_first, $ri_last ) = @_;
+    my ( $self, $this_batch ) = @_;
+
+    my $ri_first = $this_batch->[_ri_first_];
+    my $ri_last  = $this_batch->[_ri_last_];
 
     # first remove continuation indentation if appropriate
     my $max_line = @{$ri_first} - 1;
@@ -22036,7 +22027,7 @@ sub correct_lp_indentation {
     # blocks may be too long when given -lp indentation.  We will fix that now
     # if possible, using the list of these closing block indexes.
     my $ri_starting_one_line_block =
-      $self->[_this_batch_]->[_ri_starting_one_line_block_];
+      $this_batch->[_ri_starting_one_line_block_];
     if ( @{$ri_starting_one_line_block} ) {
         $self->correct_lp_indentation_pass_1( $ri_first, $ri_last,
             $ri_starting_one_line_block );
@@ -22098,7 +22089,7 @@ sub correct_lp_indentation {
             #
             #  We leave it to the aligner to decide how to do this.
             if ( $line == 1 && $i == $ibeg ) {
-                $self->[_this_batch_]->[_do_not_pad_] = 1;
+                $this_batch->[_do_not_pad_] = 1;
             }
 
             #--------------------------------------------
@@ -26698,7 +26689,7 @@ sub get_available_spaces_to_go {
 
     sub set_lp_indentation {
 
-        my ($self) = @_;
+        my ( $self, $this_batch ) = @_;
 
         #------------------------------------------------------------------
         # Define the leading whitespace for all tokens in the current batch
@@ -26737,7 +26728,7 @@ sub get_available_spaces_to_go {
         my %last_lp_equals = ();
 
         my $rLL               = $self->[_rLL_];
-        my $starting_in_quote = $self->[_this_batch_]->[_starting_in_quote_];
+        my $starting_in_quote = $this_batch->[_starting_in_quote_];
 
         my $imin = 0;
 
@@ -27831,7 +27822,7 @@ EOM
 
 sub convey_batch_to_vertical_aligner {
 
-    my ($self) = @_;
+    my ( $self, $this_batch ) = @_;
 
     # This routine receives a batch of code for which the final line breaks
     # have been defined. Here we prepare the lines for passing to the vertical
@@ -27845,7 +27836,6 @@ sub convey_batch_to_vertical_aligner {
     my $rLL               = $self->[_rLL_];
     my $Klimit            = $self->[_Klimit_];
     my $ris_list_by_seqno = $self->[_ris_list_by_seqno_];
-    my $this_batch        = $self->[_this_batch_];
 
     my $do_not_pad              = $this_batch->[_do_not_pad_];
     my $starting_in_quote       = $this_batch->[_starting_in_quote_];
@@ -27895,7 +27885,7 @@ sub convey_batch_to_vertical_aligner {
           if ( $type_beg_next eq 'k'
             && $is_if_unless{$token_beg_next} );
 
-        $self->set_logical_padding( $ri_first, $ri_last, $starting_in_quote )
+        $self->set_logical_padding($this_batch)
           if ($rOpts_logical_padding);
 
         $self->xlp_tweak( $ri_first, $ri_last )
@@ -28596,6 +28586,13 @@ EOM
             $ralignment_hash_by_line );
     } ## end sub set_vertical_alignment_markers
 
+    my %is_dot_question_colon;
+
+    BEGIN {
+        my @q = qw( . ? : );
+        @is_dot_question_colon{@q} = (1) x scalar(@q);
+    }
+
     sub set_vertical_alignment_markers_token_loop {
         my ( $self, $line, $ibeg, $iend ) = @_;
 
@@ -28616,8 +28613,6 @@ EOM
         my $level_beg = $levels_to_go[$ibeg];
         my $token_beg = $tokens_to_go[$ibeg];
         my $type_beg  = $types_to_go[$ibeg];
-        my $type_beg_special_char =
-          ( $type_beg eq '.' || $type_beg eq ':' || $type_beg eq '?' );
 
         my $last_vertical_alignment_BEFORE_index = -1;
         my $vert_last_nonblank_type              = $type_beg;
@@ -28652,7 +28647,7 @@ EOM
                 $i_elsif_close = $mate_index_to_go[$i_good_paren];
                 if ( !defined($i_elsif_close) ) { $i_elsif_close = -1 }
             }
-        } ## end if ( $type_beg eq 'k' )
+        }
 
         # --------------------------------------------
         # Loop over each token in this output line ...
@@ -28661,9 +28656,9 @@ EOM
 
             next if ( $types_to_go[$i] eq 'b' );
 
-            my $type           = $types_to_go[$i];
-            my $token          = $tokens_to_go[$i];
-            my $alignment_type = EMPTY_STRING;
+            my $type  = $types_to_go[$i];
+            my $token = $tokens_to_go[$i];
+            my $alignment_type;
 
             # ----------------------------------------------
             # Check for 'paren patch' : Remove excess parens
@@ -28796,8 +28791,8 @@ EOM
                 #     $PDL::IO::Pic::biggrays
                 #     ? ( m/GIF/          ? 0 : 1 )
                 #     : ( m/GIF|RAST|IFF/ ? 0 : 1 );
-                if (   $type_beg_special_char
-                    && $i == $ibeg + 2
+                if (   $i == $ibeg + 2
+                    && $is_dot_question_colon{$type_beg}
                     && $types_to_go[ $i - 1 ] eq 'b' )
                 {
                     $alignment_type = EMPTY_STRING;
@@ -29366,7 +29361,12 @@ sub get_seqno {
         #           &Error_OutOfRange;
         #       }
         #
-        my ( $self, $ri_first, $ri_last, $starting_in_quote ) = @_;
+        my ( $self, $this_batch ) = @_;
+
+        my $ri_first          = $this_batch->[_ri_first_];
+        my $ri_last           = $this_batch->[_ri_last_];
+        my $starting_in_quote = $this_batch->[_starting_in_quote_];
+
         my $max_line = @{$ri_first} - 1;
 
         my ( $ibeg, $ibeg_next, $ibegm, $iend, $iendm, $ipad, $pad_spaces,
@@ -29623,7 +29623,6 @@ sub get_seqno {
             # an editor.  In that case either the user will see and
             # fix the problem or it will be corrected next time the
             # entire file is processed with perltidy.
-            my $this_batch      = $self->[_this_batch_];
             my $peak_batch_size = $this_batch->[_peak_batch_size_];
             next if ( $ipad == 0 && $peak_batch_size <= 1 );
 
