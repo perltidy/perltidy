@@ -19068,7 +19068,7 @@ EOM
                     }
                 }
                 else {
-                    ## no blank
+                    # no blank line needed
                 }
             }
 
@@ -29945,7 +29945,7 @@ sub xlp_tweak {
 
     my %keyword_map;
     my %operator_map;
-    my %is_w_n_C;
+    my %is_k_w_n_C_bang;
     my %is_my_local_our;
     my %is_kwU;
     my %is_use_like;
@@ -29987,10 +29987,12 @@ sub xlp_tweak {
             '/=' => '+=',
         );
 
-        %is_w_n_C = (
+        %is_k_w_n_C_bang = (
+            'k' => 1,
             'w' => 1,
             'n' => 1,
             'C' => 1,
+            '!' => 1,
         );
 
         # leading keywords which to skip for efficiency when making parenless
@@ -30352,15 +30354,13 @@ sub xlp_tweak {
                     if ( $ci_levels_to_go[$ibeg] ) { $tok .= '_1' }
                 }
 
-                # Mark multiple copies of certain tokens with the copy number
+                # Mark multiple copies of certain tokens with a copy number.
                 # This will allow the aligner to decide if they are matched.
-                # For now, only do this for equals. For example, the two
-                # equals on the next line will be labeled '=0' and '=0.2'.
-                # Later, the '=0.2' will be ignored in alignment because it
-                # has no match.
-
-                # $|          = $debug = 1 if $opt_d;
-                # $full_index = 1          if $opt_i;
+                # For example, the two equals in the example below will be
+                # labeled '=0' and '=0.2'.  Later, the '=0.2' will be ignored
+                # in alignment because it has no match.
+                #    $|          = $debug = 1 if $opt_d;
+                #    $full_index = 1          if $opt_i;
 
                 if ( $raw_tok eq '=' || $raw_tok eq '=>' ) {
                     $token_count{$tok}++;
@@ -30391,73 +30391,75 @@ sub xlp_tweak {
             # Part 3: continue accumulating the next pattern
             #-----------------------------------------------
 
-            # for keywords we have to use the actual text
-            if ( $type eq 'k' ) {
-
-                my $tok_fix = $tokens_to_go[$i];
-
-                # but map certain keywords to a common string to allow
-                # alignment.
-                $tok_fix = $keyword_map{$tok_fix}
-                  if ( defined( $keyword_map{$tok_fix} ) );
-                $patterns[$j] .= $tok_fix;
-            }
-
-            elsif ( $type eq 'b' ) {
+            if ( $type eq 'b' ) {
                 $patterns[$j] .= $type;
             }
 
-            # Mark most things before arrows as a quote to
-            # get them to line up. Testfile: mixed.pl.
+            elsif ( $is_k_w_n_C_bang{$type} ) {
 
-            # handle $type =~ /^[wnC]$/
-            elsif ( $is_w_n_C{$type} ) {
+                # for keywords we have to use the actual text
+                if ( $type eq 'k' ) {
 
-                my $type_fix = $type;
+                    my $tok_fix = $tokens_to_go[$i];
 
-                if ( $i < $iend - 1 ) {
-                    my $next_type = $types_to_go[ $i + 1 ];
-                    my $i_next_nonblank =
-                      ( ( $next_type eq 'b' ) ? $i + 2 : $i + 1 );
+                    # but map certain keywords to a common string to allow
+                    # alignment.
+                    $tok_fix = $keyword_map{$tok_fix}
+                      if ( defined( $keyword_map{$tok_fix} ) );
+                    $patterns[$j] .= $tok_fix;
+                }
 
-                    if ( $types_to_go[$i_next_nonblank] eq '=>' ) {
-                        $type_fix = 'Q';
+                # ignore any ! in patterns
+                elsif ( $type eq '!' ) {
+                    $saw_exclamation_mark = 1;
+                }
 
-                        # Patch to ignore leading minus before words,
-                        # by changing pattern 'mQ' into just 'Q',
-                        # so that we can align things like this:
-                        #  Button   => "Print letter \"~$_\"",
-                        #  -command => [ sub { print "$_[0]\n" }, $_ ],
-                        if ( $patterns[$j] eq 'm' ) {
-                            $patterns[$j] = EMPTY_STRING;
+                # Handle $type =~ /^[wnC]$/...
+                # Mark most things before arrows as a quote to
+                # get them to line up. Testfile: mixed.pl.
+                else {
+
+                    my $type_fix = $type;
+
+                    if ( $i < $iend - 1 ) {
+                        my $next_type = $types_to_go[ $i + 1 ];
+                        my $i_next_nonblank =
+                          ( ( $next_type eq 'b' ) ? $i + 2 : $i + 1 );
+
+                        if ( $types_to_go[$i_next_nonblank] eq '=>' ) {
+                            $type_fix = 'Q';
+
+                            # Patch to ignore leading minus before words,
+                            # by changing pattern 'mQ' into just 'Q',
+                            # so that we can align things like this:
+                            #  Button   => "Print letter \"~$_\"",
+                            #  -command => [ sub { print "$_[0]\n" }, $_ ],
+                            if ( $patterns[$j] eq 'm' ) {
+                                $patterns[$j] = EMPTY_STRING;
+                            }
                         }
                     }
+
+                    # Convert a bareword within braces into a quote for
+                    # matching.  This will allow alignment of expressions like
+                    # this:
+                    #    local ( $SIG{'INT'} ) = IGNORE;
+                    #    local ( $SIG{ALRM} )  = 'POSTMAN';
+                    if (   $type eq 'w'
+                        && $i > $ibeg
+                        && $i < $iend
+                        && $types_to_go[ $i - 1 ] eq 'L'
+                        && $types_to_go[ $i + 1 ] eq 'R' )
+                    {
+                        $type_fix = 'Q';
+                    }
+
+                    # patch to make numbers and quotes align
+                    if ( $type eq 'n' ) { $type_fix = 'Q' }
+
+                    $patterns[$j] .= $type_fix;
                 }
-
-                # Convert a bareword within braces into a quote for
-                # matching.  This will allow alignment of expressions like
-                # this:
-                #    local ( $SIG{'INT'} ) = IGNORE;
-                #    local ( $SIG{ALRM} )  = 'POSTMAN';
-                if (   $type eq 'w'
-                    && $i > $ibeg
-                    && $i < $iend
-                    && $types_to_go[ $i - 1 ] eq 'L'
-                    && $types_to_go[ $i + 1 ] eq 'R' )
-                {
-                    $type_fix = 'Q';
-                }
-
-                # patch to make numbers and quotes align
-                if ( $type eq 'n' ) { $type_fix = 'Q' }
-
-                $patterns[$j] .= $type_fix;
-            } ## end elsif ( $is_w_n_C{$type} )
-
-            # ignore any ! in patterns
-            elsif ( $type eq '!' ) {
-                $saw_exclamation_mark = 1;
-            }
+            } ## end elsif ( $is_k_w_n_C{$type} )
 
             # everything else
             else {
