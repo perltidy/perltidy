@@ -5525,7 +5525,7 @@ sub read_config_file {
             }
         }
         else {
-            ## done
+            # no abbreviations to untangle
         }
 
         # Now store any parameters

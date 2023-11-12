@@ -141,8 +141,6 @@ PRE_END
             undef $rOpts->{'pod2html'};
         }
         else {
-            ##eval "use Pod::Html";
-            #if ($@) {
             if ($missing_pod_html) {
                 Perl::Tidy::Warn(
 "unable to find Pod::Html; cannot use pod2html\n-npod disables this message\n"
@@ -747,7 +745,7 @@ sub pod_to_html {
                 push @args, "--no$kwd";
             }
             else {
-                ## ok - not defined
+                # user did not set this keyword
             }
         }
 

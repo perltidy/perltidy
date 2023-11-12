@@ -3977,11 +3977,6 @@ sub prune_alignment_tree {
     #  $level_keep is the minimum level to keep
     my @delete_list;
 
-    # Not currently used:
-    #  Groups with ending comma lists and their range of sizes:
-    #  $ragged_comma_group{$id} = [ imax_group_min, imax_group_max ]
-    ## my %ragged_comma_group;
-
     # We work with a list of nodes to visit at the next deeper depth.
     my @todo_list;
     if ( defined( $match_tree[0] ) ) {

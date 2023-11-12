@@ -3078,19 +3078,18 @@ sub set_whitespace_flags {
 
     # main loop over all tokens to define the whitespace flags
     my $last_type_is_opening;
-    my ( $token, $type );
     my $j = -1;
     foreach my $rtokh ( @{$rLL} ) {
 
         $j++;
 
-        $type = $rtokh->[_TYPE_];
+        my $type = $rtokh->[_TYPE_];
         if ( $type eq 'b' ) {
             $rwhitespace_flags->[$j] = WS_OPTIONAL;
             next;
         }
 
-        $token = $rtokh->[_TOKEN_];
+        my $token = $rtokh->[_TOKEN_];
 
         my $ws;
 
@@ -9226,8 +9225,7 @@ sub respace_tokens_inner_loop {
     #-----------------------------------------------------------------
     foreach my $KK ( $Kfirst .. $Klast ) {
 
-        # TODO: consider eliminating this closure var by passing directly to
-        # store_token following pattern of store_token_to_go.
+        # Update closure variable needed by sub store_token
         $Ktoken_vars = $KK;
 
         my $rtoken_vars = $rLL->[$KK];
@@ -13892,9 +13890,12 @@ sub break_before_list_opening_containers {
             # ok to break
         }
 
-        # Shouldn't happen! Bad flag, but make behavior same as 3
+        # Bad flag, this shouldn't happen because of the integer range checks.
+        # Continue using behavior same as option 3 if not in DEVEL_MODE
         else {
-            # ok to break
+            DEVEL_MODE && Fault(<<EOM);
+Bad -bbx break option=$break_option for '$token': fix integer range checks.
+EOM
         }
 
         # Set a flag for actual implementation later in
@@ -18261,7 +18262,7 @@ sub starting_one_line_block {
             $self->[_ris_short_broken_eval_block_]->{$type_sequence_j} = 1;
         }
         else {
-            # ok
+            # do not continue the search
         }
     }
     return;
@@ -24417,7 +24418,6 @@ EOM
         $dont_align[$depth] =
 
           # code BLOCKS are handled at a higher level
-          ##( $block_type ne EMPTY_STRING )
           $block_type
 
           # certain paren lists
@@ -25612,7 +25612,7 @@ EOM
         # actually looking back token by token.
         if ( !$too_long && $i_opening_paren > 0 && $list_type eq '=>' ) {
             my $i_opening_minus_test = $i_opening_paren - 4;
-            if ( $i_opening_minus >= 0 ) {
+            if ( $i_opening_minus_test >= 0 ) {
                 $too_long = $self->excess_line_length( $i_opening_minus_test,
                     $i_effective_last_comma + 1 ) > 0;
             }
@@ -26216,7 +26216,6 @@ sub study_list_complexity {
     my $complex_item_count    = 0;
     my $number_of_fields_best = $rOpts_maximum_fields_per_table;
     my $i_max                 = @{$ritem_lengths} - 1;
-    ##my @item_complexity;
 
     my $i_last_last_break = -3;
     my $i_last_break      = -2;
@@ -26269,13 +26268,7 @@ sub study_list_complexity {
         # add weight for extra tokens.
         $weighted_length += 2 * ( $ie - $ib );
 
-##        my $BUB = join '', @tokens_to_go[$ib..$ie];
-##        print "# COMPLEXITY:$weighted_length   $BUB\n";
-
-##push @item_complexity, $weighted_length;
-
-        # now mark a ragged break after this item it if it is 'long and
-        # complex':
+        # mark a ragged break after this item it if it is 'long and complex':
         if ( $weighted_length >= $definitely_complex ) {
 
             # if we broke after the previous term
@@ -29230,8 +29223,9 @@ sub get_seqno {
                         # chain ends with previous line
                         $line_2 = $line - 1;
                     }
-                    else {    ## ( $lev > $lev_last )
+                    else {
 
+                        # ( $lev > $lev_last )
                         # kill chain
                         $line_1 = undef;
                     }

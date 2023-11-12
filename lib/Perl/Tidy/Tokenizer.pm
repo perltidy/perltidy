@@ -6587,7 +6587,6 @@ sub decide_if_code_block {
             foreach my $k ( $j + 1 .. @pre_types - 2 ) {
                 if ( $pre_types[$k] eq $quote_mark ) {
                     $j = $k + 1;
-                    ##my $next = $pre_types[$j];
                     last;
                 }
             }
