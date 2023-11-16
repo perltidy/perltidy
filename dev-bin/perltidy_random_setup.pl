@@ -1351,10 +1351,12 @@ EOM
 
           vertical-tightness
           vertical-tightness-closing
+          closing-token-indentation
         );
 
         # Added vertical-tightness and vertical-tightness-closing because
         # they are expansions. They should not be among the options. (c271)
+        # Also added closing-token-indentation for same reason.
 
         my %skip;
         @skip{@q} = (1) x scalar(@q);
