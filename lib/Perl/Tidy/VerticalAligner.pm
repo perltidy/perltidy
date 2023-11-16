@@ -533,7 +533,7 @@ sub valign_input {
     # we receive one line of specially marked text for vertical alignment.
     # We compare the line with the current group, and either:
     # - the line joins the current group if alignments match, or
-    # - the current group is flushed and a new group is started otherwise
+    # - the current group is flushed and a new group is started
     #---------------------------------------------------------------------
     #
     # The key input parameters describing each line are:
@@ -2387,6 +2387,10 @@ sub sweep_left_to_right {
     sub do_left_to_right_sweep {
 
         my ($rcall_hash) = @_;
+
+        # This is the worker routine for sub 'sweep_left_to_right'. Make
+        # vertical alignments by sweeping from left to right over groups
+        # of lines which have been located and prepared by the caller.
 
         my $rlines      = $rcall_hash->{rlines};
         my $rgroups     = $rcall_hash->{rgroups};
