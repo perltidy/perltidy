@@ -26693,11 +26693,21 @@ sub get_available_spaces_to_go {
         # defined by an lp object:
         my $lp_object_count_this_batch = 0;
 
-        # Safety check, should not be needed:
+        # Safety check: this should not be called when there is nothing to do
         if (   !$rOpts_line_up_parentheses
             || !defined($max_index_to_go)
             || $max_index_to_go < 0 )
         {
+            my $lp_str =
+              defined($rOpts_line_up_parentheses)
+              ? $rOpts_line_up_parentheses
+              : 'undef';
+            my $max_str =
+              defined($max_index_to_go) ? $max_index_to_go : 'undef';
+            DEVEL_MODE
+              && Fault(
+"should not be here with -lp=$lp_str -max_index_to_go=$max_str\n"
+              );
             return $lp_object_count_this_batch;
         }
 
@@ -30897,6 +30907,13 @@ sub make_paren_name {
                 }
                 else {
                     # shouldn't happen - default_adjust_indentation is 0 or 1
+                    DEVEL_MODE
+                      && Fault(
+"default_indentation=$default_adjust_indentation expected to be 0 or 1\n"
+                      );
+
+                    # continue with 0 if not in DEVEL_MODE
+                    $indentation = $leading_spaces_beg;
                 }
             }
         }
