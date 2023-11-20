@@ -586,7 +586,7 @@ EOM
     $self->[_true_brace_error_count_]             = 0;
     $self->[_rOpts_]                              = $rOpts;
     $self->[_save_logfile_] =
-      $logger_object ? $logger_object->get_save_logfile : 0;
+      defined($logger_object) && $logger_object->get_save_logfile();
 
     bless $self, $class;
 

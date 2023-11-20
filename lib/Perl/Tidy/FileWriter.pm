@@ -169,8 +169,8 @@ sub new {
     $self->[_K_arrival_order_matches_]     = 0;
     $self->[_K_sequence_error_msg_]        = EMPTY_STRING;
     $self->[_K_last_arrival_]              = -1;
-    $self->[_save_logfile_]                = defined($logger_object);
-    $self->[_routput_string_]              = undef;
+    $self->[_save_logfile_] =
+      defined($logger_object) && $logger_object->get_save_logfile();
 
     # '$line_sink_object' is a SCALAR ref which receives the lines.
     my $ref = ref($line_sink_object);
@@ -249,14 +249,6 @@ sub get_consecutive_blank_lines {
 sub reset_consecutive_blank_lines {
     my $self = shift;
     $self->[_consecutive_blank_lines_] = 0;
-    return;
-}
-
-# This sub call allows termination of logfile writing for efficiency when we
-# know that the logfile will not be saved.
-sub set_save_logfile {
-    my ( $self, $save_logfile ) = @_;
-    $self->[_save_logfile_] = $save_logfile;
     return;
 }
 

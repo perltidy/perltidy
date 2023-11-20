@@ -463,9 +463,6 @@ sub report_definite_bug {
 }
 
 sub get_save_logfile {
-
-    # Returns a true/false flag indicating whether or not
-    # the logfile will be saved.
     my $self = shift;
     return $self->{_save_logfile};
 } ## end sub get_save_logfile

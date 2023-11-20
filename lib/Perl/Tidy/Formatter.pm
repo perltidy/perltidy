@@ -1082,8 +1082,8 @@ sub new {
     $self->[_no_vertical_tightness_flags_] = 0;
     $self->[_last_vt_type_]                = 0;
 
-    # This flag will be updated later by a call to get_save_logfile()
-    $self->[_save_logfile_] = defined($logger_object);
+    $self->[_save_logfile_] =
+      defined($logger_object) && $logger_object->get_save_logfile();
 
     # Be sure all variables in $self have been initialized above.  To find the
     # correspondence of index numbers and array names, copy a list to a file
@@ -1246,11 +1246,15 @@ sub check_token_array {
     sub check_line_hashes {
         my $self   = shift;
         my $rlines = $self->[_rlines_];
+
+        # Note that the keys ending in _0 are only required when a logfile
+        # is being saved, so we will just check for unknown keys, but not
+        # require an exact match.
         foreach my $rline ( @{$rlines} ) {
             my $iline     = $rline->{_line_number};
             my $line_type = $rline->{_line_type};
             check_keys( $rline, \%valid_line_hash,
-                "Checkpoint: line number =$iline,  line_type=$line_type", 1 );
+                "Checkpoint: line number =$iline,  line_type=$line_type", 0 );
         }
         return;
     } ## end sub check_line_hashes
@@ -6306,13 +6310,15 @@ EOM
         # Need to remember if we can trim the input line
         $line_of_tokens->{_ended_in_blank_token} = $rtoken_type->[$jmax] eq 'b';
 
-        # Values needed by Logger
-        $line_of_tokens->{_level_0}    = $rlevels->[0];
-        $line_of_tokens->{_ci_level_0} = 0;               # fix later
-        $line_of_tokens->{_nesting_blocks_0} =
-          $line_of_tokens_old->{_nesting_blocks_0};
-        $line_of_tokens->{_nesting_tokens_0} =
-          $line_of_tokens_old->{_nesting_tokens_0};
+        # Values needed by Logger if a logfile is saved:
+        if ( $self->[_save_logfile_] ) {
+            $line_of_tokens->{_level_0}    = $rlevels->[0];
+            $line_of_tokens->{_ci_level_0} = 0;               # fix later
+            $line_of_tokens->{_nesting_blocks_0} =
+              $line_of_tokens_old->{_nesting_blocks_0};
+            $line_of_tokens->{_nesting_tokens_0} =
+              $line_of_tokens_old->{_nesting_tokens_0};
+        }
 
         return;
 
@@ -6366,16 +6372,6 @@ EOM
         $self->dump_verbatim();
         $self->wrapup($severe_error);
         return 1;
-    }
-
-    # Update the 'save_logfile' flag based to include any tokenization errors.
-    # We can save time by skipping logfile calls if it is not going to be saved.
-    my $logger_object = $self->[_logger_object_];
-    if ($logger_object) {
-        my $save_logfile = $logger_object->get_save_logfile();
-        $self->[_save_logfile_] = $save_logfile;
-        my $file_writer_object = $self->[_file_writer_object_];
-        $file_writer_object->set_save_logfile($save_logfile);
     }
 
     {
