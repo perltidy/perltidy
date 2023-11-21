@@ -8001,6 +8001,25 @@ sub bubba {
         $C_sigmas = sub
         { [ $a3::COMMON, $a3::Offset{lcount} + 47 ] };
 
+==> b1462 <==
+die sprintf(
+     "Usage: %s [ -r | -a | -f fmt ] file ...\n",
+     (
+       $0=~
+         m|.*/(.*)|o
+     ),
+
+);
+
+die sprintf(
+     "Usage: %s [ -r | -a | -f fmt ] file ...\n",
+     (
+       $0=~
+         m|.*/(.*)|o
+     ),
+
+);
+
 ==> b148 <==
 # state 1
 @yydgoto=(
