@@ -1756,6 +1756,12 @@ and side comments.  The term B<block comment> here refers to a full-line
 comment, whereas B<side comment> will refer to a comment which appears on a
 line to the right of some code.
 
+Perltidy does not do any word wrapping of commented text to match a selected
+maximum line length. This is because there is no way to determine if this is
+appropriate for the given content. However, an interactive program named
+B<perlcomment.pl> is available in the B<examples> folder of the perltidy
+distribution which can assist in doing this.
+
 =over 4
 
 =item B<-ibc>,  B<--indent-block-comments>

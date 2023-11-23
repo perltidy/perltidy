@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #
-# Walk through a perl script and reformat perl comments 
+# Walk through a perl script and reformat perl comments
 # using Text::Autoformat.
 #
 # usage:
@@ -13,21 +13,30 @@
 #
 # This file demonstrates using Perl::Tidy to walk through a perl file
 # and find all of its comments.  It offers to reformat each group of
-# consecutive full-line comments with Text::Autoformat.  
+# consecutive full-line comments with Text::Autoformat.
 #
 # This may or may not be useful, depending on your coding style.
 # Change it to suit your own purposes; see sub get_line().
 #
-# Uses: Text::Autoformat 
+# Uses: Text::Autoformat
 #       Perl::Tidy
 #
 # Steve Hancock, March 2003
 # Based on a suggestion by Tim Maher
+# Also discussed in git#127
 #
+# Note that the indentation which is assumed for blocks of comments is whatever
+# the indentation is in the input file. A potential problem is that if the
+# input file has very long comments which have been out-dented, this may not
+# give the desired result. This problem can be avoided by doing a preliminary
+# formatting pass with perltidy which includes the parameter
+# --nooutdent-long-comments (-nolc).
+
 # TODO: (just ideas that probably won't get done)
 # -Handle lines of stars, dashes, etc better
 # -Need flag to limit changes to lines greater than some minimum length
 # -reformat side and hanging side comments
+
 use strict;
 use Getopt::Std;
 use Text::Autoformat;
@@ -40,7 +49,7 @@ my $usage = <<EOM;
 EOM
 
 getopts('hl:') or die "$usage";
-if ($opt_h) {die $usage}
+if ($opt_h) { die $usage }
 if ( !defined $opt_l ) {
     $opt_l = 72;
 }
@@ -60,11 +69,11 @@ sub autoformat_file {
     unless ($fh) { die "cannot open '$file': $!\n" }
     my $formatter = CommentFormatter->new($line_length);
 
-    my $err=perltidy(
-        'formatter' => $formatter,    # callback object
+    my $err = perltidy(
+        'formatter' => $formatter,     # callback object
         'source'    => $fh,
-        'argv'        => "-npro -se",   # dont need .perltidyrc
-                                        # errors to STDOUT
+        'argv'      => "-npro -se",    # dont need .perltidyrc
+                                       # errors to STDOUT
     );
     if ($err) {
         die "Error calling perltidy\n";
@@ -100,16 +109,16 @@ sub write_line {
     # Other lines go to stdout immediately
     my $self           = shift;
     my $line_of_tokens = shift;
-    my $line_type      = $line_of_tokens->{_line_type}; 
-    ## my $input_line_number = $line_of_tokens->{_line_number}; 
+    my $line_type      = $line_of_tokens->{_line_type};
+    ## my $input_line_number = $line_of_tokens->{_line_number};
     my $input_line  = $line_of_tokens->{_line_text};      # the original line
     my $rtoken_type = $line_of_tokens->{_rtoken_type};    # type of tokens
     my $rtokens     = $line_of_tokens->{_rtokens};        # text of tokens
 
     # Just print non-code, non-comment lines
     if (
-        $line_type ne 'CODE'    # if it's not code,
-        || !@$rtokens           # or is a blank line
+        $line_type ne 'CODE'           # if it's not code,
+        || !@$rtokens                  # or is a blank line
         || $$rtoken_type[-1] ne '#'    # or the last token isn't a comment
       )
     {
@@ -123,7 +132,7 @@ sub write_line {
     # - a full line comment (@$rtokens==1)
 
     # Output a line with a side comment, but remember it
-    if (@$rtokens > 1) {
+    if ( @$rtokens > 1 ) {
         $self->print($input_line);
         $self->{_in_hanging_side_comment} = 1;
         return;
@@ -132,7 +141,7 @@ sub write_line {
     # A hanging side comment is a full-line comment immediately
     # following a side comment or another hanging side comment.
     # Output a hanging side comment directly
-    if ($self->{_in_hanging_side_comment}) {
+    if ( $self->{_in_hanging_side_comment} ) {
         $self->print($input_line);
         return;
     }
@@ -163,11 +172,11 @@ sub print {
 
 sub append_comment {
     my ( $self, $input_line ) = @_;
-    my $rcomment_block = $self->{_rcomment_block};
+    my $rcomment_block         = $self->{_rcomment_block};
     my $maximum_comment_length = $self->{_maximum_comment_length};
     $$rcomment_block .= $input_line;
-    if (length($input_line) > $maximum_comment_length) {
-        $self->{_maximum_comment_length}=length($input_line);
+    if ( length($input_line) > $maximum_comment_length ) {
+        $self->{_maximum_comment_length} = length($input_line);
     }
 }
 
@@ -182,12 +191,12 @@ sub append_comment {
 
     sub flush_comments {
 
-        my ($self)         = @_;
-        my $rcomment_block = $self->{_rcomment_block};
-        my $line_length    = $self->{_line_length};
+        my ($self)                 = @_;
+        my $rcomment_block         = $self->{_rcomment_block};
+        my $line_length            = $self->{_line_length};
         my $maximum_comment_length = $self->{_maximum_comment_length};
         if ($$rcomment_block) {
-            my $comments           = $$rcomment_block;
+            my $comments = $$rcomment_block;
 
             # we will just reformat lines longer than the desired length for now
             # TODO: this can be changed
@@ -209,7 +218,7 @@ sub append_comment {
             }
             print $comments;
             $$rcomment_block = "";
-            $self->{_maximum_comment_length}=0;
+            $self->{_maximum_comment_length} = 0;
         }
     }
 }
@@ -229,7 +238,7 @@ sub queryu {
 sub ifyes {
     my $count = 0;
   ASK:
-    my $ans   = queryu(@_);
+    my $ans = queryu(@_);
     if    ( $ans =~ /^Y/ ) { return 1 }
     elsif ( $ans =~ /^N/ ) { return 0 }
     else {
