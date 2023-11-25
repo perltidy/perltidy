@@ -99,7 +99,6 @@ use Encode::Guess;
 use IO::File;
 use File::Basename;
 use File::Copy;
-use File::Temp qw(tempfile);
 
 # perl stat function index names, based on
 #    https://perldoc.perl.org/functions/stat
