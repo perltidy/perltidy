@@ -1348,6 +1348,7 @@ EOM
           code-skipping-begin
           code-skipping-end
           line-range-tidy
+          show-options
 
           vertical-tightness
           vertical-tightness-closing
@@ -1357,6 +1358,7 @@ EOM
         # Added vertical-tightness and vertical-tightness-closing because
         # they are expansions. They should not be among the options. (c271)
         # Also added closing-token-indentation for same reason.
+        # Added show-options because it just writes a lot of .LOG files
 
         my %skip;
         @skip{@q} = (1) x scalar(@q);
