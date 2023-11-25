@@ -11857,6 +11857,30 @@ die sprintf(
 --delete-old-whitespace
 --opening-paren-right
 
+==> b1463.in <==
+die sprintf(
+    "Usage: %s [ -r | -a | -f fmt ] file ...\n",
+    (
+        $0 =~
+          m|.*/(.*)|o
+    ),
+
+);
+
+die sprintf(
+    "Usage: %s [ -r | -a | -f fmt ] file ...\n", (
+       $0 =~
+         m|.*/(.*)|o
+    ),
+
+);
+
+==> b1463.par <==
+--maximum-line-length=50
+--extended-line-up-parentheses
+--delete-old-whitespace
+--opening-paren-right
+
 ==> b148.in <==
 # state 1
 @yydgoto=(

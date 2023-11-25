@@ -32028,24 +32028,16 @@ sub set_vertical_tightness_flags {
 
             # give -kba priority over -otr (b1445)
             && !$self->[_rbreak_after_Klast_]->{ $K_to_go[$iend] }
+
+            # Fix b1462, b1463: avoid possible edge instability with
+            # the combination -xlp and -dws
+            && !(
+                   $rOpts_extended_line_up_parentheses
+                && $rOpts_delete_old_whitespace
+            )
           )
         {
             my $spaces = ( $types_to_go[ $ibeg_next - 1 ] eq 'b' ) ? 1 : 0;
-
-            # Fix b1462 - avoid edge instability problem with -lp -naws:
-            # If the '(' started a different line, consider the newline
-            # to be a space. This is restricted to -lp for now but
-            # could be generalized if necessary.
-            if (  !$spaces
-                && $rOpts_line_up_parentheses
-                && !$rOpts_add_whitespace )
-            {
-                my $Kend        = $K_to_go[$iend];
-                my $Kbeg_next   = $K_to_go[$ibeg_next];
-                my $ix_end      = $self->[_rLL_]->[$Kend]->[_LINE_INDEX_];
-                my $ix_beg_next = $self->[_rLL_]->[$Kbeg_next]->[_LINE_INDEX_];
-                if ( $ix_end != $ix_beg_next ) { $spaces = 1 }
-            }
 
             $vt_type         = 2;
             $vt_opening_flag = 0;

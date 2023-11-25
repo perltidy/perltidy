@@ -8020,6 +8020,25 @@ die sprintf(
 
 );
 
+==> b1463 <==
+die sprintf(
+    "Usage: %s [ -r | -a | -f fmt ] file ...\n",
+    (
+       $0 =~
+         m|.*/(.*)|o
+    ),
+
+);
+
+die sprintf(
+    "Usage: %s [ -r | -a | -f fmt ] file ...\n",
+    (
+       $0 =~
+         m|.*/(.*)|o
+    ),
+
+);
+
 ==> b148 <==
 # state 1
 @yydgoto=(
