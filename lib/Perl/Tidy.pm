@@ -541,6 +541,8 @@ sub perltidy {
 
     my %input_hash = @_;
 
+    # This is the main perltidy routine
+
     my %defaults = (
         argv                  => undef,
         destination           => undef,
@@ -922,15 +924,7 @@ EOM
     #----------------------------------------
     # check parameters and their interactions
     #----------------------------------------
-    $self->check_options(
-
-        $is_Windows,
-        $Windows_type,
-        $rpending_complaint,
-        $num_files,
-        $rinteger_option_range
-
-    );
+    $self->check_options( $num_files, $rinteger_option_range );
 
     if ($user_formatter) {
         $rOpts->{'format'} = 'user';
@@ -2686,7 +2680,7 @@ sub process_iteration_layer {
         # check iteration count and quietly fix if necessary:
         # - iterations option only applies to code beautification mode
         # - the convergence check should stop most runs on iteration 2, and
-        #   virtually all on iteration 3.  But we'll allow up to 6.
+        #   virtually all on iteration 3.  We allow up to ITERATION_LIMIT.
         $max_iterations = $rOpts->{'iterations'};
         if ( !defined($max_iterations)
             || $max_iterations <= 0 )
@@ -3070,6 +3064,8 @@ EOM
 
 sub line_diff {
 
+    my ( $s1, $s2 ) = @_;
+
     # Given two strings, return
     # $diff_marker = a string with carat (^) symbols indicating differences
     # $pos1 = character position of first difference; pos1=-1 if no difference
@@ -3077,7 +3073,6 @@ sub line_diff {
     # Form exclusive or of the strings, which has null characters where strings
     # have same common characters so non-null characters indicate character
     # differences.
-    my ( $s1, $s2 ) = @_;
     my $diff_marker = EMPTY_STRING;
     my $pos         = -1;
     my $pos1        = $pos;
@@ -3101,9 +3096,10 @@ sub line_diff {
 
 sub compare_string_buffers {
 
+    my ( $rbufi, $rbufo ) = @_;
+
     # Compare input and output string buffers and return a brief text
     # description of the first difference.
-    my ( $rbufi, $rbufo ) = @_;
 
     my $leni = defined($rbufi) ? length( ${$rbufi} ) : 0;
     my $leno = defined($rbufo) ? length( ${$rbufo} ) : 0;
@@ -4699,18 +4695,16 @@ sub cleanup_word_list {
 
 sub check_options {
 
-    my (
-        $self,
+    my ( $self, $num_files, $rinteger_option_range ) = @_;
 
-        $is_Windows,
-        $Windows_type,
-        $rpending_complaint,
-        $num_files,
-        $rinteger_option_range
+    # Check options at a high level. Note that other modules have their
+    # own sub 'check_options' for lower level checking.
 
-    ) = @_;
-
-    # $num_files = number of files to be processed, for error checks
+    # Input parameters:
+    #  $num_files = the number of files to be processed in this call to
+    #     perltidy, needed for error checks.
+    #  $rinteger_option-range = hash with valid ranges of parameters which
+    #     take an integer
 
     my $rOpts = $self->[_rOpts_];
 

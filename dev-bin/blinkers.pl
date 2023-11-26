@@ -51,9 +51,9 @@ sub main {
 
     while (1) {
         print <<EOM;
--------------------------------------------
-Perltidy Build Main Menu - Case Insensitive
--------------------------------------------
+----------------------------
+Main Menu - Case Insensitive
+----------------------------
 
 dirs  - working on directories: $dir_string
 tidy  - use perltidy version: $perltidy v$perltidy_version
