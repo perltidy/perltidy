@@ -132,6 +132,8 @@ EOM
 
 sub warning {
     my ( $self, $msg ) = @_;
+
+    # log a warning message from any caller
     my $logger_object = $self->[_logger_object_];
     if ($logger_object) { $logger_object->warning($msg); }
     return;
@@ -201,6 +203,11 @@ EOM
 
 sub setup_convergence_test {
     my ( $self, $rlist ) = @_;
+
+    # $rlist is a reference to a list of line-ending token indexes 'K' of
+    # the input stream. We will compare these with the line-ending token
+    # indexes of the output stream. If they are identical, then we have
+    # convergence.
     if ( @{$rlist} ) {
 
         # We are going to destroy the list, so make a copy
@@ -261,11 +268,11 @@ sub want_blank_line {
 } ## end sub want_blank_line
 
 sub require_blank_code_lines {
+    my ( $self, $count ) = @_;
 
     # write out the requested number of blanks regardless of the value of -mbl
     # unless -mbl=0.  This allows extra blank lines to be written for subs and
     # packages even with the default -mbl=1
-    my ( $self, $count ) = @_;
     my $need   = $count - $self->[_consecutive_blank_lines_];
     my $rOpts  = $self->[_rOpts_];
     my $forced = $rOpts->{'maximum-consecutive-blank-lines'} > 0;
