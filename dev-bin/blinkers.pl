@@ -24,10 +24,10 @@ my $rfrequency_hash;
 
 $| = 1;
 
-# First cd to the git root directory, so that all paths are then given from the
-# git root
-my $git_home = qx[git rev-parse --show-toplevel];
-chomp $git_home;
+# The perltidy git home directory is only needed for the 'rename' feature.
+my $git_home = EMPTY_STRING;
+find_git_home();
+my $know_git_home = $git_home;
 
 my $perltidy         = 'perltidy';
 my $perltidy_version = EMPTY_STRING;
@@ -42,6 +42,7 @@ my $rcode = {
     'DIRS' => \&set_dirs,
     'RET'  => \&retest_blinkers,
     'MIN'  => \&minimize_profiles,
+    'GIT'  => \&ask_git_home,
     'REN'  => \&rename_blinkers,
 };
 
@@ -55,8 +56,9 @@ sub main {
 Main Menu - Case Insensitive
 ----------------------------
 
-dirs  - working on directories: $dir_string
+dirs  - directories: $dir_string
 tidy  - use perltidy version: $perltidy v$perltidy_version
+git   - git home: $git_home
 ret   - retest check/update Version Number
 min   - minimize profile(s)
 ren   - rename a set of directories
@@ -128,12 +130,35 @@ sub set_dirs {
         if ( -d $_ ) { push @{$rdirs}, $_ }
     }
     if ( !@{$rdirs} ) { push @{$rdirs}, '.'; }
-    if ( @{$rdirs} > 6 ) {
-        $dir_string = join " ", @{$rdirs}[ 0 .. 5 ];
-        $dir_string .= "...";
+    $dir_string = join " ", @{$rdirs};
+    if (length($dir_string . 40)) {
+        my $numd=@{$rdirs};
+        $dir_string = substr($dir_string, 0, 40);
+        $dir_string .= "...[$numd dirs]";
     }
-    else {
-        $dir_string = join " ", @{$rdirs};
+    return;
+}
+
+sub find_git_home {
+    my ( $fh, $err_file ) = File::Temp::tempfile();
+
+    # See if we are within the perltidy git
+    $git_home = qx[git rev-parse --show-toplevel 2>$err_file];
+    chomp $git_home;
+    if ( -e $err_file ) { unlink $err_file }
+    return;
+}
+
+sub ask_git_home {
+    my ( $fh, $err_file ) = File::Temp::tempfile();
+
+    # Only allow user to change git_home if it is not known automatically
+    if ( !$know_git_home ) {
+        $git_home = query(<<EOM);
+We are not within the perltidy git. If you want to rename folders,
+you will need to enter the path to the perltidy git home directory:
+EOM
+        chomp $git_home;
     }
     return;
 }
