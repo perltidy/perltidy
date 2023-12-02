@@ -6411,6 +6411,8 @@ EOM
         $self->find_multiline_qw($rqw_lines);
     }
 
+    $self->warn_variable_usage() if $rOpts->{'warn-variable-usage'};
+
     $self->examine_vertical_tightness_flags();
 
     $self->set_excluded_lp_containers();
@@ -8640,6 +8642,468 @@ sub set_CODE_type {
 
     return \@ix_side_comments;
 } ## end sub set_CODE_type
+
+sub warn_variable_usage {
+    my ($self) = @_;
+
+    # Scan for unused variables and related variable issues if requested.
+    # We do this in a single sweep through the file.
+
+    my $rLL                  = $self->[_rLL_];
+    my $rlines               = $self->[_rlines_];
+    my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
+    my $ris_sub_block        = $self->[_ris_sub_block_];
+    my $K_closing_container  = $self->[_K_closing_container_];
+
+    my %is_re_match_op = (
+        '=~' => 1,
+        '!~' => 1,
+    );
+
+    # Single letter options:
+    #  u - declared but unused
+    #  r - reused scope
+    #  s - reused sigil
+    #  p - package boundaries crossed by lexical variables
+    #  0 - none of the above
+    #  1 - all of the above
+    #  * - all of the above
+    # Example:
+    #  -wvu=ur  : do check types 'u' and 'r'
+
+    my $wvu_key    = 'warn-variable-usage';
+    my $wvu_option = $rOpts->{$wvu_key};
+
+    my $check_unused        = $wvu_option =~ /[u1\*]/;
+    my $check_reused        = $wvu_option =~ /[r1\*]/;
+    my $check_sigil         = $wvu_option =~ /[s1\*]/;
+    my $check_cross_package = $wvu_option =~ /[p1\*]/;
+
+    # The stack:
+    # [$seqno, $rhash ]
+    # where
+    #  $seqno = the sequence number of the code block
+    #  $rhash = a hash of identifiers defined within this block (see below)
+    my $rstack = [];
+    push @{$rstack}, [ SEQ_ROOT, {} ];
+
+    # $rhash holds all lexecal variables defined within a given block:
+    # $rhash->{ $name => [ $count, $line_index, $type, $package ] };
+    #   $name = the variable name, such as '$data', '@list', '%vars',
+    #   $line_index = index of the line where it is defined
+    #   $type = lexical type, 'my' or 'state'
+    #   $package = what package was in effect when it was defined
+
+    # Variables defining current state:
+    my $current_package = 'main';
+    my $K_last_code;    # index K of the previous noblank token
+
+    # Variables for a batch of lexical varis being collected:
+    my $K_end_my          = -1;    # max token index of this set
+    my $my_starting_count = 0;     # the initial token count for this set
+    my $my_keyword;                # 'state' or 'my' keyword for this set
+
+    # Variables for warning messages:
+    my @warnings;                  # array of warning messages
+    my %package_warnings;          # warning messages for package cross-over
+    my %sub_count_by_package;      # how many subs defined in a package
+
+    # Variables for scanning interpolated quotes:
+    my $ix_HERE_END = -1;          # the line index of the last here target read
+    my $in_interpolated_quote;     # in multiline quote with interpolation?
+
+    # update counts for a list of variable names
+    my $update_use_count = sub {
+        my @names = @_;
+        foreach my $name (@names) {
+            foreach my $layer ( reverse( @{$rstack} ) ) {
+                my ( $seqno, $rhash ) = @{$layer};
+                if ( $rhash->{$name} ) {
+                    $rhash->{$name}->[0]++;
+                    last;
+                }
+            }
+        }
+    };
+
+    # scan interpolated text for vars
+    my $scan_for_vars = sub {
+        my ($text) = @_;
+
+        # scan interpolated text for variable names
+        # Look for something like: $word, @word, $word[, $word{
+        my @names;
+        while ( $text =~ / ([\$\@]) (\w+) ([\[\{]?) /gcx ) {
+            my $sigil = $1;
+            my $word  = $2;
+            my $brace = $3;
+            if ($brace) {
+                if ( $brace eq '[' ) { $sigil = '@' }
+                if ( $brace eq '{' ) { $sigil = '%' }
+            }
+            my $name = $sigil . $word;
+            push @names, $name;
+        }
+
+        $update_use_count->(@names) if (@names);
+        return;
+    };
+
+    #--------------------
+    # Loop over all lines
+    #--------------------
+    my $ix_line = -1;
+    foreach my $line_of_tokens ( @{$rlines} ) {
+        $ix_line++;
+        my $line_type = $line_of_tokens->{_line_type};
+        next if ( $line_type ne 'CODE' );
+
+        my ( $Kfirst, $Klast ) = @{ $line_of_tokens->{_rK_range} };
+        next unless defined($Klast);
+
+        #----------------------------------
+        # Loop over all tokens on this line
+        #----------------------------------
+        foreach my $KK ( $Kfirst .. $Klast ) {
+            my $type = $rLL->[$KK]->[_TYPE_];
+            next if ( $type eq 'b' || $type eq '#' );
+            my $token = $rLL->[$KK]->[_TOKEN_];
+            my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+            my $block_type;
+            $block_type = $rblock_type_of_seqno->{$seqno} if ($seqno);
+
+            #--------------
+            # a block brace
+            #--------------
+            if ($block_type) {
+                if ( $is_opening_type{$type} ) {
+
+                    # new stack entry
+                    push @{$rstack}, [ $seqno, {} ];
+
+                    # update sub count
+                    if ( $ris_sub_block->{$seqno} ) {
+                        $sub_count_by_package{$current_package}++;
+                    }
+                }
+
+                # closing brace
+                else {
+                    my ( $prev_seqno, $rmy_var_hash ) = @{ $rstack->[-1] };
+
+                    # check for stack error
+                    if ( $prev_seqno ne $seqno ) {
+                        DEVEL_MODE
+                          && Fault(
+                            "stack error: seqno=$seqno ne $prev_seqno\n");
+
+                        # give up - file may be unbalanced
+                        return;
+                    }
+
+                    # Check for unused vars
+                    if ( $rmy_var_hash && $check_unused ) {
+                        foreach my $name ( keys %{$rmy_var_hash} ) {
+                            my $item = $rmy_var_hash->{$name};
+                            my ( $count, $line_index, $lex_type, $pkg ) =
+                              @{$item};
+                            if ( !$count ) {
+                                push @warnings,
+                                  [ "$lex_type $name unused", $line_index + 1 ];
+                            }
+                        }
+                    }
+                    pop @{$rstack};
+                }
+            }
+
+            #----------
+            # a keyword
+            #----------
+            elsif ( $type eq 'k' ) {
+
+                # look for new lexical definition
+                if ( $token eq 'my' || $token eq 'state' ) {
+                    my $Kn         = $self->K_next_code($KK);
+                    my $token_next = $rLL->[$Kn]->[_TOKEN_];
+                    $my_keyword = $token;
+                    my $K_closing = $K_closing_container->{$seqno};
+                    $K_end_my =
+                      $token_next eq '(' && $K_closing ? $K_closing : $Kn;
+                    $my_starting_count = 0;
+                    if ( defined($K_last_code) ) {
+                        my $last_type  = $rLL->[$K_last_code]->[_TYPE_];
+                        my $last_token = $rLL->[$K_last_code]->[_TOKEN_];
+                        if (   $last_type eq '\\'
+                            || $last_type eq '='
+                            || $last_type eq 'k' && $last_token eq 'return' )
+                        {
+                            $my_starting_count = 1;
+                        }
+                    }
+                }
+            }
+
+            #--------------
+            # an identifier
+            #--------------
+            elsif ( $type eq 'i' ) {
+
+                # Still collecting 'my' identifiers?
+                if ( $KK <= $K_end_my ) {
+                    my $name       = $token;
+                    my $line_index = $rLL->[$KK]->[_LINE_INDEX_];
+
+                    # Look up the stack to see if this is already declared
+                    if ($check_reused) {
+                        foreach my $item ( @{$rstack} ) {
+                            my $rhash = $item->[1];
+                            if ( $rhash->{$name} ) {
+                                my $first_line = $rhash->{$name}->[1];
+                                push @warnings,
+                                  [
+"$my_keyword $name reused, see line $first_line",
+                                    $line_index + 1
+                                  ];
+                                last;
+                            }
+                        }
+                    }
+
+                    # see if this word is already used with a different sigil
+                    if ($check_sigil) {
+                        my $sigil = EMPTY_STRING;
+                        my $word  = EMPTY_STRING;
+                        if ( $token =~ /^(\W+)(\w+)$/ ) {
+                            $sigil = $1;
+                            $word  = $2;
+                        }
+                        foreach my $item ( @{$rstack} ) {
+                            my $rhash = $item->[1];
+                            foreach my $sig (qw($ @ %)) {
+                                next if ( $sig eq $sigil );
+                                my $test_name = $sig . $word;
+                                if ( $rhash->{$test_name} ) {
+                                    my $first_line = $rhash->{$test_name}->[1];
+                                    push @warnings,
+                                      [
+"$my_keyword $name is like $test_name with a sigil change, see line $first_line",
+                                        $line_index + 1
+                                      ];
+                                    last;
+                                }
+                            }
+                        }
+                    }
+
+                    # Store this lexical variable
+                    my $rhash = $rstack->[-1]->[1];
+                    $rhash->{$name} = [
+                        $my_starting_count, $line_index,
+                        $my_keyword,        $current_package
+                    ];
+                }
+
+                # Not collecting 'my' vars - update counts
+                else {
+
+                    my $sigil = EMPTY_STRING;
+                    my $word  = EMPTY_STRING;
+
+                    # This regex will allow leading numbers, like '$34x', but
+                    # that will not be a problem because it will not match a
+                    # hash key.
+                    if ( $token =~ /^(\W+)(\w+)$/ ) {
+                        $sigil = $1;
+                        $word  = $2;
+                        $sigil = substr( $sigil, -1, 1 );
+                        if ( $sigil !~ /^[\$\@\%]$/ ) {
+                            $sigil = EMPTY_STRING;
+                            $word  = EMPTY_STRING;
+                        }
+                    }
+
+                    # Determine type of variable and change sigil if
+                    # appropriate to have the same leading sigil as the
+                    # corresponding hash key.  For example, if we see
+                    # '$var[' then we need to use hash ke '@var'.
+                    my $name;
+                    my $Kn = $self->K_next_code($KK);
+                    if ( $sigil && defined($Kn) ) {
+                        my $next_token = $rLL->[$Kn]->[_TOKEN_];
+                        if ( $next_token eq '{' ) {
+                            $name = '%' . $word;
+                        }
+                        elsif ( $next_token eq '[' ) { $name = '@' . $word }
+                        else                         { $name = $sigil . $word }
+                    }
+                    $update_use_count->($name) if ($name);
+                }
+            }
+
+            #--------------------
+            # a package statement
+            #--------------------
+            elsif ( $type eq 'P' ) {
+                my $package = $token;
+                if ( $package ne $current_package ) {
+                    $current_package = $package;
+
+                    # Look for lexical vars declared in other packages which
+                    # will be accessible in this package
+                    if ($check_cross_package) {
+                        my $rpackage_warnings = $package_warnings{$package};
+                        if ( !defined($rpackage_warnings) ) {
+                            $rpackage_warnings = [];
+                            $package_warnings{$package} = $rpackage_warnings;
+                        }
+                        foreach my $item ( @{$rstack} ) {
+                            my ( $seqno, $rhash ) = @{$item};
+                            foreach my $name ( keys %{$rhash} ) {
+                                my $entry = $rhash->{$name};
+                                my ( $count, $line_index, $lex_type, $pkg ) =
+                                  @{$entry};
+                                if ( $pkg ne $package ) {
+                                    push @{$rpackage_warnings},
+                                      [
+"$lex_type $name is accessible in other packages",
+                                        $line_index + 1
+                                      ];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            #-----------
+            # a here doc
+            #-----------
+            elsif ( $type eq 'h' ) {
+
+                # is it interpolated?
+                my $interpolated = $token !~ /^ [^<]* << [~]? \' /x;
+                if ($interpolated) {
+                    my $ix_HERE = $ix_HERE_END;
+                    if ( $ix_HERE < $ix_line ) { $ix_HERE = $ix_line }
+
+                    # collect the here doc text
+                    my $ix_max    = @{$rlines};
+                    my $here_text = EMPTY_STRING;
+                    while ( ++$ix_HERE <= $ix_max ) {
+                        my $lhash = $rlines->[$ix_HERE];
+                        my $ltype = $lhash->{_line_type};
+                        if ( $ltype eq 'HERE' ) {
+                            $here_text .= $lhash->{_line_text};
+                            next;
+                        }
+                        elsif ( $ltype eq 'HERE_END' ) {
+                            $ix_HERE_END = $ix_HERE;
+                            last;
+                        }
+                        else {
+                            DEVEL_MODE
+                              && Fault("line_type=$ltype should be HERE..\n");
+                            return;
+                        }
+                    }
+
+                    # scan it
+                    $scan_for_vars->($here_text);
+                }
+            }
+
+            #---------------------
+            # a quote of some type
+            #---------------------
+            elsif ( $type eq 'Q' ) {
+
+                # is this an interpolated quote?
+                my $interpolated;
+                if ( $line_of_tokens->{_starting_in_quote} ) {
+                    $interpolated = $in_interpolated_quote;
+                }
+                else {
+                    if (   $K_last_code
+                        && $is_re_match_op{ $rLL->[$K_last_code]->[_TYPE_] } )
+                    {
+                        $interpolated = 1;
+                    }
+                    elsif ( $token !~ /^(qw|q[^qrx]|y|tr|\')/ ) {
+                        $interpolated = 1;
+                    }
+                }
+
+                if ($interpolated) {
+                    $scan_for_vars->($token);
+                }
+
+                if ( $line_of_tokens->{_ending_in_quote} ) {
+                    $in_interpolated_quote = $interpolated;
+                }
+            }
+            else {
+                # skip all other token types
+            }
+            $K_last_code = $KK;
+        }
+    }
+
+    #----------
+    # Finish up
+    #----------
+    if ( @{$rstack} != 1 ) {
+
+        # shouldn't happen for a balanced input file
+    }
+    else {
+
+        foreach my $item ( @{$rstack} ) {
+            my ( $seqno, $rhash ) = @{$item};
+            foreach my $name ( keys %{$rhash} ) {
+                my $entry = $rhash->{$name};
+                my ( $count, $line_index, $lex_type, $pkg ) = @{$entry};
+
+                # Warn about unused lexical variables
+                if ($check_unused) {
+                    if ( !$count ) {
+                        push @warnings,
+                          [ "$lex_type $name unused", $line_index + 1 ];
+                    }
+                }
+            }
+        }
+    }
+
+    # Only include cross-package warnings for packages which created subs
+    my @pkg_warnings;
+    foreach my $key ( keys %package_warnings ) {
+        next if ( !$sub_count_by_package{$key} );
+        push @pkg_warnings, @{ $package_warnings{$key} };
+    }
+
+    # Remove multiple warnings for the same line, which can happen
+    # if there were multiple packages.
+    if (@pkg_warnings) {
+        my %seen;
+        my @uniq = grep { !$seen{ $_->[1] }++ } @pkg_warnings;
+        push @warnings, @uniq;
+    }
+
+    # Write the report to the warnings file. Note that we write with a single
+    # warning message to avoid the warning line limit.
+    if (@warnings) {
+        my $message = "Begin scan for --$wvu_key=$wvu_option:\n";
+        foreach my $item ( sort { $a->[1] <=> $b->[1] } @warnings ) {
+            my ( $msg, $lno ) = @{$item};
+            $message .= "$lno: $msg\n";
+        }
+        $message .= "End scan for --$wvu_key=$wvu_option:\n";
+        warning($message);
+    }
+
+    return;
+} ## end sub warn_variable_usage
 
 sub find_non_indenting_braces {
 

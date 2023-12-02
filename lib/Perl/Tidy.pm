@@ -3647,6 +3647,7 @@ sub generate_options {
     $add_option->( 'look-for-hash-bang',           'x',    '!' );
     $add_option->( 'look-for-selfloader',          'lsl',  '!' );
     $add_option->( 'pass-version-line',            'pvl',  '!' );
+    $add_option->( 'warn-variable-usage',          'wvu',  '=s' );
 
     ########################################
     $category = 13;    # Debugging
