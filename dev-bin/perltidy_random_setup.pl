@@ -1169,6 +1169,8 @@ EOM
             'output-line-ending' => [ 'dos',  'win', 'mac', 'unix' ],
             'extended-block-tightness-list' => [ 'k', 't', 'kt' ],
 
+            'warn-variable-usage' => ['0', '1'],
+
             'space-backslash-quote'         => [ 0, 2 ],
             'block-brace-tightness'         => [ 0, 2 ],
             'keyword-paren-inner-tightness' => [ 0, 2 ],

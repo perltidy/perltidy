@@ -8657,7 +8657,6 @@ sub warn_variable_usage {
     my $ris_sub_block        = $self->[_ris_sub_block_];
     my $K_closing_container  = $self->[_K_closing_container_];
     my $rK_next_seqno_by_K   = $self->[_rK_next_seqno_by_K_];
-    my $rtype_count_by_seqno = $self->[_rtype_count_by_seqno_];
 
     my %is_re_match_op = ( '=~' => 1, '!~'    => 1 );
     my %is_my_state    = ( 'my' => 1, 'state' => 1 );
@@ -8685,10 +8684,10 @@ sub warn_variable_usage {
     my $wvu_key    = 'warn-variable-usage';
     my $wvu_option = $rOpts->{$wvu_key};
 
-    my $check_unused        = $wvu_option =~ /[u1\*]/;
-    my $check_reused        = $wvu_option =~ /[r1\*]/;
     my $check_sigil         = $wvu_option =~ /[s1\*]/;
     my $check_cross_package = $wvu_option =~ /[p1\*]/;
+    my $check_unused        = $wvu_option =~ /[u1\*]/;
+    my $check_reused        = $wvu_option =~ /[r1\*]/;
 
     # The block stack:
     # [$seqno, $rhash ]
@@ -8721,6 +8720,21 @@ sub warn_variable_usage {
     my %package_warnings;        # warning messages for package cross-over
     my %sub_count_by_package;    # how many subs defined in a package
 
+    # Default names which are excluded from test types 'u' and 'r':
+    my @xl = qw($self $class);
+
+    my $wvuxl_key      = 'warn-variable-usage-exclusion-list';
+    my $excluded_names = $rOpts->{$wvuxl_key};
+    if ($excluded_names) {
+        $excluded_names =~ s/,/ /;
+        $excluded_names =~ s/^\s+//;
+        $excluded_names =~ s/\s+$//;
+        @xl = split /\s+/, $excluded_names;
+    }
+
+    my %is_excluded_name;
+    @{is_excluded_name}{@xl} = (1) x scalar(@xl);
+
     # Variables for scanning interpolated quotes:
     my $ix_HERE_END = -1;         # the line index of the last here target read
     my $in_interpolated_quote;    # in multiline quote with interpolation?
@@ -8743,11 +8757,24 @@ sub warn_variable_usage {
             $word  = $2;
         }
 
+        my $skip_reused_test = $is_excluded_name{$name};
+
         my @sigils_to_test;
-        if    ($check_sigil)  { @sigils_to_test = qw($ @ %) }
-        elsif ($check_reused) { @sigils_to_test = ($sigil) }
+        if ($check_sigil) {
+            if ( $check_reused && !$skip_reused_test ) {
+                @sigils_to_test = (qw($ @ %));
+            }
+            else {
+                foreach my $sig (qw($ @ %)) {
+                    if ( $sig ne $sigil ) { push @sigils_to_test, $sig; }
+                }
+            }
+        }
+        elsif ( $check_reused && !$skip_reused_test ) {
+            push @sigils_to_test, $sigil;
+        }
         else {
-            # skip tests
+            # neither
         }
 
         # Look up the stack to see if this name has been seen, possibly
@@ -8760,14 +8787,17 @@ sub warn_variable_usage {
                     next unless ( $rhash->{$test_name} );
                     my $first_line = $rhash->{$test_name}->[1] + 1;
                     my $msg;
+                    my $letter;
                     if ( $sig eq $sigil ) {
                         $msg = "$my_keyword $name reused, see line $first_line";
+                        $letter = 'r';
                     }
                     else {
                         $msg =
-"$my_keyword $name is like $test_name with a sigil change, see line $first_line";
+"$my_keyword $name and $test_name overlap in scope, see line $first_line";
+                        $letter = 's';
                     }
-                    push @warnings, [ $msg, $line_index + 1 ];
+                    push @warnings, [ $msg, $line_index + 1, $letter ];
                     last;
                 }
             }
@@ -8959,8 +8989,8 @@ sub warn_variable_usage {
                     # pop stack and scan results at a closing block brace
                     elsif ($block_type) {
 
-                        my ( $prev_seqno, $rmy_var_hash ) =
-                          @{ $rblock_stack->[-1] };
+                        my $stack_item = pop @{$rblock_stack};
+                        my ( $prev_seqno, $rmy_var_hash ) = @{$stack_item};
 
                         # check for stack error
                         if ( $prev_seqno ne $seqno ) {
@@ -8980,16 +9010,18 @@ sub warn_variable_usage {
                                 my $item = $rmy_var_hash->{$name};
                                 my ( $count, $line_index, $lex_type, $pkg ) =
                                   @{$item};
-                                if ( !$count ) {
+                                if (   !$count
+                                    && !$is_excluded_name{$name} )
+                                {
                                     push @warnings,
                                       [
                                         "$lex_type $name unused",
-                                        $line_index + 1
+                                        $line_index + 1,
+                                        'u'
                                       ];
                                 }
                             }
                         }
-                        pop @{$rblock_stack};
                     }
                     else {
                         # not a block
@@ -9135,7 +9167,7 @@ sub warn_variable_usage {
                             $package_warnings{$package} = $rpackage_warnings;
                         }
                         foreach my $item ( @{$rblock_stack} ) {
-                            my ( $seqno, $rhash ) = @{$item};
+                            my ( $seqno_item, $rhash ) = @{$item};
                             foreach my $name ( keys %{$rhash} ) {
                                 my $entry = $rhash->{$name};
                                 my ( $count, $line_index, $lex_type, $pkg ) =
@@ -9144,7 +9176,8 @@ sub warn_variable_usage {
                                     push @{$rpackage_warnings},
                                       [
 "$lex_type $name is accessible in later packages",
-                                        $line_index + 1
+                                        $line_index + 1,
+                                        'p'
                                       ];
                                 }
                             }
@@ -9202,15 +9235,20 @@ sub warn_variable_usage {
                 }
                 else {
 
-                    # does it follow =~ or !~
+                    # is interpolated if it follow a match operator =~ or !~
                     if (   $K_last_code
                         && $is_re_match_op{ $rLL->[$K_last_code]->[_TYPE_] } )
                     {
                         $interpolated = 1;
                     }
 
-                    # does it NOT have a leading operator: qw q y tr '
-                    elsif ( $token !~ /^(qw|q[^qrx]|y|tr|\')/ ) {
+                    # is not interpolated for leading operators: qw q y tr '
+                    elsif ( $token =~ /^(qw|q[^qrx]|y|tr|\')/ ) {
+                        $interpolated = 0;
+                    }
+
+                    # is interpolated for everything else
+                    else {
                         $interpolated = 1;
                     }
                 }
@@ -9249,7 +9287,7 @@ sub warn_variable_usage {
                 if ($check_unused) {
                     if ( !$count ) {
                         push @warnings,
-                          [ "$lex_type $name unused", $line_index + 1 ];
+                          [ "$lex_type $name unused", $line_index + 1, 'u' ];
                     }
                 }
             }
@@ -9275,9 +9313,12 @@ sub warn_variable_usage {
     # warning message to avoid the warning line limit.
     if (@warnings) {
         my $message = "Begin scan for --$wvu_key=$wvu_option:\n";
+        $message .= <<EOM;
+Line:Issue: Var;  issue u=unused r=reused s=multi-sigil p=package crossing
+EOM
         foreach my $item ( sort { $a->[1] <=> $b->[1] } @warnings ) {
-            my ( $msg, $lno ) = @{$item};
-            $message .= "$lno: $msg\n";
+            my ( $msg, $lno, $letter ) = @{$item};
+            $message .= "$lno:$letter: $msg\n";
         }
         $message .= "End scan for --$wvu_key=$wvu_option:\n";
         warning($message);

@@ -3633,21 +3633,22 @@ sub generate_options {
     ########################################
     $category = 9;    # Other controls
     ########################################
-    $add_option->( 'warn-missing-else',            'wme',  '!' );
-    $add_option->( 'add-missing-else',             'ame',  '!' );
-    $add_option->( 'add-missing-else-comment',     'amec', '=s' );
-    $add_option->( 'delete-block-comments',        'dbc',  '!' );
-    $add_option->( 'delete-closing-side-comments', 'dcsc', '!' );
-    $add_option->( 'delete-pod',                   'dp',   '!' );
-    $add_option->( 'delete-side-comments',         'dsc',  '!' );
-    $add_option->( 'tee-block-comments',           'tbc',  '!' );
-    $add_option->( 'tee-pod',                      'tp',   '!' );
-    $add_option->( 'tee-side-comments',            'tsc',  '!' );
-    $add_option->( 'look-for-autoloader',          'lal',  '!' );
-    $add_option->( 'look-for-hash-bang',           'x',    '!' );
-    $add_option->( 'look-for-selfloader',          'lsl',  '!' );
-    $add_option->( 'pass-version-line',            'pvl',  '!' );
-    $add_option->( 'warn-variable-usage',          'wvu',  '=s' );
+    $add_option->( 'warn-missing-else',                  'wme',   '!' );
+    $add_option->( 'add-missing-else',                   'ame',   '!' );
+    $add_option->( 'add-missing-else-comment',           'amec',  '=s' );
+    $add_option->( 'delete-block-comments',              'dbc',   '!' );
+    $add_option->( 'delete-closing-side-comments',       'dcsc',  '!' );
+    $add_option->( 'delete-pod',                         'dp',    '!' );
+    $add_option->( 'delete-side-comments',               'dsc',   '!' );
+    $add_option->( 'tee-block-comments',                 'tbc',   '!' );
+    $add_option->( 'tee-pod',                            'tp',    '!' );
+    $add_option->( 'tee-side-comments',                  'tsc',   '!' );
+    $add_option->( 'look-for-autoloader',                'lal',   '!' );
+    $add_option->( 'look-for-hash-bang',                 'x',     '!' );
+    $add_option->( 'look-for-selfloader',                'lsl',   '!' );
+    $add_option->( 'pass-version-line',                  'pvl',   '!' );
+    $add_option->( 'warn-variable-usage',                'wvu',   '=s' );
+    $add_option->( 'warn-variable-usage-exclusion-list', 'wvuxl', '=s' );
 
     ########################################
     $category = 13;    # Debugging
