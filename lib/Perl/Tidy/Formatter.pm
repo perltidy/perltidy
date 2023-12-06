@@ -8698,27 +8698,34 @@ sub warn_variable_usage {
     push @{$rblock_stack}, [ SEQ_ROOT, {} ];
 
     # $rhash holds all lexecal variables defined within a given block:
-    # $rhash->{ $name => [ $count, $line_index, $type, $package ] };
+    #   $rhash->{
+    #    $name => {
+    #        count      => $count,
+    #        line_index => $line_index,
+    #        type       => $type,
+    #        package    => $package,
+    #        K          => $KK
+    #    }
+    #   };
     #   $name = the variable name, such as '$data', '@list', '%vars',
     #   $line_index = index of the line where it is defined
     #   $type = lexical type, 'my' or 'state' or 'our'
     #   $package = what package was in effect when it was defined
+    #   $KK = token index (for sorting)
 
     # Variables defining current state:
-    my $current_package = 'main';
+    my $current_package = 'package main';
     my $K_last_code;    # index K of the previous noblank token
 
     # Variables for a batch of lexical varis being collected:
-    my $K_end_my          = -1;         # max token index of this set
-    my $my_starting_count = 0;          # the initial token count for this set
-    my $my_keyword;                     # 'state' or 'my' keyword for this set
-    my $early_stack_push = 0;           # true if we pushed the stack early
-    my %block_following_paren_seqno;    # seqno_paren=>seqno_block at '){'
+    my $my_keyword;                # 'state' or 'my' keyword for this set
+    my $K_end_my          = -1;    # max token index of this set
+    my $my_starting_count = 0;     # the initial token count for this set
 
     # Variables for warning messages:
-    my @warnings;                # array of warning messages
-    my %package_warnings;        # warning messages for package cross-over
-    my %sub_count_by_package;    # how many subs defined in a package
+    my @warnings;                  # array of warning messages
+    my %package_warnings;          # warning messages for package cross-over
+    my %sub_count_by_package;      # how many subs defined in a package
 
     # Default names which are excluded from test types 'u' and 'r':
     my @xl = qw($self $class);
@@ -8785,19 +8792,32 @@ sub warn_variable_usage {
                 foreach my $sig (@sigils_to_test) {
                     my $test_name = $sig . $word;
                     next unless ( $rhash->{$test_name} );
-                    my $first_line = $rhash->{$test_name}->[1] + 1;
+                    my $first_line = $rhash->{$test_name}->{line_index} + 1;
                     my $msg;
                     my $letter;
+                    my $var = "$my_keyword $name";
+                    my $note;
                     if ( $sig eq $sigil ) {
-                        $msg = "$my_keyword $name reused, see line $first_line";
+                        my $as_iterator =
+                          $is_my_state{$my_keyword}
+                          ? EMPTY_STRING
+                          : ' as_iterator';
+                        $note   = "reused$as_iterator - see line $first_line";
                         $letter = 'r';
                     }
                     else {
-                        $msg =
-"$my_keyword $name and $test_name overlap in scope, see line $first_line";
+                        $note =
+                          "overlaps $test_name in scope - see line $first_line";
                         $letter = 's';
                     }
-                    push @warnings, [ $msg, $line_index + 1, $letter ];
+                    push @warnings,
+                      {
+                        name        => $var,
+                        note        => $note,
+                        line_number => $line_index + 1,
+                        letter      => $letter,
+                        K           => $KK
+                      };
                     last;
                 }
             }
@@ -8805,9 +8825,14 @@ sub warn_variable_usage {
 
         # Store this lexical variable
         my $rhash = $rblock_stack->[-1]->[1];
-        $rhash->{$name} =
-          [ $my_starting_count, $line_index, $my_keyword, $current_package ];
-
+        $rhash->{$name} = {
+            count      => $my_starting_count,
+            line_index => $line_index,
+            type       => $my_keyword,
+            package    => $current_package,
+            K          => $KK,
+        };
+        return;
     };
 
     #--------------------------------------------------
@@ -8819,11 +8844,12 @@ sub warn_variable_usage {
             foreach my $layer ( reverse( @{$rblock_stack} ) ) {
                 my ( $seqno, $rhash ) = @{$layer};
                 if ( $rhash->{$name} ) {
-                    $rhash->{$name}->[0]++;
+                    $rhash->{$name}->{count}++;
                     last;
                 }
             }
         }
+        return;
     };
 
     #---------------------------------------
@@ -8875,23 +8901,42 @@ sub warn_variable_usage {
 
         # see if this opening paren immediately follows the keyword
         my $K_n = $self->K_next_code($KK);
+        return unless $K_n;
+        my $token_KK = $rLL->[$KK]->[_TOKEN_];
+
         if ( $K_n == $K_paren ) {
             $is_keyword_paren = 1;
         }
 
         # if not, then look for pattern 'for my $var ('
-        elsif ($is_for_foreach{ $rLL->[$KK]->[_TOKEN_] }
+        elsif ($is_for_foreach{$token_KK}
             && $rLL->[$K_n]->[_TYPE_] eq 'k'
             && $is_my_state{ $rLL->[$K_n]->[_TOKEN_] } )
         {
 
             # look for an identifier after the 'my'
             $K_n = $self->K_next_code($K_n);
+            return unless $K_n;
             if ( $rLL->[$K_n]->[_TYPE_] eq 'i' ) {
 
                 # followed by the same '('
                 $K_n              = $self->K_next_code($K_n);
-                $is_keyword_paren = $K_n == $K_paren;
+                $is_keyword_paren = $K_n && $K_n == $K_paren;
+            }
+        }
+
+        # look for iterator pattern 'for $var ('
+        elsif ($is_for_foreach{$token_KK}
+            && $rLL->[$K_n]->[_TYPE_] eq 'i' )
+        {
+            # followed by the same '('
+            $K_n = $self->K_next_code($K_n);
+            if ( $K_n && $K_n == $K_paren && $K_n > $K_end_my ) {
+                $is_keyword_paren = 1;
+
+                # Patch: force this iterator to be entered as new lexical
+                $K_end_my   = $K_paren;
+                $my_keyword = $token_KK;
             }
         }
         else {
@@ -8940,33 +8985,16 @@ sub warn_variable_usage {
                 my $block_type;
                 $block_type = $rblock_type_of_seqno->{$seqno} if ($seqno);
 
+                my $is_on_stack = ( $seqno == $rblock_stack->[-1]->[0] );
+
                 #--------------
                 # a block brace
                 #--------------
                 if ( $is_opening_token{$token} ) {
 
-                    if (   $block_type
-                        || $block_following_paren_seqno{$seqno} )
-                    {
+                    if ( $block_type && !$is_on_stack ) {
 
-                        if ( !$early_stack_push ) {
-                            push @{$rblock_stack}, [ $seqno, {} ];
-                        }
-
-                        # Verify that the correct opening token arrives
-                        # after an early stack push and turn off the flag.
-                        elsif ( $seqno == $rblock_stack->[-1]->[0] ) {
-                            $early_stack_push = 0;
-                        }
-
-                        # Error check. This should never happen because
-                        # the early stack push only occurs when the actual
-                        # opening token is the next container.
-                        else {
-                            my $lno = $ix_line + 1;
-                            DEVEL_MODE
-                              && Fault("frozen stack error near line $lno\n");
-                        }
+                        push @{$rblock_stack}, [ $seqno, {} ];
 
                         # update sub count
                         if ( $ris_sub_block->{$seqno} ) {
@@ -8974,57 +9002,89 @@ sub warn_variable_usage {
                         }
                     }
                 }
+
                 elsif ( $is_closing_token{$token} ) {
 
-                    # Transfer stack at paren followed by block: '){'
-                    if ( $block_following_paren_seqno{$seqno} ) {
-                        $rblock_stack->[-1]->[0] =
-                          $block_following_paren_seqno{$seqno};
-
-                        # alert the opening brace not to push another
-                        # copy on the stack
-                        $early_stack_push = 1;
-                    }
-
                     # pop stack and scan results at a closing block brace
-                    elsif ($block_type) {
-
+                    if ($is_on_stack) {
                         my $stack_item = pop @{$rblock_stack};
                         my ( $prev_seqno, $rmy_var_hash ) = @{$stack_item};
 
-                        # check for stack error
-                        if ( $prev_seqno ne $seqno ) {
-                            my $lno = $ix_line + 1;
-                            DEVEL_MODE
-                              && Fault(
-"stack error: seqno=$seqno ne $prev_seqno near line $lno\n"
-                              );
+                        # if we popped a block token
+                        if ($block_type) {
 
-                            # give up - file may be unbalanced
-                            return;
-                        }
+                            # Check for unused vars if requested
+                            if ( $check_unused && $rmy_var_hash ) {
+                                foreach my $name ( keys %{$rmy_var_hash} ) {
+                                    my $entry      = $rmy_var_hash->{$name};
+                                    my $count      = $entry->{count};
+                                    my $line_index = $entry->{line_index};
+                                    my $lex_type   = $entry->{type};
+                                    my $pkg        = $entry->{package};
+                                    my $Kvar       = $entry->{K};
 
-                        # Check for unused vars
-                        if ( $rmy_var_hash && $check_unused ) {
-                            foreach my $name ( keys %{$rmy_var_hash} ) {
-                                my $item = $rmy_var_hash->{$name};
-                                my ( $count, $line_index, $lex_type, $pkg ) =
-                                  @{$item};
-                                if (   !$count
-                                    && !$is_excluded_name{$name} )
-                                {
-                                    push @warnings,
-                                      [
-                                        "$lex_type $name unused",
-                                        $line_index + 1,
-                                        'u'
-                                      ];
+                                    if (   !$count
+                                        && !$is_excluded_name{$name} )
+                                    {
+                                        my $var  = "$lex_type $name";
+                                        my $note = EMPTY_STRING;
+                                        push @warnings,
+                                          {
+                                            name        => $var,
+                                            note        => $note,
+                                            line_number => $line_index + 1,
+                                            letter      => 'u',
+                                            K           => $Kvar,
+                                          };
+                                    }
                                 }
                             }
                         }
+
+                        # if we just popped a non-block token
+                        else {
+
+                            # an opening token should follow next - push it
+                            my $K_n = $self->K_next_code($KK);
+                            if (   $K_n
+                                && $rLL->[$K_n]->[_TYPE_SEQUENCE_]
+                                && $is_opening_token{ $rLL->[$K_n]->[_TOKEN_] }
+                              )
+                            {
+                                my $seqno_n = $rLL->[$K_n]->[_TYPE_SEQUENCE_];
+                                push @{$rblock_stack},
+                                  [ $seqno_n, $rmy_var_hash ];
+                            }
+
+                            # if not, it is an programming error
+                            else {
+
+                                # A non-block should only be on the stack if an
+                                # opening token follows
+                                my $token_n = $rLL->[$K_n]->[_TOKEN_];
+                                my $lno     = $ix_line + 1;
+                                DEVEL_MODE && Fault(<<EOM);
+Non-block closing token '$token' on stack followed by token $token at line $lno
+Expecting to find an opening token here.
+EOM
+                            }
+                        }
+                    }
+
+                    # not on the stack: stack error if this is a block
+                    elsif ($block_type) {
+                        my $lno        = $ix_line + 1;
+                        my $prev_seqno = $rblock_stack->[-1]->[0];
+                        DEVEL_MODE
+                          && Fault(
+"stack error: seqno=$seqno ne $prev_seqno near line $lno\n"
+                          );
+
+                        # give up - file may be unbalanced
+                        return;
                     }
                     else {
-                        # not a block
+                        # not a block, not on stack, so nothing to do
                     }
                 }
                 else {
@@ -9071,34 +9131,21 @@ sub warn_variable_usage {
                 # such as 'for my $var (..) { ... }'
                 #--------------------------------------------------
                 elsif ( $is_blocktype_with_paren{$token} ) {
-                    my ( $seqno_paren, $seqno_brace ) =
-                      $find_paren_and_brace->($KK);
+                    my ( $seqno_paren, $seqno_brace, $is_iterator_without_my )
+                      = $find_paren_and_brace->($KK);
                     if ( $seqno_paren && $seqno_brace ) {
 
-                        # The issue here is that lexical variables created
-                        # within or before the opening brace get the scope of
-                        # the brace block.  This is a problem because we won't
-                        # put that block on the stack until later.  As a
-                        # workaround, we are going to push the opening paren on
-                        # the stack early, and fix things when the opening
-                        # brace actually arrives.  This causes any 'my'
-                        # variables between the keyword and block brace to
-                        # eventually have the scope of the block.
-                        if ( !$early_stack_push ) {
-                            push @{$rblock_stack}, [ $seqno_paren, {} ];
-                            $early_stack_push = 1;
-                            $block_following_paren_seqno{$seqno_paren} =
-                              $seqno_brace;
-                        }
-                        else {
+			# Lexical variables created within or before the
+			# opening brace get the scope of the brace block.  This
+			# is a problem because we won't put that block on the
+			# stack until later.  As a workaround, we are going to
+			# push the opening paren on the stack early, and fix
+			# things when the opening brace actually arrives.  This
+			# causes any 'my' variables between the keyword and
+			# block brace to eventually have the scope of the
+			# block.
+                        push @{$rblock_stack}, [ $seqno_paren, {} ];
 
-                            # stack already frozen - shouldn't happen
-                            my $lno = $ix_line + 1;
-                            DEVEL_MODE
-                              && Fault(
-"strangely nested blocks near line $lno at seqno $seqno_brace K=$KK tok=$token type=$type\n"
-                              );
-                        }
                     }
                 }
             }
@@ -9169,16 +9216,25 @@ sub warn_variable_usage {
                         foreach my $item ( @{$rblock_stack} ) {
                             my ( $seqno_item, $rhash ) = @{$item};
                             foreach my $name ( keys %{$rhash} ) {
-                                my $entry = $rhash->{$name};
-                                my ( $count, $line_index, $lex_type, $pkg ) =
-                                  @{$entry};
+                                my $entry      = $rhash->{$name};
+                                my $count      = $entry->{count};
+                                my $line_index = $entry->{line_index};
+                                my $lex_type   = $entry->{type};
+                                my $pkg        = $entry->{package};
+                                my $Kvar       = $entry->{K};
                                 if ( $pkg ne $package ) {
+                                    my $lno = $ix_line + 1;
+                                    my $note =
+                                      "is accessible in later packages";
+                                    my $var = "$lex_type $name";
                                     push @{$rpackage_warnings},
-                                      [
-"$lex_type $name is accessible in later packages",
-                                        $line_index + 1,
-                                        'p'
-                                      ];
+                                      {
+                                        name        => $var,
+                                        note        => $note,
+                                        line_number => $line_index + 1,
+                                        letter      => 'p',
+                                        K           => $Kvar,
+                                      };
                                 }
                             }
                         }
@@ -9280,14 +9336,24 @@ sub warn_variable_usage {
         foreach my $item ( @{$rblock_stack} ) {
             my ( $seqno, $rhash ) = @{$item};
             foreach my $name ( keys %{$rhash} ) {
-                my $entry = $rhash->{$name};
-                my ( $count, $line_index, $lex_type, $pkg ) = @{$entry};
+                my $entry      = $rhash->{$name};
+                my $count      = $entry->{count};
+                my $line_index = $entry->{line_index};
+                my $lex_type   = $entry->{type};
+                my $pkg        = $entry->{package};
+                my $Kvar       = $entry->{K};
 
                 # Warn about unused lexical variables
                 if ($check_unused) {
                     if ( !$count ) {
                         push @warnings,
-                          [ "$lex_type $name unused", $line_index + 1, 'u' ];
+                          {
+                            name        => "$lex_type $name",
+                            note        => EMPTY_STRING,
+                            line_number => $line_index + 1,
+                            letter      => 'u',
+                            K           => $Kvar,
+                          };
                     }
                 }
             }
@@ -9305,20 +9371,33 @@ sub warn_variable_usage {
     # happen if there were multiple packages.
     if (@pkg_warnings) {
         my %seen;
-        my @uniq = grep { !$seen{ $_->[1] . ':' . $_->[0] }++ } @pkg_warnings;
+        my @uniq = grep { !$seen{ $_->{line_number} . ':' . $_->{name} }++ }
+          @pkg_warnings;
         push @warnings, @uniq;
     }
 
     # Write the report to the warnings file. Note that we write with a single
     # warning message to avoid the warning line limit.
     if (@warnings) {
-        my $message = "Begin scan for --$wvu_key=$wvu_option:\n";
+        my $message = "Begin scan for --$wvu_key=$wvu_option\n";
         $message .= <<EOM;
-Line:Issue: Var;  issue u=unused r=reused s=multi-sigil p=package crossing
+u=unused  r=reused  s=multi-sigil  p=package crossing
+Line:Issue: Var: note
 EOM
-        foreach my $item ( sort { $a->[1] <=> $b->[1] } @warnings ) {
-            my ( $msg, $lno, $letter ) = @{$item};
-            $message .= "$lno:$letter: $msg\n";
+        foreach my $item (
+            sort {
+                     $a->{line_number} <=> $b->{line_number}
+                  || $a->{K} <=> $b->{K}
+                  || $a->{letter} cmp $b->{letter}
+            } @warnings
+          )
+        {
+            my $var    = $item->{name};
+            my $note   = $item->{note};
+            my $lno    = $item->{line_number};
+            my $letter = $item->{letter};
+            my $K      = $item->{K};
+            $message .= "$lno:$letter: $var: $note\n";
         }
         $message .= "End scan for --$wvu_key=$wvu_option:\n";
         warning($message);
