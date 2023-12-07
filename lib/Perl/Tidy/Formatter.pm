@@ -6367,7 +6367,9 @@ EOM
         Exit(0);
     }
 
-    # output file verbatim if severe error or no formatting requested
+    #----------------------------------------------------------------
+    # Output file verbatim if severe error or no formatting requested
+    #----------------------------------------------------------------
     if ( $severe_error || $rOpts->{notidy} ) {
         $self->dump_verbatim();
         $self->wrapup($severe_error);
@@ -6411,8 +6413,16 @@ EOM
         $self->find_multiline_qw($rqw_lines);
     }
 
-    $self->warn_variable_usage()
-      if ( $rOpts->{'warn-variable-usage'}
+    # Dump variable usage info if requested
+    if ( $rOpts->{'dump-variables'} ) {
+        $self->dump_variables();
+        Exit(0);
+    }
+
+    # Act on -warn-variables if requesed and if the logger is available
+    # (the logger is deactivated during iterations)
+    $self->warn_variables()
+      if ( $rOpts->{'warn-variables'}
         && $self->[_logger_object_] );
 
     $self->examine_vertical_tightness_flags();
@@ -8645,11 +8655,39 @@ sub set_CODE_type {
     return \@ix_side_comments;
 } ## end sub set_CODE_type
 
-sub warn_variable_usage {
-    my ($self) = @_;
+sub scan_variable_usage {
+    my ( $self, $sv_option ) = @_;
 
-    # Scan for unused variables and related variable issues if requested.
-    # We do this in a single sweep through the file.
+    # Scan for unused and reused lexical variables in a single sweep.
+
+    # Given:
+    #  $sv_option is an optional set of letters to restrict checks:
+    #    - do all checks if not defined
+    #    - do selected checks if defined
+    #    - a value of '1' produces all checks
+    #    - example: $sv_option = 'rsp' does checks 'r' 's' 'p' (see below)
+    # Return:
+    #   - nothing if no errors found
+    #   - ref to a list of issues, one per variable, in line order.
+    #     Each list item is a hash of values describing the issue.
+
+    # Check types:
+    #  u - declared but unused
+    #  r - reused scope
+    #  s - reused sigil
+    #  p - package boundaries crossed by lexical variables
+    #  0 - none of the above
+    #  1 - all of the above
+    #  * - all of the above
+    # Example:
+    #  -sv_option=ur  : do check types 'u' and 'r'
+
+    $sv_option = '*' if ( !defined($sv_option) );
+
+    my $check_sigil         = $sv_option =~ /[s1\*]/;
+    my $check_cross_package = $sv_option =~ /[p1\*]/;
+    my $check_unused        = $sv_option =~ /[u1\*]/;
+    my $check_reused        = $sv_option =~ /[r1\*]/;
 
     my $rLL                  = $self->[_rLL_];
     my $rlines               = $self->[_rlines_];
@@ -8670,25 +8708,6 @@ sub warn_variable_usage {
     ##qw(if elsif unless while until for foreach switch case given when catch);
     @is_blocktype_with_paren{@q} = (1) x scalar(@q);
 
-    # Single letter options:
-    #  u - declared but unused
-    #  r - reused scope
-    #  s - reused sigil
-    #  p - package boundaries crossed by lexical variables
-    #  0 - none of the above
-    #  1 - all of the above
-    #  * - all of the above
-    # Example:
-    #  -wvu=ur  : do check types 'u' and 'r'
-
-    my $wvu_key    = 'warn-variable-usage';
-    my $wvu_option = $rOpts->{$wvu_key};
-
-    my $check_sigil         = $wvu_option =~ /[s1\*]/;
-    my $check_cross_package = $wvu_option =~ /[p1\*]/;
-    my $check_unused        = $wvu_option =~ /[u1\*]/;
-    my $check_reused        = $wvu_option =~ /[r1\*]/;
-
     # The block stack:
     # [$seqno, $rhash ]
     # where
@@ -8702,14 +8721,15 @@ sub warn_variable_usage {
     #    $name => {
     #        count      => $count,
     #        line_index => $line_index,
-    #        type       => $type,
+    #        keyword    => $keyword,
     #        package    => $package,
     #        K          => $KK
     #    }
     #   };
     #   $name = the variable name, such as '$data', '@list', '%vars',
+    #   $count =  number of uses
     #   $line_index = index of the line where it is defined
-    #   $type = lexical type, 'my' or 'state' or 'our'
+    #   $keyword = 'my' or 'state' or 'for' or 'foreach'
     #   $package = what package was in effect when it was defined
     #   $KK = token index (for sorting)
 
@@ -8727,24 +8747,9 @@ sub warn_variable_usage {
     my %package_warnings;          # warning messages for package cross-over
     my %sub_count_by_package;      # how many subs defined in a package
 
-    # Default names which are excluded from test types 'u' and 'r':
-    my @xl = qw($self $class);
-
-    my $wvuxl_key      = 'warn-variable-usage-exclusion-list';
-    my $excluded_names = $rOpts->{$wvuxl_key};
-    if ($excluded_names) {
-        $excluded_names =~ s/,/ /;
-        $excluded_names =~ s/^\s+//;
-        $excluded_names =~ s/\s+$//;
-        @xl = split /\s+/, $excluded_names;
-    }
-
-    my %is_excluded_name;
-    @{is_excluded_name}{@xl} = (1) x scalar(@xl);
-
     # Variables for scanning interpolated quotes:
-    my $ix_HERE_END = -1;         # the line index of the last here target read
-    my $in_interpolated_quote;    # in multiline quote with interpolation?
+    my $ix_HERE_END = -1;          # the line index of the last here target read
+    my $in_interpolated_quote;     # in multiline quote with interpolation?
 
     #--------------------------------
     # sub to checkin a new identifier
@@ -8764,11 +8769,9 @@ sub warn_variable_usage {
             $word  = $2;
         }
 
-        my $skip_reused_test = $is_excluded_name{$name};
-
         my @sigils_to_test;
         if ($check_sigil) {
-            if ( $check_reused && !$skip_reused_test ) {
+            if ($check_reused) {
                 @sigils_to_test = (qw($ @ %));
             }
             else {
@@ -8777,7 +8780,7 @@ sub warn_variable_usage {
                 }
             }
         }
-        elsif ( $check_reused && !$skip_reused_test ) {
+        elsif ($check_reused) {
             push @sigils_to_test, $sigil;
         }
         else {
@@ -8793,9 +8796,7 @@ sub warn_variable_usage {
                     my $test_name = $sig . $word;
                     next unless ( $rhash->{$test_name} );
                     my $first_line = $rhash->{$test_name}->{line_index} + 1;
-                    my $msg;
                     my $letter;
-                    my $var = "$my_keyword $name";
                     my $note;
                     if ( $sig eq $sigil ) {
                         my $as_iterator =
@@ -8812,7 +8813,8 @@ sub warn_variable_usage {
                     }
                     push @warnings,
                       {
-                        name        => $var,
+                        name        => $name,
+                        keyword     => $my_keyword,
                         note        => $note,
                         line_number => $line_index + 1,
                         letter      => $letter,
@@ -8828,7 +8830,7 @@ sub warn_variable_usage {
         $rhash->{$name} = {
             count      => $my_starting_count,
             line_index => $line_index,
-            type       => $my_keyword,
+            keyword    => $my_keyword,
             package    => $current_package,
             K          => $KK,
         };
@@ -8847,6 +8849,29 @@ sub warn_variable_usage {
                     $rhash->{$name}->{count}++;
                     last;
                 }
+            }
+        }
+        return;
+    };
+
+    #-----------------------------------------------
+    # sub to check for zero counts when stack closes
+    #-----------------------------------------------
+    my $check_for_unused_names = sub {
+        my ($rhash) = @_;
+        foreach my $name ( keys %{$rhash} ) {
+            my $entry = $rhash->{$name};
+            my $count = $entry->{count};
+            if ( !$count ) {
+                push @warnings,
+                  {
+                    name        => $name,
+                    keyword     => $entry->{keyword},
+                    note        => EMPTY_STRING,
+                    line_number => $entry->{line_index} + 1,
+                    letter      => 'u',
+                    K           => $entry->{K},
+                  };
             }
         }
         return;
@@ -9015,29 +9040,7 @@ sub warn_variable_usage {
 
                             # Check for unused vars if requested
                             if ( $check_unused && $rmy_var_hash ) {
-                                foreach my $name ( keys %{$rmy_var_hash} ) {
-                                    my $entry      = $rmy_var_hash->{$name};
-                                    my $count      = $entry->{count};
-                                    my $line_index = $entry->{line_index};
-                                    my $lex_type   = $entry->{type};
-                                    my $pkg        = $entry->{package};
-                                    my $Kvar       = $entry->{K};
-
-                                    if (   !$count
-                                        && !$is_excluded_name{$name} )
-                                    {
-                                        my $var  = "$lex_type $name";
-                                        my $note = EMPTY_STRING;
-                                        push @warnings,
-                                          {
-                                            name        => $var,
-                                            note        => $note,
-                                            line_number => $line_index + 1,
-                                            letter      => 'u',
-                                            K           => $Kvar,
-                                          };
-                                    }
-                                }
+                                $check_for_unused_names->($rmy_var_hash);
                             }
                         }
 
@@ -9135,15 +9138,15 @@ EOM
                       = $find_paren_and_brace->($KK);
                     if ( $seqno_paren && $seqno_brace ) {
 
-			# Lexical variables created within or before the
-			# opening brace get the scope of the brace block.  This
-			# is a problem because we won't put that block on the
-			# stack until later.  As a workaround, we are going to
-			# push the opening paren on the stack early, and fix
-			# things when the opening brace actually arrives.  This
-			# causes any 'my' variables between the keyword and
-			# block brace to eventually have the scope of the
-			# block.
+                        # Lexical variables created within or before the
+                        # opening brace get the scope of the brace block.  This
+                        # is a problem because we won't put that block on the
+                        # stack until later.  As a workaround, we are going to
+                        # push the opening paren on the stack early, and fix
+                        # things when the opening brace actually arrives.  This
+                        # causes any 'my' variables between the keyword and
+                        # block brace to eventually have the scope of the
+                        # block.
                         push @{$rblock_stack}, [ $seqno_paren, {} ];
 
                     }
@@ -9216,24 +9219,20 @@ EOM
                         foreach my $item ( @{$rblock_stack} ) {
                             my ( $seqno_item, $rhash ) = @{$item};
                             foreach my $name ( keys %{$rhash} ) {
-                                my $entry      = $rhash->{$name};
-                                my $count      = $entry->{count};
-                                my $line_index = $entry->{line_index};
-                                my $lex_type   = $entry->{type};
-                                my $pkg        = $entry->{package};
-                                my $Kvar       = $entry->{K};
+                                my $entry = $rhash->{$name};
+                                my $pkg   = $entry->{package};
                                 if ( $pkg ne $package ) {
                                     my $lno = $ix_line + 1;
                                     my $note =
-                                      "is accessible in later packages";
-                                    my $var = "$lex_type $name";
+"is accessible in later packages, see line $lno";
                                     push @{$rpackage_warnings},
                                       {
-                                        name        => $var,
+                                        name        => $name,
+                                        keyword     => $entry->{keyword},
                                         note        => $note,
-                                        line_number => $line_index + 1,
+                                        line_number => $entry->{line_index} + 1,
                                         letter      => 'p',
-                                        K           => $Kvar,
+                                        K           => $entry->{K},
                                       };
                                 }
                             }
@@ -9298,8 +9297,8 @@ EOM
                         $interpolated = 1;
                     }
 
-                    # is not interpolated for leading operators: qw q y tr '
-                    elsif ( $token =~ /^(qw|q[^qrx]|y|tr|\')/ ) {
+                    # is not interpolated for leading operators: qw q tr y '
+                    elsif ( $token =~ /^(qw | q[^qrx] | tr | [y\'] )/x ) {
                         $interpolated = 0;
                     }
 
@@ -9333,29 +9332,10 @@ EOM
         DEVEL_MODE && Fault("stack error at end of scan\n");
     }
     else {
-        foreach my $item ( @{$rblock_stack} ) {
-            my ( $seqno, $rhash ) = @{$item};
-            foreach my $name ( keys %{$rhash} ) {
-                my $entry      = $rhash->{$name};
-                my $count      = $entry->{count};
-                my $line_index = $entry->{line_index};
-                my $lex_type   = $entry->{type};
-                my $pkg        = $entry->{package};
-                my $Kvar       = $entry->{K};
-
-                # Warn about unused lexical variables
-                if ($check_unused) {
-                    if ( !$count ) {
-                        push @warnings,
-                          {
-                            name        => "$lex_type $name",
-                            note        => EMPTY_STRING,
-                            line_number => $line_index + 1,
-                            letter      => 'u',
-                            K           => $Kvar,
-                          };
-                    }
-                }
+        if ($check_unused) {
+            foreach my $item ( @{$rblock_stack} ) {
+                my ( $seqno, $rhash ) = @{$item};
+                $check_for_unused_names->($rhash);
             }
         }
     }
@@ -9371,40 +9351,132 @@ EOM
     # happen if there were multiple packages.
     if (@pkg_warnings) {
         my %seen;
-        my @uniq = grep { !$seen{ $_->{line_number} . ':' . $_->{name} }++ }
-          @pkg_warnings;
-        push @warnings, @uniq;
+        foreach my $item (@pkg_warnings) {
+            my $key = $item->{line_number} . ':' . $item->{name};
+            next if ( $seen{$key}++ );
+            push @warnings, $item;
+        }
     }
 
-    # Write the report to the warnings file. Note that we write with a single
-    # warning message to avoid the warning line limit.
-    if (@warnings) {
-        my $message = "Begin scan for --$wvu_key=$wvu_option\n";
-        $message .= <<EOM;
+    return \@warnings;
+} ## end sub scan_variable_usage
+
+sub dump_variables {
+    my ($self) = @_;
+
+    # dump selected variables --dump-variables(-dv) is set.
+    my $dv_key    = 'dump-variables';
+    my $dv_option = $rOpts->{$dv_key};
+    if ( $dv_option eq '*' || $dv_option eq '1' ) { $dv_option = 'spur' }
+    return unless ($dv_option);
+
+    my $rlines = $self->scan_variable_usage($dv_option);
+    return unless ( @{$rlines} );
+
+    # output for multiple types
+    my $output_string = <<EOM;
 u=unused  r=reused  s=multi-sigil  p=package crossing
 Line:Issue: Var: note
 EOM
-        foreach my $item (
-            sort {
-                     $a->{line_number} <=> $b->{line_number}
-                  || $a->{K} <=> $b->{K}
-                  || $a->{letter} cmp $b->{letter}
-            } @warnings
-          )
-        {
-            my $var    = $item->{name};
-            my $note   = $item->{note};
-            my $lno    = $item->{line_number};
-            my $letter = $item->{letter};
-            my $K      = $item->{K};
-            $message .= "$lno:$letter: $var: $note\n";
-        }
-        $message .= "End scan for --$wvu_key=$wvu_option:\n";
-        warning($message);
+    foreach my $item (
+        sort {
+                 $a->{line_number} <=> $b->{line_number}
+              || $a->{K} <=> $b->{K}
+              || $a->{letter} cmp $b->{letter}
+        } @{$rlines}
+      )
+    {
+        my $name    = $item->{name};
+        my $keyword = $item->{keyword};
+        my $note    = $item->{note};
+        my $lno     = $item->{line_number};
+        my $letter  = $item->{letter};
+        my $K       = $item->{K};
+        my $var     = "$keyword $name";
+        if ($note) { $note = ": $note" }
+        $output_string .= "$lno:$letter: $var$note\n";
     }
+    print {*STDOUT} $output_string;
 
     return;
-} ## end sub warn_variable_usage
+} ## end sub dump_variables
+
+sub warn_variables {
+    my ($self) = @_;
+
+    # process a --warn-variables command
+
+    my $wv_key    = 'warn-variables';
+    my $wv_option = $rOpts->{$wv_key};
+
+    # Single letter options:
+    #  u - declared but unused [NOT AVAILABLE as a warning, use dump]
+    #  r - reused scope
+    #  s - reused sigil
+    #  p - package boundaries crossed by lexical variables
+    #  0 - none of the above
+    #  1 - all of the above
+    #  * - all of the above
+    # Example:
+    #  -wv=sr  : do check types 's' and 'r'
+
+    if ( $wv_option eq '*' || $wv_option eq '1' ) { $wv_option = 'spr' }
+
+    # NOTE: Option type 'u' (undefined) is not allowed because it will cause
+    # needless warnings when perltidy is run on small blocks from an editor.
+    if ( $wv_option =~ s/u//g ) {
+        Warn(<<EOM);
+--$wv_key=u is not available; use --dump-variables=u to find unused vars
+EOM
+    }
+
+    return unless ($wv_option);
+
+    my $rwarnings = $self->scan_variable_usage($wv_option);
+    return unless ( @{$rwarnings} );
+
+    my $message = "Begin scan for --$wv_key=$wv_option\n";
+    $message .= <<EOM;
+r=reused  s=multi-sigil  p=package crossing
+Line:Issue: Var: note
+EOM
+
+    # remove any excluded names
+    my $wvxl_key       = 'warn-variables-exclusion-list';
+    my $excluded_names = $rOpts->{$wvxl_key};
+    if ($excluded_names) {
+        $excluded_names =~ s/,/ /;
+        $excluded_names =~ s/^\s+//;
+        $excluded_names =~ s/\s+$//;
+        my @xl = split /\s+/, $excluded_names;
+        my %is_excluded_name;
+        @{is_excluded_name}{@xl} = (1) x scalar(@xl);
+        my @filtered = grep { !$is_excluded_name{ $_->{name} } } @{$rwarnings};
+        $rwarnings = \@filtered;
+    }
+
+    foreach my $item (
+        sort {
+                 $a->{line_number} <=> $b->{line_number}
+              || $a->{K} <=> $b->{K}
+              || $a->{letter} cmp $b->{letter}
+        } @{$rwarnings}
+      )
+    {
+        my $name    = $item->{name};
+        my $keyword = $item->{keyword};
+        my $note    = $item->{note};
+        my $lno     = $item->{line_number};
+        my $letter  = $item->{letter};
+        my $K       = $item->{K};
+        my $var     = "$keyword $name";
+        if ($note) { $note = ": $note" }
+        $message .= "$lno:$letter: $var$note\n";
+    }
+    $message .= "End scan for --$wv_key=$wv_option:\n";
+    warning($message);
+    return;
+} ## end sub warn_variables
 
 sub find_non_indenting_braces {
 
