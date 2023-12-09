@@ -5389,7 +5389,7 @@ to avoid causing problems with scripts which have extended syntaxes.
 B<-DEBUG>  will write a file with extension F<.DEBUG> for each input file
 showing the tokenization of all lines of code.
 
-=item B<Making a table of information on code blocks>
+=item B<Making a table of information on code blocks with --dump-block-summary>
 
 A table listing information about the blocks of code in a file can be made with
 B<--dump-block-summary>, or B<-dbs>.  This causes perltidy to read and parse
@@ -5496,6 +5496,90 @@ This selects every if-chain which contains 2 or more B<elsif> blocks:
 
 =back
 
+=item B<Finding unused, reused, and other variables of interest with --dump-variables>
+
+Lexical variables with certain properties of interest to a programmer can be
+listed with B<--dump-variables> or B<-dv>.  This parameter must be on the
+command line, along with a single file name.  It causes perltidy to scan the
+file for certain variable types, write any found to the standard output, and
+then immediately exit without doing any formatting. For example
+
+    perltidy -dv somefile.pl >vars.txt
+
+produces a file with lines which look something like
+
+    1778:u: my $input_file
+    6089:r: my $j: reused - see line 6076
+
+The values on the line are separated by colons and have the following
+meaning:
+
+    line number   - the number of the line of the input file
+    issue         - a single letter indicating the issue, see below
+    variable name - the name of the variable, preceded by a keyword
+    note          - an optional note referring to another line
+
+The checks are for lexical variables introduced by the keywords B<my> and B<state>.  The types of checks which are made are identified in the output with one
+of the letters, B<r>, B<s>, B<p>, and B<u> as follows:
+
+=over 4
+
+=item B<r: reused variable name>
+
+These are variables which are re-declared in the scope of a variable
+with the identical name.  This can be confusing, and might indicate
+an error.
+
+=item B<s: sigil change but reused bareword>
+
+These are variables which have the same bareword name but a different sigil
+(B<$>, B<@>, or B<%>) as another variable in the same scope.  For example, this
+occurs if variables B<$data> and B<%data> share the same scope. This can be
+confusing and can be avoided by altering one of the variable names.
+
+=item B<p: package-crossing variables>
+
+These are lexical variables which are declared in one package and still visible
+in a later package with subroutines in the same file.  This only occurs if
+there are multiple packages in a file. It might be avoided by enclosing such
+variables in a bare block to limit their scope.
+
+=item B<u: unused variables>
+
+These are variables which are declared but not used. There are many good
+reasons for having unused variables, but sometimes they can occur due to being
+orphaned by a coding change, due to a misspelling, or by having an
+unintentional preceding C<my>.  So it is worth checking them, especially for
+new code.
+
+=back
+
+=item B<Warning about certain variables type with --warn-variables>
+
+The flag B<--warn-variables=string>, or B<-wv=string>, can be used to to
+produce a warning message if certain of the above variable types are
+encountered during formatting.   The input parameter B<string> is a
+a concatenation of the letters associated with the types of variables
+to produce a warning. For example:
+
+   perltidy -wv=sp somefile.pl
+
+will process F<somefile.pl> normally but issue a warning if either of
+the issues 's' or 'p', described above, are encountered.
+
+A limitation is that warnings may not be requested for unused variables, type
+'u'. The reason is that this would produce many needless warnings, especially
+when perltidy is run on small snippets of code from within an editor.
+
+All possible variable warnings may be requested with B<-wv=rsp> or simply
+B<-wv=1> or B<-wv='*'>.
+
+A companion flag, B<--want-variables-exclusion-list=string>, or B<-wvxl=string>,
+can be used to skip warning checks for a list of variables.  For example,
+
+   perltidy -wv=1 -wvxl='$self $class'  somefile.pl
+
+will skip all warnings for variables C<$self> and C<$class>.
 
 =item B<Working with MakeMaker, AutoLoader and SelfLoader>
 
