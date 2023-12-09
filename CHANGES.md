@@ -2,6 +2,38 @@
 
 ## 2023 09 12.05
 
+    - Added --dump-variables (-dv) option to dump a list of variables with
+      certain properties of interest. For example
+
+         perltidy -dv somefile.pl >vars.txt
+
+      produces a file with lines which look something like
+
+         ...
+         1778:u: my $input_file
+         6089:r: my $j: reused - see line 6076
+
+      The values on the line are separated by colons are:
+
+        line number   - the number of the line of the input file
+        issue         - a single letter indicating the issue, see below
+        variable name - the name of the variable, preceded by a keyword
+        note          - an optional note referring to another line
+
+      The issue is indicated by a letter which may be one of:
+        r: reused variable name
+        s: sigil change but reused bareword
+        p: lexical variable with scope in multiple packages
+        u: unused variable
+
+    - Added a related flag --warn-variables=s (-wv=s) option to warn
+      if certain types of variables are found in a script. For example
+
+        perltidy -wv=rps somefile.pl
+
+      will check for and warn if any of the above types r, s, or p are seen.
+      The manual has further details.
+
     - All parameters taking integer values are now checked for
       out-of-range values before processing starts. When a
       minimum or maximum range is exceeded, the new default
