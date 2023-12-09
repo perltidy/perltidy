@@ -66,7 +66,7 @@ use strict;
 use warnings;
 
 # DEVEL_MODE gets switched on during automated testing for extra checking
-use constant DEVEL_MODE   => 0;
+use constant DEVEL_MODE   => 1;
 use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };
 
@@ -8668,22 +8668,36 @@ sub scan_variable_usage {
     #    - example: $sv_option = 'rsp' does checks 'r' 's' 'p' (see below)
     # Return:
     #   - nothing if no errors found
-    #   - ref to a list of issues, one per variable, in line order.
-    #     Each list item is a hash of values describing the issue.
+    #   - ref to a list of 'warnings', one per variable, in line order.
+    #     Each list item is a hash of values describing the issue. These
+    #     are stored in a list of hash refs, as follows:
+    #        push @warnings,
+    #          {
+    #            name        => $name,        # name, such as '$var', '%data'
+    #            line_number => $line_number, # line number where defined
+    #            K           => $KK,          # index of token $name
+    #            keyword     => $keyword,     # 'my', 'state', 'for', 'foreach'
+    #            letter      => $letter,      # one of: r s p u
+    #            note        => $note,        # additional text info
+    #          };
 
-    # Check types:
+    # issues are indicated by a unique letter 'letter'
     #  u - declared but unused
     #  r - reused scope
     #  s - reused sigil
     #  p - package boundaries crossed by lexical variables
+
+    # checks for these issues are requested with -sv_option, which may also be:
     #  0 - none of the above
     #  1 - all of the above
     #  * - all of the above
-    # Example:
+    # Example input:
     #  -sv_option=ur  : do check types 'u' and 'r'
 
+    # Assume all if no option received from caller.
     $sv_option = '*' if ( !defined($sv_option) );
 
+    # Unpack the option
     my $check_sigil         = $sv_option =~ /[s1\*]/;
     my $check_cross_package = $sv_option =~ /[p1\*]/;
     my $check_unused        = $sv_option =~ /[u1\*]/;
@@ -8698,6 +8712,7 @@ sub scan_variable_usage {
 
     my %is_re_match_op = ( '=~' => 1, '!~'    => 1 );
     my %is_my_state    = ( 'my' => 1, 'state' => 1 );
+    my %is_valid_sigil = ( '$'  => 1, '@'     => 1, '%' => 1 );
 
     # These can have the form keyword ( .... ) { BLOCK }
     my %is_for_foreach = ( 'for' => 1, 'foreach' => 1 );
@@ -8708,13 +8723,26 @@ sub scan_variable_usage {
     ##qw(if elsif unless while until for foreach switch case given when catch);
     @is_blocktype_with_paren{@q} = (1) x scalar(@q);
 
-    # The block stack:
-    # [$seqno, $rhash ]
-    # where
-    #  $seqno = the sequence number of the code block
-    #  $rhash = a hash of identifiers defined within this block (see below)
+    # Variables defining current state:
+    my $current_package = 'package main';
+
     my $rblock_stack = [];
-    push @{$rblock_stack}, [ SEQ_ROOT, {} ];
+
+    my $push_block_stack = sub {
+        my ( $seqno, $rvars ) = @_;
+
+        # push an entry for a new block onto the block stack:
+        # Given:
+        #  $seqno   = the sequence number of the code block
+        #  $rvars   = hash of initial identifiers for the block, if given
+        #             will be empty hash ref if not given
+        if ( !defined($rvars) ) { $rvars = {} }
+        push @{$rblock_stack},
+          { seqno => $seqno, package => $current_package, rvars => $rvars };
+        return;
+    };
+
+    $push_block_stack->(SEQ_ROOT);
 
     # $rhash holds all lexecal variables defined within a given block:
     #   $rhash->{
@@ -8732,10 +8760,6 @@ sub scan_variable_usage {
     #   $keyword = 'my' or 'state' or 'for' or 'foreach'
     #   $package = what package was in effect when it was defined
     #   $KK = token index (for sorting)
-
-    # Variables defining current state:
-    my $current_package = 'package main';
-    my $K_last_code;    # index K of the previous noblank token
 
     # Variables for a batch of lexical varis being collected:
     my $my_keyword;                # 'state' or 'my' keyword for this set
@@ -8791,7 +8815,7 @@ sub scan_variable_usage {
         # with a different sigil
         if (@sigils_to_test) {
             foreach my $item ( @{$rblock_stack} ) {
-                my $rhash = $item->[1];
+                my $rhash = $item->{rvars};
                 foreach my $sig (@sigils_to_test) {
                     my $test_name = $sig . $word;
                     next unless ( $rhash->{$test_name} );
@@ -8826,7 +8850,7 @@ sub scan_variable_usage {
         }
 
         # Store this lexical variable
-        my $rhash = $rblock_stack->[-1]->[1];
+        my $rhash = $rblock_stack->[-1]->{rvars};
         $rhash->{$name} = {
             count      => $my_starting_count,
             line_index => $line_index,
@@ -8844,9 +8868,9 @@ sub scan_variable_usage {
         my @names = @_;
         foreach my $name (@names) {
             foreach my $layer ( reverse( @{$rblock_stack} ) ) {
-                my ( $seqno, $rhash ) = @{$layer};
-                if ( $rhash->{$name} ) {
-                    $rhash->{$name}->{count}++;
+                my $rvars = $layer->{rvars};
+                if ( $rvars->{$name} ) {
+                    $rvars->{$name}->{count}++;
                     last;
                 }
             }
@@ -9010,18 +9034,16 @@ sub scan_variable_usage {
                 my $block_type;
                 $block_type = $rblock_type_of_seqno->{$seqno} if ($seqno);
 
-                my $is_on_stack = ( $seqno == $rblock_stack->[-1]->[0] );
+                my $is_on_stack = ( $seqno == $rblock_stack->[-1]->{seqno} );
 
-                #--------------
-                # a block brace
-                #--------------
                 if ( $is_opening_token{$token} ) {
 
+                    # always push a block unless it has already been pushed
                     if ( $block_type && !$is_on_stack ) {
 
-                        push @{$rblock_stack}, [ $seqno, {} ];
+                        $push_block_stack->($seqno);
 
-                        # update sub count
+                        # update sub count for cross-package checks
                         if ( $ris_sub_block->{$seqno} ) {
                             $sub_count_by_package{$current_package}++;
                         }
@@ -9030,24 +9052,29 @@ sub scan_variable_usage {
 
                 elsif ( $is_closing_token{$token} ) {
 
-                    # pop stack and scan results at a closing block brace
+                    # always pop the stack if this token is on the stack
                     if ($is_on_stack) {
-                        my $stack_item = pop @{$rblock_stack};
-                        my ( $prev_seqno, $rmy_var_hash ) = @{$stack_item};
+                        my $stack_item   = pop @{$rblock_stack};
+                        my $popped_seqno = $stack_item->{seqno};
+                        my $rpopped_vars = $stack_item->{rvars};
 
                         # if we popped a block token
                         if ($block_type) {
 
+                            # the current package gets updated at a block end
+                            $current_package = $stack_item->{package};
+
                             # Check for unused vars if requested
-                            if ( $check_unused && $rmy_var_hash ) {
-                                $check_for_unused_names->($rmy_var_hash);
+                            if ( $check_unused && $rpopped_vars ) {
+                                $check_for_unused_names->($rpopped_vars);
                             }
                         }
 
-                        # if we just popped a non-block token
+                        # if we just popped a non-block token:
                         else {
 
-                            # an opening token should follow next - push it
+                            # an opening token should follow - push it;
+                            # this transfers 'my' info at 'for my $x ( ) {'
                             my $K_n = $self->K_next_code($KK);
                             if (   $K_n
                                 && $rLL->[$K_n]->[_TYPE_SEQUENCE_]
@@ -9055,8 +9082,7 @@ sub scan_variable_usage {
                               )
                             {
                                 my $seqno_n = $rLL->[$K_n]->[_TYPE_SEQUENCE_];
-                                push @{$rblock_stack},
-                                  [ $seqno_n, $rmy_var_hash ];
+                                $push_block_stack->( $seqno_n, $rpopped_vars );
                             }
 
                             # if not, it is an programming error
@@ -9067,27 +9093,27 @@ sub scan_variable_usage {
                                 my $token_n = $rLL->[$K_n]->[_TOKEN_];
                                 my $lno     = $ix_line + 1;
                                 DEVEL_MODE && Fault(<<EOM);
-Non-block closing token '$token' on stack followed by token $token at line $lno
+Non-block closing token '$token' on stack followed by token $token_n at line $lno
 Expecting to find an opening token here.
 EOM
                             }
                         }
                     }
 
-                    # not on the stack: stack error if this is a block
+                    # if not on the stack: error if this is a block
                     elsif ($block_type) {
-                        my $lno        = $ix_line + 1;
-                        my $prev_seqno = $rblock_stack->[-1]->[0];
+                        my $lno          = $ix_line + 1;
+                        my $popped_seqno = $rblock_stack->[-1]->{seqno};
                         DEVEL_MODE
                           && Fault(
-"stack error: seqno=$seqno ne $prev_seqno near line $lno\n"
+"stack error: seqno=$seqno ne $popped_seqno near line $lno\n"
                           );
 
                         # give up - file may be unbalanced
                         return;
                     }
                     else {
-                        # not a block, not on stack, so nothing to do
+                        # not a block, not on stack: nothing to do
                     }
                 }
                 else {
@@ -9117,6 +9143,7 @@ EOM
 
                     # Get initial count
                     $my_starting_count = 0;
+                    my $K_last_code = $self->K_previous_code($KK);
                     if ( defined($K_last_code) ) {
                         my $last_type  = $rLL->[$K_last_code]->[_TYPE_];
                         my $last_token = $rLL->[$K_last_code]->[_TOKEN_];
@@ -9134,8 +9161,8 @@ EOM
                 # such as 'for my $var (..) { ... }'
                 #--------------------------------------------------
                 elsif ( $is_blocktype_with_paren{$token} ) {
-                    my ( $seqno_paren, $seqno_brace, $is_iterator_without_my )
-                      = $find_paren_and_brace->($KK);
+                    my ( $seqno_paren, $seqno_brace ) =
+                      $find_paren_and_brace->($KK);
                     if ( $seqno_paren && $seqno_brace ) {
 
                         # Lexical variables created within or before the
@@ -9147,7 +9174,7 @@ EOM
                         # causes any 'my' variables between the keyword and
                         # block brace to eventually have the scope of the
                         # block.
-                        push @{$rblock_stack}, [ $seqno_paren, {} ];
+                        $push_block_stack->($seqno_paren);
 
                     }
                 }
@@ -9176,7 +9203,7 @@ EOM
                         $sigil = $1;
                         $word  = $2;
                         $sigil = substr( $sigil, -1, 1 );
-                        if ( $sigil !~ /^[\$\@\%]$/ ) {
+                        if ( !$is_valid_sigil{$sigil} ) {
                             $sigil = EMPTY_STRING;
                             $word  = EMPTY_STRING;
                         }
@@ -9217,7 +9244,7 @@ EOM
                             $package_warnings{$package} = $rpackage_warnings;
                         }
                         foreach my $item ( @{$rblock_stack} ) {
-                            my ( $seqno_item, $rhash ) = @{$item};
+                            my $rhash = $item->{rvars};
                             foreach my $name ( keys %{$rhash} ) {
                                 my $entry = $rhash->{$name};
                                 my $pkg   = $entry->{package};
@@ -9291,6 +9318,7 @@ EOM
                 else {
 
                     # is interpolated if it follow a match operator =~ or !~
+                    my $K_last_code = $self->K_previous_code($KK);
                     if (   $K_last_code
                         && $is_re_match_op{ $rLL->[$K_last_code]->[_TYPE_] } )
                     {
@@ -9319,7 +9347,6 @@ EOM
             else {
                 # skip all other token types
             }
-            $K_last_code = $KK;
         }
     }
 
@@ -9334,13 +9361,14 @@ EOM
     else {
         if ($check_unused) {
             foreach my $item ( @{$rblock_stack} ) {
-                my ( $seqno, $rhash ) = @{$item};
+                my $rhash = $item->{rvars};
                 $check_for_unused_names->($rhash);
             }
         }
     }
 
     # Only include cross-package warnings for packages which created subs.
+    # This will limit this type of warning to significant package changes.
     my @pkg_warnings;
     foreach my $key ( keys %package_warnings ) {
         next if ( !$sub_count_by_package{$key} );
@@ -9358,19 +9386,18 @@ EOM
         }
     }
 
-    return \@warnings;
+    my @sorted =
+      sort { $a->{K} <=> $b->{K} || $a->{letter} cmp $b->{letter} } @warnings;
+
+    return \@sorted;
 } ## end sub scan_variable_usage
 
 sub dump_variables {
     my ($self) = @_;
 
-    # dump selected variables --dump-variables(-dv) is set.
-    my $dv_key    = 'dump-variables';
-    my $dv_option = $rOpts->{$dv_key};
-    if ( $dv_option eq '*' || $dv_option eq '1' ) { $dv_option = 'spur' }
-    return unless ($dv_option);
+    # process a --dump-variables(-dv) command
 
-    my $rlines = $self->scan_variable_usage($dv_option);
+    my $rlines = $self->scan_variable_usage();
     return unless ( @{$rlines} );
 
     # output for multiple types
@@ -9378,23 +9405,14 @@ sub dump_variables {
 u=unused  r=reused  s=multi-sigil  p=package crossing
 Line:Issue: Var: note
 EOM
-    foreach my $item (
-        sort {
-                 $a->{line_number} <=> $b->{line_number}
-              || $a->{K} <=> $b->{K}
-              || $a->{letter} cmp $b->{letter}
-        } @{$rlines}
-      )
-    {
-        my $name    = $item->{name};
-        my $keyword = $item->{keyword};
-        my $note    = $item->{note};
+    foreach my $item ( @{$rlines} ) {
         my $lno     = $item->{line_number};
         my $letter  = $item->{letter};
-        my $K       = $item->{K};
-        my $var     = "$keyword $name";
+        my $keyword = $item->{keyword};
+        my $name    = $item->{name};
+        my $note    = $item->{note};
         if ($note) { $note = ": $note" }
-        $output_string .= "$lno:$letter: $var$note\n";
+        $output_string .= "$lno:$letter: $keyword $name$note\n";
     }
     print {*STDOUT} $output_string;
 
@@ -9410,7 +9428,7 @@ sub warn_variables {
     my $wv_option = $rOpts->{$wv_key};
 
     # Single letter options:
-    #  u - declared but unused [NOT AVAILABLE as a warning, use dump]
+    #  u - declared but unused [NOT AVAILABLE here, use --dump-variables]
     #  r - reused scope
     #  s - reused sigil
     #  p - package boundaries crossed by lexical variables
@@ -9422,7 +9440,7 @@ sub warn_variables {
 
     if ( $wv_option eq '*' || $wv_option eq '1' ) { $wv_option = 'spr' }
 
-    # NOTE: Option type 'u' (undefined) is not allowed because it will cause
+    # Option type 'u' (undefined) is not allowed here because it will cause
     # needless warnings when perltidy is run on small blocks from an editor.
     if ( $wv_option =~ s/u//g ) {
         Warn(<<EOM);
@@ -9444,34 +9462,24 @@ EOM
     # remove any excluded names
     my $wvxl_key       = 'warn-variables-exclusion-list';
     my $excluded_names = $rOpts->{$wvxl_key};
+    my %is_excluded_name;
     if ($excluded_names) {
         $excluded_names =~ s/,/ /;
         $excluded_names =~ s/^\s+//;
         $excluded_names =~ s/\s+$//;
         my @xl = split /\s+/, $excluded_names;
-        my %is_excluded_name;
         @{is_excluded_name}{@xl} = (1) x scalar(@xl);
-        my @filtered = grep { !$is_excluded_name{ $_->{name} } } @{$rwarnings};
-        $rwarnings = \@filtered;
     }
 
-    foreach my $item (
-        sort {
-                 $a->{line_number} <=> $b->{line_number}
-              || $a->{K} <=> $b->{K}
-              || $a->{letter} cmp $b->{letter}
-        } @{$rwarnings}
-      )
-    {
-        my $name    = $item->{name};
-        my $keyword = $item->{keyword};
-        my $note    = $item->{note};
+    foreach my $item ( @{$rwarnings} ) {
+        my $name = $item->{name};
+        next if ( $is_excluded_name{$name} );
         my $lno     = $item->{line_number};
         my $letter  = $item->{letter};
-        my $K       = $item->{K};
-        my $var     = "$keyword $name";
+        my $keyword = $item->{keyword};
+        my $note    = $item->{note};
         if ($note) { $note = ": $note" }
-        $message .= "$lno:$letter: $var$note\n";
+        $message .= "$lno:$letter: $keyword $name$note\n";
     }
     $message .= "End scan for --$wv_key=$wv_option:\n";
     warning($message);

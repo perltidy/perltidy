@@ -3667,7 +3667,7 @@ sub generate_options {
     $add_option->( 'dump-profile',                    'dpro',  '!' );
     $add_option->( 'dump-short-names',                'dsn',   '!' );
     $add_option->( 'dump-token-types',                'dtt',   '!' );
-    $add_option->( 'dump-variables',                  'dv',    '=s' );
+    $add_option->( 'dump-variables',                  'dv',    '!' );
     $add_option->( 'dump-want-left-space',            'dwls',  '!' );
     $add_option->( 'dump-want-right-space',           'dwrs',  '!' );
     $add_option->( 'experimental',                    'exp',   '=s' );
