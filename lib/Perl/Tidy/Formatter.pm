@@ -8679,13 +8679,14 @@ sub scan_variable_usage {
     #            keyword     => $keyword,     # 'my', 'state', 'for', 'foreach'
     #            letter      => $letter,      # one of: r s p u
     #            note        => $note,        # additional text info
+    #            see_line    => $see_line,    # line referenced in note
     #          };
 
     # issues are indicated by a unique letter 'letter'
-    #  u - declared but unused
+    #  u - unused
     #  r - reused scope
     #  s - reused sigil
-    #  p - package boundaries crossed by lexical variables
+    #  p - package boundaries crossed
 
     # checks for these issues are requested with -sv_option, which may also be:
     #  0 - none of the above
@@ -8822,6 +8823,7 @@ sub scan_variable_usage {
                     my $first_line = $rhash->{$test_name}->{line_index} + 1;
                     my $letter;
                     my $note;
+                    my $see_line = 0;
                     if ( $sig eq $sigil ) {
                         my $as_iterator =
                           $is_my_state{$my_keyword}
@@ -8831,8 +8833,9 @@ sub scan_variable_usage {
                         $letter = 'r';
                     }
                     else {
+                        $see_line = $first_line;
                         $note =
-                          "overlaps $test_name in scope - see line $first_line";
+                          "overlaps $test_name in scope - see line $see_line";
                         $letter = 's';
                     }
                     push @warnings,
@@ -8840,6 +8843,7 @@ sub scan_variable_usage {
                         name        => $name,
                         keyword     => $my_keyword,
                         note        => $note,
+                        see_line    => $see_line,
                         line_number => $line_index + 1,
                         letter      => $letter,
                         K           => $KK
@@ -8892,6 +8896,7 @@ sub scan_variable_usage {
                     name        => $name,
                     keyword     => $entry->{keyword},
                     note        => EMPTY_STRING,
+                    see_line    => 0,
                     line_number => $entry->{line_index} + 1,
                     letter      => 'u',
                     K           => $entry->{K},
@@ -9147,12 +9152,11 @@ EOM
                     if ( defined($K_last_code) ) {
                         my $last_type  = $rLL->[$K_last_code]->[_TYPE_];
                         my $last_token = $rLL->[$K_last_code]->[_TOKEN_];
-                        if (   $last_type eq '\\'
-                            || $last_type eq '='
-                            || $last_type eq 'k' && $last_token eq 'return' )
-                        {
-                            $my_starting_count = 1;
-                        }
+
+                        # A preceding \ implies that this memory can be used
+                        # even if the variable name does not appear again.
+                        # For example: return \my $string_buf;
+                        if ( $last_type eq '\\' ) { $my_starting_count = 1 }
                     }
                 }
 
@@ -9249,14 +9253,16 @@ EOM
                                 my $entry = $rhash->{$name};
                                 my $pkg   = $entry->{package};
                                 if ( $pkg ne $package ) {
-                                    my $lno = $ix_line + 1;
+                                    my $lno      = $ix_line + 1;
+                                    my $see_line = $lno;
                                     my $note =
-"is accessible in later packages, see line $lno";
+"is accessible in later packages, see line $see_line";
                                     push @{$rpackage_warnings},
                                       {
                                         name        => $name,
                                         keyword     => $entry->{keyword},
                                         note        => $note,
+                                        see_line    => $see_line,
                                         line_number => $entry->{line_index} + 1,
                                         letter      => 'p',
                                         K           => $entry->{K},
@@ -9369,17 +9375,22 @@ EOM
 
     # Only include cross-package warnings for packages which created subs.
     # This will limit this type of warning to significant package changes.
-    my @pkg_warnings;
+    my @p_warnings;
     foreach my $key ( keys %package_warnings ) {
         next if ( !$sub_count_by_package{$key} );
-        push @pkg_warnings, @{ $package_warnings{$key} };
+        push @p_warnings, @{ $package_warnings{$key} };
     }
 
     # Remove duplicate package warnings for the same initial line, which can
     # happen if there were multiple packages.
-    if (@pkg_warnings) {
+    if (@p_warnings) {
         my %seen;
-        foreach my $item (@pkg_warnings) {
+
+        # sort on package warning line order
+        @p_warnings = sort { $a->{see_line} <=> $b->{see_line} } @p_warnings;
+
+        # use first package warning for a given variable
+        foreach my $item (@p_warnings) {
             my $key = $item->{line_number} . ':' . $item->{name};
             next if ( $seen{$key}++ );
             push @warnings, $item;
