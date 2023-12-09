@@ -8,7 +8,7 @@ package Perl::Tidy::Debugger;
 use strict;
 use warnings;
 use English qw( -no_match_vars );
-our $VERSION = '20230912.05';
+our $VERSION = '20230912.06';
 
 use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };

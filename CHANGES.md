@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2023 09 12.05
+## 2023 09 12.06
 
     - Added --dump-variables (-dv) option to dump a list of variables with
       certain properties of interest. For example
@@ -13,7 +13,7 @@
          1778:u: my $input_file
          6089:r: my $j: reused - see line 6076
 
-      The values on the line are separated by colons are:
+      The values on the line which are separated by colons are:
 
         line number   - the number of the line of the input file
         issue         - a single letter indicating the issue, see below

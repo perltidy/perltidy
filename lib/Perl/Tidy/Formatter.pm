@@ -66,7 +66,7 @@ use strict;
 use warnings;
 
 # DEVEL_MODE gets switched on during automated testing for extra checking
-use constant DEVEL_MODE   => 1;
+use constant DEVEL_MODE   => 0;
 use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };
 
@@ -75,7 +75,7 @@ use constant SPACE        => q{ };
 use Carp;
 use English    qw( -no_match_vars );
 use List::Util qw( min max first );    # min, max first are in Perl 5.8
-our $VERSION = '20230912.05';
+our $VERSION = '20230912.06';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
