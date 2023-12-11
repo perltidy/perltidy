@@ -66,6 +66,8 @@ formatter which is described in L<"HTML OPTIONS">.
 
 =head1 EXAMPLES
 
+Here are some example perltidy commands followed by their meanings:
+
   perltidy somefile.pl
 
 This will produce a file F<somefile.pl.tdy> containing the script reformatted
@@ -117,6 +119,16 @@ the default 80 columns.
 Execute perltidy on file F<somefile.pl> and save a log file F<somefile.pl.LOG>
 which shows the nesting of braces, parentheses, and square brackets at
 the start of every line.
+
+   perltidy -dbs -dbl=10 somefile.pl >blocks.csv
+
+This will dump a table of comma-separated metrics for subroutines longer than
+10 lines to F<blocks.csv>.
+
+    perltidy -dv somefile.pl >vars.txt
+
+This will dump a list of unused and reused lexical variable names to
+F<vars.txt>.
 
   perltidy -html somefile.pl
 
