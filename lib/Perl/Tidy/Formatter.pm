@@ -880,7 +880,8 @@ BEGIN {
 
 sub new {
 
-    my ( $class, @args ) = @_;
+    my ( $class, @arglist ) = @_;
+    if ( @arglist % 2 ) { croak "Odd number of items in arg hash list\n" }
 
     # we are given an object with a write_line() method to take lines
     my %defaults = (
@@ -891,7 +892,7 @@ sub new {
         is_encoded_data    => EMPTY_STRING,
         fh_tee             => undef,
     );
-    my %args = ( %defaults, @args );
+    my %args = ( %defaults, @arglist );
 
     my $length_function    = $args{length_function};
     my $is_encoded_data    = $args{is_encoded_data};
@@ -3132,11 +3133,11 @@ sub set_whitespace_flags {
                 # tightness = 1 means pad inside if "complex"
                 # tightness = 2 means never pad inside with space
 
-                my $tightness;
+                my $tightness_here;
                 if ( $last_block_type && $last_token eq '{' ) {
-                    $tightness = $rOpts_block_brace_tightness;
+                    $tightness_here = $rOpts_block_brace_tightness;
                 }
-                else { $tightness = $tightness{$last_token} }
+                else { $tightness_here = $tightness{$last_token} }
 
                 #=============================================================
                 # Patch for test problem <<snippets/fabrice_bug.in>>
@@ -3151,14 +3152,14 @@ sub set_whitespace_flags {
                 # to bt=1.  Note that here we must set tightness=1 and not 2 so
                 # that the closing space is also avoided
                 # (via the $j_tight_closing_paren flag in coding)
-                if ( $type eq 'w' && $token =~ /^\^/ ) { $tightness = 1 }
+                if ( $type eq 'w' && $token =~ /^\^/ ) { $tightness_here = 1 }
 
                 #=============================================================
 
-                if ( $tightness <= 0 ) {
+                if ( $tightness_here <= 0 ) {
                     $ws = WS_YES;
                 }
-                elsif ( $tightness > 1 ) {
+                elsif ( $tightness_here > 1 ) {
                     $ws = WS_NO;
                 }
                 else {
@@ -3222,11 +3223,9 @@ sub set_whitespace_flags {
                     && $j < $jmax )
                 {
                     my $level = $rLL->[$j]->[_LEVEL_];
-                    my $jp    = $j;
                     ## NOTE: we might use the KNEXT variable to avoid this loop
                     ## but profiling shows that little would be saved
-                    foreach my $inc ( 1 .. 9 ) {
-                        $jp++;
+                    foreach my $jp ( $j + 1 .. $j + 9 ) {
                         last if ( $jp > $jmax );
                         last if ( $rLL->[$jp]->[_LEVEL_] != $level );    # b1236
                         next unless ( $rLL->[$jp]->[_TOKEN_] eq '(' );
@@ -3302,16 +3301,16 @@ sub set_whitespace_flags {
 
                 if ( !defined($ws) ) {
 
-                    my $tightness;
+                    my $tightness_here;
                     my $block_type = $rblock_type_of_seqno->{$seqno}
                       || $block_type_for_tightness{$seqno};
 
                     if ( $block_type && $token eq '}' ) {
-                        $tightness = $rOpts_block_brace_tightness;
+                        $tightness_here = $rOpts_block_brace_tightness;
                     }
-                    else { $tightness = $tightness{$token} }
+                    else { $tightness_here = $tightness{$token} }
 
-                    $ws = ( $tightness > 1 ) ? WS_NO : WS_YES;
+                    $ws = ( $tightness_here > 1 ) ? WS_NO : WS_YES;
                 }
             }
 
@@ -3413,7 +3412,7 @@ sub set_whitespace_flags {
                 {
                     $ws =
                         $rOpts_space_function_paren
-                      ? $self->ws_space_function_paren( $j, $rtokh_last_last )
+                      ? $self->ws_space_function_paren($rtokh_last_last)
                       : WS_NO;
 
                     set_container_ws_by_keyword( $last_token, $seqno );
@@ -3623,9 +3622,9 @@ sub set_container_ws_by_keyword {
     # treatment for its inside space.  If so we set a hash value using the
     # sequence number as key.
     if ( $word && $sequence_number ) {
-        my $tightness = $keyword_paren_inner_tightness{$word};
-        if ( defined($tightness) && $tightness != 1 ) {
-            my $ws_flag = $tightness == 0 ? WS_YES : WS_NO;
+        my $tightness_here = $keyword_paren_inner_tightness{$word};
+        if ( defined($tightness_here) && $tightness_here != 1 ) {
+            my $ws_flag = $tightness_here == 0 ? WS_YES : WS_NO;
             $opening_container_inside_ws{$sequence_number} = $ws_flag;
             $closing_container_inside_ws{$sequence_number} = $ws_flag;
         }
@@ -3704,7 +3703,7 @@ sub ws_in_container {
 
 sub ws_space_function_paren {
 
-    my ( $self, $j, $rtokh_last_last ) = @_;
+    my ( $self, $rtokh_last_last ) = @_;
 
     # Called if --space-function-paren is set to see if it might cause
     # a problem.  The manual warns the user about potential problems with
@@ -8285,14 +8284,14 @@ EOM
 
     if (DEBUG_SET_CI) {
         my @output_lines;
-        foreach my $KK ( 0 .. $Klimit ) {
-            my $line = $debug_lines[$KK];
+        foreach my $Kd ( 0 .. $Klimit ) {
+            my $line = $debug_lines[$Kd];
             if ($line) {
-                my $Kp = $self->K_previous_code($KK);
-                my $Kn = $self->K_next_code($KK);
+                my $Kp = $self->K_previous_code($Kd);
+                my $Kn = $self->K_next_code($Kd);
                 if (   DEBUG_SET_CI > 1
                     || $Kp && $saw_ci_diff{$Kp}
-                    || $saw_ci_diff{$KK}
+                    || $saw_ci_diff{$Kd}
                     || $Kn && $saw_ci_diff{$Kn} )
                 {
                     push @output_lines, $line;
@@ -9060,7 +9059,6 @@ sub scan_variable_usage {
                     # always pop the stack if this token is on the stack
                     if ($is_on_stack) {
                         my $stack_item   = pop @{$rblock_stack};
-                        my $popped_seqno = $stack_item->{seqno};
                         my $rpopped_vars = $stack_item->{rvars};
 
                         # if we popped a block token
@@ -9107,11 +9105,11 @@ EOM
 
                     # if not on the stack: error if this is a block
                     elsif ($block_type) {
-                        my $lno          = $ix_line + 1;
-                        my $popped_seqno = $rblock_stack->[-1]->{seqno};
+                        my $lno         = $ix_line + 1;
+                        my $stack_seqno = $rblock_stack->[-1]->{seqno};
                         DEVEL_MODE
                           && Fault(
-"stack error: seqno=$seqno ne $popped_seqno near line $lno\n"
+"stack error: seqno=$seqno ne $stack_seqno near line $lno\n"
                           );
 
                         # give up - file may be unbalanced
@@ -20714,9 +20712,8 @@ EOM
         return if ( $parent_seqno_to_go[$i2] ne $parent_seqno_1 );
 
         if ( $i2 < $i1 ) { ( $i1, $i2 ) = ( $i2, $i1 ) }
-        my $K1  = $K_to_go[$i1];
-        my $K2  = $K_to_go[$i2];
-        my $rLL = $self->[_rLL_];
+        my $K1 = $K_to_go[$i1];
+        my $K2 = $K_to_go[$i2];
 
         my $depth_1 = $nesting_depth_to_go[$i1];
         return if ( $depth_1 < 0 );
@@ -20863,11 +20860,11 @@ sub break_equals {
     for my $n ( 1 .. 2 ) {
         my $il_n = $ri_left->[$n];
         my $ir_n = $ri_right->[$n];
-        foreach my $i ( $il_n + 1 .. $ir_n ) {
-            my $type = $types_to_go[$i];
+        foreach my $ii ( $il_n + 1 .. $ir_n ) {
+            my $type = $types_to_go[$ii];
             return
               if ( $is_assignment{$type}
-                && $nesting_depth_to_go[$i] eq $depth_beg );
+                && $nesting_depth_to_go[$ii] eq $depth_beg );
         }
     }
 
@@ -22152,7 +22149,7 @@ EOM
                   && $ibeg_2 == $iend_2
                   && token_sequence_length( $ibeg_2, $ibeg_2 ) <
                   $rOpts_short_concatenation_item_length );
-            my $is_ternary = (
+            my $is_ternary_joint = (
                 $type_ibeg_1 eq '?' && ( $ibeg_3 >= 0
                     && $types_to_go[$ibeg_3] eq ':' )
             );
@@ -22161,7 +22158,7 @@ EOM
             # will put ?/: at start of adjacent lines
             if (   $ibeg_1 != $iend_1
                 && !$is_short_quote
-                && !$is_ternary )
+                && !$is_ternary_joint )
             {
                 my $combine_ok = (
                     (
@@ -24094,7 +24091,7 @@ sub do_colon_breaks {
         @item_count_stack,
         @last_comma_index,
         @last_dot_index,
-        @last_nonblank_type,
+        @last_nonblank_type_stack,
         @old_breakpoint_count_stack,
         @opening_structure_index_stack,
         @rfor_semicolon_list,
@@ -24199,13 +24196,13 @@ sub do_colon_breaks {
             if ( $rOpts_comma_arrow_breakpoints == 3 && $seqno ) {
                 $override_cab3[$depth_t] = $self->[_roverride_cab3_]->{$seqno};
             }
-            $breakpoint_stack[$depth_t]       = $starting_breakpoint_count;
-            $container_type[$depth_t]         = EMPTY_STRING;
-            $identifier_count_stack[$depth_t] = 0;
-            $index_before_arrow[$depth_t]     = -1;
-            $interrupted_list[$depth_t]       = 1;
-            $item_count_stack[$depth_t]       = 0;
-            $last_nonblank_type[$depth_t]     = EMPTY_STRING;
+            $breakpoint_stack[$depth_t]         = $starting_breakpoint_count;
+            $container_type[$depth_t]           = EMPTY_STRING;
+            $identifier_count_stack[$depth_t]   = 0;
+            $index_before_arrow[$depth_t]       = -1;
+            $interrupted_list[$depth_t]         = 1;
+            $item_count_stack[$depth_t]         = 0;
+            $last_nonblank_type_stack[$depth_t] = EMPTY_STRING;
             $opening_structure_index_stack[$depth_t] = -1;
 
             $breakpoint_undo_stack[$depth_t]       = undef;
@@ -24263,7 +24260,8 @@ sub do_colon_breaks {
                 # barewords, identifiers (that is, anything that doesn't
                 # look like a function call)
                 # c250: added new sub identifier type 'S'
-                my $must_break_open = $last_nonblank_type[$dd] !~ /^[kwiUS]$/;
+                my $must_break_open =
+                  $last_nonblank_type_stack[$dd] !~ /^[kwiUS]$/;
 
                 $self->table_maker(
                     {
@@ -24497,9 +24495,9 @@ EOM
             # Look for breaks in this order:
             # 0   1    2   3
             # or  and  ||  &&
-            foreach my $i ( 0 .. 3 ) {
-                if ( $rand_or_list[$dd][$i] ) {
-                    foreach ( @{ $rand_or_list[$dd][$i] } ) {
+            foreach my $ii ( 0 .. 3 ) {
+                if ( $rand_or_list[$dd][$ii] ) {
+                    foreach ( @{ $rand_or_list[$dd][$ii] } ) {
                         $self->set_forced_breakpoint($_);
                     }
 
@@ -25248,7 +25246,7 @@ EOM
         $index_before_arrow[$depth]            = -1;
         $interrupted_list[$depth]              = 0;
         $item_count_stack[$depth]              = 0;
-        $last_nonblank_type[$depth]            = $last_nonblank_type;
+        $last_nonblank_type_stack[$depth]      = $last_nonblank_type;
         $opening_structure_index_stack[$depth] = $i;
 
         $breakpoint_undo_stack[$depth]       = $forced_breakpoint_undo_count;
@@ -27193,7 +27191,8 @@ sub get_maximum_fields_wanted {
         my $last_length       = undef;
         my $total_variation_1 = 0;
         my $total_variation_2 = 0;
-        my @total_variation_2 = ( 0, 0 );
+
+        my @total_variation_2_sums = ( 0, 0 );
 
         foreach my $j ( 0 .. $item_count - 1 ) {
 
@@ -27212,14 +27211,15 @@ sub get_maximum_fields_wanted {
             my $ll = $last_length_2[$is_odd];
             if ( defined($ll) ) {
                 my $dl = abs( $length - $ll );
-                $total_variation_2[$is_odd] += $dl;
+                $total_variation_2_sums[$is_odd] += $dl;
             }
             else {
                 $first_length_2[$is_odd] = $length;
             }
             $last_length_2[$is_odd] = $length;
         }
-        $total_variation_2 = $total_variation_2[0] + $total_variation_2[1];
+        $total_variation_2 =
+          $total_variation_2_sums[0] + $total_variation_2_sums[1];
 
         my $factor = ( $item_count > 10 ) ? 1 : ( $item_count > 5 ) ? 0.75 : 0;
         if ( $total_variation_2 >= $factor * $total_variation_1 ) {
@@ -33074,7 +33074,7 @@ sub set_vertical_tightness_flags {
 # These routines are called once per batch when the --closing-side-comments flag
 # has been set.
 
-    my %block_leading_text;
+    my $rblock_leading_text;
     my %block_opening_line_number;
     my $csc_new_statement_ok;
     my $csc_last_label;
@@ -33088,7 +33088,7 @@ sub set_vertical_tightness_flags {
     my $leading_block_text_line_number;
 
     sub initialize_csc_vars {
-        %block_leading_text           = ();
+        $rblock_leading_text          = {};
         %block_opening_line_number    = ();
         $csc_new_statement_ok         = 1;
         $csc_last_label               = EMPTY_STRING;
@@ -33263,11 +33263,11 @@ sub set_vertical_tightness_flags {
                 if ( $token eq '}' ) {
 
                     # restore any leading text saved when we entered this block
-                    if ( defined( $block_leading_text{$type_sequence} ) ) {
+                    if ( defined( $rblock_leading_text->{$type_sequence} ) ) {
                         ( $block_leading_text, $rblock_leading_if_elsif_text )
-                          = @{ $block_leading_text{$type_sequence} };
+                          = @{ $rblock_leading_text->{$type_sequence} };
                         $i_block_leading_text = $i;
-                        delete $block_leading_text{$type_sequence};
+                        delete $rblock_leading_text->{$type_sequence};
                         $rleading_block_if_elsif_text =
                           $rblock_leading_if_elsif_text;
                     }
@@ -33324,7 +33324,7 @@ sub set_vertical_tightness_flags {
                         if ( $accumulating_text_for_block eq $block_type ) {
 
                             # save any leading text before we enter this block
-                            $block_leading_text{$type_sequence} = [
+                            $rblock_leading_text->{$type_sequence} = [
                                 $leading_block_text,
                                 $rleading_block_if_elsif_text
                             ];

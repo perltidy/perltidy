@@ -9,6 +9,7 @@ package Perl::Tidy::Logger;
 use strict;
 use warnings;
 our $VERSION = '20230912.06';
+use Carp;
 use English qw( -no_match_vars );
 
 use constant DEVEL_MODE   => 0;
@@ -45,7 +46,8 @@ use constant DEFAULT_LOGFILE_GAP => 50;
 
 sub new {
 
-    my ( $class, @args ) = @_;
+    my ( $class, @arglist ) = @_;
+    if ( @arglist % 2 ) { croak "Odd number of items in arg hash list\n" }
 
     my %defaults = (
         rOpts           => undef,
@@ -56,7 +58,7 @@ sub new {
         is_encoded_data => undef,
     );
 
-    my %args = ( %defaults, @args );
+    my %args = ( %defaults, @arglist );
 
     my $rOpts           = $args{rOpts};
     my $log_file        = $args{log_file};

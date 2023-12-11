@@ -76,8 +76,6 @@ sub write_debug_entry {
     my $input_line_number = $line_of_tokens->{_line_number};
     my $line_type         = $line_of_tokens->{_line_type};
 
-    my ( $j, $num );
-
     my $token_str              = "$input_line_number: ";
     my $reconstructed_original = "$input_line_number: ";
 
@@ -99,7 +97,7 @@ sub write_debug_entry {
             $pattern .= $rtoken_type->[$j];
         }
         $reconstructed_original .= $rtokens->[$j];
-        $num = length( $rtokens->[$j] );
+        my $num      = length( $rtokens->[$j] );
         my $type_str = $rtoken_type->[$j];
 
         # be sure there are no blank tokens (shouldn't happen)

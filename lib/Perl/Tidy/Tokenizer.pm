@@ -482,7 +482,8 @@ sub check_options {
 
 sub new {
 
-    my ( $class, @args ) = @_;
+    my ( $class, @arglist ) = @_;
+    if ( @arglist % 2 ) { croak "Odd number of items in arg hash list\n" }
 
     my %defaults = (
         source_object        => undef,
@@ -493,7 +494,7 @@ sub new {
         starting_line_number => 1,
         rOpts                => {},
     );
-    my %args = ( %defaults, @args );
+    my %args = ( %defaults, @arglist );
 
     # we are given an object with a get_line() method to supply source lines
     my $source_object = $args{source_object};
@@ -5671,7 +5672,10 @@ EOM
         #---------------------------------------------------------
 
         # Arrays to hold token values for this line:
-        my ( @levels, @block_type, @type_sequence, @token_type, @tokens );
+        my (
+            @output_levels,     @output_block_type, @output_type_sequence,
+            @output_token_type, @output_tokens
+        );
 
         $line_of_tokens->{_nesting_tokens_0} = $nesting_token_string;
 
@@ -5682,14 +5686,14 @@ EOM
         # Loop over tokens
         #-----------------
         # $i is the index of the pretoken which starts this full token
-        foreach my $i ( @{$routput_token_list} ) {
+        foreach my $ii ( @{$routput_token_list} ) {
 
-            my $type_i = $routput_token_type->[$i];
+            my $type_i = $routput_token_type->[$ii];
 
             #----------------------------------------
             # Section 1. Handle a non-sequenced token
             #----------------------------------------
-            if ( !$routput_type_sequence->[$i] ) {
+            if ( !$routput_type_sequence->[$ii] ) {
 
                 #-------------------------------
                 # Section 1.1. types ';' and 't'
@@ -5698,7 +5702,7 @@ EOM
                 # - output __END__, __DATA__, and format as type 'k' instead
                 #   of ';' to make html colors correct, etc.
                 if ( $is_semicolon_or_t{$type_i} ) {
-                    my $tok_i = $rtokens->[$i];
+                    my $tok_i = $rtokens->[$ii];
                     if ( $is_END_DATA_format_sub{$tok_i} ) {
                         $type_i = 'k';
                     }
@@ -5724,10 +5728,10 @@ EOM
                 #----------------------------------------------------
                 # Section 1.3. Store values for a non-sequenced token
                 #----------------------------------------------------
-                push( @levels,        $level_in_tokenizer );
-                push( @block_type,    EMPTY_STRING );
-                push( @type_sequence, EMPTY_STRING );
-                push( @token_type,    $type_i );
+                push( @output_levels,        $level_in_tokenizer );
+                push( @output_block_type,    EMPTY_STRING );
+                push( @output_type_sequence, EMPTY_STRING );
+                push( @output_token_type,    $type_i );
 
             }
 
@@ -5743,9 +5747,9 @@ EOM
                 my $level_i = $level_in_tokenizer;
 
                 # $tok_i is the PRE-token.  It only equals the token for symbols
-                my $tok_i = $rtokens->[$i];
+                my $tok_i = $rtokens->[$ii];
 
-                # $routput_indent_flag->[$i] indicates that we need a change
+                # $routput_indent_flag->[$ii] indicates that we need a change
                 # in level at a nested ternary, as follows
                 #     1 => at a nested ternary ?
                 #    -1 => at a nested ternary :
@@ -5758,7 +5762,7 @@ EOM
 
                     if ( $type_i eq '?' ) {
 
-                        if ( $routput_indent_flag->[$i] > 0 ) {
+                        if ( $routput_indent_flag->[$ii] > 0 ) {
                             $level_in_tokenizer++;
 
                             # break BEFORE '?' in a nested ternary
@@ -5775,7 +5779,7 @@ EOM
 
                             $level_in_tokenizer++;
 
-                            if ( $routput_block_type->[$i] ) {
+                            if ( $routput_block_type->[$ii] ) {
                                 $nesting_block_flag = 1;
                                 $nesting_block_string .= '1';
                             }
@@ -5804,7 +5808,7 @@ EOM
                         || $type_i eq 'R'
 
                         # only the second and higher ? : have levels
-                        || $type_i eq ':' && $routput_indent_flag->[$i] < 0
+                        || $type_i eq ':' && $routput_indent_flag->[$ii] < 0
                       )
                     {
 
@@ -5847,15 +5851,15 @@ EOM
 
                 # The starting nesting block string, which is used in any .LOG
                 # output, should include the first token of the line
-                if ( !@levels ) {
+                if ( !@output_levels ) {
                     $nesting_block_string_0 = $nesting_block_string;
                 }
 
                 # Store values for a sequenced token
-                push( @levels,        $level_i );
-                push( @block_type,    $routput_block_type->[$i] );
-                push( @type_sequence, $routput_type_sequence->[$i] );
-                push( @token_type,    $type_i );
+                push( @output_levels,        $level_i );
+                push( @output_block_type,    $routput_block_type->[$ii] );
+                push( @output_type_sequence, $routput_type_sequence->[$ii] );
+                push( @output_token_type,    $type_i );
 
             }
         }    ## End loop to over tokens
@@ -5867,13 +5871,13 @@ EOM
         $line_of_tokens->{_nesting_blocks_0} = $nesting_block_string_0;
 
         # Form and store the tokens
-        if (@levels) {
+        if (@output_levels) {
 
             my $im     = shift @{$routput_token_list};
             my $offset = $rtoken_map->[$im];
-            foreach my $i ( @{$routput_token_list} ) {
-                my $numc = $rtoken_map->[$i] - $offset;
-                push( @tokens, substr( $input_line, $offset, $numc ) );
+            foreach my $ii ( @{$routput_token_list} ) {
+                my $numc = $rtoken_map->[$ii] - $offset;
+                push( @output_tokens, substr( $input_line, $offset, $numc ) );
                 $offset += $numc;
 
                 # programming note: it seems most efficient to 'next' out of
@@ -5889,7 +5893,7 @@ EOM
 
             # Form and store the final token of this line
             my $numc = length($input_line) - $offset;
-            push( @tokens, substr( $input_line, $offset, $numc ) );
+            push( @output_tokens, substr( $input_line, $offset, $numc ) );
 
             if (DEVEL_MODE) {
                 if ( $numc <= 0 ) {
@@ -5900,7 +5904,7 @@ EOM
                 }
 
                 # Make sure we didn't gain or lose any characters
-                my $test_line = join EMPTY_STRING, @tokens;
+                my $test_line = join EMPTY_STRING, @output_tokens;
                 if ( $test_line ne $input_line ) {
                     my $len_input = length($input_line);
                     my $len_test  = length($test_line);
@@ -5916,11 +5920,11 @@ EOM
         }
 
         # Wrap up this line of tokens for shipping to the Formatter
-        $line_of_tokens->{_rtoken_type}    = \@token_type;
-        $line_of_tokens->{_rtokens}        = \@tokens;
-        $line_of_tokens->{_rblock_type}    = \@block_type;
-        $line_of_tokens->{_rtype_sequence} = \@type_sequence;
-        $line_of_tokens->{_rlevels}        = \@levels;
+        $line_of_tokens->{_rtoken_type}    = \@output_token_type;
+        $line_of_tokens->{_rtokens}        = \@output_tokens;
+        $line_of_tokens->{_rblock_type}    = \@output_block_type;
+        $line_of_tokens->{_rtype_sequence} = \@output_type_sequence;
+        $line_of_tokens->{_rlevels}        = \@output_levels;
 
         return;
     } ## end sub tokenizer_wrapup_line

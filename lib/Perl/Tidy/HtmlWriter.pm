@@ -9,6 +9,7 @@ use strict;
 use warnings;
 our $VERSION = '20230912.06';
 
+use Carp;
 use English qw( -no_match_vars );
 use File::Basename;
 
@@ -83,7 +84,8 @@ sub DESTROY {
 
 sub new {
 
-    my ( $class, @args ) = @_;
+    my ( $class, @arglist ) = @_;
+    if ( @arglist % 2 ) { croak "Odd number of items in arg hash list\n" }
 
     my %defaults = (
         input_file         => undef,
@@ -92,7 +94,7 @@ sub new {
         html_toc_extension => undef,
         html_src_extension => undef,
     );
-    my %args = ( %defaults, @args );
+    my %args = ( %defaults, @arglist );
 
     my $input_file         = $args{input_file};
     my $html_file          = $args{html_file};

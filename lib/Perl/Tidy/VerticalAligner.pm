@@ -332,7 +332,8 @@ EOM
 
 sub new {
 
-    my ( $class, @args ) = @_;
+    my ( $class, @arglist ) = @_;
+    if ( @arglist % 2 ) { croak "Odd number of items in arg hash list\n" }
 
     my %defaults = (
         rOpts              => undef,
@@ -340,7 +341,7 @@ sub new {
         logger_object      => undef,
         diagnostics_object => undef,
     );
-    my %args = ( %defaults, @args );
+    my %args = ( %defaults, @arglist );
 
     # Initialize other caches and buffers
     initialize_step_B_cache();
@@ -3397,12 +3398,12 @@ sub match_line_pairs {
     # so that lines can just look back one line for their pair info.
     if ( @{$rlines} > @{$rnew_lines} ) {
         my $last_pair_info = -1;
-        foreach my $line ( @{$rlines} ) {
-            if ( $line->{'is_hanging_side_comment'} ) {
-                $line->{'imax_pair'} = $last_pair_info;
+        foreach my $line_t ( @{$rlines} ) {
+            if ( $line_t->{'is_hanging_side_comment'} ) {
+                $line_t->{'imax_pair'} = $last_pair_info;
             }
             else {
-                $last_pair_info = $line->{'imax_pair'};
+                $last_pair_info = $line_t->{'imax_pair'};
             }
         }
     }
@@ -3913,21 +3914,21 @@ sub prune_alignment_tree {
 
         # Otherwise see if anything changed and update the tree if so
         else {
-            foreach my $depth ( 0 .. $MAX_DEPTH ) {
+            foreach my $dep ( 0 .. $MAX_DEPTH ) {
 
-                my $def_current = defined( $token_patterns_current[$depth] );
-                my $def_next    = defined( $token_patterns_next[$depth] );
+                my $def_current = defined( $token_patterns_current[$dep] );
+                my $def_next    = defined( $token_patterns_next[$dep] );
                 last if ( !$def_current && !$def_next );
                 if (   !$def_current
                     || !$def_next
-                    || $token_patterns_current[$depth] ne
-                    $token_patterns_next[$depth] )
+                    || $token_patterns_current[$dep] ne
+                    $token_patterns_next[$dep] )
                 {
                     my $n_parent;
-                    if ( $depth > 0 && defined( $match_tree[ $depth - 1 ] ) ) {
-                        $n_parent = @{ $match_tree[ $depth - 1 ] } - 1;
+                    if ( $dep > 0 && defined( $match_tree[ $dep - 1 ] ) ) {
+                        $n_parent = @{ $match_tree[ $dep - 1 ] } - 1;
                     }
-                    $end_node->( $depth, $jm, $n_parent );
+                    $end_node->( $dep, $jm, $n_parent );
                     last;
                 }
             }
@@ -4690,8 +4691,8 @@ sub align_side_comments {
 
         # Loop over the groups with side comments
         my $column_limit;
-        foreach my $ng (@todo) {
-            my ( $jbeg, $jend ) = @{ $rgroups->[$ng] };
+        foreach my $ngr (@todo) {
+            my ( $jbeg, $jend ) = @{ $rgroups->[$ngr] };
 
             # Note that since all lines in a group have common alignments, we
             # just have to work on one of the lines (the first line).
