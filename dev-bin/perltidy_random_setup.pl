@@ -1376,6 +1376,9 @@ EOM
 
                 next if $skip{$name};
 
+                # skip all dump options; they dump to stdout and exit
+                next if ($name=~/^dump-/);
+
                 # Skip all pattern lists
                 if ( $flag =~ /s$/ ) {
                     if (   $name =~ /-(list|prefix)/
