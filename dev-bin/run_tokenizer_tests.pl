@@ -4,6 +4,10 @@ use warnings;
 use File::Copy;
 use Perl::Tidy;
 
+my $tmp_dir;
+main();
+
+sub main { #<<<
 my $usage = <<EOM;
 
 This utility runs perltidy on a database of tokenizer test cases. 
@@ -105,7 +109,7 @@ my $db_fname = $0 . ".data";
 # set tmp dir - you may need to change this depending on setup
 my $git_home = qx[git rev-parse --show-toplevel];
 chomp $git_home;
-my $tmp_dir = $git_home . "/dev-bin/tmp";
+$tmp_dir = $git_home . "/dev-bin/tmp";
 
 if ( -e $tmp_dir && !-d $tmp_dir ) {
     print STDERR "'$tmp_dir' exists but is not a dir: please fix\n";
@@ -251,6 +255,8 @@ EOM
 run_test_cases( $rdata_files, \@cases );
 exit 1;
 
+}
+
 sub run_test_cases {
     my ( $rdata_files, $rcases ) = @_;
 
@@ -297,7 +303,6 @@ sub run_test_cases {
         }
         my $stderr_string;
         my $errorfile_string;
-        my @output_history;
         my $params = "";
         my $err    = Perl::Tidy::perltidy(
             source      => \$source,
@@ -371,7 +376,6 @@ sub read_data_to_hash {
 
     my $dstring = get_string($db_fname);
     my @lines   = split /\n/, $dstring;
-    my $lines   = @lines;
     my $fname   = "";
     my $lno     = 0;
     my $string;

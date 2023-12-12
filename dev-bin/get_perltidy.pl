@@ -117,7 +117,7 @@ if ($backup_option) {
 }
 
 sub get_latest_perltidy {
-    my ($Dflag) = @_;
+    my ($opt_D) = @_;
     use Cwd qw(getcwd);
     my $starting_dir = getcwd();
     my $dir          = $PERLTIDY_GIT;
@@ -125,7 +125,7 @@ sub get_latest_perltidy {
     my ( $fh_tmp, $tmpfile ) = tempfile();
     chdir $dir;
     my $ofile = $starting_dir . '/perltidy.pl';
-    system "./pm2pl $Dflag -o $ofile >$tmpfile";
+    system "./pm2pl $opt_D -o $ofile >$tmpfile";
     chdir $starting_dir;
     open my $fh, '<', $tmpfile or die "Can't open $tmpfile: $!";
     unlink $tmpfile;

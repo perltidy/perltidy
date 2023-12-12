@@ -24,6 +24,9 @@ use warnings;
 
 # 4. When done, remove the temporary directory
 
+main();
+
+sub main { #<<<
 my $cmd;
 my @files = @ARGV;
 if ( !@files ) { @files = glob('../*'); }
@@ -69,6 +72,7 @@ foreach my $file (@files) {
     }
 
     # Otherwise, leave the files for analysis
+}
 }
 
 sub add_side_comments {

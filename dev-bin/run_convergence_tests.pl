@@ -4,6 +4,12 @@ use warnings;
 use File::Copy;
 use Perl::Tidy;
 
+my $tmp_dir;
+my %Opts;
+
+main();
+
+sub main { #<<<
 my $usage = <<EOM;
 
 This utility runs perltidy on a database of stability test cases. 
@@ -93,7 +99,7 @@ my @option_string = qw(
   u
 );
 
-my %Opts = ();
+%Opts = ();
 if ( !GetOptions( \%Opts, @option_string ) ) {
     die "Programming Bug: error in setting default options";
 }
@@ -110,7 +116,7 @@ my $expect_fname = $0 . ".expect";
 # set tmp dir - you may need to change this depending on setup
 my $git_home = qx[git rev-parse --show-toplevel];
 chomp $git_home;
-my $tmp_dir = $git_home . "/dev-bin/tmp";
+$tmp_dir = $git_home . "/dev-bin/tmp";
 if ( -e $tmp_dir && !-d $tmp_dir ) {
     print STDERR "'$tmp_dir' exists but is not a dir: please fix\n";
     exit 1;
@@ -280,6 +286,7 @@ if ( @{$rexpect_cases_to_update} ) {
 }
 
 exit 1;
+}
 
 sub run_test_cases {
     my ( $rdata_files, $rexpect_files, $rcases ) = @_;
@@ -542,7 +549,6 @@ sub read_data_to_hash {
 
     my $dstring = get_string($db_fname);
     my @lines   = split /^/, $dstring;
-    my $lines   = @lines;
     my $fname   = "";
     my $lno     = 0;
     my $string;

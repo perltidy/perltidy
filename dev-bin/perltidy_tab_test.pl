@@ -29,7 +29,6 @@ use warnings;
 #   get tabs which will not be removed.  These should be the only results
 #   reported with errors.
 
-my $cmd;
 my @files = @ARGV;
 if ( !@files ) { @files = glob('../*'); }
 my $total_error_count = 0;
