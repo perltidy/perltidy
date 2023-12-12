@@ -89,10 +89,9 @@ sub get_defaults {
 
     # get latest parameters from perltidy
     use File::Temp qw(tempfile);
-    my $ris_default = {};
+    my %is_default;
     my ( $fout, $tmpnam ) = File::Temp::tempfile();
     if ( !$fout ) { die "cannot get tempfile\n" }
-    my @parameters;
     system "perltidy --dump-defaults >$tmpnam";
     open( IN, "<", $tmpnam ) || die "cannot open $tmpnam: $!\n";
 
@@ -100,9 +99,9 @@ sub get_defaults {
         next if $line =~ /#/;
         $line         =~ s/^\s+//;
         $line         =~ s/\s+$//;
-        $ris_default->{$line} = 1;
+        $is_default{$line} = 1;
     }
     close IN;
     unlink $tmpnam if ( -e $tmpnam );
-    return $ris_default;
+    return \%is_default;
 }

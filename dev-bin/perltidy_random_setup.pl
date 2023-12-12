@@ -17,35 +17,41 @@ use Data::Dumper;
 
 # You should create a temporary directory for this work.
 
+# Global variables
 our $rsetup;    # the setup hash
 my $config_file   = "config.txt";
 my $FILES_file    = "FILES.txt";
 my $PROFILES_file = "PROFILES.txt";
 my $perltidy      = "./perltidy.pl";
-my $rfiles        = [];
 my $rprofiles     = [];
 
-# if file 'perltidy.pl' is found here then make that the default
-if ( -e './perltidy.pl' ) { $perltidy = './perltidy.pl' }
+main();
 
-# always require a separate version of perltidy
-# go get a copy if there is none:
-# On my system I have a utility 'get_perltidy.pl' which gets the latest
-# perltidy.pl with DEVEL_MODE => 1 everywhere
-else {
-    print STDERR "Attempting to get perltidy.pl in DEVEL_MODE...\n";
-    my $fail = system("get_perltidy.pl");
-    if ($fail) {
-        die "..Failed. Please move a copy of perltidy.pl here first\n";
+sub main {
+
+    my $rfiles = [];
+
+    # if file 'perltidy.pl' is found here then make that the default
+    if ( -e './perltidy.pl' ) { $perltidy = './perltidy.pl' }
+
+    # always require a separate version of perltidy
+    # go get a copy if there is none:
+    # On my system I have a utility 'get_perltidy.pl' which gets the latest
+    # perltidy.pl with DEVEL_MODE => 1 everywhere
+    else {
+        print STDERR "Attempting to get perltidy.pl in DEVEL_MODE...\n";
+        my $fail = system("get_perltidy.pl");
+        if ($fail) {
+            die "..Failed. Please move a copy of perltidy.pl here first\n";
+        }
     }
-}
 
-# see if DEVEL_MODE is set, turn it on if not
-if ( $perltidy eq "./perltidy.pl" ) {
-    check_DEVEL_MODE($perltidy);
-}
+    # see if DEVEL_MODE is set, turn it on if not
+    if ( $perltidy eq "./perltidy.pl" ) {
+        check_DEVEL_MODE($perltidy);
+    }
 
-query(<<EOM);
+    query(<<EOM);
 
 IMPORTANT: You should start this program in an empty directory that you create
 specifically for this test.  After testing you will probably want to delete the
@@ -64,42 +70,42 @@ Hit <cr> to continue, or hit control-C to quit.
 
 EOM
 
-# Defaults
-default_config();
+    # Defaults
+    default_config();
 
-if ( -e $config_file ) {
-    if ( ifyes( "Read the existing config.txt file? [Y/N]", "Y" ) ) {
-        read_config($config_file);
+    if ( -e $config_file ) {
+        if ( ifyes( "Read the existing config.txt file? [Y/N]", "Y" ) ) {
+            read_config($config_file);
+        }
     }
-}
 
-if ( -e $FILES_file ) {
-    if ( ifyes( "Found $FILES_file, read it ? [Y/N]", "Y" ) ) {
-        $rfiles = read_list($FILES_file);
-        my $nfiles = @{$rfiles};
-        print STDOUT "found $nfiles files\n";
+    if ( -e $FILES_file ) {
+        if ( ifyes( "Found $FILES_file, read it ? [Y/N]", "Y" ) ) {
+            $rfiles = read_list($FILES_file);
+            my $nfiles = @{$rfiles};
+            print STDOUT "found $nfiles files\n";
+        }
     }
-}
 
-if ( !@{$rfiles} ) {
-    $rfiles = define_new_files();
-}
-
-if ( -e $PROFILES_file ) {
-    if ( ifyes( "Found $PROFILES_file, read it ? [Y/N]", "Y" ) ) {
-        $rprofiles = read_list($PROFILES_file);
-        my $nfiles = @{$rprofiles};
-        print STDOUT "found $nfiles profiles\n";
+    if ( !@{$rfiles} ) {
+        $rfiles = define_new_files();
     }
-}
 
-if ( !@{$rprofiles} ) {
-    make_profiles();
-    $rprofiles = filter_profiles($rprofiles);
-}
+    if ( -e $PROFILES_file ) {
+        if ( ifyes( "Found $PROFILES_file, read it ? [Y/N]", "Y" ) ) {
+            $rprofiles = read_list($PROFILES_file);
+            my $nfiles = @{$rprofiles};
+            print STDOUT "found $nfiles profiles\n";
+        }
+    }
 
-# this is permanently deactivated
-$rsetup->{'syntax_check'} = 0;
+    if ( !@{$rprofiles} ) {
+        make_profiles();
+        $rprofiles = filter_profiles($rprofiles);
+    }
+
+    # this is permanently deactivated
+    $rsetup->{'syntax_check'} = 0;
 
 =pod
 $rsetup->{'syntax_check'} = ifyes( <<EOM, "N" );
@@ -111,18 +117,17 @@ Y/N:
 EOM
 =cut
 
-my $file_info    = get_file_info($rfiles);
-my $profile_info = get_profile_info();
-my $nprofiles    = @{$rprofiles};
-while (1) {
-    my $files              = $rsetup->{files};
-    my $chain_mode         = $rsetup->{chain_mode};
-    my $append_flags       = $rsetup->{append_flags};
-    my $do_syntax_check    = $rsetup->{syntax_check};
-    my $delete_good_output = $rsetup->{delete_good_output};
-    my $perltidy_version   = $rsetup->{perltidy};
-    $perltidy_version = "[default]" unless ($perltidy_version);
-    print <<EOM;
+    my $file_info    = get_file_info($rfiles);
+    my $profile_info = get_profile_info();
+    while (1) {
+        my $files              = $rsetup->{files};
+        my $chain_mode         = $rsetup->{chain_mode};
+        my $append_flags       = $rsetup->{append_flags};
+        my $do_syntax_check    = $rsetup->{syntax_check};
+        my $delete_good_output = $rsetup->{delete_good_output};
+        my $perltidy_version   = $rsetup->{perltidy};
+        $perltidy_version = "[default]" unless ($perltidy_version);
+        print <<EOM;
 ===Main Menu===
 R   - Read a config file
       Files:    $files
@@ -140,70 +145,73 @@ Q   - Quit without saving config file
 W   - Write config, FILES.txt, PROFILES.txt, GO.sh and eXit
 EOM
 
-    my ($ans) = queryu(':');
-    if ( $ans eq 'R' ) {
-        my $infile = get_input_filename( '', '.txt', $config_file );
-        read_config($infile);
-    }
-    elsif ( $ans eq 'E' ) {
-        edit_config();
-    }
-    elsif ( $ans eq 'FR' ) {
-        $rfiles    = define_new_files();
-        $rfiles    = filter_files($rfiles);
-        $file_info = get_file_info($rfiles);
-    }
-    elsif ( $ans eq 'FA' ) {
-        $rfiles    = add_files($rfiles);
-        $file_info = get_file_info($rfiles);
-    }
-    elsif ( $ans eq 'P' ) {
-        make_profiles();
-        $rprofiles    = filter_profiles($rprofiles);
-        $profile_info = get_profile_info();
-    }
-    elsif ( $ans eq 'C' ) {
-        $chain_mode = get_num("Chaining: 0=no, 1=always,2=random");
-        $rsetup->{chain_mode} = $chain_mode;
-    }
-    elsif ( $ans eq 'A' ) {
-        my $str = query("Enter any flags to append");
-        $rsetup->{append_flags} = $str;
-    }
-    elsif ( $ans eq 'D' ) {
-        $delete_good_output =
-          ifyes( "Delete needless good output files? [Y/N]", "Y" );
-        $rsetup->{delete_good_output} = $delete_good_output;
-    }
-    elsif ( $ans eq 'S' ) {
-        $do_syntax_check = ifyes( "Do syntax checking? [Y/N]", "N" );
-        $rsetup->{syntax_check} = $do_syntax_check;
-    }
-    elsif ( $ans eq 'V' ) {
-        my $test =
-          query(
-            "Enter the full path to the perltidy binary, or <cr> for default");
-        if ( $test && !-e $test ) {
-            next
-              unless (
-                ifyes("I cannot find that, do you want to use it anyway?") );
+        my ($ans) = queryu(':');
+        if ( $ans eq 'R' ) {
+            my $infile = get_input_filename( '', '.txt', $config_file );
+            read_config($infile);
         }
-        $rsetup->{perltidy} = $test;
+        elsif ( $ans eq 'E' ) {
+            edit_config();
+        }
+        elsif ( $ans eq 'FR' ) {
+            $rfiles    = define_new_files();
+            $rfiles    = filter_files($rfiles);
+            $file_info = get_file_info($rfiles);
+        }
+        elsif ( $ans eq 'FA' ) {
+            $rfiles    = add_files($rfiles);
+            $file_info = get_file_info($rfiles);
+        }
+        elsif ( $ans eq 'P' ) {
+            make_profiles();
+            $rprofiles    = filter_profiles($rprofiles);
+            $profile_info = get_profile_info();
+        }
+        elsif ( $ans eq 'C' ) {
+            $chain_mode = get_num("Chaining: 0=no, 1=always,2=random");
+            $rsetup->{chain_mode} = $chain_mode;
+        }
+        elsif ( $ans eq 'A' ) {
+            my $str = query("Enter any flags to append");
+            $rsetup->{append_flags} = $str;
+        }
+        elsif ( $ans eq 'D' ) {
+            $delete_good_output =
+              ifyes( "Delete needless good output files? [Y/N]", "Y" );
+            $rsetup->{delete_good_output} = $delete_good_output;
+        }
+        elsif ( $ans eq 'S' ) {
+            $do_syntax_check = ifyes( "Do syntax checking? [Y/N]", "N" );
+            $rsetup->{syntax_check} = $do_syntax_check;
+        }
+        elsif ( $ans eq 'V' ) {
+            my $test =
+              query(
+"Enter the full path to the perltidy binary, or <cr> for default"
+              );
+            if ( $test && !-e $test ) {
+                next
+                  unless (
+                    ifyes("I cannot find that, do you want to use it anyway?")
+                  );
+            }
+            $rsetup->{perltidy} = $test;
+        }
+        elsif ( $ans eq 'Q' ) {
+            last if ( ifyes("Quit without saving? [Y/N]") );
+        }
+        elsif ( $ans eq 'W' || $ans eq 'X' ) {
+            write_config($config_file);
+            $rfiles    = filter_files($rfiles);
+            $rprofiles = filter_profiles($rprofiles);
+            write_list( $FILES_file,    $rfiles );
+            write_list( $PROFILES_file, $rprofiles );
+            last;
+        }
     }
-    elsif ( $ans eq 'Q' ) {
-        last if ( ifyes("Quit without saving? [Y/N]") );
-    }
-    elsif ( $ans eq 'W' || $ans eq 'X' ) {
-        write_config($config_file);
-        $rfiles    = filter_files($rfiles);
-        $rprofiles = filter_profiles($rprofiles);
-        write_list( $FILES_file,    $rfiles );
-        write_list( $PROFILES_file, $rprofiles );
-        last;
-    }
-}
 
-write_GO();
+    write_GO();
+}
 
 sub filter_files {
     my ($rlist) = @_;
@@ -228,8 +236,8 @@ sub filter_files {
     # NOTE: this could also be an option
     @{$rlist} = grep { !-e "$_.ERR" }
 
-    # exclude pro{$rlist}
-    @{$rlist} = grep { $_ !~ /profile\.[0-9]*/ } @{$rlist};
+      # exclude pro{$rlist}
+      @{$rlist} = grep { $_ !~ /profile\.[0-9]*/ } @{$rlist};
 
     # Sort by size
     @{$rlist} =
@@ -276,9 +284,10 @@ EOM
 
     my $rnew_files = [];
     my $glob       = '../*';
+    my $ans;
 
   REDO:
-    my $ans = query("File glob to get some NEW files to process, <cr>='$glob'");
+    $ans  = query("File glob to get some NEW files to process, <cr>='$glob'");
     $glob = $ans if ($ans);
     return $rnew_files unless ($glob);
     my @files = glob($glob);
@@ -289,10 +298,8 @@ EOM
     $rnew_files = filter_files($rnew_files);
 
     while (1) {
-        my $nfiles_new    = @{$rnew_files};
-        my $total_size_mb = file_size_sum_mb($rnew_files);
-        my $file_info     = get_file_info($rnew_files);
-        my $ans           = queryu(<<EOM);
+        my $file_info = get_file_info($rnew_files);
+        $ans = queryu(<<EOM);
 $file_info
 R  Redo with a different glob
 F  Reduce total size by a fraction
@@ -331,7 +338,7 @@ EOM
         my $ans = queryu(':');
         if ( $ans eq 'G' ) {
             my $glob = '../*';
-            my $ans =
+            $ans =
               query("File glob to get some NEW files to process, <cr>='$glob'");
             $glob = $ans if ($ans);
             next unless ($glob);
@@ -385,8 +392,8 @@ sub reduce_total_file_size {
     my $want = $sum * $fraction;
     my @new_files;
     foreach (@partial_sum) {
-        my ( $fname, $sum ) = @{$_};
-        last if ( $sum > $want );
+        my ( $fname, $psum ) = @{$_};
+        last if ( $psum > $want );
         push @new_files, $fname;
     }
     return \@new_files;
@@ -671,17 +678,17 @@ sub get_num {
         use File::Temp qw(tempfile);
         my ( $fout, $tmpnam ) = File::Temp::tempfile();
         if ( !$fout ) { die "cannot get tempfile\n" }
-        my @parameters;
+        my $rparameters = [];
         system "perltidy --dump-long-names >$tmpnam";
         open( IN, "<", $tmpnam ) || die "cannot open $tmpnam: $!\n";
         while ( my $line = <IN> ) {
             next if $line =~ /#/;
             chomp $line;
-            push @parameters, $line;
+            push @{$rparameters}, $line;
         }
         close IN;
         unlink $tmpnam if ( -e $tmpnam );
-        return \@parameters;
+        return $rparameters;
     }
 
     sub get_integer_option_range {
@@ -707,20 +714,6 @@ sub get_num {
         unlink $tmpnam if ( -e $tmpnam );
         return \%integer_option_range;
     }
-
-    sub dump_integer_option_range {
-        my ($rinteger_option_range) = @_;
-        print {*STDOUT} "Option, min, max, default\n";
-        foreach my $key ( sort keys %{$rinteger_option_range} ) {
-            my ( $min, $max, $default ) = @{ $rinteger_option_range->{$key} };
-            foreach ( $min, $max, $default ) {
-                $_ = 'undef' unless defined($_);
-            }
-            print {*STDOUT} "$key, $min, $max, $default\n";
-        }
-        return;
-    } ## end sub dump_integer_option-range
-
 
     BEGIN {
 
@@ -1031,9 +1024,10 @@ sub get_num {
             print STDERR "Updating perltidy parameters....\n";
         }
 
-	$rinteger_option_range = get_integer_option_range();
+        $rinteger_option_range = get_integer_option_range();
 
     }
+
     sub make_profiles {
         my $nfiles_old = @{$rprofiles};
         my $case       = 0;
@@ -1165,11 +1159,11 @@ EOM
         );
 
         my %option_range = (
-            'format'             => [ 'tidy', 'html' ],    #, 'user' ],
-            'output-line-ending' => [ 'dos',  'win', 'mac', 'unix' ],
-            'extended-block-tightness-list' => [ 'k', 't', 'kt' ],
+            'format'                        => [ 'tidy', 'html' ],  #, 'user' ],
+            'output-line-ending'            => [ 'dos',  'win', 'mac', 'unix' ],
+            'extended-block-tightness-list' => [ 'k',    't',   'kt' ],
 
-            'warn-variables' => ['0', '1'],
+            'warn-variables' => [ '0', '1' ],
 
             'space-backslash-quote'         => [ 0, 2 ],
             'block-brace-tightness'         => [ 0, 2 ],
@@ -1377,7 +1371,7 @@ EOM
                 next if $skip{$name};
 
                 # skip all dump options; they dump to stdout and exit
-                next if ($name=~/^dump-/);
+                next if ( $name =~ /^dump-/ );
 
                 # Skip all pattern lists
                 if ( $flag =~ /s$/ ) {

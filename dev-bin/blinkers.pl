@@ -102,6 +102,8 @@ sub set_perltidy {
 
 sub get_version {
     my ($my_perltidy) = @_;
+
+    # get the perltidy version
     my ( $fh, $tmpname ) = File::Temp::tempfile();
     my $cmd = "$my_perltidy -v >$tmpname";
     system($cmd);
@@ -131,9 +133,9 @@ sub set_dirs {
     }
     if ( !@{$rdirs} ) { push @{$rdirs}, '.'; }
     $dir_string = join " ", @{$rdirs};
-    if (length($dir_string . 40)) {
-        my $numd=@{$rdirs};
-        $dir_string = substr($dir_string, 0, 40);
+    if ( length( $dir_string . 40 ) ) {
+        my $numd = @{$rdirs};
+        $dir_string = substr( $dir_string, 0, 40 );
         $dir_string .= "...[$numd dirs]";
     }
     return;
@@ -150,7 +152,6 @@ sub find_git_home {
 }
 
 sub ask_git_home {
-    my ( $fh, $err_file ) = File::Temp::tempfile();
 
     # Only allow user to change git_home if it is not known automatically
     if ( !$know_git_home ) {
@@ -322,8 +323,8 @@ sub blinker_test {
     my $imax = 4;
     my @ofiles;
     my %digest_seen;
-    my $digest = digest_file($ifile);
-    $digest_seen{$digest} = 0;
+    my $digest_in = digest_file($ifile);
+    $digest_seen{$digest_in} = 0;
 
     # Option changes:
     # -it=1   (just do 1 iteration)
@@ -649,13 +650,17 @@ sub rename_blinkers {
 
 sub find_last_name {
     my ($data) = @_;
+
+    # Find the last blinker case number in the file $data
+    # We ignore cases not beginning with 'b'
+
     if ( !-e $data ) {
         print STDERR "Cannot find $data\n";
         return;
     }
     my $string = slurp_file($data);
     my @lines  = split /^/, $string;
-    my ( $max_case, $prefix );
+    my $max_case;
 
     #==> b001.in <==
     foreach my $line (@lines) {
@@ -663,7 +668,9 @@ sub find_last_name {
             if ( !defined($max_case) || $max_case < $1 ) { $max_case = $1 }
         }
     }
-    return 'b' . $max_case;
+
+    if ( defined($max_case) ) { $max_case = 'b' . $max_case }
+    return $max_case;
 }
 
 #########################################################

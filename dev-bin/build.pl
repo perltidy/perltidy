@@ -350,7 +350,8 @@ sub make_dist {
       )
     {
         my $fout = "tmp/cpants_lint.out";
-        my $cmd  = "cpants_lint.pl $tar_gz_file >$fout 2>$fout";
+        if ( -e $fout ) { unlink $fout }
+        my $cmd = "cpants_lint.pl $tar_gz_file >$fout 2>$fout";
         post_result($fout);
     }
     return;
