@@ -915,7 +915,7 @@ EOM
     # line parameters and is expecting formatted output to stdout.  Another
     # precaution, added elsewhere, is to ignore these in a .perltidyrc
     my $num_files = @Arg_files;
-    foreach my $opt_name (qw(dump-block-summary dump-variables)) {
+    foreach my $opt_name (qw(dump-block-summary dump-unusual-variables)) {
         if ( $rOpts->{$opt_name} && $num_files != 1 ) {
             Die(<<EOM);
 --$opt_name expects 1 filename in the arg list but saw $num_files filenames
@@ -3635,22 +3635,22 @@ sub generate_options {
     ########################################
     $category = 9;    # Other controls
     ########################################
-    $add_option->( 'warn-missing-else',             'wme',  '!' );
-    $add_option->( 'add-missing-else',              'ame',  '!' );
-    $add_option->( 'add-missing-else-comment',      'amec', '=s' );
-    $add_option->( 'delete-block-comments',         'dbc',  '!' );
-    $add_option->( 'delete-closing-side-comments',  'dcsc', '!' );
-    $add_option->( 'delete-pod',                    'dp',   '!' );
-    $add_option->( 'delete-side-comments',          'dsc',  '!' );
-    $add_option->( 'tee-block-comments',            'tbc',  '!' );
-    $add_option->( 'tee-pod',                       'tp',   '!' );
-    $add_option->( 'tee-side-comments',             'tsc',  '!' );
-    $add_option->( 'look-for-autoloader',           'lal',  '!' );
-    $add_option->( 'look-for-hash-bang',            'x',    '!' );
-    $add_option->( 'look-for-selfloader',           'lsl',  '!' );
-    $add_option->( 'pass-version-line',             'pvl',  '!' );
-    $add_option->( 'warn-variables',                'wv',   '=s' );
-    $add_option->( 'warn-variables-exclusion-list', 'wvxl', '=s' );
+    $add_option->( 'warn-missing-else',            'wme',  '!' );
+    $add_option->( 'add-missing-else',             'ame',  '!' );
+    $add_option->( 'add-missing-else-comment',     'amec', '=s' );
+    $add_option->( 'delete-block-comments',        'dbc',  '!' );
+    $add_option->( 'delete-closing-side-comments', 'dcsc', '!' );
+    $add_option->( 'delete-pod',                   'dp',   '!' );
+    $add_option->( 'delete-side-comments',         'dsc',  '!' );
+    $add_option->( 'tee-block-comments',           'tbc',  '!' );
+    $add_option->( 'tee-pod',                      'tp',   '!' );
+    $add_option->( 'tee-side-comments',            'tsc',  '!' );
+    $add_option->( 'look-for-autoloader',          'lal',  '!' );
+    $add_option->( 'look-for-hash-bang',           'x',    '!' );
+    $add_option->( 'look-for-selfloader',          'lsl',  '!' );
+    $add_option->( 'pass-version-line',            'pvl',  '!' );
+    $add_option->( 'warn-variable-types',          'wvt',  '=s' );
+    $add_option->( 'warn-variable-exclusion-list', 'wvxl', '=s' );
 
     ########################################
     $category = 13;    # Debugging
@@ -3667,7 +3667,7 @@ sub generate_options {
     $add_option->( 'dump-profile',                    'dpro',  '!' );
     $add_option->( 'dump-short-names',                'dsn',   '!' );
     $add_option->( 'dump-token-types',                'dtt',   '!' );
-    $add_option->( 'dump-variables',                  'dv',    '!' );
+    $add_option->( 'dump-unusual-variables',          'duv',   '!' );
     $add_option->( 'dump-want-left-space',            'dwls',  '!' );
     $add_option->( 'dump-want-right-space',           'dwrs',  '!' );
     $add_option->( 'experimental',                    'exp',   '=s' );
@@ -4551,7 +4551,7 @@ EOM
                     dump-want-left-space
                     dump-want-right-space
                     dump-block-summary
-                    dump-variables
+                    dump-unusual-variables
                     help
                     stylesheet
                     version

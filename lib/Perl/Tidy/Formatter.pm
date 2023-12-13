@@ -6413,15 +6413,15 @@ EOM
     }
 
     # Dump variable usage info if requested
-    if ( $rOpts->{'dump-variables'} ) {
-        $self->dump_variables();
+    if ( $rOpts->{'dump-unusual-variables'} ) {
+        $self->dump_unusual_variables();
         Exit(0);
     }
 
-    # Act on -warn-variables if requesed and if the logger is available
+    # Act on -warn-variable-types if requesed and if the logger is available
     # (the logger is deactivated during iterations)
-    $self->warn_variables()
-      if ( $rOpts->{'warn-variables'}
+    $self->warn_variable_types()
+      if ( $rOpts->{'warn-variable-types'}
         && $self->[_logger_object_] );
 
     $self->examine_vertical_tightness_flags();
@@ -9401,10 +9401,10 @@ EOM
     return \@sorted;
 } ## end sub scan_variable_usage
 
-sub dump_variables {
+sub dump_unusual_variables {
     my ($self) = @_;
 
-    # process a --dump-variables(-dv) command
+    # process a --dump-unusual-variables(-duv) command
 
     my $rlines = $self->scan_variable_usage();
     return unless ( @{$rlines} );
@@ -9426,18 +9426,18 @@ EOM
     print {*STDOUT} $output_string;
 
     return;
-} ## end sub dump_variables
+} ## end sub dump_unusual_variables
 
-sub warn_variables {
+sub warn_variable_types {
     my ($self) = @_;
 
-    # process a --warn-variables command
+    # process a --warn-variable-types command
 
-    my $wv_key    = 'warn-variables';
+    my $wv_key    = 'warn-variable-types';
     my $wv_option = $rOpts->{$wv_key};
 
     # Single letter options:
-    #  u - declared but unused [NOT AVAILABLE here, use --dump-variables]
+    #  u - declared but unused [NOT AVAILABLE, use --dump-unusual-variables]
     #  r - reused scope
     #  s - reused sigil
     #  p - package boundaries crossed by lexical variables
@@ -9445,7 +9445,7 @@ sub warn_variables {
     #  1 - all of the above
     #  * - all of the above
     # Example:
-    #  -wv=sr  : do check types 's' and 'r'
+    #  -wvt=sr  : do check types 's' and 'r'
 
     if ( $wv_option eq '*' || $wv_option eq '1' ) { $wv_option = 'spr' }
 
@@ -9453,7 +9453,7 @@ sub warn_variables {
     # needless warnings when perltidy is run on small blocks from an editor.
     if ( $wv_option =~ s/u//g ) {
         Warn(<<EOM);
---$wv_key=u is not available; use --dump-variables=u to find unused vars
+--$wv_key=u is not available; use --dump-unusual-variables=u to find unused vars
 EOM
     }
 
@@ -9469,7 +9469,7 @@ Line:Issue: Var: note
 EOM
 
     # remove any excluded names
-    my $wvxl_key       = 'warn-variables-exclusion-list';
+    my $wvxl_key       = 'warn-variable-exclusion-list';
     my $excluded_names = $rOpts->{$wvxl_key};
     my %is_excluded_name;
     if ($excluded_names) {
@@ -9493,7 +9493,7 @@ EOM
     $message .= "End scan for --$wv_key=$wv_option:\n";
     warning($message);
     return;
-} ## end sub warn_variables
+} ## end sub warn_variable_types
 
 sub find_non_indenting_braces {
 

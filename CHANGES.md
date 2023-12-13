@@ -2,10 +2,10 @@
 
 ## 2023 09 12.06
 
-    - Added --dump-variables (-dv) option to dump a list of variables with
-      certain properties of interest. For example
+    - Added --dump-unusual-variables (-duv) option to dump a list of
+      variables with certain properties of interest. For example
 
-         perltidy -dv somefile.pl >vars.txt
+         perltidy -duv somefile.pl >vars.txt
 
       produces a file with lines which look something like
 
@@ -26,12 +26,13 @@
         p: lexical variable with scope in multiple packages
         u: unused variable
 
-    - Added a related flag --warn-variables=s (-wv=s) option to warn
-      if certain types of variables are found in a script. For example
+    - Added a related flag --warn-variable-types=string (-wvt=string) option
+      to warn if certain types of variables are found in a script. The types
+      may include 'r', 's', and 'p' but not 'u'.
 
-        perltidy -wv=rps somefile.pl
+        perltidy -wvt=rp somefile.pl
 
-      will check for and warn if any of the above types r, s, or p are seen.
+      will check for and warn if any variabls of type 'r', or 'p' are seen.
       The manual has further details.
 
     - All parameters taking integer values are now checked for

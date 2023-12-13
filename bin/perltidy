@@ -125,7 +125,7 @@ the start of every line.
 This will dump a table of comma-separated metrics for subroutines longer than
 10 lines to F<blocks.csv>.
 
-    perltidy -dv somefile.pl >vars.txt
+    perltidy -duv somefile.pl >vars.txt
 
 This will dump a list of unused and reused lexical variable names to
 F<vars.txt>.
@@ -5508,15 +5508,15 @@ This selects every if-chain which contains 2 or more B<elsif> blocks:
 
 =back
 
-=item B<Finding unused, reused, and other variables of interest with --dump-variables>
+=item B<Finding unused, reused, and other variables of interest with --dump-unusual-variables>
 
 Lexical variables with certain properties of interest to a programmer can be
-listed with B<--dump-variables> or B<-dv>.  This parameter must be on the
-command line, along with a single file name.  It causes perltidy to scan the
-file for certain variable types, write any found to the standard output, and
-then immediately exit without doing any formatting. For example
+listed with B<--dump-unusual-variables> or B<-duv>.  This parameter must be on
+the command line, along with a single file name.  It causes perltidy to scan
+the file for certain variable types, write any found to the standard output,
+and then immediately exit without doing any formatting. For example
 
-    perltidy -dv somefile.pl >vars.txt
+    perltidy -duv somefile.pl >vars.txt
 
 produces a file with lines which look something like
 
@@ -5564,19 +5564,19 @@ provided by another routine or data structure but which are not needed, or they
 might be defined for possible future program development, clarity or debugging.
 But sometimes they can occur due to being orphaned by a coding change, due to a
 misspelling, or by having an unintentional preceding C<my>.  So it is worth
-checking them, especially for new code.
+reviewing them, especially for new code.
 
 =back
 
-=item B<Warning about certain variables type with --warn-variables>
+=item B<Warning about certain variable types with --warn-variable-types>
 
-The flag B<--warn-variables=string>, or B<-wv=string>, can be used to to
+The flag B<--warn-variable-types=string>, or B<-wvt=string>, can be used to to
 produce a warning message if certain of the above variable types are
 encountered during formatting.   The input parameter B<string> is a
 a concatenation of the letters associated with the types of variables
-to produce a warning. For example:
+which are to produce a warning. For example:
 
-   perltidy -wv=sp somefile.pl
+   perltidy -wvt=sp somefile.pl
 
 will process F<somefile.pl> normally but issue a warning if either of
 the issues 's' or 'p', described above, are encountered.
@@ -5586,10 +5586,10 @@ A limitation is that warnings may not be requested for unused variables, type
 when perltidy is run on small snippets of code from within an editor.
 
 All possible variable warnings may be requested with B<-wv=rsp> or simply
-B<-wv=1> or B<-wv='*'>.  The default is not to do these checks, and it can
-also be indicated with B<-wv=0>.
+B<-wvt=1> or B<-wvt='*'>.  The default is not to do these checks, and it can
+also be indicated with B<-wvt=0>.
 
-A companion flag, B<--want-variables-exclusion-list=string>, or B<-wvxl=string>,
+A companion flag, B<--warn-variable-exclusion-list=string>, or B<-wvxl=string>,
 can be used to skip warning checks for a list of variables.  For example,
 
    perltidy -wv=1 -wvxl='$self $class'  somefile.pl
