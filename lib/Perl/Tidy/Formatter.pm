@@ -8868,14 +8868,49 @@ sub scan_variable_usage {
     # sub to update counts for a list of variable names
     #--------------------------------------------------
     my $update_use_count = sub {
-        my @names = @_;
-        foreach my $name (@names) {
-            foreach my $layer ( reverse( @{$rblock_stack} ) ) {
-                my $rvars = $layer->{rvars};
-                if ( $rvars->{$name} ) {
-                    $rvars->{$name}->{count}++;
-                    last;
-                }
+        my ( $sigil_string, $word, $bracket ) = @_;
+
+        # Given:
+        #   $sigil_string = a string of leading sigils, like '$', '$$', '@$$'
+        #   $word         = the following bareword
+        #   $bracket      = a following array or hash bracket or brace, if any
+        #                   (token types '[' and 'L')
+        #   Note: any braces around the bareword must have been stripped
+        #   by the caller
+        # Task:
+        #   Form the hash key ($word, @word, or %word) and update the count
+
+        return unless ( defined($sigil_string) && defined($word) );
+
+        my $sigil = substr( $sigil_string, -1, 1 );
+        return unless ( $is_valid_sigil{$sigil} );
+
+        # Examples:
+        # input     => key
+        # $var         $var
+        # @var         @var
+        # $var[        @var
+        # $var{        %var
+        # @$var        $var
+        # ${var}       $var  (caller must remove the braces)
+        # @$var[0..2]  $var
+        # @var[0..2]   @var  array slice
+        # @var{w1 w2}  %var  hash slice
+        # %var{w1 w2}  %var  hash slice
+
+        my $name;
+        if ( $bracket && length($sigil_string) == 1 ) {
+            if    ( $bracket eq '{' ) { $sigil = '%' }
+            elsif ( $bracket eq '[' ) { $sigil = '@' }
+            else                      { }
+        }
+        $name = $sigil . $word;
+
+        foreach my $layer ( reverse( @{$rblock_stack} ) ) {
+            my $rvars = $layer->{rvars};
+            if ( $rvars->{$name} ) {
+                $rvars->{$name}->{count}++;
+                last;
             }
         }
         return;
@@ -8911,21 +8946,13 @@ sub scan_variable_usage {
     my $scan_quoted_text = sub {
         my ($text) = @_;
 
-        # Look for something like: $word, @word, $word[, $word{
-        my @names;
-        while ( $text =~ / ([\$\@]) (\w+) ([\[\{]?) /gcx ) {
-            my $sigil = $1;
-            my $word  = $2;
-            my $brace = $3;
-            if ($brace) {
-                if ( $brace eq '[' ) { $sigil = '@' }
-                if ( $brace eq '{' ) { $sigil = '%' }
-            }
-            my $name = $sigil . $word;
-            push @names, $name;
+        # Looking for something like $word, @word, $word[, $$word, ${word}, ..
+        while ( $text =~ / ([\$\@]  [\$]*) \{?(\w+)\}? ([\[\{]?) /gcx ) {
+            my $sigil_string = $1;
+            my $word         = $2;
+            my $brace        = $3;
+            $update_use_count->( $sigil_string, $word, $brace );
         }
-
-        $update_use_count->(@names) if (@names);
         return;
     };
 
@@ -9013,6 +9040,46 @@ sub scan_variable_usage {
         return ( $seqno_paren, $seqno_brace );
     };
 
+    my $scan_braced_id = sub {
+        my ($KK) = @_;
+
+        # We are at an opening brace and looking for something like this:
+        #   @{word}[@var]
+        #   ${word}
+        #    ^
+        #    |
+        #    -- $KK
+        #
+        # Look back for the sigil
+        my $Kp = $self->K_previous_code($KK);
+
+        my $type  = $rLL->[$Kp]->[_TYPE_];
+        my $token = $rLL->[$Kp]->[_TOKEN_];
+        return unless ( defined($Kp) && $rLL->[$Kp]->[_TYPE_] eq 't' );
+        my $sigil_string = $rLL->[$Kp]->[_TOKEN_];
+
+        # Look forward for the bareword
+        my $Kn = $self->K_next_code($KK);
+        return unless ( defined($Kn) && $rLL->[$Kn]->[_TYPE_] eq 'w' );
+        my $word = $rLL->[$Kn]->[_TOKEN_];
+
+        # Look forward for the closing brace
+        my $Knn = $self->K_next_code($Kn);
+        return unless ( defined($Knn) && $rLL->[$Knn]->[_TYPE_] eq 'R' );
+
+        # Look forward for a possible { or [
+        my $bracket;
+        my $Knnn = $self->K_next_code($Knn);
+        if ( defined($Knnn) ) {
+            my $next_type = $rLL->[$Knnn]->[_TYPE_];
+            if ( $next_type eq 'L' || $next_type eq '[' ) {
+                $bracket = $rLL->[$Knnn]->[_TOKEN_];
+            }
+        }
+        $update_use_count->( $sigil_string, $word, $bracket );
+        return;
+    };
+
     #--------------------
     # Loop over all lines
     #--------------------
@@ -9051,6 +9118,11 @@ sub scan_variable_usage {
                         if ( $ris_sub_block->{$seqno} ) {
                             $sub_count_by_package{$current_package}++;
                         }
+                    }
+
+                    # look for something like @{word} etc
+                    if ( $type eq 'L' ) {
+                        $scan_braced_id->($KK);
                     }
                 }
 
@@ -9185,7 +9257,7 @@ EOM
             #--------------
             # an identifier
             #--------------
-            elsif ( $type eq 'i' ) {
+            elsif ( $type eq 'i' || $type eq 'Z' ) {
 
                 # Still collecting 'my' vars?
                 if ( $KK <= $K_end_my ) {
@@ -9195,37 +9267,33 @@ EOM
                 # Not collecting 'my' vars - update counts
                 else {
 
-                    my $sigil = EMPTY_STRING;
-                    my $word  = EMPTY_STRING;
+                    my $sigil_string = EMPTY_STRING;
+                    my $word         = EMPTY_STRING;
 
                     # The regex below will match numbers, like '$34x', but that
                     # should not be a problem because it will not match a hash
                     # key.
                     if ( $token =~ /^(\W+)(\w+)$/ ) {
-                        $sigil = $1;
-                        $word  = $2;
-                        $sigil = substr( $sigil, -1, 1 );
+                        $sigil_string = $1;
+                        $word         = $2;
+                        my $sigil = substr( $sigil_string, -1, 1 );
                         if ( !$is_valid_sigil{$sigil} ) {
-                            $sigil = EMPTY_STRING;
-                            $word  = EMPTY_STRING;
+                            $sigil_string = EMPTY_STRING;
+                            $word         = EMPTY_STRING;
                         }
                     }
 
-                    # Determine type of variable and change sigil if
-                    # appropriate to have the same leading sigil as the
-                    # corresponding hash key.  For example, if we see
-                    # '$var[' then we need to use hash ke '@var'.
-                    my $name;
-                    my $Kn = $self->K_next_code($KK);
-                    if ( $sigil && defined($Kn) ) {
-                        my $next_token = $rLL->[$Kn]->[_TOKEN_];
-                        if ( $next_token eq '{' ) {
-                            $name = '%' . $word;
+                    if ( $sigil_string && $word ) {
+                        my $Kn = $self->K_next_code($KK);
+                        my $bracket;
+                        if ( defined($Kn) ) {
+                            my $next_type = $rLL->[$Kn]->[_TYPE_];
+                            if ( $next_type eq '[' || $next_type eq 'L' ) {
+                                $bracket = $rLL->[$Kn]->[_TOKEN_];
+                            }
                         }
-                        elsif ( $next_token eq '[' ) { $name = '@' . $word }
-                        else                         { $name = $sigil . $word }
+                        $update_use_count->( $sigil_string, $word, $bracket );
                     }
-                    $update_use_count->($name) if ($name);
                 }
             }
 
