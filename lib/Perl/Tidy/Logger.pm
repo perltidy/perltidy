@@ -8,7 +8,7 @@
 package Perl::Tidy::Logger;
 use strict;
 use warnings;
-our $VERSION = '20230912.06';
+our $VERSION = '20230912.07';
 use Carp;
 use English qw( -no_match_vars );
 
