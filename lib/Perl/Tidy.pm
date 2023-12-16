@@ -833,6 +833,12 @@ EOM
     }
     $self->[_file_extension_separator_] = $dot;
 
+    # save a copy of the last two input args for error checking later
+    my @ARGV_saved;
+    if ( @ARGV > 1 ) {
+        @ARGV_saved = ( $ARGV[-2], $ARGV[-1] );
+    }
+
     #-------------------------
     # get command line options
     #-------------------------
@@ -965,6 +971,53 @@ EOM
     Perl::Tidy::VerticalAligner::check_options($rOpts);
     if ( $rOpts->{'format'} eq 'html' ) {
         Perl::Tidy::HtmlWriter->check_options($rOpts);
+    }
+
+    # Try to catch an unusual missing string parameter error, like this:
+    #    perltidy -wvt perltidy.pl
+    # The problem is that -wvt wants a string, so it grabs 'perltidy.pl'.
+    # Then there is no output filename, so input is assumed to be stdin.
+    # This make perltidy unexpectedly wait for input. To the user, it
+    # appears that perltidy has gone into an infinite loop. Issue c312.
+    # To avoid getting this far, it is best for parameters which take a
+    # string to check the strings in one of the 'check_options' subs, and
+    # exit if there is an obvious error. This has been done for -wvt,
+    # but are undoubtedly other parameters where this problem might occur.
+    if ( !$num_files && @ARGV_saved > 1 ) {
+        my $opt_test  = $ARGV_saved[-2];
+        my $file_test = $ARGV_saved[-1];
+        if (   $opt_test =~ s/^[-]+//
+            && $file_test !~ /^[-]/
+            && $file_test !~ /^\d+$/
+            && -e $file_test )
+        {
+
+            # These options can take filenames, so we will ignore them here
+            my %is_option_with_file_parameter;
+            my @qf = qw(outfile profile);
+            @is_option_with_file_parameter{@qf} = (1) x scalar(@qf);
+
+            # Expand an abbreviation into a long name
+            my $long_name;
+            my $exp = $rexpansion->{$opt_test};
+            if    ( !$exp )        { $long_name = $opt_test }
+            elsif ( @{$exp} == 1 ) { $long_name = $exp->[0] }
+            else                   { }
+
+            # If this arg grabbed the file, then it must take a string arg
+            if (   $long_name
+                && defined( $rOpts->{$long_name} )
+                && $rOpts->{$long_name} eq $file_test
+                && !$is_option_with_file_parameter{$long_name} )
+            {
+                Die(<<EOM);
+Stopping on possible missing string parameter for '-$opt_test':
+This parameter takes a string and has been set equal to file '$file_test',
+and formatted output will go to standard output. If this is actually correct,
+you can skip this message by entering this as '-$opt_test=$file_test'.
+EOM
+            }
+        }
     }
 
     # make the pattern of file extensions that we shouldn't touch
