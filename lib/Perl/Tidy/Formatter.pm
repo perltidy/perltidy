@@ -8707,6 +8707,7 @@ sub scan_variable_usage {
     my $rlines               = $self->[_rlines_];
     my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
     my $ris_sub_block        = $self->[_ris_sub_block_];
+    my $K_opening_container  = $self->[_K_opening_container_];
     my $K_closing_container  = $self->[_K_closing_container_];
     my $rK_next_seqno_by_K   = $self->[_rK_next_seqno_by_K_];
 
@@ -8718,16 +8719,37 @@ sub scan_variable_usage {
     my %is_for_foreach = ( 'for' => 1, 'foreach' => 1 );
     my %is_blocktype_with_paren;
 
-    # TODO: check how extended syntax words handle 'my' in parens
-    my @q = qw(if elsif unless while until for foreach);
-    ##qw(if elsif unless while until for foreach switch case given when catch);
+    # Note that 'elsif' is not in this list because it is handled specially
+    my @q = qw(if unless while until for foreach);
     @is_blocktype_with_paren{@q} = (1) x scalar(@q);
 
     # Variables defining current state:
     my $current_package = 'package main';
 
+    # The basic idea of this routine is straightforward:
+    # - We create a stack of block braces
+    # - We walk through the tokens in the file
+    # - At an opening block brace, we push a new stack entry
+    # - At a closing block brace, we pop the stack,
+    #     and check the count of any 'my' vars (issue 'u')
+    # - At an identifier, like '$var':
+    #   - if it follows a 'my' we enter it on the stack with starting count 0
+    #     check conflicts with any other vars on the stack (issues 'r' and 's')
+    #   - otherwise, we see if the variable is in the stack, and if so,
+    #     update the count
+    # - At a package, we see if it has access to existing 'my' vars (issue 'p')
+
+    # There are lots of details, but that's the main idea. A difficulty is
+    # when 'my' vars are created in the control section of blocks such as
+    # for, foreach, if, unless, .. These follow special rules. The
+    # way it is done here is to propagate such vars in a special control
+    # layer stack entry which is pushed on just before these blocks.
+
     my $rblock_stack = [];
 
+    #---------------------------------------
+    # sub to push a block brace on the stack
+    #---------------------------------------
     my $push_block_stack = sub {
         my ( $seqno, $rvars ) = @_;
 
@@ -8737,6 +8759,7 @@ sub scan_variable_usage {
         #  $rvars   = hash of initial identifiers for the block, if given
         #             will be empty hash ref if not given
         if ( !defined($rvars) ) { $rvars = {} }
+
         push @{$rblock_stack},
           { seqno => $seqno, package => $current_package, rvars => $rvars };
         return;
@@ -9040,6 +9063,38 @@ sub scan_variable_usage {
         return ( $seqno_paren, $seqno_brace );
     };
 
+    #-------------------------------------------------------------
+    # sub to find the next opening brace seqno of an if-elsif- chain
+    #-------------------------------------------------------------
+    my $next_if_chain_seqno = sub {
+        my ($KK) = @_;
+
+        # Given:
+        #   $KK = index of a closing block brace of if/unless/elsif
+        # Return:
+        #   $seqno = sequence number of next opening block in the chain, or
+        #   nothing if chain ends
+        my $seqno_blk;
+        my $K_n = $self->K_next_code($KK);
+        return unless ($K_n);
+        return unless ( $rLL->[$K_n]->[_TYPE_] eq 'k' );
+        if ( $rLL->[$K_n]->[_TOKEN_] eq 'elsif' ) {
+            ( my $seqno_paren, $seqno_blk ) = $find_paren_and_brace->($K_n);
+        }
+        elsif ( $rLL->[$K_n]->[_TOKEN_] eq 'else' ) {
+            my $K_nn = $self->K_next_code($K_n);
+            if (   $K_nn
+                && $is_opening_token{ $rLL->[$K_nn]->[_TOKEN_] } )
+            {
+                $seqno_blk = $rLL->[$K_nn]->[_TYPE_SEQUENCE_];
+            }
+        }
+        else {
+            # chain ends if no elsif/else block
+        }
+        return $seqno_blk;
+    };
+
     my $scan_braced_id = sub {
         my ($KK) = @_;
 
@@ -9109,8 +9164,8 @@ sub scan_variable_usage {
 
                 if ( $is_opening_token{$token} ) {
 
-                    # always push a block unless it has already been pushed
-                    if ( $block_type && !$is_on_stack ) {
+                    # always push a block
+                    if ($block_type) {
 
                         $push_block_stack->($seqno);
 
@@ -9143,35 +9198,49 @@ sub scan_variable_usage {
                             if ( $check_unused && $rpopped_vars ) {
                                 $check_for_unused_names->($rpopped_vars);
                             }
+
+                            # Check for and propagate an if-chain control layer,
+                            # which will have the same seqno.
+                            if ( @{$rblock_stack}
+                                && $seqno == $rblock_stack->[-1]->{seqno} )
+                            {
+
+                                # pop again
+                                $stack_item   = pop @{$rblock_stack};
+                                $rpopped_vars = $stack_item->{rvars};
+
+                                # Check unused vars except for vars in an
+                                # if-chain control layer
+                                if (   $check_unused
+                                    && $rpopped_vars
+                                    && !$is_if_unless_elsif_else{$block_type} )
+                                {
+                                    $check_for_unused_names->($rpopped_vars);
+                                }
+
+                                # propagate control layer along if chain
+                                if ( $is_if_unless_elsif{$block_type} ) {
+                                    my $seqno_blk = $next_if_chain_seqno->($KK);
+                                    if (   $seqno_blk
+                                        && $rblock_type_of_seqno->{$seqno_blk} )
+                                    {
+                                        $push_block_stack->(
+                                            $seqno_blk, $rpopped_vars
+                                        );
+                                    }
+                                }
+                            }
                         }
 
-                        # if we just popped a non-block token:
+                        # error if we just popped a non-block token:
                         else {
-
-                            # an opening token should follow - push it;
-                            # this transfers 'my' info at 'for my $x ( ) {'
-                            my $K_n = $self->K_next_code($KK);
-                            if (   $K_n
-                                && $rLL->[$K_n]->[_TYPE_SEQUENCE_]
-                                && $is_opening_token{ $rLL->[$K_n]->[_TOKEN_] }
-                              )
-                            {
-                                my $seqno_n = $rLL->[$K_n]->[_TYPE_SEQUENCE_];
-                                $push_block_stack->( $seqno_n, $rpopped_vars );
-                            }
-
-                            # if not, it is an programming error
-                            else {
-
-                                # A non-block should only be on the stack if an
-                                # opening token follows
-                                my $token_n = $rLL->[$K_n]->[_TOKEN_];
-                                my $lno     = $ix_line + 1;
-                                DEVEL_MODE && Fault(<<EOM);
+                            my $K_n     = $self->K_next_code($KK);
+                            my $token_n = $rLL->[$K_n]->[_TOKEN_];
+                            my $lno     = $ix_line + 1;
+                            DEVEL_MODE && Fault(<<EOM);
 Non-block closing token '$token' on stack followed by token $token_n at line $lno
 Expecting to find an opening token here.
 EOM
-                            }
                         }
                     }
 
@@ -9237,19 +9306,21 @@ EOM
                 elsif ( $is_blocktype_with_paren{$token} ) {
                     my ( $seqno_paren, $seqno_brace ) =
                       $find_paren_and_brace->($KK);
-                    if ( $seqno_paren && $seqno_brace ) {
 
+                    if (   $seqno_brace
+                        && $seqno_paren
+                        && $seqno_paren != $rblock_stack->[-1]->{seqno} )
+                    {
                         # Lexical variables created within or before the
                         # opening brace get the scope of the brace block.  This
                         # is a problem because we won't put that block on the
                         # stack until later.  As a workaround, we are going to
-                        # push the opening paren on the stack early, and fix
-                        # things when the opening brace actually arrives.  This
+                        # push the opening brace on the stack early. We fix
+                        # things when the closing brace arrives in the token
+                        # stream (there will be 2 copies on the stack). This
                         # causes any 'my' variables between the keyword and
-                        # block brace to eventually have the scope of the
-                        # block.
-                        $push_block_stack->($seqno_paren);
-
+                        # block brace to reside in an upper control layer.
+                        $push_block_stack->($seqno_brace);
                     }
                 }
             }
@@ -9306,8 +9377,10 @@ EOM
                     $current_package = $package;
 
                     # Look for lexical vars declared in other packages which
-                    # will be accessible in this package
-                    if ($check_cross_package) {
+                    # will be accessible in this package. We will limit
+                    # this check to new package statements at the top level
+                    # in order to filter out some common cases.
+                    if ( $check_cross_package && @{$rblock_stack} == 1 ) {
                         my $rpackage_warnings = $package_warnings{$package};
                         if ( !defined($rpackage_warnings) ) {
                             $rpackage_warnings = [];
