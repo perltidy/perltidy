@@ -8987,15 +8987,21 @@ sub scan_variable_usage {
     #-------------------------------------------------------------
     # sub to look for '){' after keyword such as for, foreach, ...
     #-------------------------------------------------------------
-    my $find_paren_and_brace = sub {
+    my $seqno_brace_after_paren = sub {
 
         my ($KK) = @_;
 
         # Given:
-        #   $KK = index of the keyword such as 'for'
+        #   $KK = index of the keyword followed by parens and block '... ( ) {'
+        #         such as 'for', 'foreach', 'while', 'if', 'elsif' ..
         # Return:
-        #   the two sequence numbers if found,
-        #   nothing otherwise
+        #   - $seqno of the opening block brace for this keyword, if any
+        #   - nothing otherwise
+
+        #         'for my $var (..) { ... }'
+        #           ^               ^
+        #           |               |
+        #           --$KK           --$seqno of brace that we want
 
         # look ahead for an opening paren
         my $K_paren = $rK_next_seqno_by_K->[$KK];
@@ -9012,6 +9018,7 @@ sub scan_variable_usage {
         return unless $K_n;
         my $token_KK = $rLL->[$KK]->[_TOKEN_];
 
+        # is it the next token?
         if ( $K_n == $K_paren ) {
             $is_keyword_paren = 1;
         }
@@ -9048,7 +9055,7 @@ sub scan_variable_usage {
             }
         }
         else {
-            # not the correct opening paren
+            # not the correct opening paren, give up
         }
 
         return unless ($is_keyword_paren);
@@ -9056,7 +9063,7 @@ sub scan_variable_usage {
         # now jump to the closing paren
         $K_paren = $self->[_K_closing_container_]->{$seqno_paren};
 
-        # then look for an opening brace immediately after it
+        # then look for the opening brace immediately after it
         my $K_brace = $self->K_next_code($K_paren);
         return
           unless ( defined($K_brace) && $rLL->[$K_brace]->[_TOKEN_] eq '{' );
@@ -9064,8 +9071,8 @@ sub scan_variable_usage {
         my $seqno_brace = $rLL->[$K_brace]->[_TYPE_SEQUENCE_];
         return unless ( $rblock_type_of_seqno->{$seqno_brace} );
 
-        # success, we found the '){'
-        return ( $seqno_paren, $seqno_brace );
+        # success
+        return ($seqno_brace);
     };
 
     #-------------------------------------------------------------
@@ -9075,29 +9082,44 @@ sub scan_variable_usage {
         my ($KK) = @_;
 
         # Given:
-        #   $KK = index of a closing block brace of if/unless/elsif
+        #   $KK = index of a closing block brace of if/unless/elsif chain
         # Return:
-        #   $seqno = sequence number of next opening block in the chain, or
+        #   $seqno_block = sequence number of next opening block in the chain,
         #   nothing if chain ends
-        my $seqno_blk;
+        my $seqno_block;
         my $K_n = $self->K_next_code($KK);
         return unless ($K_n);
         return unless ( $rLL->[$K_n]->[_TYPE_] eq 'k' );
+
+        # For an 'elsif' the brace will be after the closing paren
+        #         'elsif (..) { ... }'
+        #           ^         ^
+        #           |         |
+        #           --$KK     --$seqno of brace that we want
+        #
         if ( $rLL->[$K_n]->[_TOKEN_] eq 'elsif' ) {
-            ( my $seqno_paren, $seqno_blk ) = $find_paren_and_brace->($K_n);
+            $seqno_block = $seqno_brace_after_paren->($K_n);
         }
+
+        # For an 'else' the brace will be the next token
+        #         'else   { ... }'
+        #          ^      ^
+        #          |      |
+        #          --$KK  --$seqno of brace that we want
+        #
         elsif ( $rLL->[$K_n]->[_TOKEN_] eq 'else' ) {
             my $K_nn = $self->K_next_code($K_n);
             if (   $K_nn
                 && $is_opening_token{ $rLL->[$K_nn]->[_TOKEN_] } )
             {
-                $seqno_blk = $rLL->[$K_nn]->[_TYPE_SEQUENCE_];
+                $seqno_block = $rLL->[$K_nn]->[_TYPE_SEQUENCE_];
             }
         }
+
         else {
             # chain ends if no elsif/else block
         }
-        return $seqno_blk;
+        return $seqno_block;
     };
 
     my $scan_braced_id = sub {
@@ -9311,8 +9333,7 @@ EOM
                 # such as 'for my $var (..) { ... }'
                 #--------------------------------------------------
                 elsif ( $is_blocktype_with_paren{$token} ) {
-                    my ( $seqno_paren, $seqno_brace ) =
-                      $find_paren_and_brace->($KK);
+                    my $seqno_brace = $seqno_brace_after_paren->($KK);
                     if ($seqno_brace) {
 
                         # Variables created between these keywords and their
@@ -9518,6 +9539,7 @@ EOM
         }
     }
 
+    # Merge package issues...
     # Only include cross-package warnings for packages which created subs.
     # This will limit this type of warning to significant package changes.
     my @p_warnings;
@@ -9542,6 +9564,7 @@ EOM
         }
     }
 
+    # Sort on token index and issue type
     my @sorted =
       sort { $a->{K} <=> $b->{K} || $a->{letter} cmp $b->{letter} } @warnings;
 
