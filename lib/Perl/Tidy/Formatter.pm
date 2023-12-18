@@ -7642,12 +7642,14 @@ sub set_ci {
         my ($seqno) = @_;
         my $Kc = $K_closing_container->{$seqno};
         return unless defined($Kc);
+
+        # Skip past keyword
         my $Kcn = $self->K_next_code($Kc);
         return unless defined($Kcn);
         my $seqno_n = $rLL->[$Kcn]->[_TYPE_SEQUENCE_];
-
-        #return if ( defined($seqno_n) );
         return if ($seqno_n);
+
+        # Look for opening block brace
         my $Knn = $self->K_next_code($Kcn);
         return unless defined($Knn);
         my $seqno_nn = $rLL->[$Knn]->[_TYPE_SEQUENCE_];
@@ -8903,6 +8905,8 @@ sub scan_variable_usage {
         # Task:
         #   Form the hash key ($word, @word, or %word) and update the count
 
+        return unless ($check_unused);
+
         return unless ( defined($sigil_string) && defined($word) );
 
         my $sigil = substr( $sigil_string, -1, 1 );
@@ -8968,6 +8972,7 @@ sub scan_variable_usage {
     #---------------------------------------
     my $scan_quoted_text = sub {
         my ($text) = @_;
+        return unless ($check_unused);
 
         # Looking for something like $word, @word, $word[, $$word, ${word}, ..
         while ( $text =~ / ([\$\@]  [\$]*) \{?(\w+)\}? ([\[\{]?) /gcx ) {
@@ -9104,7 +9109,9 @@ sub scan_variable_usage {
         #    ^
         #    |
         #    -- $KK
-        #
+
+        return unless ($check_unused);
+
         # Look back for the sigil
         my $Kp = $self->K_previous_code($KK);
 
@@ -9306,20 +9313,15 @@ EOM
                 elsif ( $is_blocktype_with_paren{$token} ) {
                     my ( $seqno_paren, $seqno_brace ) =
                       $find_paren_and_brace->($KK);
+                    if ($seqno_brace) {
 
-                    if (   $seqno_brace
-                        && $seqno_paren
-                        && $seqno_paren != $rblock_stack->[-1]->{seqno} )
-                    {
-                        # Lexical variables created within or before the
-                        # opening brace get the scope of the brace block.  This
-                        # is a problem because we won't put that block on the
-                        # stack until later.  As a workaround, we are going to
-                        # push the opening brace on the stack early. We fix
-                        # things when the closing brace arrives in the token
-                        # stream (there will be 2 copies on the stack). This
-                        # causes any 'my' variables between the keyword and
-                        # block brace to reside in an upper control layer.
+                        # Variables created between these keywords and their
+                        # opening brace have special scope rules. We will
+                        # create a special 'control layer' stack entry for them
+                        # here, with the same block sequence number.  When the
+                        # closing block brace arrives, it will look for a
+                        # duplicate stack entry and either close it or,
+                        # for if-elsif-else chain, propagate it onward.
                         $push_block_stack->($seqno_brace);
                     }
                 }
@@ -9336,7 +9338,7 @@ EOM
                 }
 
                 # Not collecting 'my' vars - update counts
-                else {
+                elsif ($check_unused) {
 
                     my $sigil_string = EMPTY_STRING;
                     my $word         = EMPTY_STRING;
@@ -9365,6 +9367,9 @@ EOM
                         }
                         $update_use_count->( $sigil_string, $word, $bracket );
                     }
+                }
+                else {
+                    # ignore variable if not collecting 'my' or counts
                 }
             }
 
@@ -9419,7 +9424,8 @@ EOM
             elsif ( $type eq 'h' ) {
 
                 # is it interpolated?
-                my $interpolated = $token !~ /^ [^<]* << [~]? \' /x;
+                my $interpolated =
+                  $check_unused && $token !~ /^ [^<]* << [~]? \' /x;
                 if ($interpolated) {
                     my $ix_HERE = $ix_HERE_END;
                     if ( $ix_HERE < $ix_line ) { $ix_HERE = $ix_line }
