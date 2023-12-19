@@ -5539,22 +5539,22 @@ of the letters, B<r>, B<s>, B<p>, and B<u> as follows:
 =item B<r: reused variable name>
 
 These are variables which are re-declared in the scope of a variable with the
-identical name.  This can be confusing and lead to errors being introduced
-in future program modifications.
+identical name.  This can be confusing.  This is similar to the B<Perl::Critic>
+policy B<Variables::ProhibitReusedNames>
 
 =item B<s: sigil change but reused bareword>
 
 These are variables which have the same bareword name but a different sigil
 (B<$>, B<@>, or B<%>) as another variable in the same scope.  For example, this
 occurs if variables B<$data> and B<%data> share the same scope. This can be
-confusing and can be avoided by altering one of the variable names.
+confusing.
 
 =item B<p: package-crossing variables>
 
 These are lexical variables which are declared in one package and still visible
-in subroutines of a different package in the same file.  This can only occur if
-there are multiple packages in a file. It might be avoided by enclosing such
-variables in a bare block to limit their scope.
+in subroutines of a different package in the same file.  This check is limited
+to packages which are not enclosed in block braces in order skip some common
+use cases.
 
 =item B<u: unused variables>
 
@@ -5582,17 +5582,18 @@ will process F<somefile.pl> normally but issue a warning if either of
 the issues 's' or 'p', described above, are encountered.
 
 A limitation is that warnings may not be requested for unused variables, type
-'u'. The reason is that this would produce many needless warnings, especially
-when perltidy is run on small snippets of code from within an editor.
+'u'. The main reason is that this would produce many needless warnings,
+especially when perltidy is run on small snippets of code from within an
+editor.
 
-All possible variable warnings may be requested with B<-wv=rsp> or simply
+All possible variable warnings may be requested with B<-wvt=rsp> or simply
 B<-wvt=1> or B<-wvt='*'>.  The default is not to do these checks, and it can
 also be indicated with B<-wvt=0>.
 
 A companion flag, B<--warn-variable-exclusion-list=string>, or B<-wvxl=string>,
 can be used to skip warning checks for a list of variables.  For example,
 
-   perltidy -wv=1 -wvxl='$self $class'  somefile.pl
+   perltidy -wvt=1 -wvxl='$self $class'  somefile.pl
 
 will skip all warnings for variables C<$self> and C<$class>.
 

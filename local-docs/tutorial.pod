@@ -395,39 +395,6 @@ this line:
 
 This kind of error can otherwise be hard to find.
 
-=head2 The Log File
-
-One last topic that needs to be touched upon concerns the F<.LOG> file.
-This is where perltidy records messages that are not normally of any
-interest, but which just might occasionally be useful.  This file is not
-saved, though, unless perltidy detects that it has made a mistake or you
-ask for it to be saved.
-
-There are a couple of ways to ask perltidy to save a log file.  To
-create a relatively sparse log file, use
-
- perltidy -log testfile.pl
-
-and for a verbose log file, use
-
- perltidy -g testfile.pl
-
-The difference is that the first form only saves detailed information at
-least every 50th line, while the second form saves detailed information
-about every line.
-
-So returning to our example, lets force perltidy to save a
-verbose log file by issuing the following command
-
- perltidy -g testfile.pl
-
-You will find that a file named F<testfile.pl.LOG> has been
-created in your directory.  
-
-If you open this file, you will see that it is a text file with a
-combination of warning messages and informative messages.  All you need
-to know for now is that it exists; someday it may be useful.
-
 =head2 Using Perltidy as a Filter on Selected Text from an Editor
 
 Most programmer's editors allow a selected group of lines to be passed
@@ -483,6 +450,27 @@ editor may either display it at the top of the reformatted text or at
 the bottom (or even midstream!).  You probably cannot control this, and
 perltidy can't, but you need to know where to look when an actual error
 is detected.
+
+=head2 Finding Unused Variables
+
+To get a list of unused, reused, and certain other lexical variables of
+interest in a program named F<testfile.pl> you can use
+
+ perltidy -duv testfile.pl
+
+where -duv is short for --dump-unusual-variables. The information will be
+dumped to the standard output and perltidy will exit without formatting the
+file.  The lines of output identify four types of issues, namely
+
+   u: unused variables
+   r: reused variable name in same scope
+   s: sigil change but reused bareword, such as %file and $file
+   p: package-crossing variables: a variable with scope in multiple packages
+
+These issues, although not errors, can be worth reviewing, especially for new
+code.  Other parameters which can be useful when reviewing code are
+B<--warn-missing-else> and B<--dump-block-summary>.  The manual has further
+information.
 
 =head2 Writing an HTML File
 
