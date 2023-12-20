@@ -451,14 +451,47 @@ the bottom (or even midstream!).  You probably cannot control this, and
 perltidy can't, but you need to know where to look when an actual error
 is detected.
 
+=head2 Adding Blank Lines to Control List Formatting
+
+In the following example, the return list of five values has been automatically
+formatted over two lines:
+
+        my (
+            $rinput_string,        $is_encoded_data, $decoded_input_as,
+            $encoding_log_message, $length_function,
+        ) = $self->get_decoded_string_buffer($input_file);
+
+As a general rule, if there are no blank lines or comments betwen the opening
+and closing parens, as in this example, perltidy will use an automated rule to
+set line breaks.  Otherwise, it will keep the line breaks unchanged.  So by
+inserting a blank line somewhere within a list we can 'freeze' the line breaks
+to be the way we would like.
+
+For example, here is the above list with a line break at every comma, and
+with a blank line to prevent perltidy from changing it:
+
+        my (
+            $rinput_string,
+            $is_encoded_data,
+            $decoded_input_as,
+            $encoding_log_message,
+            $length_function,
+
+        ) = $self->get_decoded_string_buffer($input_file);
+
+An easy way to switch to a single column list such as this is to select the
+list from within an editor and reformat with a temporary small line length,
+such as -l=10. This will break the list into a single column. Then insert the
+blank line, and then reformat the list again to get the final formatting.
+
 =head2 Finding Unused Variables
 
 To get a list of unused, reused, and certain other lexical variables of
-interest in a program named F<testfile.pl> you can use
+interest in a file named F<testfile.pl> you can use
 
  perltidy -duv testfile.pl
 
-where -duv is short for --dump-unusual-variables. The information will be
+where B<-duv> is short for B<--dump-unusual-variables>. The information will be
 dumped to the standard output and perltidy will exit without formatting the
 file.  The lines of output identify four types of issues, namely
 
@@ -496,9 +529,8 @@ represented like this:
                   |          |     --->HTML -------> testfile.pl.html
                   ------------
 
-And in the future, there may be more output filters.  So if you would
-like to both beautify a script and write it to HTML, you need to do it
-in two steps.
+So if you would like to both beautify a script and write it to HTML, you need
+to do it in two steps.
 
 =head2 Summary
 
