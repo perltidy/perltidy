@@ -6070,7 +6070,7 @@ EOM
         my $tee_output;
 
         my $Klimit = $self->[_Klimit_];
-        my $Kfirst;
+        my ( $Kfirst, $Klast );
 
         # Handle line of non-code
         if ( $line_type ne 'CODE' ) {
@@ -6103,6 +6103,7 @@ EOM
 
                 # update Klimit for added tokens
                 $Klimit = @{$rLL} - 1;
+                $Klast  = $Klimit;
 
             } ## end if ( $jmax >= 0 )
             else {
@@ -6130,7 +6131,7 @@ EOM
         } ## end if ( $line_type eq 'CODE')
 
         # Finish storing line variables
-        $line_of_tokens->{_rK_range} = [ $Kfirst, $Klimit ];
+        $line_of_tokens->{_rK_range} = [ $Kfirst, $Klast ];
         $self->[_Klimit_] = $Klimit;
         my $rlines = $self->[_rlines_];
         push @{$rlines}, $line_of_tokens;
