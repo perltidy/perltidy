@@ -52,7 +52,8 @@ You'll notice an immediate style change from the "cuddled-else" style of
 the original to the default "non-cuddled-else" style.  This is because
 perltidy has to make some kind of default selection of formatting
 options, and this default tries to follow the suggestions in the
-perlstyle man pages.  
+L<perlstyle|https://metacpan.org/dist/perl/view/pod/perlstyle.pod>
+man pages.
 
 If you prefer the original "cuddled-else" style, don't worry, you can
 indicate that with a B<-ce> flag.  So if you rerun with that flag
@@ -484,6 +485,26 @@ list from within an editor and reformat with a temporary small line length,
 such as -l=10. This will break the list into a single column. Then insert the
 blank line, and then reformat the list again to get the final formatting.
 
+=head2 Adding Blank Lines to Control Vertical Alignment
+
+Blank lines can also be inserted to break unwanted vertical alignment. To
+illustrate, in the following lines the equals signs are aligned vertically.
+
+    my $self            = shift;
+    my $debug_file      = $self->{_debug_file};
+    my $is_encoded_data = $self->{_is_encoded_data};
+
+This is the default behavior, but if perltidy encounters a blank line it will
+end any vertical alignment underway and start a new alignment batch if
+possible.  So, for example, if we would like to separate the alignment of the
+first line above from the subsequent lines we can insert a blank line, like
+this:
+
+    my $self = shift;
+
+    my $debug_file      = $self->{_debug_file};
+    my $is_encoded_data = $self->{_is_encoded_data};
+
 =head2 Finding Unused Variables
 
 To get a list of unused, reused, and certain other lexical variables of
@@ -539,16 +560,12 @@ When you are ready to create a F<.perltidyrc> file, you may find it
 helpful to use the F<stylekey> page as a guide at
 http://perltidy.sourceforge.net/stylekey.html
 
-Many additional special
-features and capabilities can be found in the manual pages for perltidy
-at
-http://perltidy.sourceforge.net/perltidy.html
-
 We hope that perltidy makes perl programming a little more fun.
-Please check the perltidy
-web site http://perltidy.sourceforge.net occasionally
-for updates.
 
-The author may be contacted at perltidy at users.sourceforge.net.
+Further documentation can be found at the web site L<at GitHub|https://perltidy.github.io/perltidy/>
+or L<at Sourceforge|http://perltidy.sourceforge.net>
+or L<at metacpan|https://metacpan.org/pod/distribution/Perl-Tidy/bin/perltidy>
+
+Issues can be reported at L<GitHub|https://github.com/perltidy/perltidy>
 
 =cut
