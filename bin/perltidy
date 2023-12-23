@@ -5531,16 +5531,19 @@ meaning:
     variable name - the name of the variable, preceded by a keyword
     note          - an optional note referring to another line
 
-The checks are for lexical variables introduced by the keywords B<my> and B<state>.  The types of checks which are made are identified in the output with one
-of the letters, B<r>, B<s>, B<p>, and B<u> as follows:
+If there are a large number of issues it can be convenient to read the file
+into a spreadsheet. The checks are for lexical variables introduced by the
+keywords B<my> and B<state>.  The types of checks which are made are identified
+in the output with one of the letters, B<r>, B<s>, B<p>, and B<u> as follows:
 
 =over 4
 
 =item B<r: reused variable name>
 
 These are variables which are re-declared in the scope of a variable with the
-identical name.  This can be confusing.  This is similar to the B<Perl::Critic>
-policy B<Variables::ProhibitReusedNames>
+identical name.  This can be confusing (perhaps not when the code is first
+written, but possibly later when an update is being made). Note that this is
+similar to the B<Perl::Critic> policy B<Variables::ProhibitReusedNames>.
 
 =item B<s: sigil change but reused bareword>
 
@@ -5552,17 +5555,19 @@ confusing.
 =item B<p: package-crossing variables>
 
 These are lexical variables which are declared in one package and still visible
-in subroutines of a different package in the same file.  This check is limited
-to packages which are not enclosed in block braces in order skip some common
-use cases.
+in subroutines of a different package in the same file.  This can be confusing.
+This check is limited to packages which are not enclosed in block braces in
+order skip some common use cases.
 
 =item B<u: unused variables>
 
-These are variables which are declared but not used. There are many reasons for
-having unused variables.  For example, they can occur in lists of values
-provided by another routine or data structure but which are not needed, or they
-might be defined for possible future program development, clarity or debugging.
-But sometimes they can occur due to being orphaned by a coding change, due to a
+These are variables which occur just one time in their scope in the program
+text.  Calling them B<unused> is convenient but not really accurate. There
+are many reasons for having such variables.  For example, they might occur in a
+list of values provided by another routine or data structure, and therefor must
+be listed, even though they might not be referenced again. Or they might be
+defined for possible future program development, clarity or debugging.  But
+sometimes they can occur due to being orphaned by a coding change, due to a
 misspelling, or by having an unintentional preceding C<my>.  So it is worth
 reviewing them, especially for new code.
 
