@@ -437,7 +437,7 @@ sub check_options {
         # Note that 'grep-alias-list' has been preprocessed to be a trimmed,
         # space-separated list
         my @q = split /\s+/, $rOpts->{'grep-alias-list'};
-        @{is_grep_alias}{@q} = (1) x scalar(@q);
+        @is_grep_alias{@q} = (1) x scalar(@q);
     }
 
     $rOpts_starting_indentation_level = $rOpts->{'starting-indentation-level'};
@@ -2845,7 +2845,7 @@ EOM
           ^= &&= ||= //= <=>
           #;
         push @qZ, ',';
-        @{Z_test_hash}{@qZ} = (1) x scalar(@qZ);
+        @Z_test_hash{@qZ} = (1) x scalar(@qZ);
     }
 
     sub do_DOLLAR_SIGN {
@@ -5095,7 +5095,7 @@ EOM
 
     BEGIN {
         my @qZ = qw( -> Z );
-        @{is_arrow_or_Z}{@qZ} = (1) x scalar(@qZ);
+        @is_arrow_or_Z{@qZ} = (1) x scalar(@qZ);
     }
 
     sub tokenize_this_line {
@@ -5961,12 +5961,12 @@ BEGIN {
     push @q, ',';
     push @q, '(';     # for completeness, not currently a token type
     push @q, '->';    # was previously in UNKNOWN
-    @{op_expected_table}{@q} = (TERM) x scalar(@q);
+    @op_expected_table{@q} = (TERM) x scalar(@q);
 
     # Always UNKNOWN following these types;
     # previously had '->' in this list for c030
     @q = qw( w );
-    @{op_expected_table}{@q} = (UNKNOWN) x scalar(@q);
+    @op_expected_table{@q} = (UNKNOWN) x scalar(@q);
 
     # Always expecting OPERATOR ...
     # 'n' and 'v' are currently excluded because they might be VERSION numbers
@@ -5976,17 +5976,17 @@ BEGIN {
     # Fix for c250: added 'i' because new type 'P' was added
     @q = qw( -- C h R ++ ] Q <> i );    ## n v q );
     push @q, ')';
-    @{op_expected_table}{@q} = (OPERATOR) x scalar(@q);
+    @op_expected_table{@q} = (OPERATOR) x scalar(@q);
 
     # Fix for git #62: added '*' and '%'
     @q = qw( < ? * % );
-    @{is_weird_parsing_rule_exception}{@q} = (1) x scalar(@q);
+    @is_weird_parsing_rule_exception{@q} = (1) x scalar(@q);
 
     @q = qw<) $>;
-    @{is_paren_dollar}{@q} = (1) x scalar(@q);
+    @is_paren_dollar{@q} = (1) x scalar(@q);
 
     @q = qw( n v );
-    @{is_n_v}{@q} = (1) x scalar(@q);
+    @is_n_v{@q} = (1) x scalar(@q);
 
 } ## end BEGIN
 
@@ -6696,10 +6696,10 @@ my %is_R_closing_sb;
 BEGIN {
 
     my @q = qw< $ & % * @ ) >;
-    @{is_sigil_or_paren}{@q} = (1) x scalar(@q);
+    @is_sigil_or_paren{@q} = (1) x scalar(@q);
 
     @q = qw(R ]);
-    @{is_R_closing_sb}{@q} = (1) x scalar(@q);
+    @is_R_closing_sb{@q} = (1) x scalar(@q);
 } ## end BEGIN
 
 sub is_non_structural_brace {
@@ -7145,11 +7145,11 @@ BEGIN {
 
     # Constants like 'pi' in Trig.pm are common
     my @q = qw(pi pi2 pi4 pip2 pip4);
-    @{is_known_constant}{@q} = (1) x scalar(@q);
+    @is_known_constant{@q} = (1) x scalar(@q);
 
     # parenless calls of 'ok' are common
     @q = qw( ok );
-    @{is_known_function}{@q} = (1) x scalar(@q);
+    @is_known_function{@q} = (1) x scalar(@q);
 } ## end BEGIN
 
 sub guess_if_pattern_or_division {
@@ -7888,7 +7888,7 @@ sub do_scan_package {
         # variables, like $^W: (issue c066).
         my @q =
           qw{ ? A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ \ ] ^ _ };
-        @{is_special_variable_char}{@q} = (1) x scalar(@q);
+        @is_special_variable_char{@q} = (1) x scalar(@q);
     } ## end BEGIN
 
     # These are the possible states for this scanner:
@@ -8784,7 +8784,7 @@ EOM
 
         # lexical subs with these names can cause parsing errors in this version
         my @q = qw( m q qq qr qw qx s tr y );
-        @{warn_if_lexical}{@q} = (1) x scalar(@q);
+        @warn_if_lexical{@q} = (1) x scalar(@q);
     } ## end BEGIN
 
     # saved package and subnames in case prototype is on separate line
@@ -9292,7 +9292,7 @@ sub is_possible_numerator {
         # /(\)|\}|\;|\&\&|\|\||and|or|while|if|unless)/
         my @q = qw( & && | || ? : + - * and or while if unless);
         push @q, ')', '}', ']', '>', ',', ';';
-        @{pattern_test}{@q} = (1) x scalar(@q);
+        @pattern_test{@q} = (1) x scalar(@q);
     } ## end BEGIN
 
     sub pattern_expected {

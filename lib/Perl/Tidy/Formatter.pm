@@ -1558,10 +1558,10 @@ sub initialize_grep_and_friends {
 
     if (@grep_aliases) {
 
-        @{is_sort_map_grep}{@grep_aliases} = (1) x scalar(@grep_aliases);
+        @is_sort_map_grep{@grep_aliases} = (1) x scalar(@grep_aliases);
 
         if ( $want_one_line_block{'grep'} ) {
-            @{want_one_line_block}{@grep_aliases} = (1) x scalar(@grep_aliases);
+            @want_one_line_block{@grep_aliases} = (1) x scalar(@grep_aliases);
         }
     }
 
@@ -3851,7 +3851,7 @@ EOM
         # variables, like $^W: (issue c066, c068).
         @q =
           qw{ ? A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ \ ] ^ _ };
-        @{is_special_variable_char}{@q} = (1) x scalar(@q);
+        @is_special_variable_char{@q} = (1) x scalar(@q);
 
         @q = qw( 0 1 2 3 4 5 6 7 8 9 );
         @is_digit_char{@q} = (1) x scalar(@q);
@@ -6463,7 +6463,7 @@ my %is_loop_type;
 
 BEGIN {
     my @q = qw( for foreach while do until );
-    @{is_loop_type}{@q} = (1) x scalar(@q);
+    @is_loop_type{@q} = (1) x scalar(@q);
 }
 
 sub find_level_info {
@@ -7447,7 +7447,7 @@ sub dump_block_summary {
     $rOpts_dump_block_types =~ s/\s+$//;
     my @list = split /\s+/, $rOpts_dump_block_types;
     my %dump_block_types;
-    @{dump_block_types}{@list} = (1) x scalar(@list);
+    @dump_block_types{@list} = (1) x scalar(@list);
 
     # Get level variation info for code blocks
     my $rlevel_info = $self->find_level_info();
@@ -9105,14 +9105,17 @@ EOM
     #-------------------------------------------------------------
     # sub to find the next opening brace seqno of an if-elsif- chain
     #-------------------------------------------------------------
-    my $next_if_chain_seqno = sub {
-        my ($KK) = @_;
+    my $push_next_if_chain = sub {
+        my ( $KK, $rpopped_vars ) = @_;
 
         # Given:
         #   $KK = index of a closing block brace of if/unless/elsif chain
-        # Return:
-        #   $seqno_block = sequence number of next opening block in the chain,
-        #   nothing if chain ends
+        #   $rpopped_vars = values just popped off the stack
+        # Task:
+        #   - do nothing if chain ends, or
+        #   - push $rpopped_vars onto the next block in the chain
+
+        #  $seqno_block = sequence number of next opening block in the chain,
         my $seqno_block;
         my $K_n = $self->K_next_code($KK);
         return unless ($K_n);
@@ -9146,7 +9149,13 @@ EOM
         else {
             # chain ends if no elsif/else block
         }
-        return $seqno_block;
+
+        if (   $seqno_block
+            && $rblock_type_of_seqno->{$seqno_block} )
+        {
+            $push_block_stack->( $seqno_block, $rpopped_vars );
+        }
+        return;
     };
 
     my $scan_braced_id = sub {
@@ -9265,8 +9274,9 @@ EOM
                                 $stack_item   = pop @{$rblock_stack};
                                 $rpopped_vars = $stack_item->{rvars};
 
-                                # Check unused vars except for vars in an
-                                # if-chain control layer
+                                # Check unused vars
+                                # - except for vars in an if-chain control layer
+                                #   because they are involved in logic
                                 if (   $check_unused
                                     && $rpopped_vars
                                     && !$is_if_unless_elsif_else{$block_type} )
@@ -9276,14 +9286,7 @@ EOM
 
                                 # propagate control layer along if chain
                                 if ( $is_if_unless_elsif{$block_type} ) {
-                                    my $seqno_blk = $next_if_chain_seqno->($KK);
-                                    if (   $seqno_blk
-                                        && $rblock_type_of_seqno->{$seqno_blk} )
-                                    {
-                                        $push_block_stack->(
-                                            $seqno_blk, $rpopped_vars
-                                        );
-                                    }
+                                    $push_next_if_chain->( $KK, $rpopped_vars );
                                 }
                             }
                         }
@@ -9674,7 +9677,7 @@ EOM
         $excluded_names =~ s/^\s+//;
         $excluded_names =~ s/\s+$//;
         my @xl = split /\s+/, $excluded_names;
-        @{is_excluded_name}{@xl} = (1) x scalar(@xl);
+        @is_excluded_name{@xl} = (1) x scalar(@xl);
     }
 
     foreach my $item ( @{$rwarnings} ) {
@@ -9894,16 +9897,16 @@ BEGIN {
 
     # added 'U' to fix cases b1125 b1126 b1127
     my @q = qw(w U);
-    @{wU}{@q} = (1) x scalar(@q);
+    @wU{@q} = (1) x scalar(@q);
 
     @q = qw(w i q Q G C Z);
-    @{wiq}{@q} = (1) x scalar(@q);
+    @wiq{@q} = (1) x scalar(@q);
 
     @q = qw(w i t P S);   # Fix for c250: added new types 'P', 'S', formerly 'i'
-    @{is_witPS}{@q} = (1) x scalar(@q);
+    @is_witPS{@q} = (1) x scalar(@q);
 
     @q = qw($ & % * @);
-    @{is_sigil}{@q} = (1) x scalar(@q);
+    @is_sigil{@q} = (1) x scalar(@q);
 
     # Parens following these keywords will not be marked as lists. Note that
     # 'for' is not included and is handled separately, by including 'f' in the
@@ -13210,7 +13213,7 @@ BEGIN {
 
     # these types do not 'like' to be separated from a following paren
     @q = qw(w i q Q G C Z U);
-    @{has_tight_paren}{@q} = (1) x scalar(@q);
+    @has_tight_paren{@q} = (1) x scalar(@q);
 } ## end BEGIN
 
 use constant DEBUG_WELD => 0;
@@ -17119,7 +17122,7 @@ EOM
             if ( $CODE_type eq 'BL' ) {
                 if ( $ibeg >= 0 ) {
                     $iend = $i;
-                    push @{iblanks}, $i;
+                    push @iblanks, $i;
 
                     # propagate current subgroup token
                     my $tok = $group[-1]->[1];
@@ -25199,14 +25202,14 @@ EOM
         # b1450: old breaks at 'eq' and related operators are poor
         my @q = qw(== <= >= !=);
 
-        @{poor_types}{@q}      = (1) x scalar(@q);
-        @{poor_next_types}{@q} = (1) x scalar(@q);
+        @poor_types{@q}       = (1) x scalar(@q);
+        @poor_next_types{@q}  = (1) x scalar(@q);
         $poor_types{'L'}      = 1;
         $poor_next_types{'R'} = 1;
 
-        @q = qw(eq ne le ge lt gt);
-        @{poor_keywords}{@q}      = (1) x scalar(@q);
-        @{poor_next_keywords}{@q} = (1) x scalar(@q);
+        @q                      = qw(eq ne le ge lt gt);
+        @poor_keywords{@q}      = (1) x scalar(@q);
+        @poor_next_keywords{@q} = (1) x scalar(@q);
     } ## end BEGIN
 
     sub examine_old_breakpoint {
@@ -31051,16 +31054,16 @@ sub xlp_tweak {
         # leading keywords which to skip for efficiency when making parenless
         # container names
         my @q = qw( my local our return );
-        @{is_my_local_our}{@q} = (1) x scalar(@q);
+        @is_my_local_our{@q} = (1) x scalar(@q);
 
         # leading keywords where we should just join one token to form
         # parenless name
         @q = qw( use );
-        @{is_use_like}{@q} = (1) x scalar(@q);
+        @is_use_like{@q} = (1) x scalar(@q);
 
         # leading token types which may be used to make a container name
         @q = qw( k w U );
-        @{is_kwU}{@q} = (1) x scalar(@q);
+        @is_kwU{@q} = (1) x scalar(@q);
 
         # token types which prevent using leading word as a container name
         @q = qw(
@@ -31069,7 +31072,7 @@ sub xlp_tweak {
           **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~
         );
         push @q, ',';
-        @{is_binary_type}{@q} = (1) x scalar(@q);
+        @is_binary_type{@q} = (1) x scalar(@q);
 
         # token keywords which prevent using leading word as a container name
         @q = qw(and or err eq ne cmp);
@@ -34114,4 +34117,3 @@ sub wrapup {
 
 } ## end package Perl::Tidy::Formatter
 1;
-
