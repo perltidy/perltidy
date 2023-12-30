@@ -4184,64 +4184,6 @@ EOM
         return;
     } ## end sub do_ATTRIBUTE_LIST
 
-    sub do_QUOTED_BAREWORD {
-
-        my $self = shift;
-
-        # find type of a bareword followed by a '=>'
-        if ( $ris_constant->{$current_package}{$tok} ) {
-            $type = 'C';
-        }
-        elsif ( $ris_user_function->{$current_package}{$tok} ) {
-            $type      = 'U';
-            $prototype = $ruser_function_prototype->{$current_package}{$tok};
-        }
-        elsif ( substr( $tok, 0, 1 ) eq 'v' && $tok =~ /^v\d+$/ ) {
-            $type = 'v';
-        }
-        else {
-
-            # Bareword followed by a fat comma - see 'git18.in'
-            # If tok is something like 'x17' then it could
-            # actually be operator x followed by number 17.
-            # For example, here:
-            #     123x17 => [ 792, 1224 ],
-            # (a key of 123 repeated 17 times, perhaps not
-            # what was intended). We will mark x17 as type
-            # 'n' and it will be split. If the previous token
-            # was also a bareword then it is not very clear is
-            # going on.  In this case we will not be sure that
-            # an operator is expected, so we just mark it as a
-            # bareword.  Perl is a little murky in what it does
-            # with stuff like this, and its behavior can change
-            # over time.  Something like
-            #    a x18 => [792, 1224], will compile as
-            # a key with 18 a's.  But something like
-            #    push @array, a x18;
-            # is a syntax error.
-            if (
-                   $expecting == OPERATOR
-                && substr( $tok, 0, 1 ) eq 'x'
-                && ( length($tok) == 1
-                    || substr( $tok, 1, 1 ) =~ /^\d/ )
-              )
-            {
-                $type = 'n';
-                if ( $self->split_pretoken(1) ) {
-                    $type = 'x';
-                    $tok  = 'x';
-                }
-            }
-            else {
-
-                # git #18
-                $type = 'w';
-                $self->error_if_expecting_OPERATOR();
-            }
-        }
-        return;
-    } ## end sub do_QUOTED_BAREWORD
-
     sub do_X_OPERATOR {
 
         my $self = shift;
@@ -4662,7 +4604,44 @@ EOM
                 || $input_line !~ /^\s*__(?:END|DATA)__\s*$/ )
           )
         {
-            $self->do_QUOTED_BAREWORD();
+            # Bareword followed by a fat comma - see 'git18.in'
+            # This was previously sub do_QUOTED_BAREWORD: see c316
+            # If tok is something like 'x17' then it could
+            # actually be operator x followed by number 17.
+            # For example, here:
+            #     123x17 => [ 792, 1224 ],
+            # (a key of 123 repeated 17 times, perhaps not
+            # what was intended). We will mark x17 as type
+            # 'n' and it will be split. If the previous token
+            # was also a bareword then it is not very clear is
+            # going on.  In this case we will not be sure that
+            # an operator is expected, so we just mark it as a
+            # bareword.  Perl is a little murky in what it does
+            # with stuff like this, and its behavior can change
+            # over time.  Something like
+            #    a x18 => [792, 1224], will compile as
+            # a key with 18 a's.  But something like
+            #    push @array, a x18;
+            # is a syntax error.
+            if (
+                   $expecting == OPERATOR
+                && substr( $tok, 0, 1 ) eq 'x'
+                && ( length($tok) == 1
+                    || substr( $tok, 1, 1 ) =~ /^\d/ )
+              )
+            {
+                $type = 'n';
+                if ( $self->split_pretoken(1) ) {
+                    $type = 'x';
+                    $tok  = 'x';
+                }
+            }
+            else {
+
+                # git #18
+                $type = 'w';
+                $self->error_if_expecting_OPERATOR();
+            }
         }
 
         # quote a bare word within braces..like xxx->{s}; note that we
