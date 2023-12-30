@@ -902,6 +902,8 @@ EOM
             'space-signature-paren' => [ 0, 2 ],
             'break-after-labels'    => [ 0, 2 ],
 
+            'want-call-parens' => [ '&', 'open!close' ],
+
             'want-trailing-commas' => [ '0', '*', 'm', 'b', 'h', 'i', ' ' ],
             'one-line-block-exclusion-list' =>
               [ 'sort', 'map', 'grep', 'eval', '*', 'zzyzx' ],
@@ -1084,7 +1086,7 @@ EOM
                         if ( $count > 10 ) { $count = 10 }
                     }
                     foreach my $i ( 1 .. $count ) {
-                        my $index = int( rand($imax) + 0.5 );
+                        my $index = $imax > 0 ? int( rand($imax) + 0.5 ) : 0;
                         if ( $i > 1 ) { $string .= ' ' }
                         $string .= $rrange->[$index];
                     }

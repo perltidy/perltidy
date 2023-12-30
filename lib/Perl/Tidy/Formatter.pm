@@ -376,6 +376,9 @@ my (
     # INITIALIZER: sub initialize_trailing_comma_rules
     %trailing_comma_rules,
 
+    # INITIALIZER: sub initialize_call_paren_style
+    %call_paren_style,
+
     # regex patterns for text identification.
     # Most can be configured by user parameters.
     # Most are initialized in a sub make_**_pattern during configuration.
@@ -1426,6 +1429,8 @@ sub check_options {
     initialize_closing_side_comments();
 
     initialize_missing_else_comment();
+
+    initialize_call_paren_style();
 
     make_bli_pattern();
 
@@ -6425,6 +6430,8 @@ EOM
       if ( $rOpts->{'warn-variable-types'}
         && $self->[_logger_object_] );
 
+    $self->scan_call_parens();
+
     $self->examine_vertical_tightness_flags();
 
     $self->set_excluded_lp_containers();
@@ -9694,6 +9701,179 @@ EOM
     warning($message);
     return;
 } ## end sub warn_variable_types
+
+sub initialize_call_paren_style {
+
+    # parse the flag --want-call-parens=string
+
+    # Rules:
+    # - we scan from left to right, so if there are multiple entries for
+    #   a word, the last entry is used
+    # - starting mode is WANT PARENS
+    # - '!' switches to DO NOT WANT PARENS mode
+    # - '+' resets to WANT PARENS mode (if needed for complex lists)
+    # - '&' is default for user-defined subs
+    # - '*' is reserved as possible FUTURE default for SELECTED keywords
+    # - ',' same as space
+
+    # To create an input string:
+    # - first list all words which SHOULD have parens
+    # - then, if some do not get parens, add a '!'
+    # - then list all words which SHOULD NOT have parens;
+    # - Enter '&' instead of a word to indicate a default for sub calls
+
+    # Examples:
+    # wcp='&'            - means all sub calls should have parens
+    # wcp='open close'   - 'open' and 'close' have parens
+    # wcp='! open close' - 'open' and 'close' do NOT have parens
+    # wcp='& ! myfun '   - all subs have perens except 'myfun'
+
+    %call_paren_style = ();
+    my $opt = 'want-call-parens';
+    my $str = $rOpts->{$opt};
+    return unless $str;
+
+    my $want_parens = 1;
+    my $err_msg;
+    while (
+        $str =~ m{
+             \G(
+               (\s+) #     whitespace - this must come before \W
+             | (\W)  #  or single-character, non-whitespace punct
+             | (\d+) #  or sequence of digits - must come before \w
+             | (\w+) #  or words not starting with a digit
+             )
+            }gcx
+      )
+    {
+        # skip blanks
+        if ( defined($2) ) { next }
+
+        if ( defined($3) ) {
+            if    ( $3 eq '!' ) { $want_parens          = 0; }
+            elsif ( $3 eq '+' ) { $want_parens          = 1; }
+            elsif ( $3 eq '*' ) { $call_paren_style{$3} = $want_parens }
+            elsif ( $3 eq '&' ) { $call_paren_style{$3} = $want_parens }
+            elsif ( $3 eq ',' ) { next }
+            else                { $err_msg = "Unexpected symbol '$3'"; last }
+        }
+        elsif ( defined($4) ) {
+            $err_msg = "Unexpected digit '$4'";
+            last;
+        }
+        elsif ( defined($5) ) {
+            if ( defined( $call_paren_style{$5} ) ) {
+                Warn("--$opt has multiple entries for '$5', last is used\n");
+            }
+            $call_paren_style{$5} = $want_parens;
+        }
+        else {
+            ## should never get here
+            $err_msg = "Unexpected token '$1'";
+            last;
+        }
+    }
+    if ($err_msg) {
+        Perl::Tidy::Die("Error parsing --$opt: $err_msg\n");
+    }
+    return;
+} ## end sub initialize_call_paren_style
+
+sub scan_call_parens {
+    my ($self) = @_;
+
+    # Perform a scan requesed by --want-call-parens
+    # We search for selected functions or keywords and for a following paren.
+    # A warning is issued if the paren existence is not what is wanted
+    # according to the setting --want-call-parens.
+
+    # This routine does not attempt to add or remove parens, it merely
+    # issues a warning so that the user can make a change if desired.
+    # It is risky to add or delete parens automatically; see git #128.
+
+    my $wcp_name               = 'want-call-parens';
+    my $rOpts_warn_call_parens = $rOpts->{$wcp_name};
+    return unless ($rOpts_warn_call_parens);
+
+    # if no hash, user may have just entered -wcp='!'
+    return unless (%call_paren_style);
+
+    my $rwarnings = [];
+
+    #---------------------
+    # Loop over all tokens
+    #---------------------
+    my $rLL = $self->[_rLL_];
+    foreach my $KK ( 0 .. @{$rLL} - 1 ) {
+        my $type = $rLL->[$KK]->[_TYPE_];
+        next if ( $type eq 'b' || $type eq '#' );
+
+        # 'k'=builtin keyword, 'U'=user defined sub, 'w'=unknown bareword
+        if ( $type eq 'k' || $type eq 'U' || $type eq 'w' ) {
+
+            # Are we looking for this word?
+            my $token      = $rLL->[$KK]->[_TOKEN_];
+            my $want_paren = $call_paren_style{$token};
+
+            # Only user-defined subs (type 'U') have defaults.
+            if ( !defined($want_paren) ) {
+                $want_paren =
+                    $type eq 'k' ? undef
+                  : $type eq 'U' ? $call_paren_style{'&'}
+                  :                undef;
+            }
+            next unless defined($want_paren);
+
+            # This is a selected word. Look for a '(' at the next token.
+            my $Kn = $self->K_next_code($KK);
+            next unless defined($Kn);
+
+            my $token_Kn = $rLL->[$Kn]->[_TOKEN_];
+            if    ( $token_Kn eq '=>' ) { next }
+            elsif ( $token_Kn eq '(' )  { next if ($want_paren) }
+            else                        { next if ( !$want_paren ) }
+
+            # This disagrees with the wanted style; issue a warning.
+            my $note     = $want_paren ? "no call parens" : "has call parens";
+            my $rwarning = {
+                token       => $token,
+                token_next  => $token_Kn,
+                want        => $want_paren,
+                note        => $note,
+                line_number => $rLL->[$KK]->[_LINE_INDEX_] + 1,
+                KK          => $KK,
+                Kn          => $Kn,
+            };
+            push @{$rwarnings}, $rwarning;
+        }
+    }
+
+    # Report any warnings
+    if ( @{$rwarnings} ) {
+        my $message = "Begin scan for --$wcp_name\n";
+        $message .= <<EOM;
+Line:text:
+EOM
+        foreach my $item ( @{$rwarnings} ) {
+            my $token      = $item->{token};
+            my $token_next = $item->{token_next};
+            my $note       = $item->{note};
+            my $lno        = $item->{line_number};
+
+            # trim long tokens for the output line
+            if ( length($token_next) > 23 ) {
+                $token_next = substr( $token_next, 0, 20 ) . '...';
+            }
+            $message .= "$lno:$token $token_next: $note\n";
+        }
+        $message .= "End scan for --$wcp_name\n";
+
+        # Note that this is sent in a single call to warning() in order
+        # to avoid triggering a stop on large warning count
+        warning($message);
+    }
+    return;
+} ## end sub scan_call_parens
 
 sub find_non_indenting_braces {
 

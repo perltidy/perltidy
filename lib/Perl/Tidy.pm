@@ -3,7 +3,7 @@
 #
 #    perltidy - a perl script indenter and formatter
 #
-#    Copyright (c) 2000-2023 by Steve Hancock
+#    Copyright (c) 2000-2024 by Steve Hancock
 #    Distributed under the GPL license agreement; see file COPYING
 #
 #    This program is free software; you can redistribute it and/or modify
@@ -2104,8 +2104,9 @@ sub process_all_files {
             if ( $in_place_modify && !-w $input_file ) {
                 my $backup_method = $rOpts->{'backup-method'};
                 if ( defined($backup_method) && $backup_method eq 'copy' ) {
-                    Warn
-"skipping file '$input_file' for -b option: file reported as non-writable\n";
+                    Warn(
+"skipping file '$input_file' for -b option: file reported as non-writable\n"
+                    );
                     next;
                 }
             }
@@ -3704,6 +3705,7 @@ sub generate_options {
     $add_option->( 'pass-version-line',            'pvl',  '!' );
     $add_option->( 'warn-variable-types',          'wvt',  '=s' );
     $add_option->( 'warn-variable-exclusion-list', 'wvxl', '=s' );
+    $add_option->( 'want-call-parens',             'wcp',  '=s' );
 
     ########################################
     $category = 13;    # Debugging

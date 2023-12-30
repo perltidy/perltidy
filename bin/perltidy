@@ -5602,6 +5602,57 @@ can be used to skip warning checks for a list of variables.  For example,
 
 will skip all warnings for variables C<$self> and C<$class>.
 
+=item B<Warning about missing or extra call parens with --want-call-parens=s>
+
+Perl allows function call arguments to be placed within parentheses, but it is
+not generally required.  Styles vary, but often the arguments of user-defined
+functions are placed within parens, and the arguments of many builtin function
+calls are often written without parens.
+
+The flag B<--want-call-parens=s>, or B<-wcp=s>, can be used to to produce
+a warning message if the parens, or lack of parens, for a selected function
+does not match a desired style.  This information can help a programmer to
+maintain a certain style.
+
+The string argument B<s> is a list of functions which perltidy should check.
+The function names may builtin keywords or user-defined subs.
+Perltidy will scan the text for the listed function names, looks for a
+subsequent opening paren, and warn of any discrepancies with the request. 
+
+Functions which should enclose their arguments in parens are listed first,
+separated by spaces or commas. Then, if there are functions which should not
+have parens, an exclamation mark, B<!>, should be added followed by the list of
+those functions.
+
+For example
+
+   perltidy -wcp='open close ! print' somefile.pl
+
+means that the builtin functions C<open> and C<close> should have parens around
+their call args but C<print> should not.  Spaces are only needed to separate
+words, so this could also be written
+
+   perltidy -wcp='open close!print' somefile.pl
+
+or
+
+   perltidy -wcp='open,close!print' somefile.pl
+
+A symbol B<+> may be placed in the string B<s> to end the scope of a preceding
+B<!>.  So this example could also be written
+
+   perltidy -wcp='open ! print + close' somefile.pl
+
+If the symbol B<&> is entered instead of a function name, it means all user defined subs not in the list.  So for example
+
+   perltidy -wcp='&'
+
+means that calls to all user-defined subs in the file being processed
+should have their call arguments enclosed in parens.
+
+When adding or removing parentheses, it is important to pay attention to
+operator precedence issues.
+
 =item B<Working with MakeMaker, AutoLoader and SelfLoader>
 
 The first $VERSION line of a file which might be eval'd by MakeMaker
