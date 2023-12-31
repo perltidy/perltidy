@@ -75,7 +75,7 @@ use constant SPACE        => q{ };
 use Carp;
 use English    qw( -no_match_vars );
 use List::Util qw( min max first );    # min, max first are in Perl 5.8
-our $VERSION = '20230912.07';
+our $VERSION = '20230912.08';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -9747,9 +9747,8 @@ sub initialize_call_paren_style {
       )
     {
         # skip blanks
-        if ( defined($2) ) { next }
-
-        if ( defined($3) ) {
+        if    ( defined($2) ) { next }
+        elsif ( defined($3) ) {
             if    ( $3 eq '!' ) { $want_parens          = 0; }
             elsif ( $3 eq '+' ) { $want_parens          = 1; }
             elsif ( $3 eq '*' ) { $call_paren_style{$3} = $want_parens }
@@ -9830,6 +9829,7 @@ sub scan_call_parens {
 
             my $token_Kn = $rLL->[$Kn]->[_TOKEN_];
             if    ( $token_Kn eq '=>' ) { next }
+            elsif ( $token_Kn eq '->' ) { next }
             elsif ( $token_Kn eq '(' )  { next if ($want_paren) }
             else                        { next if ( !$want_paren ) }
 

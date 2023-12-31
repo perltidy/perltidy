@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2023 09 12.07
+## 2023 09 12.08
 
     - Added --dump-unusual-variables (-duv) option to dump a list of
       variables with certain properties of interest. For example
