@@ -75,7 +75,7 @@ use constant SPACE        => q{ };
 use Carp;
 use English    qw( -no_match_vars );
 use List::Util qw( min max first );    # min, max first are in Perl 5.8
-our $VERSION = '20230912.08';
+our $VERSION = '20230912.09';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -703,6 +703,7 @@ BEGIN {
     @is_if_elsif_else_unless_while_until_for_foreach{@q} =
       (1) x scalar(@q);
 
+    # These can either have the BLOCK form or trailing modifier form:
     @q = qw(if unless while until for foreach);
     @is_if_unless_while_until_for_foreach{@q} =
       (1) x scalar(@q);
@@ -6430,6 +6431,11 @@ EOM
       if ( $rOpts->{'warn-variable-types'}
         && $self->[_logger_object_] );
 
+    if ( $rOpts->{'dump-mixed-call-parens'} ) {
+        $self->dump_mixed_call_parens();
+        Exit(0);
+    }
+
     $self->scan_call_parens();
 
     $self->examine_vertical_tightness_flags();
@@ -9702,6 +9708,130 @@ EOM
     return;
 } ## end sub warn_variable_types
 
+sub block_seqno_of_paren_seqno {
+
+    my ( $self, $seqno_paren ) = @_;
+
+    # Given:
+    #  $seqno_paren = sequence number of the paren following a keyword which
+    #    may either introduce a block or be a trailing statement modifier,
+    #    such as 'if',
+    # Return:
+    #    - the sequence number of the block, if any, or
+    #    - nothing
+
+    #  if (...) { ...
+    #     ^   ^ ^
+    #     |   | |
+    #     |   | K_opening_brace => return sequno of this brace
+    #     |   K_closing_paren
+    #     $seqno_paren = seqno of this paren pair
+
+    # FIXME: sub $seqno_brace_after_paren in sub scan_variable_usage can
+    # eventually be simplified to make use of this sub. But we would need to
+    # first add a check for repeated parens.
+
+    return unless $seqno_paren;
+    my $K_closing_paren = $self->[_K_closing_container_]->{$seqno_paren};
+    return unless ($K_closing_paren);
+    my $K_opening_brace = $self->K_next_code($K_closing_paren);
+    return unless ($K_opening_brace);
+    my $rLL         = $self->[_rLL_];
+    my $seqno_block = $rLL->[$K_opening_brace]->[_TYPE_SEQUENCE_];
+    return
+      unless ( $seqno_block
+        && $rLL->[$K_opening_brace]->[_TOKEN_] eq '{'
+        && $self->[_rblock_type_of_seqno_]->{$seqno_block} );
+    return $seqno_block;
+}
+
+sub dump_mixed_call_parens {
+    my ($self) = @_;
+
+    # Implent --dump-mixed-call-parens
+
+    my $opt_name = 'dump-mixed-call-parens';
+    return unless $rOpts->{$opt_name};
+
+    my $rLL                 = $self->[_rLL_];
+    my $K_closing_container = $self->[_K_closing_container_];
+
+    my %skip_keywords;
+    my @q = qw(my our local state
+      and cmp continue do else elsif eq ge gt le lt ne not or xor );
+    @skip_keywords{@q} = (1) x scalar(@q);
+
+    # Types which will be checked:
+    # 'k'=builtin keyword, 'U'=user defined sub, 'w'=unknown bareword
+    my %is_kwU = ( 'k' => 1, 'w' => 1, 'U' => 1 );
+
+    my %call_counts;
+    foreach my $KK ( 0 .. @{$rLL} - 1 ) {
+
+        next unless ( $is_kwU{ $rLL->[$KK]->[_TYPE_] } );
+
+        my $type  = $rLL->[$KK]->[_TYPE_];
+        my $token = $rLL->[$KK]->[_TOKEN_];
+        if ( $type eq 'k' && $skip_keywords{$token} ) { next }
+
+        my $Kn = $self->K_next_code($KK);
+        next unless defined($Kn);
+        my $token_Kn = $rLL->[$Kn]->[_TOKEN_];
+        my $have_paren;
+        if    ( $token_Kn eq '=>' ) { next }
+        elsif ( $token_Kn eq '->' ) { next }
+        elsif ( $token_Kn eq '(' )  { $have_paren = 1 }
+        else                        { $have_paren = 0 }
+
+        # return if this is the block form of 'if', 'unless', ..
+        if (   $have_paren
+            && $is_if_unless_while_until_for_foreach{$token} )
+        {
+            my $seqno = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
+            next if ( $self->block_seqno_of_paren_seqno($seqno) );
+        }
+
+        if ( !defined( $call_counts{$token} ) ) {
+            $call_counts{$token} = [ 0, 0, $type ];
+        }
+        $call_counts{$token}->[$have_paren]++;
+    }
+    my @mixed_counts;
+    foreach my $key ( keys %call_counts ) {
+        my ( $no_count, $yes_count, $type ) = @{ $call_counts{$key} };
+        next unless ( $no_count && $yes_count );
+
+        # display type 'U' as 's' on output for clarity and better sorted order
+        my $type_out = $type eq 'U' ? 's' : $type;
+        push @mixed_counts,
+          {
+            name      => $key,
+            type      => $type_out,
+            no_count  => $no_count,
+            yes_count => $yes_count
+          };
+    }
+    return unless (@mixed_counts);
+    my @sorted =
+      sort { $a->{type} cmp $b->{type} || $a->{name} cmp $b->{name} }
+      @mixed_counts;
+
+    my $output_string = <<EOM;
+mixed paren counts for --dump-mixed-call-parens; see also --want-call-parens=s
+types are 'k'=builtin keyword 's'=user sub  'w'=other word
+type:word:+count:-count
+EOM
+    foreach my $item (@sorted) {
+        my $type      = $item->{type};
+        my $name      = $item->{name};
+        my $no_count  = $item->{no_count};
+        my $yes_count = $item->{yes_count};
+        $output_string .= "$type:$name:$yes_count:$no_count\n";
+    }
+    print {*STDOUT} $output_string;
+    return;
+} ## end sub dump_mixed_call_parens
+
 sub initialize_call_paren_style {
 
     # parse the flag --want-call-parens=string
@@ -9790,9 +9920,13 @@ sub scan_call_parens {
     # issues a warning so that the user can make a change if desired.
     # It is risky to add or delete parens automatically; see git #128.
 
-    my $wcp_name               = 'want-call-parens';
-    my $rOpts_warn_call_parens = $rOpts->{$wcp_name};
+    my $opt_name               = 'want-call-parens';
+    my $rOpts_warn_call_parens = $rOpts->{$opt_name};
     return unless ($rOpts_warn_call_parens);
+
+    # Types which will be checked:
+    # 'k'=builtin keyword, 'U'=user defined sub, 'w'=unknown bareword
+    my %is_kwU = ( 'k' => 1, 'w' => 1, 'U' => 1 );
 
     # if no hash, user may have just entered -wcp='!'
     return unless (%call_paren_style);
@@ -9804,53 +9938,58 @@ sub scan_call_parens {
     #---------------------
     my $rLL = $self->[_rLL_];
     foreach my $KK ( 0 .. @{$rLL} - 1 ) {
-        my $type = $rLL->[$KK]->[_TYPE_];
-        next if ( $type eq 'b' || $type eq '#' );
 
-        # 'k'=builtin keyword, 'U'=user defined sub, 'w'=unknown bareword
-        if ( $type eq 'k' || $type eq 'U' || $type eq 'w' ) {
+        next unless ( $is_kwU{ $rLL->[$KK]->[_TYPE_] } );
 
-            # Are we looking for this word?
-            my $token      = $rLL->[$KK]->[_TOKEN_];
-            my $want_paren = $call_paren_style{$token};
+        # Are we looking for this word?
+        my $type       = $rLL->[$KK]->[_TYPE_];
+        my $token      = $rLL->[$KK]->[_TOKEN_];
+        my $want_paren = $call_paren_style{$token};
 
-            # Only user-defined subs (type 'U') have defaults.
-            if ( !defined($want_paren) ) {
-                $want_paren =
-                    $type eq 'k' ? undef
-                  : $type eq 'U' ? $call_paren_style{'&'}
-                  :                undef;
-            }
-            next unless defined($want_paren);
-
-            # This is a selected word. Look for a '(' at the next token.
-            my $Kn = $self->K_next_code($KK);
-            next unless defined($Kn);
-
-            my $token_Kn = $rLL->[$Kn]->[_TOKEN_];
-            if    ( $token_Kn eq '=>' ) { next }
-            elsif ( $token_Kn eq '->' ) { next }
-            elsif ( $token_Kn eq '(' )  { next if ($want_paren) }
-            else                        { next if ( !$want_paren ) }
-
-            # This disagrees with the wanted style; issue a warning.
-            my $note     = $want_paren ? "no call parens" : "has call parens";
-            my $rwarning = {
-                token       => $token,
-                token_next  => $token_Kn,
-                want        => $want_paren,
-                note        => $note,
-                line_number => $rLL->[$KK]->[_LINE_INDEX_] + 1,
-                KK          => $KK,
-                Kn          => $Kn,
-            };
-            push @{$rwarnings}, $rwarning;
+        # Only user-defined subs (type 'U') have defaults.
+        if ( !defined($want_paren) ) {
+            $want_paren =
+                $type eq 'k' ? undef
+              : $type eq 'U' ? $call_paren_style{'&'}
+              :                undef;
         }
+        next unless defined($want_paren);
+
+        # This is a selected word. Look for a '(' at the next token.
+        my $Kn = $self->K_next_code($KK);
+        next unless defined($Kn);
+
+        my $token_Kn = $rLL->[$Kn]->[_TOKEN_];
+        if    ( $token_Kn eq '=>' ) { next }
+        elsif ( $token_Kn eq '->' ) { next }
+        elsif ( $token_Kn eq '(' )  { next if ($want_paren) }
+        else                        { next if ( !$want_paren ) }
+
+        # return if this is the block form of 'if', 'unless', ..
+        if (   $token_Kn eq '('
+            && $is_if_unless_while_until_for_foreach{$token} )
+        {
+            my $seqno = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
+            next if ( $self->block_seqno_of_paren_seqno($seqno) );
+        }
+
+        # This disagrees with the wanted style; issue a warning.
+        my $note     = $want_paren ? "no call parens" : "has call parens";
+        my $rwarning = {
+            token       => $token,
+            token_next  => $token_Kn,
+            want        => $want_paren,
+            note        => $note,
+            line_number => $rLL->[$KK]->[_LINE_INDEX_] + 1,
+            KK          => $KK,
+            Kn          => $Kn,
+        };
+        push @{$rwarnings}, $rwarning;
     }
 
     # Report any warnings
     if ( @{$rwarnings} ) {
-        my $message = "Begin scan for --$wcp_name\n";
+        my $message = "Begin scan for --$opt_name\n";
         $message .= <<EOM;
 Line:text:
 EOM
@@ -9866,7 +10005,7 @@ EOM
             }
             $message .= "$lno:$token $token_next: $note\n";
         }
-        $message .= "End scan for --$wcp_name\n";
+        $message .= "End scan for --$opt_name\n";
 
         # Note that this is sent in a single call to warning() in order
         # to avoid triggering a stop on large warning count

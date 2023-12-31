@@ -131,7 +131,7 @@ BEGIN {
     # then the Release version must be bumped, and it is probably past time for
     # a release anyway.
 
-    $VERSION = '20230912.08';
+    $VERSION = '20230912.09';
 } ## end BEGIN
 
 sub DESTROY {
@@ -921,7 +921,14 @@ EOM
     # line parameters and is expecting formatted output to stdout.  Another
     # precaution, added elsewhere, is to ignore these in a .perltidyrc
     my $num_files = @Arg_files;
-    foreach my $opt_name (qw(dump-block-summary dump-unusual-variables)) {
+    foreach my $opt_name (
+        qw(
+        dump-block-summary
+        dump-unusual-variables
+        dump-mixed-call-parens
+        )
+      )
+    {
         if ( $rOpts->{$opt_name} && $num_files != 1 ) {
             Die(<<EOM);
 --$opt_name expects 1 filename in the arg list but saw $num_files filenames
@@ -3718,6 +3725,7 @@ sub generate_options {
     $add_option->( 'dump-defaults',                   'ddf',   '!' );
     $add_option->( 'dump-integer-option-range',       'dior',  '!' );
     $add_option->( 'dump-long-names',                 'dln',   '!' );
+    $add_option->( 'dump-mixed-call-parens',          'dmcp',  '!' );
     $add_option->( 'dump-options',                    'dop',   '!' );
     $add_option->( 'dump-profile',                    'dpro',  '!' );
     $add_option->( 'dump-short-names',                'dsn',   '!' );
@@ -4607,6 +4615,7 @@ EOM
                     dump-want-right-space
                     dump-block-summary
                     dump-unusual-variables
+                    dump-mixed-call-parens
                     help
                     stylesheet
                     version
@@ -5847,7 +5856,7 @@ sub show_version {
     print {*STDOUT} <<"EOM";
 This is perltidy, v$VERSION 
 
-Copyright 2000-2023, Steve Hancock
+Copyright 2000-2024, Steve Hancock
 
 Perltidy is free software and may be copied under the terms of the GNU
 General Public License, which is included in the distribution files.

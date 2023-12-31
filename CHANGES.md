@@ -1,6 +1,27 @@
 # Perltidy Change Log
 
-## 2023 09 12.08
+## 2023 09 12.09
+
+    - Added --dump-mixed-call-parens (-dmcp ) which will dump a list
+      of operators which are sometimes followed by parens and sometimes not.
+      For example
+
+         perltidy -cmcp somefile.pl >out.txt
+
+      produces lines like this, where the first number is the count of
+      uses with parens, and the second number is the count without parens.
+
+        k:caller:2:1
+        k:chomp:3:4
+        k:close:7:4
+
+    - Added --warn-call-parens=s (-wcp=s) option which will warn of paren
+      uses which do not match a selected style. The manual has details. But
+      for example,
+
+        perltidy -wcp='&' somefile.pl
+
+      will format as normal but warn if any user subs are called without parens.
 
     - Added --dump-unusual-variables (-duv) option to dump a list of
       variables with certain properties of interest. For example

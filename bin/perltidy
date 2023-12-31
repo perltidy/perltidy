@@ -5401,7 +5401,7 @@ to avoid causing problems with scripts which have extended syntaxes.
 B<-DEBUG>  will write a file with extension F<.DEBUG> for each input file
 showing the tokenization of all lines of code.
 
-=item B<Making a table of information on code blocks with --dump-block-summary>
+=item B<Use --dump-block-summary to make a table of information on code blocks>
 
 A table listing information about the blocks of code in a file can be made with
 B<--dump-block-summary>, or B<-dbs>.  This causes perltidy to read and parse
@@ -5508,7 +5508,7 @@ This selects every if-chain which contains 2 or more B<elsif> blocks:
 
 =back
 
-=item B<Finding unused, reused, and other variables of interest with --dump-unusual-variables>
+=item B<use --dump-unusual-variables to find unused, reused, and certain other variables of interest>
 
 Lexical variables with certain properties of interest to a programmer can be
 listed with B<--dump-unusual-variables> or B<-duv>.  This parameter must be on
@@ -5542,7 +5542,7 @@ in the output with one of the letters, B<r>, B<s>, B<p>, and B<u> as follows:
 
 These are variables which are re-declared in the scope of a variable with the
 identical name.  This can be confusing (perhaps not when the code is first
-written, but possibly later when an update is being made). Note that this is
+written, but possibly later during maintenance work). Note that this is
 similar to the B<Perl::Critic> policy B<Variables::ProhibitReusedNames>.
 
 =item B<s: sigil change but reused bareword>
@@ -5557,7 +5557,7 @@ confusing.
 These are lexical variables which are declared in one package and still visible
 in subroutines of a different package in the same file.  This can be confusing.
 This check is limited to packages which are not enclosed in block braces in
-order skip some common use cases.
+order skip temporary package changes.
 
 =item B<u: unused variables>
 
@@ -5573,7 +5573,7 @@ reviewing them, especially for new code.
 
 =back
 
-=item B<Warning about certain variable types with --warn-variable-types>
+=item B<Use --warn-variable-types to warn about certain variable types>
 
 The flag B<--warn-variable-types=string>, or B<-wvt=string>, can be used to to
 produce a warning message if certain of the above variable types are
@@ -5602,44 +5602,85 @@ can be used to skip warning checks for a list of variables.  For example,
 
 will skip all warnings for variables C<$self> and C<$class>.
 
-=item B<Warning about missing or extra call parens with --want-call-parens=s>
+=item B<Use --dump-mixed-call-parens to find all mixed paren uses>
 
 Perl allows function call arguments to be placed within parentheses, but it is
 not generally required.  Styles vary, but often the arguments of user-defined
 functions are placed within parens, and the arguments of many builtin function
 calls are often written without parens.
 
-The flag B<--want-call-parens=s>, or B<-wcp=s>, can be used to to produce
-a warning message if the parens, or lack of parens, for a selected function
-does not match a desired style.  This information can help a programmer to
-maintain a certain style.
+The parameter B<--dump-mixed-call-parens>, or B<-dmcp>, can be used to to
+make a list of keywords and sub names which have been written both with and
+without following parens.  This can be useful for checking for a consistent
+programming style. For example,
+
+   perltidy -dmcp somefile.pl >output.txt
+
+will analyze the text of F<somefile.pl>, write the results to F<output.txt>,
+and then immediately exit.
+
+The output shows a list of operators and the number of times they were
+used with parens and the number of times without parens.  For example, here
+is a small section of the output from one program:
+
+    k:length:17:9
+    k:open:30:9
+    k:pop:3:4
+
+The 'k' indicates a Perl keyword, and the two numbers should the number of
+times it was called with parens and the number of times without parens.
+
+A detailed list list of each occurance of a particular operator use, either
+with or without parens, can be made with the parameter B<--want-call-parens=s>
+described in the next section.
+
+=item B<Use --want-call-parens=s to warn about specific missing or extra call parens>
+
+The parameter B<--want-call-parens=s>, or B<-wcp=s>, can be used to to produce
+a warning message if the parens, or lack of parens, does not match the desired
+style for a particular function.  This information can help a programmer to
+maintain a certain style.  Note that this is a regular parameter, not a
+dump, so perltidy will look for a discrepancy from the requested style
+while it does its normal formatting.  This allows monitoring a file for
+the introduction of an unwanted style.  Before using this parameter, it
+may be helpful to first use B<--dump-mixed-call-parens=s>, described in the
+previous section, to get an overview of the existing paren usage in a file.
 
 The string argument B<s> is a list of functions which perltidy should check.
-The function names may builtin keywords or user-defined subs.
-Perltidy will scan the text for the listed function names, looks for a
-subsequent opening paren, and warn of any discrepancies with the request. 
+The function names may builtin keywords or user-defined subs. The names
+must be simple words (matching the regex C<\w+>) without a package prefix
+or sigil.  Perltidy scans the text for the listed function names,
+looks for a subsequent opening paren, and warns of any discrepancies with
+the request.
 
-Functions which should enclose their arguments in parens are listed first,
-separated by spaces or commas. Then, if there are functions which should not
-have parens, an exclamation mark, B<!>, should be added followed by the list of
-those functions.
+For builtin keywords such as C<if>, which have either a block form or a
+trailing modifier form, the block form will be ignored when the file is
+scanned since parens are mandetory in that case.
+
+In the input string, functions which should enclose their arguments in parens
+are listed first, separated by spaces or commas. Then, if there are functions
+which should not have parens, an exclamation mark, B<!>, should be added
+and followed by the list of those functions.  Thus, the symbol B<!> divides
+the string into two parts, the first part being operators which should have
+parens, and the second part being operators which should not have parens.
 
 For example
 
    perltidy -wcp='open close ! print' somefile.pl
+                  <--parens--|--no parens-->
 
 means that the builtin functions C<open> and C<close> should have parens around
-their call args but C<print> should not.  Spaces are only needed to separate
-words, so this could also be written
+their call args but C<print> should not.  Spaces are okay but only needed to
+separate words, so this could also be written
 
    perltidy -wcp='open close!print' somefile.pl
 
-or
+or even
 
    perltidy -wcp='open,close!print' somefile.pl
 
-A symbol B<+> may be placed in the string B<s> to end the scope of a preceding
-B<!>.  So this example could also be written
+Though not necessary, a symbol B<+> may be placed in the string B<s> to end the
+scope of a preceding B<!>.  So this example could also be written
 
    perltidy -wcp='open ! print + close' somefile.pl
 
@@ -5650,7 +5691,7 @@ If the symbol B<&> is entered instead of a function name, it means all user defi
 means that calls to all user-defined subs in the file being processed
 should have their call arguments enclosed in parens.
 
-When adding or removing parentheses, it is important to pay attention to
+When adding or removing parentheses, it is essential to pay attention to
 operator precedence issues.
 
 =item B<Working with MakeMaker, AutoLoader and SelfLoader>
@@ -6103,7 +6144,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20230912.08
+This man page documents perltidy version 20230912.09
 
 =head1 BUG REPORTS
 
@@ -6113,7 +6154,7 @@ To report a new bug or problem, use the "issues" link on this page.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2000-2023 by Steve Hancock
+Copyright (c) 2000-2024 by Steve Hancock
 
 =head1 LICENSE
 
