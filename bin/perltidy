@@ -5602,97 +5602,95 @@ can be used to skip warning checks for a list of variables.  For example,
 
 will skip all warnings for variables C<$self> and C<$class>.
 
-=item B<Use --dump-mixed-call-parens to find all mixed paren uses>
+=item B<Use --dump-mixed-call-parens to find functions called both with and without parens>
 
-Perl allows function call arguments to be placed within parentheses, but it is
-not generally required.  Styles vary, but often the arguments of user-defined
-functions are placed within parens, and the arguments of many builtin function
-calls are often written without parens.
-
-The parameter B<--dump-mixed-call-parens>, or B<-dmcp>, can be used to to
-make a list of keywords and sub names which have been written both with and
-without following parens.  This can be useful for checking for a consistent
-programming style. For example,
+The parameter B<--dump-mixed-call-parens>, or B<-dmcp>, provides information on
+the use of call parens within a program.  It produces a list of keywords and sub
+names which occur both both with and without parens.  In other words, with
+a mixed style.  This might be useful if one is working to standardize the
+call style for some particular keyword or function. For example,
 
    perltidy -dmcp somefile.pl >output.txt
 
 will analyze the text of F<somefile.pl>, write the results to F<output.txt>,
-and then immediately exit.
+and then immediately exit (like all B<dump-> parameters).
 
 The output shows a list of operators and the number of times they were
 used with parens and the number of times without parens.  For example, here
-is a small section of the output from one program:
+is a small section of the output from one file in a past Perl distribution:
 
     k:length:17:9
     k:open:30:9
     k:pop:3:4
 
-The 'k' indicates a Perl keyword, and the two numbers should the number of
-times it was called with parens and the number of times without parens.
+The first line shows that the C<length> function occurs 17 times with parens
+and 9 times without parens.  The 'k' indicates that C<length> is a Perl builtin
+keyword. So from this partial output we see that the author had a preference
+for parens around the args of C<length> and C<open>, whereas C<pop> was about
+equally likely to have parens as not.
 
 A detailed list list of each occurance of a particular operator use, either
-with or without parens, can be made with the parameter B<--want-call-parens=s>
-described in the next section.
+without or with parens, can be made with the parameters B<--want-call-parens=s>
+and B<--nowant-call-parens=s> described in the next section.
 
-=item B<Use --want-call-parens=s to warn about specific missing or extra call parens>
+=item B<Use --want-call-parens=s and --nowant-call-parens=s to warn about specific missing or extra call parens>
 
 The parameter B<--want-call-parens=s>, or B<-wcp=s>, can be used to to produce
-a warning message if the parens, or lack of parens, does not match the desired
-style for a particular function.  This information can help a programmer to
-maintain a certain style.  Note that this is a regular parameter, not a
-dump, so perltidy will look for a discrepancy from the requested style
-while it does its normal formatting.  This allows monitoring a file for
-the introduction of an unwanted style.  Before using this parameter, it
-may be helpful to first use B<--dump-mixed-call-parens=s>, described in the
-previous section, to get an overview of the existing paren usage in a file.
+a warning message if call parens are missing from selected functions.
+Likewise, B<--nowant-call-parens=s>, or B<-nwcp=s>, can warn if call parens
+exist for selected functions.  When either of these parameters are set,
+perltidy will will look for a discrepancy from the requested styles while it
+does its normal formatting operations.
 
-The string argument B<s> is a list of functions which perltidy should check.
-The function names may builtin keywords or user-defined subs. The names
-must be simple words (matching the regex C<\w+>) without a package prefix
-or sigil.  Perltidy scans the text for the listed function names,
-looks for a subsequent opening paren, and warns of any discrepancies with
-the request.
+If a function name is entered in both lists, the entry in B<-wcp> will apply.
 
-For builtin keywords such as C<if>, which have either a block form or a
-trailing modifier form, the block form will be ignored when the file is
-scanned since parens are mandetory in that case.
+Before using either of these parameters, it may be helpful to first use
+B<--dump-mixed-call-parens=s>, described in the previous section, to get an
+overview of the existing paren usage in a file.
 
-In the input string, functions which should enclose their arguments in parens
-are listed first, separated by spaces or commas. Then, if there are functions
-which should not have parens, an exclamation mark, B<!>, should be added
-and followed by the list of those functions.  Thus, the symbol B<!> divides
-the string into two parts, the first part being operators which should have
-parens, and the second part being operators which should not have parens.
+The string arguments B<s> are space-separated lists of the names of the
+functions to be checked.  The function names may builtin keywords or
+user-defined subs.  They may not include a package prefix or sigil.
 
-For example
+For builtin keywords which have both a block form and a trailing modifier form,
+such as C<if>, only the trailing modifier form will be checked because
+parens are mandatory for the block form.
 
-   perltidy -wcp='open close ! print' somefile.pl
-                  <--parens--|--no parens-->
+To illustrate,
 
-means that the builtin functions C<open> and C<close> should have parens around
-their call args but C<print> should not.  Spaces are okay but only needed to
-separate words, so this could also be written
+   perltidy -wcp='length open' -nwcp='pop'   somefile.pl
 
-   perltidy -wcp='open close!print' somefile.pl
+means that the builtin functions C<length> and C<open> should have parens around
+their call args but C<pop> should not.  If this is run on the example file
+discussed in the previous section, the error output will contain lines such as:
 
-or even
+    2314:open FD_TO_CLOSE: no call parens
+    3652:pop (: has call parens
+    3783:length $DB: no call parens
+    ...
 
-   perltidy -wcp='open,close!print' somefile.pl
+In this particular case, the list will contain the 9 entries for C<length>, 9
+entries for C<open>, and 3 entries for C<pop>, which were discovered with the
+B<-dmcp> parameter in the previous section.
 
-Though not necessary, a symbol B<+> may be placed in the string B<s> to end the
-scope of a preceding B<!>.  So this example could also be written
+The symbol B<&> may entered instead of a function name to mean all user-defined
+subs not explicitely listed.  So the compact expression
 
-   perltidy -wcp='open ! print + close' somefile.pl
-
-If the symbol B<&> is entered instead of a function name, it means all user defined subs not in the list.  So for example
-
-   perltidy -wcp='&'
+   perltidy -wcp='&' somefile.pl
 
 means that calls to all user-defined subs in the file being processed
 should have their call arguments enclosed in parens.
 
-When adding or removing parentheses, it is essential to pay attention to
-operator precedence issues.
+Perltidy does not have the ability to add or delete call parens because it is
+difficult to automate, so changes must be done by hand editing.  When adding or
+removing parentheses, it is essential to pay attention to operator precedence
+issues.  For example, if the parens in the following statement are
+removed, then C<||> must be changed to C<or>:
+
+    open( IN, "<", $infile ) || die("cannot open $infile:$!\n");
+
+Otherwise, the C<||> will operate on C<$infile> and not the return value of
+C<open>.
 
 =item B<Working with MakeMaker, AutoLoader and SelfLoader>
 

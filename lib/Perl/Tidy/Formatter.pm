@@ -9807,7 +9807,7 @@ sub dump_mixed_call_parens {
       @mixed_counts;
 
     my $output_string = <<EOM;
-mixed paren counts for --dump-mixed-call-parens; see also --want-call-parens=s
+counts with and without call parens made by --dump-mixed-call-parens
 types are 'k'=builtin keyword 's'=user sub  'w'=other word
 type:word:+count:-count
 EOM
@@ -9824,76 +9824,14 @@ EOM
 
 sub initialize_call_paren_style {
 
-    # parse the flag --want-call-parens=string
-
-    # Rules:
-    # - we scan from left to right, so if there are multiple entries for
-    #   a word, the last entry is used
-    # - starting mode is WANT PARENS
-    # - '!' switches to DO NOT WANT PARENS mode
-    # - '+' resets to WANT PARENS mode (if needed for complex lists)
-    # - '&' is default for user-defined subs
-    # - '*' is reserved as possible FUTURE default for SELECTED keywords
-    # - ',' same as space
-
-    # To create an input string:
-    # - first list all words which SHOULD have parens
-    # - then, if some do not get parens, add a '!'
-    # - then list all words which SHOULD NOT have parens;
-    # - Enter '&' instead of a word to indicate a default for sub calls
-
-    # Examples:
-    # wcp='&'            - means all sub calls should have parens
-    # wcp='open close'   - 'open' and 'close' have parens
-    # wcp='! open close' - 'open' and 'close' do NOT have parens
-    # wcp='& ! myfun '   - all subs have perens except 'myfun'
-
+    # parse --want-call-parens=s and --nowant-call-parens=s
     %call_paren_style = ();
-    my $opt = 'want-call-parens';
-    my $str = $rOpts->{$opt};
-    return unless $str;
-
-    my $want_parens = 1;
-    my $err_msg;
-    while (
-        $str =~ m{
-             \G(
-               (\s+) #     whitespace - this must come before \W
-             | (\W)  #  or single-character, non-whitespace punct
-             | (\d+) #  or sequence of digits - must come before \w
-             | (\w+) #  or words not starting with a digit
-             )
-            }gcx
-      )
-    {
-        # skip blanks
-        if    ( defined($2) ) { next }
-        elsif ( defined($3) ) {
-            if    ( $3 eq '!' ) { $want_parens          = 0; }
-            elsif ( $3 eq '+' ) { $want_parens          = 1; }
-            elsif ( $3 eq '*' ) { $call_paren_style{$3} = $want_parens }
-            elsif ( $3 eq '&' ) { $call_paren_style{$3} = $want_parens }
-            elsif ( $3 eq ',' ) { next }
-            else                { $err_msg = "Unexpected symbol '$3'"; last }
+    my $val = 0;
+    foreach my $opt_name ( 'nowant-call-parens', 'want-call-parens' ) {
+        if ( my @q = split_words( $rOpts->{$opt_name} ) ) {
+            @call_paren_style{@q} = ($val) x scalar(@q);
         }
-        elsif ( defined($4) ) {
-            $err_msg = "Unexpected digit '$4'";
-            last;
-        }
-        elsif ( defined($5) ) {
-            if ( defined( $call_paren_style{$5} ) ) {
-                Warn("--$opt has multiple entries for '$5', last is used\n");
-            }
-            $call_paren_style{$5} = $want_parens;
-        }
-        else {
-            ## should never get here
-            $err_msg = "Unexpected token '$1'";
-            last;
-        }
-    }
-    if ($err_msg) {
-        Perl::Tidy::Die("Error parsing --$opt: $err_msg\n");
+        $val++;
     }
     return;
 } ## end sub initialize_call_paren_style
@@ -9993,6 +9931,11 @@ EOM
             if ( length($token_next) > 23 ) {
                 $token_next = substr( $token_next, 0, 20 ) . '...';
             }
+
+            # stop before a ':' to allow use of ':' as spreadsheet col separator
+            my $ii = index( $token_next, ':' );
+            if ( $ii >= 0 ) { $token_next = substr( $token_next, 0, $ii ) }
+
             $message .= "$lno:$token $token_next: $note\n";
         }
         $message .= "End scan for --$opt_name\n";

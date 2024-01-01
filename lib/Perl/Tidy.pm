@@ -3713,6 +3713,7 @@ sub generate_options {
     $add_option->( 'warn-variable-types',          'wvt',  '=s' );
     $add_option->( 'warn-variable-exclusion-list', 'wvxl', '=s' );
     $add_option->( 'want-call-parens',             'wcp',  '=s' );
+    $add_option->( 'nowant-call-parens',           'nwcp', '=s' );
 
     ########################################
     $category = 13;    # Debugging

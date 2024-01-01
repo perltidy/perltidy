@@ -902,7 +902,8 @@ EOM
             'space-signature-paren' => [ 0, 2 ],
             'break-after-labels'    => [ 0, 2 ],
 
-            'want-call-parens' => [ '&', 'open!close' ],
+            'want-call-parens'   => [ '&', 'open', 'close' ],
+            'nowant-call-parens' => [ 'pop', 'open' ],
 
             'want-trailing-commas' => [ '0', '*', 'm', 'b', 'h', 'i', ' ' ],
             'one-line-block-exclusion-list' =>

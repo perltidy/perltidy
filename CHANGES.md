@@ -15,9 +15,9 @@
         k:chomp:3:4
         k:close:7:4
 
-    - Added --warn-call-parens=s (-wcp=s) option which will warn of paren
-      uses which do not match a selected style. The manual has details. But
-      for example,
+    - Added --warn-call-parens=s (-wcp=s) and --nowarn-call-parens=s (-nwcp=s)
+      options which will warn of paren uses which do not match a selected
+      style. The manual has details. But for example,
 
         perltidy -wcp='&' somefile.pl
 
