@@ -1018,6 +1018,18 @@ EOM
     return $severe_error;
 } ## end sub report_tokenization_errors
 
+sub report_v_string {
+
+    # warn if this version can't handle v-strings
+    my ( $self, $tok ) = @_;
+    if ( $] < 5.006 ) {
+        $self->warning(
+"Found v-string '$tok' but v-strings are not implemented in your version of perl; see Camel 3 book ch 2\n"
+        );
+    }
+    return;
+} ## end sub report_v_string
+
 sub is_valid_token_type {
     my ($type) = @_;
     return $is_valid_token_type{$type};
@@ -4605,7 +4617,16 @@ EOM
           )
         {
             # Bareword followed by a fat comma - see 'git18.in'
-            # This was previously sub do_QUOTED_BAREWORD: see c316
+            # This code was previously sub do_QUOTED_BAREWORD: see c316, c317
+
+            #   'v25=>1'   is a v-string key!
+            #   '-v25=>1'  is also a v-string key!
+            if ( $tok =~ /^v\d+$/ ) {
+                $type = 'v';
+                $self->complain("v-string used as hash key\n");
+                $self->report_v_string($tok);
+            }
+
             # If tok is something like 'x17' then it could
             # actually be operator x followed by number 17.
             # For example, here:
@@ -4623,7 +4644,7 @@ EOM
             # a key with 18 a's.  But something like
             #    push @array, a x18;
             # is a syntax error.
-            if (
+            elsif (
                    $expecting == OPERATOR
                 && substr( $tok, 0, 1 ) eq 'x'
                 && ( length($tok) == 1
@@ -4635,6 +4656,7 @@ EOM
                     $type = 'x';
                     $tok  = 'x';
                 }
+                $self->complain("x operator in hash key\n");
             }
             else {
 
@@ -7455,6 +7477,7 @@ sub scan_bare_identifier_do {
                     $tok  = substr( $input_line, $pos_beg, $numc );
                 }
                 $type = 'v';
+                $self->report_v_string($tok);
             }
 
             elsif ( $ris_constant->{$package}{$sub_name} ) {
