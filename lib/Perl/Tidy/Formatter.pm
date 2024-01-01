@@ -274,6 +274,7 @@ my (
     %is_if_unless_and_or_last_next_redo_return,
     %is_if_elsif_else_unless_while_until_for_foreach,
     %is_if_unless_while_until_for_foreach,
+    %is_for_foreach,
     %is_last_next_redo_return,
     %is_if_unless,
     %is_if_elsif,
@@ -707,6 +708,10 @@ BEGIN {
     @q = qw(if unless while until for foreach);
     @is_if_unless_while_until_for_foreach{@q} =
       (1) x scalar(@q);
+
+    # These can have several forms
+    @q = qw(for foreach);
+    @is_for_foreach{@q} = (1) x scalar(@q);
 
     @q = qw(last next redo return);
     @is_last_next_redo_return{@q} = (1) x scalar(@q);
@@ -3045,8 +3050,6 @@ sub set_whitespace_flags {
 
     return $rwhitespace_flags if ( $jmax < 0 );
 
-    my %is_for_foreach = ( 'for' => 1, 'foreach' => 1 );
-
     # function to return $ws for a signature paren following a sub
     my $ws_signature_paren = sub {
         my ($jj) = @_;
@@ -3786,7 +3789,6 @@ EOM
 {    ## begin closure is_essential_whitespace
 
     my %is_sort_grep_map;
-    my %is_for_foreach;
     my %is_digraph;
     my %is_trigraph;
     my %essential_whitespace_filter_l1;
@@ -3805,9 +3807,6 @@ EOM
         # grep aliases on purpose, since here we are looking parens, not braces
         @q = qw(sort grep map);
         @is_sort_grep_map{@q} = (1) x scalar(@q);
-
-        @q = qw(for foreach);
-        @is_for_foreach{@q} = (1) x scalar(@q);
 
         @q = qw(
           .. :: << >> ** && || // -> => += -= .= %= &= |= ^= *= <>
@@ -8731,14 +8730,6 @@ sub scan_variable_usage {
     my %is_my_state    = ( 'my' => 1, 'state' => 1 );
     my %is_valid_sigil = ( '$'  => 1, '@'     => 1, '%' => 1 );
 
-    # These can have the form keyword ( .... ) { BLOCK }
-    my %is_for_foreach = ( 'for' => 1, 'foreach' => 1 );
-    my %is_blocktype_with_paren;
-
-    # Note that 'elsif' is not in this list because it is handled specially
-    my @q = qw(if unless while until for foreach);
-    @is_blocktype_with_paren{@q} = (1) x scalar(@q);
-
     # Variables defining current state:
     my $current_package = 'package main';
 
@@ -9375,7 +9366,7 @@ EOM
                 # look for certain keywords which introduce blocks:
                 # such as 'for my $var (..) { ... }'
                 #--------------------------------------------------
-                elsif ( $is_blocktype_with_paren{$token} ) {
+                elsif ( $is_if_unless_while_until_for_foreach{$token} ) {
                     my $seqno_brace = $seqno_brace_after_paren->($KK);
                     if ($seqno_brace) {
 
@@ -9727,9 +9718,8 @@ sub block_seqno_of_paren_seqno {
     #     |   K_closing_paren
     #     $seqno_paren = seqno of this paren pair
 
-    # FIXME: sub $seqno_brace_after_paren in sub scan_variable_usage can
-    # eventually be simplified to make use of this sub. But we would need to
-    # first add a check for repeated parens.
+    # NOTE: sub '$seqno_brace_after_paren' in sub 'scan_variable_usage' is
+    # similar but sufficiently different that the two subs cannot be merged.
 
     return unless $seqno_paren;
     my $K_closing_paren = $self->[_K_closing_container_]->{$seqno_paren};
