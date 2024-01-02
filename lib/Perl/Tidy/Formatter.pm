@@ -9840,11 +9840,11 @@ sub initialize_call_paren_style {
 
                 # words must be simple identifiers, or '&'
                 if ( $word !~ /^(?:\&|\w+)$/ || $word =~ /^\d/ ) {
-                    Perl::Tidy::Die(
+                    Die(
                         "Unexpected word in --$opt_name: '$word'\n");
                 }
                 if ( $iter && defined( $call_paren_style{$word} ) ) {
-                    Perl::Tidy::Warn(
+                    Warn(
                         "'$word' occurs in both -nwcp and -wcp, using -wcp\n");
                 }
             }
