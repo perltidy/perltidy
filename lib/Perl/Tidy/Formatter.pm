@@ -9791,24 +9791,24 @@ sub dump_mixed_call_parens {
         my ( $no_count, $yes_count, $type ) = @{ $call_counts{$key} };
         next unless ( $no_count && $yes_count );
 
-        # display type 'U' as 's' on output for clarity and better sorted order
-        my $type_out = $type eq 'U' ? 's' : $type;
         push @mixed_counts,
           {
             name      => $key,
-            type      => $type_out,
+            type      => $type,
             no_count  => $no_count,
             yes_count => $yes_count
           };
     }
     return unless (@mixed_counts);
+
+    # sort on lc of type so that user sub type 'U' will come after 'k'
     my @sorted =
-      sort { $a->{type} cmp $b->{type} || $a->{name} cmp $b->{name} }
+      sort { lc $a->{type} cmp lc $b->{type} || $a->{name} cmp $b->{name} }
       @mixed_counts;
 
     my $output_string = <<EOM;
 counts with and without call parens made by --dump-mixed-call-parens
-types are 'k'=builtin keyword 's'=user sub  'w'=other word
+types are 'k'=builtin keyword 'U'=user sub  'w'=other word
 type:word:+count:-count
 EOM
     foreach my $item (@sorted) {
@@ -9848,16 +9848,12 @@ sub scan_call_parens {
     # issues a warning so that the user can make a change if desired.
     # It is risky to add or delete parens automatically; see git #128.
 
-    my $opt_name               = 'want-call-parens';
-    my $rOpts_warn_call_parens = $rOpts->{$opt_name};
-    return unless ($rOpts_warn_call_parens);
+    return unless (%call_paren_style);
+    my $opt_name = 'want-call-parens';
 
     # Types which will be checked:
     # 'k'=builtin keyword, 'U'=user defined sub, 'w'=unknown bareword
     my %is_kwU = ( 'k' => 1, 'w' => 1, 'U' => 1 );
-
-    # if no hash, user may have just entered -wcp='!'
-    return unless (%call_paren_style);
 
     my $rwarnings = [];
 
