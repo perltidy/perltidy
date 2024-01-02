@@ -6424,7 +6424,7 @@ EOM
         Exit(0);
     }
 
-    # Act on -warn-variable-types if requesed and if the logger is available
+    # Act on -warn-variable-types if requested and the logger is available
     # (the logger is deactivated during iterations)
     $self->warn_variable_types()
       if ( $rOpts->{'warn-variable-types'}
@@ -6435,7 +6435,11 @@ EOM
         Exit(0);
     }
 
-    $self->scan_call_parens();
+    # Act on -want-call-parens and --nowant-call-parens requested and the
+    # logger is available (the logger is deactivated during iterations)
+    $self->scan_call_parens()
+      if ( %call_paren_style
+        && $self->[_logger_object_] );
 
     $self->examine_vertical_tightness_flags();
 
@@ -9840,12 +9844,10 @@ sub initialize_call_paren_style {
 
                 # words must be simple identifiers, or '&'
                 if ( $word !~ /^(?:\&|\w+)$/ || $word =~ /^\d/ ) {
-                    Die(
-                        "Unexpected word in --$opt_name: '$word'\n");
+                    Die("Unexpected word in --$opt_name: '$word'\n");
                 }
                 if ( $iter && defined( $call_paren_style{$word} ) ) {
-                    Warn(
-                        "'$word' occurs in both -nwcp and -wcp, using -wcp\n");
+                    Warn("'$word' occurs in both -nwcp and -wcp, using -wcp\n");
                 }
             }
             @call_paren_style{@q} = ($iter) x scalar(@q);
