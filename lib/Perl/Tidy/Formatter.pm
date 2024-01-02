@@ -9825,13 +9825,31 @@ EOM
 sub initialize_call_paren_style {
 
     # parse --want-call-parens=s and --nowant-call-parens=s
+    # and store results in this global hash:
     %call_paren_style = ();
-    my $val = 0;
+    my $iter = -1;
     foreach my $opt_name ( 'nowant-call-parens', 'want-call-parens' ) {
-        if ( my @q = split_words( $rOpts->{$opt_name} ) ) {
-            @call_paren_style{@q} = ($val) x scalar(@q);
+        $iter++;
+        my $opt = $rOpts->{$opt_name};
+        next unless defined($opt);
+
+        # allow comma separators
+        $opt =~ s/,/ /g;
+        if ( my @q = split_words($opt) ) {
+            foreach my $word (@q) {
+
+                # words must be simple identifiers, or '&'
+                if ( $word !~ /^(?:\&|\w+)$/ || $word =~ /^\d/ ) {
+                    Perl::Tidy::Die(
+                        "Unexpected word in --$opt_name: '$word'\n");
+                }
+                if ( $iter && defined( $call_paren_style{$word} ) ) {
+                    Perl::Tidy::Warn(
+                        "'$word' occurs in both -nwcp and -wcp, using -wcp\n");
+                }
+            }
+            @call_paren_style{@q} = ($iter) x scalar(@q);
         }
-        $val++;
     }
     return;
 } ## end sub initialize_call_paren_style
