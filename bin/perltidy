@@ -5575,7 +5575,7 @@ reviewing them, especially for new code.
 
 =item B<Use --warn-variable-types to warn about certain variable types>
 
-The flag B<--warn-variable-types=string>, or B<-wvt=string>, can be used to to
+The flag B<--warn-variable-types=string>, or B<-wvt=string>, can be used to
 produce a warning message if certain of the above variable types are
 encountered during formatting.   The input parameter B<string> is a
 a concatenation of the letters associated with the types of variables
@@ -5629,9 +5629,8 @@ keyword. So from this partial output we see that the author had a preference
 for parens around the args of C<length> and C<open>, whereas C<pop> was about
 equally likely to have parens as not.
 
-A detailed list list of each occurance of a particular operator use, either
-without or with parens, can be made with the parameters B<--want-call-parens=s>
-and B<--nowant-call-parens=s> described in the next section.
+More detailed information can be obtained with the parameters described in the
+next section.
 
 =item B<Use --want-call-parens=s and --nowant-call-parens=s to warn about specific missing or extra call parens>
 
@@ -5639,42 +5638,35 @@ The parameter B<--want-call-parens=s>, or B<-wcp=s>, can be used to to produce
 a warning message if call parens are missing from selected functions.
 Likewise, B<--nowant-call-parens=s>, or B<-nwcp=s>, can warn if call parens
 exist for selected functions.  When either of these parameters are set,
-perltidy will will look for a discrepancy from the requested styles while it
-does its normal formatting operations.
-
-If a function name is entered in both lists, the entry in B<-wcp> will apply.
+perltidy will report any discrepancies from the requested style in its error
+output.
 
 Before using either of these parameters, it may be helpful to first use
 B<--dump-mixed-call-parens=s>, described in the previous section, to get an
 overview of the existing paren usage in a file.
 
 The string arguments B<s> are space-separated lists of the names of the
-functions to be checked.  The function names may builtin keywords or
+functions to be checked.  The function names may be builtin keywords or
 user-defined subs.  They may not include a package prefix or sigil.
-
-For builtin keywords which have both a block form and a trailing modifier form,
-such as C<if>, only the trailing modifier form will be checked because
-parens are mandatory for the block form.
-
 To illustrate,
 
    perltidy -wcp='length open' -nwcp='pop'   somefile.pl
 
-means that the builtin functions C<length> and C<open> should have parens around
-their call args but C<pop> should not.  If this is run on the example file
-discussed in the previous section, the error output will contain lines such as:
+means that the builtin functions C<length> and C<open> should have parens
+around their call args but C<pop> should not.  The error output might contain
+lines such as:
 
     2314:open FD_TO_CLOSE: no call parens
     3652:pop (: has call parens
     3783:length $DB: no call parens
     ...
 
-In this particular case, the list will contain the 9 entries for C<length>, 9
-entries for C<open>, and 3 entries for C<pop>, which were discovered with the
-B<-dmcp> parameter in the previous section.
+For builtin keywords which have both a block form and a trailing modifier form,
+such as C<if>, only the trailing modifier form will be checked since
+parens are mandatory for the block form.
 
 The symbol B<&> may entered instead of a function name to mean all user-defined
-subs not explicitely listed.  So the compact expression
+subs not explicitly listed.  So the compact expression
 
    perltidy -wcp='&' somefile.pl
 
@@ -5682,14 +5674,14 @@ means that calls to all user-defined subs in the file being processed
 should have their call arguments enclosed in parens.
 
 Perltidy does not have the ability to add or delete call parens because it is
-difficult to automate, so changes must be done by hand editing.  When adding or
+difficult to automate, so changes must be made manually.  When adding or
 removing parentheses, it is essential to pay attention to operator precedence
 issues.  For example, if the parens in the following statement are
 removed, then C<||> must be changed to C<or>:
 
     open( IN, "<", $infile ) || die("cannot open $infile:$!\n");
 
-Otherwise, the C<||> will operate on C<$infile> and not the return value of
+Otherwise, the C<||> will operate on C<$infile> rather than the return value of
 C<open>.
 
 =item B<Working with MakeMaker, AutoLoader and SelfLoader>
