@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2023 09 12.09
+## 2023 09 12.10
 
     - Added --dump-mixed-call-parens (-dmcp ) which will dump a list
       of operators which are sometimes followed by parens and sometimes not.

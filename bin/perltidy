@@ -6142,7 +6142,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20230912.09
+This man page documents perltidy version 20230912.10
 
 =head1 BUG REPORTS
 
