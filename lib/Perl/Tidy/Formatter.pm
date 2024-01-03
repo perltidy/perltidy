@@ -30440,7 +30440,7 @@ sub get_seqno {
 
         # Undo continuation indentation in certain sequences
         my ( $self, $ri_first, $ri_last, $rix_seqno_controlling_ci ) = @_;
-        my ( $line_1, $line_2, $lev_last );
+        my ( $line_1, $line_2 );
         my $max_line = @{$ri_first} - 1;
 
         my $rseqno_controlling_my_ci = $self->[_rseqno_controlling_my_ci_];
@@ -30489,7 +30489,6 @@ sub get_seqno {
 
             my $ibeg = $ri_first->[$line];
             my $iend = $ri_last->[$line];
-            my $lev  = $levels_to_go[$ibeg];
 
             #-----------------------------------
             # SECTION 1: Undo needless common CI
@@ -30513,7 +30512,11 @@ sub get_seqno {
             #        sort { $a <=> $b }
             #        grep { $lookup->{$_} ne $default } keys %$lookup );
 
-            if ( $line > 0 && !$skip_SECTION_1 ) {
+            if ( $line && !$skip_SECTION_1 ) {
+
+                my $ibeg_last = $ri_first->[ $line - 1 ];
+                my $lev       = $levels_to_go[$ibeg];
+                my $lev_last  = $levels_to_go[$ibeg_last];
 
                 # if we have started a chain..
                 if ($line_1) {
@@ -30653,8 +30656,6 @@ sub get_seqno {
                     $undo_extended_ci{$seqno} = 1;
                 }
             }
-
-            $lev_last = $lev;
         }
 
         return;
