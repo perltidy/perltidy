@@ -48,30 +48,35 @@ use Getopt::Std;
 use IO::File;
 $| = 1;
 use vars qw($opt_c $opt_h);
-my $usage = <<EOM;
+main();
+
+sub main {
+    my $usage = <<EOM;
    usage: perlmask [ -cn ] filename >outfile
 EOM
-getopts('c:h') or die "$usage";
-if ($opt_h) { die $usage }
-unless ( defined($opt_c) ) { $opt_c = 0 }
-if (@ARGV > 1) { die $usage }
+    getopts('c:h') or die "$usage";
+    if     ($opt_h)            { die $usage }
+    unless ( defined($opt_c) ) { $opt_c = 0 }
+    if     ( @ARGV > 1 )       { die $usage }
 
-my $source=$ARGV[0];   # an undefined filename will become stdin
+    my $source = $ARGV[0];    # an undefined filename will become stdin
 
-# strings to hold the files (arrays could be used to)
-my ( $masked_file, $original_file );  
+    # strings to hold the files (arrays could be used to)
+    my ( $masked_file, $original_file );
 
-PerlMask::perlmask(
-    _source         => $source,
-    _rmasked_file   => \$masked_file,
-    _roriginal_file => \$original_file,    # optional
-    _compression    => $opt_c              # optional, default=0
-);
+    PerlMask::perlmask(
+        _source         => $source,
+        _rmasked_file   => \$masked_file,
+        _roriginal_file => \$original_file,    # optional
+        _compression    => $opt_c              # optional, default=0
+    );
 
-# Now we have the masked and original files in strings of equal length.
-# We could search for specific text in the masked file here.  But here
-# we'll just print the masked file:
-if ($masked_file) { print $masked_file; }
+    # Now we have the masked and original files in strings of equal length.
+    # We could search for specific text in the masked file here.  But here
+    # we'll just print the masked file:
+    if ($masked_file) { print $masked_file; }
+    return;
+}
 
 #####################################################################
 #
@@ -112,25 +117,25 @@ use Perl::Tidy;
 
 sub perlmask {
 
-    my %args = ( _compression => 0, @_ );
+    my %args  = ( _compression => 0, @_ );
     my $rfile = $args{_rmasked_file};
     unless ( defined($rfile) ) {
         croak
           "Missing required parameter '_rmasked_file' in call to perlmask\n";
     }
-    my $ref=ref($rfile);
+    my $ref = ref($rfile);
     unless ( $ref =~ /^(SCALAR|ARRAY)$/ ) {
-            croak <<EOM;
+        croak <<EOM;
 Expecting _rmasked_file = ref to SCALAR or ARRAY in perlmask but got : ($ref)
 EOM
     }
 
     # run perltidy, which will call $formatter's write_line() for each line
-    my $err=perltidy(
+    my $err = perltidy(
         'source'    => $args{_source},
         'formatter' => bless( \%args, __PACKAGE__ ),    # callback object
-        'argv'        => "-npro -se",    # -npro : ignore .perltidyrc,
-                                         # -se   : errors to STDOUT
+        'argv'      => "-npro -se",    # -npro : ignore .perltidyrc,
+                                       # -se   : errors to STDOUT
     );
     if ($err) {
         die "Error calling perltidy\n";
@@ -173,11 +178,11 @@ sub write_line {
         my $len = length($input_line);
         if ( $opt_c == 0 && $len > 0 ) {
             print_line( $roriginal_file, $input_line ) if $roriginal_file;
-            print_line( $rmasked_file, '#' x $len ); 
+            print_line( $rmasked_file,   '#' x $len );
         }
         else {
             print_line( $roriginal_file, $input_line ) if $roriginal_file;
-            print_line( $rmasked_file, "" );
+            print_line( $rmasked_file,   "" );
         }
         return;
     }
@@ -189,7 +194,7 @@ sub write_line {
     if ( $opt_c <= 1 ) {
 
         # Find leading whitespace.  But be careful..we don't want the
-        # whitespace if it is part of quoted text, because it will 
+        # whitespace if it is part of quoted text, because it will
         # already be contained in a token.
         if ( $input_line =~ /^(\s+)/ && !$line_of_tokens->{_starting_in_quote} )
         {
@@ -232,7 +237,7 @@ sub write_line {
         }
     }
     print_line( $roriginal_file, $input_line ) if $roriginal_file;
-    print_line( $rmasked_file, $masked_line );
+    print_line( $rmasked_file,   $masked_line );
 
     # self-check lengths; this error should never happen
     if ( $opt_c == 0 && length($masked_line) != length($input_line) ) {

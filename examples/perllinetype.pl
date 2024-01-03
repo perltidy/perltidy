@@ -18,43 +18,47 @@ use Perl::Tidy;
 use IO::File;
 $| = 1;
 use vars qw($opt_h);
-my $usage = <<EOM;
+main();
+
+sub main {
+    my $usage = <<EOM;
    usage: perllinetype filename >outfile
 EOM
-getopts('h') or die "$usage";
-if ($opt_h) { die $usage }
+    getopts('h') or die "$usage";
+    if ($opt_h) { die $usage }
 
-# Make the source for perltidy, which will be a filehandle
-# or just '-' if the source is stdin
-my ($file, $fh, $source);
-if ( @ARGV == 0 ) {
-    $source = '-';
+    # Make the source for perltidy, which will be a filehandle
+    # or just '-' if the source is stdin
+    my ( $file, $fh, $source );
+    if ( @ARGV == 0 ) {
+        $source = '-';
+    }
+    elsif ( @ARGV == 1 ) {
+        $file = $ARGV[0];
+        $fh   = IO::File->new( $file, 'r' );
+        unless ($fh) { die "cannot open '$file': $!\n" }
+        $source = $fh;
+    }
+    else { die $usage }
+
+    # make the callback object
+    my $formatter = MyFormatter->new();
+
+    my $dest;
+
+    # start perltidy, which will start calling our write_line()
+    my $err = perltidy(
+        'formatter'   => $formatter,     # callback object
+        'source'      => $source,
+        'destination' => \$dest,         # (not really needed)
+        'argv'        => "-npro -se",    # dont need .perltidyrc
+                                         # errors to STDOUT
+    );
+    if ($err) {
+        die "Error calling perltidy\n";
+    }
+    $fh->close() if $fh;
 }
-elsif ( @ARGV == 1 ) {
-    $file = $ARGV[0];
-    $fh = IO::File->new( $file, 'r' );
-    unless ($fh) { die "cannot open '$file': $!\n" }
-    $source = $fh;
-}
-else { die $usage }
-
-# make the callback object
-my $formatter = MyFormatter->new(); 
-
-my $dest;
-
-# start perltidy, which will start calling our write_line()
-my $err=perltidy(
-    'formatter'   => $formatter,     # callback object
-    'source'      => $source,
-    'destination' => \$dest,         # (not really needed)
-    'argv'        => "-npro -se",    # dont need .perltidyrc
-                                     # errors to STDOUT
-);
-if ($err) {
-    die "Error calling perltidy\n";
-}
-$fh->close() if $fh;
 
 package MyFormatter;
 

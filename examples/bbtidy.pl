@@ -3,10 +3,12 @@
 # This program was posted on the MacPerl mailing list by 
 # Charles Albrecht as one way to get perltidy to work as a filter
 # under BBEdit.
+# 20240102: slh fixed obvious error found with -duv: ('my' inside BEGIN block)
 
 use Perl::Tidy;
 
-BEGIN { my $input_string = ""; my $output_string = ""; }
+my ($input_string, $output_string);
+BEGIN { $input_string = ""; $output_string = ""; }
 
 $input_string .= $_;
 

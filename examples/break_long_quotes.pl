@@ -25,23 +25,28 @@ use Getopt::Std;
 $| = 1;
 use vars qw($opt_l $opt_h);
 
-my $usage = <<EOM;
+main();
+
+sub main {
+
+    my $usage = <<EOM;
    usage: break_long_quotes.pl [ -ln ] filename >outfile
           where n=line length (default 72)
 EOM
 
-getopts('hl:') or die "$usage";
-if ($opt_h) { die $usage }
-if ( !defined $opt_l ) {
-    $opt_l = 70;
-}
-else {
-    $opt_l =~ /^\d+$/ or die "$usage";
-}
+    getopts('hl:') or die "$usage";
+    if ($opt_h) { die $usage }
+    if ( !defined $opt_l ) {
+        $opt_l = 70;
+    }
+    else {
+        $opt_l =~ /^\d+$/ or die "$usage";
+    }
 
-unless ( @ARGV == 1 ) { die $usage }
-my $file = $ARGV[0];
-scan_file( $file, $opt_l );
+    unless ( @ARGV == 1 ) { die $usage }
+    my $file = $ARGV[0];
+    scan_file( $file, $opt_l );
+}
 
 sub scan_file {
     my ( $file, $line_length ) = @_;
@@ -51,13 +56,13 @@ sub scan_file {
     unless ($fh) { die "cannot open '$file': $!\n" }
     my $formatter = MyWriter->new($line_length);
 
-    my $err=perltidy(
+    my $err = perltidy(
         'formatter' => $formatter,     # callback object
         'source'    => $fh,
         'argv'      => "-npro -se",    # don't need .perltidyrc
                                        # errors to STDOUT
     );
-    if ($err){
+    if ($err) {
         die "Error calling perltidy\n";
     }
     $fh->close();
@@ -107,7 +112,7 @@ sub write_line {
 
         # find leading whitespace
         my $leading_whitespace = ( $input_line =~ /^(\s*)/ ) ? $1 : "";
-        if ($starting_in_quote) {$leading_whitespace=""};
+        if ($starting_in_quote) { $leading_whitespace = "" }
         my $new_line = $leading_whitespace;
 
         # loop over tokens looking for quotes (token type Q)
@@ -119,7 +124,7 @@ sub write_line {
             # look for long quoted strings on a single line
             # (multiple line quotes not currently handled)
             if (   $$rtoken_type[$j] eq 'Q'
-                && !( $j == 0     && $starting_in_quote )
+                && !( $j == 0 && $starting_in_quote )
                 && !( $j == $jmax && $ending_in_quote )
                 && ( length($token) > $max_quote_length ) )
             {
@@ -148,7 +153,7 @@ EOM
     } ## end if ( $line_type eq 'CODE')
 
     # print the line
-    $self->print($input_line."\n");
+    $self->print( $input_line . "\n" );
     return;
 } ## end sub write_line
 
@@ -157,8 +162,7 @@ sub break_at_blanks {
     # break a string at one or more spaces so that the longest substring is
     # less than the desired length (if possible).
     my ( $str, $quote_char, $max_length ) = @_;
-    my $blank     = ' ';
-    my $prev_char = "";
+    my $blank = ' ';
     my @break_after_pos;
     my $quote_pos = -1;
     while ( ( $quote_pos = index( $str, $blank, 1 + $quote_pos ) ) >= 0 ) {
@@ -196,5 +200,4 @@ sub print {
 # called once after the last line of a file
 sub finish_formatting {
     my $self = shift;
-    $self->flush_comments();
 }

@@ -11,7 +11,9 @@ use strict;
 #
 # Steve Hancock, June 2006
 #
-my $usage = <<EOM;
+main();
+sub main {
+    my $usage = <<EOM;
  usage:
  perltidyrc_dump.pl [-d -s -q -h] [ filename ]
   filename is the name of a .perltidyrc config file to dump, or
@@ -23,71 +25,72 @@ my $usage = <<EOM;
   -q quiet: no comments 
   -h help
 EOM
-use Getopt::Std;
-my %my_opts;
-my $cmdline = $0 . " " . join " ", @ARGV;
-getopts( 'hdsq', \%my_opts ) or die "$usage";
-if ( $my_opts{h} ) { die "$usage" }
-if ( @ARGV > 1 )   { die "$usage" }
+    use Getopt::Std;
+    my %my_opts;
+    my $cmdline = $0 . " " . join " ", @ARGV;
+    getopts( 'hdsq', \%my_opts ) or die "$usage";
+    if ( $my_opts{h} ) { die "$usage" }
+    if ( @ARGV > 1 )   { die "$usage" }
 
-my $config_file = $ARGV[0];
-my (
-    $error_message, $rOpts,          $rGetopt_flags,
-    $rsections,     $rabbreviations, $rOpts_default,
-    $rabbreviations_default,
+    my $config_file = $ARGV[0];
+    my (
+        $error_message, $rOpts,          $rGetopt_flags,
+        $rsections,     $rabbreviations, $rOpts_default,
+        $rabbreviations_default,
 
-) = read_perltidyrc($config_file);
+    ) = read_perltidyrc($config_file);
 
-# always check the error message first
-if ($error_message) {
-    die "$error_message\n";
-}
+    # always check the error message first
+    if ($error_message) {
+        die "$error_message\n";
+    }
 
-# make a list of perltidyrc options which are same as default
-my %equals_default;
-foreach my $long_name ( keys %{$rOpts} ) {
-    my $val = $rOpts->{$long_name};
-    if ( defined( $rOpts_default->{$long_name} ) ) {
-        my $val2 = $rOpts_default->{$long_name};
-        if ( defined($val2) && defined($val) ) {
-            $equals_default{$long_name} = ( $val2 eq $val );
+    # make a list of perltidyrc options which are same as default
+    my %equals_default;
+    foreach my $long_name ( keys %{$rOpts} ) {
+        my $val = $rOpts->{$long_name};
+        if ( defined( $rOpts_default->{$long_name} ) ) {
+            my $val2 = $rOpts_default->{$long_name};
+            if ( defined($val2) && defined($val) ) {
+                $equals_default{$long_name} = ( $val2 eq $val );
+            }
         }
     }
-}
 
-# Optional: minimize the perltidyrc file length by deleting long_names
-# in $rOpts which are also in $rOpts_default and have the same value.
-# This would be useful if a perltidyrc file has been constructed from a
-# full parameter dump, for example.
-if ( $my_opts{d} ) {
-    foreach my $long_name ( keys %{$rOpts} ) {
-        delete $rOpts->{$long_name} if $equals_default{$long_name};
+    # Optional: minimize the perltidyrc file length by deleting long_names
+    # in $rOpts which are also in $rOpts_default and have the same value.
+    # This would be useful if a perltidyrc file has been constructed from a
+    # full parameter dump, for example.
+    if ( $my_opts{d} ) {
+        foreach my $long_name ( keys %{$rOpts} ) {
+            delete $rOpts->{$long_name} if $equals_default{$long_name};
+        }
     }
-}
 
-# find user-defined abbreviations
-my %abbreviations_user;
-foreach my $key ( keys %$rabbreviations ) {
-    unless ( $rabbreviations_default->{$key} ) {
-        $abbreviations_user{$key} = $rabbreviations->{$key};
+    # find user-defined abbreviations
+    my %abbreviations_user;
+    foreach my $key ( keys %$rabbreviations ) {
+        unless ( $rabbreviations_default->{$key} ) {
+            $abbreviations_user{$key} = $rabbreviations->{$key};
+        }
     }
-}
 
-# dump the options, if any
-if ( %$rOpts || %abbreviations_user ) {
-    dump_options( $cmdline, \%my_opts, $rOpts, $rGetopt_flags, $rsections,
-        $rabbreviations, \%equals_default, \%abbreviations_user );
-}
-else {
-    if ($config_file) {
-        print STDERR <<EOM;
-No configuration parameters seen in file: $config_file
-EOM
+    # dump the options, if any
+    if ( %$rOpts || %abbreviations_user ) {
+        dump_options( $cmdline, \%my_opts, $rOpts, $rGetopt_flags, $rsections,
+            $rabbreviations, \%equals_default, \%abbreviations_user );
     }
     else {
-        print STDERR <<EOM;
+        if ($config_file) {
+            print STDERR <<EOM;
+No configuration parameters seen in file: $config_file
+EOM
+        }
+        else {
+            print STDERR <<EOM;
 No .perltidyrc file found, use perltidy -dpro to see locations checked.
 EOM
+        }
     }
 }
 
@@ -121,18 +124,16 @@ sub dump_options {
 
     # build a table for long_name->short_name abbreviations
     my %short_name;
-    foreach my $abbrev ( keys %{$rabbreviations} ) {
-        foreach my $abbrev ( sort keys %$rabbreviations ) {
-            my @list = @{ $$rabbreviations{$abbrev} };
+    foreach my $abbrev ( sort keys %$rabbreviations ) {
+        my @list = @{ $$rabbreviations{$abbrev} };
 
-            # an abbreviation may expand into one or more other words,
-            # but only those that expand to a single word (which must be
-            # one of the long names) are the short names that we want
-            # here.
-            next unless @list == 1;
-            my $long_name = $list[0];
-            $short_name{$long_name} = $abbrev;
-        }
+        # an abbreviation may expand into one or more other words,
+        # but only those that expand to a single word (which must be
+        # one of the long names) are the short names that we want
+        # here.
+        next unless @list == 1;
+        my $long_name = $list[0];
+        $short_name{$long_name} = $abbrev;
     }
 
     unless ( $rmy_opts->{q} ) {

@@ -18,41 +18,47 @@ use Perl::Tidy;
 use IO::File;
 use Getopt::Std;
 use vars qw($opt_h);
-my $file;
-my $usage = <<EOM;
+
+main();
+
+sub main {
+    my $file;
+    my $usage = <<EOM;
    usage: perlxmltok filename >outfile
 EOM
-getopts('h') or die "$usage";
-if ($opt_h) {die $usage}
-if ( @ARGV == 1 ) {
-    $file = $ARGV[0];
-}
-else { die $usage }
-my $source;
-my $fh;
-if ($file) {
-    $fh = IO::File->new( $file, 'r' );
-    unless ($fh) { die "cannot open '$file': $!\n" }
-    $source = $fh;
-}
-else {
-    $source = '-';
-}
-my $formatter = Perl::Tidy::XmlWriter->new($file);
-my $dest;
+    getopts('h') or die "$usage";
+    if ($opt_h) { die $usage }
+    if ( @ARGV == 1 ) {
+        $file = $ARGV[0];
+    }
+    else { die $usage }
+    my $source;
+    my $fh;
+    if ($file) {
+        $fh = IO::File->new( $file, 'r' );
+        unless ($fh) { die "cannot open '$file': $!\n" }
+        $source = $fh;
+    }
+    else {
+        $source = '-';
+    }
+    my $formatter = Perl::Tidy::XmlWriter->new($file);
+    my $dest;
 
-# start perltidy, which will start calling our write_line()
-my $err = perltidy(
-    'formatter'   => $formatter,    # callback object
-    'source'      => $source,
-    'destination' => \$dest,        # not really needed
-    'argv'        => "-npro -se",   # dont need .perltidyrc
-                                    # errors to STDOUT
-);
-if ($err) {
-    die "Error calling perltidy\n";
+    # start perltidy, which will start calling our write_line()
+    my $err = perltidy(
+        'formatter'   => $formatter,     # callback object
+        'source'      => $source,
+        'destination' => \$dest,         # not really needed
+        'argv'        => "-npro -se",    # dont need .perltidyrc
+                                         # errors to STDOUT
+    );
+    if ($err) {
+        die "Error calling perltidy\n";
+    }
+    $fh->close() if $fh;
+    return;
 }
-$fh->close() if $fh;
 
 #####################################################################
 #
@@ -222,7 +228,7 @@ BEGIN {
 sub markup_tokens {
     my $self = shift;
     my ( $rtokens, $rtoken_type ) = @_;
-    my ( @marked_tokens, $j, $string, $type, $token );
+    my ( @marked_tokens, $j, $type, $token );
 
     for ( $j = 0 ; $j < @$rtoken_type ; $j++ ) {
         $type  = $$rtoken_type[$j];

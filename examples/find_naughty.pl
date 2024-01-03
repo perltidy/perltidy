@@ -6,7 +6,7 @@ use strict;
 #
 # usage:
 # find_naughty file1 [file2 [...]]
-# find_naughty <file.pl 
+# find_naughty <file.pl
 #
 # Author: Steve Hancock, July 2003
 #
@@ -20,19 +20,22 @@ use Getopt::Std;
 use IO::File;
 $| = 1;
 use vars qw($opt_h);
-my $usage = <<EOM;
+main();
+
+sub main {
+    my $usage = <<EOM;
 usage:
   find_naughty file1 [file2 [...]]
   find_naughty <file.pl 
 EOM
-getopts('h') or die "$usage";
-if ($opt_h) { die $usage }
+    getopts('h') or die "$usage";
+    if ($opt_h) { die $usage }
 
-unless (@ARGV) { unshift @ARGV, '-' }    # stdin
-foreach my $source (@ARGV) {
-    PerlTokenSearch::find_naughty(
-        _source   => $source,
-    );
+    unless (@ARGV) { unshift @ARGV, '-' }    # stdin
+    foreach my $source (@ARGV) {
+        PerlTokenSearch::find_naughty( _source => $source, );
+    }
+    return;
 }
 
 #####################################################################
@@ -41,7 +44,7 @@ foreach my $source (@ARGV) {
 # source filehandle and looks for selected variables.
 #
 # It works by making a callback object with a write_line() method to
-# receive tokenized lines from perltidy.  
+# receive tokenized lines from perltidy.
 #
 # Usage:
 #
@@ -60,15 +63,15 @@ use Perl::Tidy;
 
 sub find_naughty {
 
-    my %args = ( @_ );
+    my %args = (@_);
     print "Testing File: $args{_source}\n";
 
     # run perltidy, which will call $formatter's write_line() for each line
-    my $err=perltidy(
+    my $err = perltidy(
         'source'    => $args{_source},
         'formatter' => bless( \%args, __PACKAGE__ ),    # callback object
-        'argv' => "-npro -se",    # -npro : ignore .perltidyrc,
-                                  # -se   : errors to STDOUT
+        'argv'      => "-npro -se",    # -npro : ignore .perltidyrc,
+                                       # -se   : errors to STDOUT
     );
     if ($err) {
         die "Error calling perltidy\n";
@@ -80,7 +83,7 @@ sub write_line {
     # This is called back from perltidy line-by-line
     # We're looking for $`, $&, and $'
     my ( $self, $line_of_tokens ) = @_;
-    my $source            = $self->{_source};
+    my $source = $self->{_source};
 
     # pull out some stuff we might need
     my $line_type         = $line_of_tokens->{_line_type};
@@ -104,8 +107,7 @@ sub write_line {
 
         # and check it
         if ( $token =~ /^\$[\`\&\']$/ ) {
-            print STDERR
-              "$source:$input_line_number: $token\n";
+            print STDERR "$source:$input_line_number: $token\n";
         }
     }
 }

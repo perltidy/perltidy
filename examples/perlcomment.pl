@@ -43,23 +43,28 @@ use Text::Autoformat;
 $| = 1;
 use vars qw($opt_l $opt_h);
 
-my $usage = <<EOM;
+main();
+
+sub main {
+    my $usage = <<EOM;
    usage: perlcomment [ -ln ] filename >outfile
           where n=line length (default 72)
 EOM
 
-getopts('hl:') or die "$usage";
-if ($opt_h) { die $usage }
-if ( !defined $opt_l ) {
-    $opt_l = 72;
-}
-else {
-    $opt_l =~ /^\d+$/ or die "$usage";
-}
+    getopts('hl:') or die "$usage";
+    if ($opt_h) { die $usage }
+    if ( !defined $opt_l ) {
+        $opt_l = 72;
+    }
+    else {
+        $opt_l =~ /^\d+$/ or die "$usage";
+    }
 
-unless ( @ARGV == 1 ) { die $usage }
-my $file = $ARGV[0];
-autoformat_file( $file, $opt_l );
+    unless ( @ARGV == 1 ) { die $usage }
+    my $file = $ARGV[0];
+    autoformat_file( $file, $opt_l );
+    return;
+}
 
 sub autoformat_file {
     my ( $file, $line_length ) = @_;
