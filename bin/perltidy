@@ -5561,15 +5561,24 @@ order skip temporary package changes.
 
 =item B<u: unused variables>
 
-These are variables which occur just one time in their scope in the program
-text.  Calling them B<unused> is convenient but not really accurate. There
-are many reasons for having such variables.  For example, they might occur in a
-list of values provided by another routine or data structure, and therefor must
-be listed, even though they might not be referenced again. Or they might be
-defined for possible future program development, clarity or debugging.  But
-sometimes they can occur due to being orphaned by a coding change, due to a
-misspelling, or by having an unintentional preceding C<my>.  So it is worth
-reviewing them, especially for new code.
+These are variables which are declared with a C<my> and not referenced again
+within their scope.  Calling them B<unused> is convenient but not really
+accurate. There are many reasons for having such variables.  For example, they
+might occur in a list of values provided by another routine or data structure,
+and therefor must be listed, even though they might not be referenced again. Or
+they might be defined for possible future program development, clarity or
+debugging.  But sometimes they can occur due to being orphaned by a coding
+change, due to a misspelling, or by having an unintentional preceding C<my>.
+So it is worth reviewing them, especially for new code.  Here is a simple
+example of an error in an old script found with this method:
+
+   BEGIN { my $string = "" }
+   ...
+   $string .= "ok:";
+
+It looks nice, but the C<my> declaration in braces is reported as unused since
+its scope is limited by the braces.  This would have also been caught by perl
+if the author had used C<strict>.
 
 =back
 
