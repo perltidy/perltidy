@@ -380,6 +380,9 @@ my (
     # INITIALIZER: sub initialize_call_paren_style
     %call_paren_style,
 
+    # INITIALIZER: sub initialize_warn_variable_types
+    %is_warn_variable_excluded_name,
+
     # regex patterns for text identification.
     # Most can be configured by user parameters.
     # Most are initialized in a sub make_**_pattern during configuration.
@@ -1437,6 +1440,8 @@ sub check_options {
     initialize_missing_else_comment();
 
     initialize_call_paren_style();
+
+    initialize_warn_variable_types();
 
     make_bli_pattern();
 
@@ -6900,7 +6905,6 @@ sub count_sub_args {
                 # Look back for ' ) = @_'
                 my $K_mm = $self->K_previous_code($K_m);
                 return '*' unless defined($K_mm);
-                my $type_mm  = $rLL->[$K_mm]->[_TYPE_];
                 my $token_mm = $rLL->[$K_mm]->[_TOKEN_];
                 my $seqno_mm = $rLL->[$K_mm]->[_TYPE_SEQUENCE_];
 
@@ -6960,7 +6964,6 @@ sub count_sub_args {
 
                         my $K_mm = $self->K_previous_code($K_m);
                         return '*' unless defined($K_mm);
-                        my $type_mm  = $rLL->[$K_mm]->[_TYPE_];
                         my $token_mm = $rLL->[$K_mm]->[_TOKEN_];
                         if ( $token_mm eq '$self' || $token_mm eq '$class' ) {
                             $shift_count--;
@@ -7645,7 +7648,6 @@ sub set_ci {
     my $ris_asub_block       = $self->[_ris_asub_block_];
     my $K_opening_container  = $self->[_K_opening_container_];
     my $K_closing_container  = $self->[_K_closing_container_];
-    my $K_opening_ternary    = $self->[_K_opening_ternary_];
     my $K_closing_ternary    = $self->[_K_closing_ternary_];
     my $rlines               = $self->[_rlines_];
     my $rtype_count_by_seqno = $self->[_rtype_count_by_seqno_];
@@ -7740,8 +7742,6 @@ sub set_ci {
                 if ($Kn) {
                     my $type_kn = $rLL->[$Kn]->[_TYPE_];
                     if ( $is_ternary{$type_kn} ) {
-                        my $level_KK = $rLL->[$KK]->[_LEVEL_];
-                        my $level_Kn = $rLL->[$Kn]->[_LEVEL_];
                         $rLL->[$KK]->[_LEVEL_] = $rLL->[$Kn]->[_LEVEL_];
 
                         # and use the ci of a terminating ':'
@@ -7935,8 +7935,6 @@ sub set_ci {
                         # do this, so this is not a critical operation.
                         if ( $is_block_with_ci{$block_type} ) {
                             my $parent_seqno = $rparent->{_seqno};
-                            my $rtype_count_p =
-                              $rtype_count_by_seqno->{$parent_seqno};
                             if (
 
                                 # only do this within containers
@@ -8726,7 +8724,6 @@ sub scan_variable_usage {
     my $rlines               = $self->[_rlines_];
     my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
     my $ris_sub_block        = $self->[_ris_sub_block_];
-    my $K_opening_container  = $self->[_K_opening_container_];
     my $K_closing_container  = $self->[_K_closing_container_];
     my $rK_next_seqno_by_K   = $self->[_rK_next_seqno_by_K_];
 
@@ -9181,8 +9178,6 @@ EOM
         # Look back for the sigil
         my $Kp = $self->K_previous_code($KK);
 
-        my $type  = $rLL->[$Kp]->[_TYPE_];
-        my $token = $rLL->[$Kp]->[_TOKEN_];
         return unless ( defined($Kp) && $rLL->[$Kp]->[_TYPE_] eq 't' );
         my $sigil_string = $rLL->[$Kp]->[_TOKEN_];
 
@@ -9356,8 +9351,7 @@ EOM
                     $my_starting_count = 0;
                     my $K_last_code = $self->K_previous_code($KK);
                     if ( defined($K_last_code) ) {
-                        my $last_type  = $rLL->[$K_last_code]->[_TYPE_];
-                        my $last_token = $rLL->[$K_last_code]->[_TOKEN_];
+                        my $last_type = $rLL->[$K_last_code]->[_TYPE_];
 
                         # A preceding \ implies that this memory can be used
                         # even if the variable name does not appear again.
@@ -9636,13 +9630,15 @@ EOM
     return;
 } ## end sub dump_unusual_variables
 
-sub warn_variable_types {
-    my ($self) = @_;
+sub initialize_warn_variable_types {
 
-    # process a --warn-variable-types command
+    # Initialization for:
+    #    --warn-variable-types=s and --warn-variable-exclusion-list=s
+    %is_warn_variable_excluded_name = ();
 
-    my $wv_key    = 'warn-variable-types';
-    my $wv_option = $rOpts->{$wv_key};
+    my $wvt_key    = 'warn-variable-types';
+    my $wvt_option = $rOpts->{$wvt_key};
+    return unless ($wvt_option);
 
     # Single letter options:
     #  u - declared but unused [NOT AVAILABLE, use --dump-unusual-variables]
@@ -9653,18 +9649,51 @@ sub warn_variable_types {
     #  1 - all of the above
     #  * - all of the above
     # Example:
-    #  -wvt=sr  : do check types 's' and 'r'
+    #  -wuvt=sr  : do check types 's' and 'r'
 
-    if ( $wv_option eq '*' || $wv_option eq '1' ) { $wv_option = 'spr' }
+    if ( $wvt_option !~ /^[ursp01\*\s]+$/ ) {
+        Die(
+"unexpected symbols in --$wvt_key=$wvt_option; expecting r s p 0 1 *\n"
+        );
+    }
+
+    if ( $wvt_option eq '*' || $wvt_option eq '1' ) { $wvt_option = 'spr' }
 
     # Option type 'u' (undefined) is not allowed here because it will cause
     # needless warnings when perltidy is run on small blocks from an editor.
-    if ( $wv_option =~ s/u//g ) {
+    if ( $wvt_option =~ s/u//g ) {
         Warn(<<EOM);
---$wv_key=u is not available; use --dump-unusual-variables=u to find unused vars
+--$wvt_key=u is not available; use --dump-unusual-variables=u to find unused vars
 EOM
     }
 
+    # The updated option string replaces the input string
+    $rOpts->{$wvt_key} = $wvt_option;
+
+    my $wvxl_key       = 'warn-variable-exclusion-list';
+    my $excluded_names = $rOpts->{$wvxl_key};
+    if ($excluded_names) {
+        $excluded_names =~ s/,/ /g;
+        my @xl  = split_words($excluded_names);
+        my $msg = EMPTY_STRING;
+        foreach my $name (@xl) {
+            if ( $name !~ /^[\$\@\%]?\w+$/ ) {
+                $msg .= "-wvxl has unexpected name: '$name'\n";
+            }
+        }
+        if ($msg) { Die($msg) }
+        @is_warn_variable_excluded_name{@xl} = (1) x scalar(@xl);
+    }
+    return;
+} ## end sub initialize_warn_variable_types
+
+sub warn_variable_types {
+    my ($self) = @_;
+
+    # process a --warn-variable-types command
+
+    my $wv_key    = 'warn-variable-types';
+    my $wv_option = $rOpts->{$wv_key};
     return unless ($wv_option);
 
     my $rwarnings = $self->scan_variable_usage($wv_option);
@@ -9676,21 +9705,10 @@ r=reused  s=multi-sigil  p=package crossing
 Line:Issue: Var: note
 EOM
 
-    # remove any excluded names
-    my $wvxl_key       = 'warn-variable-exclusion-list';
-    my $excluded_names = $rOpts->{$wvxl_key};
-    my %is_excluded_name;
-    if ($excluded_names) {
-        $excluded_names =~ s/,/ /;
-        $excluded_names =~ s/^\s+//;
-        $excluded_names =~ s/\s+$//;
-        my @xl = split /\s+/, $excluded_names;
-        @is_excluded_name{@xl} = (1) x scalar(@xl);
-    }
-
+    # output the results, ignoring any excluded names
     foreach my $item ( @{$rwarnings} ) {
         my $name = $item->{name};
-        next if ( $is_excluded_name{$name} );
+        next if ( $is_warn_variable_excluded_name{$name} );
         my $lno     = $item->{line_number};
         my $letter  = $item->{letter};
         my $keyword = $item->{keyword};
@@ -9747,8 +9765,7 @@ sub dump_mixed_call_parens {
     my $opt_name = 'dump-mixed-call-parens';
     return unless $rOpts->{$opt_name};
 
-    my $rLL                 = $self->[_rLL_];
-    my $K_closing_container = $self->[_K_closing_container_];
+    my $rLL = $self->[_rLL_];
 
     my %skip_keywords;
     my @q = qw(my our local state
@@ -11671,7 +11688,7 @@ sub add_trailing_comma {
 
     # if so, add a comma
     if ($match) {
-        my $Knew = $self->store_new_token( ',', ',', $Kp );
+        $self->store_new_token( ',', ',', $Kp );
     }
 
     return;
@@ -30263,7 +30280,6 @@ sub make_HSC_vertical_alignments {
     if ( !$rOpts_add_whitespace ) {
 
         # Nothing to do if we are not allowed to add whitespace
-        my $pad_spaces = $rOpts->{'minimum-space-to-comment'};
         $rline_alignments = [
             [
                 [], [ SPACE . $tokens_to_go[0] ],
@@ -33751,7 +33767,6 @@ sub set_vertical_tightness_flags {
                     if (   $accumulating_text_for_block
                         && $levels_to_go[$i] <= $leading_block_text_level )
                     {
-                        my $lev = $levels_to_go[$i];
                         reset_block_text_accumulator();
                     }
 
