@@ -417,8 +417,6 @@ sub update_version_number {
         push @sources, $lib_path . $module;
     }
 
-    my $Tidy_pm_file = $lib_path . "Tidy.pm";
-
     my $saw_pod = scan_for_pod(@sources);
     return if ($saw_pod);
 
@@ -729,7 +727,6 @@ sub update_VERSION {
     # returns changed version line if successful
     # returns nothing if failure
 
-    my $backup_extension = ".bak";
     my $old_VERSION_line;
     my $new_VERSION_line;
 
@@ -747,7 +744,6 @@ sub update_VERSION {
         return;
     }
     my $in_pod;
-    my $in_md;
     my $is_md_file  = $source_file eq 'CHANGES.md';
     my $is_pod_file = !$is_md_file && $source_file !~ /\.pm/;
     while ( my $line = <$fh> ) {
