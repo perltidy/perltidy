@@ -1600,7 +1600,7 @@ sub set_output_file_permissions {
 } ## end sub set_output_file_permissions
 
 sub get_decoded_string_buffer {
-    my ( $self, $input_file, $display_name, $rpending_logfile_message ) = @_;
+    my ( $self, $input_file, $display_name ) = @_;
 
     # Decode the input buffer if necessary or requested
 
@@ -1845,7 +1845,7 @@ BEGIN {
 
 sub get_line_separator_default {
 
-    my ( $rOpts, $input_file ) = @_;
+    my ($rOpts) = @_;
 
     # Get the line separator that will apply unless overridden by a
     # --preserve-line-endings flag for a specific file
@@ -2007,7 +2007,6 @@ sub process_all_files {
     my $logfile_stream     = $rinput_hash->{'logfile'};
     my $teefile_stream     = $rinput_hash->{'teefile'};
     my $debugfile_stream   = $rinput_hash->{'debugfile'};
-    my $stderr_stream      = $rinput_hash->{'stderr'};
 
     my $number_of_files = @{$rfiles};
     while ( my $input_file = shift @{$rfiles} ) {
@@ -2171,8 +2170,7 @@ EOM
             $encoding_log_message,
             $length_function,
 
-        ) = $self->get_decoded_string_buffer( $input_file, $display_name,
-            $rpending_logfile_message );
+        ) = $self->get_decoded_string_buffer( $input_file, $display_name );
 
         # Skip this file on any error
         next if ( !defined($rinput_string) );
@@ -2507,9 +2505,8 @@ sub process_filter_layer {
         Fault("bad call: the source string ref is not SCALAR\n");
     }
 
-    my $rOpts           = $self->[_rOpts_];
-    my $is_encoded_data = $self->[_is_encoded_data_];
-    my $logger_object   = $self->[_logger_object_];
+    my $rOpts         = $self->[_rOpts_];
+    my $logger_object = $self->[_logger_object_];
 
     # vars for --line-range-tidy filter, if needed
     my @input_lines_pre;
