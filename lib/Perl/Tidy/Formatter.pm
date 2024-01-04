@@ -9378,6 +9378,9 @@ EOM
                         $push_block_stack->($seqno_brace);
                     }
                 }
+                else {
+                    # no other keywords to check
+                }
             }
 
             #--------------
@@ -19326,6 +19329,9 @@ sub starting_one_line_block {
             if ( $is_assignment{$type_eq} && $want_break_before{$type_eq} ) {
                 $i_start = $i_eq;
             }
+        }
+        else {
+            # $i_start is 0 - cannot back up
         }
     }
     elsif ( $previous_nonblank_token eq ')' ) {
