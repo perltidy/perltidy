@@ -2,11 +2,11 @@
 
 ## 2023 09 12.11
 
-    - Added --dump-mixed-call-parens (-dmcp ) which will dump a list
-      of operators which are sometimes followed by parens and sometimes not.
-      For example
+    - Added --dump-mixed-call-parens (-dmcp ) which will dump a list of
+      operators which are sometimes followed by parens and sometimes not.
+      Issue git #128. For example
 
-         perltidy -cmcp somefile.pl >out.txt
+         perltidy -dmcp somefile.pl >out.txt
 
       produces lines like this, where the first number is the count of
       uses with parens, and the second number is the count without parens.
@@ -96,7 +96,7 @@
       a space). The new default value, n=1, will produce a space if and only
       if there was a space in the input text.
 
-    - The dump-block-summary option can report an if-elsif-elsif-.. chain
+    - The --dump-block-summary option can report an if-elsif-elsif-.. chain
       as a single line item with the notation -dbt='elsif3', for example,
       where the '3' is an integer which specifies the minimum number of elsif
       blocks required for a chain to be reported. The manual has details.
