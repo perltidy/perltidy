@@ -123,7 +123,7 @@ sub dump_options {
     }
 
     # build a table for long_name->short_name abbreviations
-    my %short_name;
+    my %short_name_for_long_name;
     foreach my $abbrev ( sort keys %$rabbreviations ) {
         my @list = @{ $$rabbreviations{$abbrev} };
 
@@ -133,7 +133,7 @@ sub dump_options {
         # here.
         next unless @list == 1;
         my $long_name = $list[0];
-        $short_name{$long_name} = $abbrev;
+        $short_name_for_long_name{$long_name} = $abbrev;
     }
 
     unless ( $rmy_opts->{q} ) {
@@ -190,7 +190,7 @@ sub dump_options {
 
             # print the long version of the parameter
             # with the short version as a side comment
-            my $short_name   = $short_name{$long_name};
+            my $short_name   = $short_name_for_long_name{$long_name};
             my $long_option  = $prefix . $long_name . $suffix;
 
 	    # A few options do not have a short abbreviation.  These include
