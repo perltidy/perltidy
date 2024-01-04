@@ -1842,7 +1842,7 @@ B<## no critic> and ignore their lengths when making line break decisions,
 even if the user has not set B<-iscl>.  The reason is that an unwanted line
 break can make these special comments ineffective in controlling B<perlcritic>.
 
-Setting B<--ignore-perlcritic-comments> tells perltidy not to look for these 
+Setting B<--ignore-perlcritic-comments> tells perltidy not to look for these
 B<## no critic> comments.
 
 =item B<-hsc>, B<--hanging-side-comments>
@@ -4695,6 +4695,33 @@ following snippet illustrates these options.
 The B<-xci> flag was developed after the B<-pbp> parameters were published so you need
 to include it separately.
 
+=item B<Making a file unreadable>
+
+The goal of perltidy is to improve the readability of files, but there
+are two commands which have the opposite effect, B<--mangle> and
+B<--extrude>.  They are actually
+merely aliases for combinations of other parameters.  Both of these
+strip all possible whitespace, but leave comments and pod documents,
+so that they are essentially reversible.  The
+difference between these is that B<--mangle> puts the fewest possible
+line breaks in a script while B<--extrude> puts the maximum possible.
+Note that these options do not provided any meaningful obfuscation, because
+perltidy can be used to reformat the files.  They were originally
+developed to help test the tokenization logic of perltidy, but they
+have other uses.
+One use for B<--mangle> is the following:
+
+  perltidy --mangle myfile.pl -st | perltidy -o myfile.pl.new
+
+This will form the maximum possible number of one-line blocks (see next
+section), and can sometimes help clean up a badly formatted script.
+
+A similar technique can be used with B<--extrude> instead of B<--mangle>
+to make the minimum number of one-line blocks.
+
+Another use for B<--mangle> is to combine it with B<--delete-all-comments (-dac)> to reduce
+the file size of a perl script.
+
 =back
 
 =head2 One-Line Blocks
@@ -4717,7 +4744,7 @@ single line. This behavior can be controlled with the flag
 B<--one-line-block-exclusion-list> described below.
 
 When the B<cuddled-else> style is used, the default treatment of one-line blocks
-may interfere with the cuddled style.  In this case, the default behavior may 
+may interfere with the cuddled style.  In this case, the default behavior may
 be changed with the flag B<--cuddled-break-option=n> described elsehwere.
 
 When an existing one-line block is longer than the maximum line length, and
@@ -4915,7 +4942,7 @@ of the tokens ',', '=', and '=>', but many other alignments are possible and are
 
 These alignment types correspond to perl symbols, operators and keywords except
 for 'q', which refers to the special case of alignment in a 'use' statement of
-qw quotes and empty parens. 
+qw quotes and empty parens.
 
 They are all enabled by default, but they can be selectively disabled by including one or more of these tokens in the space-separated list B<valign-exclusion-list=s>.
 For example, the following would prevent alignment at B<=> and B<if>:
@@ -4997,7 +5024,7 @@ This section describes some parameters for dealing with extended syntax.
 
 For another method of handling extended syntax see the section L<"Skipping Selected Sections of Code">.
 
-Also note that the module F<Perl::Tidy> supplies a pre-filter and post-filter capability. This requires calling the module from a separate program rather than through the binary F<perltidy>. 
+Also note that the module F<Perl::Tidy> supplies a pre-filter and post-filter capability. This requires calling the module from a separate program rather than through the binary F<perltidy>.
 
 =over 4
 
@@ -5087,9 +5114,19 @@ is because perltidy must be able to work on small chunks of code sent from an
 editor, so it cannot assume that such lines will be within the lines being
 formatted.
 
+=item B<Working around problems with older version of Perl>
+
+Perltidy contains a number of rules which help avoid known subtleties
+and problems with older versions of perl, and these rules always
+take priority over whatever formatting flags have been set.  For example,
+perltidy will usually avoid starting a new line with a bareword, because
+this might cause problems if C<use strict> is active.
+
+There is no way to override these rules.
+
 =back
 
-=head2 Other Controls
+=head2 Deleting and Extracting Pod or Comments
 
 =over 4
 
@@ -5133,6 +5170,12 @@ B<--tee-block-comments> and B<-tsc> or  B<--tee-side-comments>.
 (Hanging side comments will be written with side comments here.)
 
 The negatives of these commands also work, and are the defaults.
+
+=back
+
+=head2 The perltidyrc file
+
+=over 4
 
 =item B<Using a F<.perltidyrc> command file>
 
@@ -5219,6 +5262,12 @@ the B<-npro> option.
 
 =item *
 
+Any parameter in the F<.perltidyrc> file can be overriden with a replacement
+value on the command line. This is because the command line is processed
+after the F<.perltidyrc> file.
+
+=item *
+
 The commands B<--dump-options>, B<--dump-defaults>, B<--dump-long-names>,
 and B<--dump-short-names>, all described below, may all be helpful.
 
@@ -5277,36 +5326,17 @@ Parsing errors can occur if it does not have a hash-bang, or, for example, if
 the actual first hash-bang is in a here-doc. In that case a parsing error will
 occur because the tokenization will begin in the middle of the here-doc.
 
-=item B<Making a file unreadable>
+=back
 
-The goal of perltidy is to improve the readability of files, but there
-are two commands which have the opposite effect, B<--mangle> and
-B<--extrude>.  They are actually
-merely aliases for combinations of other parameters.  Both of these
-strip all possible whitespace, but leave comments and pod documents,
-so that they are essentially reversible.  The
-difference between these is that B<--mangle> puts the fewest possible
-line breaks in a script while B<--extrude> puts the maximum possible.
-Note that these options do not provided any meaningful obfuscation, because
-perltidy can be used to reformat the files.  They were originally
-developed to help test the tokenization logic of perltidy, but they
-have other uses.
-One use for B<--mangle> is the following:
+=head2 Debugging perltidy input
 
-  perltidy --mangle myfile.pl -st | perltidy -o myfile.pl.new
+=over 4
 
-This will form the maximum possible number of one-line blocks (see next
-section), and can sometimes help clean up a badly formatted script.
+=item The B<--dump-...> parameters
 
-A similar technique can be used with B<--extrude> instead of B<--mangle>
-to make the minimum number of one-line blocks.
-
-Another use for B<--mangle> is to combine it with B<-dac> to reduce
-the file size of a perl script.
-
-=item B<Debugging>
-
-The following flags are available for debugging:
+The following flags are available for debugging. Note that all commands
+named B<--dump-...> will simply write some requested information to standard
+output and then immediately exit.
 
 B<--dump-cuddled-block-list> or B<-dcbl> will dump to standard output the
 internal hash of cuddled block types created by a B<-cuddled-block-list> input
@@ -5331,13 +5361,15 @@ to standard output and quit.
 B<--dump-token-types> or B<-dtt>  will write a list of all token types
 to standard output and quit.
 
-B<--dump-want-left-space> or B<-dwls>  will write the hash %want_left_space
+B<--dump-want-left-space> or B<-dwls>  will write the hash C<%want_left_space>
 to standard output and quit.  See the section on controlling whitespace
 around tokens.
 
-B<--dump-want-right-space> or B<-dwrs>  will write the hash %want_right_space
+B<--dump-want-right-space> or B<-dwrs>  will write the hash C<%want_right_space>
 to standard output and quit.  See the section on controlling whitespace
 around tokens.
+
+=item B<Other parameters related to processing>
 
 B<--no-memoize> or B<-nmem>  will turn of memoizing.
 Memoization can reduce run time when running perltidy repeatedly in a
@@ -5370,6 +5402,8 @@ It is applied to files arriving from standard input after they are read into
 memory. It is not applied to character strings arriving by a call to the
 Perl::Tidy module.
 
+=item B<Controls for when to stop processing>
+
 B<--maximum-level-errors=n> or B<-maxle=n> specifies the maximum number of
 indentation level errors are allowed before perltidy skips formatting and just
 outputs a file verbatim.  The default is B<n=1>.  This means that if the final
@@ -5398,8 +5432,38 @@ off by setting B<n=0>.
 A recommended value is B<n=3>.  However, the default is B<n=0> (skip this check)
 to avoid causing problems with scripts which have extended syntaxes.
 
-B<-DEBUG>  will write a file with extension F<.DEBUG> for each input file
-showing the tokenization of all lines of code.
+=item B<Handling errors in options which take integer values>
+
+Many of the input parameters take integer values. Before processing
+begins, a check is made to see if any of these integer parameters exceed
+their valid ranges.  The default behavior when a range is exceeded is to
+write a warning message and reset the value to its default setting. This
+default behavior can be changed with the parameter
+B<--integer-range-check=n>, or B<-irc=n>, as follows:
+
+    n=0  skip check completely (for stress-testing perltidy only)
+    n=1  reset bad values to defaults but do not issue a warning
+    n=2  reset bad values to defaults and issue warning [DEFAULT]
+    n=3  stop if any values are out of bounds
+
+The values B<n=0> and B<n=1> are mainly useful for testing purposes.
+
+=item B<Debugging perltidy tokenization>
+
+B<-DEBUG, -D> will write a file with extension F<.DEBUG> for each input file
+showing the tokenization of all lines of code. This can produce a lot of
+output and is mainly useful for debugging tokenization issues during
+perltidy development.
+
+=back
+
+=head2 Analyzing Code
+
+Perltidy reports any obvious issues that are found during formatting, such as
+unbalanced braces. But Several parameters are available for making certain
+additional checks for issues which might be of interest to a programmer.
+
+=over 4
 
 =item B<Use --dump-block-summary to make a table of information on code blocks>
 
@@ -5569,16 +5633,17 @@ and therefor must be listed, even though they might not be referenced again. Or
 they might be defined for possible future program development, clarity or
 debugging.  But sometimes they can occur due to being orphaned by a coding
 change, due to a misspelling, or by having an unintentional preceding C<my>.
-So it is worth reviewing them, especially for new code.  Here is a simple
-example of an error in an old script found with this method:
+So it is worth reviewing them, especially for new code.  Here is an
+example of an unused variable in a script located with this method:
 
    BEGIN { my $string = "" }
    ...
-   $string .= "ok:";
+   $string .= "ok";
 
-It looks nice, but the C<my> declaration in braces is reported as unused since
-its scope is limited by the braces.  This would have also been caught by perl
-if the author had used C<strict>.
+This looks nice, but the scope of the C<my> declaration is limited to the
+surrounding braces, so it is not the same variable as the other C<$string>
+and is therefore reported as unused.  This problem would have
+also been caught by perl if the author had used C<strict>.
 
 =back
 
@@ -5609,7 +5674,8 @@ can be used to skip warning checks for a list of variables.  For example,
 
    perltidy -wvt=1 -wvxl='$self $class'  somefile.pl
 
-will skip all warnings for variables C<$self> and C<$class>.
+will do all possible checks but not report any warnings for variables C<$self>
+and C<$class>.
 
 =item B<Use --dump-mixed-call-parens to find functions called both with and without parens>
 
@@ -5634,9 +5700,10 @@ is a small section of the output from one file in a past Perl distribution:
 
 The first line shows that the C<length> function occurs 17 times with parens
 and 9 times without parens.  The 'k' indicates that C<length> is a Perl builtin
-keyword. So from this partial output we see that the author had a preference
-for parens around the args of C<length> and C<open>, whereas C<pop> was about
-equally likely to have parens as not.
+keyword ('U' would mean user-defined sub, and 'w' would mean unknown bareword).
+So from this partial output we see that the author had a preference for parens
+around the args of C<length> and C<open>, whereas C<pop> was about equally
+likely to have parens as not.
 
 More detailed information can be obtained with the parameters described in the
 next section.
@@ -5693,7 +5760,9 @@ removed, then C<||> must be changed to C<or>:
 Otherwise, the C<||> will operate on C<$infile> rather than the return value of
 C<open>.
 
-=item B<Working with MakeMaker, AutoLoader and SelfLoader>
+=back
+
+=head2 B<Working with MakeMaker, AutoLoader and SelfLoader>
 
 The first $VERSION line of a file which might be eval'd by MakeMaker
 is passed through unchanged except for indentation.
@@ -5706,34 +5775,6 @@ Use B<--nolook-for-autoloader>, or B<-nlal>, to deactivate this feature.
 Likewise, if the SelfLoader module is used, perltidy will continue formatting
 code after seeing a __DATA__ line.
 Use B<--nolook-for-selfloader>, or B<-nlsl>, to deactivate this feature.
-
-=item B<Working around problems with older version of Perl>
-
-Perltidy contains a number of rules which help avoid known subtleties
-and problems with older versions of perl, and these rules always
-take priority over whatever formatting flags have been set.  For example,
-perltidy will usually avoid starting a new line with a bareword, because
-this might cause problems if C<use strict> is active.
-
-There is no way to override these rules.
-
-=item B<Handling errors in options which take integer values>
-
-Many of the input parameters take integer values. Before processing
-begins, a check is made to see if any of these integer parameters exceed
-their valid ranges.  The default behavior when a range is exceeded is to
-write a warning message and reset the value to its default setting. This
-default behavior can be changed with the parameter
-B<--integer-range-check=n>, or B<-irc=n>, as follows:
-
-    n=0  skip check completely (for stress-testing perltidy only)
-    n=1  reset bad values to defaults but do not issue a warning
-    n=2  reset bad values to defaults and issue warning [DEFAULT]
-    n=3  stop if any values are out of bounds
-
-The values B<n=0> and B<n=1> are mainly useful for testing purposes.
-
-=back
 
 =head1 HTML OPTIONS
 
