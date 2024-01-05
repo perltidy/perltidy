@@ -105,6 +105,9 @@
       emit an else block when two elsif blocks were separated by a hanging
       side comment (a very rare situation).
 
+    - The -DEBUG option no longer automatically also writes a .LOG file.
+      Use --show-options if the .LOG file is needed.
+
 ## 2023 09 12
 
     - Fix for git #124: remove a syntax error check which could cause

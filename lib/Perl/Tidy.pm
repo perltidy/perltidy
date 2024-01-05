@@ -3292,7 +3292,7 @@ sub make_logfile_header {
     $msg .= "Configuration and command line parameters for this run:\n";
     $msg .= "$options_string\n";
 
-    if ( $rOpts->{'DEBUG'} || $rOpts->{'show-options'} ) {
+    if ( $rOpts->{'show-options'} ) {
         $rOpts->{'logfile'} = 1;    # force logfile to be saved
         $msg .= "Final parameter set for this run\n";
         $msg .= "------------------------------------\n";
