@@ -29218,13 +29218,12 @@ sub convey_batch_to_vertical_aligner {
           $self->add_closing_side_comment( $ri_first, $ri_last );
     }
 
-    if ( $n_last_line > 0 || $rOpts_extended_continuation_indentation ) {
-        $self->undo_ci( $ri_first, $ri_last,
-            $this_batch->[_rix_seqno_controlling_ci_] );
-    }
-
     # for multi-line batches ...
     if ( $n_last_line > 0 ) {
+
+        # undo continuation indentation
+        $self->undo_ci( $ri_first, $ri_last,
+            $this_batch->[_rix_seqno_controlling_ci_] );
 
         # flush before a long if statement to avoid unwanted alignment
         $self->flush_vertical_aligner()
@@ -29236,6 +29235,15 @@ sub convey_batch_to_vertical_aligner {
 
         $self->xlp_tweak( $ri_first, $ri_last )
           if ($rOpts_extended_line_up_parentheses);
+    }
+
+    # -xci must undo continuation indentation even for single lines
+    elsif ($rOpts_extended_continuation_indentation) {
+        $self->undo_ci( $ri_first, $ri_last,
+            $this_batch->[_rix_seqno_controlling_ci_] );
+    }
+    else {
+        # ok: single line, no -xci
     }
 
     if (DEVEL_MODE) { $self->check_batch_summed_lengths() }
@@ -29356,14 +29364,14 @@ sub convey_batch_to_vertical_aligner {
         # which will be output, so from here on no more changes can be made to
         # the text.
         my $rline_alignment = $rline_alignments->[$n];
-        my ( $rtokens, $rfields, $rpatterns, $rfield_lengths ) =
-          @{$rline_alignment};
 
         # Programming check: (shouldn't happen)
         # The number of tokens which separate the fields must always be
         # one less than the number of fields. If this is not true then
         # an error has been introduced in sub make_alignment_patterns.
         if (DEVEL_MODE) {
+            my ( $rtokens, $rfields, $rpatterns, $rfield_lengths ) =
+              @{$rline_alignment};
             if ( @{$rfields} && ( @{$rtokens} != ( @{$rfields} - 1 ) ) ) {
                 my $nt  = @{$rtokens};
                 my $nf  = @{$rfields};
@@ -29390,8 +29398,6 @@ EOM
 
             $ibeg,
             $iend,
-            $rfields,
-            $rpatterns,
             $ri_first,
             $ri_last,
             $rindentation_list,
@@ -29444,7 +29450,7 @@ EOM
         # flush at an 'if' which follows a line with (1) terminal semicolon
         # or (2) terminal block_type which is not an 'if'.  This prevents
         # unwanted alignment between the lines.
-        elsif ( $type_beg eq 'k' && $token_beg eq 'if' ) {
+        elsif ( $token_beg eq 'if' && $type_beg eq 'k' ) {
             my $type_m = 'b';
             my $block_type_m;
 
@@ -29575,17 +29581,21 @@ EOM
         # -------------------------------------------------
         # add any new closing side comment to the last line
         # -------------------------------------------------
-        if ( $closing_side_comment && $n == $n_last_line && @{$rfields} ) {
+        if ( $closing_side_comment && $n == $n_last_line ) {
+            my ( $rtokens, $rfields, $rpatterns, $rfield_lengths ) =
+              @{$rline_alignment};
 
-            $rfields->[-1] .= " $closing_side_comment";
+            if ( @{$rfields} ) {
+                $rfields->[-1] .= " $closing_side_comment";
 
-            # NOTE: Patch for csc. We can just use 1 for the length of the csc
-            # because its length should not be a limiting factor from here on.
-            $rfield_lengths->[-1] += 2;
+              # NOTE: Patch for csc. We can just use 1 for the length of the csc
+              # because its length should not be a limiting factor from here on.
+                $rfield_lengths->[-1] += 2;
 
-            # repack
-            $rline_alignment =
-              [ $rtokens, $rfields, $rpatterns, $rfield_lengths ];
+                # repack
+                $rline_alignment =
+                  [ $rtokens, $rfields, $rpatterns, $rfield_lengths ];
+            }
         }
 
         # ------------------------
@@ -31952,8 +31962,6 @@ sub make_paren_name {
 
             $ibeg,
             $iend,
-            $rfields,
-            $rpatterns,
             $ri_first,
             $ri_last,
             $rindentation_list,
@@ -32037,18 +32045,6 @@ sub make_paren_name {
         # }
         #
 
-        # MOJO patch: Set a flag if this lines begins with ')->'
-        my $leading_paren_arrow = (
-                 $is_closing_type_beg
-              && $token_beg eq ')'
-              && (
-                ( $ibeg < $i_terminal && $types_to_go[ $ibeg + 1 ] eq '->' )
-                || (   $ibeg < $i_terminal - 1
-                    && $types_to_go[ $ibeg + 1 ] eq 'b'
-                    && $types_to_go[ $ibeg + 2 ] eq '->' )
-              )
-        );
-
         #---------------------------------------------------------
         # Section 1: set a flag and a default indentation
         #
@@ -32099,28 +32095,6 @@ sub make_paren_name {
                 $seqno_qw_closing,
 
             );
-        }
-
-        #--------------------------------------------------------
-        # Section 1B:
-        # if at ');', '};', '>;', and '];' of a terminal qw quote
-        #--------------------------------------------------------
-        elsif (
-               substr( $rpatterns->[0], 0, 2 ) eq 'qb'
-            && substr( $rfields->[0], -1, 1 ) eq ';'
-            ##         $rpatterns->[0] =~ /^qb*;$/
-            && $rfields->[0] =~ /^([\)\}\]\>]);$/
-          )
-        {
-            if ( $closing_token_indentation{$1} == 0 ) {
-                $adjust_indentation = 1;
-            }
-            else {
-                $adjust_indentation = 3;
-            }
-        }
-        else {
-            # leading token not special
         }
 
         #---------------------------------------------------------
@@ -32368,26 +32342,45 @@ sub make_paren_name {
         # than the line which contained the corresponding opening token.
         #---------------------------------------------------------------------
 
-        # Updated per bug report in alex_bug.pl: we must not
-        # mess with the indentation of closing logical braces, so
-        # we must treat something like '} else {' as if it were
-        # an isolated brace
-        my $is_isolated_block_brace = $block_type_beg
-          && ( $i_terminal == $ibeg
-            || $is_if_elsif_else_unless_while_until_for_foreach{$block_type_beg}
-          );
+        if ( defined($opening_indentation) ) {
 
-        # only do this for a ':; which is aligned with its leading '?'
-        my $is_unaligned_colon = $type_beg eq ':' && !$is_leading;
+            # MOJO patch: Set a flag if this lines begins with ')->'
+            my $leading_paren_arrow = (
+                     $is_closing_type_beg
+                  && $token_beg eq ')'
+                  && (
+                    (
+                           $ibeg < $i_terminal
+                        && $types_to_go[ $ibeg + 1 ] eq '->'
+                    )
+                    || (   $ibeg < $i_terminal - 1
+                        && $types_to_go[ $ibeg + 1 ] eq 'b'
+                        && $types_to_go[ $ibeg + 2 ] eq '->' )
+                  )
+            );
 
-        if (
-            defined($opening_indentation)
-            && !$leading_paren_arrow    # MOJO patch
-            && !$is_isolated_block_brace
-            && !$is_unaligned_colon
-          )
-        {
-            if ( get_spaces($opening_indentation) > get_spaces($indentation) ) {
+            # Updated per bug report in alex_bug.pl: we must not
+            # mess with the indentation of closing logical braces, so
+            # we must treat something like '} else {' as if it were
+            # an isolated brace
+            my $is_isolated_block_brace = $block_type_beg
+              && (
+                $i_terminal == $ibeg
+                || $is_if_elsif_else_unless_while_until_for_foreach{
+                    $block_type_beg}
+              );
+
+            # only do this for a ':; which is aligned with its leading '?'
+            my $is_unaligned_colon = $type_beg eq ':' && !$is_leading;
+
+            if (
+                   !$leading_paren_arrow
+                && !$is_isolated_block_brace
+                && !$is_unaligned_colon
+                && ( get_spaces($opening_indentation) >
+                    get_spaces($indentation) )
+              )
+            {
                 $indentation = $opening_indentation;
             }
         }
