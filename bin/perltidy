@@ -5651,28 +5651,35 @@ also been caught by perl if the author had used C<strict>.
 
 The flag B<--warn-variable-types=string>, or B<-wvt=string>, can be used to
 produce a warning message if certain of the above variable types are
-encountered during formatting.   The input parameter B<string> is a
-a concatenation of the letters associated with the types of variables
-which are to produce a warning. For example:
+encountered during formatting.   All possible variable warnings may be
+requested with B<-wvt='*'> or B<-wvt=1>.
 
-   perltidy -wvt=sp somefile.pl
+For example,
+
+   perltidy -wvt='*' somefile.pl
+
+The default is not to do any of these checks, and it can also be indicated with
+B<-wvt=0>.
+
+To restrict the check to a specfic set warnings, set the input B<string> to be
+a space-separated or comma-separated list of the letters associated with the
+types of variables to be checked. For example:
+
+   perltidy -wvt='s r' somefile.pl
 
 will process F<somefile.pl> normally but issue a warning if either of
-the issues 's' or 'p', described above, are encountered.
+the issues 's' or 'r', but not 'p', described above, are encountered.
 
 A limitation is that warnings may not be requested for unused variables, type
-'u'. The main reason is that this would produce many needless warnings,
-especially when perltidy is run on small snippets of code from within an
-editor.
-
-All possible variable warnings may be requested with B<-wvt=rsp> or simply
-B<-wvt=1> or B<-wvt='*'>.  The default is not to do these checks, and it can
-also be indicated with B<-wvt=0>.
+'u'. The is because this would produce many needless warnings, especially when
+perltidy is run on small snippets of code from within an editor. So
+unused variables can only be found with the B<-duv> option described in the
+previous section.
 
 A companion flag, B<--warn-variable-exclusion-list=string>, or B<-wvxl=string>,
 can be used to skip warning checks for a list of variables.  For example,
 
-   perltidy -wvt=1 -wvxl='$self $class'  somefile.pl
+   perltidy -wvt='*' -wvxl='$self $class'  somefile.pl
 
 will do all possible checks but not report any warnings for variables C<$self>
 and C<$class>.

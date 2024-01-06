@@ -381,6 +381,7 @@ my (
     %call_paren_style,
 
     # INITIALIZER: sub initialize_warn_variable_types
+    %warn_variable_types,
     %is_warn_variable_excluded_name,
 
     # regex patterns for text identification.
@@ -8672,16 +8673,14 @@ sub set_CODE_type {
 } ## end sub set_CODE_type
 
 sub scan_variable_usage {
-    my ( $self, $sv_option ) = @_;
+
+    my ( $self, $roption ) = @_;
 
     # Scan for unused and reused lexical variables in a single sweep.
 
     # Given:
-    #  $sv_option is an optional set of letters to restrict checks:
-    #    - do all checks if not defined
-    #    - do selected checks if defined
-    #    - a value of '1' produces all checks
-    #    - example: $sv_option = 'rsp' does checks 'r' 's' 'p' (see below)
+    #   $roption = an optional set of types of checks,
+    #              all checks are made if not given
     # Return:
     #   - nothing if no errors found
     #   - ref to a list of 'warnings', one per variable, in line order.
@@ -8698,27 +8697,22 @@ sub scan_variable_usage {
     #            see_line    => $see_line,    # line referenced in note
     #          };
 
-    # issues are indicated by a unique letter 'letter'
+    # issues are indicated by these names:
     #  u - unused
     #  r - reused scope
     #  s - reused sigil
     #  p - package boundaries crossed
 
-    # checks for these issues are requested with -sv_option, which may also be:
-    #  0 - none of the above
-    #  1 - all of the above
-    #  * - all of the above
-    # Example input:
-    #  -sv_option=ur  : do check types 'u' and 'r'
+    # Default is to do all checks if no control hash received
+    if ( !defined($roption) ) {
+        $roption = { 'r' => 1, 's' => 1, 'p' => 1, 'u' => 1 };
+    }
 
-    # Assume all if no option received from caller.
-    $sv_option = '*' if ( !defined($sv_option) );
-
-    # Unpack the option
-    my $check_sigil         = $sv_option =~ /[s1\*]/;
-    my $check_cross_package = $sv_option =~ /[p1\*]/;
-    my $check_unused        = $sv_option =~ /[u1\*]/;
-    my $check_reused        = $sv_option =~ /[r1\*]/;
+    # Unpack the control hash
+    my $check_sigil         = $roption->{'s'};
+    my $check_cross_package = $roption->{'p'};
+    my $check_unused        = $roption->{'u'};
+    my $check_reused        = $roption->{'r'};
 
     my $rLL                  = $self->[_rLL_];
     my $rlines               = $self->[_rlines_];
@@ -9636,14 +9630,19 @@ EOM
 sub initialize_warn_variable_types {
 
     # Initialization for:
-    #    --warn-variable-types=s and --warn-variable-exclusion-list=s
+    #    --warn-variable-types=s and
+    #    --warn-variable-exclusion-list=s
+    %warn_variable_types            = ();
     %is_warn_variable_excluded_name = ();
 
+    #----------------------------
+    # Parse --warn-variable-types
+    #----------------------------
     my $wvt_key    = 'warn-variable-types';
     my $wvt_option = $rOpts->{$wvt_key};
     return unless ($wvt_option);
 
-    # Single letter options:
+    # Options:
     #  u - declared but unused [NOT AVAILABLE, use --dump-unusual-variables]
     #  r - reused scope
     #  s - reused sigil
@@ -9652,19 +9651,60 @@ sub initialize_warn_variable_types {
     #  1 - all of the above
     #  * - all of the above
     # Example:
-    #  -wuvt=sr  : do check types 's' and 'r'
+    #  -wuvt='s r'  : do check types 's' and 'r'
 
-    if ( $wvt_option !~ /^[ursp01\*\s]+$/ ) {
-        Die(
-"unexpected symbols in --$wvt_key=$wvt_option; expecting r s p 0 1 *\n"
-        );
+    # 'u' will be accepted but produce a warning
+    # '0' will be checked specially
+    my @q = qw(r s p u 1 *);
+    my %is_valid_option;
+    @is_valid_option{@q} = (1) x scalar(@q);
+
+    # allow comma separators
+    $wvt_option =~ s/,/ /g;
+
+    my @opts = split_words($wvt_option);
+    return unless (@opts);
+
+    # Patch during conversion to space-separated options:
+    # split a single option of bundled letters like 'rsp' into 'r s p'
+    # The development version allowed this, but it is best to require
+    # spaces so that future options may have more than one letter.
+    # FIXME: this must be removed if any multi-letter options are added
+    if ( @opts == 1 ) {
+        my $opt = $opts[0];
+        if ( length($opt) > 1 ) {
+            @opts = split //, $opt;
+            Warn("Please use space-separated letters in --$wvt_key\n");
+        }
+
+        # catch something like ',0'
+        elsif ( $opt eq '0' ) {
+            return;
+        }
     }
 
-    if ( $wvt_option eq '*' || $wvt_option eq '1' ) { $wvt_option = 'spr' }
+    my $msg = EMPTY_STRING;
+    foreach my $opt (@opts) {
+        if ( !$is_valid_option{$opt} ) {
+            if ( $opt eq '0' ) {
+                $msg .= "--$wvt_key contains '0' mixed with other options\n";
+            }
+            else {
+                $msg .= "--$wvt_key has unexpected symbol: '$opt'\n";
+            }
+        }
+    }
+    if ($msg) { Die($msg) }
+    @warn_variable_types{@opts} = (1) x scalar(@opts);
+
+    if ( $warn_variable_types{'*'} || $warn_variable_types{'1'} ) {
+        my @all = qw(r s p);
+        @warn_variable_types{@all} = (1) x scalar(@all);
+    }
 
     # Option type 'u' (undefined) is not allowed here because it will cause
     # needless warnings when perltidy is run on small blocks from an editor.
-    if ( $wvt_option =~ s/u//g ) {
+    if ( $warn_variable_types{u} ) {
         Warn(<<EOM);
 --$wvt_key=u is not available; use --dump-unusual-variables=u to find unused vars
 EOM
@@ -9673,6 +9713,9 @@ EOM
     # The updated option string replaces the input string
     $rOpts->{$wvt_key} = $wvt_option;
 
+    #-------------------------------------
+    # Parse --warn-variable-exclusion-list
+    #-------------------------------------
     my $wvxl_key       = 'warn-variable-exclusion-list';
     my $excluded_names = $rOpts->{$wvxl_key};
     if ($excluded_names) {
@@ -9697,9 +9740,9 @@ sub warn_variable_types {
 
     my $wv_key    = 'warn-variable-types';
     my $wv_option = $rOpts->{$wv_key};
-    return unless ($wv_option);
+    return unless (%warn_variable_types);
 
-    my $rwarnings = $self->scan_variable_usage($wv_option);
+    my $rwarnings = $self->scan_variable_usage( \%warn_variable_types );
     return unless ( @{$rwarnings} );
 
     my $message = "Begin scan for --$wv_key=$wv_option\n";

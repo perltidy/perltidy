@@ -49,11 +49,16 @@
 
     - Added a related flag --warn-variable-types=string (-wvt=string) option
       to warn if certain types of variables are found in a script. The types
-      may include 'r', 's', and 'p' but not 'u'.
+      are a space-separated string which may include 'r', 's', and 'p' but
+      not 'u'. For example
 
-        perltidy -wvt=rp somefile.pl
+        perltidy -wvt='r s' somefile.pl
 
-      will check for and warn if any variabls of type 'r', or 'p' are seen.
+      will check for and warn if any variabls of type 'r', or 's' are seen,
+      but not 'p'. All possible checks may be indicated with a '*' or '1':
+
+        perltidy -wvt='*' somefile.pl
+
       The manual has further details.
 
     - All parameters taking integer values are now checked for
