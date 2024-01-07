@@ -1797,7 +1797,7 @@ EOM
         # neither -lpxl nor -lpil specified
     }
     return;
-}
+} ## end sub initialize_lpxl_lpil
 
 sub initialize_line_up_parentheses_control_hash {
     my ( $str, $opt_name ) = @_;
@@ -7311,7 +7311,7 @@ sub find_if_chains {
         push @selected_blocks, $rif_chain;
     }
     return \@selected_blocks;
-}
+} ## end sub find_if_chains
 
 sub follow_if_chain {
     my ( $self, $seqno_if, $rlevel_info, $elsif_count_min ) = @_;
@@ -7446,7 +7446,7 @@ sub follow_if_chain {
     };
 
     return $rchain;
-}
+} ## end sub follow_if_chain
 
 sub dump_block_summary {
     my ($self) = @_;
@@ -9665,8 +9665,8 @@ sub initialize_warn_variable_types {
     my @opts = split_words($wvt_option);
     return unless (@opts);
 
-    # Patch during conversion to space-separated options:
-    # split a single option of bundled letters like 'rsp' into 'r s p'
+    # Patch for conversion to space-separated options:
+    # Split a single option of bundled letters like 'rsp' into 'r s p'
     # The development version allowed this, but it is best to require
     # spaces so that future options may have more than one letter.
     # FIXME: this must be removed if any multi-letter options are added
@@ -9676,10 +9676,12 @@ sub initialize_warn_variable_types {
             @opts = split //, $opt;
             Warn("Please use space-separated letters in --$wvt_key\n");
         }
+        else {
 
-        # catch something like ',0'
-        elsif ( $opt eq '0' ) {
-            return;
+            # catch something like ',0'
+            if ( $opt eq '0' ) {
+                return;
+            }
         }
     }
 
@@ -9720,14 +9722,14 @@ EOM
     my $excluded_names = $rOpts->{$wvxl_key};
     if ($excluded_names) {
         $excluded_names =~ s/,/ /g;
-        my @xl  = split_words($excluded_names);
-        my $msg = EMPTY_STRING;
+        my @xl      = split_words($excluded_names);
+        my $err_msg = EMPTY_STRING;
         foreach my $name (@xl) {
             if ( $name !~ /^[\$\@\%]?\w+$/ ) {
-                $msg .= "-wvxl has unexpected name: '$name'\n";
+                $err_msg .= "-wvxl has unexpected name: '$name'\n";
             }
         }
-        if ($msg) { Die($msg) }
+        if ($err_msg) { Die($err_msg) }
         @is_warn_variable_excluded_name{@xl} = (1) x scalar(@xl);
     }
     return;
@@ -9801,7 +9803,7 @@ sub block_seqno_of_paren_seqno {
         && $rLL->[$K_opening_brace]->[_TOKEN_] eq '{'
         && $self->[_rblock_type_of_seqno_]->{$seqno_block} );
     return $seqno_block;
-}
+} ## end sub block_seqno_of_paren_seqno
 
 sub dump_mixed_call_parens {
     my ($self) = @_;
@@ -29238,19 +29240,19 @@ sub convey_batch_to_vertical_aligner {
 
     my $n_last_line = @{$ri_first} - 1;
 
-    my $ibeg_next = $ri_first->[0];
-    my $iend_next = $ri_last->[0];
+    my $ibeg = $ri_first->[0];
+    my $iend = $ri_last->[0];
 
-    my $type_beg_next  = $types_to_go[$ibeg_next];
-    my $type_end_next  = $types_to_go[$iend_next];
-    my $token_beg_next = $tokens_to_go[$ibeg_next];
+    my $type_beg  = $types_to_go[$ibeg];
+    my $type_end  = $types_to_go[$iend];
+    my $token_beg = $tokens_to_go[$ibeg];
 
     my $rindentation_list = [0];    # ref to indentations for each line
     my ( $cscw_block_comment, $closing_side_comment, $is_block_comment,
         $is_HSC );
 
     if (  !$max_index_to_go
-        && $type_beg_next eq '#' )
+        && $type_beg eq '#' )
     {
         if ( $batch_CODE_type && $batch_CODE_type eq 'HSC' ) { $is_HSC = 1 }
         else { $is_block_comment = 1 }
@@ -29270,8 +29272,8 @@ sub convey_batch_to_vertical_aligner {
 
         # flush before a long if statement to avoid unwanted alignment
         $self->flush_vertical_aligner()
-          if ( $type_beg_next eq 'k'
-            && $is_if_unless{$token_beg_next} );
+          if ( $type_beg eq 'k'
+            && $is_if_unless{$token_beg} );
 
         $self->set_logical_padding($this_batch)
           if ($rOpts_logical_padding);
@@ -29328,9 +29330,9 @@ sub convey_batch_to_vertical_aligner {
     # ----------------------------------------------
     # loop to send each line to the vertical aligner
     # ----------------------------------------------
-    my ( $type_beg, $type_end, $token_beg, $ljump );
+    my ( $type_beg_last, $type_end_last, $ibeg_next, $iend_next, $ljump );
 
-    for my $n ( 0 .. $n_last_line ) {
+    foreach my $n ( 0 .. $n_last_line ) {
 
         # ----------------------------------------------------------------
         # This hash will hold the args for vertical alignment of this line
@@ -29338,44 +29340,28 @@ sub convey_batch_to_vertical_aligner {
         # ----------------------------------------------------------------
         my $rvao_args = {};
 
-        my $type_beg_last = $type_beg;
-        my $type_end_last = $type_end;
+        if ( $n > 0 ) {
+            $type_beg_last = $type_beg;
+            $type_end_last = $type_end;
 
-        my $ibeg = $ibeg_next;
-        my $iend = $iend_next;
+            $ibeg = $ibeg_next;
+            $iend = $iend_next;
+
+            $type_beg  = $types_to_go[$ibeg];
+            $type_end  = $types_to_go[$iend];
+            $token_beg = $tokens_to_go[$ibeg];
+        }
+
         my $Kbeg = $K_to_go[$ibeg];
         my $Kend = $K_to_go[$iend];
 
-        $type_beg  = $type_beg_next;
-        $type_end  = $type_end_next;
-        $token_beg = $token_beg_next;
-
-        # ---------------------------------------------------
-        # Define the check value 'Kend' to send for this line
-        # ---------------------------------------------------
-        # The 'Kend' value is an integer for checking that lines come out of
-        # the far end of the pipeline in the right order.  It increases
-        # linearly along the token stream.  But we only send ending K values of
-        # non-comments down the pipeline.  This is equivalent to checking that
-        # the last CODE_type is blank or equal to 'VER'. See also sub
-        # resync_lines_and_tokens for related coding.  Note that
-        # '$batch_CODE_type' is the code type of the line to which the ending
-        # token belongs.
-        my $Kend_code =
-          $batch_CODE_type && $batch_CODE_type ne 'VER' ? undef : $Kend;
-
-        # Get some vars on line [n+1], if any,
-        # and define $ljump = level jump needed by 'sub get_final_indentation'
         if ( $n < $n_last_line ) {
             $ibeg_next = $ri_first->[ $n + 1 ];
             $iend_next = $ri_last->[ $n + 1 ];
 
-            $type_beg_next  = $types_to_go[$ibeg_next];
-            $type_end_next  = $types_to_go[$iend_next];
-            $token_beg_next = $tokens_to_go[$ibeg_next];
-
             my $Kbeg_next = $K_to_go[$ibeg_next];
-            $ljump = $rLL->[$Kbeg_next]->[_LEVEL_] - $rLL->[$Kend]->[_LEVEL_];
+            $ljump =
+              $rLL->[$Kbeg_next]->[_LEVEL_] - $rLL->[$Kend]->[_LEVEL_];
         }
         elsif ( !$is_block_comment && $Kend < $Klimit ) {
 
@@ -29397,6 +29383,20 @@ sub convey_batch_to_vertical_aligner {
         else {
             $ljump = 0;
         }
+
+        # ---------------------------------------------------
+        # Define the check value 'Kend' to send for this line
+        # ---------------------------------------------------
+        # The 'Kend' value is an integer for checking that lines come out of
+        # the far end of the pipeline in the right order.  It increases
+        # linearly along the token stream.  But we only send ending K values of
+        # non-comments down the pipeline.  This is equivalent to checking that
+        # the last CODE_type is blank or equal to 'VER'. See also sub
+        # resync_lines_and_tokens for related coding.  Note that
+        # '$batch_CODE_type' is the code type of the line to which the ending
+        # token belongs.
+        $rvao_args->{Kend} =
+          $batch_CODE_type && $batch_CODE_type ne 'VER' ? undef : $Kend;
 
         # ---------------------------------------------
         # get the vertical alignment info for this line
@@ -29705,7 +29705,6 @@ EOM
         # -----------------------------------
         # Store the remaining non-flag values
         # -----------------------------------
-        $rvao_args->{Kend}            = $Kend_code;
         $rvao_args->{ci_level}        = $ci_levels_to_go[$ibeg];
         $rvao_args->{indentation}     = $indentation;
         $rvao_args->{level_end}       = $nesting_depth_end;
@@ -29742,16 +29741,16 @@ EOM
       # and either
       && (
         # line has either single opening token
-        $iend_next == $ibeg_next
+        $iend == $ibeg
 
         # or is a single token followed by opening token.
         # Note that sub identifiers have blanks like 'sub doit'
         #                                 $token_beg !~ /\s+/
-        || ( $iend_next - $ibeg_next <= 2 && index( $token_beg, SPACE ) < 0 )
+        || ( $iend - $ibeg <= 2 && index( $token_beg, SPACE ) < 0 )
       )
 
       # and limit total to 10 character widths
-      && token_sequence_length( $ibeg_next, $iend_next ) <= 10;
+      && token_sequence_length( $ibeg, $iend ) <= 10;
 
     # remember indentation of lines containing opening containers for
     # later use by sub get_final_indentation
@@ -30401,7 +30400,7 @@ sub make_HSC_vertical_alignments {
     }
 
     return $rline_alignments;
-}
+} ## end sub make_HSC_vertical_alignments
 
 sub make_vertical_alignments {
     my ( $self, $ri_first, $ri_last ) = @_;
