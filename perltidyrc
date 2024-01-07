@@ -1,4 +1,6 @@
 # perltidyrc file for perltidy
+# Note that this is not named .perltidyrc because that would interfere
+# with testing. This has to be requested with -pro=perltidyrc
 
 # warnings
 --warning-output

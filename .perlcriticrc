@@ -183,3 +183,7 @@ allow = if unless
 # and error reporting.
 [InputOutput::RequireCheckedSyscalls]
 exclude_functions = print
+
+# Use a perltidyrc which does some warning checks
+[CodeLayout::RequireTidyCode]
+perltidyrc = perltidyrc
