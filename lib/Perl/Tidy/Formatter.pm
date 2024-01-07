@@ -6433,7 +6433,7 @@ EOM
     # Act on -warn-variable-types if requested and the logger is available
     # (the logger is deactivated during iterations)
     $self->warn_variable_types()
-      if ( $rOpts->{'warn-variable-types'}
+      if ( %warn_variable_types
         && $self->[_logger_object_] );
 
     if ( $rOpts->{'dump-mixed-call-parens'} ) {
@@ -8870,7 +8870,7 @@ sub scan_variable_usage {
                         see_line    => $see_line,
                         line_number => $line_index + 1,
                         letter      => $letter,
-                        K           => $KK
+                        K           => $KK,
                       };
                     last;
                 }
@@ -9642,22 +9642,23 @@ sub initialize_warn_variable_types {
     my $wvt_option = $rOpts->{$wvt_key};
     return unless ($wvt_option);
 
-    # Options:
-    #  u - declared but unused [NOT AVAILABLE, use --dump-unusual-variables]
+    # Specific options:
     #  r - reused scope
     #  s - reused sigil
     #  p - package boundaries crossed by lexical variables
+
+    # Other controls:
     #  0 - none of the above
     #  1 - all of the above
     #  * - all of the above
-    # Example:
-    #  -wuvt='s r'  : do check types 's' and 'r'
+    #  u - [NOT AVAILABLE, use --dump-unusual-variables]
 
-    # 'u' will be accepted but produce a warning
-    # '0' will be checked specially
-    my @q = qw(r s p u 1 *);
+    # Example:
+    #  -wvt='s r'  : do check types 's' and 'r'
+
+    my @all_opts = qw(r s p);
     my %is_valid_option;
-    @is_valid_option{@q} = (1) x scalar(@q);
+    @is_valid_option{@all_opts} = (1) x scalar(@all_opts);
 
     # allow comma separators
     $wvt_option =~ s/,/ /g;
@@ -9665,31 +9666,41 @@ sub initialize_warn_variable_types {
     my @opts = split_words($wvt_option);
     return unless (@opts);
 
-    # Patch for conversion to space-separated options:
-    # Split a single option of bundled letters like 'rsp' into 'r s p'
-    # The development version allowed this, but it is best to require
-    # spaces so that future options may have more than one letter.
-    # FIXME: this must be removed if any multi-letter options are added
+    # check a single item
     if ( @opts == 1 ) {
         my $opt = $opts[0];
+
+        # Split a single option of bundled letters like 'rsp' into 'r s p'
+        # but give a warning because this may not be allowed in the future
         if ( length($opt) > 1 ) {
             @opts = split //, $opt;
             Warn("Please use space-separated letters in --$wvt_key\n");
         }
+        elsif ( $opt eq '*' || $opt eq '1' ) {
+            @opts = keys %is_valid_option;
+        }
+        elsif ( $opt eq '0' ) {
+            return;
+        }
         else {
-
-            # catch something like ',0'
-            if ( $opt eq '0' ) {
-                return;
-            }
+            # should be one of r,s,p - catch any error below
         }
     }
 
     my $msg = EMPTY_STRING;
     foreach my $opt (@opts) {
-        if ( !$is_valid_option{$opt} ) {
-            if ( $opt eq '0' ) {
-                $msg .= "--$wvt_key contains '0' mixed with other options\n";
+        if ( $is_valid_option{$opt} ) {
+            $warn_variable_types{$opt} = 1;
+        }
+        else {
+            if ( $opt =~ /^[01\*]$/ ) {
+                $msg .=
+                  "--$wvt_key cannot contain $opt mixed with other options\n";
+            }
+            elsif ( $opt eq 'u' ) {
+                Warn(<<EOM);
+--$wvt_key=u is not available; use --dump-unusual-variables=u to find unused vars
+EOM
             }
             else {
                 $msg .= "--$wvt_key has unexpected symbol: '$opt'\n";
@@ -9697,23 +9708,6 @@ sub initialize_warn_variable_types {
         }
     }
     if ($msg) { Die($msg) }
-    @warn_variable_types{@opts} = (1) x scalar(@opts);
-
-    if ( $warn_variable_types{'*'} || $warn_variable_types{'1'} ) {
-        my @all = qw(r s p);
-        @warn_variable_types{@all} = (1) x scalar(@all);
-    }
-
-    # Option type 'u' (undefined) is not allowed here because it will cause
-    # needless warnings when perltidy is run on small blocks from an editor.
-    if ( $warn_variable_types{u} ) {
-        Warn(<<EOM);
---$wvt_key=u is not available; use --dump-unusual-variables=u to find unused vars
-EOM
-    }
-
-    # The updated option string replaces the input string
-    $rOpts->{$wvt_key} = $wvt_option;
 
     #-------------------------------------
     # Parse --warn-variable-exclusion-list
@@ -9865,7 +9859,7 @@ sub dump_mixed_call_parens {
             name      => $key,
             type      => $type,
             no_count  => $no_count,
-            yes_count => $yes_count
+            yes_count => $yes_count,
           };
     }
     return unless (@mixed_counts);
