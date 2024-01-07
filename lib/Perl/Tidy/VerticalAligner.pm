@@ -5719,7 +5719,7 @@ EOM
         }
     }
     return $line;
-}
+} ## end sub add_leading_tabs
 
 sub valign_output_step_D {
 

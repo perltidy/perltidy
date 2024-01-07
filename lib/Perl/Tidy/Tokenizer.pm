@@ -815,7 +815,7 @@ sub increment_brace_error {
 sub get_saw_brace_error {
     my $self = shift;
     return $self->[_saw_brace_error_];
-} ## end sub get_saw_brace_error
+}
 
 sub report_definite_bug {
     my $self = shift;

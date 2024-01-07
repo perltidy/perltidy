@@ -41,7 +41,7 @@ This error is probably due to a recent programming change
 ======================================================================
 EOM
     exit 1;
-}
+} ## end sub AUTOLOAD
 
 sub DESTROY {
 
@@ -57,7 +57,7 @@ sub new {
         _input_file              => EMPTY_STRING,
         _fh                      => undef,
     }, $class;
-}
+} ## end sub new
 
 sub set_input_file {
     my ( $self, $input_file ) = @_;
@@ -92,6 +92,6 @@ sub write_diagnostics {
     $fh->print($msg);
     $self->{_write_diagnostics_count}++;
     return;
-}
+} ## end sub write_diagnostics
 
 1;

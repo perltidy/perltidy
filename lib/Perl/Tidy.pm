@@ -5796,7 +5796,7 @@ sub dump_integer_option_range {
         print {*STDOUT} "$key, $min, $max, $default\n";
     }
     return;
-} ## end sub dump_integer_option-range
+} ## end sub dump_integer_option_range
 
 sub dump_defaults {
     my @defaults = @_;

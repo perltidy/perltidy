@@ -467,7 +467,7 @@ sub report_definite_bug {
 sub get_save_logfile {
     my $self = shift;
     return $self->{_save_logfile};
-} ## end sub get_save_logfile
+}
 
 sub finish {
 

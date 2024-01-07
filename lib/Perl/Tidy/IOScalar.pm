@@ -38,7 +38,7 @@ This error is probably due to a recent programming change
 ======================================================================
 EOM
     exit 1;
-}
+} ## end sub AUTOLOAD
 
 sub DESTROY {
 
@@ -78,7 +78,7 @@ expecting mode = 'r' or 'w' but got mode ($mode); trace follows:
 ------------------------------------------------------------------------
 EOM
     }
-}
+} ## end sub new
 
 sub getline {
     my $self = shift;
@@ -92,7 +92,7 @@ EOM
     }
     my $i = $self->[2]++;
     return $self->[0]->[$i];
-}
+} ## end sub getline
 
 sub print    ## no critic (Subroutines::ProhibitBuiltinHomonyms)
 {
@@ -107,5 +107,5 @@ EOM
     }
     ${ $self->[0] } .= $msg;
     return;
-}
+} ## end sub print
 1;
