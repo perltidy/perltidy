@@ -101,6 +101,9 @@ _config.yml
 # perlcritic config file
 \.perlcriticrc
 
+# perltidyrc
+\bperltidyrc
+
 # any shell scripts
 \.sh$
 

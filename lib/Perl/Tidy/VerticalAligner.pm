@@ -5,7 +5,7 @@ use Carp;
 
 { #<<< A non-indenting brace to contain all lexical variables
 
-our $VERSION = '20230912.11';
+our $VERSION = '20230912.12';
 use English qw( -no_match_vars );
 use Perl::Tidy::VerticalAligner::Alignment;
 use Perl::Tidy::VerticalAligner::Line;
