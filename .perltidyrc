@@ -1,0 +1,10 @@
+# perltidyrc file for perltidy
+
+# warnings
+--warning-output
+--warn-missing-else
+--warn-variable-types='*'
+
+# add sub names to closing brace
+--closing-side-comments
+--closing-side-comment-list='sub'
