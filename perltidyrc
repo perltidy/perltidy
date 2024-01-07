@@ -1,12 +1,20 @@
-# perltidyrc file for perltidy
-# Note that this is not named .perltidyrc because that would interfere
-# with testing. This has to be requested with -pro=perltidyrc
+# perltidyrc file for perltidy itself
+# Note:
+# - This is not named .perltidyrc because that could interfere
+#   with testing. This has to be requested with -pro=perltidyrc
+# - Formatting without these parameters remains stable, so it is not
+#   necessary to format with these parameters every time. But it should
+#   be done before a commit.
 
 # warnings
 --warning-output
 --warn-missing-else
 --warn-variable-types='*'
 
-# add sub names to closing brace
+# add comment with sub name to closing sub brace
 --closing-side-comments
 --closing-side-comment-list='sub'
+
+# add trailing commas to last item of a bare hash list
+--want-trailing-commas='h'
+--add-trailing-commas

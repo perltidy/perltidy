@@ -5288,7 +5288,7 @@ sub Win_OS_Type {
             1  => "XP/.Net",
             2  => "Win2003",
             51 => "NT3.51",
-        }
+        },
     }->{$id}->{$minor};
 
     # If $os is undefined, the above code is out of date.  Suggested updates

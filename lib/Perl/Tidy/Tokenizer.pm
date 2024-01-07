@@ -2784,7 +2784,7 @@ EOM
                         last_nonblank_i => $last_nonblank_i,
                         rpretoken_map   => $rtoken_map,
                         rpretoken_type  => $rtoken_type,
-                        input_line      => $input_line
+                        input_line      => $input_line,
                     }
                 );
                 return 1;
@@ -2806,7 +2806,7 @@ EOM
                     last_nonblank_i => $last_nonblank_i,
                     rpretoken_map   => $rtoken_map,
                     rpretoken_type  => $rtoken_type,
-                    input_line      => $input_line
+                    input_line      => $input_line,
                 }
             );
             if ( $i_tok == 0 ) {
@@ -7715,7 +7715,7 @@ sub scan_id_do {
                     type            => $type,
                     rtokens         => $rtokens,
                     rtoken_map      => $rtoken_map,
-                    max_token_index => $max_token_index
+                    max_token_index => $max_token_index,
                 }
             );
             $id_scan_state = EMPTY_STRING;

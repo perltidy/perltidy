@@ -2295,7 +2295,7 @@ sub sweep_left_to_right {
             rtodo       => \@todo,
             rmax_move   => \%max_move,
             short_pad   => $short_pad,
-            group_level => $group_level
+            group_level => $group_level,
         }
     );
     return;
@@ -3371,7 +3371,7 @@ sub match_line_pairs {
                                 tok_m       => $tok_m,
                                 pat         => $pat,
                                 pat_m       => $pat_m,
-                                pad         => $pad
+                                pad         => $pad,
                             }
                         );
                         if ($match_code) {
