@@ -23,27 +23,44 @@ F<.tdy> extension), you will get a sense of what formatting changes, if
 any, you'd like to make.  If the default formatting is acceptable, you
 do not need a F<.perltidyrc> file.
 
+The default is based on the recommendations in the L<Perl style
+guide|https://perldoc.perl.org/perlstyle>.  It is worth noting that, although
+many variations are possible with the available parameters, this style has some
+significant advantages when small sections of code are sent to perltidy from
+within an editor.  The reason is that perltidy can usually format a small
+container spanning multiple lines of code provided that the parens, braces and
+brackets are balanced.  For the default style, the number of lines required to
+make a balanced selection of code is generally less than for other styles.  For
+example, if a cuddled style is used, then an entire C<if-elsif-> chain must be
+selected for formatting rather than an individual C<elsif> block. This can be
+tedious and time consuming.
+
 =head2 Use as Filter?
 
 Do you almost always want to run perltidy as a standard filter on just
-one input file?  If yes, use B<-st> and B<-se>.  
+one input file?  If yes, use B<-st> and B<-se>.
 
 =head2 Line Length Setting
 
 Perltidy will set line breaks to prevent lines from exceeding the
-maximum line length.  
+maximum line length.
 
 Do you want the maximum line length to be 80 columns?  If no, use
 B<-l=n>, where B<n> is the number of columns you prefer.
 
+When setting the maximum line length, something to consider is that perltidy
+will use this to decide when a list of items should be broken into multiple
+lines.  So if it is set excessively large, lists may be so wide that they
+are hard to read.
+
 =head2 Indentation in Code Blocks
 
 In the block below, the variable C<$anchor> is one indentation level deep
-and is indented by 4 spaces as shown here: 
+and is indented by 4 spaces as shown here:
 
     if ( $flag eq "a" ) {
         $anchor = $header;
-    }  
+    }
 
 If you want to change this to be a different number B<n> of spaces
 per indentation level, use B<-i=n>.
@@ -68,10 +85,16 @@ it does not exceed the value of the primary indentation.
 
 =head2 Tabs
 
-The default, and recommendation, is to represent leading whitespace
-with actual space characters.  However, if you prefer to entab
-leading whitespace with one tab character for each B<n> spaces,
-use B<-et=n>.  Typically, B<n> would be 8.  
+The default, and recommendation, is to represent leading whitespace with actual
+space characters.  However, if you prefer to entab leading whitespace of lines
+of code with one tab character for each B<n> spaces, use B<-et=n>.  The value
+of B<n> should be set to be the same as used by your display software.  If
+there is a disagreement, then vertical alignment will not be displayed
+correctly.
+
+Please note that this number B<n> has nothing to do with the number of
+spaces for one level of indentation, which is specified separately
+with B<-i=n>.
 
 =head2 Opening Block Brace Right or Left?
 
@@ -80,20 +103,20 @@ into two separate categories and controlled separately in most cases.  The two
 categories are (1) code block curly braces, which contain perl code, and (2)
 everything else.  Basically, a code block brace is one which could contain
 semicolon-terminated lines of perl code.  We will first work on the scheme for
-code block curly braces.  
+code block curly braces.
 
 Decide which of the following opening brace styles you prefer for most blocks
 of code (with the possible exception of a B<sub block brace> which will
 be covered later):
 
-If you like opening braces on the right, like this, go to 
+If you like opening braces on the right, like this, go to
 L<Opening Braces Right>.
 
     if ( $flag eq "h" ) {
         $headers = 0;
-    }  
+    }
 
-If you like opening braces on the left, like this, go to 
+If you like opening braces on the left, like this, go to
 L<Opening Braces Left>.
 
     if ( $flag eq "h" )
@@ -113,7 +136,7 @@ the opening brace on the left, like this:
     }
 
 This helps to visually separate the block contents from the test
-expression.  
+expression.
 
 An alternative is to keep the brace on the right even for
 multiple-line test expressions, like this:
@@ -142,11 +165,11 @@ instead of this default style?
 
     if ( $flag eq "h" ) {
         $headers = 0;
-    }  
+    }
     elsif ( $flag eq "f" ) {
         $sectiontype = 3;
-    } 
-    else {    
+    }
+    else {
         print "invalid option: " . substr( $arg, $i, 1 ) . "\n";
         dohelp();
     }
@@ -180,7 +203,7 @@ the same as other code blocks.  If this is okay, skip ahead
 to L<Block Brace Vertical Tightness>.
 
 If you prefer an opening sub brace to be on a new line,
-like this: 
+like this:
 
     sub message
     {
@@ -220,7 +243,7 @@ But you may also use this more compressed style if you wish:
       { $headers = 0;
       }
 
-If you do not prefer this more compressed form, go to 
+If you do not prefer this more compressed form, go to
 L<Opening Sub Braces>.
 
 Otherwise use parameter B<-bbvt=n>, where n=1 or n=2.  To decide,
@@ -244,7 +267,7 @@ look at this snippet:
     }
 
 The difference is that B<-bbvt=1> breaks after an opening brace if
-the next line is unbalanced, whereas B<-bbvt=2> never breaks.  
+the next line is unbalanced, whereas B<-bbvt=2> never breaks.
 
 If you were expecting the 'ENDIF' word to move up vertically here, note that
 the second opening brace in the above example is not a code block brace (it is
@@ -297,7 +320,7 @@ example of the default:
 In this default indentation scheme, a simple formula is used to find the
 indentation of every line.  Notice how the first 'undef' is indented 4
 spaces (one level) to the right, and how 'PrintError' is indented 4 more
-speces (one more level) to the right.  
+spaces (one more level) to the right.
 
 The alternate is to let the location of the opening paren (or square
 bracket, or curly brace) define the indentation, like this:
@@ -317,9 +340,54 @@ complex structure perltidy will temporarily fall back on the default
 indentation scheme.  You may want to try both on large sections of code to see
 which works best.
 
+Also note that a disadvantage of this second scheme is that small changes in
+code, such as a change in the length of a sub name, can cause changes in many
+lines of code.  For example, if we decide to change the name C<connect> to
+C<connect_to_destination>, then all of the call args would have to move right
+by 15 spaces. This can produce a lot of lines of differences when
+changes are committed.
+
 If you prefer the first (default) scheme, no parameter is needed.
 
-If you prefer the latter scheme, use B<-lp>. 
+If you prefer the latter scheme, use B<--line-up-parentheses>, or B<-lp>.
+There is an alternative version of this option named
+B<--extended-line-up-parentheses>, or B<-xlp> which can also be used. For
+simplicity, the name B<-lp> will refer to either of these options in the
+following text.
+
+=head2 Welding
+
+The following snippet is displayed with the default formatting:
+
+    $opt_c = Text::CSV_XS->new(
+        {
+            binary       => 1,
+            sep_char     => $opt_c,
+            always_quote => 1,
+        }
+    );
+
+For this type of structure, where an inner container is nested within an outer
+container, we can get a more compact display with the parameter
+B<--weld-nested-containers>, or B<-wn>:
+
+    # perltidy -wn
+    $opt_c = Text::CSV_XS->new( {
+        binary       => 1,
+        sep_char     => $opt_c,
+        always_quote => 1,
+    } );
+
+The name of the parameter comes from the idea that the two opening and two
+closing tokens have been 'welded' together to act as a single unit. The
+indentation spaces of the contents has also been reduced by one level.
+
+This is a nice transformation because it is symmetric at the opening and
+closing, and leaves a sort of 'sandwich' structure 0which is still quite
+readable.
+
+Some parameters available for asymmetric compressions, at just the opening
+or closing of complex structures, are described in the next sections.
 
 =head2 Opening Vertical Tightness
 
@@ -350,7 +418,7 @@ with the opening tokens:
 The difference is that the lines have been compressed vertically without
 any changes to the indentation.  This can almost always be done with the
 B<-lp> indentation style, but only in limited cases for the default
-indentation style. 
+indentation style.
 
 If you prefer the default, skip ahead to L<Closing Token Placement>.
 
@@ -385,14 +453,14 @@ And here it is again formatted with B<-lp -vt=2>:
 The B<-vt=1> style tries to display the structure by preventing more
 than one step in indentation per line. In this example, the first two
 opening parens were not followed by balanced lines, so B<-vt=1> broke
-after them.  
+after them.
 
 The B<-vt=2> style does not limit itself to a single indentation step
 per line.
 
 Note that in the above example the function 'do_sumething_about_it'
 started on a new line. This is because it follows an opening code
-block brace and is governed by the flag previously set in 
+block brace and is governed by the flag previously set in
 L<Block Brace Vertical Tightness>.
 
 =head2 Closing Token Placement
@@ -400,7 +468,7 @@ L<Block Brace Vertical Tightness>.
 You have several options for dealing with the terminal closing tokens of
 non-blocks.  In the following examples, a closing parenthesis is shown, but
 these parameters apply to closing square brackets and non-block curly braces as
-well.  
+well.
 
 The default behavior for parenthesized relatively large lists is to place the
 closing paren on a separate new line.  The flag B<-cti=n> controls the amount
@@ -426,7 +494,7 @@ but it may not look very good with the B<-lp> indentation scheme:
 
 An alternative which works well with B<-lp> indentation is B<-cti=1>,
 which aligns the closing paren vertically with its
-opening paren, if possible:  
+opening paren, if possible:
 
     # perltidy -lp -cti=1
     @month_of_year = (
@@ -443,9 +511,9 @@ paren one full indentation level:
                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
                        );
 
-If you prefer the closing paren on a separate line like this, 
-note the value of B<-cti=n> that you prefer and skip ahead to 
-L<Define Horizontal Tightness>. 
+If you prefer the closing paren on a separate line like this,
+note the value of B<-cti=n> that you prefer and skip ahead to
+L<Define Horizontal Tightness>.
 
 Finally, the question of paren indentation can be avoided by placing it
 at the end of the previous line, like this:
@@ -486,7 +554,7 @@ Here is B<-lp -vtc=2>:
 Choose the one that you prefer.  The difference is that B<-vtc=1> leaves
 closing tokens at the start of a line within a list, which can assist in
 keeping hierarchical lists readable.  The B<-vtc=2> style always tries
-to move closing tokens to the end of a line.  
+to move closing tokens to the end of a line.
 
 If you choose B<-vtc=1>,
 you may also want to specify a value of B<-cti=n> (previous section) to
@@ -495,7 +563,7 @@ handle cases where a line begins with a closing paren.
 =head2 Stack Opening Tokens
 
 In the following snippet the opening hash brace has been placed
-alone on a new line.  
+alone on a new line.
 
     $opt_c = Text::CSV_XS->new(
         {
@@ -547,10 +615,14 @@ can give a similar result.  The difference is that the B<-vtc> flags try to
 avoid lines with leading opening tokens by "hiding" them at the end of a
 previous line, whereas the B<-sct> flag merely tries to reduce the number of
 lines with isolated closing tokens by stacking multiple closing tokens
-together, but it does not try to hide them.  
+together, but it does not try to hide them.
 
 The manual shows how all of these vertical tightness controls may be applied
 independently to each type of non-block opening and opening token.
+
+Also, note that B<--weld-nested-containers>, or B<-wn>, mentioned previously,
+operates like the combination of B<-sot> and B<-sct> and also reduces the
+indentation level of the contents.
 
 =head2 Define Horizontal Tightness
 
@@ -558,7 +630,7 @@ Horizontal tightness parameters define how much space is included
 within a set of container tokens.
 
 For parentheses, decide which of the following values of B<-pt=n>
-you prefer: 
+you prefer:
 
  if ( ( my $len_tab = length( $tabstr ) ) > 0 ) {  # -pt=0
  if ( ( my $len_tab = length($tabstr) ) > 0 ) {    # -pt=1 (default)
@@ -573,7 +645,7 @@ you prefer:
 
  $width = $col[ $j + $k ] - $col[ $j ];  # -sbt=0
  $width = $col[ $j + $k ] - $col[$j];    # -sbt=1 (default)
- $width = $col[$j + $k] - $col[$j];      # -sbt=2 
+ $width = $col[$j + $k] - $col[$j];      # -sbt=2
 
 For curly braces, decide which of the following values of B<-bt=n>
 you prefer:
@@ -583,7 +655,7 @@ you prefer:
  $obj->{$parsed_sql->{'table'}[0]};        # -bt=2
 
 For code block curly braces, decide which of the following values of
-B<-bbt=n> you prefer: 
+B<-bbt=n> you prefer:
 
  %bf = map { $_ => -M $_ } grep { /\.deb$/ } dirents '.'; # -bbt=0 (default)
  %bf = map { $_ => -M $_ } grep {/\.deb$/} dirents '.';   # -bbt=1
@@ -593,7 +665,7 @@ B<-bbt=n> you prefer:
 
 The default is not to place a space after a function call:
 
-  myfunc( $a, $b, $c );    # default 
+  myfunc( $a, $b, $c );    # default
 
 If you prefer a space:
 
@@ -606,7 +678,7 @@ use B<-sfp>.
 The default is to place a space between only these keywords
 and an opening paren:
 
-   my local our and or eq ne if else elsif until unless 
+   my local our and or eq ne if else elsif until unless
    while for foreach return switch case given when
 
 but no others. For example, the default is:
@@ -628,7 +700,7 @@ semicolon, like this:
 
 If you prefer a space, like this:
 
-    $i = 1 ; 
+    $i = 1 ;
 
 enter B<-sts>.
 
@@ -650,12 +722,12 @@ enter B<-nsfs>.
 Block comments are comments which occupy a full line, as opposed to side
 comments.  The default is to indent block comments with the same
 indentation as the code block that contains them (even though this
-will allow long comments to exceed the maximum line length). 
+will allow long comments to exceed the maximum line length).
 
 If you would like block comments indented except when this would cause
 the maximum line length to be exceeded, use B<-olc>.  This will cause a
 group of consecutive block comments to be outdented by the amount needed
-to prevent any one from exceeding the maximum line length. 
+to prevent any one from exceeding the maximum line length.
 
 If you never want block comments indented, use B<-nibc>.
 
@@ -756,26 +828,14 @@ for a F<.perltidyrc> file containing these parameters:
  -vt=1
  -vtc=1
 
-=head2 Tidyview
-
-There is a graphical program called B<tidyview> which you can use to read a
-preliminary F<.perltidyrc> file, make trial adjustments and immediately see
-their effect on a test file, and then write a new F<.perltidyrc>.  You can
-download a copy at
-
-http://sourceforge.net/projects/tidyview
-
 =head2 Additional Information
 
-This document has covered the main parameters.  Many more parameters are
-available for special purposes and for fine-tuning a style.  For complete
-information see the perltidy manual
-http://perltidy.sourceforge.net/perltidy.html
+For further information see the perltidy documentation at
+L<Sourceforge|http://perltidy.sourceforge.net> or at
+L<metacpan|https://metacpan.org/pod/distribution/Perl-Tidy/bin/perltidy>.  or
+at L<GitHub|https://perltidy.github.io/perltidy/>
 
-For an introduction to using perltidy, see the tutorial 
-http://perltidy.sourceforge.net/tutorial.html
-
-Suggestions for improving this document are welcome and may be sent to
-perltidy at users.sourceforge.net
+The source code is maintained at
+L<GitHub|https://github.com/perltidy/perltidy>.
 
 =cut
