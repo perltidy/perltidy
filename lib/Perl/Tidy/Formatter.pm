@@ -29389,8 +29389,9 @@ sub convey_batch_to_vertical_aligner {
         # resync_lines_and_tokens for related coding.  Note that
         # '$batch_CODE_type' is the code type of the line to which the ending
         # token belongs.
-        $rvao_args->{Kend} =
-          $batch_CODE_type && $batch_CODE_type ne 'VER' ? undef : $Kend;
+        if ( !$batch_CODE_type || $batch_CODE_type eq 'VER' ) {
+            $rvao_args->{Kend} = $Kend;
+        }
 
         # ---------------------------------------------
         # get the vertical alignment info for this line
