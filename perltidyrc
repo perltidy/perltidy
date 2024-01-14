@@ -8,8 +8,15 @@
 
 # warnings
 --warning-output
+
+# all if-elsif chains must end in an else block
 --warn-missing-else
+
+# warn if any of the 'unusual' variables are seen
 --warn-variable-types='*'
+
+# user define subs must have args in parens
+--want-call-parens='&'
 
 # add comment with sub name to closing sub brace
 --closing-side-comments
@@ -18,3 +25,6 @@
 # add trailing commas to last item of a bare hash list
 --want-trailing-commas='h'
 --add-trailing-commas
+
+# this should eventually become the default
+--delete-repeated-commas
