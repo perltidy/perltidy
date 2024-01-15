@@ -11881,6 +11881,24 @@ die sprintf(
 --delete-old-whitespace
 --opening-paren-right
 
+==> b1464.in <==
+while (
+    $^O !~ /Win32/ and
+
+    my $pid = fork()
+) {
+    my $status = waitpid $pid, 0;
+    warn "Server restarting in $config->{delay} seconds";
+    sleep $config->{delay};
+}
+
+==> b1464.par <==
+--opening-brace-always-on-right
+--keep-old-blank-lines=0
+--break-after-all-operators
+--keyword-group-blanks-size='2.8'
+--keyword-group-blanks-before=2
+
 ==> b148.in <==
 # state 1
 @yydgoto=(

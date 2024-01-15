@@ -12576,6 +12576,20 @@ sub is_in_block_by_i {
     return;
 } ## end sub is_in_block_by_i
 
+sub is_in_block_by_K {
+    my ( $self, $KK ) = @_;
+
+    # returns true if
+    #     token at $KK is contained in a BLOCK
+    #     or is at root level
+    #     or there is some kind of error (i.e. unbalanced file)
+    # returns false otherwise
+
+    my $parent_seqno = $self->parent_seqno_by_K($KK);
+    return SEQ_ROOT if ( !$parent_seqno || $parent_seqno eq SEQ_ROOT );
+    return $self->[_rblock_type_of_seqno_]->{$parent_seqno};
+} ## end sub is_in_block_by_K
+
 sub is_in_list_by_i {
     my ( $self, $i ) = @_;
 
@@ -12589,16 +12603,6 @@ sub is_in_list_by_i {
     }
     return;
 } ## end sub is_in_list_by_i
-
-sub is_list_by_K {
-
-    # Return true if token K is in a list
-    my ( $self, $KK ) = @_;
-
-    my $parent_seqno = $self->parent_seqno_by_K($KK);
-    return unless defined($parent_seqno);
-    return $self->[_ris_list_by_seqno_]->{$parent_seqno};
-} ## end sub is_list_by_K
 
 sub is_list_by_seqno {
 
@@ -17500,7 +17504,8 @@ EOM
 
             # Do not look for keywords in lists ( keyword 'my' can occur in
             # lists, see case b760); fixed for c048.
-            if ( $self->is_list_by_K($K_first) ) {
+            # Switch from ->is_list_by_K to !->is_in_block_by_K to fix b1464
+            if ( !$self->is_in_block_by_K($K_first) ) {
                 if ( $ibeg >= 0 ) { $iend = $i }
                 next;
             }

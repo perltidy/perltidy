@@ -8039,6 +8039,14 @@ die sprintf(
 
 );
 
+==> b1464 <==
+while ( $^O !~ /Win32/ and
+    my $pid = fork() ) {
+    my $status = waitpid $pid, 0;
+    warn "Server restarting in $config->{delay} seconds";
+    sleep $config->{delay};
+}
+
 ==> b148 <==
 # state 1
 @yydgoto=(
