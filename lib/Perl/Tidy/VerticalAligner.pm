@@ -222,6 +222,7 @@ my (
     $rOpts_valign_code,
     $rOpts_valign_block_comments,
     $rOpts_valign_side_comments,
+    $rOpts_valign_signed_numbers,
 
     $require_tabs,
 
@@ -292,6 +293,7 @@ sub check_options {
     $rOpts_valign_code              = $rOpts->{'valign-code'};
     $rOpts_valign_block_comments    = $rOpts->{'valign-block-comments'};
     $rOpts_valign_side_comments     = $rOpts->{'valign-side-comments'};
+    $rOpts_valign_signed_numbers    = $rOpts->{'valign-signed-numbers'};
 
     return;
 } ## end sub check_options
@@ -1761,7 +1763,11 @@ sub _flush_group_lines {
       ? get_extra_leading_spaces( $rgroup_lines, $rgroups )
       : 0;
 
-    # STEP 6: Output the lines.
+    # STEP 6: add sign padding to columns numbers if needed
+    pad_signed_number_columns($rgroup_lines)
+      if ($rOpts_valign_signed_numbers);
+
+    # STEP 7: Output the lines.
     # All lines in this group have the same leading spacing and maximum line
     # length
     my $group_leader_length       = $rgroup_lines->[0]->{'leading_space_count'};
@@ -4791,6 +4797,404 @@ sub align_side_comments {
 ###############################
 # CODE SECTION 6: Output Step A
 ###############################
+
+use constant DEBUG_VSN => 0;
+
+my %is_digit_char;
+my %is_plus_or_minus;
+my %is_leading_sign_pattern;
+
+BEGIN {
+
+    # These patterns match a signed number (and a lot of other things)
+    my @q = ( 'Q,', 'Q,b', 'Qb', 'Qb}', 'Qb},' );
+    @is_leading_sign_pattern{@q} = (1) x scalar(@q);
+
+    @q = qw( 0 1 2 3 4 5 6 7 8 9 );
+    @is_digit_char{@q} = (1) x scalar(@q);
+
+    @q = qw( + - );
+    @is_plus_or_minus{@q} = (1) x scalar(@q);
+}
+
+sub end_signed_number_column {
+    my ( $rgroup_lines, $rcol_hash, $ix_last ) = @_;
+
+    # Finish formatting a column of unsigned numbers
+    # Given:
+    #   $rgroup_lines - the current vertical aligment group of lines
+    #   $rcol_hash    - a hash of information about this vertical column
+    #   $ix_last      - index of the last line of this vertical column
+    # Task:
+    #   If this is a mixture of signed and unsigned numbers, then add a
+    #   single space before the unsigned numbers to improve appearance.
+    return unless ($rcol_hash);
+    my $jcol     = $rcol_hash->{jcol};
+    my $unsigned = $rcol_hash->{unsigned_count};
+    my $signed   = $rcol_hash->{signed_count};
+    if ( !$signed && $unsigned ) {
+        DEVEL_MODE
+          && Fault("avoid calling without mixed signed and unsigned\n");
+        return;
+    }
+    my $pos_start_number = $rcol_hash->{pos_start_number};
+    my $ix_first         = $rcol_hash->{ix_first};
+    my $nlines           = $ix_last - $ix_first + 1;
+
+    # check for skipped lines, shouldn't happen
+    if ( $signed + $unsigned != $nlines ) {
+        my $line    = $rgroup_lines->[$ix_last];
+        my $rfields = $line->{'rfields'};
+        my $text    = join '', @{$rfields};
+        DEVEL_MODE && Fault(<<EOM);
+We seem to have miscounted lines, please check:
+signed=$signed
+j=$jcol
+unsigned=$unsigned
+ix_first=$ix_first
+ix_last=$ix_last
+nlines=$nlines
+text=$text
+EOM
+        return;
+    }
+
+    foreach my $ix_line ( $ix_first .. $ix_last ) {
+        my $line                = $rgroup_lines->[$ix_line];
+        my $leading_space_count = $line->{'leading_space_count'};
+        my $rfields             = $line->{'rfields'};
+        my $rfield_lengths      = $line->{'rfield_lengths'};
+        my $jmax                = $line->{'jmax'};
+        if ( $jcol >= $jmax ) {
+
+            # shouldn't happen
+            DEVEL_MODE && Fault("jcol=$jcol >= jmax=$jmax\n");
+            return;
+        }
+        my @alignments = @{ $line->{'ralignments'} };
+        my $col        = $alignments[$jcol]->{'column'};
+        my $col_start =
+            $jcol == 0
+          ? $leading_space_count
+          : $alignments[ $jcol - 1 ]->{'column'};
+        my $avail = $col - $col_start;
+        pad_signed_field( \$rfields->[$jcol], \$rfield_lengths->[$jcol],
+            $avail, $pos_start_number );
+    }
+    return;
+} ## end sub end_signed_number_column
+
+sub pad_signed_field {
+    my ( $rstr, $rstr_len, $avail, $pos_start_number ) = @_;
+
+    # Insert an extra space before a number to highlight algebraic signs
+    # in a column of numbers.
+    # Given:
+    #  $rstr     = ref to string
+    #  $rstr_len = ref to length of string (could include wide chars)
+    #  $avail    = available spaces in the column
+    #  $pos_start_number = string position of the leading digit
+    # Task: update $rstr and $rstr_len with a single space
+
+    # First partition the string into $part1 and $part2, so that the
+    # number starts at the beginning of part2.
+    my $part1 = EMPTY_STRING;
+    my $part2 = ${$rstr};
+    if ( $pos_start_number > 0 ) {
+        $part1 = substr( ${$rstr}, 0, $pos_start_number );
+        $part2 = substr( ${$rstr}, $pos_start_number );
+
+        # Important: guard against a bad '$pos_start_number' due to
+        # a programming error. Shouldn't happen but would be catastrophic.
+        if ( substr( $part1, -1, 1 ) ne SPACE ) {
+            DEVEL_MODE && Fault("Bad position '$pos_start_number'\n");
+            return;
+        }
+    }
+
+    # Only insert a space before a digit character; otherwise do nothing.
+    my $test_char = substr( $part2, 0, 1 );
+    if ( $is_digit_char{$test_char}
+        && ${$rstr_len} < $avail )
+    {
+        ${$rstr} = $part1 . SPACE . $part2;
+        ${$rstr_len} += 1;
+    }
+    return;
+} ## end sub pad_signed_field
+
+sub pad_signed_number_columns {
+    my ($rgroup_lines) = @_;
+
+    # Given:
+    #   $rgroup_lines = the current vertical alignment group of lines
+    # Task:
+    #   Look for columns of aligned numeric values, some of whose numbers
+    #   have algebraic signs. Add a leading space to the unsigned
+    #   numbers, if possible, so that the just the signs appear as the first
+    #   character. Example of what we want to do:
+
+    #    my @correct = (
+    #        [  123456.79,   86753090000.868,  11 ],
+    #        [ -123456.79,  -86753090000.868, -11 ],
+    #        [  123456.001,  80.080,           10 ],
+    #        [ -123456.001, -80.080,           0 ],
+    #        [  10.9,        10.9,             11 ],
+    #    );
+
+    return unless ($rOpts_valign_signed_numbers);
+
+    # TODO: This option works well but there are some remaining issues.
+    # - Form groups of single columns of numbers when this option is on
+    # - Align last ragged entry item (see case rfc.in)
+    # - Needs a fine-tuning parameter for handling extremely large tables
+    # - Could use a little more optimization.
+
+    my %column_info;
+    my @columns;
+
+    #----------------
+    # loop over lines
+    #----------------
+    my $ix_line = -1;
+    my $jmax    = -1;
+    foreach my $line ( @{$rgroup_lines} ) {
+        $ix_line++;
+        my $jmax_last = $jmax;
+        $jmax = $line->{'jmax'};
+        my $jmax_change = $jmax ne $jmax_last;
+
+        #-----------------------------------
+        # Handle a reduced number of columns
+        #-----------------------------------
+        if ( $jmax < $jmax_last ) {
+            foreach my $jcol ( keys %column_info ) {
+
+                # end any stranded columns
+                next if ( $jcol < $jmax );
+                my $rcol_hash = $column_info{$jcol};
+                next unless ($rcol_hash);
+                if (   $rcol_hash->{signed_count}
+                    && $rcol_hash->{unsigned_count} )
+                {
+                    end_signed_number_column( $rgroup_lines, $rcol_hash,
+                        $ix_line - 1 );
+                }
+                delete $column_info{$jcol};
+            }
+        }
+
+        my $rfields    = $line->{'rfields'};
+        my $rpatterns  = $line->{'rpatterns'};
+        my @alignments = @{ $line->{'ralignments'} };
+
+        #--------------------------------------------------
+        # loop over fields except last field (side comment)
+        #--------------------------------------------------
+        for my $jcol ( 0 .. $jmax - 1 ) {
+
+            #-----------------------------------------
+            # Decide if this is a new alignment column
+            #-----------------------------------------
+            my $is_new_alignment = $jcol >= $jmax_last;
+            my $alignment        = $alignments[$jcol];
+            my $old_col          = $columns[$jcol];
+            my $col              = $alignment->{column};
+            $columns[$jcol] = $col;
+            if ( defined($old_col) && $old_col != $col ) {
+                $is_new_alignment = 1;
+                foreach my $jcol_old ( keys %column_info ) {
+                    next if ( $jcol_old < $jcol );
+                    my $rcol_hash = $column_info{$jcol_old};
+                    if (   $rcol_hash->{signed_count}
+                        && $rcol_hash->{unsigned_count} )
+                    {
+                        end_signed_number_column( $rgroup_lines, $rcol_hash,
+                            $ix_line - 1 );
+                    }
+                    delete $column_info{$jcol_old};
+                }
+            }
+
+            # A new padded sign column can only start at an alignment change
+            my $rcol_hash = $column_info{$jcol};
+            next if ( !$rcol_hash && !$is_new_alignment );
+
+            #----------------------------------------------------------------
+            # Examine this field, looking for for signed and unsigned numbers
+            #----------------------------------------------------------------
+            my $field   = $rfields->[$jcol];
+            my $pattern = $rpatterns->[$jcol];
+
+            my $is_signed_number   = 0;
+            my $is_unsigned_number = 0;
+            my $has_leading_quote  = 0;
+            my $pos_start_number   = 0;
+            my ( $pat1, $pat2 );
+            if ( substr( $pattern, 0, 1 ) ne 'Q' ) {
+                my $posq = index( $pattern, 'Q' );
+                if ( $posq >= 0 ) {
+                    $pat1 = substr( $pattern, 0,     $posq );
+                    $pat2 = substr( $pattern, $posq, 3 );
+                }
+            }
+            else {
+
+                # Just look at up to 3 of the pattern characters
+                $pat2 = substr( $pattern, 0, 3 );
+            }
+
+            my $sign;
+            if ( $pat2 && $is_leading_sign_pattern{$pat2} ) {
+
+                # find the start of the number
+                if ($pat1) {
+
+                    # Originally only allowed $pat1 eq '{b',
+                    # but we would also like to work with 'U{b'.
+                    # For example, for this text
+                    #      '-1,-1' => [ -1, +1 ],
+                    # $pat1=      '=>b{b'
+                    # so this has are two blanks, and we have to find
+                    # the second.
+                    my $pos_b  = index( $pat1,  'b' );
+                    my $iblank = index( $field, SPACE );
+
+                    # Allow up to 2 blank characters (type 'b'). Note that
+                    # multiple spaces in the string would cause trouble,
+                    # so checks to verify correctness must be made later.
+                    my $b_count = ( $pat1 =~ tr/b/b/ );
+                    if ( $b_count == 2 ) {
+                        $pos_b  = index( $pat1,  'b',   $pos_b + 1 );
+                        $iblank = index( $field, SPACE, $iblank + 1 );
+                    }
+                    if (   $pos_b >= 0
+                        && $pos_b + 1 == length($pat1)
+                        && $iblank > 0 )
+                    {
+                        # position of the first number character
+                        $pos_start_number = $iblank + 1;
+                    }
+                    else {
+                        # will not match
+                    }
+                }
+
+                # look for an optional + or - sign
+                my $test_char = substr( $field, $pos_start_number, 1 );
+                if ( $is_plus_or_minus{$test_char} ) {
+                    $sign      = $test_char;
+                    $test_char = substr( $field, $pos_start_number + 1, 1 );
+                }
+
+                # followed by a digit
+                if ( $is_digit_char{$test_char} ) {
+                    if   ($sign) { $is_signed_number   = 1 }
+                    else         { $is_unsigned_number = 1 }
+                }
+                elsif ( $test_char eq '"' || $test_char eq "'" ) {
+                    $has_leading_quote = 1;
+                }
+                else {
+                    # something else
+                }
+            }
+
+            #----------------------
+            # Figure out what to do
+            #----------------------
+
+            # we require a signed or unsigned number field
+            my $field_ok = $is_signed_number || $is_unsigned_number;
+
+            # if a column has not started..
+            if ( !$rcol_hash ) {
+
+                # and this is not a signed or unsigned numeric value
+                if ( !$field_ok ) {
+
+                    # give up unless a new column can start
+                    next if ( !$is_new_alignment );
+
+                    # Column heading patch:
+                    # Allow the first line to be a column heading quote.
+                    # Mark it unsigned to make the line count correct.
+                    # See 'col_headings.pl' for an example.
+                    next if ( !$has_leading_quote );
+                    $is_unsigned_number = 1;
+                }
+            }
+
+            # if a column has been started...
+            else {
+
+                # .. and this does not match
+                if (  !$field_ok
+                    || $rcol_hash->{pos_start_number} ne $pos_start_number
+                    || $rcol_hash->{col} ne $col )
+                {
+
+                    # Give up if a new column cannot start
+                    if ( !$is_new_alignment ) {
+                        $column_info{$jcol} = undef;
+                        next;
+                    }
+
+                    # or end the current column and start over
+                    if (   $rcol_hash->{signed_count}
+                        && $rcol_hash->{unsigned_count} )
+                    {
+                        end_signed_number_column( $rgroup_lines, $rcol_hash,
+                            $ix_line - 1 );
+                    }
+                    delete $column_info{$jcol};
+                    $rcol_hash = undef;
+                }
+            }
+
+            if (DEBUG_VSN) {
+                if ( !$is_new_alignment ) { $is_new_alignment = 0 }
+                my $exists = defined($rcol_hash);
+                print
+"VSN: line=$ix_line change=$jmax_change jcol=$jcol field=$field new ok?=$is_new_alignment exists?=$exists unsigned?=$is_unsigned_number signed?=$is_signed_number\n";
+            }
+
+            #--------------------------------
+            # Start a new column, if possible
+            #--------------------------------
+            if ( !defined($rcol_hash) ) {
+
+                # Currently we only start at an alignment change
+                next if ( !$is_new_alignment );
+                $column_info{$jcol} = {
+                    unsigned_count   => $is_unsigned_number,
+                    signed_count     => $is_signed_number,
+                    pos_start_number => $pos_start_number,
+                    ix_first         => $ix_line,
+                    col              => $col,
+                    jcol             => $jcol,
+                };
+            }
+
+            #------------------------------
+            # or extend the existing column
+            #------------------------------
+            else {
+                $rcol_hash->{unsigned_count} += $is_unsigned_number;
+                $rcol_hash->{signed_count}   += $is_signed_number;
+            }
+        }
+    }
+
+    # Loop to finish remaining columns
+    foreach my $jcol ( keys %column_info ) {
+        my $rcol_hash = $column_info{$jcol};
+        if ( $rcol_hash->{signed_count} && $rcol_hash->{unsigned_count} ) {
+            end_signed_number_column( $rgroup_lines, $rcol_hash, $ix_line );
+        }
+    }
+    return;
+} ## end sub pad_signed_number_columns
 
 sub valign_output_step_A {
 
