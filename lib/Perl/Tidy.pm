@@ -698,7 +698,7 @@ EOM
         my $flag = shift;
         if   ($flag) { goto ERROR_EXIT }
         else         { goto NORMAL_EXIT }
-        croak "unexpectd return to Exit";
+        croak "unexpected return to Exit";
     } ## end sub Exit
 
     sub Die {
@@ -1628,7 +1628,7 @@ sub get_decoded_string_buffer {
     # arrived from standard input or from a string ref. For example
     # 'perltidy <null.pl'.  If we issue a warning and stop, as we would
     # for a zero length file ('perltidy null.pl'), then we could cause
-    # a call to the perltidy module to mis-behave as a filter. So we will
+    # a call to the perltidy module to misbehave as a filter. So we will
     # process this as any other file in this case without any warning (c286).
     if ( !length( ${$rinput_string} ) ) {
 
@@ -3316,7 +3316,7 @@ sub generate_options {
     #  %option_range - a hash giving the valid ranges of certain options
 
     # Note: a few options are not documented in the man page and usage
-    # message. This is because these are depricated, experimental or debug
+    # message. This is because these are deprecated, experimental or debug
     # options and may or may not be retained in future versions:
 
     # These undocumented flags are accepted but not used:

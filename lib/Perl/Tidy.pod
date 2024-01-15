@@ -261,7 +261,7 @@ this flag because if it is set the destination stream will be empty or
 incomplete and should be ignored.  Error messages in the B<stderr> stream will
 indicate the cause of any problem.
 
-An exit value of 2 indicates that perltidy ran to completion but there there
+An exit value of 2 indicates that perltidy ran to completion but there
 are warning messages in the B<stderr> stream related to parameter errors or
 conflicts and/or warning messages in the B<errorfile> stream relating to
 possible syntax errors in the source code being tidied.

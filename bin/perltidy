@@ -1115,7 +1115,7 @@ The B<-nibp=string> parameter may be used to change the marker for
 non-indenting braces.  The default is equivalent to -nibp='#<<<'.  The string
 that you enter must begin with a # and should be in quotes as necessary to get
 past the command shell of your system.  This string is the leading text of a
-regex pattern that is constructed by appending pre-pending a '^' and appending
+regex pattern that is constructed by prepending a '^' and appending
 a'\s', so you must also include backslashes for characters to be taken
 literally rather than as patterns.
 
@@ -4745,7 +4745,7 @@ B<--one-line-block-exclusion-list> described below.
 
 When the B<cuddled-else> style is used, the default treatment of one-line blocks
 may interfere with the cuddled style.  In this case, the default behavior may
-be changed with the flag B<--cuddled-break-option=n> described elsehwere.
+be changed with the flag B<--cuddled-break-option=n> described elsewhere.
 
 When an existing one-line block is longer than the maximum line length, and
 must therefore be broken into multiple lines, perltidy checks for and adds any
@@ -5104,7 +5104,7 @@ B<--use-feature='noclass'>.  This tells perltidy B<not> to treat words B<class>,
 B<Neither of these> (B<--use-feature> not defined). This is the DEFAULT and
 recommended setting. In this case perltidy will try to automatically handle
 both the newer --use-feature 'class' syntax as well as some conflicting
-uses of some of these special words by exisiting modules.
+uses of some of these special words by existing modules.
 
 =back
 
@@ -5262,7 +5262,7 @@ the B<-npro> option.
 
 =item *
 
-Any parameter in the F<.perltidyrc> file can be overriden with a replacement
+Any parameter in the F<.perltidyrc> file can be overridden with a replacement
 value on the command line. This is because the command line is processed
 after the F<.perltidyrc> file.
 
@@ -5519,7 +5519,7 @@ the word immediately before the opening brace.  In addition, there are
 a few symbols for special block types, as follows:
 
    if elsif else for foreach ... any keyword introducing a block
-   sub  - any sub or anynomous sub
+   sub  - any sub or anonymous sub
    asub - any anonymous sub
    *    - any block except nameless blocks
    +    - any nested inner block loop
@@ -5643,7 +5643,7 @@ These are variables which are declared with a C<my> and not referenced again
 within their scope.  Calling them B<unused> is convenient but not really
 accurate; this is a "gray area" for a program. There are many reasons for
 having such variables.  For example, they might occur in a list of values
-provided by another routine or data structure, and therefor must be listed,
+provided by another routine or data structure, and therefore must be listed,
 even though they might not be referenced again. Or they might be defined for
 possible future program development, clarity or debugging.  B<But> sometimes
 they can occur due to being orphaned by a coding change, due to a misspelling,
@@ -5676,7 +5676,7 @@ For example,
 The default is not to do any of these checks, and it can also be indicated with
 B<-wvt=0>.
 
-To restrict the check to a specfic set warnings, set the input B<string> to be
+To restrict the check to a specific set warnings, set the input B<string> to be
 a space-separated or comma-separated list of the letters associated with the
 types of variables to be checked. For example:
 
@@ -5957,7 +5957,7 @@ corresponding abbreviation:
       identifier             identifier       i
       bareword, function     bareword         w
       keyword                keyword          k
-      quite, pattern         quote            q
+      quote, pattern         quote            q
       here doc text          here-doc-text    h
       here doc target        here-doc-target  hh
       punctuation            punctuation      pu
