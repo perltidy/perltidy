@@ -4994,7 +4994,7 @@ vertical aligner sweeps from left-to-right and usually stops if an important
 alignment cannot be made for some reason.
 
 But also notice that side comments remain aligned because their alignment is
-controlled separately with the parameter B<--valign-side_comments> described above.
+controlled separately with the parameter B<--valign-side-comments> described above.
 
 =item B<Aligning postfix unless and if with --valign-if-unless or -viu>
 
