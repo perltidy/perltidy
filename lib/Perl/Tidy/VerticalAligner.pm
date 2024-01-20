@@ -5063,7 +5063,7 @@ sub split_field {
 
         # find the = in the text
         my $pos_equals = index( $field, '=' );
-        return 0 unless ( $pos_equals >= 0 );
+        return 0 if ( $pos_equals < 0 );
 
         # be sure there are no other '=' in the pattern
         my $equals_count = ( $pat1 =~ tr/=/=/ );
