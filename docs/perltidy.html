@@ -42,7 +42,11 @@
       <li><a href="#One-Line-Blocks">One-Line Blocks</a></li>
       <li><a href="#Controlling-Vertical-Alignment">Controlling Vertical Alignment</a></li>
       <li><a href="#Extended-Syntax">Extended Syntax</a></li>
-      <li><a href="#Other-Controls">Other Controls</a></li>
+      <li><a href="#Deleting-and-Extracting-Pod-or-Comments">Deleting and Extracting Pod or Comments</a></li>
+      <li><a href="#The-perltidyrc-file">The perltidyrc file</a></li>
+      <li><a href="#Debugging-perltidy-input">Debugging perltidy input</a></li>
+      <li><a href="#Analyzing-Code">Analyzing Code</a></li>
+      <li><a href="#Working-with-MakeMaker-AutoLoader-and-SelfLoader">Working with MakeMaker, AutoLoader and SelfLoader</a></li>
     </ul>
   </li>
   <li><a href="#HTML-OPTIONS">HTML OPTIONS</a></li>
@@ -93,6 +97,8 @@
 
 <h1 id="EXAMPLES">EXAMPLES</h1>
 
+<p>Here are some example perltidy commands followed by their meanings:</p>
+
 <pre><code>  perltidy somefile.pl</code></pre>
 
 <p>This will produce a file <i>somefile.pl.tdy</i> containing the script reformatted using the default options, which approximate the style suggested in perlstyle(1). The source file <i>somefile.pl</i> is unchanged.</p>
@@ -128,6 +134,14 @@
 <pre><code>  perltidy -g somefile.pl</code></pre>
 
 <p>Execute perltidy on file <i>somefile.pl</i> and save a log file <i>somefile.pl.LOG</i> which shows the nesting of braces, parentheses, and square brackets at the start of every line.</p>
+
+<pre><code>   perltidy -dbs -dbl=10 somefile.pl &gt;blocks.csv</code></pre>
+
+<p>This will dump a table of comma-separated metrics for subroutines longer than 10 lines to <i>blocks.csv</i>.</p>
+
+<pre><code>    perltidy -duv somefile.pl &gt;vars.txt</code></pre>
+
+<p>This will dump a list of unused and reused lexical variable names to <i>vars.txt</i>.</p>
 
 <pre><code>  perltidy -html somefile.pl</code></pre>
 
@@ -410,6 +424,8 @@
 <p>This flag causes each <b>n</b> leading space characters produced by the formatting process to be replaced by one tab character. The formatting process itself works with space characters. The <b>-et=n</b> parameter is applied as a last step, after formatting is complete, to convert leading spaces into tabs. Before starting to use tabs, it is essential to first get the indentation controls set as desired without tabs, particularly the two parameters <b>--indent-columns=n</b> (or <b>-i=n</b>) and <b>--continuation-indentation=n</b> (or <b>-ci=n</b>).</p>
 
 <p>The value of the integer <b>n</b> can be any value but can be coordinated with the number of spaces used for indentation. For example, <b>-et=4 -ci=4 -i=4</b> will produce one tab for each indentation level and and one for each continuation indentation level. You may want to coordinate the value of <b>n</b> with what your display software assumes for the spacing of a tab.</p>
+
+<p>The default is not to use this, which can also be indicated using <b>-et=0</b>.</p>
 
 </dd>
 <dt id="t---tabs"><b>-t</b>, <b>--tabs</b></dt>
@@ -823,7 +839,7 @@
 <dt id="nibp-s---non-indenting-brace-prefix-s"><b>-nibp=s</b>, <b>--non-indenting-brace-prefix=s</b></dt>
 <dd>
 
-<p>The <b>-nibp=string</b> parameter may be used to change the marker for non-indenting braces. The default is equivalent to -nibp=&#39;#&lt;&lt;&lt;&#39;. The string that you enter must begin with a # and should be in quotes as necessary to get past the command shell of your system. This string is the leading text of a regex pattern that is constructed by appending pre-pending a &#39;^&#39; and appending a&#39;\s&#39;, so you must also include backslashes for characters to be taken literally rather than as patterns.</p>
+<p>The <b>-nibp=string</b> parameter may be used to change the marker for non-indenting braces. The default is equivalent to -nibp=&#39;#&lt;&lt;&lt;&#39;. The string that you enter must begin with a # and should be in quotes as necessary to get past the command shell of your system. This string is the leading text of a regex pattern that is constructed by prepending a &#39;^&#39; and appending a&#39;\s&#39;, so you must also include backslashes for characters to be taken literally rather than as patterns.</p>
 
 <p>For example, to match the side comment &#39;#++&#39;, the parameter would be</p>
 
@@ -1377,6 +1393,8 @@
 
 <p>Perltidy has a number of ways to control the appearance of both block comments and side comments. The term <b>block comment</b> here refers to a full-line comment, whereas <b>side comment</b> will refer to a comment which appears on a line to the right of some code.</p>
 
+<p>Perltidy does not do any word wrapping of commented text to match a selected maximum line length. This is because there is no way to determine if this is appropriate for the given content. However, an interactive program named <b>perlcomment.pl</b> is available in the <b>examples</b> folder of the perltidy distribution which can assist in doing this.</p>
+
 <dl>
 
 <dt id="ibc---indent-block-comments"><b>-ibc</b>, <b>--indent-block-comments</b></dt>
@@ -1729,7 +1747,7 @@
 
  #&gt;&gt;V</code></pre>
 
-<p>Additional text may appear on the special comment lines provided that it is separated from the marker by at least one space, as in the above examples.</p>
+<p>Additional text may appear on the special comment lines provided that it is separated from the marker by at least one space to highlight the sign, as in the above examples.</p>
 
 <p>Any number of code-skipping or format-skipping sections may appear in a file. If an opening code-skipping or format-skipping comment is not followed by a corresponding closing comment, then skipping continues to the end of the file. If a closing code-skipping or format-skipping comment appears in a file but does not follow a corresponding opening comment, then it is treated as an ordinary comment without any special meaning.</p>
 
@@ -3715,6 +3733,20 @@
 <p>The <b>-xci</b> flag was developed after the <b>-pbp</b> parameters were published so you need to include it separately.</p>
 
 </dd>
+<dt id="Making-a-file-unreadable"><b>Making a file unreadable</b></dt>
+<dd>
+
+<p>The goal of perltidy is to improve the readability of files, but there are two commands which have the opposite effect, <b>--mangle</b> and <b>--extrude</b>. They are actually merely aliases for combinations of other parameters. Both of these strip all possible whitespace, but leave comments and pod documents, so that they are essentially reversible. The difference between these is that <b>--mangle</b> puts the fewest possible line breaks in a script while <b>--extrude</b> puts the maximum possible. Note that these options do not provided any meaningful obfuscation, because perltidy can be used to reformat the files. They were originally developed to help test the tokenization logic of perltidy, but they have other uses. One use for <b>--mangle</b> is the following:</p>
+
+<pre><code>  perltidy --mangle myfile.pl -st | perltidy -o myfile.pl.new</code></pre>
+
+<p>This will form the maximum possible number of one-line blocks (see next section), and can sometimes help clean up a badly formatted script.</p>
+
+<p>A similar technique can be used with <b>--extrude</b> instead of <b>--mangle</b> to make the minimum number of one-line blocks.</p>
+
+<p>Another use for <b>--mangle</b> is to combine it with <b>--delete-all-comments (-dac)</b> to reduce the file size of a perl script.</p>
+
+</dd>
 </dl>
 
 <h2 id="One-Line-Blocks">One-Line Blocks</h2>
@@ -3727,7 +3759,7 @@
 
 <p>The main exception to this rule is that perltidy will attempt to form new one-line blocks following the keywords <code>map</code>, <code>eval</code>, and <code>sort</code>, <code>eval</code>, because these code blocks are often small and most clearly displayed in a single line. This behavior can be controlled with the flag <b>--one-line-block-exclusion-list</b> described below.</p>
 
-<p>When the <b>cuddled-else</b> style is used, the default treatment of one-line blocks may interfere with the cuddled style. In this case, the default behavior may be changed with the flag <b>--cuddled-break-option=n</b> described elsehwere.</p>
+<p>When the <b>cuddled-else</b> style is used, the default treatment of one-line blocks may interfere with the cuddled style. In this case, the default behavior may be changed with the flag <b>--cuddled-break-option=n</b> described elsewhere.</p>
 
 <p>When an existing one-line block is longer than the maximum line length, and must therefore be broken into multiple lines, perltidy checks for and adds any optional terminating semicolon (unless the <b>-nasc</b> option is used) if the block is a code block.</p>
 
@@ -3927,7 +3959,7 @@
 
 <p>Notice in this last example that although only the equals alignment was excluded, the ternary alignments were also lost. This happens because the vertical aligner sweeps from left-to-right and usually stops if an important alignment cannot be made for some reason.</p>
 
-<p>But also notice that side comments remain aligned because their alignment is controlled separately with the parameter <b>--valign-side_comments</b> described above.</p>
+<p>But also notice that side comments remain aligned because their alignment is controlled separately with the parameter <b>--valign-side-comments</b> described above.</p>
 
 </dd>
 <dt id="Aligning-postfix-unless-and-if-with---valign-if-unless-or--viu"><b>Aligning postfix unless and if with --valign-if-unless or -viu</b></dt>
@@ -3948,6 +3980,36 @@
     print &quot;Would need: @DepList\n&quot;        if ( @DepList    and !$Quiet );
     print &quot;RPM Output:\n&quot;                 unless $Quiet;
     print join( &quot;\n&quot;, @RPMOutput ) . &quot;\n&quot; unless $Quiet;</code></pre>
+
+</dd>
+<dt id="Aligning-signed-numbers-with---valign-signed-numbers-or--vsn"><b>Aligning signed numbers with --valign-signed-numbers or -vsn</b></dt>
+<dd>
+
+<p>Setting <b>-vsn</b> causes columns of numbers containing both signed and unsigned values to have leading signs placed in their own column. For example:</p>
+
+<pre><code>    # perltidy -vsn
+    my @correct = (
+        [  123456.79,   86753090000.868,  11 ],
+        [ -123456.79,  -86753090000.868, -11 ],
+        [  123456.001,  80.080,           10 ],
+        [ -123456.001, -80.080,           0 ],
+        [  10.9,        10.9,             11 ],
+    );</code></pre>
+
+<p>The current default alignment is strict left justification:</p>
+
+<pre><code>    # perltidy -nvsn
+    my @correct = (
+        [ 123456.79,   86753090000.868,  11 ],
+        [ -123456.79,  -86753090000.868, -11 ],
+        [ 123456.001,  80.080,           10 ],
+        [ -123456.001, -80.080,          0 ],
+        [ 10.9,        10.9,             11 ],
+    );</code></pre>
+
+<p>In a future release <b>-vsn</b> will become the default.</p>
+
+<p>This option has a control parameter <b>--valign-signed-number-limit=N</b>, or <b>-vsnl=N</b>. This value controls formatting of very long columns of numbers and should not normally need to be changed. To see the function of this parameter, consider a very long column of just unsigned numbers, say 1000 lines. If we add a single negative number, it is undesirable to move all of the other lines over by one space. This would create many lines of file differences but not really improve the appearance when a local section of the table was viewed. The number <b>N</b> avoids this problem by not adding extra indentation to a run of more than <b>N</b> lines of unsigned numbers. The default value, <b>N=20</b>, is set to be approximately the number of lines for which a viewer does not normally see both ends of a long column of unsigned numbers on a single page.</p>
 
 </dd>
 </dl>
@@ -4031,7 +4093,7 @@
 <li><p><b>--use-feature=&#39;noclass&#39;</b>. This tells perltidy <b>not</b> to treat words <b>class</b>, <b>method</b>, <b>field</b>, <b>ADJUST</b> specially.</p>
 
 </li>
-<li><p><b>Neither of these</b> (<b>--use-feature</b> not defined). This is the DEFAULT and recommended setting. In this case perltidy will try to automatically handle both the newer --use-feature &#39;class&#39; syntax as well as some conflicting uses of some of these special words by exisiting modules.</p>
+<li><p><b>Neither of these</b> (<b>--use-feature</b> not defined). This is the DEFAULT and recommended setting. In this case perltidy will try to automatically handle both the newer --use-feature &#39;class&#39; syntax as well as some conflicting uses of some of these special words by existing modules.</p>
 
 </li>
 </ul>
@@ -4039,9 +4101,17 @@
 <p>Note that this parameter is independent of any <b>use feature</b> control lines within a script. Perltidy does not look for or read such control lines. This is because perltidy must be able to work on small chunks of code sent from an editor, so it cannot assume that such lines will be within the lines being formatted.</p>
 
 </dd>
+<dt id="Working-around-problems-with-older-version-of-Perl"><b>Working around problems with older version of Perl</b></dt>
+<dd>
+
+<p>Perltidy contains a number of rules which help avoid known subtleties and problems with older versions of perl, and these rules always take priority over whatever formatting flags have been set. For example, perltidy will usually avoid starting a new line with a bareword, because this might cause problems if <code>use strict</code> is active.</p>
+
+<p>There is no way to override these rules.</p>
+
+</dd>
 </dl>
 
-<h2 id="Other-Controls">Other Controls</h2>
+<h2 id="Deleting-and-Extracting-Pod-or-Comments">Deleting and Extracting Pod or Comments</h2>
 
 <dl>
 
@@ -4073,6 +4143,12 @@
 <p>The negatives of these commands also work, and are the defaults.</p>
 
 </dd>
+</dl>
+
+<h2 id="The-perltidyrc-file">The perltidyrc file</h2>
+
+<dl>
+
 <dt id="Using-a-.perltidyrc-command-file"><b>Using a <i>.perltidyrc</i> command file</b></dt>
 <dd>
 
@@ -4120,6 +4196,9 @@
 <li><p>The parameters in the <i>.perltidyrc</i> file can be switched off with the <b>-npro</b> option.</p>
 
 </li>
+<li><p>Any parameter in the <i>.perltidyrc</i> file can be overridden with a replacement value on the command line. This is because the command line is processed after the <i>.perltidyrc</i> file.</p>
+
+</li>
 <li><p>The commands <b>--dump-options</b>, <b>--dump-defaults</b>, <b>--dump-long-names</b>, and <b>--dump-short-names</b>, all described below, may all be helpful.</p>
 
 </li>
@@ -4161,28 +4240,22 @@
 <p>Please note: do not use this flag unless you are sure your script needs it. Parsing errors can occur if it does not have a hash-bang, or, for example, if the actual first hash-bang is in a here-doc. In that case a parsing error will occur because the tokenization will begin in the middle of the here-doc.</p>
 
 </dd>
-<dt id="Making-a-file-unreadable"><b>Making a file unreadable</b></dt>
+</dl>
+
+<h2 id="Debugging-perltidy-input">Debugging perltidy input</h2>
+
+<dl>
+
+<dt id="The---dump-...-parameters">The <b>--dump-...</b> parameters</dt>
 <dd>
 
-<p>The goal of perltidy is to improve the readability of files, but there are two commands which have the opposite effect, <b>--mangle</b> and <b>--extrude</b>. They are actually merely aliases for combinations of other parameters. Both of these strip all possible whitespace, but leave comments and pod documents, so that they are essentially reversible. The difference between these is that <b>--mangle</b> puts the fewest possible line breaks in a script while <b>--extrude</b> puts the maximum possible. Note that these options do not provided any meaningful obfuscation, because perltidy can be used to reformat the files. They were originally developed to help test the tokenization logic of perltidy, but they have other uses. One use for <b>--mangle</b> is the following:</p>
-
-<pre><code>  perltidy --mangle myfile.pl -st | perltidy -o myfile.pl.new</code></pre>
-
-<p>This will form the maximum possible number of one-line blocks (see next section), and can sometimes help clean up a badly formatted script.</p>
-
-<p>A similar technique can be used with <b>--extrude</b> instead of <b>--mangle</b> to make the minimum number of one-line blocks.</p>
-
-<p>Another use for <b>--mangle</b> is to combine it with <b>-dac</b> to reduce the file size of a perl script.</p>
-
-</dd>
-<dt id="Debugging"><b>Debugging</b></dt>
-<dd>
-
-<p>The following flags are available for debugging:</p>
+<p>The following flags are available for debugging. Note that all commands named <b>--dump-...</b> will simply write some requested information to standard output and then immediately exit.</p>
 
 <p><b>--dump-cuddled-block-list</b> or <b>-dcbl</b> will dump to standard output the internal hash of cuddled block types created by a <b>-cuddled-block-list</b> input string.</p>
 
 <p><b>--dump-defaults</b> or <b>-ddf</b> will write the default option set to standard output and quit</p>
+
+<p><b>--dump-integer-option-range</b> or <b>-dior</b> will write a list of comma-separated values. Each line contains the name of an integer option along with its minimum, maximum, and default values.</p>
 
 <p><b>--dump-profile</b> or <b>-dpro</b> will write the name of the current configuration file and its contents to standard output and quit.</p>
 
@@ -4194,9 +4267,13 @@
 
 <p><b>--dump-token-types</b> or <b>-dtt</b> will write a list of all token types to standard output and quit.</p>
 
-<p><b>--dump-want-left-space</b> or <b>-dwls</b> will write the hash %want_left_space to standard output and quit. See the section on controlling whitespace around tokens.</p>
+<p><b>--dump-want-left-space</b> or <b>-dwls</b> will write the hash <code>%want_left_space</code> to standard output and quit. See the section on controlling whitespace around tokens.</p>
 
-<p><b>--dump-want-right-space</b> or <b>-dwrs</b> will write the hash %want_right_space to standard output and quit. See the section on controlling whitespace around tokens.</p>
+<p><b>--dump-want-right-space</b> or <b>-dwrs</b> will write the hash <code>%want_right_space</code> to standard output and quit. See the section on controlling whitespace around tokens.</p>
+
+</dd>
+<dt id="Other-parameters-related-to-processing"><b>Other parameters related to processing</b></dt>
+<dd>
 
 <p><b>--no-memoize</b> or <b>-nmem</b> will turn of memoizing. Memoization can reduce run time when running perltidy repeatedly in a single process. It is on by default but can be deactivated for testing with <b>-nmem</b>.</p>
 
@@ -4208,7 +4285,11 @@
 
 <pre><code>  perltidy -maxfs=20</code></pre>
 
-<p>This only applies to files specified by filename on the command line.</p>
+<p>This length test is applied to named files before they are read into memory. It is applied to files arriving from standard input after they are read into memory. It is not applied to character strings arriving by a call to the Perl::Tidy module.</p>
+
+</dd>
+<dt id="Controls-for-when-to-stop-processing"><b>Controls for when to stop processing</b></dt>
+<dd>
 
 <p><b>--maximum-level-errors=n</b> or <b>-maxle=n</b> specifies the maximum number of indentation level errors are allowed before perltidy skips formatting and just outputs a file verbatim. The default is <b>n=1</b>. This means that if the final indentation of a script differs from the starting indentation by more than 1 levels, the file will be output verbatim. To avoid formatting if there are any indentation level errors use -maxle=0. To skip this check you can either set n equal to a large number, such as <b>n=100</b>, or set <b>n=-1</b>.</p>
 
@@ -4227,10 +4308,35 @@
 
 <p>A recommended value is <b>n=3</b>. However, the default is <b>n=0</b> (skip this check) to avoid causing problems with scripts which have extended syntaxes.</p>
 
-<p><b>-DEBUG</b> will write a file with extension <i>.DEBUG</i> for each input file showing the tokenization of all lines of code.</p>
+</dd>
+<dt id="Handling-errors-in-options-which-take-integer-values"><b>Handling errors in options which take integer values</b></dt>
+<dd>
+
+<p>Many of the input parameters take integer values. Before processing begins, a check is made to see if any of these integer parameters exceed their valid ranges. The default behavior when a range is exceeded is to write a warning message and reset the value to its default setting. This default behavior can be changed with the parameter <b>--integer-range-check=n</b>, or <b>-irc=n</b>, as follows:</p>
+
+<pre><code>    n=0  skip check completely (for stress-testing perltidy only)
+    n=1  reset bad values to defaults but do not issue a warning
+    n=2  reset bad values to defaults and issue warning [DEFAULT]
+    n=3  stop if any values are out of bounds</code></pre>
+
+<p>The values <b>n=0</b> and <b>n=1</b> are mainly useful for testing purposes.</p>
 
 </dd>
-<dt id="Making-a-table-of-information-on-code-blocks"><b>Making a table of information on code blocks</b></dt>
+<dt id="Debugging-perltidy-tokenization"><b>Debugging perltidy tokenization</b></dt>
+<dd>
+
+<p><b>-DEBUG, -D</b> will write a file with extension <i>.DEBUG</i> for each input file showing the tokenization of all lines of code. This can produce a lot of output and is mainly useful for debugging tokenization issues during perltidy development.</p>
+
+</dd>
+</dl>
+
+<h2 id="Analyzing-Code">Analyzing Code</h2>
+
+<p>Perltidy reports any obvious issues that are found during formatting, such as unbalanced braces. But several parameters are available for making certain additional checks for issues which might be of interest to a programmer.</p>
+
+<dl>
+
+<dt id="Use---dump-block-summary-to-make-a-table-of-information-on-code-blocks"><b>Use --dump-block-summary to make a table of information on code blocks</b></dt>
 <dd>
 
 <p>A table listing information about the blocks of code in a file can be made with <b>--dump-block-summary</b>, or <b>-dbs</b>. This causes perltidy to read and parse the file, write a table of comma-separated values for selected code blocks to the standard output, and then exit. This parameter must be on the command line, not in a <i>.perlticyrc</i> file, and it requires a single file name on the command line. For example</p>
@@ -4261,7 +4367,7 @@
 <p><b>--dump-block-types=s</b>, or <b>-dbt=s</b>, where string <b>s</b> is a list of block types to be included. The type of a block is either the name of the perl builtin keyword for that block (such as <b>sub if elsif else for foreach ..</b>) or the word immediately before the opening brace. In addition, there are a few symbols for special block types, as follows:</p>
 
 <pre><code>   if elsif else for foreach ... any keyword introducing a block
-   sub  - any sub or anynomous sub
+   sub  - any sub or anonymous sub
    asub - any anonymous sub
    *    - any block except nameless blocks
    +    - any nested inner block loop
@@ -4307,25 +4413,158 @@
 </ul>
 
 </dd>
-<dt id="Working-with-MakeMaker-AutoLoader-and-SelfLoader"><b>Working with MakeMaker, AutoLoader and SelfLoader</b></dt>
+<dt id="use---dump-unusual-variables-to-find-unused-reused-and-certain-other-variables-of-interest"><b>use --dump-unusual-variables to find unused, reused, and certain other variables of interest</b></dt>
 <dd>
+
+<p>Lexical variables with certain properties of interest to a programmer can be listed with <b>--dump-unusual-variables</b> or <b>-duv</b>. This parameter must be on the command line, along with a single file name. It causes perltidy to scan the file for certain variable types, write any found to the standard output, and then immediately exit without doing any formatting. For example</p>
+
+<pre><code>    perltidy -duv somefile.pl &gt;vars.txt</code></pre>
+
+<p>produces a file with lines which look something like</p>
+
+<pre><code>    1778:u: my $input_file
+    6089:r: my $j: reused - see line 6076</code></pre>
+
+<p>The values on the line are separated by colons and have the following meaning:</p>
+
+<pre><code>    line number   - the number of the line of the input file
+    issue         - a single letter indicating the issue, see below
+    variable name - the name of the variable, preceded by a keyword
+    note          - an optional note referring to another line</code></pre>
+
+<p>If there are a large number of issues it can be convenient to read the file into a spreadsheet. The checks are for lexical variables introduced by the keywords <b>my</b> and <b>state</b>. The types of checks which are made are identified in the output with one of the letters, <b>r</b>, <b>s</b>, <b>p</b>, and <b>u</b> as follows:</p>
+
+<dl>
+
+<dt id="r:-reused-variable-name"><b>r: reused variable name</b></dt>
+<dd>
+
+<p>These are variables which are re-declared in the scope of a variable with the identical name. This can be confusing (perhaps not when the code is first written, but possibly later during maintenance work). This issue can be avoided by renaming one of the conflicting variables. Note that this is similar to the <b>Perl::Critic</b> policy <b>Variables::ProhibitReusedNames</b>.</p>
+
+</dd>
+<dt id="s:-sigil-change-but-reused-bareword"><b>s: sigil change but reused bareword</b></dt>
+<dd>
+
+<p>These are variables which have the same bareword name but a different sigil (<b>$</b>, <b>@</b>, or <b>%</b>) as another variable in the same scope. For example, this occurs if variables <b>$data</b> and <b>%data</b> share the same scope. This can be confusing and can be avoided by renaming one of the variables.</p>
+
+</dd>
+<dt id="p:-package-crossing-variables"><b>p: package-crossing variables</b></dt>
+<dd>
+
+<p>These are lexical variables which are declared in one package and still visible in subroutines of a different package in the same file. This can be confusing, and it might cause the program to run differently, or fail, if the the packages were ever split into separate files. This issue can usually be avoided by placing code in block braces of some type. For example, this issue is often found in test code, and might be fixed by using the structure</p>
+
+<pre><code>    main();
+
+    sub main { #&lt;&lt;&lt;
+    ## old main code goes here
+    }</code></pre>
+
+<p>The <b>non-indenting-braces</b> comment <code>#&lt;&lt;&lt;</code> is not required but will keep the indentation of the old code unchanged. It should be noted that this check is limited to packages which are not enclosed in block braces in order skip temporary package changes.</p>
+
+</dd>
+<dt id="u:-unused-variables"><b>u: unused variables</b></dt>
+<dd>
+
+<p>These are variables which are declared with a <code>my</code> and not referenced again within their scope. Calling them <b>unused</b> is convenient but not really accurate; this is a &quot;gray area&quot; for a program. There are many reasons for having such variables. For example, they might occur in a list of values provided by another routine or data structure, and therefore must be listed, even though they might not be referenced again. Or they might be defined for possible future program development, clarity or debugging. <b>But</b> sometimes they can occur due to being orphaned by a coding change, due to a misspelling, or by having an unintentional preceding <code>my</code>. So it is worth reviewing them, especially for new code. Here is an example of an unused variable in a script located with this method:</p>
+
+<pre><code>   BEGIN { my $string = &quot;&quot; }
+   ...
+   $string .= &quot;ok&quot;;</code></pre>
+
+<p>This looks nice at first glance, but the scope of the <code>my</code> declaration is limited to the surrounding braces, so it is not the same variable as the other <code>$string</code> and must therefore be reported as unused. This problem would have also been caught by perl if the author had used <code>strict</code>.</p>
+
+</dd>
+</dl>
+
+</dd>
+<dt id="Use---warn-variable-types-to-warn-about-certain-variable-types"><b>Use --warn-variable-types to warn about certain variable types</b></dt>
+<dd>
+
+<p>The flag <b>--warn-variable-types=string</b>, or <b>-wvt=string</b>, can be used to produce a warning message if certain of the above variable types are encountered during formatting. All possible variable warnings may be requested with <b>-wvt=&#39;*&#39;</b> or <b>-wvt=1</b>.</p>
+
+<p>For example,</p>
+
+<pre><code>   perltidy -wvt=&#39;*&#39; somefile.pl</code></pre>
+
+<p>The default is not to do any of these checks, and it can also be indicated with <b>-wvt=0</b>.</p>
+
+<p>To restrict the check to a specific set warnings, set the input <b>string</b> to be a space-separated or comma-separated list of the letters associated with the types of variables to be checked. For example:</p>
+
+<pre><code>   perltidy -wvt=&#39;s r&#39; somefile.pl</code></pre>
+
+<p>will process <i>somefile.pl</i> normally but issue a warning if either of the issues &#39;s&#39; or &#39;r&#39;, but not &#39;p&#39;, described above, are encountered.</p>
+
+<p>A limitation is that warnings may not be requested for unused variables, type &#39;u&#39;. The is because this would produce many needless warnings, especially when perltidy is run on small snippets of code from within an editor. So unused variables can only be found with the <b>-duv</b> option described in the previous section.</p>
+
+<p>A companion flag, <b>--warn-variable-exclusion-list=string</b>, or <b>-wvxl=string</b>, can be used to skip warning checks for a list of variables. For example,</p>
+
+<pre><code>   perltidy -wvt=&#39;*&#39; -wvxl=&#39;$self $class&#39;  somefile.pl</code></pre>
+
+<p>will do all possible checks but not report any warnings for variables <code>$self</code> and <code>$class</code>.</p>
+
+</dd>
+<dt id="Use---dump-mixed-call-parens-to-find-functions-called-both-with-and-without-parens"><b>Use --dump-mixed-call-parens to find functions called both with and without parens</b></dt>
+<dd>
+
+<p>The parameter <b>--dump-mixed-call-parens</b>, or <b>-dmcp</b>, provides information on the use of call parens within a program. It produces a list of keywords and sub names which occur both both with and without parens. In other words, with a mixed style. This might be useful if one is working to standardize the call style for some particular keyword or function. For example,</p>
+
+<pre><code>   perltidy -dmcp somefile.pl &gt;output.txt</code></pre>
+
+<p>will analyze the text of <i>somefile.pl</i>, write the results to <i>output.txt</i>, and then immediately exit (like all <b>dump-</b> parameters).</p>
+
+<p>The output shows a list of operators and the number of times they were used with parens and the number of times without parens. For example, here is a small section of the output from one file in a past Perl distribution:</p>
+
+<pre><code>    k:length:17:9
+    k:open:30:9
+    k:pop:3:4</code></pre>
+
+<p>The first line shows that the <code>length</code> function occurs 17 times with parens and 9 times without parens. The &#39;k&#39; indicates that <code>length</code> is a Perl builtin keyword (&#39;U&#39; would mean user-defined sub, and &#39;w&#39; would mean unknown bareword). So from this partial output we see that the author had a preference for parens around the args of <code>length</code> and <code>open</code>, whereas <code>pop</code> was about equally likely to have parens as not.</p>
+
+<p>More detailed information can be obtained with the parameters described in the next section.</p>
+
+</dd>
+<dt id="Use---want-call-parens-s-and---nowant-call-parens-s-to-warn-about-specific-missing-or-extra-call-parens"><b>Use --want-call-parens=s and --nowant-call-parens=s to warn about specific missing or extra call parens</b></dt>
+<dd>
+
+<p>The parameter <b>--want-call-parens=s</b>, or <b>-wcp=s</b>, can be used to to produce a warning message if call parens are missing from selected functions. Likewise, <b>--nowant-call-parens=s</b>, or <b>-nwcp=s</b>, can warn if call parens exist for selected functions. When either of these parameters are set, perltidy will report any discrepancies from the requested style in its error output.</p>
+
+<p>Before using either of these parameters, it may be helpful to first use <b>--dump-mixed-call-parens=s</b>, described in the previous section, to get an overview of the existing paren usage in a file.</p>
+
+<p>The string arguments <b>s</b> are space-separated lists of the names of the functions to be checked. The function names may be builtin keywords or user-defined subs. They may not include a package prefix or sigil. To illustrate,</p>
+
+<pre><code>   perltidy -wcp=&#39;length open&#39; -nwcp=&#39;pop&#39;   somefile.pl</code></pre>
+
+<p>means that the builtin functions <code>length</code> and <code>open</code> should have parens around their call args but <code>pop</code> should not. The error output might contain lines such as:</p>
+
+<pre><code>    2314:open FD_TO_CLOSE: no call parens
+    3652:pop (: has call parens
+    3783:length $DB: no call parens
+    ...</code></pre>
+
+<p>For builtin keywords which have both a block form and a trailing modifier form, such as <code>if</code>, only the trailing modifier form will be checked since parens are mandatory for the block form.</p>
+
+<p>The symbol <b>&amp;</b> may entered instead of a function name to mean all user-defined subs not explicitly listed. So the compact expression</p>
+
+<pre><code>   perltidy -wcp=&#39;&amp;&#39; somefile.pl</code></pre>
+
+<p>means that calls to all user-defined subs in the file being processed should have their call arguments enclosed in parens.</p>
+
+<p>Perltidy does not have the ability to add or delete call parens because it is difficult to automate, so changes must be made manually. When adding or removing parentheses, it is essential to pay attention to operator precedence issues. For example, if the parens in the following statement are removed, then <code>||</code> must be changed to <code>or</code>:</p>
+
+<pre><code>    open( IN, &quot;&lt;&quot;, $infile ) || die(&quot;cannot open $infile:$!\n&quot;);</code></pre>
+
+<p>Otherwise, the <code>||</code> will operate on <code>$infile</code> rather than the return value of <code>open</code>.</p>
+
+</dd>
+</dl>
+
+<h2 id="Working-with-MakeMaker-AutoLoader-and-SelfLoader"><b>Working with MakeMaker, AutoLoader and SelfLoader</b></h2>
 
 <p>The first $VERSION line of a file which might be eval&#39;d by MakeMaker is passed through unchanged except for indentation. Use <b>--nopass-version-line</b>, or <b>-npvl</b>, to deactivate this feature.</p>
 
 <p>If the AutoLoader module is used, perltidy will continue formatting code after seeing an __END__ line. Use <b>--nolook-for-autoloader</b>, or <b>-nlal</b>, to deactivate this feature.</p>
 
 <p>Likewise, if the SelfLoader module is used, perltidy will continue formatting code after seeing a __DATA__ line. Use <b>--nolook-for-selfloader</b>, or <b>-nlsl</b>, to deactivate this feature.</p>
-
-</dd>
-<dt id="Working-around-problems-with-older-version-of-Perl"><b>Working around problems with older version of Perl</b></dt>
-<dd>
-
-<p>Perltidy contains a number of rules which help avoid known subtleties and problems with older versions of perl, and these rules always take priority over whatever formatting flags have been set. For example, perltidy will usually avoid starting a new line with a bareword, because this might cause problems if <code>use strict</code> is active.</p>
-
-<p>There is no way to override these rules.</p>
-
-</dd>
-</dl>
 
 <h1 id="HTML-OPTIONS">HTML OPTIONS</h1>
 
@@ -4443,7 +4682,7 @@
       identifier             identifier       i
       bareword, function     bareword         w
       keyword                keyword          k
-      quite, pattern         quote            q
+      quote, pattern         quote            q
       here doc text          here-doc-text    h
       here doc target        here-doc-target  hh
       punctuation            punctuation      pu
@@ -4538,20 +4777,21 @@
  b      baa    baao   bar    bbao   bbb    bbc    bbs    bl     bli
  boa    boc    bok    bol    bom    bos    bot    cblx   ce     conv
  cpb    cs     csc    cscb   cscw   dac    dbc    dbs    dcbl   dcsc
- ddf    dln    dnl    dop    dp     dpro   drc    dsc    dsm    dsn
- dtc    dtt    dwic   dwls   dwrs   dws    eos    f      fpva   frm
- fs     fso    gcs    hbc    hbcm   hbco   hbh    hbhh   hbi    hbj
- hbk    hbm    hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv
- hbw    hent   hic    hicm   hico   hih    hihh   hii    hij    hik
- him    hin    hip    hipd   hipu   hiq    his    hisc   hiv    hiw
- hsc    html   ibc    icb    icp    iob    ipc    isbc   iscl   kgb
- kgbd   kgbi   kis    lal    log    lop    lp     lsl    mem    nib
- ohbr   okw    ola    olc    oll    olq    opr    opt    osbc   osbr
- otr    ple    pod    pvl    q      sac    sbc    sbl    scbb   schb
- scp    scsb   sct    se     sfp    sfs    skp    sob    sobb   sohb
- sop    sosb   sot    ssc    st     sts    t      tac    tbc    toc
- tp     tqw    trp    ts     tsc    tso    vbc    vc     viu    vmll
- vsc    w      wfc    wme    wn     x      xbt    xci    xlp    xs</code></pre>
+ ddf    dior   dln    dmcp   dnl    dop    dp     dpro   drc    dsc
+ dsm    dsn    dtc    dtt    duv    dwic   dwls   dwrs   dws    eos
+ f      fpva   frm    fs     fso    gcs    hbc    hbcm   hbco   hbh
+ hbhh   hbi    hbj    hbk    hbm    hbn    hbp    hbpd   hbpu   hbq
+ hbs    hbsc   hbv    hbw    hent   hic    hicm   hico   hih    hihh
+ hii    hij    hik    him    hin    hip    hipd   hipu   hiq    his
+ hisc   hiv    hiw    hsc    html   ibc    icb    icp    iob    ipc
+ isbc   iscl   kgb    kgbd   kgbi   kis    lal    log    lop    lp
+ lsl    mem    nib    ohbr   okw    ola    olc    oll    olq    opr
+ opt    osbc   osbr   otr    ple    pod    pvl    q      sac    sbc
+ sbl    scbb   schb   scp    scsb   sct    se     sfp    sfs    skp
+ sob    sobb   sohb   sop    sosb   sot    ssc    st     sts    t
+ tac    tbc    toc    tp     tqw    trp    ts     tsc    tso    vbc
+ vc     viu    vmll   vsc    vsn    w      wfc    wme    wn     x
+ xbt    xci    xlp    xs</code></pre>
 
 <p>Equivalently, the prefix &#39;no&#39; or &#39;no-&#39; on the corresponding long names may be used.</p>
 
@@ -4629,7 +4869,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20230912.04</p>
+<p>This man page documents perltidy version 20230912.13</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 
@@ -4639,7 +4879,7 @@
 
 <h1 id="COPYRIGHT">COPYRIGHT</h1>
 
-<p>Copyright (c) 2000-2023 by Steve Hancock</p>
+<p>Copyright (c) 2000-2024 by Steve Hancock</p>
 
 <h1 id="LICENSE">LICENSE</h1>
 

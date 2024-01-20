@@ -1,8 +1,112 @@
 <h1>Perltidy Change Log</h1>
 
-<h2>2023 09 12.04</h2>
+<h2>2023 09 12.13</h2>
 
-<pre><code>- The --dump-block-summary (-dbs) option now includes the number of sub
+<pre><code>- Added --valign-signed-numbers, or -vsn. This improves the appearance
+  of columns of numbers by aligning leading algebraic signs.  For example:
+
+        # perltidy -vsn
+        my $xyz_shield = [
+            [ -0.060,  -0.060,  0. ],
+            [  0.060,  -0.060,  0. ],
+            [  0.060,   0.060,  0. ],
+            [ -0.060,   0.060,  0. ],
+            [ -0.0925, -0.0925, 0.092 ],
+            [  0.0925, -0.0925, 0.092 ],
+            [  0.0925,  0.0925, 0.092 ],
+            [ -0.0925,  0.0925, 0.092 ],
+        ];
+
+        # perltidy -nvsn (current DEFAULT)
+        my $xyz_shield = [
+            [ -0.060,  -0.060,  0. ],
+            [ 0.060,   -0.060,  0. ],
+            [ 0.060,   0.060,   0. ],
+            [ -0.060,  0.060,   0. ],
+            [ -0.0925, -0.0925, 0.092 ],
+            [ 0.0925,  -0.0925, 0.092 ],
+            [ 0.0925,  0.0925,  0.092 ],
+            [ -0.0925, 0.0925,  0.092 ],
+        ];
+
+  This new option works well but is currently OFF to allow more testing
+  and fine-tuning. It is expected to be activated in a future release.
+
+- Added --dump-mixed-call-parens (-dmcp ) which will dump a list of
+  operators which are sometimes followed by parens and sometimes not.
+  Issue git #128. For example
+
+     perltidy -dmcp somefile.pl &gt;out.txt
+
+  produces lines like this, where the first number is the count of
+  uses with parens, and the second number is the count without parens.
+
+    k:caller:2:1
+    k:chomp:3:4
+    k:close:7:4
+
+- Added --want-call-parens=s (-wcp=s) and --nowant-call-parens=s (-nwcp=s)
+  options which will warn of paren uses which do not match a selected
+  style. The manual has details. But for example,
+
+    perltidy -wcp='&amp;' somefile.pl
+
+  will format as normal but warn if any user subs are called without parens.
+
+- Added --dump-unusual-variables (-duv) option to dump a list of
+  variables with certain properties of interest. For example
+
+     perltidy -duv somefile.pl &gt;vars.txt
+
+  produces a file with lines which look something like
+
+     ...
+     1778:u: my $input_file
+     6089:r: my $j: reused - see line 6076
+
+  The values on the line which are separated by colons are:
+
+    line number   - the number of the line of the input file
+    issue         - a single letter indicating the issue, see below
+    variable name - the name of the variable, preceded by a keyword
+    note          - an optional note referring to another line
+
+  The issue is indicated by a letter which may be one of:
+    r: reused variable name
+    s: sigil change but reused bareword
+    p: lexical variable with scope in multiple packages
+    u: unused variable
+
+- Added a related flag --warn-variable-types=string (-wvt=string) option
+  to warn if certain types of variables are found in a script. The types
+  are a space-separated string which may include 'r', 's', and 'p' but
+  not 'u'. For example
+
+    perltidy -wvt='r s' somefile.pl
+
+  will check for and warn if any variabls of type 'r', or 's' are seen,
+  but not 'p'. All possible checks may be indicated with a '*' or '1':
+
+    perltidy -wvt='*' somefile.pl
+
+  The manual has further details.
+
+- All parameters taking integer values are now checked for
+  out-of-range values before processing starts. When a
+  minimum or maximum range is exceeded, the new default
+  behavior is to write a warning message, reset the
+  value to its default setting, and continue.  If this default
+  behavior causes a problem, it can be changed with the new
+  parameter B&lt;--integer-range-check=n&gt;, or B&lt;-irc=n&gt;, as follows:
+
+    n=0  skip check completely (for stress-testing perltidy only)
+    n=1  reset bad values to defaults but do not issue a warning
+    n=2  reset bad values to defaults and issue a warning [DEFAULT]
+    n=3  stop immediately if any values are out of bounds
+
+  The settings n=0 and n=1 are mainly useful for testing purposes.
+
+- The --dump-block-summary (-dbs) option now includes the number of sub
   args in the 'type' column. For example, 'sub(9)' indicates a sub
   with 9 args.  Subs whose arg count cannot easily be determined are
   indicated as 'sub(*)'. The count does not include a leading '$self'
@@ -27,7 +131,7 @@
   a space). The new default value, n=1, will produce a space if and only
   if there was a space in the input text.
 
-- The dump-block-summary option can report an if-elsif-elsif-.. chain
+- The --dump-block-summary option can report an if-elsif-elsif-.. chain
   as a single line item with the notation -dbt='elsif3', for example,
   where the '3' is an integer which specifies the minimum number of elsif
   blocks required for a chain to be reported. The manual has details.
@@ -35,6 +139,9 @@
 - Fix problem c269, in which the new -ame parameter could incorrectly
   emit an else block when two elsif blocks were separated by a hanging
   side comment (a very rare situation).
+
+- The -DEBUG option no longer automatically also writes a .LOG file.
+  Use --show-options if the .LOG file is needed.
 </code></pre>
 
 <h2>2023 09 12</h2>
@@ -906,15 +1013,15 @@ signatures.  Reformatting with the current version will fix the problem.
   the -quiet flag.  This has been fixed.
 
 - Add flag -maxfs=n, --maximum-file-size-mb=n.  This parameter is provided to
-  avoid causing system problems by accidentally attempting to format an 
-  extremely large data file. The default is n=10.  The command to increase 
+  avoid causing system problems by accidentally attempting to format an
+  extremely large data file. The default is n=10.  The command to increase
   the limit to 20 MB for example would be  -mfs=20.  This only applies to
   files specified by filename on the command line.
 
-- Skip formatting if there are too many indentation level errors.  This is 
-  controlled with -maxle=n, --maximum-level-errors=n.  This means that if 
+- Skip formatting if there are too many indentation level errors.  This is
+  controlled with -maxle=n, --maximum-level-errors=n.  This means that if
   the ending indentation differs from the starting indentation by more than
-  n levels, the file will be output verbatim. The default is n=1. 
+  n levels, the file will be output verbatim. The default is n=1.
   To skip this check, set n=-1 or set n to a large number.
 
 - A related new flag, --maximum-unexpected-errors=n, or -maxue=n, is available
@@ -922,10 +1029,10 @@ signatures.  Reformatting with the current version will fix the problem.
 
 - Add flag -xci, --extended-continuation-indentation, regarding issue git #28
   This flag causes continuation indentation to "extend" deeper into structures.
-  Since this is a fairly new flag, the default is -nxci to avoid disturbing 
+  Since this is a fairly new flag, the default is -nxci to avoid disturbing
   existing formatting.  BUT you will probably see some improved formatting
-  in complex data structures by setting this flag if you currently use -ci=n 
-  and -i=n with the same value of 'n' (as is the case if you use -pbp, 
+  in complex data structures by setting this flag if you currently use -ci=n
+  and -i=n with the same value of 'n' (as is the case if you use -pbp,
   --perl-best-practices, where n=4).
 
 - Fix issue git #42, clarify how --break-at-old-logical-breakpoints works.
@@ -934,21 +1041,21 @@ signatures.  Reformatting with the current version will fix the problem.
 
 - Fix issue git #41, typo in manual regarding -fsb.
 
-- Fix issue git #40: when using the -bli option, a closing brace followed by 
-  a semicolon was not being indented.  This applies to braces which require 
+- Fix issue git #40: when using the -bli option, a closing brace followed by
+  a semicolon was not being indented.  This applies to braces which require
   semicolons, such as a 'do' block.
 
 - Added 'state' as a keyword.
 
 - A better test for convergence has been added. When iterations are requested,
   the new test will stop after the first pass if no changes in line break
-  locations are made.  Previously, file checksums were used and required at least two 
-  passes to verify convergence unless no formatting changes were made.  With the new test, 
-  only a single pass is needed when formatting changes are limited to adjustments of 
+  locations are made.  Previously, file checksums were used and required at least two
+  passes to verify convergence unless no formatting changes were made.  With the new test,
+  only a single pass is needed when formatting changes are limited to adjustments of
   indentation and whitespace on the lines of code.  Extensive testing has been made to
   verify the correctness of the new convergence test.
 
-- Line breaks are now automatically placed after 'use overload' to 
+- Line breaks are now automatically placed after 'use overload' to
   improve formatting when there are numerous overloaded operators.  For
   example
 
@@ -957,8 +1064,8 @@ signatures.  Reformatting with the current version will fix the problem.
       ...
 
 - A number of minor problems with parsing signatures and prototypes have
-  been corrected, particularly multi-line signatures. Some signatures 
-  had previously been parsed as if they were prototypes, which meant the 
+  been corrected, particularly multi-line signatures. Some signatures
+  had previously been parsed as if they were prototypes, which meant the
   normal spacing rules were not applied.  For example
 
   OLD:
@@ -972,17 +1079,17 @@ signatures.  Reformatting with the current version will fix the problem.
     }
 
 - Numerous minor issues that the average user would not encounter were found
-  and fixed. They can be seen in the more complete list of updates at 
+  and fixed. They can be seen in the more complete list of updates at
 
        https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod
 </code></pre>
 
 <h2>2020 10 01</h2>
 
-<pre><code>- Robustness of perltidy has been significantly improved.  Updating is recommended. Continual 
-  automated testing runs began about 1 Sep 2020 and numerous issues have been found and fixed. 
+<pre><code>- Robustness of perltidy has been significantly improved.  Updating is recommended. Continual
+  automated testing runs began about 1 Sep 2020 and numerous issues have been found and fixed.
   Many involve references to uninitialized variables when perltidy is fed random text and random
-  control parameters. 
+  control parameters.
 
 - Added the token '-&gt;' to the list of alignment tokens, as suggested in git
   #39, so that it can be vertically aligned if a space is placed before them with -wls='-&gt;'.
@@ -1003,14 +1110,14 @@ signatures.  Reformatting with the current version will fix the problem.
   comments generated by the -csc parameter, a separating newline was missing.
   The resulting script will not then run, but worse, if it is reformatted with
   the same parameters then closing side comments could be overwritten and data
-  lost. 
+  lost.
 
   This problem was found during automated random testing.  The parameter
   -scbb is rarely used, which is probably why this has not been reported.  Please
   upgrade your version.
 
 - Added parameter --non-indenting-braces, or -nib, which prevents
-  code from indenting one level if it follows an opening brace marked 
+  code from indenting one level if it follows an opening brace marked
   with a special side comment, '#&lt;&lt;&lt;'.  For example,
 
                 { #&lt;&lt;&lt;   a closure to contain lexical vars
@@ -1023,17 +1130,17 @@ signatures.  Reformatting with the current version will fix the problem.
 
   This is on by default.  If your code happens to have some
   opening braces followed by '#&lt;&lt;&lt;', and you
-  don't want this, you can use -nnib to deactivate it. 
+  don't want this, you can use -nnib to deactivate it.
 
 - Side comment locations reset at a line ending in a level 0 open
-  block, such as when a new multi-line sub begins.  This is intended to 
+  block, such as when a new multi-line sub begins.  This is intended to
   help keep side comments from drifting to far to the right.
 </code></pre>
 
 <h2>2020 08 22</h2>
 
 <pre><code>- Fix RT #133166, encoding not set for -st.  Also reported as RT #133171
-  and git #35. 
+  and git #35.
 
   This is a significant bug in version 20200616 which can corrupt data if
   perltidy is run as a filter on encoded text.
@@ -1048,7 +1155,7 @@ signatures.  Reformatting with the current version will fix the problem.
 - Vertical alignment has been improved. Numerous minor issues have
   been fixed.
 
-- Formatting with the -lp option is improved. 
+- Formatting with the -lp option is improved.
 
 - Fixed issue git #32, misparse of bare 'ref' in ternary
 

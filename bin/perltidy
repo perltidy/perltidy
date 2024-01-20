@@ -5664,7 +5664,7 @@ in subroutines of a different package in the same file.  This can be confusing,
 and it might cause the program to run differently, or fail, if the the packages
 were ever split into separate files. This issue can usually be avoided by
 placing code in block braces of some type.  For example, this issue is often
-found in test code, and might be fixed by using the structure
+found in test code and can sometimes be fixed by using the structure
 
     main();
 
@@ -5672,10 +5672,11 @@ found in test code, and might be fixed by using the structure
     ## old main code goes here
     }
 
-The B<non-indenting-braces> comment C<#<<<> is not required but will keep the
-indentation of the old code unchanged.  It should be noted that this check is
-limited to packages which are not enclosed in block braces in order skip
-temporary package changes.
+The B<non-indenting-braces> side comment C<#<<<> is not required but will keep
+the indentation of the old code unchanged.
+
+This check is only applied to package statements which are not enclosed in
+block braces in order avoid warnings at temporary package changes.
 
 =item B<u: unused variables>
 
@@ -6246,7 +6247,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20230912.12
+This man page documents perltidy version 20230912.13
 
 =head1 BUG REPORTS
 

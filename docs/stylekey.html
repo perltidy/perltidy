@@ -28,6 +28,7 @@
       <li><a href="#Block-Brace-Vertical-Tightness">Block Brace Vertical Tightness</a></li>
       <li><a href="#Closing-Block-Brace-Indentation">Closing Block Brace Indentation</a></li>
       <li><a href="#Indentation-Style-for-Other-Containers">Indentation Style for Other Containers</a></li>
+      <li><a href="#Welding">Welding</a></li>
       <li><a href="#Opening-Vertical-Tightness">Opening Vertical Tightness</a></li>
       <li><a href="#Closing-Token-Placement">Closing Token Placement</a></li>
       <li><a href="#Stack-Opening-Tokens">Stack Opening Tokens</a></li>
@@ -41,7 +42,6 @@
       <li><a href="#Outdenting-Long-Quotes">Outdenting Long Quotes</a></li>
       <li><a href="#Many-Other-Parameters">Many Other Parameters</a></li>
       <li><a href="#Example-.perltidyrc-files">Example .perltidyrc files</a></li>
-      <li><a href="#Tidyview">Tidyview</a></li>
       <li><a href="#Additional-Information">Additional Information</a></li>
     </ul>
   </li>
@@ -57,6 +57,8 @@
 
 <p>Before you begin, experiment using just <code>perltidy filename.pl</code> on some of your files. From the results (which you will find in files with a <i>.tdy</i> extension), you will get a sense of what formatting changes, if any, you&#39;d like to make. If the default formatting is acceptable, you do not need a <i>.perltidyrc</i> file.</p>
 
+<p>The default is based on the recommendations in the <a href="https://perldoc.perl.org/perlstyle">Perl style guide</a>. It is worth noting that, although many variations are possible with the available parameters, this style has some significant advantages when small sections of code are sent to perltidy from within an editor. The reason is that perltidy can usually format a small container spanning multiple lines of code provided that the parens, braces and brackets are balanced. For the default style, the number of lines required to make a balanced selection of code is generally less than for other styles. For example, if a cuddled style is used, then an entire <code>if-elsif-</code> chain must be selected for formatting rather than an individual <code>elsif</code> block. This can be tedious and time consuming.</p>
+
 <h2 id="Use-as-Filter">Use as Filter?</h2>
 
 <p>Do you almost always want to run perltidy as a standard filter on just one input file? If yes, use <b>-st</b> and <b>-se</b>.</p>
@@ -67,13 +69,15 @@
 
 <p>Do you want the maximum line length to be 80 columns? If no, use <b>-l=n</b>, where <b>n</b> is the number of columns you prefer.</p>
 
+<p>When setting the maximum line length, something to consider is that perltidy will use this to decide when a list of items should be broken into multiple lines. So if it is set excessively large, lists may be so wide that they are hard to read.</p>
+
 <h2 id="Indentation-in-Code-Blocks">Indentation in Code Blocks</h2>
 
 <p>In the block below, the variable <code>$anchor</code> is one indentation level deep and is indented by 4 spaces as shown here:</p>
 
 <pre><code>    if ( $flag eq &quot;a&quot; ) {
         $anchor = $header;
-    }  </code></pre>
+    }</code></pre>
 
 <p>If you want to change this to be a different number <b>n</b> of spaces per indentation level, use <b>-i=n</b>.</p>
 
@@ -92,7 +96,9 @@
 
 <h2 id="Tabs">Tabs</h2>
 
-<p>The default, and recommendation, is to represent leading whitespace with actual space characters. However, if you prefer to entab leading whitespace with one tab character for each <b>n</b> spaces, use <b>-et=n</b>. Typically, <b>n</b> would be 8.</p>
+<p>The default, and recommendation, is to represent leading whitespace with actual space characters. However, if you prefer to entab leading whitespace of lines of code with one tab character for each <b>n</b> spaces, use <b>-et=n</b>. The value of <b>n</b> should be set to be the same as used by your display software. If there is a disagreement, then vertical alignment will not be displayed correctly.</p>
+
+<p>Please note that this number <b>n</b> has nothing to do with the number of spaces for one level of indentation, which is specified separately with <b>-i=n</b>.</p>
 
 <h2 id="Opening-Block-Brace-Right-or-Left">Opening Block Brace Right or Left?</h2>
 
@@ -104,7 +110,7 @@
 
 <pre><code>    if ( $flag eq &quot;h&quot; ) {
         $headers = 0;
-    }  </code></pre>
+    }</code></pre>
 
 <p>If you like opening braces on the left, like this, go to <a href="#Opening-Braces-Left">&quot;Opening Braces Left&quot;</a>.</p>
 
@@ -151,11 +157,11 @@
 
 <pre><code>    if ( $flag eq &quot;h&quot; ) {
         $headers = 0;
-    }  
+    }
     elsif ( $flag eq &quot;f&quot; ) {
         $sectiontype = 3;
-    } 
-    else {    
+    }
+    else {
         print &quot;invalid option: &quot; . substr( $arg, $i, 1 ) . &quot;\n&quot;;
         dohelp();
     }</code></pre>
@@ -281,7 +287,7 @@
         }
     );</code></pre>
 
-<p>In this default indentation scheme, a simple formula is used to find the indentation of every line. Notice how the first &#39;undef&#39; is indented 4 spaces (one level) to the right, and how &#39;PrintError&#39; is indented 4 more speces (one more level) to the right.</p>
+<p>In this default indentation scheme, a simple formula is used to find the indentation of every line. Notice how the first &#39;undef&#39; is indented 4 spaces (one level) to the right, and how &#39;PrintError&#39; is indented 4 more spaces (one more level) to the right.</p>
 
 <p>The alternate is to let the location of the opening paren (or square bracket, or curly brace) define the indentation, like this:</p>
 
@@ -295,9 +301,38 @@
 
 <p>The first scheme is completely robust. The second scheme often looks a little nicer, but be aware that deeply nested structures it can be spoiled if the line length limit is exceeded. Also, if there are comments or blank lines within a complex structure perltidy will temporarily fall back on the default indentation scheme. You may want to try both on large sections of code to see which works best.</p>
 
+<p>Also note that a disadvantage of this second scheme is that small changes in code, such as a change in the length of a sub name, can cause changes in many lines of code. For example, if we decide to change the name <code>connect</code> to <code>connect_to_destination</code>, then all of the call args would have to move right by 15 spaces. This can produce a lot of lines of differences when changes are committed.</p>
+
 <p>If you prefer the first (default) scheme, no parameter is needed.</p>
 
-<p>If you prefer the latter scheme, use <b>-lp</b>.</p>
+<p>If you prefer the latter scheme, use <b>--line-up-parentheses</b>, or <b>-lp</b>. There is an alternative version of this option named <b>--extended-line-up-parentheses</b>, or <b>-xlp</b> which can also be used. For simplicity, the name <b>-lp</b> will refer to either of these options in the following text.</p>
+
+<h2 id="Welding">Welding</h2>
+
+<p>The following snippet is displayed with the default formatting:</p>
+
+<pre><code>    $opt_c = Text::CSV_XS-&gt;new(
+        {
+            binary       =&gt; 1,
+            sep_char     =&gt; $opt_c,
+            always_quote =&gt; 1,
+        }
+    );</code></pre>
+
+<p>For this type of structure, where an inner container is nested within an outer container, we can get a more compact display with the parameter <b>--weld-nested-containers</b>, or <b>-wn</b>:</p>
+
+<pre><code>    # perltidy -wn
+    $opt_c = Text::CSV_XS-&gt;new( {
+        binary       =&gt; 1,
+        sep_char     =&gt; $opt_c,
+        always_quote =&gt; 1,
+    } );</code></pre>
+
+<p>The name of the parameter comes from the idea that the two opening and two closing tokens have been &#39;welded&#39; together to act as a single unit. The indentation spaces of the contents has also been reduced by one level.</p>
+
+<p>This is a nice transformation because it is symmetric at the opening and closing, and leaves a sort of &#39;sandwich&#39; structure 0which is still quite readable.</p>
+
+<p>Some parameters available for asymmetric compressions, at just the opening or closing of complex structures, are described in the next sections.</p>
 
 <h2 id="Opening-Vertical-Tightness">Opening Vertical Tightness</h2>
 
@@ -483,6 +518,8 @@
 
 <p>The manual shows how all of these vertical tightness controls may be applied independently to each type of non-block opening and opening token.</p>
 
+<p>Also, note that <b>--weld-nested-containers</b>, or <b>-wn</b>, mentioned previously, operates like the combination of <b>-sot</b> and <b>-sct</b> and also reduces the indentation level of the contents.</p>
+
 <h2 id="Define-Horizontal-Tightness">Define Horizontal Tightness</h2>
 
 <p>Horizontal tightness parameters define how much space is included within a set of container tokens.</p>
@@ -499,7 +536,7 @@
 
 <pre><code> $width = $col[ $j + $k ] - $col[ $j ];  # -sbt=0
  $width = $col[ $j + $k ] - $col[$j];    # -sbt=1 (default)
- $width = $col[$j + $k] - $col[$j];      # -sbt=2 </code></pre>
+ $width = $col[$j + $k] - $col[$j];      # -sbt=2</code></pre>
 
 <p>For curly braces, decide which of the following values of <b>-bt=n</b> you prefer:</p>
 
@@ -517,7 +554,7 @@
 
 <p>The default is not to place a space after a function call:</p>
 
-<pre><code>  myfunc( $a, $b, $c );    # default </code></pre>
+<pre><code>  myfunc( $a, $b, $c );    # default</code></pre>
 
 <p>If you prefer a space:</p>
 
@@ -529,7 +566,7 @@
 
 <p>The default is to place a space between only these keywords and an opening paren:</p>
 
-<pre><code>   my local our and or eq ne if else elsif until unless 
+<pre><code>   my local our and or eq ne if else elsif until unless
    while for foreach return switch case given when</code></pre>
 
 <p>but no others. For example, the default is:</p>
@@ -550,7 +587,7 @@
 
 <p>If you prefer a space, like this:</p>
 
-<pre><code>    $i = 1 ; </code></pre>
+<pre><code>    $i = 1 ;</code></pre>
 
 <p>enter <b>-sts</b>.</p>
 
@@ -660,19 +697,11 @@
  -vt=1
  -vtc=1</code></pre>
 
-<h2 id="Tidyview">Tidyview</h2>
-
-<p>There is a graphical program called <b>tidyview</b> which you can use to read a preliminary <i>.perltidyrc</i> file, make trial adjustments and immediately see their effect on a test file, and then write a new <i>.perltidyrc</i>. You can download a copy at</p>
-
-<p>http://sourceforge.net/projects/tidyview</p>
-
 <h2 id="Additional-Information">Additional Information</h2>
 
-<p>This document has covered the main parameters. Many more parameters are available for special purposes and for fine-tuning a style. For complete information see the perltidy manual http://perltidy.sourceforge.net/perltidy.html</p>
+<p>For further information see the perltidy documentation at <a href="http://perltidy.sourceforge.net">Sourceforge</a> or at <a href="https://metacpan.org/pod/distribution/Perl-Tidy/bin/perltidy">metacpan</a>. or at <a href="https://perltidy.github.io/perltidy/">GitHub</a></p>
 
-<p>For an introduction to using perltidy, see the tutorial http://perltidy.sourceforge.net/tutorial.html</p>
-
-<p>Suggestions for improving this document are welcome and may be sent to perltidy at users.sourceforge.net</p>
+<p>The source code is maintained at <a href="https://github.com/perltidy/perltidy">GitHub</a>.</p>
 
 
 </body>

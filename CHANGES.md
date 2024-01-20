@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2023 09 12.12
+## 2023 09 12.13
 
     - Added --valign-signed-numbers, or -vsn. This improves the appearance
       of columns of numbers by aligning leading algebraic signs.  For example:

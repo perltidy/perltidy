@@ -5,7 +5,7 @@ use Carp;
 
 { #<<< A non-indenting brace to contain all lexical variables
 
-our $VERSION = '20230912.12';
+our $VERSION = '20230912.13';
 use English qw( -no_match_vars );
 use Perl::Tidy::VerticalAligner::Alignment;
 use Perl::Tidy::VerticalAligner::Line;
@@ -4881,7 +4881,7 @@ EOM
     my @unsigned_subgroups;
     my $ix_last_negative = $ix_first - 1;
     foreach my $ix ( @{$rsigned_lines} ) {
-        my $Nu = $ix - $ix_last_negative;
+        my $Nu = $ix - $ix_last_negative - 1;
         if ( $Nu > 0 && $Nu <= $rOpts_valign_signed_numbers_limit ) {
             push @unsigned_subgroups, [ $ix_last_negative + 1, $ix - 1 ];
         }
