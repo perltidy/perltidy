@@ -1,0 +1,3 @@
+# turn off vsn with -vsnl
+-vsn
+-vsnl=1

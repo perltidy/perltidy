@@ -3546,6 +3546,7 @@ sub generate_options {
     $add_option->( 'valign-inclusion-list',                     'vil',   '=s' );
     $add_option->( 'valign-if-unless',                          'viu',   '!' );
     $add_option->( 'valign-signed-numbers',                     'vsn',   '!' );
+    $add_option->( 'valign-signed-numbers-limit',               'vsnl',  '=i' );
     $add_option->( 'extended-block-tightness',                  'xbt',   '!' );
     $add_option->( 'extended-block-tightness-list',             'xbtl',  '=s' );
 
@@ -3878,6 +3879,7 @@ sub generate_options {
       valign-code
       valign-block-comments
       valign-side-comments
+      valign-signed-numbers-limit=20
       short-concatenation-item-length=8
       space-for-semicolon
       space-backslash-quote=1
@@ -4022,6 +4024,7 @@ sub generate_options {
         'starting-indentation-level'                => [ 0, undef ],
         'vertical-tightness'                        => [ 0, 2 ],
         'vertical-tightness-closing'                => [ 0, 3 ],
+        'valign-signed-numbers-limit'               => [ 0, undef ],
         'whitespace-cycle'                          => [ 0, undef ],
     );
 

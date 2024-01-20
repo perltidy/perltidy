@@ -75,7 +75,7 @@ sub AUTOLOAD {
 ======================================================================
 Error detected in package '$my_package', version $VERSION
 Received unexpected AUTOLOAD call for sub '$AUTOLOAD'
-Called from package: '$pkg'  
+Called from package: '$pkg'
 Called from File '$fname'  at line '$lno'
 This error is probably due to a recent programming change
 ======================================================================
@@ -223,6 +223,7 @@ my (
     $rOpts_valign_block_comments,
     $rOpts_valign_side_comments,
     $rOpts_valign_signed_numbers,
+    $rOpts_valign_signed_numbers_limit,
 
     $require_tabs,
 
@@ -294,6 +295,8 @@ sub check_options {
     $rOpts_valign_block_comments    = $rOpts->{'valign-block-comments'};
     $rOpts_valign_side_comments     = $rOpts->{'valign-side-comments'};
     $rOpts_valign_signed_numbers    = $rOpts->{'valign-signed-numbers'};
+    $rOpts_valign_signed_numbers_limit =
+      $rOpts->{'valign-signed-numbers-limit'};
 
     return;
 } ## end sub check_options
@@ -1507,7 +1510,7 @@ sub check_fit {
     if ( $jmax_old ne $jmax ) {
 
         warning(<<EOM);
-Program bug detected in Perl::Tidy::VerticalAligner sub check_fit 
+Program bug detected in Perl::Tidy::VerticalAligner sub check_fit
 unexpected difference in array lengths: $jmax != $jmax_old
 EOM
         return;
@@ -1927,7 +1930,7 @@ sub _flush_group_lines {
 
                 # safety check, shouldn't happen
                 warning(<<EOM);
-Program bug detected in Perl::Tidy::VerticalAligner sub sweep_top_down 
+Program bug detected in Perl::Tidy::VerticalAligner sub sweep_top_down
 undefined index for group line count $group_line_count
 EOM
                 $jbeg = $jline;
@@ -4803,11 +4806,14 @@ use constant DEBUG_VSN => 0;
 my %is_digit_char;
 my %is_plus_or_minus;
 my %is_leading_sign_pattern;
+my %is_opening_token;
 
 BEGIN {
 
-    # These patterns match a signed number (and a lot of other things)
-    my @q = ( 'Q,', 'Q,b', 'Qb', 'Qb}', 'Qb},' );
+    # These leading patterns can match a signed number
+    # here 'Q' can be a number, 'b'=blank, '}'=one of )]}
+    my @q = ( 'Q,', 'Q,b', 'Qb', 'Qb}', 'Qb},', 'Q},', 'Q};' );
+
     @is_leading_sign_pattern{@q} = (1) x scalar(@q);
 
     @q = qw( 0 1 2 3 4 5 6 7 8 9 );
@@ -4815,28 +4821,36 @@ BEGIN {
 
     @q = qw( + - );
     @is_plus_or_minus{@q} = (1) x scalar(@q);
+
+    @q = qw< { ( [ >;
+    @is_opening_token{@q} = (1) x scalar(@q);
 }
 
 sub end_signed_number_column {
-    my ( $rgroup_lines, $rcol_hash, $ix_last ) = @_;
+    my ( $rgroup_lines, $rcol_hash, $ix_last, $ending_alignment ) = @_;
 
     # Finish formatting a column of unsigned numbers
     # Given:
     #   $rgroup_lines - the current vertical aligment group of lines
     #   $rcol_hash    - a hash of information about this vertical column
     #   $ix_last      - index of the last line of this vertical column
+    #   $ending_alignment - true if this ends a vertical alignment col
     # Task:
     #   If this is a mixture of signed and unsigned numbers, then add a
     #   single space before the unsigned numbers to improve appearance.
     return unless ($rcol_hash);
-    my $jcol     = $rcol_hash->{jcol};
-    my $unsigned = $rcol_hash->{unsigned_count};
-    my $signed   = $rcol_hash->{signed_count};
+    my $jcol               = $rcol_hash->{jcol};
+    my $unsigned           = $rcol_hash->{unsigned_count};
+    my $signed             = $rcol_hash->{signed_count};
+    my $starting_alignment = $rcol_hash->{starting_alignment};
+    my $rsigned_lines      = $rcol_hash->{rsigned_lines};
+
     if ( !$signed && $unsigned ) {
         DEVEL_MODE
           && Fault("avoid calling without mixed signed and unsigned\n");
         return;
     }
+
     my $pos_start_number = $rcol_hash->{pos_start_number};
     my $ix_first         = $rcol_hash->{ix_first};
     my $nlines           = $ix_last - $ix_first + 1;
@@ -4845,7 +4859,7 @@ sub end_signed_number_column {
     if ( $signed + $unsigned != $nlines ) {
         my $line    = $rgroup_lines->[$ix_last];
         my $rfields = $line->{'rfields'};
-        my $text    = join '', @{$rfields};
+        my $text    = join EMPTY_STRING, @{$rfields};
         DEVEL_MODE && Fault(<<EOM);
 We seem to have miscounted lines, please check:
 signed=$signed
@@ -4859,7 +4873,50 @@ EOM
         return;
     }
 
-    foreach my $ix_line ( $ix_first .. $ix_last ) {
+    # Find the unsigned groups from the signed groups
+    # Exclude groups with Nu>Max where Nu=unsigned count, and Max is about 20.
+    # Little visual improvement is gained by padding more than this , and this
+    # avoids large numbers of differences in a file when a single line is
+    # changed.
+    my @unsigned_subgroups;
+    my $ix_last_negative = $ix_first - 1;
+    foreach my $ix ( @{$rsigned_lines} ) {
+        my $Nu = $ix - $ix_last_negative;
+        if ( $Nu > 0 && $Nu <= $rOpts_valign_signed_numbers_limit ) {
+            push @unsigned_subgroups, [ $ix_last_negative + 1, $ix - 1 ];
+        }
+        $ix_last_negative = $ix;
+    }
+    my $Nu = $ix_last - $ix_last_negative;
+    if ( $Nu > 0 && $Nu <= $rOpts_valign_signed_numbers_limit ) {
+        push @unsigned_subgroups, [ $ix_last_negative + 1, $ix_last ];
+    }
+
+    if ( !@unsigned_subgroups ) { return }    # shouldn't happen
+
+    # Apply the limiting number of lines to pad in the average sense;
+    # require  Nu <= Nc*Max where Nu=unsigned count, Nc=sign change count.
+    # - interior unsigned_subgroups have two sign-change interfaces
+    # - boundary unsigned_subgroups have one sign-change interfaces
+    my $Nc = 2 * @unsigned_subgroups;
+    if ( $unsigned_subgroups[0]->[0] eq $ix_first ) { $Nc -= 1 }
+    if ( $unsigned_subgroups[-1]->[1] eq $ix_last ) { $Nc -= 1 }
+    if ( $unsigned > $Nc * $rOpts_valign_signed_numbers_limit ) {
+        return;
+    }
+
+    # Make a list of lines to be processed
+    # TODO: This loop can eventually store available space and use it to and
+    # do additional filtering out of things like unwanted sign alternation
+    my @ix_todo;
+    foreach my $item (@unsigned_subgroups) {
+        my ( $ix_min, $ix_max ) = @{$item};
+        foreach my $ix ( $ix_min .. $ix_max ) {
+            push @ix_todo, $ix;
+        }
+    }
+
+    foreach my $ix_line (@ix_todo) {
         my $line                = $rgroup_lines->[$ix_line];
         my $leading_space_count = $line->{'leading_space_count'};
         my $rfields             = $line->{'rfields'};
@@ -4896,32 +4953,139 @@ sub pad_signed_field {
     #  $pos_start_number = string position of the leading digit
     # Task: update $rstr and $rstr_len with a single space
 
+    # Give up if there is no space available
+    if ( ${$rstr_len} >= $avail ) { return }
+
     # First partition the string into $part1 and $part2, so that the
     # number starts at the beginning of part2.
     my $part1 = EMPTY_STRING;
     my $part2 = ${$rstr};
+    my $str   = ${$rstr};
     if ( $pos_start_number > 0 ) {
-        $part1 = substr( ${$rstr}, 0, $pos_start_number );
-        $part2 = substr( ${$rstr}, $pos_start_number );
+        my $len = length($str);
+        if ( $pos_start_number >= $len ) {
+            DEVEL_MODE && Fault(<<EOM);
+Expection position '$pos_start_number' < length $len of string '$str' 
+EOM
+            return;
+        }
+        $part1 = substr( $str, 0, $pos_start_number );
+        $part2 = substr( $str, $pos_start_number );
 
-        # Important: guard against a bad '$pos_start_number' due to
-        # a programming error. Shouldn't happen but would be catastrophic.
-        if ( substr( $part1, -1, 1 ) ne SPACE ) {
-            DEVEL_MODE && Fault("Bad position '$pos_start_number'\n");
+        # Verify that we are inserting a new space after either (1) an existing
+        # space or (2) an opening token. Otherwise disaster can occur. An error
+        # here implies a programming error in defining '$pos_start_number'.
+        my $test_char1 = substr( $part1, -1, 1 );
+        if ( $test_char1 ne SPACE && !$is_opening_token{$test_char1} ) {
+            DEVEL_MODE && Fault(<<EOM);
+Expecting test char1 as space or { but saw '$test_char1' in string '$str'
+Probably bad position '$pos_start_number'
+EOM
             return;
         }
     }
 
-    # Only insert a space before a digit character; otherwise do nothing.
-    my $test_char = substr( $part2, 0, 1 );
-    if ( $is_digit_char{$test_char}
-        && ${$rstr_len} < $avail )
-    {
+    # Verify we are inserting a space before a digit character
+    my $test_char2 = substr( $part2, 0, 1 );
+    if ( $is_digit_char{$test_char2} ) {
         ${$rstr} = $part1 . SPACE . $part2;
         ${$rstr_len} += 1;
     }
+    else {
+        DEVEL_MODE && Fault(<<EOM);
+Expecting test char2 as leading digit but saw '$test_char2' in string '$str'
+May be bad position '$pos_start_number'
+EOM
+    }
     return;
 } ## end sub pad_signed_field
+
+sub split_field {
+    my ( $pat1, $field ) = @_;
+
+    # Given;
+    #   $pat1 = first part of a pattern before a 'Q'
+    #   $field = corresponding text field
+    # Return:
+    #   $pos_start_number = positiion in $field where the Q should start
+    #                     = 0 if cannot find
+
+    my $pos_start_number = 0;
+
+    # Require 0 or 1 braces
+    my $len_field = length($field);
+    my $len_pat1  = length($pat1);
+    return unless ( $len_pat1 && $len_field );
+
+    # Look at the pattern ending
+    my $ending_b = 0;
+    my $ch       = substr( $pat1, -1, 1 );
+    if ( $ch eq 'b' ) {
+        $ending_b = 1;
+        $ch       = substr( $pat1, -2, 1 );
+    }
+
+    # handle either '{b' or '{'
+    if ( $ch eq '{' ) {
+
+        # Only one brace
+        my $brace_count = ( $pat1 =~ tr/\{/\{/ );
+        return 0 if ( $brace_count != 1 );
+
+        my $i_paren   = index( $field, '(' );
+        my $i_bracket = index( $field, '[' );
+        my $i_brace   = index( $field, '{' );
+        my $i_opening = length($field);
+        if ( $i_paren >= 0 ) { $i_opening = $i_paren }
+        if (   $i_bracket >= 0
+            && $i_bracket < $i_opening )
+        {
+            $i_opening = $i_bracket;
+        }
+        if ( $i_brace >= 0 && $i_brace < $i_opening ) {
+            $i_opening = $i_brace;
+        }
+        if (   $i_opening >= 0
+            && $i_opening < length($field) - 1 )
+        {
+            $pos_start_number = $i_opening + 1 + $ending_b;
+        }
+        else {
+            # strange - could not find the opening token
+        }
+    }
+
+    # no braces: maybe '=>b'
+    else {
+
+        # looking for patterns ending in '=b' or '=>b'
+        if ( !$ending_b ) { return 0 }
+
+        # find the = in the text
+        my $pos_equals = index( $field, '=' );
+        return 0 unless ( $pos_equals >= 0 );
+
+        # be sure there are no other '=' in the pattern
+        my $equals_count = ( $pat1 =~ tr/=/=/ );
+        return 0 if ( $equals_count != 1 );
+
+        if ( $len_pat1 >= 2 && substr( $pat1, -2, 2 ) eq '=b' ) {
+            $pos_start_number = $pos_equals + 2;
+        }
+        elsif ( $len_pat1 >= 3 && substr( $pat1, -3, 3 ) eq '=>b' ) {
+            $pos_start_number = $pos_equals + 3;
+        }
+        else {
+
+            # cannot handle this pattern
+            return 0;
+        }
+    }
+
+    if ( $pos_start_number >= $len_field ) { $pos_start_number = 0 }
+
+    return ($pos_start_number);
+} ## end sub split_field
 
 sub pad_signed_number_columns {
     my ($rgroup_lines) = @_;
@@ -4942,13 +5106,13 @@ sub pad_signed_number_columns {
     #        [  10.9,        10.9,             11 ],
     #    );
 
-    return unless ($rOpts_valign_signed_numbers);
+    # A current limitation is that lines with just a single column of numbers
+    # cannot be processed because the vertical aligner does not currently form
+    # them them into groups (since they are otherwise already aligned). This
+    # situation is rare, but could be fixed with a future coding change
+    # upstream.
 
-    # TODO: This option works well but there are some remaining issues.
-    # - Form groups of single columns of numbers when this option is on
-    # - Align last ragged entry item (see case rfc.in)
-    # - Needs a fine-tuning parameter for handling extremely large tables
-    # - Could use a little more optimization.
+    return unless ($rOpts_valign_signed_numbers);
 
     my %column_info;
     my @columns;
@@ -4964,13 +5128,20 @@ sub pad_signed_number_columns {
         $jmax = $line->{'jmax'};
         my $jmax_change = $jmax ne $jmax_last;
 
-        #-----------------------------------
-        # Handle a reduced number of columns
-        #-----------------------------------
+        my @alignments     = @{ $line->{'ralignments'} };
+        my $rfields        = $line->{'rfields'};
+        my $rfield_lengths = $line->{'rfield_lengthss'};
+        my $rpatterns      = $line->{'rpatterns'};
+        my $rtokens        = $line->{'rtokens'};
+
+        #-----------------------------------------------
+        # Check for a reduction in the number of columns
+        #-----------------------------------------------
         if ( $jmax < $jmax_last ) {
+
             foreach my $jcol ( keys %column_info ) {
 
-                # end any stranded columns
+                # end any stranded columns on the right
                 next if ( $jcol < $jmax );
                 my $rcol_hash = $column_info{$jcol};
                 next unless ($rcol_hash);
@@ -4978,19 +5149,33 @@ sub pad_signed_number_columns {
                     && $rcol_hash->{unsigned_count} )
                 {
                     end_signed_number_column( $rgroup_lines, $rcol_hash,
-                        $ix_line - 1 );
+                        $ix_line - 1, 1 );
                 }
                 delete $column_info{$jcol};
             }
+
+            # Try to keep the end data column running; test case 'rfc.in'
+            # In a list, the last item will still need a trailing comma.
+            # TODO: consider doing this earlier in the left-right sweep
+            my $jcol = $jmax - 1;
+            if ( $jcol > 0 && $column_info{$jcol} ) {
+                my $alignment = $alignments[$jcol];
+                my $old_col   = $columns[$jcol];
+                my $col       = $alignment->{column};
+                if ( $col < $old_col ) {
+                    my $spaces_needed = $old_col - $col;
+                    my $spaces_available =
+                      $line->get_available_space_on_right();
+                    if ( $spaces_available >= $spaces_needed ) {
+                        $line->increase_field_width( $jcol, $spaces_needed );
+                    }
+                }
+            }
         }
 
-        my $rfields    = $line->{'rfields'};
-        my $rpatterns  = $line->{'rpatterns'};
-        my @alignments = @{ $line->{'ralignments'} };
-
-        #--------------------------------------------------
-        # loop over fields except last field (side comment)
-        #--------------------------------------------------
+        #--------------------------------------------
+        # Loop over fields except last (side comment)
+        #--------------------------------------------
         for my $jcol ( 0 .. $jmax - 1 ) {
 
             #-----------------------------------------
@@ -5010,7 +5195,7 @@ sub pad_signed_number_columns {
                         && $rcol_hash->{unsigned_count} )
                     {
                         end_signed_number_column( $rgroup_lines, $rcol_hash,
-                            $ix_line - 1 );
+                            $ix_line - 1, 1 );
                     }
                     delete $column_info{$jcol_old};
                 }
@@ -5018,7 +5203,6 @@ sub pad_signed_number_columns {
 
             # A new padded sign column can only start at an alignment change
             my $rcol_hash = $column_info{$jcol};
-            next if ( !$rcol_hash && !$is_new_alignment );
 
             #----------------------------------------------------------------
             # Examine this field, looking for for signed and unsigned numbers
@@ -5028,100 +5212,94 @@ sub pad_signed_number_columns {
 
             my $is_signed_number   = 0;
             my $is_unsigned_number = 0;
-            my $has_leading_quote  = 0;
-            my $pos_start_number   = 0;
-            my ( $pat1, $pat2 );
-            if ( substr( $pattern, 0, 1 ) ne 'Q' ) {
-                my $posq = index( $pattern, 'Q' );
-                if ( $posq >= 0 ) {
-                    $pat1 = substr( $pattern, 0,     $posq );
-                    $pat2 = substr( $pattern, $posq, 3 );
-                }
-            }
-            else {
 
-                # Just look at up to 3 of the pattern characters
-                $pat2 = substr( $pattern, 0, 3 );
-            }
+            #--------------------------------------------------------
+            # set $pos_start_number = index in field of digit or sign
+            #--------------------------------------------------------
+            my $pos_start_number = 0;
 
-            my $sign;
-            if ( $pat2 && $is_leading_sign_pattern{$pat2} ) {
+            # Set $field_ok to false on encountering any problem
+            # Do not pad signed and unsigned hash keys
+            my $field_ok = length($field) > 0
+              && substr( $rtokens->[$jcol], 0, 2 ) ne '=>';
 
-                # find the start of the number
-                if ($pat1) {
+            if ( $field_ok && $pattern ) {
 
-                    # Originally only allowed $pat1 eq '{b',
-                    # but we would also like to work with 'U{b'.
-                    # For example, for this text
-                    #      '-1,-1' => [ -1, +1 ],
-                    # $pat1=      '=>b{b'
-                    # so this has are two blanks, and we have to find
-                    # the second.
-                    my $pos_b  = index( $pat1,  'b' );
-                    my $iblank = index( $field, SPACE );
+                # Split the pattern at the first 'Q' (a quote or number):
+                # $pat1 = pattern before the 'Q' (if any)
+                # $pat2 = pattern starting at the 'Q'
+                my ( $pat1, $pat2 );
+                if ( substr( $pattern, 0, 1 ) eq 'Q' ) {
 
-                    # Allow up to 2 blank characters (type 'b'). Note that
-                    # multiple spaces in the string would cause trouble,
-                    # so checks to verify correctness must be made later.
-                    my $b_count = ( $pat1 =~ tr/b/b/ );
-                    if ( $b_count == 2 ) {
-                        $pos_b  = index( $pat1,  'b',   $pos_b + 1 );
-                        $iblank = index( $field, SPACE, $iblank + 1 );
-                    }
-                    if (   $pos_b >= 0
-                        && $pos_b + 1 == length($pat1)
-                        && $iblank > 0 )
-                    {
-                        # position of the first number character
-                        $pos_start_number = $iblank + 1;
-                    }
-                    else {
-                        # will not match
-                    }
-                }
-
-                # look for an optional + or - sign
-                my $test_char = substr( $field, $pos_start_number, 1 );
-                if ( $is_plus_or_minus{$test_char} ) {
-                    $sign      = $test_char;
-                    $test_char = substr( $field, $pos_start_number + 1, 1 );
-                }
-
-                # followed by a digit
-                if ( $is_digit_char{$test_char} ) {
-                    if   ($sign) { $is_signed_number   = 1 }
-                    else         { $is_unsigned_number = 1 }
-                }
-                elsif ( $test_char eq '"' || $test_char eq "'" ) {
-                    $has_leading_quote = 1;
+                    # Just look at up to 3 of the pattern characters
+                    $pat2 = substr( $pattern, 0, 3 );
                 }
                 else {
-                    # something else
+                    my $posq = index( $pattern, 'Q' );
+                    if ( $posq >= 0 ) {
+                        $pat1 = substr( $pattern, 0,     $posq );
+                        $pat2 = substr( $pattern, $posq, 3 );
+                    }
+                    else {
+                        $field_ok = 0;
+                    }
+                }
+
+                # We require $pat2 to have one of the known patterns
+                if ( $field_ok && $pat2 && $is_leading_sign_pattern{$pat2} ) {
+
+                    # If the number starts within the field then we must
+                    # find its offset position.
+                    if ($pat1) {
+
+                        # Note: an optimization would be to remember previous
+                        # calls for each column and use them if possible, but
+                        # benchmarking shows that this is not necessary.
+                        # See .ba54 for example coding.
+                        $pos_start_number = split_field( $pat1, $field );
+
+                        $field_ok ||= $pos_start_number;
+                    }
+
+                    if ($field_ok) {
+
+                        # look for an optional + or - sign
+                        my $test_char =
+                          $field
+                          ? substr( $field, $pos_start_number, 1 )
+                          : EMPTY_STRING;
+                        my $sign;
+                        if ( $is_plus_or_minus{$test_char} ) {
+                            $sign = $test_char;
+                            $test_char =
+                              substr( $field, $pos_start_number + 1, 1 );
+                        }
+
+                        # followed by a digit
+                        if ( $is_digit_char{$test_char} ) {
+                            if   ($sign) { $is_signed_number   = 1 }
+                            else         { $is_unsigned_number = 1 }
+                        }
+                        else {
+                            $field_ok = 0;
+                        }
+                    }
                 }
             }
 
             #----------------------
             # Figure out what to do
             #----------------------
-
             # we require a signed or unsigned number field
-            my $field_ok = $is_signed_number || $is_unsigned_number;
+            # which is not a hash key
+            $field_ok &&= ( $is_signed_number || $is_unsigned_number );
 
             # if a column has not started..
             if ( !$rcol_hash ) {
 
                 # and this is not a signed or unsigned numeric value
                 if ( !$field_ok ) {
-
-                    # give up unless a new column can start
-                    next if ( !$is_new_alignment );
-
-                    # Column heading patch:
-                    # Allow the first line to be a column heading quote.
-                    # Mark it unsigned to make the line count correct.
-                    # See 'col_headings.pl' for an example.
-                    next if ( !$has_leading_quote );
-                    $is_unsigned_number = 1;
+                    next;
                 }
             }
 
@@ -5134,18 +5312,14 @@ sub pad_signed_number_columns {
                     || $rcol_hash->{col} ne $col )
                 {
 
-                    # Give up if a new column cannot start
-                    if ( !$is_new_alignment ) {
-                        $column_info{$jcol} = undef;
-                        next;
-                    }
-
                     # or end the current column and start over
                     if (   $rcol_hash->{signed_count}
                         && $rcol_hash->{unsigned_count} )
                     {
-                        end_signed_number_column( $rgroup_lines, $rcol_hash,
-                            $ix_line - 1 );
+                        end_signed_number_column(
+                            $rgroup_lines, $rcol_hash,
+                            $ix_line - 1,  $is_new_alignment
+                        );
                     }
                     delete $column_info{$jcol};
                     $rcol_hash = undef;
@@ -5164,15 +5338,18 @@ sub pad_signed_number_columns {
             #--------------------------------
             if ( !defined($rcol_hash) ) {
 
-                # Currently we only start at an alignment change
-                next if ( !$is_new_alignment );
+                next if ( !$field_ok );
+
+                my $rsigned_lines = $is_signed_number ? [$ix_line] : [];
                 $column_info{$jcol} = {
-                    unsigned_count   => $is_unsigned_number,
-                    signed_count     => $is_signed_number,
-                    pos_start_number => $pos_start_number,
-                    ix_first         => $ix_line,
-                    col              => $col,
-                    jcol             => $jcol,
+                    unsigned_count     => $is_unsigned_number,
+                    signed_count       => $is_signed_number,
+                    pos_start_number   => $pos_start_number,
+                    ix_first           => $ix_line,
+                    col                => $col,
+                    jcol               => $jcol,
+                    rsigned_lines      => $rsigned_lines,
+                    starting_alignment => $is_new_alignment,
                 };
             }
 
@@ -5182,15 +5359,20 @@ sub pad_signed_number_columns {
             else {
                 $rcol_hash->{unsigned_count} += $is_unsigned_number;
                 $rcol_hash->{signed_count}   += $is_signed_number;
+                if ($is_signed_number) {
+                    push @{ $rcol_hash->{rsigned_lines} }, $ix_line;
+                }
             }
         }
     }
 
-    # Loop to finish remaining columns
+    #-------------------------------------
+    # Loop to finish any remaining columns
+    #-------------------------------------
     foreach my $jcol ( keys %column_info ) {
         my $rcol_hash = $column_info{$jcol};
         if ( $rcol_hash->{signed_count} && $rcol_hash->{unsigned_count} ) {
-            end_signed_number_column( $rgroup_lines, $rcol_hash, $ix_line );
+            end_signed_number_column( $rgroup_lines, $rcol_hash, $ix_line, 1 );
         }
     }
     return;
@@ -6053,7 +6235,7 @@ sub add_leading_tabs {
         # be called because we might be in a quote of some kind
         if ( $leading_space_count <= 0 ) {
             DEVEL_MODE && Fault(<<EOM);
-should not be here with leading space count = $leading_space_count 
+should not be here with leading space count = $leading_space_count
 EOM
             return $line;
         }

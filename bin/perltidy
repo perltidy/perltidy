@@ -2234,8 +2234,9 @@ this:
 
  #>>V
 
-Additional text may appear on the special comment lines provided that it
-is separated from the marker by at least one space, as in the above examples.
+Additional text may appear on the special comment lines provided that it is
+separated from the marker by at least one space to highlight the sign, as in
+the above examples.
 
 Any number of code-skipping or format-skipping sections may appear in a file.
 If an opening code-skipping or format-skipping comment is not followed by a
@@ -5016,6 +5017,45 @@ postfix B<if> for purposes of alignment.  Thus
     print "RPM Output:\n"                 unless $Quiet;
     print join( "\n", @RPMOutput ) . "\n" unless $Quiet;
 
+=item B<Aligning signed numbers with --valign-signed-numbers or -vsn>
+
+Setting B<-vsn> causes columns of numbers containing both signed and unsigned
+values to have leading signs placed in their own column. For example:
+
+    # perltidy -vsn
+    my @correct = (
+        [  123456.79,   86753090000.868,  11 ],
+        [ -123456.79,  -86753090000.868, -11 ],
+        [  123456.001,  80.080,           10 ],
+        [ -123456.001, -80.080,           0 ],
+        [  10.9,        10.9,             11 ],
+    );
+
+The current default alignment is strict left justification:
+
+    # perltidy -nvsn
+    my @correct = (
+        [ 123456.79,   86753090000.868,  11 ],
+        [ -123456.79,  -86753090000.868, -11 ],
+        [ 123456.001,  80.080,           10 ],
+        [ -123456.001, -80.080,          0 ],
+        [ 10.9,        10.9,             11 ],
+    );
+
+In a future release B<-vsn> will become the default.
+
+This option has a control parameter B<--valign-signed-number-limit=N>, or
+B<-vsnl=N>. This value controls formatting of very long columns of numbers and
+should not normally need to be changed.  To see the function of this parameter,
+consider a very long column of just unsigned numbers, say 1000 lines. If we add
+a single negative number, it is undesirable to move all of the other lines over
+by one space. This would create many lines of file differences but not really
+improve the appearance when a local section of the table was viewed. The number
+B<N> avoids this problem by not adding extra indentation to a run
+of more than B<N> lines of unsigned numbers.  The default value, B<N=20>, is
+set to be approximately the number of lines for which a viewer does not
+normally see both ends of a long column of unsigned numbers on a single page.
+
 =back
 
 =head2 Extended Syntax
@@ -6106,8 +6146,8 @@ The following list shows all short parameter names which allow a prefix
  sbl    scbb   schb   scp    scsb   sct    se     sfp    sfs    skp
  sob    sobb   sohb   sop    sosb   sot    ssc    st     sts    t
  tac    tbc    toc    tp     tqw    trp    ts     tsc    tso    vbc
- vc     viu    vmll   vsc    w      wfc    wme    wn     x      xbt
- xci    xlp    xs
+ vc     viu    vmll   vsc    vsn    w      wfc    wme    wn     x
+ xbt    xci    xlp    xs
 
 Equivalently, the prefix 'no' or 'no-' on the corresponding long names may be
 used.

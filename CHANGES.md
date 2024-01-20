@@ -2,6 +2,36 @@
 
 ## 2023 09 12.12
 
+    - Added --valign-signed-numbers, or -vsn. This improves the appearance
+      of columns of numbers by aligning leading algebraic signs.  For example:
+
+            # perltidy -vsn
+            my $xyz_shield = [
+                [ -0.060,  -0.060,  0. ],
+                [  0.060,  -0.060,  0. ],
+                [  0.060,   0.060,  0. ],
+                [ -0.060,   0.060,  0. ],
+                [ -0.0925, -0.0925, 0.092 ],
+                [  0.0925, -0.0925, 0.092 ],
+                [  0.0925,  0.0925, 0.092 ],
+                [ -0.0925,  0.0925, 0.092 ],
+            ];
+
+            # perltidy -nvsn (current DEFAULT)
+            my $xyz_shield = [
+                [ -0.060,  -0.060,  0. ],
+                [ 0.060,   -0.060,  0. ],
+                [ 0.060,   0.060,   0. ],
+                [ -0.060,  0.060,   0. ],
+                [ -0.0925, -0.0925, 0.092 ],
+                [ 0.0925,  -0.0925, 0.092 ],
+                [ 0.0925,  0.0925,  0.092 ],
+                [ -0.0925, 0.0925,  0.092 ],
+            ];
+
+      This new option works well but is currently OFF to allow more testing
+      and fine-tuning. It is expected to be activated in a future release.
+
     - Added --dump-mixed-call-parens (-dmcp ) which will dump a list of
       operators which are sometimes followed by parens and sometimes not.
       Issue git #128. For example
@@ -964,21 +994,21 @@
       were added to request that old breakpoints be kept before or after
       selected token types.  For example, -kbb='=>' means that newlines before
       fat commas should be kept.
- 
+
     - Fix git #44, fix exit status for assert-tidy/untidy.  The exit status was
       always 0 for --assert-tidy if the user had turned off all error messages with
       the -quiet flag.  This has been fixed.
 
     - Add flag -maxfs=n, --maximum-file-size-mb=n.  This parameter is provided to
-      avoid causing system problems by accidentally attempting to format an 
-      extremely large data file. The default is n=10.  The command to increase 
+      avoid causing system problems by accidentally attempting to format an
+      extremely large data file. The default is n=10.  The command to increase
       the limit to 20 MB for example would be  -mfs=20.  This only applies to
       files specified by filename on the command line.
 
-    - Skip formatting if there are too many indentation level errors.  This is 
-      controlled with -maxle=n, --maximum-level-errors=n.  This means that if 
+    - Skip formatting if there are too many indentation level errors.  This is
+      controlled with -maxle=n, --maximum-level-errors=n.  This means that if
       the ending indentation differs from the starting indentation by more than
-      n levels, the file will be output verbatim. The default is n=1. 
+      n levels, the file will be output verbatim. The default is n=1.
       To skip this check, set n=-1 or set n to a large number.
 
     - A related new flag, --maximum-unexpected-errors=n, or -maxue=n, is available
@@ -986,10 +1016,10 @@
 
     - Add flag -xci, --extended-continuation-indentation, regarding issue git #28
       This flag causes continuation indentation to "extend" deeper into structures.
-      Since this is a fairly new flag, the default is -nxci to avoid disturbing 
+      Since this is a fairly new flag, the default is -nxci to avoid disturbing
       existing formatting.  BUT you will probably see some improved formatting
-      in complex data structures by setting this flag if you currently use -ci=n 
-      and -i=n with the same value of 'n' (as is the case if you use -pbp, 
+      in complex data structures by setting this flag if you currently use -ci=n
+      and -i=n with the same value of 'n' (as is the case if you use -pbp,
       --perl-best-practices, where n=4).
 
     - Fix issue git #42, clarify how --break-at-old-logical-breakpoints works.
@@ -998,33 +1028,33 @@
 
     - Fix issue git #41, typo in manual regarding -fsb.
 
-    - Fix issue git #40: when using the -bli option, a closing brace followed by 
-      a semicolon was not being indented.  This applies to braces which require 
+    - Fix issue git #40: when using the -bli option, a closing brace followed by
+      a semicolon was not being indented.  This applies to braces which require
       semicolons, such as a 'do' block.
 
     - Added 'state' as a keyword.
 
     - A better test for convergence has been added. When iterations are requested,
       the new test will stop after the first pass if no changes in line break
-      locations are made.  Previously, file checksums were used and required at least two 
-      passes to verify convergence unless no formatting changes were made.  With the new test, 
-      only a single pass is needed when formatting changes are limited to adjustments of 
+      locations are made.  Previously, file checksums were used and required at least two
+      passes to verify convergence unless no formatting changes were made.  With the new test,
+      only a single pass is needed when formatting changes are limited to adjustments of
       indentation and whitespace on the lines of code.  Extensive testing has been made to
       verify the correctness of the new convergence test.
 
-    - Line breaks are now automatically placed after 'use overload' to 
+    - Line breaks are now automatically placed after 'use overload' to
       improve formatting when there are numerous overloaded operators.  For
       example
- 
+
         use overload
           '+' => sub {
           ...
 
     - A number of minor problems with parsing signatures and prototypes have
-      been corrected, particularly multi-line signatures. Some signatures 
-      had previously been parsed as if they were prototypes, which meant the 
+      been corrected, particularly multi-line signatures. Some signatures
+      had previously been parsed as if they were prototypes, which meant the
       normal spacing rules were not applied.  For example
-   
+
       OLD:
         sub echo ($message= 'Hello World!' ) {
             ...;
@@ -1036,16 +1066,16 @@
         }
 
     - Numerous minor issues that the average user would not encounter were found
-      and fixed. They can be seen in the more complete list of updates at 
+      and fixed. They can be seen in the more complete list of updates at
 
            https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod
 
 ## 2020 10 01
 
-    - Robustness of perltidy has been significantly improved.  Updating is recommended. Continual 
-      automated testing runs began about 1 Sep 2020 and numerous issues have been found and fixed. 
+    - Robustness of perltidy has been significantly improved.  Updating is recommended. Continual
+      automated testing runs began about 1 Sep 2020 and numerous issues have been found and fixed.
       Many involve references to uninitialized variables when perltidy is fed random text and random
-      control parameters. 
+      control parameters.
 
     - Added the token '->' to the list of alignment tokens, as suggested in git
       #39, so that it can be vertically aligned if a space is placed before them with -wls='->'.
@@ -1065,14 +1095,14 @@
       comments generated by the -csc parameter, a separating newline was missing.
       The resulting script will not then run, but worse, if it is reformatted with
       the same parameters then closing side comments could be overwritten and data
-      lost. 
+      lost.
 
       This problem was found during automated random testing.  The parameter
       -scbb is rarely used, which is probably why this has not been reported.  Please
       upgrade your version.
 
     - Added parameter --non-indenting-braces, or -nib, which prevents
-      code from indenting one level if it follows an opening brace marked 
+      code from indenting one level if it follows an opening brace marked
       with a special side comment, '#<<<'.  For example,
 
                     { #<<<   a closure to contain lexical vars
@@ -1085,16 +1115,16 @@
 
       This is on by default.  If your code happens to have some
       opening braces followed by '#<<<', and you
-      don't want this, you can use -nnib to deactivate it. 
+      don't want this, you can use -nnib to deactivate it.
 
     - Side comment locations reset at a line ending in a level 0 open
-      block, such as when a new multi-line sub begins.  This is intended to 
+      block, such as when a new multi-line sub begins.  This is intended to
       help keep side comments from drifting to far to the right.
 
 ## 2020 08 22
 
     - Fix RT #133166, encoding not set for -st.  Also reported as RT #133171
-      and git #35. 
+      and git #35.
 
       This is a significant bug in version 20200616 which can corrupt data if
       perltidy is run as a filter on encoded text.
@@ -1107,7 +1137,7 @@
     - Vertical alignment has been improved. Numerous minor issues have
       been fixed.
 
-    - Formatting with the -lp option is improved. 
+    - Formatting with the -lp option is improved.
 
     - Fixed issue git #32, misparse of bare 'ref' in ternary
 
