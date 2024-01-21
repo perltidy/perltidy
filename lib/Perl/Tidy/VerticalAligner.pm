@@ -4852,6 +4852,7 @@ sub end_signed_number_column {
     }
 
     my $pos_start_number = $rcol_hash->{pos_start_number};
+    my $char_end_part1   = $rcol_hash->{char_end_part1};
     my $ix_first         = $rcol_hash->{ix_first};
     my $nlines           = $ix_last - $ix_first + 1;
 
@@ -4873,12 +4874,12 @@ EOM
         return;
     }
 
-    # Find the unsigned groups from the signed groups
-    # Exclude groups with Nu>Max where Nu=unsigned count, and Max is about 20.
-    # Little visual improvement is gained by padding more than this , and this
-    # avoids large numbers of differences in a file when a single line is
-    # changed.
+    # Form groups of unsigned numbers from the list of signed numbers.  Exclude
+    # groups with more than about 20 consecutive numbers.  Little visual
+    # improvement is gained by padding more than this, and this avoids large
+    # numbers of differences in a file when a single line is changed.
     my @unsigned_subgroups;
+    my $ix_u             = $rsigned_lines->[0];
     my $ix_last_negative = $ix_first - 1;
     foreach my $ix ( @{$rsigned_lines} ) {
         my $Nu = $ix - $ix_last_negative - 1;
@@ -4894,67 +4895,76 @@ EOM
 
     if ( !@unsigned_subgroups ) { return }    # shouldn't happen
 
-    # Apply the limiting number of lines to pad in the average sense;
-    # require  Nu <= Nc*Max where Nu=unsigned count, Nc=sign change count.
-    # - interior unsigned_subgroups have two sign-change interfaces
-    # - boundary unsigned_subgroups have one sign-change interfaces
-    my $Nc = 2 * @unsigned_subgroups;
-    if ( $unsigned_subgroups[0]->[0] eq $ix_first ) { $Nc -= 1 }
-    if ( $unsigned_subgroups[-1]->[1] eq $ix_last ) { $Nc -= 1 }
+    # Compute available space for each line
+    my %excess_space;
+    foreach my $item (@unsigned_subgroups) {
+        my ( $ix_min, $ix_max ) = @{$item};
+        my $num = $ix_max - $ix_min + 1;
+        foreach my $ix ( $ix_min .. $ix_max ) {
+            my $line                = $rgroup_lines->[$ix];
+            my $leading_space_count = $line->{'leading_space_count'};
+            my $jmax                = $line->{'jmax'};
+            my $rfield_lengths      = $line->{'rfield_lengths'};
+            if ( $jcol >= $jmax ) {
+
+                # shouldn't happen
+                DEVEL_MODE && Fault("jcol=$jcol >= jmax=$jmax\n");
+                return;
+            }
+            my @alignments = @{ $line->{'ralignments'} };
+            my $col        = $alignments[$jcol]->{'column'};
+            my $col_start =
+                $jcol == 0
+              ? $leading_space_count
+              : $alignments[ $jcol - 1 ]->{'column'};
+            my $avail = $col - $col_start;
+            $excess_space{$ix} = $avail - $rfield_lengths->[$jcol];
+        }
+    }
+
+    # Count the number of signed-unsigned interfaces that would change
+    # if we do the padding
+    my $Nc = 0;
+    foreach my $item (@unsigned_subgroups) {
+        my ( $ix_min, $ix_max ) = @{$item};
+        $Nc++ if ( $excess_space{$ix_min} > 0 && $ix_min != $ix_first );
+        $Nc++ if ( $excess_space{$ix_max} > 0 && $ix_max != $ix_last );
+    }
+
+    # Give up if the number of interface changes will be below the cutoff
     if ( $unsigned > $Nc * $rOpts_valign_signed_numbers_limit ) {
         return;
     }
 
-    # Make a list of lines to be processed
-    # TODO: This loop can eventually store available space and use it to and
-    # do additional filtering out of things like unwanted sign alternation
-    my @ix_todo;
+    # Go ahead and insert an extra space before the unsigned numbers
+    # if space is available
     foreach my $item (@unsigned_subgroups) {
         my ( $ix_min, $ix_max ) = @{$item};
         foreach my $ix ( $ix_min .. $ix_max ) {
-            push @ix_todo, $ix;
+            next if ( $excess_space{$ix} <= 0 );
+            my $line           = $rgroup_lines->[$ix];
+            my $rfields        = $line->{'rfields'};
+            my $rfield_lengths = $line->{'rfield_lengths'};
+            pad_signed_field(
+                \$rfields->[$jcol], \$rfield_lengths->[$jcol],
+                $pos_start_number,  $char_end_part1
+            );
         }
-    }
-
-    foreach my $ix_line (@ix_todo) {
-        my $line                = $rgroup_lines->[$ix_line];
-        my $leading_space_count = $line->{'leading_space_count'};
-        my $rfields             = $line->{'rfields'};
-        my $rfield_lengths      = $line->{'rfield_lengths'};
-        my $jmax                = $line->{'jmax'};
-        if ( $jcol >= $jmax ) {
-
-            # shouldn't happen
-            DEVEL_MODE && Fault("jcol=$jcol >= jmax=$jmax\n");
-            return;
-        }
-        my @alignments = @{ $line->{'ralignments'} };
-        my $col        = $alignments[$jcol]->{'column'};
-        my $col_start =
-            $jcol == 0
-          ? $leading_space_count
-          : $alignments[ $jcol - 1 ]->{'column'};
-        my $avail = $col - $col_start;
-        pad_signed_field( \$rfields->[$jcol], \$rfield_lengths->[$jcol],
-            $avail, $pos_start_number );
     }
     return;
 } ## end sub end_signed_number_column
 
 sub pad_signed_field {
-    my ( $rstr, $rstr_len, $avail, $pos_start_number ) = @_;
+    my ( $rstr, $rstr_len, $pos_start_number, $char_end_part1 ) = @_;
 
     # Insert an extra space before a number to highlight algebraic signs
     # in a column of numbers.
     # Given:
     #  $rstr     = ref to string
     #  $rstr_len = ref to length of string (could include wide chars)
-    #  $avail    = available spaces in the column
     #  $pos_start_number = string position of the leading digit
+    #  $char_end_part1 = character at $pos_start_number - 1
     # Task: update $rstr and $rstr_len with a single space
-
-    # Give up if there is no space available
-    if ( ${$rstr_len} >= $avail ) { return }
 
     # First partition the string into $part1 and $part2, so that the
     # number starts at the beginning of part2.
@@ -4972,20 +4982,23 @@ EOM
         $part1 = substr( $str, 0, $pos_start_number );
         $part2 = substr( $str, $pos_start_number );
 
-        # Verify that we are inserting a new space after either (1) an existing
-        # space or (2) an opening token. Otherwise disaster can occur. An error
-        # here implies a programming error in defining '$pos_start_number'.
+        # VERIFY that we are inserting a new space after either
+        #   (1) an existing space or
+        #   (2) an opening token.
+        # Otherwise disaster can occur. An error here implies a programming
+        # error in defining '$pos_start_number'.
+
         my $test_char1 = substr( $part1, -1, 1 );
-        if ( $test_char1 ne SPACE && !$is_opening_token{$test_char1} ) {
+        if ( $test_char1 ne $char_end_part1 ) {
             DEVEL_MODE && Fault(<<EOM);
-Expecting test char1 as space or { but saw '$test_char1' in string '$str'
+Expecting '$char_end_part1' but saw '$test_char1' in string '$str'
 Probably bad position '$pos_start_number'
 EOM
             return;
         }
     }
 
-    # Verify we are inserting a space before a digit character
+    # VERIFY we are inserting a space before a digit character
     my $test_char2 = substr( $part2, 0, 1 );
     if ( $is_digit_char{$test_char2} ) {
         ${$rstr} = $part1 . SPACE . $part2;
@@ -5009,20 +5022,25 @@ sub split_field {
     # Return:
     #   $pos_start_number = positiion in $field where the Q should start
     #                     = 0 if cannot find
+    #   $char_end_part1 = the character preceding $pos_start_number
 
     my $pos_start_number = 0;
+    my $char_end_part1   = EMPTY_STRING;
+
+    my @fail = ( 0, EMPTY_STRING );
 
     # Require 0 or 1 braces
     my $len_field = length($field);
     my $len_pat1  = length($pat1);
-    return unless ( $len_pat1 && $len_field );
+    return @fail unless ( $len_pat1 && $len_field );
 
     # Look at the pattern ending
     my $ending_b = 0;
     my $ch       = substr( $pat1, -1, 1 );
     if ( $ch eq 'b' ) {
-        $ending_b = 1;
-        $ch       = substr( $pat1, -2, 1 );
+        $ending_b       = 1;
+        $ch             = substr( $pat1, -2, 1 );
+        $char_end_part1 = SPACE;
     }
 
     # handle either '{b' or '{'
@@ -5030,25 +5048,33 @@ sub split_field {
 
         # Only one brace
         my $brace_count = ( $pat1 =~ tr/\{/\{/ );
-        return 0 if ( $brace_count != 1 );
+        return @fail if ( $brace_count != 1 );
 
         my $i_paren   = index( $field, '(' );
         my $i_bracket = index( $field, '[' );
         my $i_brace   = index( $field, '{' );
         my $i_opening = length($field);
-        if ( $i_paren >= 0 ) { $i_opening = $i_paren }
+        my $ch_opening;
+        if ( $i_paren >= 0 ) {
+            $i_opening  = $i_paren;
+            $ch_opening = '(';
+        }
         if (   $i_bracket >= 0
             && $i_bracket < $i_opening )
         {
-            $i_opening = $i_bracket;
+            $i_opening  = $i_bracket;
+            $ch_opening = '[';
         }
         if ( $i_brace >= 0 && $i_brace < $i_opening ) {
-            $i_opening = $i_brace;
+            $i_opening  = $i_brace;
+            $ch_opening = '{';
         }
         if (   $i_opening >= 0
             && $i_opening < length($field) - 1 )
         {
             $pos_start_number = $i_opening + 1 + $ending_b;
+            $char_end_part1   = $ch_opening
+              if ( !$ending_b );
         }
         else {
             # strange - could not find the opening token
@@ -5059,15 +5085,15 @@ sub split_field {
     else {
 
         # looking for patterns ending in '=b' or '=>b'
-        if ( !$ending_b ) { return 0 }
+        if ( !$ending_b ) { return @fail }
 
         # find the = in the text
         my $pos_equals = index( $field, '=' );
-        return 0 if ( $pos_equals < 0 );
+        return @fail if ( $pos_equals < 0 );
 
         # be sure there are no other '=' in the pattern
         my $equals_count = ( $pat1 =~ tr/=/=/ );
-        return 0 if ( $equals_count != 1 );
+        return @fail if ( $equals_count != 1 );
 
         if ( $len_pat1 >= 2 && substr( $pat1, -2, 2 ) eq '=b' ) {
             $pos_start_number = $pos_equals + 2;
@@ -5078,13 +5104,19 @@ sub split_field {
         else {
 
             # cannot handle this pattern
-            return 0;
+            return @fail;
         }
     }
 
-    if ( $pos_start_number >= $len_field ) { $pos_start_number = 0 }
+    if ( $pos_start_number <= 0 || $pos_start_number >= $len_field ) {
+        return @fail;
+    }
 
-    return ($pos_start_number);
+    # A final check that we are not in a quote
+    my $field1 = substr( $field, 0, $pos_start_number - 1 );
+    if ( $field1 =~ /[\'\"\`]/ ) { return @fail; }
+
+    return ( $pos_start_number, $char_end_part1 );
 } ## end sub split_field
 
 sub pad_signed_number_columns {
@@ -5217,6 +5249,7 @@ sub pad_signed_number_columns {
             # set $pos_start_number = index in field of digit or sign
             #--------------------------------------------------------
             my $pos_start_number = 0;
+            my $char_end_part1   = EMPTY_STRING;
 
             # Set $field_ok to false on encountering any problem
             # Do not pad signed and unsigned hash keys
@@ -5256,7 +5289,8 @@ sub pad_signed_number_columns {
                         # calls for each column and use them if possible, but
                         # benchmarking shows that this is not necessary.
                         # See .ba54 for example coding.
-                        $pos_start_number = split_field( $pat1, $field );
+                        ( $pos_start_number, $char_end_part1 ) =
+                          split_field( $pat1, $field );
 
                         $field_ok ||= $pos_start_number;
                     }
@@ -5290,6 +5324,7 @@ sub pad_signed_number_columns {
             #----------------------
             # Figure out what to do
             #----------------------
+
             # we require a signed or unsigned number field
             # which is not a hash key
             $field_ok &&= ( $is_signed_number || $is_unsigned_number );
@@ -5297,22 +5332,24 @@ sub pad_signed_number_columns {
             # if a column has not started..
             if ( !$rcol_hash ) {
 
-                # and this is not a signed or unsigned numeric value
-                if ( !$field_ok ) {
-                    next;
-                }
+                # give up if this is cannot start a new column
+                next if ( !$field_ok );
+
+                # otherwise continue on to start a new column
+
             }
 
             # if a column has been started...
             else {
 
-                # .. and this does not match
+                # and this cannot be added to it
                 if (  !$field_ok
                     || $rcol_hash->{pos_start_number} ne $pos_start_number
+                    || $rcol_hash->{char_end_part1} ne $char_end_part1
                     || $rcol_hash->{col} ne $col )
                 {
 
-                    # or end the current column and start over
+                    # then end the current column and start over
                     if (   $rcol_hash->{signed_count}
                         && $rcol_hash->{unsigned_count} )
                     {
@@ -5333,9 +5370,9 @@ sub pad_signed_number_columns {
 "VSN: line=$ix_line change=$jmax_change jcol=$jcol field=$field new ok?=$is_new_alignment exists?=$exists unsigned?=$is_unsigned_number signed?=$is_signed_number\n";
             }
 
-            #--------------------------------
-            # Start a new column, if possible
-            #--------------------------------
+            #---------------------------------------
+            # Either start a new column, if possible
+            #---------------------------------------
             if ( !defined($rcol_hash) ) {
 
                 next if ( !$field_ok );
@@ -5345,6 +5382,7 @@ sub pad_signed_number_columns {
                     unsigned_count     => $is_unsigned_number,
                     signed_count       => $is_signed_number,
                     pos_start_number   => $pos_start_number,
+                    char_end_part1     => $char_end_part1,
                     ix_first           => $ix_line,
                     col                => $col,
                     jcol               => $jcol,
