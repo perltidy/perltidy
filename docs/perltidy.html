@@ -4451,7 +4451,7 @@
 <dt id="p:-package-crossing-variables"><b>p: package-crossing variables</b></dt>
 <dd>
 
-<p>These are lexical variables which are declared in one package and still visible in subroutines of a different package in the same file. This can be confusing, and it might cause the program to run differently, or fail, if the the packages were ever split into separate files. This issue can usually be avoided by placing code in block braces of some type. For example, this issue is often found in test code, and might be fixed by using the structure</p>
+<p>These are lexical variables which are declared in one package and still visible in subroutines of a different package in the same file. This can be confusing, and it might cause the program to run differently, or fail, if the the packages were ever split into separate files. This issue can usually be avoided by placing code in block braces of some type. For example, this issue is often found in test code and can sometimes be fixed by using the structure</p>
 
 <pre><code>    main();
 
@@ -4459,7 +4459,9 @@
     ## old main code goes here
     }</code></pre>
 
-<p>The <b>non-indenting-braces</b> comment <code>#&lt;&lt;&lt;</code> is not required but will keep the indentation of the old code unchanged. It should be noted that this check is limited to packages which are not enclosed in block braces in order skip temporary package changes.</p>
+<p>The <b>non-indenting-braces</b> side comment <code>#&lt;&lt;&lt;</code> is not required but will keep the indentation of the old code unchanged.</p>
+
+<p>This check is only applied to package statements which are not enclosed in block braces in order avoid warnings at temporary package changes.</p>
 
 </dd>
 <dt id="u:-unused-variables"><b>u: unused variables</b></dt>
