@@ -11899,6 +11899,42 @@ while (
 --keyword-group-blanks-size='2.8'
 --keyword-group-blanks-before=2
 
+==> b1465.in <==
+# See initialize_lp_*
+
+my @pics =
+         grep ( -f "$dir/$_"
+                  && -s "$dir/$_"
+                  &&              # Not zero byte file
+                  !-f "$dir/$_$NO_ALBUM"
+                  &&              # Don't show these
+                  !/\Q$NOT_IMG\E$/
+                  &&              # The not_img files themselves
+                  !/\Q$NO_ALBUM\E$/
+                  &&              # The not_img files themselves
+                  !/\.txt$/ &&    # Per image captions
+                  !/\.htaccess$/
+                  &&              # httpd security files
+                  !/~$/ &&        # Emacs backup files
+                  $_ ne
+"$opt->{'index'}$HTML"
+                  &&                 # Index html
+                  $_ ne $HEADER &&   # Header/footer
+                  $_ ne $FOOTER
+                  && $_ ne
+                  $opt->{'captions'}
+         ,                           # Captions file
+         @dir );
+
+
+==> b1465.par <==
+--maximum-line-length=29
+--indent-columns=9
+--continuation-indentation=9
+--variable-maximum-line-length
+--extended-line-up-parentheses
+--ignore-side-comment-lengths
+
 ==> b148.in <==
 # state 1
 @yydgoto=(

@@ -7807,11 +7807,15 @@ my %distance_pref =
 
 
 ==> b1453 <==
-my $foo = decode_json( {
-      foo => 'bar' } );
+my $foo =
+          decode_json( {
+              foo => 'bar' }
+          );
 
-my $foo = decode_json( {
-      foo => 'bar' } );
+my $foo =
+          decode_json( {
+              foo => 'bar' }
+          );
 
 ==> b1454 <==
 my $red_color =
@@ -8046,6 +8050,34 @@ while ( $^O !~ /Win32/ and
     warn "Server restarting in $config->{delay} seconds";
     sleep $config->{delay};
 }
+
+==> b1465 <==
+# See initialize_lp_*
+
+my @pics =
+         grep ( -f "$dir/$_"
+                  && -s "$dir/$_"
+                  &&              # Not zero byte file
+                  !-f "$dir/$_$NO_ALBUM"
+                  &&              # Don't show these
+                  !/\Q$NOT_IMG\E$/
+                  &&              # The not_img files themselves
+                  !/\Q$NO_ALBUM\E$/
+                  &&              # The not_img files themselves
+                  !/\.txt$/ &&    # Per image captions
+                  !/\.htaccess$/
+                  &&              # httpd security files
+                  !/~$/ &&        # Emacs backup files
+                  $_ ne
+"$opt->{'index'}$HTML"
+                  &&                 # Index html
+                  $_ ne $HEADER &&   # Header/footer
+                  $_ ne $FOOTER
+                  && $_ ne
+                  $opt->{'captions'}
+         ,                           # Captions file
+         @dir );
+
 
 ==> b148 <==
 # state 1
