@@ -5042,7 +5042,8 @@ The current default alignment is strict left justification:
         [ 10.9,        10.9,             11 ],
     );
 
-In a future release B<-vsn> will become the default.
+This option is mainly limited to lists of comma-separated numbers. In a future
+release B<-vsn> will become the default.
 
 This option has a control parameter B<--valign-signed-number-limit=N>, or
 B<-vsnl=N>. This value controls formatting of very long columns of numbers and

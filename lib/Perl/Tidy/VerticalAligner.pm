@@ -5014,20 +5014,36 @@ EOM
 } ## end sub pad_signed_field
 
 sub split_field {
-    my ( $pat1, $field ) = @_;
+    my ( $pat1, $field, $pattern ) = @_;
 
     # Given;
-    #   $pat1 = first part of a pattern before a 'Q'
-    #   $field = corresponding text field
+    #   $pat1    = first part of a pattern before a 'Q'
+    #   $field   = corresponding text field
+    #   $pattern = full pattern
     # Return:
     #   $pos_start_number = positiion in $field where the Q should start
     #                     = 0 if cannot find
     #   $char_end_part1 = the character preceding $pos_start_number
+    #   $ch_opening     = the preceding opening container character, if any
 
     my $pos_start_number = 0;
     my $char_end_part1   = EMPTY_STRING;
+    my $ch_opening       = EMPTY_STRING;
+    my @fail             = ( $pos_start_number, $char_end_part1, $ch_opening );
 
-    my @fail = ( 0, EMPTY_STRING );
+    # Be sure there is just one 'Q' in the pattern. Multiple Q terms can occur
+    # when fields are joined, but since we are jumping into the middle of a
+    # field it is safest not to try to handle them.
+    my $Q_count = ( $pattern =~ tr/Q/Q/ );
+    if ( $Q_count && $Q_count > 1 ) {
+        return @fail;
+    }
+
+    # Same thing for commas
+    my $comma_count = ( $pattern =~ tr/,/,/ );
+    if ( $comma_count && $comma_count > 1 ) {
+        return @fail;
+    }
 
     # Require 0 or 1 braces
     my $len_field = length($field);
@@ -5054,7 +5070,6 @@ sub split_field {
         my $i_bracket = index( $field, '[' );
         my $i_brace   = index( $field, '{' );
         my $i_opening = length($field);
-        my $ch_opening;
         if ( $i_paren >= 0 ) {
             $i_opening  = $i_paren;
             $ch_opening = '(';
@@ -5112,12 +5127,74 @@ sub split_field {
         return @fail;
     }
 
-    # A final check that we are not in a quote
-    my $field1 = substr( $field, 0, $pos_start_number - 1 );
-    if ( $field1 =~ /[\'\"\`]/ ) { return @fail; }
-
-    return ( $pos_start_number, $char_end_part1 );
+    return ( $pos_start_number, $char_end_part1, $ch_opening );
 } ## end sub split_field
+
+sub field_matches_end_pattern {
+    my ( $field2, $pat2 ) = @_;
+
+    # Check that a possible numeric field matches the ending pattern
+
+    # Given:
+    #  $field2 = the rest of the field after removing any sign
+    #  $pat2   = the end pattern of this field
+    # Return:
+    #  false if field is definitely non-numeric
+    #  true otherwise
+
+    my $next_char   = substr( $pat2, 1, 1 );
+    my $field2_trim = EMPTY_STRING;
+
+    # if pattern is one of: 'Q,', 'Q,b'
+    if ( $next_char eq ',' ) {
+        my $icomma = index( $field2, ',' );
+        if ( $icomma >= 0 ) {
+            $field2_trim = substr( $field2, 0, $icomma );
+        }
+    }
+
+    # if pattern is one of: 'Qb', 'Qb}', 'Qb},'
+    elsif ( $next_char eq 'b' ) {
+        my $ispace = index( $field2, SPACE );
+        if ( $ispace >= 0 ) {
+            $field2_trim = substr( $field2, 0, $ispace );
+        }
+    }
+
+    # if pattern is one of 'Q},', 'Q};'
+    elsif ( $next_char eq '}' ) {
+        if ( $field2 =~ /^([^\)\}\]]+)/ ) {
+            $field2_trim = $1;
+        }
+    }
+
+    # unrecognized pattern
+    else {
+        DEVEL_MODE && Fault(<<EOM);
+Unexpected ending pattern '$pat2' next='$next_char' field2='$field2'
+The hash 'is_leading_sign_pattern' seems to have changed but the code
+has not been updated to handle it. Please fix.
+EOM
+        return;
+    }
+
+    if ( !length($field2_trim) ) {
+        DEVEL_MODE
+          && Fault(
+            "STRANGE: cannot find end of field=$field2 for pat=$pat2 \n");
+        return;
+    }
+
+    # Reject obviously non-numeric fields just to be sure we did not
+    # jump into a quote of some kind
+    if ( $field2_trim !~ /^[\d\.\+\-abcdefpx_]+$/i ) {
+        DEBUG_VSN
+          && print STDERR
+"Rejecting match to pat2='$pat2' with next=$next_char field2=$field2 trimmed='$field2_trim'\n";
+        return;
+    }
+    return 1;
+} ## end sub field_matches_end_pattern
 
 sub pad_signed_number_columns {
     my ($rgroup_lines) = @_;
@@ -5137,6 +5214,12 @@ sub pad_signed_number_columns {
     #        [ -123456.001, -80.080,           0 ],
     #        [  10.9,        10.9,             11 ],
     #    );
+
+    # The logic here is complex because we are working with bits of text
+    # which have been broken into patterns which are convenient for the
+    # vertical aligner, but we no longer have the original tokenization
+    # which would have indicated the precise bounds of numbers.  So we
+    # have to procede very carefully with lots of checks.
 
     # A current limitation is that lines with just a single column of numbers
     # cannot be processed because the vertical aligner does not currently form
@@ -5250,6 +5333,7 @@ sub pad_signed_number_columns {
             #--------------------------------------------------------
             my $pos_start_number = 0;
             my $char_end_part1   = EMPTY_STRING;
+            my $ch_opening       = EMPTY_STRING;
 
             # Set $field_ok to false on encountering any problem
             # Do not pad signed and unsigned hash keys
@@ -5262,24 +5346,19 @@ sub pad_signed_number_columns {
                 # $pat1 = pattern before the 'Q' (if any)
                 # $pat2 = pattern starting at the 'Q'
                 my ( $pat1, $pat2 );
-                if ( substr( $pattern, 0, 1 ) eq 'Q' ) {
-
-                    # Just look at up to 3 of the pattern characters
-                    $pat2 = substr( $pattern, 0, 3 );
+                my $posq = index( $pattern, 'Q' );
+                if ( $posq < 0 ) {
+                    $field_ok = 0;
                 }
                 else {
-                    my $posq = index( $pattern, 'Q' );
-                    if ( $posq >= 0 ) {
-                        $pat1 = substr( $pattern, 0,     $posq );
-                        $pat2 = substr( $pattern, $posq, 3 );
-                    }
-                    else {
-                        $field_ok = 0;
-                    }
+                    # Just look at up to 3 of the pattern characters
+                    # We require $pat2 to have one of the known patterns
+                    $pat1     = substr( $pattern, 0,     $posq );
+                    $pat2     = substr( $pattern, $posq, 3 );
+                    $field_ok = $is_leading_sign_pattern{$pat2};
                 }
 
-                # We require $pat2 to have one of the known patterns
-                if ( $field_ok && $pat2 && $is_leading_sign_pattern{$pat2} ) {
+                if ($field_ok) {
 
                     # If the number starts within the field then we must
                     # find its offset position.
@@ -5289,8 +5368,8 @@ sub pad_signed_number_columns {
                         # calls for each column and use them if possible, but
                         # benchmarking shows that this is not necessary.
                         # See .ba54 for example coding.
-                        ( $pos_start_number, $char_end_part1 ) =
-                          split_field( $pat1, $field );
+                        ( $pos_start_number, $char_end_part1, $ch_opening ) =
+                          split_field( $pat1, $field, $pattern );
 
                         $field_ok ||= $pos_start_number;
                     }
@@ -5298,10 +5377,7 @@ sub pad_signed_number_columns {
                     if ($field_ok) {
 
                         # look for an optional + or - sign
-                        my $test_char =
-                          $field
-                          ? substr( $field, $pos_start_number, 1 )
-                          : EMPTY_STRING;
+                        my $test_char = substr( $field, $pos_start_number, 1 );
                         my $sign;
                         if ( $is_plus_or_minus{$test_char} ) {
                             $sign = $test_char;
@@ -5309,10 +5385,25 @@ sub pad_signed_number_columns {
                               substr( $field, $pos_start_number + 1, 1 );
                         }
 
-                        # followed by a digit
+                        # and a digit
                         if ( $is_digit_char{$test_char} ) {
-                            if   ($sign) { $is_signed_number   = 1 }
-                            else         { $is_unsigned_number = 1 }
+                            my $field2;
+                            if ($sign) {
+                                $is_signed_number = 1;
+                                $field2 =
+                                  substr( $field, $pos_start_number + 1 );
+                            }
+                            else {
+                                $is_unsigned_number = 1;
+                                $field2 =
+                                  $pos_start_number
+                                  ? substr( $field, $pos_start_number )
+                                  : $field;
+                            }
+
+                            # Check for match to ending pattern
+                            $field_ok =
+                              field_matches_end_pattern( $field2, $pat2 );
                         }
                         else {
                             $field_ok = 0;
