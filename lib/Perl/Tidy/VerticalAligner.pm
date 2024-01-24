@@ -845,7 +845,14 @@ sub valign_input {
     if ( $jmax <= 0 ) {
         $self->[_zero_count_]++;
 
-        if ( @{$rgroup_lines}
+        # VSN PATCH for a single number, part 1.
+        my $is_numeric =
+          (      $jmax == 0
+              && $rOpts_valign_signed_numbers
+              && $rpatterns->[0] eq 'n,' );
+
+        if (   !$is_numeric
+            && @{$rgroup_lines}
             && !get_recoverable_spaces( $rgroup_lines->[0]->{'indentation'} ) )
         {
 
@@ -5270,14 +5277,19 @@ sub pad_signed_number_columns {
             }
 
             # Try to keep the end data column running; test case 'rfc.in'
-            # In a list, the last item will still need a trailing comma.
-            # TODO: consider doing this earlier in the left-right sweep
+            # The last item in a list will still need a trailing comma.
+            # VSN PATCH for a single number, part 3: change >= to >=0 and
+            # check for a leading digit
             my $jcol = $jmax - 1;
-            if ( $jcol > 0 && $column_info{$jcol} ) {
+            if ( $jcol >= 0 && $column_info{$jcol} ) {
                 my $alignment = $alignments[$jcol];
                 my $old_col   = $columns[$jcol];
                 my $col       = $alignment->{column};
-                if ( $col < $old_col ) {
+
+                # only do this if the text has a leading digit
+                if (   $col < $old_col
+                    && $rfields->[$jcol] =~ /^[+-]?\d/ )
+                {
                     my $spaces_needed = $old_col - $col;
                     my $spaces_available =
                       $line->get_available_space_on_right();
@@ -5324,6 +5336,9 @@ sub pad_signed_number_columns {
             #----------------------------------------------------------------
             my $field   = $rfields->[$jcol];
             my $pattern = $rpatterns->[$jcol];
+
+            # VSN PATCH for single number part 2
+            if ( $pattern eq 'n,' ) { $pattern = 'Q,' }
 
             my $is_signed_number   = 0;
             my $is_unsigned_number = 0;

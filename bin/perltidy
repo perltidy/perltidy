@@ -5042,20 +5042,37 @@ The current default alignment is strict left justification:
         [ 10.9,        10.9,             11 ],
     );
 
-This option is mainly limited to lists of comma-separated numbers. In a future
-release B<-vsn> will become the default.
+In a future release B<-vsn> will become the default.
 
+Some points regarding B<-vsn> are:
+
+=over 4
+
+=item *
+This option works by inserting a single space ahead of unsigned numbers
+when possible. This is not done if it would require increasing the
+maximum width of a column.
+
+=item *
+This option is mainly limited to lists of comma-separated numbers.  For
+multiline lists of numbers, having trailing commas can sometimes improve the
+results.  If missing, perltidy can add them for example
+with parameters B<-wtc=b -atc>.  See L<"Adding and Deleting Commas">.
+
+=item *
 This option has a control parameter B<--valign-signed-number-limit=N>, or
 B<-vsnl=N>. This value controls formatting of very long columns of numbers and
-should not normally need to be changed.  To see the function of this parameter,
-consider a very long column of just unsigned numbers, say 1000 lines. If we add
-a single negative number, it is undesirable to move all of the other lines over
-by one space. This would create many lines of file differences but not really
-improve the appearance when a local section of the table was viewed. The number
-B<N> avoids this problem by not adding extra indentation to a run
-of more than B<N> lines of unsigned numbers.  The default value, B<N=20>, is
-set to be approximately the number of lines for which a viewer does not
-normally see both ends of a long column of unsigned numbers on a single page.
+should not normally need to be changed.  To see its purpose, consider a very
+long column of just unsigned numbers, say 1000 lines. If we add a single
+negative number, it is undesirable to move all of the other numbers over by one
+space. This would create many lines of file differences but not really improve
+the appearance when a local section of the table was viewed. The number B<N>
+avoids this problem by not adding extra indentation to a run of more than B<N>
+lines of unsigned numbers.  The default value, B<N=20>, is set to be a number
+of lines for which the ends of a long column of unsigned numbers are not
+normally both in view.
+
+=back
 
 =back
 
