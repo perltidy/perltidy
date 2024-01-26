@@ -163,6 +163,10 @@ my (
     $rOpts_outdent_labels,
     $rOpts_maximum_level_errors,
     $rOpts_maximum_unexpected_errors,
+    $rOpts_indent_closing_brace,
+    $rOpts_non_indenting_braces,
+    $rOpts_non_indenting_brace_prefix,
+    $rOpts_whitespace_cycle,
 
     $tabsize,
     %is_END_DATA_format_sub,
@@ -239,6 +243,8 @@ BEGIN {
         _rinput_lines_                       => $i++,
         _input_line_index_next_              => $i++,
         _rtrimmed_input_lines_               => $i++,
+        _rclosing_brace_indentation_hash_    => $i++,
+        _rnon_indenting_brace_stack_         => $i++,
     };
 } ## end BEGIN
 
@@ -453,6 +459,10 @@ sub check_options {
     $rOpts_maximum_unexpected_errors  = $rOpts->{'maximum-unexpected-errors'};
     $rOpts_code_skipping              = $rOpts->{'code-skipping'};
     $rOpts_code_skipping_begin        = $rOpts->{'code-skipping-begin'};
+    $rOpts_indent_closing_brace       = $rOpts->{'indent-closing-brace'};
+    $rOpts_non_indenting_braces       = $rOpts->{'non-indenting-braces'};
+    $rOpts_non_indenting_brace_prefix = $rOpts->{'non-indenting-brace-prefix'};
+    $rOpts_whitespace_cycle           = $rOpts->{'whitespace-cycle'};
 
     # In the Tokenizer, --indent-columns is just used for guessing old
     # indentation, and must be positive.  If -i=0 is used for this run (which
@@ -585,7 +595,16 @@ EOM
     $self->[_rlower_case_labels_at_]              = undef;
     $self->[_maximum_level_]                      = 0;
     $self->[_true_brace_error_count_]             = 0;
-    $self->[_rOpts_]                              = $rOpts;
+    $self->[_rnon_indenting_brace_stack_]         = [];
+
+    $self->[_rclosing_brace_indentation_hash_] = {
+        valid                 => undef,
+        rhistory_line_number  => [0],
+        rhistory_level_diff   => [0],
+        rhistory_anchor_point => [1],
+    };
+
+    $self->[_rOpts_] = $rOpts;
     $self->[_save_logfile_] =
       defined($logger_object) && $logger_object->get_save_logfile();
 
@@ -876,6 +895,9 @@ sub report_tokenization_errors {
     my $level = get_indentation_level();
     if ( $level != $self->[_starting_level_] ) {
         $self->warning("final indentation level: $level\n");
+
+        $self->show_indentation_hint();
+
         my $level_diff = $self->[_starting_level_] - $level;
         if ( $level_diff < 0 ) { $level_diff = -$level_diff }
 
@@ -1017,6 +1039,50 @@ EOM
     }
     return $severe_error;
 } ## end sub report_tokenization_errors
+
+sub show_indentation_hint {
+    my ($self) = @_;
+
+    # Output help information based on closing brace indentation comparisons
+    # This can be helpful for the case of a missing brace in a previously
+    # formatted file.
+
+    # Skip if whitespace cycle is set - to complex
+    return if ($rOpts_whitespace_cycle);
+
+    # skip if non-indenting-brace-prefix (very rare, but could be fixed)
+    return if ($rOpts_non_indenting_brace_prefix);
+
+    # skip if indentation analysis is not valid
+    my $rhash = $self->[_rclosing_brace_indentation_hash_];
+    return if ( !$rhash->{valid} );
+
+    my $rhistory_line_number  = $rhash->{rhistory_line_number};
+    my $rhistory_level_diff   = $rhash->{rhistory_level_diff};
+    my $rhistory_anchor_point = $rhash->{rhistory_anchor_point};
+
+    my $num_his = @{$rhistory_level_diff};
+    return if ( $num_his < 2 );
+
+    # Find the first disagreement.
+    my $i_first_diff = 0;
+    foreach my $i ( 1 .. $num_his - 1 ) {
+        next if ( !$rhistory_level_diff->[$i] );
+        $i_first_diff = $i;
+        last;
+    }
+    return if ( $i_first_diff < 2 );
+    my $lno_first_diff_minus = $rhistory_line_number->[ $i_first_diff - 1 ];
+    my $lno_first_diff       = $rhistory_line_number->[$i_first_diff];
+
+    $self->interrupt_logfile();
+    $self->warning(<<EOM);
+$lno_first_diff_minus-$lno_first_diff: line range of first indentation disagreement with input
+EOM
+    $self->resume_logfile();
+
+    return;
+} ## end sub indentation_hint
 
 sub report_v_string {
 
@@ -3405,6 +3471,7 @@ EOM
         $rbrace_context->[$brace_depth]         = $context;
         ( $type_sequence, $indent_flag ) =
           $self->increase_nesting_depth( BRACE, $rtoken_map->[$i_tok] );
+
         return;
     } ## end sub do_LEFT_CURLY_BRACKET
 
@@ -3434,6 +3501,13 @@ EOM
         # if an operator or term is expected next.
         if ( $is_block_operator{$block_type} ) {
             $tok = $block_type;
+        }
+
+        # pop non-indenting brace stack if sequence number matches
+        if ( @{ $self->[_rnon_indenting_brace_stack_] }
+            && $self->[_rnon_indenting_brace_stack_]->[-1] eq $type_sequence )
+        {
+            pop @{ $self->[_rnon_indenting_brace_stack_] };
         }
 
         $context = $rbrace_context->[$brace_depth];
@@ -5245,6 +5319,8 @@ EOM
         $indent_flag     = 0;
         $peeked_ahead    = 0;
 
+        my $starting_level_in_tokenizer = $level_in_tokenizer;
+
         $self->tokenizer_main_loop();
 
         #-------------------------------------------------
@@ -5433,7 +5509,26 @@ EOM
             #----------------------
             # END NODE 2: a comment
             #----------------------
-            last if ( $pre_type eq '#' );
+            if ( $pre_type eq '#' ) {
+
+                # push non-indenting brace stack Look for a possible
+                # non-indenting brace.  This is only used to give a hint in
+                # case the file is unbalanced.
+                # NOTE: hardwired to '#<<<'; this can be fixed
+                if (   $last_nonblank_token eq '{'
+                    && $last_nonblank_block_type
+                    && $last_nonblank_type_sequence
+                    && $rOpts_non_indenting_braces )
+                {
+                    my $offset = $rtoken_map->[$i_tok];
+                    my $text   = substr( $input_line, $offset, 4 );
+                    if ( $text eq '#<<<' ) {
+                        push @{ $self->[_rnon_indenting_brace_stack_] },
+                          $last_nonblank_type_sequence;
+                    }
+                }
+                last;
+            }
 
             # continue gathering identifier if necessary
             if ($id_scan_state) {
@@ -5926,6 +6021,81 @@ EOM
         $line_of_tokens->{_rblock_type}    = \@output_block_type;
         $line_of_tokens->{_rtype_sequence} = \@output_type_sequence;
         $line_of_tokens->{_rlevels}        = \@output_levels;
+
+        #-----------------------------------------------------------------
+        # Compare input indentation with computed levels at closing braces
+        #-----------------------------------------------------------------
+        # This may provide a useful hint for error location if the file
+        # is not balanced in braces.  Closing braces are used because they
+        # have a well-defined indentation and can be processed efficiently.
+        if ( $output_tokens[0] eq '}' ) {
+
+            my $block_type = $output_block_type[0];
+            if ( $is_zero_continuation_block_type{$block_type} ) {
+
+                # subtract 1 space for newline in untrimmed line
+                my $untrimmed_input_line = $line_of_tokens->{_line_text};
+                my $space_count =
+                  length($untrimmed_input_line) - length($input_line) - 1;
+
+                # check for tabs
+                if ( $space_count
+                    && ord( substr( $untrimmed_input_line, 0, 1 ) ) == ORD_TAB )
+                {
+                    if ( $untrimmed_input_line =~ /^(\t+)?(\s+)?/ ) {
+                        if ($1) { $space_count += length($1) * $tabsize }
+                        if ($2) { $space_count += length($2) }
+                    }
+                }
+
+                # '$guess' = the level according to indentation
+                my $guess = int( $space_count / $rOpts_indent_columns );
+
+                # subtract 1 level from guess for --indent-closing-brace
+                $guess -= 1 if ($rOpts_indent_closing_brace);
+
+                # subtract 1 from $level for each non-indenting brace level
+                my $adjust = @{ $self->[_rnon_indenting_brace_stack_] };
+
+                # find the difference between expected and indentation guess
+                my $level_diff = $output_levels[0] - $adjust - $guess;
+
+                my $rhash = $self->[_rclosing_brace_indentation_hash_];
+
+                # results are only valid if we guess correctly at the
+                # first spaced brace
+                if ( $space_count && !defined( $rhash->{valid} ) ) {
+                    $rhash->{valid} = !$level_diff;
+                }
+
+                # save the result
+                my $rhistory_line_number  = $rhash->{rhistory_line_number};
+                my $rhistory_level_diff   = $rhash->{rhistory_level_diff};
+                my $rhistory_anchor_point = $rhash->{rhistory_anchor_point};
+
+                if ( $rhistory_level_diff->[-1] != $level_diff ) {
+
+                    # add an anchor point
+                    push @{$rhistory_level_diff},   $level_diff;
+                    push @{$rhistory_line_number},  $input_line_number;
+                    push @{$rhistory_anchor_point}, 1;
+                }
+                else {
+
+                    # add a movable point following an anchor point
+                    if ( $rhistory_anchor_point->[-1] ) {
+                        push @{$rhistory_level_diff},   $level_diff;
+                        push @{$rhistory_line_number},  $input_line_number;
+                        push @{$rhistory_anchor_point}, 0;
+                    }
+
+                    # extend a movable point
+                    else {
+                        $rhistory_line_number->[-1] = $input_line_number;
+                    }
+                }
+            }
+        }
 
         return;
     } ## end sub tokenizer_wrapup_line
