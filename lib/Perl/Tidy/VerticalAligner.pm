@@ -5196,7 +5196,7 @@ EOM
     # jump into a quote of some kind
     if ( $field2_trim !~ /^[\d\.\+\-abcdefpx_]+$/i ) {
         DEBUG_VSN
-          && print STDERR
+          && print {*STDERR}
 "Rejecting match to pat2='$pat2' with next=$next_char field2=$field2 trimmed='$field2_trim'\n";
         return;
     }
