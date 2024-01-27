@@ -244,6 +244,7 @@ BEGIN {
         _input_line_index_next_              => $i++,
         _rtrimmed_input_lines_               => $i++,
         _rclosing_brace_indentation_hash_    => $i++,
+        _show_indentation_table_             => $i++,
         _rnon_indenting_brace_stack_         => $i++,
     };
 } ## end BEGIN
@@ -596,6 +597,7 @@ EOM
     $self->[_maximum_level_]                      = 0;
     $self->[_true_brace_error_count_]             = 0;
     $self->[_rnon_indenting_brace_stack_]         = [];
+    $self->[_show_indentation_table_]             = 0;
 
     $self->[_rclosing_brace_indentation_hash_] = {
         valid                 => undef,
@@ -896,7 +898,7 @@ sub report_tokenization_errors {
     if ( $level != $self->[_starting_level_] ) {
         $self->warning("final indentation level: $level\n");
 
-        $self->show_indentation_hint();
+        $self->[_show_indentation_table_] = 1;
 
         my $level_diff = $self->[_starting_level_] - $level;
         if ( $level_diff < 0 ) { $level_diff = -$level_diff }
@@ -913,6 +915,10 @@ EOM
     }
 
     $self->check_final_nesting_depths();
+
+    if ( $self->[_show_indentation_table_] ) {
+        $self->show_indentation_table();
+    }
 
     # Likewise, large numbers of brace errors usually indicate non-perl
     # scripts, so set the severe error flag at a low number.  This is similar
@@ -1040,18 +1046,20 @@ EOM
     return $severe_error;
 } ## end sub report_tokenization_errors
 
-sub show_indentation_hint {
+sub show_indentation_table {
     my ($self) = @_;
 
-    # Output help information based on closing brace indentation comparisons
-    # This can be helpful for the case of a missing brace in a previously
-    # formatted file.
+    # Output indentation table made at closing braces.  This can be helpful for
+    # the case of a missing brace in a previously formatted file.
 
-    # Skip if whitespace cycle is set - to complex
+    # skip if whitespace cycle is set - to complex
     return if ($rOpts_whitespace_cycle);
 
     # skip if non-indenting-brace-prefix (very rare, but could be fixed)
     return if ($rOpts_non_indenting_brace_prefix);
+
+    # skip if starting level is not zero (probably in editor)
+    return if ($rOpts_starting_indentation_level);
 
     # skip if indentation analysis is not valid
     my $rhash = $self->[_rclosing_brace_indentation_hash_];
@@ -1061,28 +1069,66 @@ sub show_indentation_hint {
     my $rhistory_level_diff   = $rhash->{rhistory_level_diff};
     my $rhistory_anchor_point = $rhash->{rhistory_anchor_point};
 
-    my $num_his = @{$rhistory_level_diff};
-    return if ( $num_his < 2 );
+    # Remove the first artificial point from the table
+    shift @{$rhistory_line_number};
+    shift @{$rhistory_level_diff};
+    shift @{$rhistory_anchor_point};
 
-    # Find the first disagreement.
-    my $i_first_diff = 0;
-    foreach my $i ( 1 .. $num_his - 1 ) {
-        next if ( !$rhistory_level_diff->[$i] );
-        $i_first_diff = $i;
-        last;
+    # skip if the table does not have at least 2 points to pinpoint an error
+    my $num_his = @{$rhistory_level_diff};
+    return if ( $num_his <= 1 );
+
+    # skip if first point shows a level error - the analysis may not be valid
+    return if ( $rhistory_level_diff->[0] );
+
+    # Since the table could be arbitrarily large, we will limit the table to N
+    # lines.  If there are more lines than that, we will show N-3 lines, then
+    # ..., then the last 2 lines. Allow about 3 lines per error, so a table
+    # limit of 10 can localize up to about 3 errors in a file.
+    my $nlines_max   = 10;
+    my @pre_indexes  = ( 0 .. $num_his - 1 );
+    my @post_indexes = ();
+    if ( @pre_indexes > $nlines_max ) {
+        if ( $nlines_max >= 5 ) {
+            @pre_indexes  = ( 0 .. $nlines_max - 4 );
+            @post_indexes = ( $num_his - 2, $num_his - 1 );
+        }
+        else {
+            @pre_indexes = ( 0 .. $nlines_max - 1 );
+        }
     }
-    return if ( $i_first_diff < 2 );
-    my $lno_first_diff_minus = $rhistory_line_number->[ $i_first_diff - 1 ];
-    my $lno_first_diff       = $rhistory_line_number->[$i_first_diff];
+
+    my @output_lines;
+    push @output_lines, <<EOM;
+Table of level differences using closing brace indentation
+This might help localize brace errors if the file was previously formatted
+line:  (brace nesting level) - (level expected from indentation)
+EOM
+    foreach my $i (@pre_indexes) {
+        my $lno  = $rhistory_line_number->[$i];
+        my $diff = $rhistory_level_diff->[$i];
+        push @output_lines, <<EOM;
+$lno: $diff
+EOM
+    }
+    if (@post_indexes) {
+        push @output_lines, "...\n";
+        foreach my $i (@post_indexes) {
+            my $lno  = $rhistory_line_number->[$i];
+            my $diff = $rhistory_level_diff->[$i];
+            push @output_lines, <<EOM;
+$lno: $diff
+EOM
+        }
+    }
+    my $output_str = join EMPTY_STRING, @output_lines;
 
     $self->interrupt_logfile();
-    $self->warning(<<EOM);
-$lno_first_diff_minus-$lno_first_diff: line range of first indentation disagreement with input
-EOM
+    $self->warning($output_str);
     $self->resume_logfile();
 
     return;
-} ## end sub indentation_hint
+} ## end sub show_indentation_table
 
 sub report_v_string {
 
@@ -6030,8 +6076,8 @@ EOM
         # have a well-defined indentation and can be processed efficiently.
         if ( $output_tokens[0] eq '}' ) {
 
-            my $block_type = $output_block_type[0];
-            if ( $is_zero_continuation_block_type{$block_type} ) {
+            my $blk = $output_block_type[0];
+            if ( $is_zero_continuation_block_type{$blk} ) {
 
                 # subtract 1 space for newline in untrimmed line
                 my $untrimmed_input_line = $line_of_tokens->{_line_text};
@@ -7119,6 +7165,7 @@ EOM
                     $self->resume_logfile();
                 }
                 $self->increment_brace_error();
+                if ( $bb eq BRACE ) { $self->[_show_indentation_table_] = 1 }
             }
         }
         $rcurrent_depth->[$aa]--;
@@ -7134,6 +7181,7 @@ EOM
                 '^' );
         }
         $self->increment_brace_error();
+        if ( $aa eq BRACE ) { $self->[_show_indentation_table_] = 1 }
 
         # keep track of errors in braces alone (ignoring ternary nesting errors)
         $self->[_true_brace_error_count_]++
@@ -7159,6 +7207,7 @@ The most recent un-matched $opening_brace_names[$aa] is on line $sl
 EOM
             $self->indicate_error( $msg, @{$rsl}, '^' );
             $self->increment_brace_error();
+            if ( $aa eq BRACE ) { $self->[_show_indentation_table_] = 1 }
         }
     }
     return;

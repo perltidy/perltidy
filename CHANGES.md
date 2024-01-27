@@ -140,6 +140,12 @@
       emit an else block when two elsif blocks were separated by a hanging
       side comment (a very rare situation).
 
+    - When braces are detected to be unbalanced, an attempt is made to
+      localize the error by comparing the indentation at closing braces
+      with their actual nesting levels. Line numbers at any differences
+      are reported in the error file.  This can be useful for files which
+      have previously been formatted by perltidy.
+
     - The -DEBUG option no longer automatically also writes a .LOG file.
       Use --show-options if the .LOG file is needed.
 
