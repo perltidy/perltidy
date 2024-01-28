@@ -149,9 +149,14 @@ my (
     # INITIALIZER: sub check_options
     $code_skipping_pattern_begin,
     $code_skipping_pattern_end,
+    $format_skipping_pattern_begin,
+    $format_skipping_pattern_end,
 
     $rOpts_code_skipping,
     $rOpts_code_skipping_begin,
+    $rOpts_format_skipping,
+    $rOpts_format_skipping_begin,
+    $rOpts_format_skipping_end,
     $rOpts_starting_indentation_level,
     $rOpts_indent_columns,
     $rOpts_look_for_hash_bang,
@@ -206,7 +211,8 @@ BEGIN {
         _warning_count_                      => $i++,
         _html_tag_count_                     => $i++,
         _in_pod_                             => $i++,
-        _in_skipped_                         => $i++,
+        _in_code_skipping_                   => $i++,
+        _in_format_skipping_                 => $i++,
         _in_attribute_list_                  => $i++,
         _in_quote_                           => $i++,
         _quote_target_                       => $i++,
@@ -246,7 +252,6 @@ BEGIN {
         _rclosing_brace_indentation_hash_    => $i++,
         _show_indentation_table_             => $i++,
         _rnon_indenting_brace_stack_         => $i++,
-        _in_format_skipping_                 => $i++,
     };
 } ## end BEGIN
 
@@ -463,6 +468,9 @@ sub check_options {
     $rOpts_maximum_unexpected_errors  = $rOpts->{'maximum-unexpected-errors'};
     $rOpts_code_skipping              = $rOpts->{'code-skipping'};
     $rOpts_code_skipping_begin        = $rOpts->{'code-skipping-begin'};
+    $rOpts_format_skipping            = $rOpts->{'format-skipping'};
+    $rOpts_format_skipping_begin      = $rOpts->{'format-skipping-begin'};
+    $rOpts_format_skipping_end        = $rOpts->{'format-skipping-end'};
     $rOpts_indent_closing_brace       = $rOpts->{'indent-closing-brace'};
     $rOpts_non_indenting_braces       = $rOpts->{'non-indenting-braces'};
     $rOpts_non_indenting_brace_prefix = $rOpts->{'non-indenting-brace-prefix'};
@@ -490,6 +498,11 @@ sub check_options {
       make_skipping_pattern( $rOpts, 'code-skipping-begin', '#<<V' );
     $code_skipping_pattern_end =
       make_skipping_pattern( $rOpts, 'code-skipping-end', '#>>V' );
+
+    $format_skipping_pattern_begin =
+      make_skipping_pattern( $rOpts, 'format-skipping-begin', '#<<<' );
+    $format_skipping_pattern_end =
+      make_skipping_pattern( $rOpts, 'format-skipping-end', '#>>>' );
 
     return;
 } ## end sub check_options
@@ -538,7 +551,8 @@ EOM
     # _line_start_quote_     line where we started looking for a long quote
     # _in_here_doc_          flag indicating if we are in a here-doc
     # _in_pod_               flag set if we are in pod documentation
-    # _in_skipped_           flag set if we are in a skipped section
+    # _in_code_skipping_     flag set if we are in a code skipping section
+    # _in_format_skipping_   flag set if we are in a format skipping section
     # _in_error_             flag set if we saw severe error (binary in script)
     # _in_trouble_           set if we saw a troublesome lexical like 'my sub s'
     # _warning_count_        number of calls to logger sub warning
@@ -567,7 +581,8 @@ EOM
     $self->[_warning_count_]            = 0;
     $self->[_html_tag_count_]           = 0;
     $self->[_in_pod_]                   = 0;
-    $self->[_in_skipped_]               = 0;
+    $self->[_in_code_skipping_]         = 0;
+    $self->[_in_format_skipping_]       = 0;
     $self->[_in_attribute_list_]        = 0;
     $self->[_in_quote_]                 = 0;
     $self->[_quote_target_]             = EMPTY_STRING;
@@ -601,7 +616,6 @@ EOM
     $self->[_true_brace_error_count_]             = 0;
     $self->[_rnon_indenting_brace_stack_]         = [];
     $self->[_show_indentation_table_]             = 0;
-    $self->[_in_format_skipping_]                 = 0;
 
     $self->[_rclosing_brace_indentation_hash_] = {
         valid                 => undef,
@@ -943,7 +957,7 @@ EOM
         $self->warning("hit EOF while in format description\n");
     }
 
-    if ( $self->[_in_skipped_] ) {
+    if ( $self->[_in_code_skipping_] ) {
         $self->write_logfile_entry(
             "hit EOF while in lines skipped with --code-skipping\n");
     }
@@ -1109,7 +1123,7 @@ sub show_indentation_table {
 
     my @output_lines;
     push @output_lines, <<EOM;
-Here is a table of level differences based on closing brace indentation.
+Table of nesting level differences at closing braces.
 This might help localize brace errors if the file was previously formatted.
 line:  (brace level) - (level expected from old indentation)
 EOM
@@ -1130,6 +1144,7 @@ $lno: $diff
 EOM
         }
     }
+    push @output_lines, "\n";
     my $output_str = join EMPTY_STRING, @output_lines;
 
     $self->interrupt_logfile();
@@ -1364,18 +1379,18 @@ sub get_line {
     }
 
     # print line unchanged if in skipped section
-    elsif ( $self->[_in_skipped_] ) {
+    elsif ( $self->[_in_code_skipping_] ) {
 
         $line_of_tokens->{_line_type} = 'SKIP';
         if ( $input_line =~ /$code_skipping_pattern_end/ ) {
             $line_of_tokens->{_line_type} = 'SKIP_END';
             $self->log_numbered_msg("Exiting code-skipping section\n");
-            $self->[_in_skipped_] = 0;
+            $self->[_in_code_skipping_] = 0;
         }
         elsif ( $input_line =~ /$code_skipping_pattern_begin/ ) {
 
             # warn of duplicate starting comment lines, git #118
-            my $lno = $self->[_in_skipped_];
+            my $lno = $self->[_in_code_skipping_];
             $self->warning(
                 "Already in code-skipping section which started at line $lno\n"
             );
@@ -1522,7 +1537,8 @@ sub get_line {
     #        _in_end_
     #        _in_format_
     #        _in_error_
-    #        _in_skipped_
+    #        _in_code_skipping_
+    #        _in_format_skipping_
     #        _in_pod_
     #        _in_quote_
 
@@ -1573,7 +1589,7 @@ sub get_line {
     }
 
     # handle start of skipped section
-    if ( $self->[_in_skipped_] ) {
+    if ( $self->[_in_code_skipping_] ) {
 
         $line_of_tokens->{_line_type} = 'SKIP';
         $self->log_numbered_msg("Entering code-skipping section\n");
@@ -1717,13 +1733,20 @@ sub find_starting_indentation_level {
                         && $line =~ /$code_skipping_pattern_begin/ )
                     {
                         $in_code_skipping = 1;
+                        next;
                     }
                 }
                 else {
                     if ( $line =~ /$code_skipping_pattern_end/ ) {
                         $in_code_skipping = 0;
                     }
+                    next;
                 }
+
+                # Note that we could also ignore format-skipping lines here
+                # but it isn't clear if that would be best.
+                # See c326 for example code.
+
                 next;
             }
             next if ($in_code_skipping);
@@ -5333,8 +5356,38 @@ EOM
                 && $input_line . "\n" =~ /$code_skipping_pattern_begin/
               )
             {
-                $self->[_in_skipped_] = $self->[_last_line_number_];
+                $self->[_in_code_skipping_] = $self->[_last_line_number_];
                 return;
+            }
+
+            if ( !$self->[_in_format_skipping_] ) {
+                if (
+                    (
+                        substr( $input_line, 0, 4 ) eq '#<<<'
+                        || $rOpts_format_skipping_begin
+                    )
+                    && $rOpts_format_skipping
+
+                    # note that the code_skipping_patterns require a newline
+                    && $input_line . "\n" =~ /$format_skipping_pattern_begin/
+                  )
+                {
+                    $self->[_in_format_skipping_] = $self->[_last_line_number_];
+                }
+            }
+            else {
+                if (
+                    (
+                        substr( $input_line, 0, 4 ) eq '#>>>'
+                        || $rOpts_format_skipping_end
+                    )
+
+                    # note that the code_skipping_patterns require a newline
+                    && $input_line . "\n" =~ /$format_skipping_pattern_end/
+                  )
+                {
+                    $self->[_in_format_skipping_] = 0;
+                }
             }
 
             # Optional fast processing of a block comment
