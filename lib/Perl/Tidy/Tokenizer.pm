@@ -246,6 +246,7 @@ BEGIN {
         _rclosing_brace_indentation_hash_    => $i++,
         _show_indentation_table_             => $i++,
         _rnon_indenting_brace_stack_         => $i++,
+        _in_format_skipping_                 => $i++,
     };
 } ## end BEGIN
 
@@ -598,6 +599,7 @@ EOM
     $self->[_true_brace_error_count_]             = 0;
     $self->[_rnon_indenting_brace_stack_]         = [];
     $self->[_show_indentation_table_]             = 0;
+    $self->[_in_format_skipping_]                 = 0;
 
     $self->[_rclosing_brace_indentation_hash_] = {
         valid                 => undef,
@@ -1052,7 +1054,7 @@ sub show_indentation_table {
     # Output indentation table made at closing braces.  This can be helpful for
     # the case of a missing brace in a previously formatted file.
 
-    # skip if whitespace cycle is set - to complex
+    # skip if -wc is used (rare); it is too complex to use
     return if ($rOpts_whitespace_cycle);
 
     # skip if non-indenting-brace-prefix (very rare, but could be fixed)
@@ -1074,8 +1076,13 @@ sub show_indentation_table {
     shift @{$rhistory_level_diff};
     shift @{$rhistory_anchor_point};
 
-    # skip if the table does not have at least 2 points to pinpoint an error
+    # Ignore an ending non-anchor point
     my $num_his = @{$rhistory_level_diff};
+    if ( !$rhistory_anchor_point->[-1] ) {
+        $num_his -= 1;
+    }
+
+    # skip if the table does not have at least 2 points to pinpoint an error
     return if ( $num_his <= 1 );
 
     # skip if first point shows a level error - the analysis may not be valid
@@ -1100,9 +1107,9 @@ sub show_indentation_table {
 
     my @output_lines;
     push @output_lines, <<EOM;
-Table of level differences using closing brace indentation
-This might help localize brace errors if the file was previously formatted
-line:  (brace nesting level) - (level expected from indentation)
+Here is a table of level differences based on closing brace indentation.
+This might help localize brace errors if the file was previously formatted.
+line:  (brace level) - (level expected from old indentation)
 EOM
     foreach my $i (@pre_indexes) {
         my $lno  = $rhistory_line_number->[$i];
@@ -2234,7 +2241,6 @@ EOM
     # These block types terminate statements and do not need a trailing
     # semicolon
     # patched for SWITCH/CASE/
-    # NOTE: not currently used but may be used in the future
     my %is_zero_continuation_block_type;
     my @q;
     @q = qw( } { BEGIN END CHECK INIT AUTOLOAD DESTROY UNITCHECK continue ;
@@ -5560,15 +5566,20 @@ EOM
                 # push non-indenting brace stack Look for a possible
                 # non-indenting brace.  This is only used to give a hint in
                 # case the file is unbalanced.
-                # NOTE: hardwired to '#<<<'; this can be fixed
+                # Hardwired to '#<<<' for efficiency.  We will not use the
+                # result later if the pattern has been changed (very unusual).
                 if (   $last_nonblank_token eq '{'
                     && $last_nonblank_block_type
                     && $last_nonblank_type_sequence
+                    && !$self->[_in_format_skipping_]
                     && $rOpts_non_indenting_braces )
                 {
                     my $offset = $rtoken_map->[$i_tok];
-                    my $text   = substr( $input_line, $offset, 4 );
-                    if ( $text eq '#<<<' ) {
+                    my $text   = substr( $input_line, $offset, 5 );
+                    my $len    = length($text);
+                    if (   $len == 4 && $text eq '#<<<'
+                        || $len > 4 && $text eq '#<<< ' )
+                    {
                         push @{ $self->[_rnon_indenting_brace_stack_] },
                           $last_nonblank_type_sequence;
                     }
@@ -6077,7 +6088,20 @@ EOM
         if ( $output_tokens[0] eq '}' ) {
 
             my $blk = $output_block_type[0];
-            if ( $is_zero_continuation_block_type{$blk} ) {
+            if (
+                (
+                    # builtin block types without continuation indentation
+                    $is_zero_continuation_block_type{$blk}
+
+                    # or a named sub, but skip sub aliases for efficiency,
+                    # since this is just for diagnostic info
+                    || substr( $blk, 0, 4 ) eq 'sub '
+                )
+
+                # and we are not in format skipping
+                && !$self->[_in_format_skipping_]
+              )
+            {
 
                 # subtract 1 space for newline in untrimmed line
                 my $untrimmed_input_line = $line_of_tokens->{_line_text};
@@ -6103,8 +6127,10 @@ EOM
                 # subtract 1 from $level for each non-indenting brace level
                 my $adjust = @{ $self->[_rnon_indenting_brace_stack_] };
 
+                my $level = $output_levels[0];
+
                 # find the difference between expected and indentation guess
-                my $level_diff = $output_levels[0] - $adjust - $guess;
+                my $level_diff = $level - $adjust - $guess;
 
                 my $rhash = $self->[_rclosing_brace_indentation_hash_];
 
