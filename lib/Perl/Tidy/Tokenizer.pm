@@ -333,7 +333,7 @@ EOM
     return;
 } ## end sub Fault
 
-sub make_code_skipping_pattern {
+sub make_skipping_pattern {
     my ( $rOpts, $opt_name, $default ) = @_;
     my $param = $rOpts->{$opt_name};
     if ( !$param ) { $param = $default }
@@ -341,14 +341,16 @@ sub make_code_skipping_pattern {
     if ( $param !~ /^#/ ) {
         Die("ERROR: the $opt_name parameter '$param' must begin with '#'\n");
     }
-    my $pattern = '^\s*' . $param . '\b';
+
+    # Note that the ending \s will match a newline
+    my $pattern = '^\s*' . $param . '\s';
     if ( Perl::Tidy::Formatter::bad_pattern($pattern) ) {
         Die(
 "ERROR: the $opt_name parameter '$param' causes the invalid regex '$pattern'\n"
         );
     }
     return $pattern;
-} ## end sub make_code_skipping_pattern
+} ## end sub make_skipping_pattern
 
 sub check_options {
 
@@ -485,9 +487,9 @@ sub check_options {
     if ( !$tabsize ) { $tabsize = TAB_SIZE_DEFAULT }
 
     $code_skipping_pattern_begin =
-      make_code_skipping_pattern( $rOpts, 'code-skipping-begin', '#<<V' );
+      make_skipping_pattern( $rOpts, 'code-skipping-begin', '#<<V' );
     $code_skipping_pattern_end =
-      make_code_skipping_pattern( $rOpts, 'code-skipping-end', '#>>V' );
+      make_skipping_pattern( $rOpts, 'code-skipping-end', '#>>V' );
 
     return;
 } ## end sub check_options
@@ -5326,7 +5328,9 @@ EOM
                     || $rOpts_code_skipping_begin
                 )
                 && $rOpts_code_skipping
-                && $input_line =~ /$code_skipping_pattern_begin/
+
+                # note that the code_skipping_patterns require a newline
+                && $input_line . "\n" =~ /$code_skipping_pattern_begin/
               )
             {
                 $self->[_in_skipped_] = $self->[_last_line_number_];
