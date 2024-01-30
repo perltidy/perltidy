@@ -34,6 +34,7 @@
 
     - Added --dump-mixed-call-parens (-dmcp ) which will dump a list of
       operators which are sometimes followed by parens and sometimes not.
+      This can be useful for developing a uniform style for selected operators.
       Issue git #128. For example
 
          perltidy -dmcp somefile.pl >out.txt
@@ -54,7 +55,7 @@
       will format as normal but warn if any user subs are called without parens.
 
     - Added --dump-unusual-variables (-duv) option to dump a list of
-      variables with certain properties of interest. For example
+      variables with certain properties of interest.  For example
 
          perltidy -duv somefile.pl >vars.txt
 
@@ -76,6 +77,10 @@
         s: sigil change but reused bareword
         p: lexical variable with scope in multiple packages
         u: unused variable
+
+      This is very useful for locating problem areas and even bugs in code.
+      As an example, after it was developed it was applied to the perltidy
+      source code and it revealed two bugs; fortunately both were benign.
 
     - Added a related flag --warn-variable-types=string (-wvt=string) option
       to warn if certain types of variables are found in a script. The types
@@ -142,12 +147,30 @@
 
     - When braces are detected to be unbalanced, an attempt is made to
       localize the error by comparing the indentation at closing braces
-      with their actual nesting levels. Line numbers at any differences
-      are reported in the error file.  This can be useful for files which
-      have previously been formatted by perltidy.
+      with their actual nesting levels. This can be useful for files which
+      have previously been formatted by perltidy. To illustrate, a test was
+      made in which the closing brace at line 30644 was commented out in
+      a file with a total of over 62000 lines.  The new error message is
+
+        Final nesting depth of '{'s is 1
+        The most recent un-matched '{' is on line 6858
+        ...
+        Table of nesting level differences at closing braces.
+        This might help localize brace errors if the file was previously formatted.
+        line:  (brace level) - (level expected from old indentation)
+        30643: 0
+        30645: 1
+
+      Previously, the error file only indicated that the error in this case
+      was somewhere after line 6858, so the new table is very helpful. Closing
+      brace indentation is checked because it is unambiguous and can be done
+      very efficiently.
 
     - The -DEBUG option no longer automatically also writes a .LOG file.
       Use --show-options if the .LOG file is needed.
+
+    - The run time of this version with all new options in use is no
+      greater than the previous version thanks to optimization work.
 
 ## 2023 09 12
 
@@ -1155,7 +1178,7 @@
 
     - Added support for Switch::Plain syntax, issue git #31.
 
-    - Fixed minor problem where trailing 'unless' clauses were not 
+    - Fixed minor problem where trailing 'unless' clauses were not
       getting vertically aligned.
 
     - Added a parameter --logical-padding or -lop to allow logical padding
@@ -1173,35 +1196,35 @@
       'teefile' call parameters.  These output streams are rarely used but
       they are now treated the same as any 'logfile' stream.
 
-    - add option --break-at-old-semicolon-breakpoints', -bos, requested 
+    - add option --break-at-old-semicolon-breakpoints', -bos, requested
       in RT#131644.  This flag will keep lines beginning with a semicolon.
 
     - Added --use-unicode-gcstring to control use of Unicode::GCString for
-      evaluating character widths of encoded data.  The default is 
+      evaluating character widths of encoded data.  The default is
       not to use this (--nouse-unicode-gcstring). If this flag is set,
-      perltidy will look for Unicode::GCString and, if found, will use it 
+      perltidy will look for Unicode::GCString and, if found, will use it
       to evaluate character display widths.  This can improve displayed
       vertical alignment for files with wide characters.  It is a nice
       feature but it is off by default to avoid conflicting formatting
-      when there are multiple developers.  Perltidy installation does not 
-      require Unicode::GCString, so users wanting to use this feature need 
+      when there are multiple developers.  Perltidy installation does not
+      require Unicode::GCString, so users wanting to use this feature need
       set this flag and also to install Unicode::GCString separately.
 
     - Added --character-encoding=guess or -guess to have perltidy guess
-      if a file (or other input stream) is encoded as -utf8 or some 
-      other single-byte encoding. This is useful when processing a mixture 
+      if a file (or other input stream) is encoded as -utf8 or some
+      other single-byte encoding. This is useful when processing a mixture
       of file types, such as utf8 and latin-1.
 
       Please Note: The default encoding has been set to be 'guess'
-      instead of 'none'. This seems like the best default, since 
+      instead of 'none'. This seems like the best default, since
       it allows perltidy work properly with both
       utf8 files and older latin-1 files.  The guess mode uses Encode::Guess,
-      which is included in standard perl distributions, and only tries to 
-      guess if a file is utf8 or not, never any other encoding.  If the guess is 
-      utf8, and if the file successfully decodes as utf8, then it the encoding 
-      is assumed to be utf8.  Otherwise, no encoding is assumed. 
-      If you do not want to use this new default guess mode, or have a 
-      problem with it, you can set --character-encoding=none (the previous 
+      which is included in standard perl distributions, and only tries to
+      guess if a file is utf8 or not, never any other encoding.  If the guess is
+      utf8, and if the file successfully decodes as utf8, then it the encoding
+      is assumed to be utf8.  Otherwise, no encoding is assumed.
+      If you do not want to use this new default guess mode, or have a
+      problem with it, you can set --character-encoding=none (the previous
       default) or --character-encoding=utf8 (if you deal with utf8 files).
 
     - Specific encodings of input files other than utf8 may now be given, for
@@ -1222,11 +1245,11 @@
 ## 2020 01 10
 
     - This release adds a flag to control the feature RT#130394 (allow short nested blocks)
-      introduced in the previous release.  Unfortunately that feature breaks 
+      introduced in the previous release.  Unfortunately that feature breaks
       RPerl installations, so a control flag has been introduced and that feature is now
       off by default.  The flag is:
 
-      --one-line-block-nesting=n, or -olbn=n, where n is an integer as follows: 
+      --one-line-block-nesting=n, or -olbn=n, where n is an integer as follows:
 
       -olbn=0 break nested one-line blocks into multiple lines [new DEFAULT]
       -olbn=1 stable; keep existing nested-one line blocks intact [previous DEFAULT]
@@ -1247,8 +1270,8 @@
     - Fixed issue RT#131288: parse error for un-prototyped constant function without parenthesized
       call parameters followed by ternary.
 
-    - Fixed issue RT#131360, installation documentation.  Added a note that the binary 
-      'perltidy' comes with the Perl::Tidy module. They can both normally be installed with 
+    - Fixed issue RT#131360, installation documentation.  Added a note that the binary
+      'perltidy' comes with the Perl::Tidy module. They can both normally be installed with
       'cpanm Perl::Tidy'
 
 
@@ -1261,7 +1284,7 @@
     - Fixed issue RT#130394: Allow short nested blocks.  Given the following
 
         $factorial = sub { reduce { $a * $b } 1 .. 11 };
-   
+
       Previous versions would always break the sub block because it
       contains another block (the reduce block).  The fix keeps
       short one-line blocks such as this intact.
@@ -1271,19 +1294,19 @@
       one or more aliases for 'sub', separated by spaces or commas.
       For example,
 
-        perltidy -sal='method fun' 
+        perltidy -sal='method fun'
 
       will cause the perltidy to treat the words 'method' and 'fun' to be
       treated the same as if they were 'sub'.
 
-    - Added flag --space-prototype-paren=i, or -spp=i, to control spacing 
+    - Added flag --space-prototype-paren=i, or -spp=i, to control spacing
       before the opening paren of a prototype, where i=0, 1, or 2:
       i=0 no space
       i=1 follow input [current and default]
       i=2 always space
 
       Previously, perltidy always followed the input.
-      For example, given the following input 
+      For example, given the following input
 
          sub usage();
 
@@ -1301,16 +1324,16 @@
 
 ## 2019 09 15
 
-    - fixed issue RT#130344: false warning "operator in print statement" 
-      for "use lib". 
+    - fixed issue RT#130344: false warning "operator in print statement"
+      for "use lib".
 
     - fixed issue RT#130304: standard error output should include filename.
-      When perltidy error messages are directed to the standard error output 
-      with -se or --standard-error-output, the message lines now have a prefix 
-      'filename:' for clarification in case multiple files 
-      are processed, where 'filename' is the name of the input file.  If 
-      input is from the standard input the displayed filename is '<stdin>', 
-      and if it is from a data structure then displayed filename 
+      When perltidy error messages are directed to the standard error output
+      with -se or --standard-error-output, the message lines now have a prefix
+      'filename:' for clarification in case multiple files
+      are processed, where 'filename' is the name of the input file.  If
+      input is from the standard input the displayed filename is '<stdin>',
+      and if it is from a data structure then displayed filename
       is '<source_stream>'.
 
     - implement issue RT#130425: check mode.  A new flag '--assert-tidy'

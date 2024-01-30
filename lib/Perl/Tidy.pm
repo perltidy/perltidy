@@ -150,7 +150,7 @@ sub AUTOLOAD {
     print {*STDERR} <<EOM;
 ======================================================================
 Unexpected call to Autoload looking for sub $AUTOLOAD
-Called from package: '$pkg'  
+Called from package: '$pkg'
 Called from File '$fname'  at line '$lno'
 This error is probably due to a recent programming change
 ======================================================================
@@ -757,7 +757,7 @@ EOM
             croak <<EOM;
 ------------------------------------------------------------------------
 Please check value of -dump_options_type in call to perltidy;
-saw: '$dump_options_type' 
+saw: '$dump_options_type'
 expecting: 'perltidyrc' or 'full'
 ------------------------------------------------------------------------
 EOM
@@ -801,7 +801,7 @@ EOM
             my ( $rargv_str, $msg ) = parse_args($argv);
             if ($msg) {
                 Die(<<EOM);
-Error parsing this string passed to to perltidy with 'argv': 
+Error parsing this string passed to to perltidy with 'argv':
 $msg
 EOM
             }
@@ -2890,7 +2890,7 @@ sub process_iteration_layer {
             my $stopping_on_error = $stop_now;
             if ($stop_now) {
                 $convergence_log_message = <<EOM;
-Stopping iterations because of severe errors.                       
+Stopping iterations because of severe errors.
 EOM
             }
 
@@ -2919,7 +2919,7 @@ EOM
                         # them when they happen.
                         $rstatus->{'blinking'} = 1;
                         $convergence_log_message = <<EOM;
-BLINKER. Output for iteration $iter same as for $saw_md5{$digest}. 
+BLINKER. Output for iteration $iter same as for $saw_md5{$digest}.
 EOM
                         $stopping_on_error ||= $convergence_log_message;
                         DEVEL_MODE
@@ -3239,7 +3239,7 @@ EOM
         $msg .= <<EOM;
 <$counti:$linei
 >$counto:$lineo
-$line_diff 
+$line_diff
 EOM
         return $msg;
     } ## end while
@@ -4522,7 +4522,7 @@ sub _process_command_line {
             if ($config_file) {
                 Warn(<<EOM);
  Conflict: a perltidyrc configuration file was specified both as this
- perltidy call parameter: $perltidyrc_stream 
+ perltidy call parameter: $perltidyrc_stream
  and with this -profile=$config_file.
  Using -profile=$config_file.
 EOM
@@ -4925,15 +4925,15 @@ EOM
 
         if ( $rOpts->{'opening-brace-on-new-line'} ) {
             Warn(<<EOM);
- Conflict: you specified both 'opening-brace-always-on-right' (-bar) and 
+ Conflict: you specified both 'opening-brace-always-on-right' (-bar) and
   'opening-brace-on-new-line' (-bl).  Ignoring -bl.
 EOM
             $rOpts->{'opening-brace-on-new-line'} = 0;
         }
         if ( $rOpts->{'brace-left-and-indent'} ) {
             Warn(<<EOM);
- Conflict: you specified both 'opening-brace-always-on-right' (-bar) and 
-  '--brace-left-and-indent' (-bli).  Ignoring -bli. 
+ Conflict: you specified both 'opening-brace-always-on-right' (-bar) and
+  '--brace-left-and-indent' (-bli).  Ignoring -bli.
 EOM
             $rOpts->{'brace-left-and-indent'} = 0;
         }
@@ -5177,7 +5177,7 @@ EOM
 
             if ($config_file) {
                 Die(<<"DIE");
-Please check your configuration file $config_file for circular-references. 
+Please check your configuration file $config_file for circular-references.
 To deactivate it, use -npro.
 DIE
             }
@@ -5198,7 +5198,7 @@ sub dump_short_names {
     print {*STDOUT} <<EOM;
 List of short names.  This list shows how all abbreviations are
 translated into other abbreviations and, eventually, into long names.
-New abbreviations may be defined in a .perltidyrc file.  
+New abbreviations may be defined in a .perltidyrc file.
 For a list of all long names, use perltidy --dump-long-names (-dln).
 --------------------------------------------------------------------------
 EOM
@@ -5856,7 +5856,7 @@ sub readable_options {
 
 sub show_version {
     print {*STDOUT} <<"EOM";
-This is perltidy, v$VERSION 
+This is perltidy, v$VERSION
 
 Copyright 2000-2024, Steve Hancock
 
@@ -5897,8 +5897,8 @@ I/O control
  -f      force perltidy to read a binary file
  -g      like -log but writes more detailed .LOG file, for debugging scripts
  -opt    write the set of options actually used to a .LOG file
- -npro   ignore .perltidyrc configuration command file 
- -pro=file   read configuration commands from file instead of .perltidyrc 
+ -npro   ignore .perltidyrc configuration command file
+ -pro=file   read configuration commands from file instead of .perltidyrc
  -st     send output to standard output, STDOUT
  -se     send all error output to standard error output, STDERR
  -v      display version number to standard output and quit
@@ -5922,11 +5922,11 @@ Whitespace Control
  -bbvtl=s  make -bbvt to apply to selected list of block types
  -pt=n   paren tightness (n=0, 1 or 2)
  -sbt=n  square bracket tightness (n=0, 1, or 2)
- -bvt=n  brace vertical tightness, 
+ -bvt=n  brace vertical tightness,
          n=(0=open, 1=close unless multiple steps on a line, 2=always close)
  -pvt=n  paren vertical tightness (see -bvt for n)
  -sbvt=n square bracket vertical tightness (see -bvt for n)
- -bvtc=n closing brace vertical tightness: 
+ -bvtc=n closing brace vertical tightness:
          n=(0=open, 1=sometimes close, 2=always close)
  -pvtc=n closing paren vertical tightness, see -bvtc for n.
  -sbvtc=n closing square bracket vertical tightness, see -bvtc for n.
@@ -5934,9 +5934,9 @@ Whitespace Control
  -lp     line up parentheses, brackets, and non-BLOCK braces
  -sfs    add space before semicolon in for( ; ; )
  -aws    allow perltidy to add whitespace (default)
- -dws    delete all old non-essential whitespace 
+ -dws    delete all old non-essential whitespace
  -icb    indent closing brace of a code block
- -cti=n  closing indentation of paren, square bracket, or non-block brace: 
+ -cti=n  closing indentation of paren, square bracket, or non-block brace:
          n=0 none, =1 align with opening, =2 one full indentation level
  -icp    equivalent to -cti=2
  -wls=s  want space left of tokens in string; i.e. -nwls='+ - * /'
@@ -5959,7 +5959,7 @@ Line Break Control
  -cbl=s  list of blocks to cuddled, default 'try-catch-finally'
  -dnl    delete old newlines (default)
  -l=n    maximum line length;  default n=80
- -bl     opening brace on new line 
+ -bl     opening brace on new line
  -sbl    opening sub brace on new line.  value of -bl is used if not given.
  -bli    opening brace on new line and indented
  -bar    opening brace always on right, even for long clauses
@@ -5980,7 +5980,7 @@ Following Old Breakpoints
  -bom    break at old method call breakpoints: ->
  -bok    break at old list keyword breakpoints such as map, sort (default)
  -bot    break at old conditional (ternary ?:) operator breakpoints (default)
- -boa    break at old attribute breakpoints 
+ -boa    break at old attribute breakpoints
  -cab=n  break at commas after a comma-arrow (=>):
          n=0 break at all commas after =>
          n=1 stable: break unless this breaks an existing one-line container
@@ -5997,7 +5997,7 @@ Comment controls
  -cscp=s change closing side comment prefix to be other than '## end'
  -cscl=s change closing side comment to apply to selected list of blocks
  -csci=n minimum number of lines needed to apply a -csc tag, default n=6
- -csct=n maximum number of columns of appended text, default n=20 
+ -csct=n maximum number of columns of appended text, default n=20
  -cscw   causes warning if old side comment is overwritten with -csc
 
  -sbc    use 'static block comments' identified by leading '##' (default)
@@ -6009,18 +6009,18 @@ Comment controls
 
 Delete selected text
  -dac    delete all comments AND pod
- -dbc    delete block comments     
- -dsc    delete side comments  
+ -dbc    delete block comments
+ -dsc    delete side comments
  -dp     delete pod
 
 Send selected text to a '.TEE' file
  -tac    tee all comments AND pod
- -tbc    tee block comments       
- -tsc    tee side comments       
- -tp     tee pod           
+ -tbc    tee block comments
+ -tsc    tee side comments
+ -tp     tee pod
 
 Outdenting
- -olq    outdent long quoted strings (default) 
+ -olq    outdent long quoted strings (default)
  -olc    outdent a long block comment line
  -ola    outdent statement labels
  -okw    outdent control keywords (redo, next, last, goto, return)
@@ -6060,7 +6060,7 @@ HTML
 
 A prefix of "n" negates short form toggle switches, and a prefix of "no"
 negates the long forms.  For example, -nasc means don't add missing
-semicolons.  
+semicolons.
 
 If you are unable to see this entire text, try "perltidy -h | more"
 For more detailed information, and additional options, try "man perltidy",

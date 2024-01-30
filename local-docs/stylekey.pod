@@ -458,7 +458,7 @@ after them.
 The B<-vt=2> style does not limit itself to a single indentation step
 per line.
 
-Note that in the above example the function 'do_sumething_about_it'
+Note that in the above example the function 'do_something_about_it'
 started on a new line. This is because it follows an opening code
 block brace and is governed by the flag previously set in
 L<Block Brace Vertical Tightness>.

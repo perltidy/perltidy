@@ -283,7 +283,7 @@ sub AUTOLOAD {
 ======================================================================
 Error detected in package '$my_package', version $VERSION
 Received unexpected AUTOLOAD call for sub '$AUTOLOAD'
-Called from package: '$pkg'  
+Called from package: '$pkg'
 Called from File '$fname'  at line '$lno'
 This error is probably due to a recent programming change
 ======================================================================
@@ -2485,7 +2485,7 @@ EOM
                 $self->interrupt_logfile();
                 $self->warning(<<EOM);
 $input_line_number: Trouble parsing at characters '$excess' after special variable '$var'.
-A space may be needed after '$var'. 
+A space may be needed after '$var'.
 EOM
                 $self->resume_logfile();
             }
@@ -9948,7 +9948,7 @@ EOM
            [0-9a-fA-F_]*)                # optional Additional exponent digits
 
            # or hex integer
-           |([xX][0-9a-fA-F_]+)        
+           |([xX][0-9a-fA-F_]+)
 
            # or octal fraction
            |([oO]?[0-7_]+          # string of octal digits
@@ -9960,13 +9960,13 @@ EOM
            |([oO]?[0-7_]+)         # string of octal digits
 
            # or a binary float
-           |([bB][01_]*            # 'b' with string of binary digits 
+           |([bB][01_]*            # 'b' with string of binary digits
            (\.([01][01_]*)?)?      # optional decimal and fraction
            [Pp][+-]?[01]           # Required exponent indicator, no underscore
            [01_]*)                 # additional exponent bits
 
            # or binary integer
-           |([bB][01_]+)           # 'b' with string of binary digits 
+           |([bB][01_]+)           # 'b' with string of binary digits
 
            )}gx
           )
@@ -10672,18 +10672,18 @@ sub dump_token_types {
     # adding NEW_TOKENS: add a comment here
     $fh->print(<<'END_OF_LIST');
 
-Here is a list of the token types currently used for lines of type 'CODE'.  
-For the following tokens, the "type" of a token is just the token itself.  
+Here is a list of the token types currently used for lines of type 'CODE'.
+For the following tokens, the "type" of a token is just the token itself.
 
 .. :: << >> ** && .. || // -> => += -= .= %= &= |= ^= *= <>
 ( ) <= >= == =~ !~ != ++ -- /= x=
-... **= <<= >>= &&= ||= //= <=> 
+... **= <<= >>= &&= ||= //= <=>
 , + - / * | % ! x ~ = \ ? : . < > ^ &
 
 The following additional token types are defined:
 
  type    meaning
-    b    blank (white space) 
+    b    blank (white space)
     {    indent: opening structural curly brace or square bracket or paren
          (code block, anonymous hash reference, or anonymous array reference)
     }    outdent: right structural curly brace or square bracket or paren
@@ -10692,7 +10692,7 @@ The following additional token types are defined:
     (    left non-structural paren (all but a list right of an =)
     )    right non-structural paren
     L    left non-structural curly brace (enclosing a key)
-    R    right non-structural curly brace 
+    R    right non-structural curly brace
     ;    terminal semicolon
     f    indicates a semicolon in a "for" statement
     h    here_doc operator <<
@@ -10718,9 +10718,9 @@ The following additional token types are defined:
     p    unary +
     m    unary -
     pp   pre-increment operator ++
-    mm   pre-decrement operator -- 
+    mm   pre-decrement operator --
     A    : used as attribute separator
-    
+
     Here are the '_line_type' codes used internally:
     SYSTEM         - system-specific code before hash-bang line
     CODE           - line of perl code (including comments)

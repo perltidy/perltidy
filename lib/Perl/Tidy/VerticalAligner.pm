@@ -47,15 +47,17 @@ use constant SPACE        => q{ };
 #                 sub _flush_comment_lines
 # CODE SECTION 5: Code to process groups of code lines
 #                 sub _flush_group_lines
-# CODE SECTION 6: Output Step A
+# CODE SECTION 6: Pad Signed Number Columns
+#                 sub pad_signed_number_columns
+# CODE SECTION 7: Output Step A
 #                 sub valign_output_step_A
-# CODE SECTION 7: Output Step B
+# CODE SECTION 8: Output Step B
 #                 sub valign_output_step_B
-# CODE SECTION 8: Output Step C
+# CODE SECTION 9: Output Step C
 #                 sub valign_output_step_C
-# CODE SECTION 9: Output Step D
+# CODE SECTION 10: Output Step D
 #                 sub valign_output_step_D
-# CODE SECTION 10: Summary
+# CODE SECTION 11: Summary
 #                 sub report_anything_unusual
 
 ##################################################################
@@ -4804,9 +4806,9 @@ sub align_side_comments {
     return;
 } ## end sub align_side_comments
 
-###############################
-# CODE SECTION 6: Output Step A
-###############################
+###########################################
+# CODE SECTION 6: Pad Signed Number Columns
+###########################################
 
 use constant DEBUG_VSN => 0;
 
@@ -4968,7 +4970,7 @@ sub pad_signed_field {
     # in a column of numbers.
     # Given:
     #  $rstr     = ref to string
-    #  $rstr_len = ref to length of string (could include wide chars)
+    #  $rstr_len = ref to display width of string (could include wide chars)
     #  $pos_start_number = string position of the leading digit
     #  $char_end_part1 = character at $pos_start_number - 1
     # Task: update $rstr and $rstr_len with a single space
@@ -4982,7 +4984,7 @@ sub pad_signed_field {
         my $len = length($str);
         if ( $pos_start_number >= $len ) {
             DEVEL_MODE && Fault(<<EOM);
-Expection position '$pos_start_number' < length $len of string '$str' 
+Expection position '$pos_start_number' < length $len of string '$str'
 EOM
             return;
         }
@@ -5032,6 +5034,12 @@ sub split_field {
     #                     = 0 if cannot find
     #   $char_end_part1 = the character preceding $pos_start_number
     #   $ch_opening     = the preceding opening container character, if any
+
+    # We have to find where the possible number starts in this field.
+    # This is a tricky operation because we are flying a little blind here,
+    # without the help of the original tokenization. The main danger would
+    # be to fall into some kind of quoted text which tricks the logic.
+    # The safe thing to do is return @fail if anything does not look right.
 
     my $pos_start_number = 0;
     my $char_end_part1   = EMPTY_STRING;
@@ -5522,6 +5530,10 @@ sub pad_signed_number_columns {
     return;
 } ## end sub pad_signed_number_columns
 
+###############################
+# CODE SECTION 7: Output Step A
+###############################
+
 sub valign_output_step_A {
 
     #------------------------------------------------------------
@@ -5697,7 +5709,7 @@ sub get_output_line_number {
 } ## end sub get_output_line_number
 
 ###############################
-# CODE SECTION 7: Output Step B
+# CODE SECTION 8: Output Step B
 ###############################
 
 {    ## closure for sub valign_output_step_B
@@ -6218,7 +6230,7 @@ sub get_output_line_number {
 }
 
 ###############################
-# CODE SECTION 8: Output Step C
+# CODE SECTION 9: Output Step C
 ###############################
 
 {    ## closure for sub valign_output_step_C
@@ -6352,7 +6364,7 @@ sub get_output_line_number {
 }
 
 ###############################
-# CODE SECTION 9: Output Step D
+# CODE SECTION 10: Output Step D
 ###############################
 
 sub add_leading_tabs {
@@ -6473,7 +6485,7 @@ sub valign_output_step_D {
 } ## end sub valign_output_step_D
 
 ##########################
-# CODE SECTION 10: Summary
+# CODE SECTION 11: Summary
 ##########################
 
 sub report_anything_unusual {

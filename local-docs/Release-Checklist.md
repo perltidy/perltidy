@@ -25,7 +25,7 @@
 - review/update the CHANGES.md file
 - be sure RPerl still works:
   - build and install the latest Perl::Tidy on development machine
-  - install the latest RPerl [currently RPerl-5.002000]
+  - install the latest RPerl [currently RPerl-7.000000]
   - perl Makefile.PL, make, make test - should complete ok
 - Review code, especially any ## commented out sections and "FIXME's"
 - run perlver on all modules to check minimum version; should be 5.8.0
