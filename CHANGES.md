@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2023 09 12.13
+## 2024 02 02
 
     - Added --valign-signed-numbers, or -vsn. This improves the appearance
       of columns of numbers by aligning leading algebraic signs.  For example:
@@ -61,7 +61,6 @@
 
       produces a file with lines which look something like
 
-         ...
          1778:u: my $input_file
          6089:r: my $j: reused - see line 6076
 
@@ -73,14 +72,13 @@
         note          - an optional note referring to another line
 
       The issue is indicated by a letter which may be one of:
+
         r: reused variable name
         s: sigil change but reused bareword
         p: lexical variable with scope in multiple packages
         u: unused variable
 
-      This is very useful for locating problem areas and even bugs in code.
-      As an example, after it was developed it was applied to the perltidy
-      source code and it revealed two bugs; fortunately both were benign.
+      This is very useful for locating problem areas and bugs in code.
 
     - Added a related flag --warn-variable-types=string (-wvt=string) option
       to warn if certain types of variables are found in a script. The types
@@ -97,12 +95,11 @@
       The manual has further details.
 
     - All parameters taking integer values are now checked for
-      out-of-range values before processing starts. When a
-      minimum or maximum range is exceeded, the new default
-      behavior is to write a warning message, reset the
-      value to its default setting, and continue.  If this default
-      behavior causes a problem, it can be changed with the new
-      parameter B<--integer-range-check=n>, or B<-irc=n>, as follows:
+      out-of-range values before processing starts. When a maximum or
+      maximum range is exceeded, the new default behavior is to write a
+      warning message, reset the value to its default setting, and continue.
+      This default behavior can be changed with the new parameter
+      --integer-range-check=n, or -irc=n, as follows:
 
         n=0  skip check completely (for stress-testing perltidy only)
         n=1  reset bad values to defaults but do not issue a warning
@@ -169,8 +166,8 @@
     - The -DEBUG option no longer automatically also writes a .LOG file.
       Use --show-options if the .LOG file is needed.
 
-    - The run time of this version with all new options in use is no
-      greater than the previous version thanks to optimization work.
+    - The run time of this version with all new options in use is no greater
+      than that of the previous version thanks to optimization work.
 
 ## 2023 09 12
 

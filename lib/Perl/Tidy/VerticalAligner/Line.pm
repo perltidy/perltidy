@@ -10,7 +10,7 @@ package Perl::Tidy::VerticalAligner::Line;
 use strict;
 use warnings;
 
-our $VERSION = '20230912.13';
+our $VERSION = '20240202';
 use English qw( -no_match_vars );
 
 sub AUTOLOAD {
@@ -33,6 +33,11 @@ This error is probably due to a recent programming change
 EOM
     exit 1;
 } ## end sub AUTOLOAD
+
+sub DESTROY {
+
+    # required to avoid call to AUTOLOAD in some versions of perl
+}
 
 # Constructor may be called as a class method
 sub new {
@@ -66,6 +71,8 @@ sub current_field_width {
 sub increase_field_width {
 
     my ( $self, $j, $pad ) = @_;
+
+    # Increase the width of alignment field $j by $pad spaces
     my $jmax = $self->{jmax};
     foreach ( $j .. $jmax ) {
         my $alignment = $self->{ralignments}->[$_];
