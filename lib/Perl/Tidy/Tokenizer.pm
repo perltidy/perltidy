@@ -1925,12 +1925,11 @@ sub prepare_for_a_new_file {
 
     # TV2: refs to ARRAYS for processing one LINE
     # Re-initialized on each call.
-    my $routput_token_list     = [];    # stack of output token indexes
-    my $routput_token_type     = [];    # token types
-    my $routput_block_type     = [];    # types of code block
-    my $routput_container_type = [];    # paren types, such as if, elsif, ..
-    my $routput_type_sequence  = [];    # nesting sequential number
-    my $routput_indent_flag    = [];    #
+    my $routput_token_list    = [];    # stack of output token indexes
+    my $routput_token_type    = [];    # token types
+    my $routput_block_type    = [];    # types of code block
+    my $routput_type_sequence = [];    # nesting sequential number
+    my $routput_indent_flag   = [];    #
 
     # TV3: SCALARS for quote variables.  These are initialized with a
     # subroutine call and continually updated as lines are processed.
@@ -2051,9 +2050,9 @@ sub prepare_for_a_new_file {
         ];
 
         my $rTV2 = [
-            $routput_token_list,    $routput_token_type,
-            $routput_block_type,    $routput_container_type,
-            $routput_type_sequence, $routput_indent_flag,
+            $routput_token_list, $routput_token_type,
+            $routput_block_type, $routput_type_sequence,
+            $routput_indent_flag,
         ];
 
         my $rTV3 = [
@@ -2131,9 +2130,9 @@ sub prepare_for_a_new_file {
         ) = @{$rTV1};
 
         (
-            $routput_token_list,    $routput_token_type,
-            $routput_block_type,    $routput_container_type,
-            $routput_type_sequence, $routput_indent_flag,
+            $routput_token_list, $routput_token_type,
+            $routput_block_type, $routput_type_sequence,
+            $routput_indent_flag,
         ) = @{$rTV2};
 
         (
@@ -5410,11 +5409,10 @@ EOM
         $self->[_line_of_text_] = $input_line;
 
         # re-initialize for the main loop
-        $routput_token_list     = [];    # stack of output token indexes
-        $routput_token_type     = [];    # token types
-        $routput_block_type     = [];    # types of code block
-        $routput_container_type = [];    # paren types, such as if, elsif, ..
-        $routput_type_sequence  = [];    # nesting sequential number
+        $routput_token_list    = [];    # stack of output token indexes
+        $routput_token_type    = [];    # token types
+        $routput_block_type    = [];    # types of code block
+        $routput_type_sequence = [];    # nesting sequential number
 
         $rhere_target_list = [];
 
@@ -5482,11 +5480,10 @@ EOM
         # initialize for main loop
         if (0) { #<<< this is not necessary
         foreach my $ii ( 0 .. $max_token_index + 3 ) {
-            $routput_token_type->[$ii]     = EMPTY_STRING;
-            $routput_block_type->[$ii]     = EMPTY_STRING;
-            $routput_container_type->[$ii] = EMPTY_STRING;
-            $routput_type_sequence->[$ii]  = EMPTY_STRING;
-            $routput_indent_flag->[$ii]    = 0;
+            $routput_token_type->[$ii]    = EMPTY_STRING;
+            $routput_block_type->[$ii]    = EMPTY_STRING;
+            $routput_type_sequence->[$ii] = EMPTY_STRING;
+            $routput_indent_flag->[$ii]   = 0;
         }
         }
 
@@ -5570,11 +5567,10 @@ EOM
 
             # store previous token type
             if ( $i_tok >= 0 ) {
-                $routput_token_type->[$i_tok]     = $type;
-                $routput_block_type->[$i_tok]     = $block_type;
-                $routput_container_type->[$i_tok] = $container_type;
-                $routput_type_sequence->[$i_tok]  = $type_sequence;
-                $routput_indent_flag->[$i_tok]    = $indent_flag;
+                $routput_token_type->[$i_tok]    = $type;
+                $routput_block_type->[$i_tok]    = $block_type;
+                $routput_type_sequence->[$i_tok] = $type_sequence;
+                $routput_indent_flag->[$i_tok]   = $indent_flag;
             }
 
             # get the next pre-token and type
@@ -5832,11 +5828,10 @@ EOM
 
         # Store the final token
         if ( $i_tok >= 0 ) {
-            $routput_token_type->[$i_tok]     = $type;
-            $routput_block_type->[$i_tok]     = $block_type;
-            $routput_container_type->[$i_tok] = $container_type;
-            $routput_type_sequence->[$i_tok]  = $type_sequence;
-            $routput_indent_flag->[$i_tok]    = $indent_flag;
+            $routput_token_type->[$i_tok]    = $type;
+            $routput_block_type->[$i_tok]    = $block_type;
+            $routput_type_sequence->[$i_tok] = $type_sequence;
+            $routput_indent_flag->[$i_tok]   = $indent_flag;
         }
 
         # Remember last nonblank values
