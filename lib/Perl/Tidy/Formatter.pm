@@ -3929,10 +3929,16 @@ EOM
 
         my $tokenr_leading_ch    = substr( $tokenr, 0, 1 );
         my $tokenr_leading_ch2   = substr( $tokenr, 0, 2 );
-        my $tokenr_is_bareword   = $tokenr =~ /^[^\d\W]/;
         my $tokenr_is_open_paren = $tokenr eq '(';
         my $token_joined         = $tokenl . $tokenr;
         my $tokenl_is_dash       = $tokenl eq '-';
+        my $tokenr_is_bareword   = ord($tokenr_leading_ch) > ORD_PRINTABLE_MAX
+
+          # always correct but slow
+          ? $tokenr =~ /^[^\d\W]/
+
+          # fast but ascii only
+          : ( $tokenr_leading_ch =~ tr/a-zA-Z_/a-zA-Z_/ );
 
         #-------------------
         # Must do full check
