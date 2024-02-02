@@ -20257,16 +20257,15 @@ EOM
 
             # gather info needed by sub break_long_lines
             if ( $type_sequence_to_go[$i] ) {
-                my $seqno = $type_sequence_to_go[$i];
-                my $token = $tokens_to_go[$i];
 
                 # remember indexes of any tokens controlling xci
                 # in this batch. This list is needed by sub undo_ci.
+                my $seqno = $type_sequence_to_go[$i];
                 if ( $self->[_ris_seqno_controlling_ci_]->{$seqno} ) {
                     push @ix_seqno_controlling_ci, $i;
                 }
 
-                if ( $is_opening_sequence_token{$token} ) {
+                if ( $is_opening_sequence_token{ $tokens_to_go[$i] } ) {
                     if ( $self->[_rbreak_container_]->{$seqno} ) {
                         $self->set_forced_breakpoint($i);
                     }
