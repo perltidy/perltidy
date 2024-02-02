@@ -6029,28 +6029,6 @@ EOM
         return;
     } ## end sub check_sequence_numbers
 
-    sub store_block_type {
-        my ( $self, $block_type, $seqno ) = @_;
-
-        return if ( !$block_type );
-
-        # Save the type of a block in a hash using sequence number as key
-        $self->[_rblock_type_of_seqno_]->{$seqno} = $block_type;
-
-        # and save named subs and anynymous subs in separate hashes so that
-        # we only have to do the pattern tests once.
-        if ( $matches_ASUB{$block_type} ) {
-            $self->[_ris_asub_block_]->{$seqno} = 1;
-        }
-        elsif ( $block_type =~ /$SUB_PATTERN/ ) {
-            $self->[_ris_sub_block_]->{$seqno} = 1;
-        }
-        else {
-            # not a sub type
-        }
-        return;
-    } ## end sub store_block_type
-
     # hash keys which are common to old and new line_of_tokens
     my @common_keys;
 
@@ -6236,8 +6214,28 @@ EOM
                     # Save a sequenced block type at its opening token.
                     # Note that unsequenced block types can occur in
                     # unbalanced code with errors but are ignored here.
-                    $self->store_block_type( $rblock_type->[$j], $seqno )
-                      if ( $rblock_type->[$j] );
+                    if ( $rblock_type->[$j] ) {
+                        my $block_type = $rblock_type->[$j];
+
+                        # Store the block type with sequence number as hash key
+                        $self->[_rblock_type_of_seqno_]->{$seqno} = $block_type;
+
+                        # and save anynymous subs and named subs in separate
+                        # hashes to avoid future pattern tests
+                        if ( $matches_ASUB{$block_type} ) {
+                            $self->[_ris_asub_block_]->{$seqno} = 1;
+                        }
+
+                        # The pre-check on space speeds up this test:
+                        elsif ($block_type =~ /\s/
+                            && $block_type =~ /$SUB_PATTERN/ )
+                        {
+                            $self->[_ris_sub_block_]->{$seqno} = 1;
+                        }
+                        else {
+                            # not a sub type
+                        }
+                    }
                 }
                 elsif ( $is_closing_token{$token} ) {
 
