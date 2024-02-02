@@ -15,10 +15,10 @@
 # warn if any of the 'unusual' variables are seen
 --warn-variable-types='*'
 
-# user define subs must have args in parens
+# user-defined subs must have args in parens
 --want-call-parens='&'
 
-# add comment with sub name to closing sub brace
+# add closing side comments for named subs
 --closing-side-comments
 --closing-side-comment-list='sub'
 
