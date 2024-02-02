@@ -3,19 +3,6 @@
 This file only lists open bugs.  For bugs which have been fixed, see the
 ChangeLog.
 
-## The --extrude and --mangle options can produce code with syntax errors
-
-The --extrude tries to put as many newlines in the formatted code as possible.
-The --mangle tries to remove as many newlines as possible.  These options are
-very useful for stress testing perltidy (and Perl) but not so much for normal
-formatting.  Occasionally they will produce code which Perl considers to have a
-syntax error.  These problems often involve code where Perl is having to guess
-the tokenization based on whitespace.  The given/when and switch/case
-statements are also particularly vulnerable to unusual line breaks and
-whitespace.  This type of error should not normally occur in practice, but if
-it does it should be easy to fix the problem by rerunning perltidy with more
-normal parameters or by manually changing whitespace or newlines.
-
 ## The Pod:Html module has some bugs
 
 Perltidy uses the module Pod::Html, and for the most part it works very well
