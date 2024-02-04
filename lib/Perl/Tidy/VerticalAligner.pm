@@ -849,9 +849,7 @@ sub valign_input {
 
         # VSN PATCH for a single number, part 1.
         my $is_numeric =
-          (      $jmax == 0
-              && $rOpts_valign_signed_numbers
-              && $rpatterns->[0] eq 'n,' );
+          $rOpts_valign_signed_numbers && $rpatterns->[0] eq 'n,';
 
         if (   !$is_numeric
             && @{$rgroup_lines}
@@ -886,8 +884,10 @@ sub valign_input {
         }
 
         # just write this line directly if no current group, no side comment,
-        # and no space recovery is needed.
+        # and no space recovery is needed,
+        # and not numeric - VSN PATCH for a single number, part 4.
         if (   !@{$rgroup_lines}
+            && !$is_numeric
             && !get_recoverable_spaces($indentation) )
         {
 
@@ -1995,11 +1995,23 @@ EOM
                 # There are no matching tokens, so now check side comments.
                 # Programming note: accessing arrays with index -1 is
                 # risky in Perl, but we have verified there is at least one
-                # line in the group and that there is at least one field.
+                # line in the group and that there is at least one field,
                 my $prev_comment =
                   $rall_lines->[ $jline - 1 ]->{'rfields'}->[-1];
                 my $side_comment = $new_line->{'rfields'}->[-1];
-                end_rgroup(-1) if ( !$side_comment || !$prev_comment );
+
+                # do not end group if both lines have side comments
+                if ( !$side_comment || !$prev_comment ) {
+
+                    # Otherwise - VSN PATCH for a single number:
+                    # - do not end group if numeric and no side comment, or
+                    # - end if !numeric or side comment
+                    my $pat        = $new_line->{'rpatterns'}->[0];
+                    my $is_numeric = $rOpts_valign_signed_numbers
+                      && ( $pat eq 'n,'
+                        || $pat eq 'n,b' );
+                    end_rgroup(-1) if ( !$is_numeric || $side_comment );
+                }
             }
             else {
                 ##ok: continue
@@ -2128,7 +2140,14 @@ sub two_line_pad {
         foreach my $i ( 0 .. $imax_min ) {
             my $pat   = $rpatterns->[$i];
             my $pat_m = $rpatterns_m->[$i];
-            if ( $pat ne $pat_m ) { $patterns_match = 0; last }
+
+            # VSN PATCH: allow numbers to match quotes
+            if ( $pat_m ne $pat && length($pat_m) eq length($pat) ) {
+                $pat   =~ tr/n/Q/;
+                $pat_m =~ tr/n/Q/;
+            }
+
+            if ( $pat ne $pat_m ) { $patterns_match = 0; last; }
         }
     }
 
@@ -3378,6 +3397,12 @@ sub match_line_pairs {
                     my $pat   = $rpatterns->[$i];
                     my $pat_m = $rpatterns_m->[$i];
 
+                    # VSN PATCH: allow numbers to match quotes
+                    if ( $pat_m ne $pat ) {
+                        $pat   =~ tr/n/Q/;
+                        $pat_m =~ tr/n/Q/;
+                    }
+
                     # If patterns don't match, we have to be careful...
                     if ( $pat_m ne $pat ) {
                         my $pad =
@@ -4243,7 +4268,13 @@ sub Dump_tree_groups {
             else {
                 $jfirst_bad = $j unless defined($jfirst_bad);
             }
-            if ( $rpatterns_0->[$j] ne $rpatterns_1->[$j] ) {
+            my $pat_0 = $rpatterns_0->[$j];
+            my $pat_1 = $rpatterns_1->[$j];
+            if ( $pat_0 ne $pat_1 && length($pat_0) eq length($pat_1) ) {
+                $pat_0 =~ tr/n/Q/;
+                $pat_1 =~ tr/n/Q/;
+            }
+            if ( $pat_0 ne $pat_1 ) {
 
                 # Flag this as a marginal match since patterns differ.
                 # Normally, we will not allow just two lines to match if
@@ -4819,9 +4850,12 @@ my %is_opening_token;
 
 BEGIN {
 
-    # These leading patterns can match a signed number
-    # here 'Q' can be a number, 'b'=blank, '}'=one of )]}
-    my @q = ( 'Q,', 'Q,b', 'Qb', 'Qb}', 'Qb},', 'Q},', 'Q};' );
+    # PATTERNS: A pattern is basically the concatenation of all token types in
+    # the field, with keywords converted to their actual text.  The formatter
+    # has changed things like 'print' to 'priNt' so that all 'n's are numbers.
+    # The following patterns 'n' can match a signed number of interest.
+    # Thus 'n'=a signed or unsigned number, 'b'=a space, '}'=one of ) ] }
+    my @q = ( 'n,', 'n,b', 'nb', 'nb}', 'nb},', 'n},', 'n};' );
 
     @is_leading_sign_pattern{@q} = (1) x scalar(@q);
 
@@ -4885,8 +4919,8 @@ EOM
 
     # Form groups of unsigned numbers from the list of signed numbers.  Exclude
     # groups with more than about 20 consecutive numbers.  Little visual
-    # improvement is gained by padding more than this, and this avoids large
-    # numbers of differences in a file when a single line is changed.
+    # improvement is gained by padding more than this, and this avoids
+    # large numbers of differences in a file when a single line is changed.
     my @unsigned_subgroups;
     my $ix_u             = $rsigned_lines->[0];
     my $ix_last_negative = $ix_first - 1;
@@ -5026,19 +5060,16 @@ sub split_field {
     my ( $pat1, $field, $pattern ) = @_;
 
     # Given;
-    #   $pat1    = first part of a pattern before a 'Q'
+    #   $pat1    = first part of a pattern before a numeric type 'n'
     #   $field   = corresponding text field
     #   $pattern = full pattern
     # Return:
-    #   $pos_start_number = positiion in $field where the Q should start
+    #   $pos_start_number = positiion in $field where the number should start
     #                     = 0 if cannot find
     #   $char_end_part1 = the character preceding $pos_start_number
     #   $ch_opening     = the preceding opening container character, if any
 
     # We have to find where the possible number starts in this field.
-    # This is a tricky operation because we are flying a little blind here,
-    # without the help of the original tokenization. The main danger would
-    # be to fall into some kind of quoted text which tricks the logic.
     # The safe thing to do is return @fail if anything does not look right.
 
     my $pos_start_number = 0;
@@ -5046,11 +5077,11 @@ sub split_field {
     my $ch_opening       = EMPTY_STRING;
     my @fail             = ( $pos_start_number, $char_end_part1, $ch_opening );
 
-    # Be sure there is just one 'Q' in the pattern. Multiple Q terms can occur
-    # when fields are joined, but since we are jumping into the middle of a
-    # field it is safest not to try to handle them.
-    my $Q_count = ( $pattern =~ tr/Q/Q/ );
-    if ( $Q_count && $Q_count > 1 ) {
+    # Be sure there is just 'n' in the pattern. Multiple terms can occur
+    # when fields are joined, but since we are jumping into the middle
+    # of a field it is safest not to try to handle them.
+    my $n_count = ( $pattern =~ tr/n/n/ );
+    if ( $n_count && $n_count > 1 ) {
         return @fail;
     }
 
@@ -5160,7 +5191,7 @@ sub field_matches_end_pattern {
     my $next_char   = substr( $pat2, 1, 1 );
     my $field2_trim = EMPTY_STRING;
 
-    # if pattern is one of: 'Q,', 'Q,b'
+    # if pattern is one of: 'n,', 'n,b'
     if ( $next_char eq ',' ) {
         my $icomma = index( $field2, ',' );
         if ( $icomma >= 0 ) {
@@ -5168,7 +5199,7 @@ sub field_matches_end_pattern {
         }
     }
 
-    # if pattern is one of: 'Qb', 'Qb}', 'Qb},'
+    # if pattern is one of: 'nb', 'nb}', 'nb},'
     elsif ( $next_char eq 'b' ) {
         my $ispace = index( $field2, SPACE );
         if ( $ispace >= 0 ) {
@@ -5176,7 +5207,7 @@ sub field_matches_end_pattern {
         }
     }
 
-    # if pattern is one of 'Q},', 'Q};'
+    # if pattern is one of 'n},', 'n};'
     elsif ( $next_char eq '}' ) {
         if ( $field2 =~ /^([^\)\}\]]+)/ ) {
             $field2_trim = $1;
@@ -5234,13 +5265,11 @@ sub pad_signed_number_columns {
     # which have been broken into patterns which are convenient for the
     # vertical aligner, but we no longer have the original tokenization
     # which would have indicated the precise bounds of numbers.  So we
-    # have to procede very carefully with lots of checks.
-
-    # A current limitation is that lines with just a single column of numbers
-    # cannot be processed because the vertical aligner does not currently form
-    # them them into groups (since they are otherwise already aligned). This
-    # situation is rare, but could be fixed with a future coding change
-    # upstream.
+    # have to procede very carefully with lots of checks. There are
+    # more checks than really necessary now because originally numbers
+    # and quotes were both indicated with pattern 'Q'. But now numbers are
+    # uniquely marked as pattern 'n', so there is less risk of an error.
+    # The extra checks take very little time so they are retained.
 
     return unless ($rOpts_valign_signed_numbers);
 
@@ -5286,8 +5315,6 @@ sub pad_signed_number_columns {
 
             # Try to keep the end data column running; test case 'rfc.in'
             # The last item in a list will still need a trailing comma.
-            # VSN PATCH for a single number, part 3: change >= to >=0 and
-            # check for a leading digit
             my $jcol = $jmax - 1;
             if ( $jcol >= 0 && $column_info{$jcol} ) {
                 my $alignment = $alignments[$jcol];
@@ -5345,9 +5372,6 @@ sub pad_signed_number_columns {
             my $field   = $rfields->[$jcol];
             my $pattern = $rpatterns->[$jcol];
 
-            # VSN PATCH for single number part 2
-            if ( $pattern eq 'n,' ) { $pattern = 'Q,' }
-
             my $is_signed_number   = 0;
             my $is_unsigned_number = 0;
 
@@ -5365,11 +5389,11 @@ sub pad_signed_number_columns {
 
             if ( $field_ok && $pattern ) {
 
-                # Split the pattern at the first 'Q' (a quote or number):
-                # $pat1 = pattern before the 'Q' (if any)
-                # $pat2 = pattern starting at the 'Q'
+                # Split the pattern at the first 'n'
+                # $pat1 = pattern before the 'n' (if any)
+                # $pat2 = pattern starting at the 'n'
                 my ( $pat1, $pat2 );
-                my $posq = index( $pattern, 'Q' );
+                my $posq = index( $pattern, 'n' );
                 if ( $posq < 0 ) {
                     $field_ok = 0;
                 }

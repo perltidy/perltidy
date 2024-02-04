@@ -31813,6 +31813,11 @@ sub xlp_tweak {
                     # alignment.
                     $tok_fix = $keyword_map{$tok_fix}
                       if ( defined( $keyword_map{$tok_fix} ) );
+
+                    # VSN PATCH: all 'n' chars in a pattern must be for token
+                    # type 'n' (number). i.e. convert 'print' to 'priNt'
+                    $tok_fix =~ tr/n/N/;
+
                     $patterns[$j] .= $tok_fix;
                 }
 
@@ -31861,8 +31866,10 @@ sub xlp_tweak {
                         $type_fix = 'Q';
                     }
 
-                    # patch to make numbers and quotes align
-                    if ( $type eq 'n' ) { $type_fix = 'Q' }
+                    # VSN PATCH: no longer changing 'n' to 'Q' here; this
+                    # will be handled in the vertical aligner and allow
+                    # the aligner to find numbers more efficiently.
+                    ##: if ( $type eq 'n' ) { $type_fix = 'Q' }
 
                     $patterns[$j] .= $type_fix;
                 }
