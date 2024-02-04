@@ -1092,10 +1092,29 @@ sub show_indentation_table {
     shift @{$rhistory_level_diff};
     shift @{$rhistory_anchor_point};
 
-    # Ignore an ending non-anchor point
+    # Remove dubious points at an anchor point = 2 and beyond
+    # These can occur when non-indenting braces are used
     my $num_his = @{$rhistory_level_diff};
+    foreach my $i ( 0 .. $num_his - 1 ) {
+        if ( $rhistory_anchor_point->[$i] == 2 ) {
+            $num_his = $i;
+            last;
+        }
+    }
+    return if ( $num_his <= 1 );
+
+    # Ignore an ending non-anchor point
     if ( !$rhistory_anchor_point->[-1] ) {
         $num_his -= 1;
+    }
+
+    # Ignore an ending point which is the same as the previous point
+    if ( $num_his > 1 ) {
+        if ( $rhistory_level_diff->[ $num_his - 1 ] ==
+            $rhistory_level_diff->[ $num_his - 2 ] )
+        {
+            $num_his -= 1;
+        }
     }
 
     # skip if the table does not have at least 2 points to pinpoint an error
@@ -6199,10 +6218,19 @@ EOM
 
                 if ( $rhistory_level_diff->[-1] != $level_diff ) {
 
+                    # Patch for non-indenting-braces: if we guess zero and
+                    # match before all non-indenting braces have been found,
+                    # it means that we would need negative indentation to
+                    # match if/when the brace is found. So we have a problem
+                    # from here on. We indicate this with a value 2 instead
+                    # of 1 as a signal to stop outputting the table here.
+                    my $anchor = 1;
+                    if ( $guess == 0 && $adjust > 0 ) { $anchor = 2 }
+
                     # add an anchor point
                     push @{$rhistory_level_diff},   $level_diff;
                     push @{$rhistory_line_number},  $input_line_number;
-                    push @{$rhistory_anchor_point}, 1;
+                    push @{$rhistory_anchor_point}, $anchor;
                 }
                 else {
 
