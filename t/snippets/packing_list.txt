@@ -407,6 +407,10 @@
 ../snippets29.t	vsn.def
 ../snippets29.t	vsn.vsn1
 ../snippets29.t	vsn.vsn2
+../snippets29.t	dia.def
+../snippets29.t	dia.dia1
+../snippets29.t	dia.dia2
+../snippets29.t	dia.dia3
 ../snippets3.t	ce_wn1.ce_wn
 ../snippets3.t	ce_wn1.def
 ../snippets3.t	colin.colin

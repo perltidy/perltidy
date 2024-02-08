@@ -5,6 +5,10 @@
 #2 vsn.def
 #3 vsn.vsn1
 #4 vsn.vsn2
+#5 dia.def
+#6 dia.dia1
+#7 dia.dia2
+#8 dia.dia3
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -22,7 +26,13 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
-        'def'    => "",
+        'def'  => "",
+        'dia1' => "-dia",
+        'dia2' => "-aia",
+        'dia3' => <<'----------',
+-dia -aia -iac=2
+-ias='][ }->{ ]->{ }->['
+----------
         'git125' => "-ssp=0",
         'vsn1'   => <<'----------',
 -vsn
@@ -39,6 +49,21 @@ BEGIN {
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'dia' => <<'----------',
+return $this->{'content'}[$row][$col];
+return $this->{'content'}->[$row]->[$col];
+return $self->{'commandline'}->{'arg_list'}->[0]->[0]->{'hostgroups'};
+return $self->{'commandline'}{'arg_list'}[0][0]{'hostgroups'};
+$names->{'strings'}[ $featureEntry->{'settings'}{$setting} ][1][0]{0};
+$names->{'strings'}->[ $featureEntry->{'settings'}->{$setting} ]->[1]->[0]->{0};
+$this->{'hline_color'}[ $last_drawn_row + 1 ][$col];
+$this->{'hline_color'}->[ $last_drawn_row + 1 ]->[$col];
+@{ $table{$file}{$subname}{$pack}{ $type . $name }->{$event} };
+$tagslib->{ $fields[$x_i]->tag() }{ $subf[$i][0] }{tab};
+$m2_results{ $modlog->{uid} }->{m2_count}{ $_->{uid} }++;
+$self->_get_meta_data_hash_ref()->{ $p_object->get_key() }->[$p_offset];
+----------
 
         'git125' => <<'----------',
 sub Add ( $x, $y );
@@ -130,6 +155,82 @@ $s->drawLine( 0,   10 );
 $s->drawLine( -35, 0 );
 $s->drawLine( 0,   -10 );
 #4...........
+        },
+
+        'dia.def' => {
+            source => "dia",
+            params => "def",
+            expect => <<'#5...........',
+return $this->{'content'}[$row][$col];
+return $this->{'content'}->[$row]->[$col];
+return $self->{'commandline'}->{'arg_list'}->[0]->[0]->{'hostgroups'};
+return $self->{'commandline'}{'arg_list'}[0][0]{'hostgroups'};
+$names->{'strings'}[ $featureEntry->{'settings'}{$setting} ][1][0]{0};
+$names->{'strings'}->[ $featureEntry->{'settings'}->{$setting} ]->[1]->[0]->{0};
+$this->{'hline_color'}[ $last_drawn_row + 1 ][$col];
+$this->{'hline_color'}->[ $last_drawn_row + 1 ]->[$col];
+@{ $table{$file}{$subname}{$pack}{ $type . $name }->{$event} };
+$tagslib->{ $fields[$x_i]->tag() }{ $subf[$i][0] }{tab};
+$m2_results{ $modlog->{uid} }->{m2_count}{ $_->{uid} }++;
+$self->_get_meta_data_hash_ref()->{ $p_object->get_key() }->[$p_offset];
+#5...........
+        },
+
+        'dia.dia1' => {
+            source => "dia",
+            params => "dia1",
+            expect => <<'#6...........',
+return $this->{'content'}[$row][$col];
+return $this->{'content'}[$row][$col];
+return $self->{'commandline'}{'arg_list'}[0][0]{'hostgroups'};
+return $self->{'commandline'}{'arg_list'}[0][0]{'hostgroups'};
+$names->{'strings'}[ $featureEntry->{'settings'}{$setting} ][1][0]{0};
+$names->{'strings'}[ $featureEntry->{'settings'}{$setting} ]->[1][0]{0};
+$this->{'hline_color'}[ $last_drawn_row + 1 ][$col];
+$this->{'hline_color'}[ $last_drawn_row + 1 ][$col];
+@{ $table{$file}{$subname}{$pack}{ $type . $name }{$event} };
+$tagslib->{ $fields[$x_i]->tag() }{ $subf[$i][0] }{tab};
+$m2_results{ $modlog->{uid} }->{m2_count}{ $_->{uid} }++;
+$self->_get_meta_data_hash_ref()->{ $p_object->get_key() }->[$p_offset];
+#6...........
+        },
+
+        'dia.dia2' => {
+            source => "dia",
+            params => "dia2",
+            expect => <<'#7...........',
+return $this->{'content'}->[$row]->[$col];
+return $this->{'content'}->[$row]->[$col];
+return $self->{'commandline'}->{'arg_list'}->[0]->[0]->{'hostgroups'};
+return $self->{'commandline'}->{'arg_list'}->[0]->[0]->{'hostgroups'};
+$names->{'strings'}->[ $featureEntry->{'settings'}->{$setting} ][1]->[0]->{0};
+$names->{'strings'}->[ $featureEntry->{'settings'}->{$setting} ]->[1]->[0]->{0};
+$this->{'hline_color'}->[ $last_drawn_row + 1 ]->[$col];
+$this->{'hline_color'}->[ $last_drawn_row + 1 ]->[$col];
+@{ $table{$file}->{$subname}->{$pack}->{ $type . $name }->{$event} };
+$tagslib->{ $fields[$x_i]->tag() }{ $subf[$i]->[0] }{tab};
+$m2_results{ $modlog->{uid} }->{m2_count}->{ $_->{uid} }++;
+$self->_get_meta_data_hash_ref()->{ $p_object->get_key() }->[$p_offset];
+#7...........
+        },
+
+        'dia.dia3' => {
+            source => "dia",
+            params => "dia3",
+            expect => <<'#8...........',
+return $this->{'content'}->[$row][$col];
+return $this->{'content'}->[$row][$col];
+return $self->{'commandline'}->{'arg_list'}->[0][0]->{'hostgroups'};
+return $self->{'commandline'}->{'arg_list'}->[0][0]->{'hostgroups'};
+$names->{'strings'}->[ $featureEntry->{'settings'}->{$setting} ][1][0]->{0};
+$names->{'strings'}->[ $featureEntry->{'settings'}->{$setting} ][1][0]->{0};
+$this->{'hline_color'}->[ $last_drawn_row + 1 ][$col];
+$this->{'hline_color'}->[ $last_drawn_row + 1 ][$col];
+@{ $table{$file}->{$subname}->{$pack}->{ $type . $name }->{$event} };
+$tagslib->{ $fields[$x_i]->tag() }->{ $subf[$i][0] }->{tab};
+$m2_results{ $modlog->{uid} }->{m2_count}->{ $_->{uid} }++;
+$self->_get_meta_data_hash_ref()->{ $p_object->get_key() }->[$p_offset];
+#8...........
         },
     };
 

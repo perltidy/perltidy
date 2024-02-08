@@ -3901,6 +3901,155 @@ commas are removed.
 
 =back
 
+=head2 Adding and Deleting Interbracket Arrows
+
+In the following expression, the arrow operator '->' between the closing and
+opening brackets of hash keys and array indexes are optional:
+
+   return $self->{'commandline'}->{'arg_list'}->[0]->[0]->{'hostgroups'};
+
+These will be called B<interbracket arrows> here, for lack of a better term.
+Perltidy will not change them by default, but they can be added or removed with
+the following parameters.
+
+=over 4
+
+=item B<-dia>,  B<--delete-interbracket-arrows>
+
+This parameter deletes interbracket arrows. Applied to the above example we have
+
+    # perltidy -dia
+    return $self->{'commandline'}{'arg_list'}[0][0]{'hostgroups'};
+
+By default this applies to all interbracket arrows, but selective deletion is possible
+with controls described below.
+
+=item B<-aia>,  B<--add-interbracket-arrows>
+
+This parameter adds interbracket arrows. Applied to the line of code above, we
+get back the original line.
+
+    # perltidy -aia
+    return $self->{'commandline'}->{'arg_list'}->[0]->[0]->{'hostgroups'};
+
+Selective changes can be made with controls described below.
+
+=item B<-ias=s>,  B<--interbracket-arrow-style=s>
+
+By default the B<-add-> and B<-delete-> parameters apply to all interbracket
+arrows.
+
+An optional style can be specified with this parameter string B<s>. In that
+case the parameters B<--add-interbracket-arrows> and
+B<--delete-interbracket-arrows> only apply where they would bring the
+formatting into agreement with the specified style. They may both be used in a
+single run if a mixed style is specified since there is no conflict.
+
+The style string B<s> gives a graphical description of the desired style. It
+lists up to four possible pairs of bracket types with an optional "cuddled"
+arrow.  For example:
+
+   -ias='][   }->{'
+
+This means no arrows are wanted between '][' but arrows should be between '}{'.
+And it means that the unlisted pairs ']{' and '}[' should remain unchanged,
+either with or without arrows.
+
+In this particular example, if the parameter B<--delete-interbracket-arrows> is
+used, then only arrows like ']->[' will be deleted, since they
+are the only ones which disagree with the style.
+
+And likewise, if B<--add-interbracket-arrows> is used, then arrows will
+only be inserted between brackets like '}{' to bring the formatting into
+conformity with the style in this example.
+
+Spaces in the string B<s> are optional.  They are ignored when the
+expression is parsed.
+
+The style corresponding to all possible arrows is
+
+      -ias=']->[ ]->{ }->[ }->{'
+
+For convenience, this may also be requested with B<-ias=1> or B<-ias='*'>.
+
+The style corresponding to no interbracket arrows is
+
+      -ias=']  [ ]  { }  [ }  {'
+
+which may also be requested with B<-ias=0>.
+
+=item B<-wia>,  B<--warn-interbracket-arrows>
+
+If this parameter is set, then a message is written to the error file in the
+following cases:
+
+=over 4
+
+=item *
+
+If an arrow is added or deleted by an add or delete command.
+
+=item *
+
+If a style is defined and an arrow would have been added or deleted if requested.
+So for example, the command
+
+   perltidy -wia -ias=']['
+
+will show where a file has arrows like ]->[' since they do not match the style,
+but no changes will be made because the delete command B<-dia> has not been
+given. And
+
+   perltidy -wia -ias=0
+
+will warn if any arrows exist, since the flag -ias=0 means that no arrows
+are wanted.
+
+=back
+
+=item B<-iac=n>,  B<--interbracket-arrow-complexity=n>
+
+This parameter makes it possible to skip adding or deleting arrows following a
+container which is complex in some sense. Three levels of complexity can be
+specified with the integer B<n>, as follows:
+
+   n=0   the contents of the left container must be a single thing (token)
+   n=1   the left container must not contain other containers [DEFAULT]
+   n=2   the left container may contain anything
+
+Some examples:
+
+    # Container                complexity
+    {'commandline'}            0 single token         OK by default
+    { $type . $name }          1 multiple tokens      OK by default
+    [ $plot{'x-axis'} - 1 ]    2 contains a container SKIPPED by default
+
+So, with the default complexity level of 1, an arrow could be added or deleted
+following the first two of these containers but not the third.
+
+=back
+
+B<Some points to consider> when working with these parameters are:
+
+=over 4
+
+=item *
+
+There are no known bugs, but this is a relatively new feature. So please
+carefully check file differences and run tests when interbracket arrows are
+added or removed.
+
+=item *
+
+For some unusual spacing parameters, it could take an extra iteration for
+the spaces between brackets to reach their final state after arrows are
+added or deleted.
+
+=item *
+
+Any comments between brackets will prevent the adding and deleting of arrows.
+
+=back
 
 =head2 Missing Else Blocks
 
@@ -4301,10 +4450,10 @@ for the previous item B<-blbs=n>.
 =item B<-bbs>,  B<--blanks-before-subs>
 
 For compatibility with previous versions, B<-bbs> or B<--blanks-before-subs>
-is equivalent to F<-blbp=1> and F<-blbs=1>.
+is equivalent to B<-blbp=1> and B<-blbs=1>.
 
 Likewise, B<-nbbs> or B<--noblanks-before-subs>
-is equivalent to F<-blbp=0> and F<-blbs=0>.
+is equivalent to B<-blbp=0> and B<-blbs=0>.
 
 =item B<-bbb>,  B<--blanks-before-blocks>
 

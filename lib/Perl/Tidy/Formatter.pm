@@ -377,6 +377,9 @@ my (
     # INITIALIZER: sub initialize_trailing_comma_rules
     %trailing_comma_rules,
 
+    # INITIALIZER: sub initialize_interbracket_arrow_style
+    %interbracket_arrow_style,
+
     # INITIALIZER: sub initialize_call_paren_style
     %call_paren_style,
 
@@ -620,6 +623,7 @@ BEGIN {
 
         _no_vertical_tightness_flags_ => $i++,
         _last_vt_type_                => $i++,
+        _rwant_arrow_before_seqno_    => $i++,
 
         _LAST_SELF_INDEX_ => $i - 1,
     };
@@ -1095,6 +1099,7 @@ sub new {
 
     $self->[_no_vertical_tightness_flags_] = 0;
     $self->[_last_vt_type_]                = 0;
+    $self->[_rwant_arrow_before_seqno_]    = {};
 
     $self->[_save_logfile_] =
       defined($logger_object) && $logger_object->get_save_logfile();
@@ -1524,6 +1529,8 @@ EOM
     initialize_line_length_vars();    # after 'initialize_global_option_vars'
 
     initialize_trailing_comma_rules();    # after 'initialize_line_length_vars'
+
+    initialize_interbracket_arrow_style();
 
     initialize_weld_nested_exclusion_rules();
 
@@ -2839,6 +2846,119 @@ EOM
 
     return;
 } ## end sub initialize_trailing_comma_rules
+
+sub initialize_interbracket_arrow_style {
+
+    # Setup hash for desired arrow style
+    %interbracket_arrow_style = ();
+
+    # and check other parameters for conflicts
+    my $name_add    = 'add-interbracket-arrows';
+    my $name_delete = 'delete-interbracket-arrows';
+    my $name_warn   = 'warn-interbracket-arrows';
+    my $name_style  = 'interbracket-arrow-style';
+
+    my $opt_add    = $rOpts->{$name_add};
+    my $opt_delete = $rOpts->{$name_delete};
+    my $opt_warn   = $rOpts->{$name_warn};
+    my $opt_style  = $rOpts->{$name_style};
+
+    if ( $opt_add && $opt_delete && !$opt_style ) {
+        Die(<<EOM);
+Cannot use both --$name_add and --$name_delete
+  unless --$name_style is defined
+EOM
+    }
+
+    return unless defined($opt_style);
+    $opt_style =~ tr/,/ /;
+    $opt_style =~ s/^\s+//;
+    $opt_style =~ s/\s+$//;
+    return unless length($opt_style);
+
+    if    ( $opt_style eq '0' ) { $opt_style = ']  [ ]  { }  [ }  {' }
+    elsif ( $opt_style eq '1' ) { $opt_style = ']->[ ]->{ }->[ }->{' }
+    elsif ( $opt_style eq '*' ) { $opt_style = ']->[ ]->{ }->[ }->{' }
+    else                        { }
+
+    # We are walking along a string such as
+    #     $opt_style=" ][  ]->{   }->[  }{ ";
+    # ignoring spaces and looking for bracket pairs with optional
+    # arrow like:   ']['  or ]->{  or }->[  or  }{
+    # The two bracket characters are the hash key and the hash value
+    # is 1 for an arrow and -1 for no arrow.
+
+    # $ch1 will hold most recent closing bracket
+    # $ch2 will hold a '->' if seen
+    my %rule_hash;
+    my ( $ch1, $ch2 );
+    my $err_msg;
+    while (1) {
+        if (
+            $opt_style =~ m{
+             \G
+               (\s+)    # 1. whitespace
+             | ([\}\]]) # 2. closing bracket
+             | (->)     # 3. arrow
+             | ([\[\{]) # 4. opening bracket
+             | (.*)     # 5. something else, error
+
+            }gcx
+          )
+        {
+            if ($1) { next }
+            if ($2) {
+                if   ( !$ch1 ) { $ch1     = $2 }
+                else           { $err_msg = "unexpected '$2'"; last }
+                next;
+            }
+            if ($3) {
+                if   ($ch1) { $ch2     = $3 }
+                else        { $err_msg = "unexpected '$3'"; last }
+                next;
+            }
+            if ($4) {
+                if ( $ch1 || $ch2 ) {
+                    my $key = $ch1 . $4;
+                    if ( !defined( $rule_hash{$key} ) ) {
+                        $rule_hash{$key} = $ch2 ? 1 : -1;
+                    }
+                    else { $err_msg = "multiple copies for '$key'"; last; }
+                    $ch1 = $ch2 = undef;
+                }
+                else { $err_msg = "unexpected '$4'"; last }
+                next;
+            }
+            if ($5) {
+                my $bad = $5;
+                if ( length($bad) > 10 ) {
+                    $bad = substr( $bad, 0, 10 ) . '...';
+                }
+                $err_msg = "confused at: '$bad'\n";
+                last;
+            }
+        }
+
+        # that's all..
+        else {
+            last;
+        }
+    }
+
+    if ($err_msg) {
+        my $pos = pos($opt_style);    # could display location
+        Die("Error parsing --$name_style: $err_msg\n");
+    }
+
+    # Copy the rule hash, converting braces to token types
+    foreach my $key ( keys %rule_hash ) {
+        my $key_fix = $key;
+        $key_fix =~ tr/{}/LR/;
+        $interbracket_arrow_style{$key_fix} = $rule_hash{$key};
+    }
+
+    return;
+} ## end sub initialize_interbracket_arrow_style
 
 sub initialize_whitespace_hashes {
 
@@ -6408,6 +6528,8 @@ EOM
 
     # Verify that the line hash does not have any unknown keys.
     $self->check_line_hashes() if (DEVEL_MODE);
+
+    $self->interbracket_arrow_check();
 
     {
         # Make a pass through all tokens, adding or deleting any whitespace as
@@ -10094,6 +10216,245 @@ sub find_non_indenting_braces {
     return;
 } ## end sub find_non_indenting_braces
 
+sub interbracket_arrow_check {
+
+    my ($self) = @_;
+
+    # Implement the options to add or delete optional arrows between brackets
+    my $rOpts_add            = $rOpts->{'add-interbracket-arrows'};
+    my $rOpts_del            = $rOpts->{'delete-interbracket-arrows'};
+    my $rOpts_warn           = $rOpts->{'warn-interbracket-arrows'};
+    my $rOpts_warn_and_style = $rOpts_warn && %interbracket_arrow_style;
+
+    return
+      unless ( $rOpts_add || $rOpts_del || $rOpts_warn_and_style );
+
+    # Method:
+    #  Loop over all opening brackets and look back for a possible arrow
+    #  and closing bracket.  If the location between brackets allows an
+    #  optional arrow, then see if one should be added or deleted.
+    #  Set a flag for sub respace_tokens which will make the change.
+
+    # Deleting examples:
+    #  $variables->{'a'}->{'b'}     $variables->{'a'}{'b'}
+    #  $variables{'a'}->{'b'}       $variables{'a'}->{'b'}
+    #  $items[1]->[4]->{red}        $items[1][4]{red}
+    #  $items{blue}->[4]->{red}     $items{blue}[4]{red}
+
+    #  Adding examples:
+    #  $variables->{'a'}{'b'}       $variables->{'a'}->{'b'}
+    #  $variables{'a'}->{'b'}       $variables{'a'}->{'b'}
+    #  $items[1][4]{red}            $items[1]->[4]->{red}
+    #  $items{blue}[4]{red}         $items{blue}->[4]->{red}
+
+    # bracket chain      ]   { }   [ ]  [
+    #                      |     |    |
+    # arrow ok?            ?     ?    ?
+
+    # The following chain rule is used to locate optional arrow locations:
+    # Scanning left to right:
+    #  -arrows can begin once we see an opening token preceded by:
+    #    - an ->, or
+    #    - a simple scalar identifier like '$href{' or '$aryref['
+    #  - Once arrows begin they may continue to the end of the bracket chain.
+
+    #   To illustrate why we just can't add and remove arrows between
+    #   ']' and '[', for example, consider
+    #   my $v1 = [ 1, 2, [ 3, 4 ] ]->[2]->[0];    # ok
+    #   my $v2 = [ 1, 2, [ 3, 4 ] ]->[2][0];      # ok, keep required arrow
+    #   my $v3 = [ 1, 2, [ 3, 4 ] ][2][0];        # Error
+
+    # We will maintain the flag for this check in the following hash:
+    my %trailing_arrow_ok_by_seqno;
+
+    my $rLL = $self->[_rLL_];
+    return unless ( defined($rLL) && @{$rLL} );
+    my $K_opening_container = $self->[_K_opening_container_];
+    my $K_closing_container = $self->[_K_closing_container_];
+
+    my @lno_del;
+    my @lno_add;
+
+    my $warn = sub {
+
+        # write a warning on changes made or needed if -wia is set
+        my ( $rlno_list, $first_word ) = @_;
+        my $str;
+        my $num_changes = @{$rlno_list};
+        my @unique_lno  = do {
+            my %seen;
+            grep { !$seen{$_}++ } @{$rlno_list};
+        };
+        my $num_lno = @unique_lno;
+        my $num_lim = 10;
+        if ( $num_lno <= $num_lim ) {
+            $str = join( SPACE, @unique_lno );
+        }
+        else {
+            $str = join( SPACE, @unique_lno[ 0 .. $num_lim - 1 ] ) . " ...";
+        }
+        my $ess1 = $num_changes == 1 ? EMPTY_STRING : 's';
+        my $ess2 = $num_lno == 1     ? EMPTY_STRING : 's';
+        my $msg  = "$first_word $num_changes '->'$ess1 at line$ess2 $str\n";
+        warning($msg);
+        return;
+    };
+
+    # Complexity control flag:
+    #  =0 left container must just contain a single token
+    #  =1 left container must not contain other containers [DEFAULT]
+    #  =2 no complexity constraints
+    my $complexity = $rOpts->{'interbracket-arrow-complexity'};
+    if ( !defined($complexity) ) { $complexity = 1 }
+
+    #--------------------------------------------
+    # Main loop over all opening container tokens
+    #--------------------------------------------
+    foreach my $seqno ( sort { $a <=> $b } keys %{$K_opening_container} ) {
+
+        # We just want opening token types 'L" or '['
+        # Note: the tokenizer marks hash braces '{' and '}' as 'L' and 'R'
+        # but we have to be careful because small block braces can also
+        # get marked 'L' and 'R' for formatting purposes.
+        my $Ko   = $K_opening_container->{$seqno};
+        my $type = $rLL->[$Ko]->[_TYPE_];
+        next if ( $type ne 'L' && $type ne '[' );
+
+        # Now find the previous nonblank token
+        my $K_m = $Ko - 1;
+        next if ( $K_m < 0 );
+        my $type_m = $rLL->[$K_m]->[_TYPE_];
+        if ( $type_m eq 'b' && $K_m > 0 ) {
+            $K_m -= 1;
+            $type_m = $rLL->[$K_m]->[_TYPE_];
+        }
+
+        # These vars will hold the previous closing bracket, if any;
+        # initialized to this token but will be moved if it is an arrow
+        my $K_mm    = $K_m;
+        my $type_mm = $type_m;
+
+        # Decide if an inter-bracket arrow could follow the closing token
+        # of this container..
+
+        # preceded by scalar identifier (such as '$array[' or '$hash{') ?
+        if ( $type_m eq 'i' || $type_m eq 'Z' ) {
+
+            my $token_m = $rLL->[$K_m]->[_TOKEN_];
+            if ( substr( $token_m, 0, 1 ) eq '$' ) {
+
+                # arrows can follow the CLOSING bracket of this container
+                $trailing_arrow_ok_by_seqno{$seqno} = 1;
+            }
+        }
+
+        # or a closing bracket or hash brace
+        elsif ( $type_m eq ']' || $type_m eq 'R' ) {
+            my $seqno_m = $rLL->[$K_m]->[_TYPE_SEQUENCE_];
+
+            # propagate the arrow status flag
+            $trailing_arrow_ok_by_seqno{$seqno} =
+              $trailing_arrow_ok_by_seqno{$seqno_m};
+        }
+
+        # check a pointer and if found, back up one more token
+        elsif ( $type_m eq '->' ) {
+
+            # arrows can follow the CLOSING bracket of this container
+            $trailing_arrow_ok_by_seqno{$seqno} = 1;
+
+            # back up one token before the arrow
+            $K_mm = $K_m - 1;
+            next if ( $K_mm <= 0 );
+            $type_mm = $rLL->[$K_mm]->[_TYPE_];
+            if ( $type_mm eq 'b' && $K_mm > 0 ) {
+                $K_mm -= 1;
+                $type_mm = $rLL->[$K_mm]->[_TYPE_];
+            }
+        }
+        else {
+            # something else
+        }
+
+        # now check for a preceding closing bracket or hash brace
+        next if ( $type_mm ne ']' && $type_mm ne 'R' );
+        my $seqno_mm = $rLL->[$K_mm]->[_TYPE_SEQUENCE_];
+        next if ( !$seqno_mm );
+
+        $trailing_arrow_ok_by_seqno{$seqno} = 1;
+
+        # We are between brackets with these two or three sequential tokens,
+        # indexes _mm and _m are identical if there is no arrow.
+        #   $type_mm   $type_m     $type
+        #    R or ]      ->?       [  or L
+
+        # Can an inter-bracket arrow be here?
+        next unless ( $trailing_arrow_ok_by_seqno{$seqno_mm} );
+
+        # If the user defined a style, only continue if this requires
+        # adding or deleting an '->' to match the style
+        if (%interbracket_arrow_style) {
+            my $style = $interbracket_arrow_style{ $type_mm . $type };
+            next if ( !$style );
+            next
+              if ( $style == -1 && $type_m ne '->'
+                || $style == 1 && $type_m eq '->' );
+        }
+
+        next if ( $type_m eq '->' && !$rOpts_del && !$rOpts_warn );
+        next if ( $type_m ne '->' && !$rOpts_add && !$rOpts_warn );
+
+        # Do not continue if the left container is too complex..
+        # complexity flag = 0: only one nonblank token in the brackets
+        if ( !$complexity ) {
+            my $count = 0;
+            my $Ko_mm = $K_opening_container->{$seqno_mm};
+            next unless defined($Ko_mm);
+            foreach my $KK ( $Ko_mm + 1 .. $K_mm - 2 ) {
+                next if ( $rLL->[$KK]->[_TYPE_] eq 'b' );
+                $count++;
+                last if ( $count > 1 );
+            }
+            next if ( $count > 1 );
+        }
+
+        # complexity flag = 1: no interior container tokens
+        elsif ( $complexity == 1 ) {
+
+            if ( $seqno_mm ne $seqno - 1 ) {
+                next;
+            }
+        }
+        else {
+            # complexity flag >1 => no restriction
+        }
+
+        # set a flag telling sub respace_tokens to actually make the change
+        my $lno = 1 + $rLL->[$Ko]->[_LINE_INDEX_];
+        if ( $type_m eq '->' ) {
+            if ($rOpts_del) {
+                $self->[_rwant_arrow_before_seqno_]->{$seqno} = -1;
+            }
+            if ( $rOpts_del || $rOpts_warn_and_style ) { push @lno_del, $lno }
+        }
+        else {
+            if ($rOpts_add) {
+                $self->[_rwant_arrow_before_seqno_]->{$seqno} = 1;
+            }
+            if ( $rOpts_add || $rOpts_warn_and_style ) { push @lno_add, $lno }
+        }
+    }
+
+    if ($rOpts_warn) {
+        my $wia = '--warn-interbracket-arrows report:';
+        $warn->( \@lno_add, $rOpts_add ? "$wia added" : "$wia: missing" )
+          if (@lno_add);
+        $warn->( \@lno_del, $rOpts_del ? "$wia deleted " : "$wia: unwanted " )
+          if (@lno_del);
+    }
+    return;
+} ## end sub interbracket_arrow_check
+
 sub delete_side_comments {
     my ( $self, $rix_side_comments ) = @_;
 
@@ -10296,6 +10657,7 @@ my $roverride_cab3;
 my $rparent_of_seqno;
 my $rtype_count_by_seqno;
 my $rblock_type_of_seqno;
+my $rwant_arrow_before_seqno;
 
 my $K_opening_container;
 my $K_closing_container;
@@ -10353,6 +10715,7 @@ sub initialize_respace_tokens_closure {
     $rparent_of_seqno          = $self->[_rparent_of_seqno_];
     $rtype_count_by_seqno      = $self->[_rtype_count_by_seqno_];
     $rblock_type_of_seqno      = $self->[_rblock_type_of_seqno_];
+    $rwant_arrow_before_seqno  = $self->[_rwant_arrow_before_seqno_];
 
     %K_first_here_doc_by_seqno = ();
 
@@ -10726,6 +11089,21 @@ sub respace_tokens_inner_loop {
                                 $self->delete_weld_interfering_comma($KK);
                             }
                         }
+                    }
+                }
+            }
+
+            # Opening container
+            else {
+                my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
+                if ( $rwant_arrow_before_seqno->{$type_sequence} ) {
+
+                    # +1 means add  -1 means delete previous arrow
+                    if ( $rwant_arrow_before_seqno->{$type_sequence} > 0 ) {
+                        $self->add_interbracket_arrow();
+                    }
+                    else {
+                        $self->delete_interbracket_arrow();
                     }
                 }
             }
@@ -11888,13 +12266,55 @@ sub delete_weld_interfering_comma {
 
 } ## end sub delete_weld_interfering_comma
 
+sub add_interbracket_arrow {
+    my ($self) = @_;
+
+    # Add a new '->' after the last token on the stack
+    my $Kp = $self->K_previous_nonblank( undef, $rLL_new );
+    return unless ( defined($Kp) );
+
+    # verify that we are adding after a } or ]
+    my $type_p = $rLL_new->[$Kp]->[_TYPE_];
+    if ( $type_p ne 'R' && $type_p ne ']' ) {
+        DEVEL_MODE && Fault("trying to store new arrow after type $type_p");
+        return;
+    }
+
+    $self->store_new_token( '->', '->', $Kp );
+
+    return;
+} ## end sub add_interbracket_arrow
+
+sub delete_interbracket_arrow {
+    my ($self) = @_;
+
+    # Delete the last nonblank token on the stack which is an '->'
+    my $Kp = $self->K_previous_nonblank( undef, $rLL_new );
+    return unless ( defined($Kp) );
+
+    # verify that we are deleting an '->'
+    my $type_p = $rLL_new->[$Kp]->[_TYPE_];
+    if ( $type_p ne '->' ) {
+        DEVEL_MODE && Fault("trying to delete arrow but type $type_p");
+        return;
+    }
+
+    $self->unstore_last_nonblank_token( '->', -1 );
+
+    return;
+} ## end sub delete_interbracket_arrow
+
 sub unstore_last_nonblank_token {
 
-    my ( $self, $type ) = @_;
+    my ( $self, $type, $want_space ) = @_;
 
     # remove the most recent nonblank token from the new token list
     # Input parameter:
     #   $type = type to be removed (for safety check)
+    #   $want_space = telling if a space should remain
+    #                 1 => always
+    #                 0 or undef => only if there was one (used for ',')
+    #                -1 => never (used for '->')
 
     # Returns true if success
     #         false if error
@@ -11910,7 +12330,11 @@ sub unstore_last_nonblank_token {
         return;
     }
 
+    if ( !defined($want_space) ) { $want_space = 0 }
+
     my ( $rcomma, $rblank );
+
+    # Note: orignally just for ',' but now also for '->'
 
     # case 1: pop comma from top of stack
     if ( $rLL_new->[-1]->[_TYPE_] eq $type ) {
@@ -11939,15 +12363,34 @@ sub unstore_last_nonblank_token {
     # $last_nonblank_code_type alone. Then sub store_token will produce
     # the correct result. This is simpler and is done here.
 
-    # Now add a blank space after the comma if appropriate.
-    # Some unusual spacing controls might need another iteration to
-    # reach a final state.
-    if ( $rLL_new->[-1]->[_TYPE_] ne 'b' ) {
-        if ( defined($rblank) ) {
-            $rblank->[_CUMULATIVE_LENGTH_] -= 1;    # fix for deleted comma
-            push @{$rLL_new}, $rblank;
+    # remove a remaining blank if requested
+    if ( $rLL_new->[-1]->[_TYPE_] eq 'b' ) {
+
+        # current method for deleted '->'
+        if ( $want_space == -1 ) {
+            pop @{$rLL_new};
         }
     }
+
+    # add a blank if requested
+    else {
+        if ( $want_space == 1 ) {
+            $self->store_token();
+        }
+        elsif ( !$want_space ) {
+
+            # add one if there was one (current method for commas)
+            if ( defined($rblank) ) {
+                my $len = length($type);
+                $rblank->[_CUMULATIVE_LENGTH_] -= $len;  # fix for deleted comma
+                push @{$rLL_new}, $rblank;
+            }
+        }
+        else {
+            # want_space=-1 so do not add a blank
+        }
+    }
+
     return 1;
 } ## end sub unstore_last_nonblank_token
 
@@ -12210,15 +12653,11 @@ sub store_new_token {
     #  $token = the token text
     #  $Kp    = index of the previous token in the new list, $rLL_new
 
-    # Returns:
-    #  $Knew = index in $rLL_new of the new token
-
     # This operation is a little tricky because we are creating a new token and
     # we have to take care to follow the requested whitespace rules.
 
     my $Ktop         = @{$rLL_new} - 1;
     my $top_is_space = $Ktop >= 0 && $rLL_new->[$Ktop]->[_TYPE_] eq 'b';
-    my $Knew;
     if ( $top_is_space && $want_left_space{$type} == WS_NO ) {
 
         #----------------------------------------------------
@@ -12230,10 +12669,9 @@ sub store_new_token {
 
         my $rcopy = copy_token_as_type( $rLL_new->[$Ktop], 'b', SPACE );
 
-        $Knew                               = $Ktop;
-        $rLL_new->[$Knew]->[_TOKEN_]        = $token;
-        $rLL_new->[$Knew]->[_TOKEN_LENGTH_] = length($token);
-        $rLL_new->[$Knew]->[_TYPE_]         = $type;
+        $rLL_new->[$Ktop]->[_TOKEN_]        = $token;
+        $rLL_new->[$Ktop]->[_TOKEN_LENGTH_] = length($token);
+        $rLL_new->[$Ktop]->[_TYPE_]         = $type;
 
         # NOTE: we are changing the output stack without updating variables
         # $last_nonblank_code_type, etc. Future needs might require that
@@ -12248,7 +12686,9 @@ sub store_new_token {
         }
 
         # Then store a new blank
-        $self->store_token($rcopy);
+        if ( $want_right_space{$type} == WS_YES ) {
+            $self->store_token($rcopy);
+        }
     }
     else {
 
@@ -12273,12 +12713,21 @@ sub store_new_token {
                 $rLL_new->[$Ktop]->[_LINE_INDEX_] = $new_top_ix;
             }
         }
+        else {
+            if ( $want_left_space{$type} == WS_YES ) {
+                $self->store_token();
+            }
+        }
 
         my $rcopy = copy_token_as_type( $rLL_new->[$Kp], $type, $token );
         $self->store_token($rcopy);
-        $Knew = @{$rLL_new} - 1;
+
+        if ( $want_right_space{$type} == WS_YES ) {
+            $self->store_token();
+        }
     }
-    return $Knew;
+
+    return;
 } ## end sub store_new_token
 
 sub check_Q {

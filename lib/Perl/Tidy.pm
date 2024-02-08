@@ -3714,6 +3714,12 @@ sub generate_options {
     $add_option->( 'want-call-parens',             'wcp',  '=s' );
     $add_option->( 'nowant-call-parens',           'nwcp', '=s' );
 
+    $add_option->( 'add-interbracket-arrows',       'aia', '!' );
+    $add_option->( 'delete-interbracket-arrows',    'dia', '!' );
+    $add_option->( 'warn-interbracket-arrows',      'wia', '!' );
+    $add_option->( 'interbracket-arrow-style',      'ias', '=s' );
+    $add_option->( 'interbracket-arrow-complexity', 'iac', '=i' );
+
     ########################################
     $category = 13;    # Debugging
     ########################################
@@ -3838,6 +3844,7 @@ sub generate_options {
       indent-block-comments
       indent-columns=4
       integer-range-check=2
+      interbracket-arrow-complexity=1
       iterations=1
       keep-old-blank-lines=1
       keyword-paren-inner-tightness=1
@@ -3994,6 +4001,7 @@ sub generate_options {
         'entab-leading-whitespace'                  => [ 0, undef ],
         'fixed-position-side-comment'               => [ 0, undef ],
         'indent-columns'                            => [ 0, undef ],
+        'interbracket-arrow-complexity'             => [ 0, 2 ],
         'integer-range-check'                       => [ 0, 3 ],
         'iterations'                                => [ 0, undef ],
         'keep-old-blank-lines'                      => [ 0, 2 ],

@@ -1,0 +1,8 @@
+return $this->{'content'}->[$row][$col];
+return $this->{'content'}->[$row][$col];
+return $self->{'commandline'}{'arg_list'}->[0][0]->{'hostgroups'};
+return $self->{'commandline'}{'arg_list'}->[0][0]->{'hostgroups'};
+$names->{'strings'}->[ $featureEntry->{'settings'}{$setting} ][1][0]->{0};
+$names->{'strings'}->[ $featureEntry->{'settings'}{$setting} ][1][0]->{0};
+$this->{'hline_color'}->[ $last_drawn_row + 1 ][$col];
+$this->{'hline_color'}->[ $last_drawn_row + 1 ][$col];

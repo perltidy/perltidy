@@ -860,6 +860,8 @@ EOM
             'output-line-ending'            => [ 'dos',  'win', 'mac', 'unix' ],
             'extended-block-tightness-list' => [ 'k',    't',   'kt' ],
 
+            'interbracket-arrow-style' => [ ']{', ']->{', '][', ']->[', '}[', '}->[', '}{', '}->{'],
+
             'warn-variable-types' => [ '0', '1' ],
 
             'space-backslash-quote'         => [ 0, 2 ],
