@@ -3946,8 +3946,8 @@ formatting into agreement with the specified style. They may both be used in a
 single run if a mixed style is specified since there is no conflict.
 
 The style string B<s> gives a graphical description of the desired style. It
-lists up to four possible pairs of bracket types with an optional "cuddled"
-arrow.  For example:
+lists up to four possible pairs of bracket types with an optional
+arrow between them.  For example:
 
    -ias='][   }->{'
 
@@ -6297,25 +6297,25 @@ dot is added, and the backup file will be F<somefile.pl~>  .
 The following list shows all short parameter names which allow a prefix
 'n' to produce the negated form:
 
- D      ame    anl    asbl   asc    ast    asu    atc    atnl   aws
- b      baa    baao   bar    bbao   bbb    bbc    bbs    bl     bli
- boa    boc    bok    bol    bom    bos    bot    cblx   ce     conv
- cpb    cs     csc    cscb   cscw   dac    dbc    dbs    dcbl   dcsc
- ddf    dior   dln    dmcp   dnl    dop    dp     dpro   drc    dsc
- dsm    dsn    dtc    dtt    duv    dwic   dwls   dwrs   dws    eos
- f      fpva   frm    fs     fso    gcs    hbc    hbcm   hbco   hbh
- hbhh   hbi    hbj    hbk    hbm    hbn    hbp    hbpd   hbpu   hbq
- hbs    hbsc   hbv    hbw    hent   hic    hicm   hico   hih    hihh
- hii    hij    hik    him    hin    hip    hipd   hipu   hiq    his
- hisc   hiv    hiw    hsc    html   ibc    icb    icp    iob    ipc
- isbc   iscl   kgb    kgbd   kgbi   kis    lal    log    lop    lp
- lsl    mem    nib    ohbr   okw    ola    olc    oll    olq    opr
- opt    osbc   osbr   otr    ple    pod    pvl    q      sac    sbc
- sbl    scbb   schb   scp    scsb   sct    se     sfp    sfs    skp
- sob    sobb   sohb   sop    sosb   sot    ssc    st     sts    t
- tac    tbc    toc    tp     tqw    trp    ts     tsc    tso    vbc
- vc     viu    vmll   vsc    vsn    w      wfc    wme    wn     x
- xbt    xci    xlp    xs
+ D      aia    ame    anl    asbl   asc    ast    asu    atc    atnl
+ aws    b      baa    baao   bar    bbao   bbb    bbc    bbs    bl
+ bli    boa    boc    bok    bol    bom    bos    bot    cblx   ce
+ conv   cpb    cs     csc    cscb   cscw   dac    dbc    dbs    dcbl
+ dcsc   ddf    dia    dior   dln    dmcp   dnl    dop    dp     dpro
+ drc    dsc    dsm    dsn    dtc    dtt    duv    dwic   dwls   dwrs
+ dws    eos    f      fpva   frm    fs     fso    gcs    hbc    hbcm
+ hbco   hbh    hbhh   hbi    hbj    hbk    hbm    hbn    hbp    hbpd
+ hbpu   hbq    hbs    hbsc   hbv    hbw    hent   hic    hicm   hico
+ hih    hihh   hii    hij    hik    him    hin    hip    hipd   hipu
+ hiq    his    hisc   hiv    hiw    hsc    html   ibc    icb    icp
+ iob    ipc    isbc   iscl   kgb    kgbd   kgbi   kis    lal    log
+ lop    lp     lsl    mem    nib    ohbr   okw    ola    olc    oll
+ olq    opr    opt    osbc   osbr   otr    ple    pod    pvl    q
+ sac    sbc    sbl    scbb   schb   scp    scsb   sct    se     sfp
+ sfs    skp    sob    sobb   sohb   sop    sosb   sot    ssc    st
+ sts    t      tac    tbc    toc    tp     tqw    trp    ts     tsc
+ tso    vbc    vc     viu    vmll   vsc    vsn    w      wfc    wia
+ wme    wn     x      xbt    xci    xlp    xs
 
 Equivalently, the prefix 'no' or 'no-' on the corresponding long names may be
 used.
