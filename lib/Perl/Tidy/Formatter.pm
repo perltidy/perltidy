@@ -10264,6 +10264,11 @@ sub interbracket_arrow_check {
     #   my $v2 = [ 1, 2, [ 3, 4 ] ]->[2][0];      # ok, keep required arrow
     #   my $v3 = [ 1, 2, [ 3, 4 ] ][2][0];        # Error
 
+    #   Note that an arrow does not get placed between '}' and '[' here:
+    #     my $val = ${$x}[1];
+    #   Perltidy marks the '$' as type 't', and since the logic below checks
+    #   for identifiers of type 'i', it will work ok.
+
     # We will maintain the flag for this check in the following hash:
     my %trailing_arrow_ok_by_seqno;
 
