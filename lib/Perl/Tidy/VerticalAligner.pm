@@ -3684,7 +3684,7 @@ sub get_line_token_info {
         # handle no levels
         my $rtoken_patterns = {};
         my $rtoken_indexes  = {};
-        my @levs            = sort keys %saw_level;
+        my @levs            = sort { $a <=> $b } keys %saw_level;
         if ( !defined($lev_min) ) {
             $lev_min                     = -1;
             $lev_max                     = -1;
