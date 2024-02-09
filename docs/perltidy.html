@@ -35,6 +35,7 @@
       <li><a href="#Breaking-Before-or-After-Operators">Breaking Before or After Operators</a></li>
       <li><a href="#Controlling-List-Formatting">Controlling List Formatting</a></li>
       <li><a href="#Adding-and-Deleting-Commas">Adding and Deleting Commas</a></li>
+      <li><a href="#Adding-and-Deleting-Interbracket-Arrows">Adding and Deleting Interbracket Arrows</a></li>
       <li><a href="#Missing-Else-Blocks">Missing Else Blocks</a></li>
       <li><a href="#Retaining-or-Ignoring-Existing-Line-Breaks">Retaining or Ignoring Existing Line Breaks</a></li>
       <li><a href="#Blank-Line-Control">Blank Line Control</a></li>
@@ -3102,6 +3103,130 @@
 </dd>
 </dl>
 
+<h2 id="Adding-and-Deleting-Interbracket-Arrows">Adding and Deleting Interbracket Arrows</h2>
+
+<p>In the following expression, the arrow operator &#39;-&gt;&#39; between the closing and opening brackets of hash keys and array indexes are optional:</p>
+
+<pre><code>   return $self-&gt;{&#39;commandline&#39;}-&gt;{&#39;arg_list&#39;}-&gt;[0]-&gt;[0]-&gt;{&#39;hostgroups&#39;};</code></pre>
+
+<p>These will be called <b>interbracket arrows</b> here, for lack of a better term. Perltidy will not change them by default, but they can be added or removed with the following parameters.</p>
+
+<dl>
+
+<dt id="dia---delete-interbracket-arrows"><b>-dia</b>, <b>--delete-interbracket-arrows</b></dt>
+<dd>
+
+<p>This parameter deletes interbracket arrows. Applied to the above example we have</p>
+
+<pre><code>    # perltidy -dia
+    return $self-&gt;{&#39;commandline&#39;}{&#39;arg_list&#39;}[0][0]{&#39;hostgroups&#39;};</code></pre>
+
+<p>By default this applies to all interbracket arrows, but selective deletion is possible with controls described below.</p>
+
+</dd>
+<dt id="aia---add-interbracket-arrows"><b>-aia</b>, <b>--add-interbracket-arrows</b></dt>
+<dd>
+
+<p>This parameter adds interbracket arrows. Applied to the line of code above, we get back the original line.</p>
+
+<pre><code>    # perltidy -aia
+    return $self-&gt;{&#39;commandline&#39;}-&gt;{&#39;arg_list&#39;}-&gt;[0]-&gt;[0]-&gt;{&#39;hostgroups&#39;};</code></pre>
+
+<p>Selective changes can be made with controls described below.</p>
+
+</dd>
+<dt id="ias-s---interbracket-arrow-style-s"><b>-ias=s</b>, <b>--interbracket-arrow-style=s</b></dt>
+<dd>
+
+<p>By default the <b>-add-</b> and <b>-delete-</b> parameters apply to all interbracket arrows.</p>
+
+<p>An optional style can be specified with this parameter string <b>s</b>. In that case the parameters <b>--add-interbracket-arrows</b> and <b>--delete-interbracket-arrows</b> only apply where they would bring the formatting into agreement with the specified style. They may both be used in a single run if a mixed style is specified since there is no conflict.</p>
+
+<p>The style string <b>s</b> gives a graphical description of the desired style. It lists up to four possible pairs of bracket types with an optional arrow between them. For example:</p>
+
+<pre><code>   -ias=&#39;][   }-&gt;{&#39;</code></pre>
+
+<p>This means no arrows are wanted between &#39;][&#39; but arrows should be between &#39;}{&#39;. And it means that the unlisted pairs &#39;]{&#39; and &#39;}[&#39; should remain unchanged, either with or without arrows.</p>
+
+<p>In this particular example, if the parameter <b>--delete-interbracket-arrows</b> is used, then only arrows like &#39;]-&gt;[&#39; will be deleted, since they are the only ones which disagree with the style.</p>
+
+<p>And likewise, if <b>--add-interbracket-arrows</b> is used, then arrows will only be inserted between brackets like &#39;}{&#39; to bring the formatting into conformity with the style in this example.</p>
+
+<p>Spaces in the string <b>s</b> are optional. They are ignored when the expression is parsed.</p>
+
+<p>The style corresponding to all possible arrows is</p>
+
+<pre><code>      -ias=&#39;]-&gt;[ ]-&gt;{ }-&gt;[ }-&gt;{&#39;</code></pre>
+
+<p>For convenience, this may also be requested with <b>-ias=1</b> or <b>-ias=&#39;*&#39;</b>.</p>
+
+<p>The style corresponding to no interbracket arrows is</p>
+
+<pre><code>      -ias=&#39;]  [ ]  { }  [ }  {&#39;</code></pre>
+
+<p>which may also be requested with <b>-ias=0</b>.</p>
+
+</dd>
+<dt id="wia---warn-interbracket-arrows"><b>-wia</b>, <b>--warn-interbracket-arrows</b></dt>
+<dd>
+
+<p>If this parameter is set, then a message is written to the error file in the following cases:</p>
+
+<ul>
+
+<li><p>If an arrow is added or deleted by an add or delete command.</p>
+
+</li>
+<li><p>If a style is defined and an arrow would have been added or deleted if requested. So for example, the command</p>
+
+<pre><code>   perltidy -wia -ias=&#39;][&#39;</code></pre>
+
+<p>will show where a file has arrows like ]-&gt;[&#39; since they do not match the style, but no changes will be made because the delete command <b>-dia</b> has not been given. And</p>
+
+<pre><code>   perltidy -wia -ias=0</code></pre>
+
+<p>will warn if any arrows exist, since the flag -ias=0 means that no arrows are wanted.</p>
+
+</li>
+</ul>
+
+</dd>
+<dt id="iac-n---interbracket-arrow-complexity-n"><b>-iac=n</b>, <b>--interbracket-arrow-complexity=n</b></dt>
+<dd>
+
+<p>This parameter makes it possible to skip adding or deleting arrows following a container which is complex in some sense. Three levels of complexity can be specified with the integer <b>n</b>, as follows:</p>
+
+<pre><code>   n=0   the contents of the left container must be a single thing (token)
+   n=1   the left container must not contain other containers [DEFAULT]
+   n=2   the left container may contain anything</code></pre>
+
+<p>Some examples:</p>
+
+<pre><code>    # Container                complexity
+    {&#39;commandline&#39;}            0 single token         OK by default
+    { $type . $name }          1 multiple tokens      OK by default
+    [ $plot{&#39;x-axis&#39;} - 1 ]    2 contains a container SKIPPED by default</code></pre>
+
+<p>So, with the default complexity level of 1, an arrow could be added or deleted following the first two of these containers but not the third.</p>
+
+</dd>
+</dl>
+
+<p><b>Some points to consider</b> when working with these parameters are:</p>
+
+<ul>
+
+<li><p>There are no known bugs, but this is a relatively new feature. So please carefully check file differences and run tests when interbracket arrows are added or removed.</p>
+
+</li>
+<li><p>For some unusual spacing parameters, it could take an extra iteration for the spaces between brackets to reach their final state after arrows are added or deleted.</p>
+
+</li>
+<li><p>Any comments between brackets will prevent the adding and deleting of arrows.</p>
+
+</li>
+</ul>
+
 <h2 id="Missing-Else-Blocks">Missing Else Blocks</h2>
 
 <p>A defensive programming technique is to require that every <b>if-elsif-</b> chain be terminated with an <b>else</b> block, even though it is not strictly required. This helps insure that there are no holes in the logic.</p>
@@ -3438,9 +3563,9 @@
 <dt id="bbs---blanks-before-subs"><b>-bbs</b>, <b>--blanks-before-subs</b></dt>
 <dd>
 
-<p>For compatibility with previous versions, <b>-bbs</b> or <b>--blanks-before-subs</b> is equivalent to <i>-blbp=1</i> and <i>-blbs=1</i>.</p>
+<p>For compatibility with previous versions, <b>-bbs</b> or <b>--blanks-before-subs</b> is equivalent to <b>-blbp=1</b> and <b>-blbs=1</b>.</p>
 
-<p>Likewise, <b>-nbbs</b> or <b>--noblanks-before-subs</b> is equivalent to <i>-blbp=0</i> and <i>-blbs=0</i>.</p>
+<p>Likewise, <b>-nbbs</b> or <b>--noblanks-before-subs</b> is equivalent to <b>-blbp=0</b> and <b>-blbs=0</b>.</p>
 
 </dd>
 <dt id="bbb---blanks-before-blocks"><b>-bbb</b>, <b>--blanks-before-blocks</b></dt>
@@ -4788,25 +4913,25 @@
 
 <p>The following list shows all short parameter names which allow a prefix &#39;n&#39; to produce the negated form:</p>
 
-<pre><code> D      ame    anl    asbl   asc    ast    asu    atc    atnl   aws
- b      baa    baao   bar    bbao   bbb    bbc    bbs    bl     bli
- boa    boc    bok    bol    bom    bos    bot    cblx   ce     conv
- cpb    cs     csc    cscb   cscw   dac    dbc    dbs    dcbl   dcsc
- ddf    dior   dln    dmcp   dnl    dop    dp     dpro   drc    dsc
- dsm    dsn    dtc    dtt    duv    dwic   dwls   dwrs   dws    eos
- f      fpva   frm    fs     fso    gcs    hbc    hbcm   hbco   hbh
- hbhh   hbi    hbj    hbk    hbm    hbn    hbp    hbpd   hbpu   hbq
- hbs    hbsc   hbv    hbw    hent   hic    hicm   hico   hih    hihh
- hii    hij    hik    him    hin    hip    hipd   hipu   hiq    his
- hisc   hiv    hiw    hsc    html   ibc    icb    icp    iob    ipc
- isbc   iscl   kgb    kgbd   kgbi   kis    lal    log    lop    lp
- lsl    mem    nib    ohbr   okw    ola    olc    oll    olq    opr
- opt    osbc   osbr   otr    ple    pod    pvl    q      sac    sbc
- sbl    scbb   schb   scp    scsb   sct    se     sfp    sfs    skp
- sob    sobb   sohb   sop    sosb   sot    ssc    st     sts    t
- tac    tbc    toc    tp     tqw    trp    ts     tsc    tso    vbc
- vc     viu    vmll   vsc    vsn    w      wfc    wme    wn     x
- xbt    xci    xlp    xs</code></pre>
+<pre><code> D      aia    ame    anl    asbl   asc    ast    asu    atc    atnl
+ aws    b      baa    baao   bar    bbao   bbb    bbc    bbs    bl
+ bli    boa    boc    bok    bol    bom    bos    bot    cblx   ce
+ conv   cpb    cs     csc    cscb   cscw   dac    dbc    dbs    dcbl
+ dcsc   ddf    dia    dior   dln    dmcp   dnl    dop    dp     dpro
+ drc    dsc    dsm    dsn    dtc    dtt    duv    dwic   dwls   dwrs
+ dws    eos    f      fpva   frm    fs     fso    gcs    hbc    hbcm
+ hbco   hbh    hbhh   hbi    hbj    hbk    hbm    hbn    hbp    hbpd
+ hbpu   hbq    hbs    hbsc   hbv    hbw    hent   hic    hicm   hico
+ hih    hihh   hii    hij    hik    him    hin    hip    hipd   hipu
+ hiq    his    hisc   hiv    hiw    hsc    html   ibc    icb    icp
+ iob    ipc    isbc   iscl   kgb    kgbd   kgbi   kis    lal    log
+ lop    lp     lsl    mem    nib    ohbr   okw    ola    olc    oll
+ olq    opr    opt    osbc   osbr   otr    ple    pod    pvl    q
+ sac    sbc    sbl    scbb   schb   scp    scsb   sct    se     sfp
+ sfs    skp    sob    sobb   sohb   sop    sosb   sot    ssc    st
+ sts    t      tac    tbc    toc    tp     tqw    trp    ts     tsc
+ tso    vbc    vc     viu    vmll   vsc    vsn    w      wfc    wia
+ wme    wn     x      xbt    xci    xlp    xs</code></pre>
 
 <p>Equivalently, the prefix &#39;no&#39; or &#39;no-&#39; on the corresponding long names may be used.</p>
 
@@ -4884,7 +5009,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20240202</p>
+<p>This man page documents perltidy version 20240202.01</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

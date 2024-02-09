@@ -1,5 +1,24 @@
 # Perltidy Change Log
 
+## 2024 02 02.01
+
+    - Added control --delete-interbracket-arrows, or -dia, to delete optional
+      hash ref and array ref arrows between brackets as in the following
+      expression (see git #131)
+
+        return $self->{'commandline'}->{'arg_list'}->[0]->[0]->{'hostgroups'};
+
+        # perltidy -dia gives:
+        return $self->{'commandline'}{'arg_list'}[0][0]{'hostgroups'};
+
+      Added the opposite control --aia-interbracket-arrows, or -aia, to
+      add arrows. So applied to the previous line the arrows are restored:
+
+        # perltidy -aia
+        return $self->{'commandline'}->{'arg_list'}->[0]->[0]->{'hostgroups'};
+
+     The manual describes additional controls for selective adding and deleting.
+
 ## 2024 02 02
 
     - Added --valign-signed-numbers, or -vsn. This improves the appearance
@@ -1339,7 +1358,7 @@
       has also been added.  The next item, RT#130297, insures that the script
       will exit with a non-zero exit flag if the assertion fails.
 
-    - fixed issue RT#130297; the perltidy script now exits with a nonzero exit 
+    - fixed issue RT#130297; the perltidy script now exits with a nonzero exit
       status if it wrote to the standard error output. Prevously only fatal
       run errors produced a non-zero exit flag. Now, even non-fatal messages
       requested with the -w flag will cause a non-zero exit flag.  The exit
