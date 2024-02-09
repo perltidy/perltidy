@@ -11109,6 +11109,7 @@ sub respace_tokens_inner_loop {
                     }
                     else {
                         $self->delete_interbracket_arrow();
+                        $rwhitespace_flags->[$KK] = WS_NO;
                     }
                 }
             }
