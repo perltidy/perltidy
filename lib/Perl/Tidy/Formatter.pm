@@ -2893,7 +2893,9 @@ EOM
     my %rule_hash;
     my ( $ch1, $ch2 );
     my $err_msg;
+    my $pos_last;
     while (1) {
+        $pos_last = pos($opt_style);
         if (
             $opt_style =~ m{
              \G
@@ -2946,8 +2948,12 @@ EOM
     }
 
     if ($err_msg) {
-        my $pos = pos($opt_style);    # could display location
-        Die("Error parsing --$name_style: $err_msg\n");
+        my $msg;
+        if ( $pos_last && length($opt_style) < 20 ) {
+            $msg = $opt_style . "\n" . SPACE x $pos_last . '^' . "\n";
+        }
+        $msg .= "Error parsing --$name_style: $err_msg";
+        Die($msg);
     }
 
     # Copy the rule hash, converting braces to token types
