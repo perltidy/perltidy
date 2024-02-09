@@ -10,3 +10,6 @@ $this->{'hline_color'}->[ $last_drawn_row + 1 ]->[$col];
 $tagslib->{ $fields[$x_i]->tag() }{ $subf[$i][0] }{tab};
 $m2_results{ $modlog->{uid} }->{m2_count}{ $_->{uid} }++;
 $self->_get_meta_data_hash_ref()->{ $p_object->get_key() }->[$p_offset];
+my $v2   = [ 1, 2, [ 3, 4 ] ]->[2]->[0];
+my $val1 = ${$x}[1];
+my $val2 = $${$x}->[1];
