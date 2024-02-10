@@ -12124,7 +12124,8 @@ sub add_trailing_comma {
 
     # if so, add a comma
     if ($match) {
-        $self->store_new_token( ',', ',', $Kp );
+        my $want_space_after = $rwhitespace_flags->[$KK] == WS_YES;
+        $self->store_new_token( ',', ',', $Kp, $want_space_after );
     }
 
     return;
@@ -12292,7 +12293,8 @@ sub add_interbracket_arrow {
         return;
     }
 
-    $self->store_new_token( '->', '->', $Kp );
+    my $want_space_after = $want_right_space{'->'} == WS_YES;
+    $self->store_new_token( '->', '->', $Kp, $want_space_after );
 
     return;
 } ## end sub add_interbracket_arrow
@@ -12656,7 +12658,7 @@ sub match_trailing_comma_rule {
 
 sub store_new_token {
 
-    my ( $self, $type, $token, $Kp ) = @_;
+    my ( $self, $type, $token, $Kp, $want_space_after ) = @_;
 
     # Create and insert a completely new token into the output stream
 
@@ -12664,6 +12666,8 @@ sub store_new_token {
     #  $type  = the token type
     #  $token = the token text
     #  $Kp    = index of the previous token in the new list, $rLL_new
+    #  $want_space_after = true if we want a space after the new token
+    #                      false if no space
 
     # This operation is a little tricky because we are creating a new token and
     # we have to take care to follow the requested whitespace rules.
@@ -12698,7 +12702,7 @@ sub store_new_token {
         }
 
         # Then store a new blank
-        if ( $want_right_space{$type} == WS_YES ) {
+        if ($want_space_after) {
             $self->store_token($rcopy);
         }
     }
@@ -12734,7 +12738,7 @@ sub store_new_token {
         my $rcopy = copy_token_as_type( $rLL_new->[$Kp], $type, $token );
         $self->store_token($rcopy);
 
-        if ( $want_right_space{$type} == WS_YES ) {
+        if ($want_space_after) {
             $self->store_token();
         }
     }
