@@ -11325,9 +11325,18 @@ EOM
             if (   $last_nonblank_code_type eq ','
                 && $rOpts->{'delete-repeated-commas'} )
             {
-                # Could note this deletion as a possible future update:
-                ## $self->note_deleted_comma($input_line_number);
-                next;
+
+                # do not delete a comma repeated on a different line -
+                # this can cause problems, such as promoting a side comment
+                # to a block comment. See test 'mangle4.in'
+                if ( $KK == $Kfirst ) {
+                    ## but a warning could be issued
+                }
+                else {
+                    # Could note this deletion as a possible future update:
+                    ## $self->note_deleted_comma($input_line_number);
+                    next;
+                }
             }
 
             # remember input line index of first comma if -wtc is used
