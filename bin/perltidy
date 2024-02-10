@@ -5812,9 +5812,11 @@ in the output with one of the letters, B<r>, B<s>, B<p>, and B<u> as follows:
 =item B<r: reused variable name>
 
 These are variables which are re-declared in the scope of a variable with the
-identical name.  This can be confusing (perhaps not when the code is first
-written, but possibly later during maintenance work). This issue can be
-avoided by renaming one of the conflicting variables. Note that this is
+identical name.  This can be confusing, perhaps not when the code is first
+written, but possibly later during maintenance work. For example, this
+can make it difficult to locate the correct variable with an editor when
+changes are being made. This issue can be avoided by renaming one of the
+conflicting variables. Note that this is
 similar to the B<Perl::Critic> policy B<Variables::ProhibitReusedNames>.
 
 =item B<s: sigil change but reused bareword>
@@ -5849,15 +5851,17 @@ block braces in order avoid warnings at temporary package changes.
 
 These are variables which are declared with a C<my> and not referenced again
 within their scope.  Calling them B<unused> is convenient but not really
-accurate; this is a "gray area" for a program. There are many reasons for
+accurate; this is a "gray area" for a program. There are some good reasons for
 having such variables.  For example, they might occur in a list of values
 provided by another routine or data structure, and therefore must be listed,
-even though they might not be referenced again. Or they might be defined for
-possible future program development, clarity or debugging.  B<But> sometimes
-they can occur due to being orphaned by a coding change, due to a misspelling,
-or by having an unintentional preceding C<my>.  So it is worth reviewing them,
-especially for new code.  Here is an example of an unused variable in a script
-located with this method:
+even though they might not be referenced again.  Having such variables can make
+them immediately available for future development and debugging, and can be
+beneficial for program clarity.
+
+B<But> sometimes they can occur due to being orphaned by a coding
+change, due to a misspelling, or by having an unintentional preceding
+C<my>.  So it is worth reviewing them, especially for new code.  Here is
+an example of an unused variable in a script located with this method:
 
    BEGIN { my $string = "" }
    ...
@@ -5865,8 +5869,8 @@ located with this method:
 
 This looks nice at first glance, but the scope of the C<my> declaration is
 limited to the surrounding braces, so it is not the same variable as the other
-C<$string> and must therefore be reported as unused.  This problem would have
-also been caught by perl if the author had used C<strict>.
+C<$string> and must therefore be reported as unused.  This particular problem
+would have also been caught by perl if the author had used C<strict>.
 
 =back
 
