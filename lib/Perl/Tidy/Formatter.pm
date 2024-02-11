@@ -11329,14 +11329,25 @@ EOM
                 # do not delete a comma repeated on a different line -
                 # this can cause problems, such as promoting a side comment
                 # to a block comment. See test 'mangle4.in'
+                my $lno = 1 + $rLL->[$KK]->[_LINE_INDEX_];
                 if ( $KK == $Kfirst ) {
-                    ## but a warning could be issued
+                    complain(
+                        "repeated commas across multiple lines, not deleted\n",
+                        $lno
+                    );
                 }
                 else {
                     # Could note this deletion as a possible future update:
                     ## $self->note_deleted_comma($input_line_number);
+                    complain( "deleted repeated ','\n", $lno );
                     next;
                 }
+            }
+            elsif ($last_nonblank_code_type eq '=>'
+                && $rOpts->{'delete-repeated-commas'} )
+            {
+                my $lno = 1 + $rLL->[$KK]->[_LINE_INDEX_];
+                complain( "found '=>,' ... error?\n", $lno );
             }
 
             # remember input line index of first comma if -wtc is used
@@ -11348,6 +11359,29 @@ EOM
                 {
                     $self->[_rfirst_comma_line_index_]->{$seqno} =
                       $rtoken_vars->[_LINE_INDEX_];
+                }
+            }
+        }
+        elsif ( $type eq '=>' ) {
+            if (   $last_nonblank_code_type eq '=>'
+                && $rOpts->{'delete-repeated-commas'} )
+            {
+
+                # Check for repeated '=>'s
+                # Note that ',=>' is useful and called a winking fat comma
+
+                # Do not delete a fat comma repeated on a different line -
+                # this can cause problems, such as promoting a side comment
+                # to a block comment. See test 'mangle4.in'
+                my $lno = 1 + $rLL->[$KK]->[_LINE_INDEX_];
+                if ( $KK == $Kfirst ) {
+                    complain(
+                        "-repeated '=>' acriss multiple lines, not deleted\n",
+                        $lno );
+                }
+                else {
+                    complain( "deleted repeated '=>'\n", $lno );
+                    next;
                 }
             }
         }
