@@ -28,3 +28,7 @@
 
 # this should eventually become the default
 --delete-repeated-commas
+
+# This will become -ias='*'
+--add-interbracket-arrows
+--interbracket-arrow-style=']->{ }->['

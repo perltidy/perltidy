@@ -3402,7 +3402,7 @@ sub generate_options {
         $option_category{$long_name} = $category_name[$category];
         if ($short_name) {
             if ( $expansion{$short_name} ) {
-                my $existing_name = $expansion{$short_name}[0];
+                my $existing_name = $expansion{$short_name}->[0];
                 Die(
 "redefining abbreviation $short_name for $long_name; already used for $existing_name\n"
                 );
@@ -3412,7 +3412,7 @@ sub generate_options {
                 my $nshort_name = 'n' . $short_name;
                 my $nolong_name = 'no' . $long_name;
                 if ( $expansion{$nshort_name} ) {
-                    my $existing_name = $expansion{$nshort_name}[0];
+                    my $existing_name = $expansion{$nshort_name}->[0];
                     Die(
 "attempting to redefine abbreviation $nshort_name for $nolong_name; already used for $existing_name\n"
                     );
@@ -4042,7 +4042,7 @@ sub generate_options {
             my $key = $1;
             my $def = $2;
             if ( defined( $integer_option_range{$key} ) ) {
-                $integer_option_range{$key}[2] = $def;
+                $integer_option_range{$key}->[2] = $def;
             }
         }
     }
@@ -4063,7 +4063,7 @@ sub generate_options {
         if ( defined( $integer_option_range{$key} )
             && @{ $integer_option_range{$key} } < 3 )
         {
-            $integer_option_range{$key}[2] = undef;
+            $integer_option_range{$key}->[2] = undef;
         }
     }
 
