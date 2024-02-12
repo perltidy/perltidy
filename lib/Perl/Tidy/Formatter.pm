@@ -21451,10 +21451,12 @@ EOM
 
 sub terminal_type_i {
 
-    #  returns type of last token on this line (terminal token), as follows:
-    #  returns # for a full-line comment
-    #  returns ' ' for a blank line
-    #  otherwise returns final token type
+    # Given:
+    #  ($ibeg, $iend) = index range of the current output buffer line
+    # Returns type of last token on this line (terminal token), as follows:
+    #   # for a full-line comment
+    #   ' ' for a blank line
+    #   otherwise returns final token type
 
     my ( $ibeg, $iend ) = @_;
 
@@ -21466,7 +21468,7 @@ sub terminal_type_i {
     if ( $type_i eq '#' ) {
         $i--;
         if ( $i < $ibeg ) {
-            return wantarray ? ( $type_i, $ibeg ) : $type_i;
+            return $type_i;
         }
         $type_i = $types_to_go[$i];
     }
@@ -21475,7 +21477,7 @@ sub terminal_type_i {
     if ( $type_i eq 'b' ) {
         $i--;
         if ( $i < $ibeg ) {
-            return wantarray ? ( $type_i, $ibeg ) : $type_i;
+            return $type_i;
         }
         $type_i = $types_to_go[$i];
     }
@@ -21492,7 +21494,7 @@ sub terminal_type_i {
     {
         $type_i = 'b';
     }
-    return wantarray ? ( $type_i, $i ) : $type_i;
+    return $type_i;
 } ## end sub terminal_type_i
 
 sub pad_array_to_go {

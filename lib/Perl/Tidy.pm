@@ -3126,9 +3126,9 @@ sub line_diff {
 
     my ( $s1, $s2 ) = @_;
 
-    # Given two strings, return
-    # $diff_marker = a string with carat (^) symbols indicating differences
-    # $pos1 = character position of first difference; pos1=-1 if no difference
+    # Given two strings, Return
+    #  $diff_marker = a string with carat (^) symbols indicating differences
+    #  $pos1 = character position of first difference; pos1=-1 if no difference
 
     # Form exclusive or of the strings, which has null characters where strings
     # have same common characters so non-null characters indicate character
@@ -3151,7 +3151,7 @@ sub line_diff {
             last;
         }
     }
-    return wantarray ? ( $diff_marker, $pos1 ) : $diff_marker;
+    return ( $diff_marker, $pos1 );
 } ## end sub line_diff
 
 sub compare_string_buffers {
@@ -5512,7 +5512,7 @@ sub Win_Config_Locs {
 "I dont know a sensible place to look for config files on an $os system.\n";
         return;
     }
-    return wantarray ? ( $os, $system, $allusers ) : $os;
+    return ( $os, $system, $allusers );
 } ## end sub Win_Config_Locs
 
 sub dump_config_file {
