@@ -220,6 +220,7 @@ my (
     $rOpts_tabs,
     $rOpts_entab_leading_whitespace,
     $rOpts_fixed_position_side_comment,
+    $rOpts_maximum_line_length,
     $rOpts_minimum_space_to_comment,
     $rOpts_valign_code,
     $rOpts_valign_block_comments,
@@ -292,6 +293,7 @@ sub check_options {
     $rOpts_fixed_position_side_comment =
       $rOpts->{'fixed-position-side-comment'};
 
+    $rOpts_maximum_line_length      = $rOpts->{'maximum-line-length'};
     $rOpts_minimum_space_to_comment = $rOpts->{'minimum-space-to-comment'};
     $rOpts_valign_code              = $rOpts->{'valign-code'};
     $rOpts_valign_block_comments    = $rOpts->{'valign-block-comments'};
@@ -4917,14 +4919,19 @@ EOM
         return;
     }
 
-    # Form groups of unsigned numbers from the list of signed numbers.  Exclude
-    # groups with more than about 20 consecutive numbers.  Little visual
+    #-----------------------------------------------------------------
+    # Form groups of unsigned numbers from the list of signed numbers.
+    #-----------------------------------------------------------------
+
+    # Exclude groups with more than about 20 consecutive numbers.  Little visual
     # improvement is gained by padding more than this, and this avoids
     # large numbers of differences in a file when a single line is changed.
     my @unsigned_subgroups;
     my $ix_u             = $rsigned_lines->[0];
     my $ix_last_negative = $ix_first - 1;
+    my %is_signed;
     foreach my $ix ( @{$rsigned_lines} ) {
+        $is_signed{$ix} = 1;
         my $Nu = $ix - $ix_last_negative - 1;
         if ( $Nu > 0 && $Nu <= $rOpts_valign_signed_numbers_limit ) {
             push @unsigned_subgroups, [ $ix_last_negative + 1, $ix - 1 ];
@@ -4938,7 +4945,59 @@ EOM
 
     if ( !@unsigned_subgroups ) { return }    # shouldn't happen
 
+    #---------------------------------------------------------------
+    # Check number lengths; do not pad some irregular number lengths
+    #---------------------------------------------------------------
+
+    # Compute range of number lengths.  The 'field_lengths' are unreliable
+    # because they may include some arbitrary trailing text; see 'substr.t'
+    my $max_unsigned_length = 0;
+    my $max_signed_length   = 0;
+    my $min_unsigned_length = $rOpts_maximum_line_length;
+    my $min_signed_length   = $rOpts_maximum_line_length;
+    foreach my $ix ( $ix_first .. $ix_last ) {
+        my $line   = $rgroup_lines->[$ix];
+        my $rfield = $line->{'rfields'};
+        my $str    = substr( $rfield->[$jcol], $pos_start_number );
+        if ( $str =~ /^([^\s\,\)\]\}]*)/ ) { $str = $1 }
+        my $len = length($str);
+        if ( $is_signed{$ix} ) {
+            if ( $len > $max_signed_length ) { $max_signed_length = $len }
+            if ( $len < $min_signed_length ) { $min_signed_length = $len }
+        }
+        else {
+            if ( $len > $max_unsigned_length ) { $max_unsigned_length = $len }
+            if ( $len < $min_unsigned_length ) { $min_unsigned_length = $len }
+        }
+    }
+
+    # Is this an isolated column of leading values?
+    my $is_single_col;
+    if ( $jcol == 0 && $pos_start_number == 0 ) {
+        my $line_first = $rgroup_lines->[$ix_first];
+        my $jmax       = $line_first->{jmax};
+        $is_single_col = $jmax == 1;
+    }
+
+    # Skip padding if no signed numbers exceed unsigned numbers in length
+    # For example, a column of two digit unsigned numbers with some -1's
+    if ( $max_signed_length <= $min_unsigned_length ) {
+        return;
+    }
+
+    # Skip padding if max unsigned length exceeds max signed length and
+    # this is a large table, or a single leading column.
+    if ( $max_unsigned_length > $max_signed_length ) {
+        if (   $is_single_col
+            || $unsigned + $signed > $rOpts_valign_signed_numbers_limit )
+        {
+            return;
+        }
+    }
+
+    #--------------------------------------
     # Compute available space for each line
+    #--------------------------------------
     my %excess_space;
     foreach my $item (@unsigned_subgroups) {
         my ( $ix_min, $ix_max ) = @{$item};
@@ -4960,8 +5019,9 @@ EOM
                 $jcol == 0
               ? $leading_space_count
               : $alignments[ $jcol - 1 ]->{'column'};
-            my $avail = $col - $col_start;
-            $excess_space{$ix} = $avail - $rfield_lengths->[$jcol];
+            my $avail        = $col - $col_start;
+            my $field_length = $rfield_lengths->[$jcol];
+            $excess_space{$ix} = $avail - $field_length;
         }
     }
 
@@ -4979,10 +5039,12 @@ EOM
         return;
     }
 
-    # Go ahead and insert an extra space before the unsigned numbers
-    # if space is available
+    #------------------------------------------------------------------------
+    # Insert an extra space before the unsigned numbers if space is available
+    #------------------------------------------------------------------------
     foreach my $item (@unsigned_subgroups) {
         my ( $ix_min, $ix_max ) = @{$item};
+
         foreach my $ix ( $ix_min .. $ix_max ) {
             next if ( $excess_space{$ix} <= 0 );
             my $line           = $rgroup_lines->[$ix];
@@ -6070,7 +6132,7 @@ sub get_output_line_number {
             }
         }
         return ( $str, $str_length, $leading_string, $leading_string_length,
-            $leading_space_count, $level, $maximum_line_length, );
+            $leading_space_count, $level, $maximum_line_length );
 
     } ## end sub handle_cached_line
 

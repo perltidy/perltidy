@@ -1094,7 +1094,7 @@ EOM
     }
 
     my $logfile_header = make_logfile_header( $rOpts, $config_file,
-        $rraw_options, $Windows_type, $readable_options, );
+        $rraw_options, $Windows_type, $readable_options );
 
     # Store some values needed by lower level routines
     $self->[_diagnostics_object_] = $diagnostics_object;
@@ -4340,7 +4340,7 @@ q(wbb=% + - * / x != == >= <= =~ !~ < > | & = **= += *= &= <<= &&= -= /= |= >>= 
     # Uncomment next line to dump all expansions for debugging:
     # dump_short_names(\%expansion);
     return ( \@option_string, \@defaults, \%expansion, \%option_category,
-        \%option_range, \%integer_option_range, );
+        \%option_range, \%integer_option_range );
 
 } ## end sub generate_options
 
@@ -4406,7 +4406,7 @@ sub _process_command_line {
     else { $glc = undef }
 
     my ( $roption_string, $rdefaults, $rexpansion,
-        $roption_category, $roption_range, $rinteger_option_range, )
+        $roption_category, $roption_range, $rinteger_option_range )
       = generate_options();
 
     #--------------------------------------------------------------

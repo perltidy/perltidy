@@ -3736,7 +3736,7 @@ by this parameter.
 
 =item *
 
-These warnings are only output if the B<--warnings> flag is set.
+These warnings are only output if the B<-w> flag is set.
 
 =back
 

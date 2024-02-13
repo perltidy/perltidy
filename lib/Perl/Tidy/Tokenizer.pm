@@ -1953,7 +1953,7 @@ sub prepare_for_a_new_file {
     # TV3: SCALARS for quote variables.  These are initialized with a
     # subroutine call and continually updated as lines are processed.
     my ( $in_quote, $quote_type, $quote_character, $quote_pos, $quote_depth,
-        $quoted_string_1, $quoted_string_2, $allowed_quote_modifiers, );
+        $quoted_string_1, $quoted_string_2, $allowed_quote_modifiers );
 
     # TV4: SCALARS for multi-line identifiers and
     # statements. These are initialized with a subroutine call

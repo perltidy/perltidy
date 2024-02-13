@@ -4864,7 +4864,7 @@ EOM
 
         my ( $block_type, $i_next, $i_next_nonblank, $next_nonblank_token,
             $next_nonblank_type, $next_token, $next_type,
-            $total_nesting_depth, );
+            $total_nesting_depth );
 
         # main loop to compute bond strengths between each pair of tokens
         foreach my $i ( 0 .. $max_index_to_go ) {
@@ -11348,6 +11348,9 @@ EOM
             {
                 my $lno = 1 + $rLL->[$KK]->[_LINE_INDEX_];
                 complain( "found '=>,' ... error?\n", $lno );
+            }
+            else {
+                # not a repeated comma type
             }
 
             # remember input line index of first comma if -wtc is used

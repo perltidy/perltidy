@@ -22,13 +22,13 @@
 --closing-side-comments
 --closing-side-comment-list='sub'
 
-# add trailing commas to last item of a bare hash list
---want-trailing-commas='h'
---add-trailing-commas
+# remove trailing commas followed by paren
+--want-trailing-commas='b'
+--delete-trailing-commas
 
 # this should eventually become the default
 --delete-repeated-commas
 
-# This will become -ias='*'
+# For now, require arrows at asymmetric bracket combinations
 --add-interbracket-arrows
 --interbracket-arrow-style=']->{ }->['
