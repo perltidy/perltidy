@@ -4871,6 +4871,27 @@ BEGIN {
     @is_opening_token{@q} = (1) x scalar(@q);
 }
 
+sub min_max_median {
+    my ($rvalues) = @_;
+
+    # Given:  $rvalues = ref to an array of numbers
+    # Return: the min, max, and median
+    my $num = @{$rvalues};
+    return unless ($num);
+
+    my @sorted = sort { $a <=> $b } @{$rvalues};
+
+    my $min  = $sorted[0];
+    my $max  = $sorted[-1];
+    my $imid = int $num / 2;
+    my $median =
+        @sorted % 2
+      ? $sorted[$imid]
+      : ( $sorted[ $imid - 1 ] + $sorted[$imid] ) / 2;
+
+    return ( $min, $max, $median );
+} ## end sub min_max_median
+
 sub end_signed_number_column {
     my ( $rgroup_lines, $rcol_hash, $ix_last, $ending_alignment ) = @_;
 
@@ -4922,10 +4943,6 @@ EOM
     #-----------------------------------------------------------------
     # Form groups of unsigned numbers from the list of signed numbers.
     #-----------------------------------------------------------------
-
-    # Exclude groups with more than about 20 consecutive numbers.  Little visual
-    # improvement is gained by padding more than this, and this avoids
-    # large numbers of differences in a file when a single line is changed.
     my @unsigned_subgroups;
     my $ix_u             = $rsigned_lines->[0];
     my $ix_last_negative = $ix_first - 1;
@@ -4938,6 +4955,10 @@ EOM
         }
         $ix_last_negative = $ix;
     }
+
+    # Exclude groups with more than about 20 consecutive numbers.  Little
+    # visual improvement is gained by padding more than this, and this avoids
+    # large numbers of differences in a file when a single line is changed.
     my $Nu = $ix_last - $ix_last_negative;
     if ( $Nu > 0 && $Nu <= $rOpts_valign_signed_numbers_limit ) {
         push @unsigned_subgroups, [ $ix_last_negative + 1, $ix_last ];
@@ -4945,30 +4966,43 @@ EOM
 
     if ( !@unsigned_subgroups ) { return }    # shouldn't happen
 
-    #---------------------------------------------------------------
-    # Check number lengths; do not pad some irregular number lengths
-    #---------------------------------------------------------------
+    # Padding signed numbers looks best when the numbers, excluding signs,
+    # all have about the same length. When the lengths are irregular, with
+    # mostly longer unsigned numbers, it doesn't look good to do this. So
+    # we need to filter out these bad-looking cases.
 
-    # Compute range of number lengths.  The 'field_lengths' are unreliable
-    # because they may include some arbitrary trailing text; see 'substr.t'
-    my $max_unsigned_length = 0;
-    my $max_signed_length   = 0;
-    my $min_unsigned_length = $rOpts_maximum_line_length;
-    my $min_signed_length   = $rOpts_maximum_line_length;
+    #------------------------------------------------------
+    # Check number lengths needed for checking irregularity
+    #------------------------------------------------------
+    # The 'field_lengths' are unreliable because they may include some
+    # arbitrary trailing text; see 'substr.t' So we must look for the end of
+    # the number at a space, comma, or closing container token. Note that these
+    # lengths include the length of any signs.
+    my @len_unsigned;
+    my @len_signed;
     foreach my $ix ( $ix_first .. $ix_last ) {
         my $line   = $rgroup_lines->[$ix];
         my $rfield = $line->{'rfields'};
         my $str    = substr( $rfield->[$jcol], $pos_start_number );
         if ( $str =~ /^([^\s\,\)\]\}]*)/ ) { $str = $1 }
         my $len = length($str);
-        if ( $is_signed{$ix} ) {
-            if ( $len > $max_signed_length ) { $max_signed_length = $len }
-            if ( $len < $min_signed_length ) { $min_signed_length = $len }
-        }
-        else {
-            if ( $len > $max_unsigned_length ) { $max_unsigned_length = $len }
-            if ( $len < $min_unsigned_length ) { $min_unsigned_length = $len }
-        }
+        if   ( $is_signed{$ix} ) { push @len_signed,   $len }
+        else                     { push @len_unsigned, $len }
+    }
+
+    my ( $min_unsigned_length, $max_unsigned_length, $median_unsigned_length )
+      = min_max_median( \@len_unsigned );
+    my ( $min_signed_length, $max_signed_length, $median_signed_length ) =
+      min_max_median( \@len_signed );
+
+    #-----------------------------------------------------------------
+    # Skip if unsigned numbers are long compared to the signed numbers
+    #-----------------------------------------------------------------
+
+    # Quick test: skip padding if no signed numbers exceed unsigned numbers in
+    # length For example, a column of two digit unsigned numbers with some -1's
+    if ( $max_signed_length <= $min_unsigned_length ) {
+        return;
     }
 
     # Is this an isolated column of leading values?
@@ -4979,17 +5013,12 @@ EOM
         $is_single_col = $jmax == 1;
     }
 
-    # Skip padding if no signed numbers exceed unsigned numbers in length
-    # For example, a column of two digit unsigned numbers with some -1's
-    if ( $max_signed_length <= $min_unsigned_length ) {
-        return;
-    }
-
-    # Skip padding if max unsigned length exceeds max signed length and
-    # this is a large table, or a single leading column.
-    if ( $max_unsigned_length > $max_signed_length ) {
+    # Skip padding in a large table, or single column, where 'most'
+    # of the signed values are shorter than the unsigned values.
+    # The median is used to make this insensitive to small changes.
+    if ( $median_unsigned_length >= $median_signed_length ) {
         if (   $is_single_col
-            || $unsigned + $signed > $rOpts_valign_signed_numbers_limit )
+            || $nlines > $rOpts_valign_signed_numbers_limit / 2 )
         {
             return;
         }
@@ -4999,6 +5028,8 @@ EOM
     # Compute available space for each line
     #--------------------------------------
     my %excess_space;
+    my $stuck_count   = 0;
+    my $movable_count = 0;
     foreach my $item (@unsigned_subgroups) {
         my ( $ix_min, $ix_max ) = @{$item};
         my $num = $ix_max - $ix_min + 1;
@@ -5021,7 +5052,43 @@ EOM
               : $alignments[ $jcol - 1 ]->{'column'};
             my $avail        = $col - $col_start;
             my $field_length = $rfield_lengths->[$jcol];
-            $excess_space{$ix} = $avail - $field_length;
+            my $excess       = $avail - $field_length;
+            $excess_space{$ix} = $excess;
+            if   ( $excess <= 0 ) { $stuck_count++ }
+            else                  { $movable_count++ }
+        }
+    }
+
+    return unless ($movable_count);
+
+    # Give up if a high percentage of the unsigned values cannot move. Here
+    # is an example where two unsigned values cannot move right (X2 and X4)
+    #        my %hash = (
+    #            X0 => -12867.098241163,
+    #            X1 =>  2.31694338671684,
+    #            X2 => 0.0597726714860419,
+    #            Y0 =>  30043.1335503155,
+    #            Y1 => 0.0525784981597044,
+    #            Y2 => -2.32447131600783,
+    #        );
+
+    # The stuck/unsigned ratio in this example is 2/4 = 1/2.
+    # A small cutoff ratio is used to avoid this problem
+    if ( $stuck_count >= $unsigned / 5 ) {
+
+        my $line = $rgroup_lines->[$ix_first];
+        my $jmax = $line->{'jmax'};
+
+        # This test works best for a single column of values
+        return if ($is_single_col);
+
+        # or list of key => values
+        if ( $jcol == 1 && $jmax == 2 ) {
+            my $rtokens = $line->{'rtokens'};
+            my $tok     = $rtokens->[0];
+            if ( substr( $tok, 0, 2 ) eq '=>' ) {
+                return;
+            }
         }
     }
 
