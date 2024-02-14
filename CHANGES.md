@@ -2,16 +2,20 @@
 
 ## 2024 02 02.01
 
-    - The option --delete-repeated-commas, -drc has been expanded as follows:
+    - The option --delete-repeated-commas is now the default.
+
+      It makes the following checks and changes:
       - Repeated commas like ',,' on the same line are removed with a warning
       - Repeated fat commas like '=> =>' on the same line are removed with a
         warning
-      - Repeated commas and fat commas on different lines remain unchanged
-        but produce a warning
+      - Repeated commas and fat commas on different lines remain unchanged but
+        produce a warning (to avoid promoting a side-comment to block comment)
       - The combination '=>,' produces a warning but is not changed (it is
-        likely a serious error but only its author would know how to fix it).
-      These warnings are only output if the --warnings flag is set.
-      The -drc option is off by default; this could change in the future.
+        likely an error but only its author would know how to fix it).
+      These warnings are only output if the --warning-output, -w flag is set.
+
+      This is now the DEFAULT Behavior.
+      To avoid this change, use --nodelete-repeated-commas, or -ndrc.
 
     - Added control --delete-interbracket-arrows, or -dia, to delete optional
       hash ref and array ref arrows between brackets as in the following

@@ -3731,8 +3731,8 @@ likely an error but only its author would know how to fix it).
 
 =item *
 
-Note that the special combination ',=>' ('winking fat comma') is ignored
-by this parameter.
+Note that the remaining combination ',=>' (sometimes called a
+'winking fat comma') is ignored by this parameter.
 
 =item *
 
@@ -3740,7 +3740,7 @@ These warnings are only output if the B<-w> flag is set.
 
 =back
 
-This feature is currently off by default and must be requested.
+This feature is on by default.  Use B<-ndrc> to turn it off.
 
 =item B<--want-trailing-commas=s> or B<-wtc=s>, B<--add-trailing-commas> or B<-atc>, and B<--delete-trailing-commas> or B<-dtc>
 

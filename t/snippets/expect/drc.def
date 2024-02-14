@@ -1,1 +1,1 @@
-ignoreSpec( $file, "file",, \%spec,,, \%Rspec );
+ignoreSpec( $file, "file", \%spec, \%Rspec );

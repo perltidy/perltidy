@@ -3833,6 +3833,7 @@ sub generate_options {
       noextended-continuation-indentation
       cuddled-break-option=1
       delete-old-newlines
+      delete-repeated-commas
       delete-semicolons
       dump-block-minimum-lines=20
       dump-block-types=sub

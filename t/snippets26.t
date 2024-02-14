@@ -46,7 +46,7 @@ BEGIN {
 --code-skipping-end='#>>V'
 ----------
         'def'    => "",
-        'drc'    => "-drc",
+        'drc'    => "-ndrc",
         'git106' => "-xlp -gnu -xci",
         'git108' => "-wn -wfc",
         'git93'  => <<'----------',
@@ -632,7 +632,7 @@ $r = $c->
             source => "drc",
             params => "def",
             expect => <<'#9...........',
-ignoreSpec( $file, "file",, \%spec,,, \%Rspec );
+ignoreSpec( $file, "file", \%spec, \%Rspec );
 #9...........
         },
 
@@ -640,7 +640,7 @@ ignoreSpec( $file, "file",, \%spec,,, \%Rspec );
             source => "drc",
             params => "drc",
             expect => <<'#10...........',
-ignoreSpec( $file, "file", \%spec, \%Rspec );
+ignoreSpec( $file, "file",, \%spec,,, \%Rspec );
 #10...........
         },
 
