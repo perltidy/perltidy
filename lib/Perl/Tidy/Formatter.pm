@@ -11326,19 +11326,16 @@ EOM
                 && $rOpts->{'delete-repeated-commas'} )
             {
 
-                # do not delete a comma repeated on a different line -
-                # this can cause problems, such as promoting a side comment
-                # to a block comment. See test 'mangle4.in'
+                # Do not delete the leading comma of a line with a side
+                # comment. This could promote the side comment to a block
+                # comment.  See test 'mangle4.in'
                 my $lno = 1 + $rLL->[$KK]->[_LINE_INDEX_];
-                if ( $KK == $Kfirst ) {
+                if ( $KK eq $Kfirst && $rLL->[$Klast]->[_TYPE_] eq '#' ) {
                     complain(
-                        "repeated commas across multiple lines, not deleted\n",
-                        $lno
-                    );
+                        "repeated comma before side comment, not deleted\n",
+                        $lno );
                 }
                 else {
-                    # Could note this deletion as a possible future update:
-                    ## $self->note_deleted_comma($input_line_number);
                     complain( "deleted repeated ','\n", $lno );
                     next;
                 }
@@ -11373,13 +11370,13 @@ EOM
                 # Check for repeated '=>'s
                 # Note that ',=>' is useful and called a winking fat comma
 
-                # Do not delete a fat comma repeated on a different line -
-                # this can cause problems, such as promoting a side comment
-                # to a block comment. See test 'mangle4.in'
+                # Do not delete the leading fat comma of a line with a side
+                # comment. This could promote the side comment to a block
+                # comment.  See test 'mangle4.in'
                 my $lno = 1 + $rLL->[$KK]->[_LINE_INDEX_];
-                if ( $KK == $Kfirst ) {
+                if ( $KK eq $Kfirst && $rLL->[$Klast]->[_TYPE_] eq '#' ) {
                     complain(
-                        "-repeated '=>' acriss multiple lines, not deleted\n",
+                        "-repeated '=>' before side comment, not deleted\n",
                         $lno );
                 }
                 else {
