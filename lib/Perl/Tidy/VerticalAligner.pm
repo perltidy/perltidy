@@ -5013,15 +5013,11 @@ EOM
         $is_single_col = $jmax == 1;
     }
 
-    # Skip padding in a large table, or single column, where 'most'
-    # of the signed values are shorter than the unsigned values.
-    # The median is used to make this insensitive to small changes.
-    if ( $median_unsigned_length >= $median_signed_length ) {
-        if (   $is_single_col
-            || $nlines > $rOpts_valign_signed_numbers_limit / 2 )
-        {
-            return;
-        }
+    # Skip padding in a table where 'most' of the signed values are shorter
+    # than the unsigned values. Require at least 3 unsigned values for this
+    # test to reduce the influence of the min and max values
+    if ( $median_unsigned_length >= $median_signed_length && $unsigned > 2 ) {
+        return;
     }
 
     #--------------------------------------
