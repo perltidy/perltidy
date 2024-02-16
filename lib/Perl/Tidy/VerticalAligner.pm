@@ -4966,20 +4966,21 @@ EOM
 
     if ( !@unsigned_subgroups ) { return }    # shouldn't happen
 
+    #--------------------------------------------
+    # Find number lengths for irregularity checks
+    #--------------------------------------------
     # Padding signed numbers looks best when the numbers, excluding signs,
     # all have about the same length. When the lengths are irregular, with
     # mostly longer unsigned numbers, it doesn't look good to do this. So
     # we need to filter out these bad-looking cases.
 
-    #------------------------------------------------------
-    # Check number lengths needed for checking irregularity
-    #------------------------------------------------------
     # The 'field_lengths' are unreliable because they may include some
     # arbitrary trailing text; see 'substr.t' So we must look for the end of
     # the number at a space, comma, or closing container token. Note that these
     # lengths include the length of any signs.
     my @len_unsigned;
     my @len_signed;
+    my @lengths;
     foreach my $ix ( $ix_first .. $ix_last ) {
         my $line   = $rgroup_lines->[$ix];
         my $rfield = $line->{'rfields'};
@@ -4988,6 +4989,7 @@ EOM
         my $len = length($str);
         if   ( $is_signed{$ix} ) { push @len_signed,   $len }
         else                     { push @len_unsigned, $len }
+        push @lengths, [ $len, $ix ];
     }
 
     my ( $min_unsigned_length, $max_unsigned_length, $median_unsigned_length )
@@ -4995,36 +4997,114 @@ EOM
     my ( $min_signed_length, $max_signed_length, $median_signed_length ) =
       min_max_median( \@len_signed );
 
-    #-----------------------------------------------------------------
-    # Skip if unsigned numbers are long compared to the signed numbers
-    #-----------------------------------------------------------------
-
-    # Quick test: skip padding if no signed numbers exceed unsigned numbers in
-    # length For example, a column of two digit unsigned numbers with some -1's
+    # Skip padding if no signed numbers exceed unsigned numbers in length
     if ( $max_signed_length <= $min_unsigned_length ) {
         return;
     }
 
-    # Is this an isolated column of leading values?
-    my $is_single_col;
-    if ( $jcol == 0 && $pos_start_number == 0 ) {
-        my $line_first = $rgroup_lines->[$ix_first];
-        my $jmax       = $line_first->{jmax};
-        $is_single_col = $jmax == 1;
+    # If max signed length is greatest - all unsigned values can be padded
+    elsif ( $max_signed_length > $max_unsigned_length ) {
+
+        # Example:
+        #    %wind_dir = (
+        #        'n'  => [  1,  0 ],
+        #        'ne' => [  1,  1 ],
+        #        'e'  => [  0,  1 ],
+        #        'se' => [ -1,  1 ],
+        #        's'  => [ -1,  0 ],
+        #        'sw' => [ -1, -1 ],
+        #        'w'  => [  0, -1 ],
+        #        'nw' => [  1, -1 ],
+        #        ''   => [  0,  0 ],
+        #    );
+
+        # This is the ideal case - ok to continue and pad
     }
 
-    # Skip padding in a table where 'most' of the signed values are shorter
-    # than the unsigned values. Require at least 3 unsigned values for this
-    # test to reduce the influence of the min and max values
-    if ( $median_unsigned_length >= $median_signed_length && $unsigned > 2 ) {
-        return;
+    # intermediate case: some signed numbers cannot be padded ...
+    else {
+
+        # We have to take a closer look.
+        # Here is an example which looks bad if we do padding like this:
+        #    my %hash = (
+        #        X0 => -12867.098241163,
+        #        X1 =>  2.31694338671684,       # unsigned w/   excess>0
+        #        X2 => 0.0597726714860419,      # max length => excess=0
+        #        Y0 =>  30043.1335503155,       # unsigned w/   excess>0
+        #        Y1 => 0.0525784981597044,      # max length => excess=0
+        #        Y2 => -2.32447131600783,
+        #    );
+
+        # To decide what looks okay, we count 'good' and 'bad' line interfaces:
+        #    X0 - X1 = good (X0 is signed and X1 can move)
+        #    X1 - X2 = bad  (x1 can move but x2 cannot)
+        #    X2 - Y0 = bad  (x2 cannot move but Y0 can move)
+        #    Y0 - Y1 = bad  (Y0 can move but Y1 cannot move)
+        #    Y1 - Y2 = bad  (Y1 cannot move and Y2 is signed)
+        # Result: 4 bad interfaces and 1 good => so we will skip this
+        my $good_count = 0;
+        my $bad_count  = 0;
+        foreach my $item (@lengths) {
+            $item->[0] = $max_unsigned_length - $item->[0];
+        }
+        my $item0 = shift @lengths;
+        my ( $excess, $ix ) = @{$item0};
+        my $immobile_count = $excess ? 0 : 1;
+        foreach my $item (@lengths) {
+            my $excess_m = $excess;
+            my $ix_m     = $ix;
+            ( $excess, $ix ) = @{$item};
+            if ( !$excess ) { $immobile_count++ }
+
+            if ( $is_signed{$ix_m} ) {
+
+                # signed-unsigned interface
+                if ( !$is_signed{$ix} ) {
+                    if   ($excess) { $good_count++ }
+                    else           { $bad_count++ }
+                }
+
+                # signed-signed: ok, not good or bad
+            }
+            else {
+
+                # unsigned-signed interface
+                if ( $is_signed{$ix} ) {
+                    if   ($excess_m) { $good_count++ }
+                    else             { $bad_count++ }
+                }
+
+                # unsigned-unsigned: bad if different
+                else {
+                    if ( $excess_m xor $excess ) {
+                        $bad_count++;
+                    }
+                }
+            }
+        }
+
+        # Filter 1: skip if more interfaces are 'bad' than 'good'
+        if ( $bad_count > $good_count ) {
+            return;
+        }
+
+        # Filter 2: skip in a table with multiple 'bad' interfaces and where
+        # 'most' of the unsigned lengths are shorter than the signed lengths.
+        # Using the median value makes this insensitive to small changes.
+        if (   $median_unsigned_length >= $median_signed_length
+            && $bad_count > 1
+            && $immobile_count > 1 )
+        {
+            return;
+        }
+
+        # Anything that gets past these filters should look ok if padded
     }
 
-    #--------------------------------------
-    # Compute available space for each line
-    #--------------------------------------
+    #---------------------------------------------
+    # Compute actual available space for each line
+    #---------------------------------------------
     my %excess_space;
-    my $stuck_count   = 0;
     my $movable_count = 0;
     foreach my $item (@unsigned_subgroups) {
         my ( $ix_min, $ix_max ) = @{$item};
@@ -5050,43 +5130,11 @@ EOM
             my $field_length = $rfield_lengths->[$jcol];
             my $excess       = $avail - $field_length;
             $excess_space{$ix} = $excess;
-            if   ( $excess <= 0 ) { $stuck_count++ }
-            else                  { $movable_count++ }
+            if ( $excess > 0 ) { $movable_count++ }
         }
     }
 
     return unless ($movable_count);
-
-    # Give up if a high percentage of the unsigned values cannot move. Here
-    # is an example where two unsigned values cannot move right (X2 and X4)
-    #        my %hash = (
-    #            X0 => -12867.098241163,
-    #            X1 =>  2.31694338671684,
-    #            X2 => 0.0597726714860419,
-    #            Y0 =>  30043.1335503155,
-    #            Y1 => 0.0525784981597044,
-    #            Y2 => -2.32447131600783,
-    #        );
-
-    # The stuck/unsigned ratio in this example is 2/4 = 1/2.
-    # A small cutoff ratio is used to avoid this problem
-    if ( $stuck_count >= $unsigned / 5 ) {
-
-        my $line = $rgroup_lines->[$ix_first];
-        my $jmax = $line->{'jmax'};
-
-        # This test works best for a single column of values
-        return if ($is_single_col);
-
-        # or list of key => values
-        if ( $jcol == 1 && $jmax == 2 ) {
-            my $rtokens = $line->{'rtokens'};
-            my $tok     = $rtokens->[0];
-            if ( substr( $tok, 0, 2 ) eq '=>' ) {
-                return;
-            }
-        }
-    }
 
     # Count the number of signed-unsigned interfaces that would change
     # if we do the padding
@@ -5097,7 +5145,10 @@ EOM
         $Nc++ if ( $excess_space{$ix_max} > 0 && $ix_max != $ix_last );
     }
 
+    #--------------------------------------------------------------------
+    # Sparsity check:
     # Give up if the number of interface changes will be below the cutoff
+    #--------------------------------------------------------------------
     if ( $unsigned > $Nc * $rOpts_valign_signed_numbers_limit ) {
         return;
     }
