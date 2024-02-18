@@ -131,7 +131,7 @@ BEGIN {
     # then the Release version must be bumped, and it is probably past time for
     # a release anyway.
 
-    $VERSION = '20240202.01';
+    $VERSION = '20240202.02';
 } ## end BEGIN
 
 sub DESTROY {
@@ -3887,6 +3887,7 @@ sub generate_options {
       valign-code
       valign-block-comments
       valign-side-comments
+      valign-signed-numbers
       valign-signed-numbers-limit=20
       short-concatenation-item-length=8
       space-for-semicolon

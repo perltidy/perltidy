@@ -1,6 +1,12 @@
 # Perltidy Change Log
 
-## 2024 02 02.01
+## 2024 02 02.02
+
+    - The option --valign-signed-numbers, or -vsn is now the default. It
+      was introduced in the previous release has been found to significantly
+      improve the overall appearance of columns of signed and unsigned
+      numbers.  It will change formatting slightly in scripts with columns
+      of vertically aligned numbers, and can be deactivated with -nvsn.
 
     - The option --delete-repeated-commas is now the default.
 

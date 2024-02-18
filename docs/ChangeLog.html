@@ -1,8 +1,26 @@
 <h1>Perltidy Change Log</h1>
 
-<h2>2024 02 02.01</h2>
+<h2>2024 02 02.02</h2>
 
-<pre><code>- Added control --delete-interbracket-arrows, or -dia, to delete optional
+<pre><code>- The option --valign-signed-numbers, or -vsn is now the default. It
+  was introduced in the previous release has been found to significantly
+  improve the overall appearance of columns of signed and unsigned
+  numbers.  It will change formatting slightly in scripts with columns
+  of vertically aligned numbers, and can be deactivated with -nvsn.
+
+- The option --delete-repeated-commas is now the default.
+
+  It makes the following checks and changes:
+  - Repeated commas like ',,' are removed with a warning
+  - Repeated fat commas like '=&gt; =&gt;' are removed with a
+    warning
+  - The combination '=&gt;,' produces a warning but is not changed
+  These warnings are only output if --warning-output, or -w, is set.
+
+  This is now the DEFAULT Behavior.
+  Use --nodelete-repeated-commas, or -ndrc, to turn this option off.
+
+- Added control --delete-interbracket-arrows, or -dia, to delete optional
   hash ref and array ref arrows between brackets as in the following
   expression (see git #131)
 

@@ -2951,7 +2951,28 @@
 <pre><code>      # perltidy -drc:
       ignoreSpec( $file, &quot;file&quot;, \%spec, \%Rspec );</code></pre>
 
-<p>Since the default is not to add or delete commas, this feature is off by default and must be requested.</p>
+<p>This parameter also deletes repeated fat commas, &#39;=&gt;&#39;. The complete list of actions taken when this flag is set are as follows:</p>
+
+<ul>
+
+<li><p>Repeated commas like &#39;,,&#39; are removed with a warning.</p>
+
+</li>
+<li><p>Repeated fat commas like &#39;=&gt; =&gt;&#39; are removed with a warning.</p>
+
+</li>
+<li><p>The combination &#39;=&gt;,&#39; produces a warning but is not changed (it is likely an error but only its author would know how to fix it).</p>
+
+</li>
+<li><p>The remaining combination &#39;,=&gt;&#39; (sometimes called a &#39;winking fat comma&#39;) is ignored by this parameter.</p>
+
+</li>
+<li><p>These warnings are only output if the <b>--warning-output</b>, or <b>-w</b>, flag is set.</p>
+
+</li>
+</ul>
+
+<p>This feature is on by default. Use <b>-ndrc</b> to turn it off.</p>
 
 </dd>
 <dt id="want-trailing-commas-s-or--wtc-s---add-trailing-commas-or--atc-and---delete-trailing-commas-or--dtc"><b>--want-trailing-commas=s</b> or <b>-wtc=s</b>, <b>--add-trailing-commas</b> or <b>-atc</b>, and <b>--delete-trailing-commas</b> or <b>-dtc</b></dt>
@@ -4577,7 +4598,7 @@
 <dt id="r:-reused-variable-name"><b>r: reused variable name</b></dt>
 <dd>
 
-<p>These are variables which are re-declared in the scope of a variable with the identical name. This can be confusing (perhaps not when the code is first written, but possibly later during maintenance work). This issue can be avoided by renaming one of the conflicting variables. Note that this is similar to the <b>Perl::Critic</b> policy <b>Variables::ProhibitReusedNames</b>.</p>
+<p>These are variables which are re-declared in the scope of a variable with the identical name. This can be confusing, perhaps not when the code is first written, but possibly later during maintenance work. For example, this can make it difficult to locate the correct variable with an editor when changes are being made. This issue can be avoided by renaming one of the conflicting variables. Note that this is similar to the <b>Perl::Critic</b> policy <b>Variables::ProhibitReusedNames</b>.</p>
 
 </dd>
 <dt id="s:-sigil-change-but-reused-bareword"><b>s: sigil change but reused bareword</b></dt>
@@ -4605,13 +4626,15 @@
 <dt id="u:-unused-variables"><b>u: unused variables</b></dt>
 <dd>
 
-<p>These are variables which are declared with a <code>my</code> and not referenced again within their scope. Calling them <b>unused</b> is convenient but not really accurate; this is a &quot;gray area&quot; for a program. There are many reasons for having such variables. For example, they might occur in a list of values provided by another routine or data structure, and therefore must be listed, even though they might not be referenced again. Or they might be defined for possible future program development, clarity or debugging. <b>But</b> sometimes they can occur due to being orphaned by a coding change, due to a misspelling, or by having an unintentional preceding <code>my</code>. So it is worth reviewing them, especially for new code. Here is an example of an unused variable in a script located with this method:</p>
+<p>These are variables which are declared with a <code>my</code> and not referenced again within their scope. Calling them <b>unused</b> is convenient but not really accurate; this is a &quot;gray area&quot; for a program. There are some good reasons for having such variables. For example, they might occur in a list of values provided by another routine or data structure, and therefore must be listed, even though they might not be referenced again. Having such variables can make them immediately available for future development and debugging, and can be beneficial for program clarity.</p>
+
+<p><b>But</b> sometimes they can occur due to being orphaned by a coding change, due to a misspelling, or by having an unintentional preceding <code>my</code>. So it is worth reviewing them, especially for new code. Here is an example of an unused variable in a script located with this method:</p>
 
 <pre><code>   BEGIN { my $string = &quot;&quot; }
    ...
    $string .= &quot;ok&quot;;</code></pre>
 
-<p>This looks nice at first glance, but the scope of the <code>my</code> declaration is limited to the surrounding braces, so it is not the same variable as the other <code>$string</code> and must therefore be reported as unused. This problem would have also been caught by perl if the author had used <code>strict</code>.</p>
+<p>This looks nice at first glance, but the scope of the <code>my</code> declaration is limited to the surrounding braces, so it is not the same variable as the other <code>$string</code> and must therefore be reported as unused. This particular problem would have also been caught by perl if the author had used <code>strict</code>.</p>
 
 </dd>
 </dl>
@@ -5009,7 +5032,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20240202.01</p>
+<p>This man page documents perltidy version 20240202.02</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 
