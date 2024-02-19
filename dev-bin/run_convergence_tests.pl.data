@@ -11935,6 +11935,96 @@ my @pics =
 --extended-line-up-parentheses
 --ignore-side-comment-lengths
 
+==> b1466.in <==
+sub new{
+     my($self)=$class->SUPER::new(
+          yyrules=>[
+               ['$start',2,undef,],
+               [
+                    'item',
+                    3,
+                    sub{
+                         if($_[3]){
+                              my($k,$v,);
+                              while(($k,$v,)=each(%{$_[3]})){
+                                   if($k eq"email_"){
+                                        if(
+                                                   defined$groups{$_[1]}
+                                                   ->{"email_work"})
+                                        {
+                                             $k="email_home";
+                                        }
+                                        else{
+                                             $k="email_work";
+                                        }
+                                   }
+
+                                   $groups{$_[1]}->{$k}=$v;
+                              }
+                         }
+                    },
+               ],
+               [
+                        '@1-3',
+                        0,
+                        sub{parse_value($_[2]->{ENCODING});},
+               ],
+               ['params',0,sub{{}},],
+               [
+                        'params',
+                        3,
+                        sub{
+                             my%hash;
+                             for(my$i=0;$i<@{$_[3]};$i+=2){
+                                  push@{$hash{$_[3]->[$i]}},$_[3]->[$i+1];
+                             }
+                             \%hash;
+                        },
+               ],
+               [
+                        'paramlist',
+                        1,
+                        sub{$_[1]},
+               ],
+               [
+                        'paramlist',
+                        5,
+                        sub{
+                             unshift(@{$_[1]},@{$_[5]},)if defined$_[5];
+                             $_[1];
+                        },
+               ],
+               [
+                        'param',
+                        5,
+                        sub{[uc($_[1]),uc($_[5]),]},
+               ],
+               ['addressparts',1,sub{{"address",$_[1],}},],
+               [
+                        'addressparts',
+                        3,
+                        sub{{"address",$_[1],"address2",$_[3],}},
+               ],
+               [
+                        'addressparts',
+                        5,
+                        sub{{"address",$_[1],"address2",$_[3],"street",$_[5],}},
+               ],
+          ],
+          @_,
+     );
+     bless($self,$class,);
+
+}
+
+==> b1466.par <==
+--indent-columns=5
+--continuation-indentation=7
+--weld-nested-containers
+--noadd-whitespace
+--extended-continuation-indentation
+--extended-line-up-parentheses
+
 ==> b148.in <==
 # state 1
 @yydgoto=(

@@ -2212,6 +2212,20 @@ EOM
 ##        );
     }
 
+    #-----------------------------------------------------------
+    # The combination -xlp -xci and ci>i can be unstable (b1466)
+    #-----------------------------------------------------------
+    if (   $rOpts->{'extended-line-up-parentheses'}
+        && $rOpts->{'extended-continuation-indentation'}
+        && $rOpts->{'continuation-indentation'} > $rOpts->{'indent-columns'}
+        && $rOpts->{'indent-columns'} > 1 )
+    {
+        $rOpts->{'continuation-indentation'} = $rOpts->{'indent-columns'};
+        ## This combination is only likely to occur during random testing, so
+        ## skip the warning.
+        ##Warn("The combination -xlp -xci -ci>-i can be unstable; reducing ci\n");
+    }
+
     return;
 } ## end sub initialize_line_up_parentheses
 
@@ -12167,8 +12181,11 @@ sub add_trailing_comma {
 
     # if so, add a comma
     if ($match) {
-        my $want_space_after = $rwhitespace_flags->[$KK] == WS_YES;
-        $self->store_new_token( ',', ',', $Kp, $want_space_after );
+
+        # any blank after the comma will be added before the closing paren,
+        # below
+        $self->store_new_token( ',', ',', $Kp );
+
     }
 
     return;
@@ -12336,8 +12353,8 @@ sub add_interbracket_arrow {
         return;
     }
 
-    my $want_space_after = $want_right_space{'->'} == WS_YES;
-    $self->store_new_token( '->', '->', $Kp, $want_space_after );
+    $self->store_new_token( '->', '->', $Kp );
+    if ( $want_right_space{'->'} == WS_YES ) { $self->store_token() }
 
     return;
 } ## end sub add_interbracket_arrow
@@ -12701,16 +12718,15 @@ sub match_trailing_comma_rule {
 
 sub store_new_token {
 
-    my ( $self, $type, $token, $Kp, $want_space_after ) = @_;
+    my ( $self, $type, $token, $Kp ) = @_;
 
     # Create and insert a completely new token into the output stream
+    # Caller must add space after this token if necessary
 
     # Input parameters:
     #  $type  = the token type
     #  $token = the token text
     #  $Kp    = index of the previous token in the new list, $rLL_new
-    #  $want_space_after = true if we want a space after the new token
-    #                      false if no space
 
     # This operation is a little tricky because we are creating a new token and
     # we have to take care to follow the requested whitespace rules.
@@ -12745,9 +12761,7 @@ sub store_new_token {
         }
 
         # Then store a new blank
-        if ($want_space_after) {
-            $self->store_token($rcopy);
-        }
+        ## $self->store_token($rcopy);
     }
     else {
 
@@ -12781,9 +12795,6 @@ sub store_new_token {
         my $rcopy = copy_token_as_type( $rLL_new->[$Kp], $type, $token );
         $self->store_token($rcopy);
 
-        if ($want_space_after) {
-            $self->store_token();
-        }
     }
 
     return;
