@@ -26,9 +26,6 @@
 --want-trailing-commas='b'
 --delete-trailing-commas
 
-# this should eventually become the default
---delete-repeated-commas
-
 # For now, require arrows at asymmetric bracket combinations
 --add-interbracket-arrows
 --interbracket-arrow-style=']->{ }->['

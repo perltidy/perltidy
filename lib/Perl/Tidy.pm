@@ -3839,6 +3839,7 @@ sub generate_options {
       dump-block-types=sub
       extended-syntax
       encode-output-strings
+      file-size-order
       function-paren-vertical-alignment
       fuzzy-line-length
       hanging-side-comments

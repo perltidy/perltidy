@@ -2,6 +2,15 @@
 
 ## 2024 02 02.02
 
+    - The option --file-size-order, or -fso is now the default. When
+      perltidy is given a list of multiple filenames to process, they
+      are sorted by size and processed in order of increasing size.
+      This can significantly reduce memory usage by Perl.  This
+      option has always been used in testing, where typically several
+      jobs each operating on thousands of filenames are running at the
+      same time and competing for system resources.  If this option
+      is not wanted for some reason, it can be deactivated with -nfso.
+
     - The option --valign-signed-numbers, or -vsn is now the default. It
       was introduced in the previous release has been found to significantly
       improve the overall appearance of columns of signed and unsigned

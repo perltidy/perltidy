@@ -5618,9 +5618,10 @@ html files, and another is when the B<-cscw> option is selected. The default is
 to allow timestamps (B<--timestamp> or B<-ts>).
 
 B<--file-size-order> or B<-fso> will cause files to be processed in order of
-increasing size, when multiple files are being processed.  This is useful
-during program development, when large numbers of files with varying sizes are
-processed, because it can reduce virtual memory usage.
+increasing size, when multiple files are being processed.  This is particularly
+useful during program development, when large numbers of files with varying
+sizes are processed, because it can reduce virtual memory usage. This is
+the default and can be deactivated with B<-nfso>.
 
 B<--maximum-file-size-mb=n> or B<-maxfs=n> specifies the maximum file size in
 megabytes that perltidy will attempt to format. This parameter is provided to
