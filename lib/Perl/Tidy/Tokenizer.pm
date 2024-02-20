@@ -4731,8 +4731,18 @@ EOM
         #    true if this token ends the current line
         #    false otherwise
 
-        my ( $next_nonblank_token, $i_next ) =
-          $self->find_next_nonblank_token( $i, $rtokens, $max_token_index );
+        my $next_nonblank_token;
+        my $i_next = $i + 1;
+        if ( $i_next <= $max_token_index && $rtoken_type->[$i_next] eq 'b' ) {
+            $i_next++;
+        }
+        if ( $i_next <= $max_token_index ) {
+            $next_nonblank_token = $rtokens->[$i_next];
+        }
+        else {
+            ( $next_nonblank_token, $i_next ) =
+              $self->find_next_nonblank_token( $i, $rtokens, $max_token_index );
+        }
 
         # a bare word immediately followed by :: is not a keyword;
         # use $tok_kw when testing for keywords to avoid a mistake
