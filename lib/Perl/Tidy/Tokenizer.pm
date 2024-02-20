@@ -6145,7 +6145,7 @@ EOM
                     my $len_test  = length($test_line);
 
                     # check '$rtoken_map' and '$routput_token_list'
-                    Fault(<<EOM);
+                    $self->Fault(<<EOM);
 Reconstruted line difers from input; input_length=$len_input test_length=$len_test
 input:'$input_line'
 test :'$test_line'
@@ -10238,6 +10238,11 @@ sub do_quote {
         $max_token_index,
 
     ) = @_;
+
+    if ( DEVEL_MODE && @_ != ( my $my_count = 12 ) ) {
+        my $count = @_;
+        $self->Fault("arg count $count expected to be $my_count\n");
+    }
 
     my $quoted_string;
     if ( $in_quote == 2 ) {    # two quotes/quoted_string_1s to follow
