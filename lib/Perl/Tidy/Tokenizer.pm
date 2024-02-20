@@ -3363,8 +3363,8 @@ EOM
         elsif ( $expecting == UNKNOWN ) {    # indeterminate, must guess..
             my $msg;
             ( $is_pattern, $msg ) =
-              $self->guess_if_pattern_or_division( $i, $rtokens, $rtoken_map,
-                $max_token_index );
+              $self->guess_if_pattern_or_division( $i, $rtokens, $rtoken_type,
+                $rtoken_map, $max_token_index );
 
             if ($msg) {
                 $self->write_diagnostics("DIVIDE:$msg\n");
@@ -3697,8 +3697,8 @@ EOM
             #      /(.*)/ && (print $1,"\n");
             my $msg;
             ( $is_pattern, $msg ) =
-              $self->guess_if_pattern_or_conditional( $i, $rtokens, $rtoken_map,
-                $max_token_index );
+              $self->guess_if_pattern_or_conditional( $i, $rtokens,
+                $rtoken_type, $rtoken_map, $max_token_index );
 
             if ($msg) { $self->write_logfile_entry($msg) }
         }
@@ -4046,8 +4046,8 @@ EOM
                 $found_target, $here_doc_target, $here_quote_character, $i,
                 $saw_error
               )
-              = $self->find_here_doc( $expecting, $i, $rtokens, $rtoken_map,
-                $max_token_index );
+              = $self->find_here_doc( $expecting, $i, $rtokens, $rtoken_type,
+                $rtoken_map, $max_token_index );
 
             if ($found_target) {
                 push @{$rhere_target_list},
@@ -4112,8 +4112,8 @@ EOM
                 $found_target, $here_doc_target, $here_quote_character, $i,
                 $saw_error
               )
-              = $self->find_here_doc( $expecting, $i, $rtokens, $rtoken_map,
-                $max_token_index );
+              = $self->find_here_doc( $expecting, $i, $rtokens, $rtoken_type,
+                $rtoken_map, $max_token_index );
 
             if ($found_target) {
 
@@ -5072,6 +5072,7 @@ EOM
             $quoted_string_1,
             $quoted_string_2,
             $rtokens,
+            $rtoken_type,
             $rtoken_map,
             $max_token_index,
 
@@ -7385,7 +7386,8 @@ sub guess_if_pattern_or_conditional {
     #   msg = a warning or diagnostic message
     # USES GLOBAL VARIABLES: $last_nonblank_token
 
-    my ( $self, $i, $rtokens, $rtoken_map, $max_token_index ) = @_;
+    my ( $self, $i, $rtokens, $rtoken_type, $rtoken_map, $max_token_index ) =
+      @_;
     my $is_pattern = 0;
     my $msg        = "guessing that ? after $last_nonblank_token starts a ";
 
@@ -7417,6 +7419,7 @@ sub guess_if_pattern_or_conditional {
             $ibeg,
             $in_quote,
             $rtokens,
+            $rtoken_type,
             $quote_character,
             $quote_pos,
             $quote_depth,
@@ -7489,7 +7492,8 @@ sub guess_if_pattern_or_division {
     #   $is_pattern = 0 if probably division,  =1 if probably a pattern
     #   msg = a warning or diagnostic message
     # USES GLOBAL VARIABLES: $last_nonblank_token
-    my ( $self, $i, $rtokens, $rtoken_map, $max_token_index ) = @_;
+    my ( $self, $i, $rtokens, $rtoken_type, $rtoken_map, $max_token_index ) =
+      @_;
     my $is_pattern = 0;
     my $msg        = "guessing that / after $last_nonblank_token starts a ";
     my $ibeg       = $i;
@@ -7545,6 +7549,7 @@ sub guess_if_pattern_or_division {
             $ibeg,
             $in_quote,
             $rtokens,
+            $rtoken_type,
             $quote_character,
             $quote_pos,
             $quote_depth,
@@ -10078,7 +10083,9 @@ sub find_here_doc {
     #   $i - unchanged if not here doc,
     #    or index of the last token of the here target
     #   $saw_error - flag noting unbalanced quote on here target
-    my ( $self, $expecting, $i, $rtokens, $rtoken_map, $max_token_index ) = @_;
+    my ( $self, $expecting, $i, $rtokens, $rtoken_type, $rtoken_map,
+        $max_token_index )
+      = @_;
 
     my $ibeg                 = $i;
     my $found_target         = 0;
@@ -10119,6 +10126,7 @@ sub find_here_doc {
             $i_next_nonblank,
             $in_quote,
             $rtokens,
+            $rtoken_type,
             $here_quote_character,
             $quote_pos,
             $quote_depth,
@@ -10215,6 +10223,7 @@ sub do_quote {
         $quoted_string_1,
         $quoted_string_2,
         $rtokens,
+        $rtoken_type,
         $rtoken_map,
         $max_token_index,
 
@@ -10237,6 +10246,7 @@ sub do_quote {
             $ibeg,
             $in_quote,
             $rtokens,
+            $rtoken_type,
             $quote_character,
             $quote_pos,
             $quote_depth,
@@ -10268,6 +10278,7 @@ sub do_quote {
             $ibeg,
             $in_quote,
             $rtokens,
+            $rtoken_type,
             $quote_character,
             $quote_pos,
             $quote_depth,
@@ -10325,6 +10336,7 @@ sub follow_quoted_string {
         $i_beg,
         $in_quote,
         $rtokens,
+        $rtoken_type,
         $beginning_tok,
         $quote_pos,
         $quote_depth,
@@ -10361,7 +10373,8 @@ sub follow_quoted_string {
         while ( $i < $max_token_index ) {
             $tok = $rtokens->[ ++$i ];
 
-            if ( $tok !~ /^\s*$/ ) {
+            ##if ( $tok !~ /^\s*$/ ) {
+            if ( $rtoken_type->[$i] ne 'b' ) {
 
                 if ( ( $tok eq '#' ) && ($allow_quote_comments) ) {
                     $i = $max_token_index;
