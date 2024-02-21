@@ -7744,6 +7744,11 @@ sub scan_bare_identifier_do {
         $max_token_index
 
     ) = @_;
+
+    if ( DEVEL_MODE && ( my $count = @_ ) != ( my $expected_count = 8 ) ) {
+        $self->Fault("arg count $count expected to be $expected_count\n");
+    }
+
     my $i_begin = $i;
     my $package = undef;
 
@@ -7979,6 +7984,11 @@ sub scan_id_do {
         $max_token_index
 
     ) = @_;
+
+    if ( DEVEL_MODE && ( my $count = @_ ) != ( my $expected_count = 8 ) ) {
+        $self->Fault("arg count $count expected to be $expected_count\n");
+    }
+
     use constant DEBUG_NSCAN => 0;
     my $type = EMPTY_STRING;
     my ( $i_beg, $pos_beg );
@@ -8859,7 +8869,12 @@ sub do_scan_package {
             $max_token_index,
             $expecting,
             $container_type
+
         ) = @_;
+
+        if ( DEVEL_MODE && ( my $count = @_ ) != ( my $expected_count = 8 ) ) {
+            $self->Fault("arg count $count expected to be $expected_count\n");
+        }
 
         # return flag telling caller to split the pretoken
         my $split_pretoken_flag;
@@ -10093,9 +10108,22 @@ sub find_here_doc {
     #   $i - unchanged if not here doc,
     #    or index of the last token of the here target
     #   $saw_error - flag noting unbalanced quote on here target
-    my ( $self, $expecting, $i, $rtokens, $rtoken_type, $rtoken_map,
-        $max_token_index )
-      = @_;
+    my (
+
+        $self,
+
+        $expecting,
+        $i,
+        $rtokens,
+        $rtoken_type,
+        $rtoken_map,
+        $max_token_index
+
+    ) = @_;
+
+    if ( DEVEL_MODE && ( my $count = @_ ) != ( my $expected_count = 7 ) ) {
+        $self->Fault("arg count $count expected to be $expected_count\n");
+    }
 
     my $ibeg                 = $i;
     my $found_target         = 0;
@@ -10225,6 +10253,7 @@ sub do_quote {
     my (
 
         $self,
+
         $i,
         $in_quote,
         $quote_character,
@@ -10239,9 +10268,8 @@ sub do_quote {
 
     ) = @_;
 
-    if ( DEVEL_MODE && @_ != ( my $my_count = 12 ) ) {
-        my $count = @_;
-        $self->Fault("arg count $count expected to be $my_count\n");
+    if ( DEVEL_MODE && ( my $count = @_ ) != ( my $expected_count = 12 ) ) {
+        $self->Fault("arg count $count expected to be $expected_count\n");
     }
 
     my $quoted_string;
@@ -10348,6 +10376,7 @@ sub follow_quoted_string {
     my (
 
         $self,
+
         $i_beg,
         $in_quote,
         $rtokens,
@@ -10358,6 +10387,10 @@ sub follow_quoted_string {
         $max_token_index,
 
     ) = @_;
+
+    if ( DEVEL_MODE && ( my $count = @_ ) != ( my $expected_count = 9 ) ) {
+        $self->Fault("arg count $count expected to be $expected_count\n");
+    }
 
     my ( $tok, $end_tok );
     my $i             = $i_beg - 1;
