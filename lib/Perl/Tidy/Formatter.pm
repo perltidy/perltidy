@@ -525,6 +525,7 @@ BEGIN {
         _K_opening_ternary_         => $i++,
         _K_closing_ternary_         => $i++,
         _rK_sequenced_token_list_   => $i++,
+        _rpackage_info_list_        => $i++,
         _rtype_count_by_seqno_      => $i++,
         _ris_function_call_paren_   => $i++,
         _rlec_count_by_seqno_       => $i++,
@@ -981,6 +982,9 @@ sub new {
 
     # A list of index K of sequenced tokens to allow loops over all
     $self->[_rK_sequenced_token_list_] = [];
+
+    # A list of info about package statements
+    $self->[_rpackage_info_list_] = [];
 
     # 'rSS' is the 'Signed Sequence' list, a continuous list of all sequence
     # numbers with + or - indicating opening or closing. This list represents
@@ -7149,98 +7153,36 @@ sub find_selected_packages {
 
     my ( $self, $rdump_block_types ) = @_;
 
-    # returns a list of all selected package statements in a file
-    my @package_list;
-
+    # Returns a list of all selected package statements in a file
+    # for use in dumping block information.
+    # Note that we are running before sub respace_tokens, so not
+    # all data structures are avaialble. This is similar to sub
+    # set_package_info which runs after sub respace_tokens.
     if (   !$rdump_block_types->{'*'}
         && !$rdump_block_types->{'package'}
         && !$rdump_block_types->{'class'} )
     {
-        return \@package_list;
+        return [];
     }
 
-    my $rLL    = $self->[_rLL_];
-    my $Klimit = $self->[_Klimit_];
-    my $rlines = $self->[_rlines_];
-
-    my $K_closing_container = $self->[_K_closing_container_];
-    my @package_sweep;
+    my $rLL = $self->[_rLL_];
+    my @K_package_list;
+    my $Klimit = @{$rLL} - 1;
     foreach my $KK ( 0 .. $Klimit ) {
         my $item = $rLL->[$KK];
         my $type = $item->[_TYPE_];
 
         # fix for c250: package type has changed from 'i' to 'P'
         next if ( $type ne 'P' );
-
-        my $token = $item->[_TOKEN_];
-        if (   substr( $token, 0, 7 ) eq 'package' && $token =~ /^package\s/
-            || substr( $token, 0, 5 ) eq 'class' && $token =~ /^class\s/ )
-        {
-
-            $token =~ s/\s+/ /g;
-            my ( $keyword, $name ) = split /\s+/, $token, 2;
-
-            my $lx_start     = $item->[_LINE_INDEX_];
-            my $level        = $item->[_LEVEL_];
-            my $parent_seqno = $self->parent_seqno_by_K($KK);
-
-            # Skip a class BLOCK because it will be handled as a block
-            if ( $keyword eq 'class' ) {
-                my $line_of_tokens = $rlines->[$lx_start];
-                my $rK_range       = $line_of_tokens->{_rK_range};
-                my ( $K_first, $K_last ) = @{$rK_range};
-                if ( $rLL->[$K_last]->[_TYPE_] eq '#' ) {
-                    $K_last = $self->K_previous_code($K_last);
-                }
-                if ( defined($K_last) ) {
-                    my $seqno_class = $rLL->[$K_last]->[_TYPE_SEQUENCE_];
-                    my $block_type_next =
-                      $self->[_rblock_type_of_seqno_]->{$seqno_class};
-
-                    # these block types are currently marked 'package'
-                    # but may be 'class' in the future, so allow both.
-                    if ( defined($block_type_next)
-                        && $block_type_next =~ /^(class|package)\b/ )
-                    {
-                        next;
-                    }
-                }
-            }
-
-            my $K_closing = $Klimit;
-            if ( $parent_seqno != SEQ_ROOT ) {
-                my $Kc = $K_closing_container->{$parent_seqno};
-                if ( defined($Kc) ) {
-                    $K_closing = $Kc;
-                }
-            }
-
-            # This package ends any previous package at this level
-            if ( defined( my $ix = $package_sweep[$level] ) ) {
-                my $rpk = $package_list[$ix];
-                my $Kc  = $rpk->{K_closing};
-                if ( $Kc > $KK ) {
-                    $rpk->{K_closing} = $KK - 1;
-                }
-            }
-            $package_sweep[$level] = @package_list;
-
-            # max_change and block_count are not currently reported 'package'
-            push @package_list,
-              {
-                line_start  => $lx_start + 1,
-                K_opening   => $KK,
-                K_closing   => $Klimit,
-                name        => $name,
-                type        => $keyword,
-                level       => $level,
-                max_change  => 0,
-                block_count => 0,
-              };
-        }
+        push @K_package_list, $KK;
     }
 
-    return \@package_list;
+    my $rpackage_list = $self->make_package_info_list( \@K_package_list );
+
+    # remove BLOCK formats since they get reported as blocks
+    my @filtered_list = grep { !$_->{is_block} } @{$rpackage_list};
+
+    return \@filtered_list;
 } ## end sub find_selected_packages
 
 sub find_selected_blocks {
@@ -10712,6 +10654,9 @@ my $CODE_type;
 
 my $rwhitespace_flags;
 
+# new index K of package or class statements
+my @K_package_list;
+
 sub initialize_respace_tokens_closure {
 
     my ($self) = @_;
@@ -10777,6 +10722,8 @@ sub initialize_respace_tokens_closure {
     $K_closing_container = $self->[_K_closing_container_] = {};
 
     @K_sequenced_token_list = ();
+
+    @K_package_list = ();
 
     return;
 
@@ -10974,6 +10921,9 @@ sub respace_tokens {
     my $Klimit;
     if ( @{$rLL_new} ) { $Klimit = @{$rLL_new} - 1 }
     $self->[_Klimit_] = $Klimit;
+
+    $self->[_rpackage_info_list_] =
+      $self->make_package_info_list( \@K_package_list );
 
     # During development, verify that the new array still looks okay.
     DEVEL_MODE && $self->check_token_array();
@@ -11225,6 +11175,10 @@ sub respace_tokens_inner_loop {
                         $self->[_ris_special_identifier_token_]->{$token} =
                           'package';
                     }
+
+                    # remember the new K of this package; this may be
+                    # off by 1 if a blank gets inserted before it
+                    push @K_package_list, scalar @{$rLL_new};
                 }
                 else {
                     # Could be something like '* STDERR' or '$ debug'
@@ -12871,6 +12825,123 @@ sub check_Q {
 } ## end sub check_Q
 
 } ## end closure respace_tokens
+
+sub make_package_info_list {
+
+    # Create a hash of values which can be used to find the package of any
+    # token.  This sub must be called after rLL has been updated because it
+    # calls parent_seqno_by_K.
+    my ( $self, $rK_package_list ) = @_;
+
+    # This sub defines a searchable list of all package statements in a file.
+    # The package of a token at an arbitrary index K is the last entry
+    # in the list for which K_opening < K < K_closing.
+    # If no package is found, then the package is 'main'.
+    # This list is in order of the index K of the package statements.
+    # so the search can stop if we find K_opening > K.
+    my @package_info_list;
+
+    my $rLL    = $self->[_rLL_];
+    my $Klimit = $self->[_Klimit_];
+    my $rlines = $self->[_rlines_];
+
+    my $K_closing_container = $self->[_K_closing_container_];
+    my @package_stack;
+
+    foreach my $KK ( @{$rK_package_list} ) {
+        my $item = $rLL->[$KK];
+        my $type = $item->[_TYPE_];
+
+        # Stored K values may be off by 1 due to an added blank
+        if ( $type eq 'b' ) {
+            $KK += 1;
+            $item = $rLL->[$KK];
+            $type = $item->[_TYPE_];
+        }
+
+        # shouldn't happen:
+        if ( $type ne 'P' ) {
+            DEVEL_MODE && Fault("type '$type' expected to be 'P'\n");
+            next;
+        }
+
+        my $token = $item->[_TOKEN_];
+        my ( $keyword, $name ) = split /\s+/, $token, 2;
+
+        my $K_opening = $KK;
+        my $lx_start  = $item->[_LINE_INDEX_];
+
+        # for non-BLOCK form:
+        my $level        = $item->[_LEVEL_];
+        my $parent_seqno = $self->parent_seqno_by_K($KK);
+        my $is_block     = 0;
+
+        # Check for BLOCK form:
+        # package NAME VERSION BLOCK
+
+        # Skip past VERSION
+        my $Kn = $self->K_next_code($KK);
+        if ( $Kn && $rLL->[$Kn]->[_TYPE_] eq 'n' ) {
+            $Kn = $self->K_next_code($Kn);
+        }
+
+        # Look for BLOCK
+        if ( $Kn && $rLL->[$Kn]->[_TOKEN_] eq '{' ) {
+            my $seqno_n = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
+            $level += 1;
+            $parent_seqno = $seqno_n;
+            $is_block     = 1;
+        }
+
+        my $K_closing = $Klimit;
+        if ( $parent_seqno != SEQ_ROOT ) {
+            my $Kc = $K_closing_container->{$parent_seqno};
+            if ( defined($Kc) ) {
+                $K_closing = $Kc;
+            }
+        }
+
+        while (@package_stack) {
+            my $ii = $package_stack[-1];
+            my $Kc = $package_info_list[$ii]->{K_closing};
+
+            # pop any inactive stack items
+            if ( $Kc < $K_opening ) {
+                pop @package_stack;
+                next;
+            }
+
+            # end a stack item at this level
+            else {
+                my $level_i = $package_info_list[$ii]->{level};
+                if ( $level_i == $level ) {
+                    $package_info_list[$ii]->{K_closing} = $K_opening - 1;
+                    pop @package_stack;
+                }
+            }
+            last;
+        }
+
+        my $ii_next = @package_info_list;
+        push @package_stack, $ii_next;
+
+        # max_change and block_count are for possible future usage
+        push @package_info_list,
+          {
+            type        => $keyword,
+            name        => $name,
+            level       => $level,
+            line_start  => $lx_start + 1,
+            K_opening   => $K_opening,
+            K_closing   => $K_closing,
+            is_block    => $is_block,
+            max_change  => 0,
+            block_count => 0,
+          };
+    }
+
+    return \@package_info_list;
+} ## end sub make_package_info_list
 
 sub copy_token_as_type {
 
