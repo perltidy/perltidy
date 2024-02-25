@@ -525,7 +525,7 @@ BEGIN {
         _K_opening_ternary_         => $i++,
         _K_closing_ternary_         => $i++,
         _rK_sequenced_token_list_   => $i++,
-        _rpackage_info_list_        => $i++,
+        _rpackage_lists_            => $i++,
         _rtype_count_by_seqno_      => $i++,
         _ris_function_call_paren_   => $i++,
         _rlec_count_by_seqno_       => $i++,
@@ -980,11 +980,11 @@ sub new {
     $self->[_K_opening_ternary_]   = {};
     $self->[_K_closing_ternary_]   = {};
 
-    # A list of index K of sequenced tokens to allow loops over all
+    # A list of index K of sequenced tokens to allow loops over them all
     $self->[_rK_sequenced_token_list_] = [];
 
     # A list of info about package statements
-    $self->[_rpackage_info_list_] = [];
+    $self->[_rpackage_lists_] = [];
 
     # 'rSS' is the 'Signed Sequence' list, a continuous list of all sequence
     # numbers with + or - indicating opening or closing. This list represents
@@ -7153,11 +7153,8 @@ sub find_selected_packages {
 
     my ( $self, $rdump_block_types ) = @_;
 
-    # Returns a list of all selected package statements in a file
-    # for use in dumping block information.
-    # Note that we are running before sub respace_tokens, so not
-    # all data structures are avaialble. This is similar to sub
-    # set_package_info which runs after sub respace_tokens.
+    # Returns a list of all selected package statements in a file for use
+    # in dumping block information.
     if (   !$rdump_block_types->{'*'}
         && !$rdump_block_types->{'package'}
         && !$rdump_block_types->{'class'} )
@@ -7165,22 +7162,23 @@ sub find_selected_packages {
         return [];
     }
 
+    # Find all 'package' tokens in the file
     my $rLL = $self->[_rLL_];
     my @K_package_list;
-    my $Klimit = @{$rLL} - 1;
-    foreach my $KK ( 0 .. $Klimit ) {
-        my $item = $rLL->[$KK];
-        my $type = $item->[_TYPE_];
-
-        # fix for c250: package type has changed from 'i' to 'P'
-        next if ( $type ne 'P' );
+    foreach my $KK ( 0 .. @{$rLL} - 1 ) {
+        next if ( $rLL->[$KK]->[_TYPE_] ne 'P' );
         push @K_package_list, $KK;
     }
 
-    my $rpackage_list = $self->make_package_info_list( \@K_package_list );
+    # Get the information needed for the block dump
+    my $rpackage_lists = $self->make_package_info_list( \@K_package_list );
+    my ( $rpackage_info_list, $rpackage_lookup_list ) = @{$rpackage_lists};
 
-    # remove BLOCK formats since they get reported as blocks
-    my @filtered_list = grep { !$_->{is_block} } @{$rpackage_list};
+    # Remove the first item in the info list, which is a dummy package main
+    shift @{$rpackage_info_list};
+
+    # Remove BLOCK format packages since they get reported as blocks separately
+    my @filtered_list = grep { !$_->{is_block} } @{$rpackage_info_list};
 
     return \@filtered_list;
 } ## end sub find_selected_packages
@@ -10922,7 +10920,7 @@ sub respace_tokens {
     if ( @{$rLL_new} ) { $Klimit = @{$rLL_new} - 1 }
     $self->[_Klimit_] = $Klimit;
 
-    $self->[_rpackage_info_list_] =
+    $self->[_rpackage_lists_] =
       $self->make_package_info_list( \@K_package_list );
 
     # During development, verify that the new array still looks okay.
@@ -12833,7 +12831,14 @@ sub make_package_info_list {
     # calls parent_seqno_by_K.
     my ( $self, $rK_package_list ) = @_;
 
-    # This sub defines a searchable list of all package statements in a file.
+    # This sub defines searchable lists of all package statements in a file.
+
+    my $rLL                 = $self->[_rLL_];
+    my $Klimit              = $self->[_Klimit_];
+    my $rlines              = $self->[_rlines_];
+    my $K_closing_container = $self->[_K_closing_container_];
+
+    # RETURN LIST #1: package_info_list:
     # The package of a token at an arbitrary index K is the last entry
     # in the list for which K_opening < K < K_closing.
     # If no package is found, then the package is 'main'.
@@ -12841,12 +12846,31 @@ sub make_package_info_list {
     # so the search can stop if we find K_opening > K.
     my @package_info_list;
 
-    my $rLL    = $self->[_rLL_];
-    my $Klimit = $self->[_Klimit_];
-    my $rlines = $self->[_rlines_];
+    # Start with an entry for 'main'
+    push @package_info_list,
+      {
+        type        => 'package',
+        name        => 'main',
+        level       => 0,
+        line_start  => 0,
+        K_opening   => 0,
+        K_closing   => $Klimit,
+        is_block    => 0,
+        max_change  => 0,
+        block_count => 0,
+      };
 
-    my $K_closing_container = $self->[_K_closing_container_];
     my @package_stack;
+    push @package_stack, 0;
+
+    # RETURN LIST #2: package_lookup_list:
+    # A flat list of [$K,$name,$i], where package is name '$name' from
+    # token index $K to the index $k of the next entry in the list.
+    # The third item $i is the index in package_info_list.
+    # This is easier to use than LIST #1 when sweeping through all
+    # tokens since it eliminates the need for a stack.
+    my @package_lookup_list;
+    push @package_lookup_list, [ 0, 'main', 0 ];
 
     foreach my $KK ( @{$rK_package_list} ) {
         my $item = $rLL->[$KK];
@@ -12890,7 +12914,7 @@ sub make_package_info_list {
             my $seqno_n = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
             $level += 1;
             $parent_seqno = $seqno_n;
-            $is_block     = 1;
+            $is_block     = $seqno_n;
         }
 
         my $K_closing = $Klimit;
@@ -12901,6 +12925,9 @@ sub make_package_info_list {
             }
         }
 
+        # This is the index of this new package in the package_info_list
+        my $ii_next = @package_info_list;
+
         while (@package_stack) {
             my $ii = $package_stack[-1];
             my $Kc = $package_info_list[$ii]->{K_closing};
@@ -12908,6 +12935,9 @@ sub make_package_info_list {
             # pop any inactive stack items
             if ( $Kc < $K_opening ) {
                 pop @package_stack;
+                my $i_top    = $package_stack[-1];
+                my $name_top = $package_info_list[$i_top]->{name};
+                push @package_lookup_list, [ $Kc + 1, $name_top, $i_top ];
                 next;
             }
 
@@ -12922,8 +12952,8 @@ sub make_package_info_list {
             last;
         }
 
-        my $ii_next = @package_info_list;
-        push @package_stack, $ii_next;
+        push @package_lookup_list, [ $K_opening, $name, $ii_next ];
+        push @package_stack,       $ii_next;
 
         # max_change and block_count are for possible future usage
         push @package_info_list,
@@ -12940,7 +12970,7 @@ sub make_package_info_list {
           };
     }
 
-    return \@package_info_list;
+    return [ \@package_info_list, \@package_lookup_list ];
 } ## end sub make_package_info_list
 
 sub copy_token_as_type {
