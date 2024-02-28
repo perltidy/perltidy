@@ -525,7 +525,6 @@ BEGIN {
         _K_opening_ternary_         => $i++,
         _K_closing_ternary_         => $i++,
         _rK_sequenced_token_list_   => $i++,
-        _rpackage_lists_            => $i++,
         _rtype_count_by_seqno_      => $i++,
         _ris_function_call_paren_   => $i++,
         _rlec_count_by_seqno_       => $i++,
@@ -982,9 +981,6 @@ sub new {
 
     # A list of index K of sequenced tokens to allow loops over them all
     $self->[_rK_sequenced_token_list_] = [];
-
-    # A list of info about package statements
-    $self->[_rpackage_lists_] = [];
 
     # 'rSS' is the 'Signed Sequence' list, a continuous list of all sequence
     # numbers with + or - indicating opening or closing. This list represents
@@ -6860,295 +6856,6 @@ sub find_code_line_count {
     return $rcode_line_count;
 } ## end sub find_code_line_count
 
-sub count_list_args {
-    my ( $self, $rarg_list ) = @_;
-
-    my $seqno        = $rarg_list->{seqno};
-    my $is_signature = $rarg_list->{is_signature};
-    my $shift_count  = $is_signature ? 0 : $rarg_list->{shift_count};
-    my $saw_self     = $is_signature ? 0 : $rarg_list->{saw_self};
-
-    # Given:
-    #   $seqno        = sequence number of a list for counting items
-    #   $is_signature = true if this is a sub signature list
-    #   $shift_count  = starting number of '$var=shift;' items to include
-    #   $saw_self     = true if there was previous '$self=shift;'
-
-    # Return:
-    #   - the number of args, or
-    #   - '*' if the number cannot be determined in a simple way
-    #   - '*' if the list contains non-scalar items
-
-    # Method:
-    #   - the basic idea is to count commas within the parens
-    #   - for non-signature lists, do not count an initial
-    #     '$self' or '$class' variable
-
-    my $rLL = $self->[_rLL_];
-
-    return '*' unless ( defined($seqno) );
-    my $K_opening = $self->[_K_opening_container_]->{$seqno};
-    my $K_closing = $self->[_K_closing_container_]->{$seqno};
-    return '*' unless ( defined($K_closing) );
-
-    my $level_opening = $rLL->[$K_opening]->[_LEVEL_];
-    my $arg_count     = $shift_count;
-
-    #--------------------------------------------------------
-    # Main loop to scan the container looking for list items.
-    #--------------------------------------------------------
-    foreach my $KK ( $K_opening + 1 .. $K_closing - 1 ) {
-
-        my $type = $rLL->[$KK]->[_TYPE_];
-        next if ( $type eq 'b' );
-        next if ( $type eq '#' );
-
-        # Only look at top-level tokens
-        my $level = $rLL->[$K_opening]->[_LEVEL_];
-        next if ( $level > $level_opening + 1 );
-
-        my $token = $rLL->[$KK]->[_TOKEN_];
-
-        # handle identifiers
-        if ( $type eq 'i' ) {
-            my $sigil = substr( $token, 0, 1 );
-
-            # Give up if we find list sigils
-            if ( $sigil eq '%' || $sigil eq '@' ) { return '*' }
-
-            elsif ($sigil eq '$'
-                && !$is_signature
-                && !$saw_self
-                && !$arg_count
-                && ( $token eq '$self' || $token eq '$class' ) )
-            {
-                $saw_self = 1;
-                $arg_count -= 1;
-            }
-
-            # Give up if we find an indexed ref to $_[..]
-            elsif ( length($token) >= 5 && substr( $token, 0, 3 ) eq '$_[' ) {
-                return '*';
-            }
-
-            else {
-                # continue search
-            }
-        }
-
-        # handle commas: count commas separating args in a list
-        elsif ( $type eq ',' ) {
-            $arg_count++;
-        }
-
-        else {
-            # continue search
-        }
-    }
-
-    # Increase the count by 1 if the list does not have a trailing comma
-    my $K_last = $self->K_previous_code($K_closing);
-    if ( $rLL->[$K_last]->[_TYPE_] ne ',' ) { $arg_count++ }
-    return $arg_count;
-
-} ## end sub count_list_args
-
-# A constant to limit backward searches
-use constant MANY_TOKENS => 100;
-
-sub count_sub_args {
-    my ( $self, $seqno_block ) = @_;
-
-    # Given:
-    #   $seqno_block = sequence number of a sub block
-
-    # Return:
-    #   - the number of args to a sub for display by dump-block-summary, or
-    #   - '*' if the number cannot be determined in a simple way
-    #   - undef to deactivate this option (no count will be displayed)
-
-    # Just return '*' upon encountering anything unusual.
-
-    my $rLL             = $self->[_rLL_];
-    my $K_opening_block = $self->[_K_opening_container_]->{$seqno_block};
-
-    #---------------------------------------------------------------
-    # Scan backward from the opening brace to find the keyword 'sub'
-    #---------------------------------------------------------------
-    my $Kt_min = $K_opening_block - MANY_TOKENS;
-    if ( $Kt_min < 0 ) { $Kt_min = 0 }
-    my $K_sub;
-    foreach my $Kt ( reverse( $Kt_min .. $K_opening_block ) ) {
-        my $token = $rLL->[$Kt]->[_TOKEN_];
-        my $type  = $rLL->[$Kt]->[_TYPE_];
-        if (
-            substr( $token, 0, 3 ) eq 'sub'
-            && (   $type eq 'S'
-                || $type eq 'k'
-                || $type eq 'i' )
-          )
-        {
-            $K_sub = $Kt;
-            last;
-        }
-    }
-
-    # Give up if not found - may be an enormously long signature?
-    return '*' unless defined($K_sub);
-
-    #---------------------------------------
-    # Check for and process a signature list
-    #---------------------------------------
-    my $Ksub_p = $self->K_next_code($K_sub);
-    if (   $rLL->[$Ksub_p]->[_TYPE_SEQUENCE_]
-        && $rLL->[$Ksub_p]->[_TOKEN_] eq '(' )
-    {
-        # Switch to searching the signature container. We will get the
-        # count when we arrive at the closing token.
-        my $seqno     = $rLL->[$Ksub_p]->[_TYPE_SEQUENCE_];
-        my $arg_count = $self->count_list_args(
-            {
-                seqno        => $seqno,
-                is_signature => 1,
-            }
-        );
-        return $arg_count;
-    }
-
-    #------------------------------------------------------------
-    # Otherwise look for =shift; and =@_; within sub block braces
-    #------------------------------------------------------------
-    my $seqno     = $seqno_block;
-    my $K_opening = $self->[_K_opening_container_]->{$seqno};
-    my $K_closing = $self->[_K_closing_container_]->{$seqno};
-    return '*' unless defined($K_closing);
-
-    my $level_opening = $rLL->[$K_opening]->[_LEVEL_];
-
-    # Count number of 'shift;' at the top level
-    my $shift_count = 0;
-    my $saw_self;
-
-    foreach my $KK ( $K_opening + 1 .. $K_closing - 1 ) {
-
-        my $type = $rLL->[$KK]->[_TYPE_];
-        next if ( $type eq 'b' );
-        next if ( $type eq '#' );
-
-        my $token = $rLL->[$KK]->[_TOKEN_];
-        if ( $type eq 'i' ) {
-
-            #--------------
-            # look for '@_'
-            #--------------
-            if ( $token eq '@_' ) {
-                my $level = $rLL->[$KK]->[_LEVEL_];
-
-                # Give up upon finding @_ at a lower level
-                return '*' unless ( $level == $level_opening + 1 );
-
-                # Look back for ' = @_'
-                my $K_m = $self->K_previous_code($KK);
-                return '*' unless defined($K_m);
-                my $type_m = $rLL->[$K_m]->[_TYPE_];
-                return '*' unless ( $type_m eq '=' );
-
-                # Look back for ' ) = @_'
-                my $K_mm = $self->K_previous_code($K_m);
-                return '*' unless defined($K_mm);
-                my $token_mm = $rLL->[$K_mm]->[_TOKEN_];
-                my $seqno_mm = $rLL->[$K_mm]->[_TYPE_SEQUENCE_];
-
-                #------------------------------------
-                # Count args in the list ( ... ) = @_;
-                #------------------------------------
-                if ( $seqno_mm && $token_mm eq ')' ) {
-                    my $arg_count = $self->count_list_args(
-                        {
-                            seqno        => $seqno_mm,
-                            is_signature => 0,
-                            shift_count  => $shift_count,
-                            saw_self     => $saw_self,
-                        }
-                    );
-                    return $arg_count;
-                }
-
-                # Give up if = @_ is not preceded by a simple list
-                return '*';
-            }
-
-            # Give up if we find an indexed ref to $_[..]
-            elsif ( length($token) >= 5 && substr( $token, 0, 3 ) eq '$_[' ) {
-                return '*';
-            }
-
-            else {
-                # continue search
-            }
-        }
-
-        #-------------------
-        # look for '=shift;'
-        #-------------------
-        elsif ( $token eq 'shift' && $type eq 'k' ) {
-
-            # look for 'shift;' and count as 1 arg
-            my $Kp     = $self->K_next_code($KK);
-            my $type_p = defined($Kp) ? $rLL->[$Kp]->[_TYPE_] : ';';
-            if ( $type_p eq ';' || $is_closing_type{$type_p} ) {
-                my $level = $rLL->[$KK]->[_LEVEL_];
-
-                # Give up on lower level shifts
-                return '*' unless ( $level == $level_opening + 1 );
-
-                $shift_count++;
-
-                # Do not count leading '$self = shift' or '$class = shift'
-                #                        |    |   |
-                #                    $K_mm  $K_m  $KK
-                if ( $shift_count == 1 && !$saw_self ) {
-                    my $K_m = $self->K_previous_code($KK);
-                    return '*' unless ( defined($K_m) );
-                    my $type_m = $rLL->[$K_m]->[_TYPE_];
-                    if ( $type_m eq '=' ) {
-
-                        my $K_mm = $self->K_previous_code($K_m);
-                        return '*' unless defined($K_mm);
-                        my $token_mm = $rLL->[$K_mm]->[_TOKEN_];
-                        if ( $token_mm eq '$self' || $token_mm eq '$class' ) {
-                            $shift_count--;
-                            $saw_self = 1;
-                        }
-                    }
-                }
-            }
-        }
-
-        # Check for a container boundary
-        elsif ( $rLL->[$KK]->[_TYPE_SEQUENCE_] ) {
-            if ( $is_opening_type{$type} ) {
-
-                my $seqno_test = $rLL->[$KK]->[_TYPE_SEQUENCE_];
-
-                #----------------------------------------------------------
-                # End search if we reach a sub declearation within this sub
-                #----------------------------------------------------------
-                if (   $self->[_ris_sub_block_]->{$seqno_test}
-                    || $self->[_ris_asub_block_]->{$seqno_test} )
-                {
-                    return $shift_count;
-                }
-            }
-        }
-        else {
-            # continue search
-        }
-    }
-    return $shift_count;
-
-} ## end sub count_sub_args
-
 sub find_selected_packages {
 
     my ( $self, $rdump_block_types ) = @_;
@@ -7171,8 +6878,8 @@ sub find_selected_packages {
     }
 
     # Get the information needed for the block dump
-    my $rpackage_lists = $self->make_package_info_list( \@K_package_list );
-    my ( $rpackage_info_list, $rpackage_lookup_list ) = @{$rpackage_lists};
+    my $rpackage_lists     = $self->package_info_maker( \@K_package_list );
+    my $rpackage_info_list = $rpackage_lists->{'rpackage_info_list'};
 
     # Remove the first item in the info list, which is a dummy package main
     shift @{$rpackage_info_list};
@@ -7283,8 +6990,13 @@ EOM
                     last;
                 }
             }
-            my $count = $self->count_sub_args($seqno);
-            if ( defined($count) ) { $type .= '(' . $count . ')' }
+            my $rarg = { seqno => $seqno };
+            $self->count_sub_args($rarg);
+            my $count    = $rarg->{shift_count};
+            my $saw_self = $rarg->{saw_self};
+            if ( !defined($count) )    { $count = '*' }
+            if ( $saw_self && $count ) { $count -= 1 }
+            if ( defined($count) )     { $type .= '(' . $count . ')' }
         }
         elsif ( $ris_sub_block->{$seqno}
             && ( $dump_all_types || $rdump_block_types->{'sub'} ) )
@@ -7298,8 +7010,14 @@ EOM
             my @parts = split /\s+/, $block_type;
             $name = $parts[1];
             $name =~ s/\(.*$//;
-            my $count = $self->count_sub_args($seqno);
-            if ( defined($count) ) { $type .= '(' . $count . ')' }
+
+            my $rarg = { seqno => $seqno };
+            $self->count_sub_args($rarg);
+            my $count    = $rarg->{shift_count};
+            my $saw_self = $rarg->{saw_self};
+            if ( !defined($count) )    { $count = '*' }
+            if ( $saw_self && $count ) { $count -= 1 }
+            if ( defined($count) )     { $type .= '(' . $count . ')' }
         }
         elsif (
             $block_type =~ /^(package|class)\b/
@@ -7567,11 +7285,11 @@ sub dump_block_summary {
       $self->find_if_chains( \%dump_block_types, $rlevel_info );
 
     # Get package info
-    my $rpackage_list = $self->find_selected_packages( \%dump_block_types );
+    my $rpackages = $self->find_selected_packages( \%dump_block_types );
 
     # merge
     my @all_blocks =
-      ( @{$rselected_blocks}, @{$rselected_if_chains}, @{$rpackage_list} );
+      ( @{$rselected_blocks}, @{$rselected_if_chains}, @{$rpackages} );
 
     return unless (@all_blocks);
 
@@ -7624,6 +7342,7 @@ sub dump_block_summary {
         }
 
         # Store the final set of print variables
+        # Note: K_opening is added for sorting but deleted before printing
         push @{$routput_lines}, [
 
             $input_stream_name,
@@ -7636,6 +7355,7 @@ sub dump_block_summary {
             $item->{max_change},
             $item->{block_count},
             $mccabe_count,
+            $K_opening,
 
         ];
     }
@@ -7643,12 +7363,15 @@ sub dump_block_summary {
     return unless @{$routput_lines};
 
     # Sort blocks and packages on starting line number
-    my @sorted_lines = sort { $a->[1] <=> $b->[1] } @{$routput_lines};
+    my @sorted_lines = sort { $a->[-1] <=> $b->[-1] } @{$routput_lines};
 
     print {*STDOUT}
 "file,line,line_count,code_lines,type,name,level,max_change,block_count,mccabe_count\n";
 
     foreach my $rline_vars (@sorted_lines) {
+
+        # remove K_opening which was added for stable sorting
+        pop @{$rline_vars};
         my $line = join( ",", @{$rline_vars} ) . "\n";
         print {*STDOUT} $line;
     }
@@ -9696,7 +9419,7 @@ sub dump_unusual_variables {
 
     # output for multiple types
     my $output_string = <<EOM;
-u=unused  r=reused  s=multi-sigil  p=package crossing
+Issues abbreviations  u=unused  r=reused  s=multi-sigil  p=package crossing
 Line:Issue: Var: note
 EOM
     foreach my $item ( @{$rlines} ) {
@@ -9829,7 +9552,7 @@ sub warn_variable_types {
 
     my $message = "Begin scan for --$wv_key=$wv_option\n";
     $message .= <<EOM;
-r=reused  s=multi-sigil  p=package crossing
+Issue abbreviations  r=reused  s=multi-sigil  p=package crossing
 Line:Issue: Var: note
 EOM
 
@@ -10623,6 +10346,7 @@ my $rparent_of_seqno;
 my $rtype_count_by_seqno;
 my $rblock_type_of_seqno;
 my $rwant_arrow_before_seqno;
+my $ris_sub_block;
 
 my $K_opening_container;
 my $K_closing_container;
@@ -10635,6 +10359,7 @@ my $last_nonblank_code_token;
 my $last_nonblank_block_type;
 my $last_last_nonblank_code_type;
 my $last_last_nonblank_code_token;
+my $K_last_S;
 
 my %seqno_stack;
 my %K_old_opening_by_seqno;
@@ -10654,6 +10379,9 @@ my $rwhitespace_flags;
 
 # new index K of package or class statements
 my @K_package_list;
+
+# info about list of sub call args
+my %sub_call_paren_info_by_seqno;
 
 sub initialize_respace_tokens_closure {
 
@@ -10684,6 +10412,7 @@ sub initialize_respace_tokens_closure {
     $rtype_count_by_seqno      = $self->[_rtype_count_by_seqno_];
     $rblock_type_of_seqno      = $self->[_rblock_type_of_seqno_];
     $rwant_arrow_before_seqno  = $self->[_rwant_arrow_before_seqno_];
+    $ris_sub_block             = $self->[_ris_sub_block_];
 
     %K_first_here_doc_by_seqno = ();
 
@@ -10692,6 +10421,7 @@ sub initialize_respace_tokens_closure {
     $last_nonblank_block_type      = EMPTY_STRING;
     $last_last_nonblank_code_type  = ';';
     $last_last_nonblank_code_token = ';';
+    $K_last_S                      = 1;
 
     %seqno_stack            = ();
     %K_old_opening_by_seqno = ();    # Note: old K index
@@ -10721,7 +10451,8 @@ sub initialize_respace_tokens_closure {
 
     @K_sequenced_token_list = ();
 
-    @K_package_list = ();
+    @K_package_list               = ();
+    %sub_call_paren_info_by_seqno = ();
 
     return;
 
@@ -10920,14 +10651,17 @@ sub respace_tokens {
     if ( @{$rLL_new} ) { $Klimit = @{$rLL_new} - 1 }
     $self->[_Klimit_] = $Klimit;
 
-    $self->[_rpackage_lists_] =
-      $self->make_package_info_list( \@K_package_list );
-
     # During development, verify that the new array still looks okay.
     DEVEL_MODE && $self->check_token_array();
 
     # update the token limits of each line
     ( $severe_error, $rqw_lines ) = $self->resync_lines_and_tokens();
+
+    # look for possible errors in call arg counts
+    if ( !$severe_error && $rOpts->{'warn-mixed-arg-counts'} ) {
+        $self->cross_check_sub_call_args( \@K_package_list,
+            \%sub_call_paren_info_by_seqno );
+    }
 
     return ( $severe_error, $rqw_lines );
 } ## end sub respace_tokens
@@ -11080,6 +10814,39 @@ sub respace_tokens_inner_loop {
                         $rwhitespace_flags->[$KK] = WS_NO;
                     }
                 }
+
+                # Save info for sub call arg count check
+                if ( $token eq '(' ) {
+                    if (
+
+                        # function(
+                        $last_nonblank_code_type eq 'U'
+                        || $last_nonblank_code_type eq 'w'
+
+                        # ->function(
+                        || (   $last_nonblank_code_type eq 'i'
+                            && $last_last_nonblank_code_type eq '->' )
+
+                        # &function(
+                        || ( $last_nonblank_code_type eq 'i'
+                            && substr( $last_nonblank_code_token, 0, 1 ) eq
+                            '&' )
+                      )
+                    {
+                        $sub_call_paren_info_by_seqno{$type_sequence} = {
+                            token_mm => $last_last_nonblank_code_token,
+                            type_mm  => $last_last_nonblank_code_type,
+                            token_m  => $last_nonblank_code_token,
+                            type_m   => $last_nonblank_code_type,
+                        };
+                    }
+                }
+                elsif ( $ris_sub_block->{$type_sequence} ) {
+                    $ris_sub_block->{$type_sequence} = $K_last_S;
+                }
+                else {
+                    ## not a special opening token
+                }
             }
         }
 
@@ -11133,54 +10900,67 @@ sub respace_tokens_inner_loop {
                     $token =~ s/\s+$//g;
                     $rtoken_vars->[_TOKEN_] = $token;
                 }
+            }
 
-                # Fixed for c250 to use 'S' for sub definitions
-                if ( $type eq 'S' ) {
+            # Fixed for c250 to use 'S' for sub definitions
+            if ( $type eq 'S' ) {
 
-                    # -spp = 0 : no space before opening prototype paren
-                    # -spp = 1 : stable (follow input spacing)
-                    # -spp = 2 : always space before opening prototype paren
-                    if ( !defined($rOpts_space_prototype_paren)
-                        || $rOpts_space_prototype_paren == 1 )
-                    {
-                        ## default: stable
-                    }
-                    elsif ( $rOpts_space_prototype_paren == 0 ) {
-                        $token =~ s/\s+\(/\(/;
-                    }
-                    elsif ( $rOpts_space_prototype_paren == 2 ) {
-                        $token =~ s/\(/ (/;
-                    }
-                    else {
-                        # bad n value for -spp=n
-                        # just use the default
-                    }
-
-                    # one space max, and no tabs
-                    $token =~ s/\s+/ /g;
-                    $rtoken_vars->[_TOKEN_] = $token;
-
-                    $self->[_ris_special_identifier_token_]->{$token} = 'sub';
+                # The new index of this token will either be
+                # @{$rLL_new} or 1 greater. We always use the +1
+                # and user routine will back up if it is a blank.
+                # Caution: a prototype starting on new line will be marked
+                # as 'S', so skip.
+                if ( substr( $token, 0, 1 ) ne '(' ) {
+                    $K_last_S = @{$rLL_new} + 1;
                 }
 
-                # and trim spaces in package statements (added for c250)
-                elsif ( $type eq 'P' ) {
+                # Note: an asub with prototype like this will come this way
+                # and be partially treated as a named sub
+                #     sub () {
 
-                    # clean up spaces in package identifiers, like
-                    #   "package        Bob::Dog;"
-                    if ( $token =~ s/\s+/ /g ) {
-                        $rtoken_vars->[_TOKEN_] = $token;
-                        $self->[_ris_special_identifier_token_]->{$token} =
-                          'package';
-                    }
-
-                    # remember the new K of this package; this may be
-                    # off by 1 if a blank gets inserted before it
-                    push @K_package_list, scalar @{$rLL_new};
+                # -spp = 0 : no space before opening prototype paren
+                # -spp = 1 : stable (follow input spacing)
+                # -spp = 2 : always space before opening prototype paren
+                if ( !defined($rOpts_space_prototype_paren)
+                    || $rOpts_space_prototype_paren == 1 )
+                {
+                    ## default: stable
+                }
+                elsif ( $rOpts_space_prototype_paren == 0 ) {
+                    $token =~ s/\s+\(/\(/;
+                }
+                elsif ( $rOpts_space_prototype_paren == 2 ) {
+                    $token =~ s/\(/ (/;
                 }
                 else {
-                    # Could be something like '* STDERR' or '$ debug'
+                    # bad n value for -spp=n
+                    # just use the default
                 }
+
+                # one space max, and no tabs
+                $token =~ s/\s+/ /g;
+                $rtoken_vars->[_TOKEN_] = $token;
+
+                $self->[_ris_special_identifier_token_]->{$token} = 'sub';
+            }
+
+            # and trim spaces in package statements (added for c250)
+            elsif ( $type eq 'P' ) {
+
+                # clean up spaces in package identifiers, like
+                #   "package        Bob::Dog;"
+                if ( $token =~ s/\s+/ /g ) {
+                    $rtoken_vars->[_TOKEN_] = $token;
+                    $self->[_ris_special_identifier_token_]->{$token} =
+                      'package';
+                }
+
+                # remember the new K of this package; this may be
+                # off by 1 if a blank gets inserted before it
+                push @K_package_list, scalar @{$rLL_new};
+            }
+            else {
+                # Could be something like '* STDERR' or '$ debug'
             }
         }
 
@@ -12824,155 +12604,6 @@ sub check_Q {
 
 } ## end closure respace_tokens
 
-sub make_package_info_list {
-
-    # Create a hash of values which can be used to find the package of any
-    # token.  This sub must be called after rLL has been updated because it
-    # calls parent_seqno_by_K.
-    my ( $self, $rK_package_list ) = @_;
-
-    # This sub defines searchable lists of all package statements in a file.
-
-    my $rLL                 = $self->[_rLL_];
-    my $Klimit              = $self->[_Klimit_];
-    my $rlines              = $self->[_rlines_];
-    my $K_closing_container = $self->[_K_closing_container_];
-
-    # RETURN LIST #1: package_info_list:
-    # The package of a token at an arbitrary index K is the last entry
-    # in the list for which K_opening < K < K_closing.
-    # If no package is found, then the package is 'main'.
-    # This list is in order of the index K of the package statements.
-    # so the search can stop if we find K_opening > K.
-    my @package_info_list;
-
-    # Start with an entry for 'main'
-    push @package_info_list,
-      {
-        type        => 'package',
-        name        => 'main',
-        level       => 0,
-        line_start  => 0,
-        K_opening   => 0,
-        K_closing   => $Klimit,
-        is_block    => 0,
-        max_change  => 0,
-        block_count => 0,
-      };
-
-    my @package_stack;
-    push @package_stack, 0;
-
-    # RETURN LIST #2: package_lookup_list:
-    # A flat list of [$K,$name,$i], where package is name '$name' from
-    # token index $K to the index $k of the next entry in the list.
-    # The third item $i is the index in package_info_list.
-    # This is easier to use than LIST #1 when sweeping through all
-    # tokens since it eliminates the need for a stack.
-    my @package_lookup_list;
-    push @package_lookup_list, [ 0, 'main', 0 ];
-
-    foreach my $KK ( @{$rK_package_list} ) {
-        my $item = $rLL->[$KK];
-        my $type = $item->[_TYPE_];
-
-        # Stored K values may be off by 1 due to an added blank
-        if ( $type eq 'b' ) {
-            $KK += 1;
-            $item = $rLL->[$KK];
-            $type = $item->[_TYPE_];
-        }
-
-        # shouldn't happen:
-        if ( $type ne 'P' ) {
-            DEVEL_MODE && Fault("type '$type' expected to be 'P'\n");
-            next;
-        }
-
-        my $token = $item->[_TOKEN_];
-        my ( $keyword, $name ) = split /\s+/, $token, 2;
-
-        my $K_opening = $KK;
-        my $lx_start  = $item->[_LINE_INDEX_];
-
-        # for non-BLOCK form:
-        my $level        = $item->[_LEVEL_];
-        my $parent_seqno = $self->parent_seqno_by_K($KK);
-        my $is_block     = 0;
-
-        # Check for BLOCK form:
-        # package NAME VERSION BLOCK
-
-        # Skip past VERSION
-        my $Kn = $self->K_next_code($KK);
-        if ( $Kn && $rLL->[$Kn]->[_TYPE_] eq 'n' ) {
-            $Kn = $self->K_next_code($Kn);
-        }
-
-        # Look for BLOCK
-        if ( $Kn && $rLL->[$Kn]->[_TOKEN_] eq '{' ) {
-            my $seqno_n = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
-            $level += 1;
-            $parent_seqno = $seqno_n;
-            $is_block     = $seqno_n;
-        }
-
-        my $K_closing = $Klimit;
-        if ( $parent_seqno != SEQ_ROOT ) {
-            my $Kc = $K_closing_container->{$parent_seqno};
-            if ( defined($Kc) ) {
-                $K_closing = $Kc;
-            }
-        }
-
-        # This is the index of this new package in the package_info_list
-        my $ii_next = @package_info_list;
-
-        while (@package_stack) {
-            my $ii = $package_stack[-1];
-            my $Kc = $package_info_list[$ii]->{K_closing};
-
-            # pop any inactive stack items
-            if ( $Kc < $K_opening ) {
-                pop @package_stack;
-                my $i_top    = $package_stack[-1];
-                my $name_top = $package_info_list[$i_top]->{name};
-                push @package_lookup_list, [ $Kc + 1, $name_top, $i_top ];
-                next;
-            }
-
-            # end a stack item at this level
-            else {
-                my $level_i = $package_info_list[$ii]->{level};
-                if ( $level_i == $level ) {
-                    $package_info_list[$ii]->{K_closing} = $K_opening - 1;
-                    pop @package_stack;
-                }
-            }
-            last;
-        }
-
-        push @package_lookup_list, [ $K_opening, $name, $ii_next ];
-        push @package_stack,       $ii_next;
-
-        # max_change and block_count are for possible future usage
-        push @package_info_list,
-          {
-            type        => $keyword,
-            name        => $name,
-            level       => $level,
-            line_start  => $lx_start + 1,
-            K_opening   => $K_opening,
-            K_closing   => $K_closing,
-            is_block    => $is_block,
-            max_change  => 0,
-            block_count => 0,
-          };
-    }
-
-    return [ \@package_info_list, \@package_lookup_list ];
-} ## end sub make_package_info_list
-
 sub copy_token_as_type {
 
     # This provides a quick way to create a new token by
@@ -13405,6 +13036,762 @@ EOM
     return ( $severe_error, $rqw_lines );
 
 } ## end sub resync_lines_and_tokens
+
+sub package_info_maker {
+
+    # Create a hash of values which can be used to find the package of any
+    # token.  This sub must be called after rLL has been updated because it
+    # calls parent_seqno_by_K.
+    my ( $self, $rK_package_list ) = @_;
+
+    # Given:
+    #  @{$rK_package_list} = a simple list of token index K of each 'package'
+    #  statement in the file.
+    # Returns:
+    #   {
+    #    'rpackage_info_list'   => \@package_info_list,
+    #    'rpackage_lookup_list' => \@package_lookup_list,
+    #   }
+    #  which are two lists with useful information on all packages
+
+    my $rLL                 = $self->[_rLL_];
+    my $rlines              = $self->[_rlines_];
+    my $K_closing_container = $self->[_K_closing_container_];
+    my $Klimit              = @{$rLL} - 1;
+
+    # RETURN LIST #1: package_info_list:
+    # The package of a token at an arbitrary index K is the last entry
+    # in the list for which K_opening < K < K_closing.
+    # If no package is found, then the package is 'main'.
+    # This list is in order of the index K of the package statements.
+    # so the search can stop if we find K_opening > K.
+    my @package_info_list;
+
+    # Start with an entry for 'main'
+    push @package_info_list,
+      {
+        type        => 'package',
+        name        => 'main',
+        level       => 0,
+        line_start  => 0,
+        K_opening   => 0,
+        K_closing   => $Klimit,
+        is_block    => 0,
+        max_change  => 0,
+        block_count => 0,
+      };
+
+    my @package_stack;
+    push @package_stack, 0;
+
+    # RETURN LIST #2: package_lookup_list:
+    # A flat list of [$name, $Kbegin, $Kend], where package is name '$name'
+    # from token index $Kbegin to the index $Kend.  This is easier to use than
+    # LIST #1 since it eliminates the need for a stack.
+    my @package_lookup_list;
+    push @package_lookup_list, [ 'main', 0, 0 ];
+
+    foreach my $KK ( @{$rK_package_list} ) {
+        my $item = $rLL->[$KK];
+        my $type = $item->[_TYPE_];
+
+        # Stored K values may be off by 1 due to an added blank
+        if ( $type eq 'b' ) {
+            $KK += 1;
+            $item = $rLL->[$KK];
+            $type = $item->[_TYPE_];
+        }
+
+        # shouldn't happen:
+        if ( $type ne 'P' ) {
+            DEVEL_MODE && Fault("type '$type' expected to be 'P'\n");
+            next;
+        }
+
+        my $token = $item->[_TOKEN_];
+        my ( $keyword, $name ) = split /\s+/, $token, 2;
+
+        my $K_opening = $KK;
+        my $lx_start  = $item->[_LINE_INDEX_];
+
+        # for non-BLOCK form:
+        my $level        = $item->[_LEVEL_];
+        my $parent_seqno = $self->parent_seqno_by_K($KK);
+        my $is_block     = 0;
+
+        # Check for BLOCK form:
+        # package NAME VERSION BLOCK
+
+        # Skip past VERSION
+        my $Kn = $self->K_next_code($KK);
+        if ( $Kn && $rLL->[$Kn]->[_TYPE_] eq 'n' ) {
+            $Kn = $self->K_next_code($Kn);
+        }
+
+        # Look for BLOCK
+        if ( $Kn && $rLL->[$Kn]->[_TOKEN_] eq '{' ) {
+            my $seqno_n = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
+            $level += 1;
+            $parent_seqno = $seqno_n;
+            $is_block     = $seqno_n;
+        }
+
+        my $K_closing = $Klimit;
+        if ( $parent_seqno != SEQ_ROOT ) {
+            my $Kc = $K_closing_container->{$parent_seqno};
+            if ( defined($Kc) ) {
+                $K_closing = $Kc;
+            }
+        }
+
+        # This is the index of this new package in the package_info_list
+        my $ii_next = @package_info_list;
+
+        while (@package_stack) {
+            my $ii = $package_stack[-1];
+            my $Kc = $package_info_list[$ii]->{K_closing};
+
+            # pop any inactive stack items
+            if ( $Kc < $K_opening ) {
+                pop @package_stack;
+                my $i_top    = $package_stack[-1];
+                my $name_top = $package_info_list[$i_top]->{name};
+                push @package_lookup_list, [ $name_top, $Kc + 1 ];
+                next;
+            }
+
+            # end a stack item at this level
+            else {
+                my $level_i = $package_info_list[$ii]->{level};
+                if ( $level_i == $level ) {
+                    $package_info_list[$ii]->{K_closing} = $K_opening - 1;
+                    pop @package_stack;
+                }
+            }
+            last;
+        }
+
+        push @package_lookup_list, [ $name, $K_opening ];
+        push @package_stack,       $ii_next;
+
+        # max_change and block_count are for possible future usage
+        push @package_info_list,
+          {
+            type        => $keyword,
+            name        => $name,
+            level       => $level,
+            line_start  => $lx_start + 1,
+            K_opening   => $K_opening,
+            K_closing   => $K_closing,
+            is_block    => $is_block,
+            max_change  => 0,
+            block_count => 0,
+          };
+    }
+
+    my $imax = @package_lookup_list - 1;
+    my $Kend = $Klimit;
+    foreach my $i ( reverse( 0 .. $imax ) ) {
+        $package_lookup_list[$i]->[2] = $Kend;
+        $Kend = $package_lookup_list[$i]->[1] - 1;
+    }
+
+    # Eliminate any needless starting package 'main'
+    if ( @package_lookup_list > 1 && $package_lookup_list[0]->[2] < 0 ) {
+        shift @package_lookup_list;
+    }
+
+    return {
+        'rpackage_info_list'   => \@package_info_list,
+        'rpackage_lookup_list' => \@package_lookup_list
+    };
+} ## end sub package_info_maker
+
+sub count_list_args {
+    my ( $self, $rarg_list ) = @_;
+
+    my $seqno        = $rarg_list->{seqno_list};
+    my $is_signature = $rarg_list->{is_signature};
+    my $shift_count  = $is_signature ? 0 : $rarg_list->{shift_count};
+    my $saw_self     = $is_signature ? 0 : $rarg_list->{saw_self};
+
+    # return undef if we return early
+    $rarg_list->{shift_count} = undef;
+
+    # Given:
+    #   $seqno        = sequence number of a list for counting items
+    #   $is_signature = true if this is a sub signature list
+    #   $shift_count  = starting number of '$var=shift;' items to include
+    #   $saw_self     = true if there was previous '$self=shift;'
+
+    # Return:
+    #   - the number of args, or
+    #   - '*' if the number cannot be determined in a simple way
+    #   - '*' if the list contains non-scalar items
+
+    # Method:
+    #   - the basic idea is to count commas within the parens
+    #   - for non-signature lists, do not count an initial
+    #     '$self' or '$class' variable
+
+    my $rLL = $self->[_rLL_];
+
+    return unless ( defined($seqno) );
+    my $K_opening = $self->[_K_opening_container_]->{$seqno};
+    my $K_closing = $self->[_K_closing_container_]->{$seqno};
+    return unless ( defined($K_closing) );
+
+    my $level_opening = $rLL->[$K_opening]->[_LEVEL_];
+    my $arg_count     = $shift_count;
+
+    #--------------------------------------------------------
+    # Main loop to scan the container looking for list items.
+    #--------------------------------------------------------
+    foreach my $KK ( $K_opening + 1 .. $K_closing - 1 ) {
+
+        my $type = $rLL->[$KK]->[_TYPE_];
+        next if ( $type eq 'b' );
+        next if ( $type eq '#' );
+
+        # Only look at top-level tokens
+        my $level = $rLL->[$K_opening]->[_LEVEL_];
+        next if ( $level > $level_opening + 1 );
+
+        my $token = $rLL->[$KK]->[_TOKEN_];
+
+        # handle identifiers
+        if ( $type eq 'i' ) {
+            my $sigil = substr( $token, 0, 1 );
+
+            # Give up if we find list sigils
+            if ( $sigil eq '%' || $sigil eq '@' ) { return }
+
+            elsif ($sigil eq '$'
+                && !$is_signature
+                && !$saw_self
+                && !$arg_count
+                && ( $token eq '$self' || $token eq '$class' ) )
+            {
+                $saw_self = $token;
+                ##$arg_count -= 1;
+            }
+
+            # Give up if we find an indexed ref to $_[..]
+            elsif ( length($token) >= 5 && substr( $token, 0, 3 ) eq '$_[' ) {
+                return;
+            }
+
+            else {
+                # continue search
+            }
+        }
+
+        # handle commas: count commas separating args in a list
+        elsif ( $type eq ',' ) {
+            $arg_count++;
+        }
+
+        else {
+            # continue search
+        }
+    }
+
+    # Increase the count by 1 if the list does not have a trailing comma
+    my $K_last = $self->K_previous_code($K_closing);
+    if ( $rLL->[$K_last]->[_TYPE_] ne ',' ) { $arg_count++ }
+    $rarg_list->{shift_count} = $arg_count;
+    $rarg_list->{saw_self}    = $saw_self;
+    return;
+
+} ## end sub count_list_args
+
+# A constant to limit backward searches
+use constant MANY_TOKENS => 100;
+
+sub count_sub_args {
+    my ( $self, $item ) = @_;
+
+    # Given: hash ref with
+    #   seqno => $seqno_block = sequence number of a sub block
+    #   K_sub => $K_sub = index of the corresponding keyword 'sub'
+
+    # Updates hash ref with values for keys:
+    #   shift_count  => absolute number of args
+    #   saw_self     => either '$self' or '$class' if seen as first arg
+    #   is_signature => true if args are in a signature
+    #   is_signature => true if args are in a signature
+    # But these keys are left undefined if they cannot be determined
+
+    my $seqno_block = $item->{seqno};
+    my $K_sub       = $item->{K_sub};
+
+    my $rLL             = $self->[_rLL_];
+    my $K_opening_block = $self->[_K_opening_container_]->{$seqno_block};
+
+    #---------------------------------------------------------------
+    # Scan backward from the opening brace to find the keyword 'sub'
+    #---------------------------------------------------------------
+    if ( !defined($K_sub) ) {
+        my $Kt_min = $K_opening_block - MANY_TOKENS;
+        if ( $Kt_min < 0 ) { $Kt_min = 0 }
+        foreach my $Kt ( reverse( $Kt_min .. $K_opening_block ) ) {
+            my $token = $rLL->[$Kt]->[_TOKEN_];
+            my $type  = $rLL->[$Kt]->[_TYPE_];
+            if (
+                substr( $token, 0, 3 ) eq 'sub'
+                && (   $type eq 'S'
+                    || $type eq 'k'
+                    || $type eq 'i' )
+              )
+            {
+                $K_sub = $Kt;
+                last;
+            }
+        }
+    }
+
+    # shouldn't happen:
+    if ( !defined($K_sub) || $K_sub >= $K_opening_block ) {
+        if ( !defined($K_sub) ) { $K_sub = 'undef' }
+        Fault("Bad K_sub=$K_sub, opening=$K_opening_block\n");
+        return;
+    }
+
+    #---------------------------------------
+    # Check for and process a signature list
+    #---------------------------------------
+    my $Ksub_p = $self->K_next_code($K_sub);
+    if (   $rLL->[$Ksub_p]->[_TYPE_SEQUENCE_]
+        && $rLL->[$Ksub_p]->[_TOKEN_] eq '(' )
+    {
+        # Switch to searching the signature container. We will get the
+        # count when we arrive at the closing token.
+        my $seqno_list = $rLL->[$Ksub_p]->[_TYPE_SEQUENCE_];
+        $item->{seqno_list}   = $seqno_list;
+        $item->{is_signature} = 1;
+        $self->count_list_args($item);
+        return;
+    }
+
+    #------------------------------------------------------------
+    # Otherwise look for =shift; and =@_; within sub block braces
+    #------------------------------------------------------------
+    my $seqno     = $seqno_block;
+    my $K_opening = $self->[_K_opening_container_]->{$seqno};
+    my $K_closing = $self->[_K_closing_container_]->{$seqno};
+    return unless defined($K_closing);
+
+    my $level_opening = $rLL->[$K_opening]->[_LEVEL_];
+
+    # Count number of 'shift;' at the top level
+    my $shift_count = 0;
+    my $saw_self;
+
+    foreach my $KK ( $K_opening + 1 .. $K_closing - 1 ) {
+
+        my $type = $rLL->[$KK]->[_TYPE_];
+        next if ( $type eq 'b' );
+        next if ( $type eq '#' );
+
+        my $token = $rLL->[$KK]->[_TOKEN_];
+        if ( $type eq 'i' ) {
+
+            #--------------
+            # look for '@_'
+            #--------------
+            if ( $token eq '@_' ) {
+                my $level = $rLL->[$KK]->[_LEVEL_];
+
+                # Give up upon finding @_ at a lower level
+                return unless ( $level == $level_opening + 1 );
+
+                # Look back for ' = @_'
+                my $K_m = $self->K_previous_code($KK);
+                return unless defined($K_m);
+                my $type_m = $rLL->[$K_m]->[_TYPE_];
+                return unless ( $type_m eq '=' );
+
+                # Look back for ' ) = @_'
+                my $K_mm = $self->K_previous_code($K_m);
+                return unless defined($K_mm);
+                my $token_mm = $rLL->[$K_mm]->[_TOKEN_];
+                my $seqno_mm = $rLL->[$K_mm]->[_TYPE_SEQUENCE_];
+
+                #------------------------------------
+                # Count args in the list ( ... ) = @_;
+                #------------------------------------
+                if ( $seqno_mm && $token_mm eq ')' ) {
+                    $item->{seqno_list}   = $seqno_mm;
+                    $item->{is_signature} = 0;
+                    $item->{shift_count}  = $shift_count;
+                    $item->{saw_self}     = $saw_self;
+                    $self->count_list_args($item);
+                    return;
+                }
+
+                # Give up if = @_ is not preceded by a simple list
+                return;
+            }
+
+            # Give up if we find an indexed ref to $_[..]
+            elsif ( length($token) >= 5 && substr( $token, 0, 3 ) eq '$_[' ) {
+                return;
+            }
+
+            else {
+                # continue search
+            }
+        }
+
+        #-------------------
+        # look for '=shift;'
+        #-------------------
+        elsif ( $token eq 'shift' && $type eq 'k' ) {
+
+            # look for 'shift;' and count as 1 arg
+            my $Kp     = $self->K_next_code($KK);
+            my $type_p = defined($Kp) ? $rLL->[$Kp]->[_TYPE_] : ';';
+            if ( $type_p eq ';' || $is_closing_type{$type_p} ) {
+                my $level = $rLL->[$KK]->[_LEVEL_];
+
+                # Give up on lower level shifts
+                return unless ( $level == $level_opening + 1 );
+
+                $shift_count++;
+
+                # OLD:
+                # Do not count leading '$self = shift' or '$class = shift'
+                #                        |    |   |
+                #                    $K_mm  $K_m  $KK
+                if ( $shift_count == 1 && !$saw_self ) {
+                    my $K_m = $self->K_previous_code($KK);
+                    return unless ( defined($K_m) );
+                    my $type_m = $rLL->[$K_m]->[_TYPE_];
+                    if ( $type_m eq '=' ) {
+
+                        my $K_mm = $self->K_previous_code($K_m);
+                        return unless defined($K_mm);
+                        my $token_mm = $rLL->[$K_mm]->[_TOKEN_];
+                        if ( $token_mm eq '$self' || $token_mm eq '$class' ) {
+                            ##$shift_count--;
+                            $saw_self = $token_mm;
+                        }
+                    }
+                }
+            }
+        }
+
+        # Check for a container boundary
+        elsif ( $rLL->[$KK]->[_TYPE_SEQUENCE_] ) {
+            if ( $is_opening_type{$type} ) {
+
+                my $seqno_test = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+
+                #----------------------------------------------------------
+                # End search if we reach a sub declearation within this sub
+                #----------------------------------------------------------
+                if (   $self->[_ris_sub_block_]->{$seqno_test}
+                    || $self->[_ris_asub_block_]->{$seqno_test} )
+                {
+                    $item->{shift_count} = $shift_count;
+                    $item->{saw_self}    = $saw_self;
+                    return;
+                }
+            }
+        }
+        else {
+            # continue search
+        }
+    }
+    $item->{shift_count} = $shift_count;
+    $item->{saw_self}    = $saw_self;
+    return;
+
+} ## end sub count_sub_args
+
+sub sub_def_info_maker {
+
+    my ( $self, $rpackage_lookup_list ) = @_;
+
+    # Returns: \%sub_info_hash, which contains sub call info:
+    #  $sub_info_hash->{$package::$name}->{
+    #      seqno        => $seqno,
+    #      package      => $package,
+    #      name         => $name,
+    #      K_sub        => $Ksub,
+    #      seqno_list   => $seqno of the paren list of args
+    #      shift_count  => number of args
+    #      is_signature => true if seqno_list is a sub signature
+    #      saw_self     => true if first arg is '$self' or '$class'
+    #  }
+
+    my $rLL                  = $self->[_rLL_];
+    my $K_opening_container  = $self->[_K_opening_container_];
+    my $K_closing_container  = $self->[_K_closing_container_];
+    my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
+    my $ris_sub_block        = $self->[_ris_sub_block_];
+    my $rK_next_seqno_by_K   = $self->[_rK_next_seqno_by_K_];
+    my $rtype_count_by_seqno = $self->[_rtype_count_by_seqno_];
+
+    my @package_stack = reverse( @{$rpackage_lookup_list} );
+    my ( $current_package, $Kbegin, $Kend ) = @{ pop @package_stack };
+    my %sub_info_hash;
+    foreach my $seqno ( sort { $a <=> $b } keys %{$ris_sub_block} ) {
+
+        # update the current package
+        my $Ko = $K_opening_container->{$seqno};
+        while ( $Ko > $Kend && @package_stack ) {
+            ( $current_package, $Kbegin, $Kend ) = @{ pop @package_stack };
+        }
+        my $block_type = $rblock_type_of_seqno->{$seqno};
+
+        # Find the previous type 'S' token with the sub name..
+        # may need to back up 1 token
+        my $K_sub = $ris_sub_block->{$seqno};
+        my $type  = $rLL->[$K_sub]->[_TYPE_];
+        if ( $type eq 'b' ) {
+            $K_sub -= 1;
+            $type = $rLL->[$K_sub]->[_TYPE_];
+        }
+
+        # Verify that this is type 'S'
+        if ( $type ne 'S' ) {
+            if (DEVEL_MODE) {
+                my $token = $rLL->[$K_sub]->[_TOKEN_];
+                my $lno   = $rLL->[$K_sub]->[_LINE_INDEX_] + 1;
+                Fault(<<EOM);
+line $lno: Bad Ksub=$K_sub for block $seqno,
+expecting type 'S' and token=$block_type
+type '$type' and token='$token'
+EOM
+            }
+            next;
+        }
+
+        # what we want:
+        #      $block_type               $name
+        # 'sub setidentifier($)'    => 'setidentifier'
+        # 'method setidentifier($)' => 'setidentifier'
+        # Examples:
+        # "sub hello", "sub hello($)", "sub hello     ($)"
+        # There will be a single space after 'sub' but any number before
+        # prototype
+        my $name      = $block_type;
+        my $pos_space = index( $block_type, SPACE );
+        if ( $pos_space > 0 ) {
+            $name = substr( $block_type, $pos_space + 1 );
+        }
+        my $pos_paren = index( $name, '(' );
+        my $prototype;
+        if ( $pos_paren > 0 ) {
+            $prototype = substr( $name, $pos_paren );
+            $name      = substr( $name, 0, $pos_paren );
+            $name =~ s/\s+$//;
+        }
+
+        my $package = $current_package;
+        if ( ( index( $name, ':' ) >= 0 || index( $name, "'" ) >= 0 )
+            && $name =~ /^(.*\W)(\w+)$/ )
+        {
+            $package = $1;
+            $name    = $2;
+            $package =~ s/\'/::/g;
+            $package =~ s/::$//;
+        }
+        $package = 'main' unless ($package);
+
+        my $item = {
+            seqno   => $seqno,
+            K_sub   => $K_sub,
+            package => $package,
+            name    => $name,
+        };
+
+        # Get arg count info
+        $self->count_sub_args($item);
+
+        my $key = $package . '::' . $name;
+        $sub_info_hash{$key} = $item;
+    }
+    return \%sub_info_hash;
+} ## end sub sub_def_info_maker
+
+sub update_sub_call_paren_info {
+
+    my ( $self, $rpackage_lookup_list, $rsub_call_paren_info_by_seqno ) = @_;
+
+    # Update the hash of info about the call parameters with arg counts
+    # and package. It contains the sequence number of each paren and
+    # type of call, and we must add the arg count and package.
+
+    # Given:
+    #   $rpackage_lookup_list = ref to list for finding packages
+    #   $rsub_call_paren_info_by_seqno = the hash to be updated
+
+    my $rLL                  = $self->[_rLL_];
+    my $K_opening_container  = $self->[_K_opening_container_];
+    my $K_closing_container  = $self->[_K_closing_container_];
+    my $rK_next_seqno_by_K   = $self->[_rK_next_seqno_by_K_];
+    my $rtype_count_by_seqno = $self->[_rtype_count_by_seqno_];
+
+    my @package_stack = reverse( @{$rpackage_lookup_list} );
+    my ( $current_package, $Kbegin, $Kend ) = @{ pop @package_stack };
+
+    #----------------------------------------------
+    # Loop over sequence numbers of all call parens
+    #----------------------------------------------
+    # parens are of the form f(  ->f(    &f(  where 'f' is a bareword
+    #                         ^     ^      ^
+    # Note that we do not handle anonymous subs because it is not possible to
+    # connect them to the actual sub definition.
+    foreach
+      my $seqno ( sort { $a <=> $b } keys %{$rsub_call_paren_info_by_seqno} )
+    {
+
+        # update the current package
+        my $Ko = $K_opening_container->{$seqno};
+        while ( $Ko > $Kend && @package_stack ) {
+            ( $current_package, $Kbegin, $Kend ) = @{ pop @package_stack };
+        }
+
+        # get the next call list
+        my $item    = $rsub_call_paren_info_by_seqno->{$seqno};
+        my $name    = $item->{token_m};
+        my $type_mm = $item->{type_mm};
+        ## These values are available but currently unused:
+        ## my $type_m   = $item->{type_m};
+        ## my $token_mm = $item->{token_mm};
+
+        # find function and package
+        my $is_ampersand_call;
+
+        # name will be like '&function' for an & call
+        if ( substr( $name, 0, 1 ) eq '&' ) {
+            $is_ampersand_call = 1;
+            $name              = substr( $name, 1 );
+        }
+
+        # look for explicit package on name
+        my $package = $current_package;
+        if ( ( index( $name, ':' ) >= 0 || index( $name, "'" ) >= 0 )
+            && $name =~ /^(.*\W)(\w+)$/ )
+        {
+            $package = $1;
+            $name    = $2;
+            $package =~ s/\'/::/g;
+            $package =~ s/::$//;
+        }
+        if ( !$package ) { $package = 'main' }
+
+        # count the args
+        my $rtype_count = $rtype_count_by_seqno->{$seqno};
+        my $arg_count   = 0;
+        if ($rtype_count) {
+            my $comma_count     = $rtype_count->{','};
+            my $fat_comma_count = $rtype_count->{'=>'};
+            if ($comma_count)     { $arg_count += $comma_count }
+            if ($fat_comma_count) { $arg_count += $fat_comma_count }
+        }
+
+        # The comma count does not include any trailing comma, so add 1..
+        if ( !$arg_count ) {
+
+            # ..but not if parens are empty
+            my $Kc = $K_closing_container->{$seqno};
+            my $Kn = $Ko + 1;
+            if ( $Kn < $Kc ) {
+                my $type_n = $rLL->[$Kn]->[_TYPE_];
+                if ( $type_n eq 'b' ) {
+                    $Kn += 1;
+                    $type_n = $rLL->[$Kn]->[_TYPE_];
+                }
+                if ( $type_n eq '#' ) {
+                    $Kn = $self->K_next_code($Ko);
+                }
+                if ( $Kn != $Kc ) { $arg_count += 1 }
+            }
+        }
+        else {
+            $arg_count += 1;
+        }
+
+        my $call_type =
+          $type_mm eq '->' ? '->' : $is_ampersand_call ? '&' : EMPTY_STRING;
+
+        # update the hash of info for this item
+        my $line_number = $rLL->[$Ko]->[_LINE_INDEX_] + 1;
+        $item->{arg_count}   = $arg_count;
+        $item->{package}     = $package;
+        $item->{name}        = $name;
+        $item->{line_number} = $line_number;
+        $item->{call_type}   = $call_type;
+    }
+    return;
+} ## end sub update_sub_call_paren_info
+
+sub cross_check_sub_call_args {
+
+    my ( $self, $rK_package_list, $rsub_call_paren_info_by_seqno ) = @_;
+
+    # do --warn-mixed-call-args, looking for discrepencies in call arg counts
+
+    # TODO:
+    # - the two call parameters could also be in $self for flexibility
+    # - still needs coding for specific error checks, below
+    # - need to mark 'my' subs in sub respace and handle them specially
+    # - still need to check call parens for @ or % terms
+    # - still needs some optimization
+    #   - maybe use simple comma check in first pass, then go back and
+    #     do detailed check only if needed.
+    #   - detailed check could scan args for '@' and '%', and continue to
+    #     look for 'defined($var)' if a call parameter is missing
+    # - be sure all changes to common routines work with --dump-block-summary
+    # - This is issue c319
+
+    my $rLL = $self->[_rLL_];
+
+    #-----------------
+    # Get package info
+    #-----------------
+    my $rpackage_lists       = $self->package_info_maker($rK_package_list);
+    my $rpackage_lookup_list = $rpackage_lists->{'rpackage_lookup_list'};
+
+    #-----------------------------------
+    # Get arg counts for sub definitions
+    #-----------------------------------
+    my $rsub_info = $self->sub_def_info_maker($rpackage_lookup_list);
+
+    #-------------------------------------------
+    # Update sub call paren info with arg counts
+    #-------------------------------------------
+    $self->update_sub_call_paren_info( $rpackage_lookup_list,
+        $rsub_call_paren_info_by_seqno );
+
+    #--------------------------------------------------------------------
+    # Cross-check sub call lists with each other and with sub definitions
+    #--------------------------------------------------------------------
+    foreach my $seqno ( keys %{$rsub_call_paren_info_by_seqno} ) {
+
+        my $rcall_item = $rsub_call_paren_info_by_seqno->{$seqno};
+
+        my $arg_count   = $rcall_item->{arg_count};
+        my $package     = $rcall_item->{package};
+        my $name        = $rcall_item->{name};
+        my $line_number = $rcall_item->{line_number};
+        my $call_type   = $rcall_item->{call_type};
+        my $key         = $package . '::' . $name;
+
+        my $rsub_item = $rsub_info->{$key};
+
+        # TODO: programming incomplete here.
+
+        # Compare to expected number of args
+
+        # Compare to other calls
+    }
+
+    return;
+} ## end sub cross_check_sub_call_args
 
 sub check_for_old_break {
     my ( $self, $KK, $rkeep_break_hash, $rbreak_hash ) = @_;

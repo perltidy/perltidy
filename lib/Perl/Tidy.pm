@@ -3720,6 +3720,8 @@ sub generate_options {
     $add_option->( 'interbracket-arrow-style',      'ias', '=s' );
     $add_option->( 'interbracket-arrow-complexity', 'iac', '=i' );
 
+    $add_option->( 'warn-mixed-arg-counts', 'wmac', '!' );
+
     ########################################
     $category = 13;    # Debugging
     ########################################
