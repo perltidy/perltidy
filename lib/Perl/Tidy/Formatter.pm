@@ -27479,6 +27479,14 @@ sub find_token_starting_list {
         }
         if ( $types_to_go[$i_opening_minus] eq 'b' ) { $i_opening_minus++ }
     }
+
+    # fix for b1467
+    elsif ( $type_prev_nb eq '=' ) {
+        if ( $want_break_before{$type_prev_nb} ) {
+            $i_opening_minus = $iprev_nb;
+        }
+    }
+
     else {
         ## previous token not special
     }

@@ -12025,6 +12025,25 @@ sub new{
 --extended-continuation-indentation
 --extended-line-up-parentheses
 
+==> b1467.in <==
+      my $self = [
+            {     receive  => 1,
+                  transmit => 2,
+            }] ;
+
+      my $self
+        = [
+            { receive => 1, transmit => 2, }
+        ] ;
+
+==> b1467.par <==
+--maximum-line-length=44
+--indent-columns=6
+--want-break-before='='
+--square-bracket-vertical-tightness-closing=1
+--square-bracket-tightness=2
+--brace-vertical-tightness=1
+
 ==> b148.in <==
 # state 1
 @yydgoto=(

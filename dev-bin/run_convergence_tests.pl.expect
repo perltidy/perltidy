@@ -8158,6 +8158,17 @@ sub new{
 
 }
 
+==> b1467 <==
+      my $self = [
+            {     receive  => 1,
+                  transmit => 2,
+            }];
+
+      my $self = [
+            {     receive  => 1,
+                  transmit => 2,
+            }];
+
 ==> b148 <==
 # state 1
 @yydgoto=(
