@@ -10360,6 +10360,7 @@ my $last_nonblank_block_type;
 my $last_last_nonblank_code_type;
 my $last_last_nonblank_code_token;
 my $K_last_S;
+my $K_last_S_is_my;
 
 my %seqno_stack;
 my %K_old_opening_by_seqno;
@@ -10382,6 +10383,12 @@ my @K_package_list;
 
 # info about list of sub call args
 my %sub_call_paren_info_by_seqno;
+
+# index K of the preceding 'S' token for a sub
+my %K_sub_by_seqno;
+
+# true for a 'my' sub
+my %is_my_sub_by_seqno;
 
 sub initialize_respace_tokens_closure {
 
@@ -10422,6 +10429,7 @@ sub initialize_respace_tokens_closure {
     $last_last_nonblank_code_type  = ';';
     $last_last_nonblank_code_token = ';';
     $K_last_S                      = 1;
+    $K_last_S_is_my                = undef;
 
     %seqno_stack            = ();
     %K_old_opening_by_seqno = ();    # Note: old K index
@@ -10453,6 +10461,8 @@ sub initialize_respace_tokens_closure {
 
     @K_package_list               = ();
     %sub_call_paren_info_by_seqno = ();
+    %K_sub_by_seqno               = ();
+    %is_my_sub_by_seqno           = ();
 
     return;
 
@@ -10659,8 +10669,14 @@ sub respace_tokens {
 
     # look for possible errors in call arg counts
     if ( !$severe_error && $rOpts->{'warn-mixed-arg-counts'} ) {
-        $self->cross_check_sub_call_args( \@K_package_list,
-            \%sub_call_paren_info_by_seqno );
+        $self->cross_check_sub_call_args(
+            {
+                rK_package_list               => \@K_package_list,
+                rsub_call_paren_info_by_seqno => \%sub_call_paren_info_by_seqno,
+                rK_sub_by_seqno               => \%K_sub_by_seqno,
+                ris_my_sub_by_seqno           => \%is_my_sub_by_seqno,
+            }
+        );
     }
 
     return ( $severe_error, $rqw_lines );
@@ -10841,8 +10857,13 @@ sub respace_tokens_inner_loop {
                         };
                     }
                 }
+
+                # At a sub block, save info to cross check arg counts
                 elsif ( $ris_sub_block->{$type_sequence} ) {
-                    $ris_sub_block->{$type_sequence} = $K_last_S;
+                    $K_sub_by_seqno{$type_sequence} = $K_last_S;
+                    if ($K_last_S_is_my) {
+                        $is_my_sub_by_seqno{$type_sequence} = 1;
+                    }
                 }
                 else {
                     ## not a special opening token
@@ -10902,16 +10923,26 @@ sub respace_tokens_inner_loop {
                 }
             }
 
-            # Fixed for c250 to use 'S' for sub definitions
+            # Trim spaces in sub definitions
             if ( $type eq 'S' ) {
 
-                # The new index of this token will either be
-                # @{$rLL_new} or 1 greater. We always use the +1
-                # and user routine will back up if it is a blank.
-                # Caution: a prototype starting on new line will be marked
-                # as 'S', so skip.
+                # save the NEW index of this token which will normally
+                # be @{$rLL_new} plus 1 because a blank is usually inserted
+                # ahead of it. The user routine will back up if necessary.
+                # Note that an isolated prototype starting on new line will
+                # be marked as 'S' but start with '(' and must be skipped.
                 if ( substr( $token, 0, 1 ) ne '(' ) {
+
                     $K_last_S = @{$rLL_new} + 1;
+
+                    # also, remember if this is a 'my' sub
+                    $K_last_S_is_my = $last_nonblank_code_type eq 'k'
+                      && (
+                        $last_nonblank_code_token eq 'my'
+                        || (   $last_nonblank_code_token eq 'sub'
+                            && $last_last_nonblank_code_type eq 'k'
+                            && $last_last_nonblank_code_token eq 'my' )
+                      );
                 }
 
                 # Note: an asub with prototype like this will come this way
@@ -13511,7 +13542,12 @@ sub count_sub_args {
 
 sub sub_def_info_maker {
 
-    my ( $self, $rpackage_lookup_list ) = @_;
+    my ( $self, $rhash ) = @_;
+
+    my $rpackage_lookup_list          = $rhash->{rpackage_lookup_list};
+    my $rsub_call_paren_info_by_seqno = $rhash->{rsub_call_paren_info_by_seqno};
+    my $rK_sub_by_seqno               = $rhash->{rK_sub_by_seqno};
+    my $ris_my_sub_by_seqno           = $rhash->{ris_my_sub_by_seqno};
 
     # Returns: \%sub_info_hash, which contains sub call info:
     #  $sub_info_hash->{$package::$name}->{
@@ -13524,6 +13560,8 @@ sub sub_def_info_maker {
     #      is_signature => true if seqno_list is a sub signature
     #      saw_self     => true if first arg is '$self' or '$class'
     #  }
+
+    # TODO: set package to be parent seqno for my sub
 
     my $rLL                  = $self->[_rLL_];
     my $K_opening_container  = $self->[_K_opening_container_];
@@ -13546,26 +13584,24 @@ sub sub_def_info_maker {
         my $block_type = $rblock_type_of_seqno->{$seqno};
 
         # Find the previous type 'S' token with the sub name..
-        # may need to back up 1 token
-        my $K_sub = $ris_sub_block->{$seqno};
+        # may need to back up 1 token if spaces were deleted
+        my $K_sub = $rK_sub_by_seqno->{$seqno};
         my $type  = $rLL->[$K_sub]->[_TYPE_];
-        if ( $type eq 'b' ) {
+        if ( $type ne 'S' ) {
             $K_sub -= 1;
             $type = $rLL->[$K_sub]->[_TYPE_];
-        }
-
-        # Verify that this is type 'S'
-        if ( $type ne 'S' ) {
-            if (DEVEL_MODE) {
-                my $token = $rLL->[$K_sub]->[_TOKEN_];
-                my $lno   = $rLL->[$K_sub]->[_LINE_INDEX_] + 1;
-                Fault(<<EOM);
+            if ( $type ne 'S' ) {
+                if (DEVEL_MODE) {
+                    my $token = $rLL->[$K_sub]->[_TOKEN_];
+                    my $lno   = $rLL->[$K_sub]->[_LINE_INDEX_] + 1;
+                    Fault(<<EOM);
 line $lno: Bad Ksub=$K_sub for block $seqno,
 expecting type 'S' and token=$block_type
 type '$type' and token='$token'
 EOM
+                }
+                next;
             }
-            next;
         }
 
         # what we want:
@@ -13618,7 +13654,7 @@ EOM
 
 sub update_sub_call_paren_info {
 
-    my ( $self, $rpackage_lookup_list, $rsub_call_paren_info_by_seqno ) = @_;
+    my ( $self, $rhash ) = @_;
 
     # Update the hash of info about the call parameters with arg counts
     # and package. It contains the sequence number of each paren and
@@ -13627,6 +13663,8 @@ sub update_sub_call_paren_info {
     # Given:
     #   $rpackage_lookup_list = ref to list for finding packages
     #   $rsub_call_paren_info_by_seqno = the hash to be updated
+    my $rpackage_lookup_list          = $rhash->{rpackage_lookup_list};
+    my $rsub_call_paren_info_by_seqno = $rhash->{rsub_call_paren_info_by_seqno};
 
     my $rLL                  = $self->[_rLL_];
     my $K_opening_container  = $self->[_K_opening_container_];
@@ -13731,22 +13769,27 @@ sub update_sub_call_paren_info {
 
 sub cross_check_sub_call_args {
 
-    my ( $self, $rK_package_list, $rsub_call_paren_info_by_seqno ) = @_;
+    my ( $self, $rhash ) = @_;
 
-    # do --warn-mixed-call-args, looking for discrepencies in call arg counts
+    # This sub implements --warn-mixed-call-args
+
+    my $rK_package_list               = $rhash->{rK_package_list};
+    my $rsub_call_paren_info_by_seqno = $rhash->{rsub_call_paren_info_by_seqno};
+    my $rK_sub_by_seqno               = $rhash->{K_sub_by_seqno};
+    my $ris_my_sub_by_seqno           = $rhash->{ris_my_sub_by_seqno};
 
     # TODO:
-    # - the two call parameters could also be in $self for flexibility
+    # - This is issue c319
     # - still needs coding for specific error checks, below
-    # - need to mark 'my' subs in sub respace and handle them specially
-    # - still need to check call parens for @ or % terms
-    # - still needs some optimization
+    # - need to handle 'my' subs specially (package is parent seqno)
+    #   (need hash by basename to check for them)
+    # - need to check call parens for @ or % terms
+    # - be sure all changes to common routines work with --dump-block-summary
+    # - needs optimization
     #   - maybe use simple comma check in first pass, then go back and
     #     do detailed check only if needed.
     #   - detailed check could scan args for '@' and '%', and continue to
     #     look for 'defined($var)' if a call parameter is missing
-    # - be sure all changes to common routines work with --dump-block-summary
-    # - This is issue c319
 
     my $rLL = $self->[_rLL_];
 
@@ -13755,21 +13798,43 @@ sub cross_check_sub_call_args {
     #-----------------
     my $rpackage_lists       = $self->package_info_maker($rK_package_list);
     my $rpackage_lookup_list = $rpackage_lists->{'rpackage_lookup_list'};
+    $rhash->{rpackage_lookup_list} = $rpackage_lookup_list;
 
     #-----------------------------------
     # Get arg counts for sub definitions
     #-----------------------------------
-    my $rsub_info = $self->sub_def_info_maker($rpackage_lookup_list);
+    my $rsub_info = $self->sub_def_info_maker($rhash);
 
     #-------------------------------------------
     # Update sub call paren info with arg counts
     #-------------------------------------------
-    $self->update_sub_call_paren_info( $rpackage_lookup_list,
-        $rsub_call_paren_info_by_seqno );
+    $self->update_sub_call_paren_info($rhash);
 
     #--------------------------------------------------------------------
     # Cross-check sub call lists with each other and with sub definitions
     #--------------------------------------------------------------------
+
+    # Examine sub calls and partition into these categories:
+
+    # 1. Those for which a sub is not defined
+    #    - ignore for method calls, not enough information
+    #    - otherwise, for multiple calls, compare counts and note differences
+    my %no_sub_def;
+
+    # 2. Those for which a sub is defined but arg count was not possible
+    #    - for multiple calls, check for method vs non-method calls
+    my %no_sub_arg_count;
+
+    # 3. Those which disagree in arg count with a sub definition.
+    #    These require a closer look. Either:
+    #    2a. The problem is that the arg lists contain non-scalars, or
+    #    2b. A warning may be needed
+    my %disagree_with_sub_def;
+
+    # 4. Those which agree in arg count with a sub definition.
+    #    Nothing further needs to be done with these.
+    my %agree_with_sub_def;
+
     foreach my $seqno ( keys %{$rsub_call_paren_info_by_seqno} ) {
 
         my $rcall_item = $rsub_call_paren_info_by_seqno->{$seqno};
@@ -13780,15 +13845,41 @@ sub cross_check_sub_call_args {
         my $line_number = $rcall_item->{line_number};
         my $call_type   = $rcall_item->{call_type};
         my $key         = $package . '::' . $name;
+        if ( !defined($arg_count) ) { next }
 
         my $rsub_item = $rsub_info->{$key};
 
-        # TODO: programming incomplete here.
+        # 1. sub not defined
+        if ( !defined($rsub_item) ) {
+            push @{ $no_sub_def{$key} }, $rcall_item;
+            next;
+        }
+        my $shift_count = $rsub_item->{shift_count};
+        my $saw_self    = $rsub_item->{saw_self};
 
-        # Compare to expected number of args
+        # 2. sub defined but arg count was not possible
+        if ( !defined($shift_count) ) {
+            push @{ $no_sub_arg_count{$key} }, $rcall_item;
+            next;
+        }
 
-        # Compare to other calls
+        my $match =
+            $call_type eq '->'
+          ? $arg_count == $shift_count - 1
+          : $arg_count == $shift_count;
+
+        # 3. disagree in arg count with a sub definition.
+        if ( !$match ) {
+            push @{ $disagree_with_sub_def{$key} }, $rcall_item;
+            next;
+        }
+
+        # 4. agree in arg count with a sub definition.
+        push @{ $agree_with_sub_def{$key} }, $rcall_item;
     }
+
+    # TODO:
+    # next step is to try to resolve disagreements or issue warnings
 
     return;
 } ## end sub cross_check_sub_call_args
