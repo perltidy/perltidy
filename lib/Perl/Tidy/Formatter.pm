@@ -13753,8 +13753,17 @@ sub update_sub_call_paren_info {
             $arg_count += 1;
         }
 
-        my $call_type =
-          $type_mm eq '->' ? '->' : $is_ampersand_call ? '&' : EMPTY_STRING;
+        my $call_type   = $is_ampersand_call ? '&' : EMPTY_STRING;
+        my $caller_name = EMPTY_STRING;
+        if ( $type_mm eq '->' ) {
+            $call_type = '->';
+            my $K_m   = $self->K_previous_code($Ko);
+            my $K_mm  = $self->K_previous_code($K_m);
+            my $K_mmm = $self->K_previous_code($K_mm);
+            if ( defined($K_mmm) && $rLL->[$K_mmm]->[_TYPE_] eq 'i' ) {
+                $caller_name = $rLL->[$K_mmm]->[_TOKEN_];
+            }
+        }
 
         # update the hash of info for this item
         my $line_number = $rLL->[$Ko]->[_LINE_INDEX_] + 1;
@@ -13763,6 +13772,7 @@ sub update_sub_call_paren_info {
         $item->{name}        = $name;
         $item->{line_number} = $line_number;
         $item->{call_type}   = $call_type;
+        $item->{caller_name} = $caller_name;
     }
     return;
 } ## end sub update_sub_call_paren_info
