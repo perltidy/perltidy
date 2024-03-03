@@ -6992,11 +6992,17 @@ EOM
             }
             my $rarg = { seqno => $seqno };
             $self->count_sub_args($rarg);
-            my $count    = $rarg->{shift_count};
-            my $saw_self = $rarg->{saw_self};
-            if ( !defined($count) )    { $count = '*' }
-            if ( $saw_self && $count ) { $count -= 1 }
-            if ( defined($count) )     { $type .= '(' . $count . ')' }
+            my $count     = $rarg->{shift_count};
+            my $self_name = $rarg->{self_name};
+            if (   $count
+                && $self_name
+                && ( $self_name eq '$self' || $self_name eq '$class' ) )
+            {
+                $count -= 1;
+            }
+            if ( !defined($count) ) { $count = '*' }
+
+            $type .= '(' . $count . ')';
         }
         elsif ( $ris_sub_block->{$seqno}
             && ( $dump_all_types || $rdump_block_types->{'sub'} ) )
@@ -7013,11 +7019,17 @@ EOM
 
             my $rarg = { seqno => $seqno };
             $self->count_sub_args($rarg);
-            my $count    = $rarg->{shift_count};
-            my $saw_self = $rarg->{saw_self};
-            if ( !defined($count) )    { $count = '*' }
-            if ( $saw_self && $count ) { $count -= 1 }
-            if ( defined($count) )     { $type .= '(' . $count . ')' }
+            my $count     = $rarg->{shift_count};
+            my $self_name = $rarg->{self_name};
+            if (   $count
+                && $self_name
+                && ( $self_name eq '$self' || $self_name eq '$class' ) )
+            {
+                $count -= 1;
+            }
+            if ( !defined($count) ) { $count = '*' }
+
+            $type .= '(' . $count . ')';
         }
         elsif (
             $block_type =~ /^(package|class)\b/
@@ -13243,8 +13255,8 @@ sub count_list_args {
 
     my $seqno        = $rarg_list->{seqno_list};
     my $is_signature = $rarg_list->{is_signature};
-    my $shift_count  = $is_signature ? 0 : $rarg_list->{shift_count};
-    my $saw_self     = $is_signature ? 0 : $rarg_list->{saw_self};
+    my $shift_count  = $is_signature ? 0            : $rarg_list->{shift_count};
+    my $self_name    = $is_signature ? EMPTY_STRING : $rarg_list->{self_name};
 
     # return undef if we return early
     $rarg_list->{shift_count} = undef;
@@ -13253,7 +13265,7 @@ sub count_list_args {
     #   $seqno        = sequence number of a list for counting items
     #   $is_signature = true if this is a sub signature list
     #   $shift_count  = starting number of '$var=shift;' items to include
-    #   $saw_self     = true if there was previous '$self=shift;'
+    #   $self_name    = first arg name
 
     # Return:
     #   - the number of args, or
@@ -13299,12 +13311,10 @@ sub count_list_args {
 
             elsif ($sigil eq '$'
                 && !$is_signature
-                && !$saw_self
-                && !$arg_count
-                && ( $token eq '$self' || $token eq '$class' ) )
+                && !$self_name
+                && !$arg_count )
             {
-                $saw_self = $token;
-                ##$arg_count -= 1;
+                $self_name = $token;
             }
 
             # Give up if we find an indexed ref to $_[..]
@@ -13331,7 +13341,7 @@ sub count_list_args {
     my $K_last = $self->K_previous_code($K_closing);
     if ( $rLL->[$K_last]->[_TYPE_] ne ',' ) { $arg_count++ }
     $rarg_list->{shift_count} = $arg_count;
-    $rarg_list->{saw_self}    = $saw_self;
+    $rarg_list->{self_name}   = $self_name;
     return;
 
 } ## end sub count_list_args
@@ -13348,7 +13358,7 @@ sub count_sub_args {
 
     # Updates hash ref with values for keys:
     #   shift_count  => absolute number of args
-    #   saw_self     => either '$self' or '$class' if seen as first arg
+    #   self_name    => name of first arg (if it can be determined)
     #   is_signature => true if args are in a signature
     #   is_signature => true if args are in a signature
     # But these keys are left undefined if they cannot be determined
@@ -13416,7 +13426,7 @@ sub count_sub_args {
 
     # Count number of 'shift;' at the top level
     my $shift_count = 0;
-    my $saw_self;
+    my $self_name   = EMPTY_STRING;
 
     foreach my $KK ( $K_opening + 1 .. $K_closing - 1 ) {
 
@@ -13455,7 +13465,7 @@ sub count_sub_args {
                     $item->{seqno_list}   = $seqno_mm;
                     $item->{is_signature} = 0;
                     $item->{shift_count}  = $shift_count;
-                    $item->{saw_self}     = $saw_self;
+                    $item->{self_name}    = $self_name;
                     $self->count_list_args($item);
                     return;
                 }
@@ -13494,7 +13504,7 @@ sub count_sub_args {
                 # Do not count leading '$self = shift' or '$class = shift'
                 #                        |    |   |
                 #                    $K_mm  $K_m  $KK
-                if ( $shift_count == 1 && !$saw_self ) {
+                if ( $shift_count == 1 && !$self_name ) {
                     my $K_m = $self->K_previous_code($KK);
                     return unless ( defined($K_m) );
                     my $type_m = $rLL->[$K_m]->[_TYPE_];
@@ -13502,10 +13512,9 @@ sub count_sub_args {
 
                         my $K_mm = $self->K_previous_code($K_m);
                         return unless defined($K_mm);
-                        my $token_mm = $rLL->[$K_mm]->[_TOKEN_];
-                        if ( $token_mm eq '$self' || $token_mm eq '$class' ) {
-                            ##$shift_count--;
-                            $saw_self = $token_mm;
+                        if ( $rLL->[$K_mm]->[_TYPE_] eq 'i' ) {
+                            my $token_mm = $rLL->[$K_mm]->[_TOKEN_];
+                            $self_name = $token_mm;
                         }
                     }
                 }
@@ -13525,7 +13534,7 @@ sub count_sub_args {
                     || $self->[_ris_asub_block_]->{$seqno_test} )
                 {
                     $item->{shift_count} = $shift_count;
-                    $item->{saw_self}    = $saw_self;
+                    $item->{self_name}   = $self_name;
                     return;
                 }
             }
@@ -13535,7 +13544,7 @@ sub count_sub_args {
         }
     }
     $item->{shift_count} = $shift_count;
-    $item->{saw_self}    = $saw_self;
+    $item->{self_name}   = $self_name;
     return;
 
 } ## end sub count_sub_args
@@ -13558,7 +13567,7 @@ sub sub_def_info_maker {
     #      seqno_list   => $seqno of the paren list of args
     #      shift_count  => number of args
     #      is_signature => true if seqno_list is a sub signature
-    #      saw_self     => true if first arg is '$self' or '$class'
+    #      self_name    => name of first arg
     #  }
 
     # TODO: set package to be parent seqno for my sub
@@ -13865,7 +13874,7 @@ sub cross_check_sub_call_args {
             next;
         }
         my $shift_count = $rsub_item->{shift_count};
-        my $saw_self    = $rsub_item->{saw_self};
+        my $self_name   = $rsub_item->{self_name};
 
         # 2. sub defined but arg count was not possible
         if ( !defined($shift_count) ) {
