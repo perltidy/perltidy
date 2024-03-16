@@ -1,0 +1,15 @@
+# test padding at '[ $clientKey,' by sub pad_broken_list, see git #134
+sub foo {
+    my ( $self, $clientKey, $systemKey ) = @_;
+
+    $q->do(
+        q{
+          Something
+        },
+        [   $clientKey,
+            $systemKey,
+        ],
+    );
+
+    return;
+}

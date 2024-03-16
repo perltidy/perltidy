@@ -9,6 +9,7 @@
 #6 dia.dia1
 #7 dia.dia2
 #8 dia.dia3
+#9 git134.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -71,6 +72,24 @@ my $val2 = $${$x}->[1];
         'git125' => <<'----------',
 sub Add ( $x, $y );
 sub Sub( $x, $y );
+----------
+
+        'git134' => <<'----------',
+# test padding at '[ $clientKey,' by sub pad_broken_list, see git #134
+sub foo {
+    my ( $self, $clientKey, $systemKey ) = @_;
+
+    $q->do(
+        q{
+          Something
+        },
+        [   $clientKey,
+            $systemKey,
+        ],
+    );
+
+    return;
+}
 ----------
 
         'vsn' => <<'----------',
@@ -246,6 +265,28 @@ my $v2   = [ 1, 2, [ 3, 4 ] ]->[2][0];
 my $val1 = ${$x}[1];
 my $val2 = $${$x}->[1];
 #8...........
+        },
+
+        'git134.def' => {
+            source => "git134",
+            params => "def",
+            expect => <<'#9...........',
+# test padding at '[ $clientKey,' by sub pad_broken_list, see git #134
+sub foo {
+    my ( $self, $clientKey, $systemKey ) = @_;
+
+    $q->do(
+        q{
+          Something
+        },
+        [   $clientKey,
+            $systemKey,
+        ],
+    );
+
+    return;
+}
+#9...........
         },
     };
 

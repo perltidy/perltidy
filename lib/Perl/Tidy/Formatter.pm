@@ -31974,6 +31974,17 @@ sub get_seqno {
               ? $is_chain_operator{$tok_next}      # and, or
               : $is_chain_operator{$type_next};    # + - * / : ? && ||
 
+            # Fix for git134
+            if (  !$has_leading_op_next
+                && $iend > $ibeg + 2
+                && $types_to_go[ $ibeg + 1 ] eq 'b'
+                && $is_opening_type{ $types_to_go[$ibeg] }
+                && $nesting_depth_to_go[$iend] > $nesting_depth_to_go[$ibeg] )
+            {
+                my $iend_next = $ri_last->[ $line + 1 ];
+                $self->pad_broken_list( $ibeg, $iend, $ibeg_next, $iend_next );
+            }
+
             next unless ($has_leading_op_next);
 
             # next line must not be at lesser depth
@@ -32381,6 +32392,108 @@ sub get_seqno {
         return;
     } ## end sub set_logical_padding
 } ## end closure set_logical_padding
+
+sub pad_broken_list {
+    my ( $self, $ibeg, $iend, $ibeg_next, $iend_next ) = @_;
+
+    # Given:
+    #   $ibeg, $iend           = index range of line to get padding
+    #   $ibeg_next, $iend_next = index range of next line
+
+    # This fixes a minor issue discussed in git134. In the example shown
+    # below, the is a broken list because of the q term, so line breaks
+    # are copied from the input. We want to insert padding at
+    # '[ $clientKey,' to align with the next line.
+
+    #    $q->do(
+    #        q{
+    #          Something
+    #        },
+    #        [ $clientKey,        ## <-- pad spaces needed here
+    #            $systemKey,
+    #        ],
+    #    );
+
+    # Notation for the line being padded:
+    #
+    #    [ $clientKey,
+    #    | |         |
+    #    | |         ------- $iend
+    #    | ------ $ibeg+2
+    #    ---- $ibeg
+
+    # NOTES:
+    # - This particular list is broken because of the 'q' term in the list
+    # - It is extremely rare for this routine to be called for typical code
+    #   (I found just two examples in my large collection of test scripts)
+    # - This routine is not called for the last line of a batch. This
+    #   is not necessary because perltidy will generally put a break
+    #   after the opening token in that case.
+
+    # The basic logic is to pad the first blank space $ibeg+1 using the
+    # leading spaces that would have been given to token at $ibeg+2 if:
+    # - this line begins with an opening token which is
+    # - followed by additional tokens on the same line,
+    # - and is a list container, and
+    # - the line terminates in a comma whose parent is this container,
+    # - then pad using the indentation of the second token
+
+    # So in other words, we are simulating doing a line break after the
+    # first token and then recombining with a -vt operation. That cannot
+    # actually happen for a broken list.
+
+    # Next token must be blank for padding, and must be followed
+    # by at least one token and comma
+    return if ( $iend < $ibeg + 3 || $types_to_go[ $ibeg + 1 ] ne 'b' );
+
+    # This is only for lists
+    my $seqno = $type_sequence_to_go[$ibeg];
+    return if ( !$seqno );
+    my $is_list = $self->[_ris_list_by_seqno_]->{$seqno};
+    return if ( !$is_list );
+
+    # First token on next line must be in same container
+    my $seqno_beg_next = $parent_seqno_to_go[$ibeg_next];
+    return if ( !$seqno_beg_next || $seqno_beg_next != $seqno );
+
+    # This does not work well if the closing token is on the next line
+    return
+      if ( !defined( $mate_index_to_go[$ibeg] )
+        || $mate_index_to_go[$ibeg] <= $iend_next );
+
+    # Line must end in a comma, with possible side comment
+    my $i_terminal = $iend;
+    if ( $types_to_go[$i_terminal] eq '#' ) {
+        $i_terminal -= 1;
+        if ( $types_to_go[$i_terminal] eq 'b' ) {
+            $i_terminal -= 1;
+        }
+    }
+    return if ( $i_terminal < $ibeg + 2 );
+    return if ( $types_to_go[$i_terminal] ne ',' );
+
+    # add padding to make the second token have the same location
+    # as if it had been output separately and later joined with -vt
+    my $lsp      = $leading_spaces_to_go[$ibeg];
+    my $lsp_next = $leading_spaces_to_go[$ibeg_next];
+
+    # this is not for -lp style
+    return if ( ref($lsp) || ref($lsp_next) );
+
+    my $pad_spaces =
+      $lsp_next -
+      ( $lsp + $token_lengths_to_go[$ibeg] +
+          $token_lengths_to_go[ $ibeg + 1 ] );
+
+    return if ( $pad_spaces <= 0 );
+
+    # Do not pad if it will cause excess line length
+    my $excess = $self->excess_line_length( $ibeg, $iend );
+    return if ( $excess + $pad_spaces > 0 );
+
+    $self->pad_token( $ibeg + 1, $pad_spaces );
+    return;
+} ## end sub pad_broken_list
 
 sub pad_token {
 
