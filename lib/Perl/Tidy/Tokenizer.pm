@@ -8725,7 +8725,8 @@ sub do_scan_package {
             $identifier .= $tok;
         }
         else {    # probable error in script, but keep going
-            warning("Unexpected '$tok' while seeking end of prototype\n");
+            $self->warning(
+                "Unexpected '$tok' while seeking end of prototype\n");
             $identifier .= $tok;
         }
         return;
@@ -8937,7 +8938,7 @@ sub do_scan_package {
 "Program bug detected: scan_complex_identifier received bad starting token = '$tok'\n";
                 if (DEVEL_MODE) { $self->Fault($msg) }
                 if ( !$self->[_in_error_] ) {
-                    warning($msg);
+                    $self->warning($msg);
                     $self->[_in_error_] = 1;
                 }
                 $id_scan_state = EMPTY_STRING;
@@ -9027,7 +9028,7 @@ EOM
                 }
 
                 if ( $id_scan_state eq $scan_state_RPAREN ) {
-                    warning(
+                    $self->warning(
                         "Hit end of line while seeking ) to end prototype\n");
                 }
 
