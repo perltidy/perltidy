@@ -5738,8 +5738,8 @@ determined by computing and comparing the block ending line numbers.
 For subroutines, the number of call arguments (args) is listed in parentheses
 in the C<type> column. For example, C<sub(9)> indicates a sub with 9 args.
 Subroutines whose arg count cannot easily be determined are indicated
-as C<sub(*)>.  The count does not include a leading variable named
-B<$self> or B<$class>.
+as C<sub(*)>.  The count includes any leading object passed in a method
+call (such as B<$self>).
 
 By default the table lists subroutines with more than 20 C<code_lines>, but
 this can be changed with the following two parameters:

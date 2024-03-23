@@ -6994,13 +6994,6 @@ EOM
             my $rarg = { seqno => $seqno };
             $self->count_sub_args($rarg);
             my $count     = $rarg->{shift_count};
-            my $self_name = $rarg->{self_name};
-            if (   $count
-                && $self_name
-                && ( $self_name eq '$self' || $self_name eq '$class' ) )
-            {
-                $count -= 1;
-            }
             if ( !defined($count) ) { $count = '*' }
 
             $type .= '(' . $count . ')';
@@ -7021,13 +7014,6 @@ EOM
             my $rarg = { seqno => $seqno };
             $self->count_sub_args($rarg);
             my $count     = $rarg->{shift_count};
-            my $self_name = $rarg->{self_name};
-            if (   $count
-                && $self_name
-                && ( $self_name eq '$self' || $self_name eq '$class' ) )
-            {
-                $count -= 1;
-            }
             if ( !defined($count) ) { $count = '*' }
 
             $type .= '(' . $count . ')';

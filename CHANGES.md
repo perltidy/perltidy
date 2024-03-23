@@ -2,6 +2,12 @@
 
 ## 2024 02 02.02
 
+    - In the option --dump-block-summary, the number of sub arguments indicated
+      for each sub now includes any leading object variable passed with
+      an arrow-operator call.  Previously the count would have been decreased
+      by one in this case. This change is needed for compatibility with future
+      updates.
+
     - The operator ``**=`` now has spaces on both sides by default. Previously,
       there was no space on the left.  This change makes its spacing the same
       as all other assignment operators. The previous behavior can be obtained
