@@ -3010,7 +3010,7 @@ sub initialize_whitespace_hashes {
     my @spaces_both_sides = qw#
       + - * / % ? = . : x < > | & ^ .. << >> ** && .. || // => += -=
       .= %= x= &= |= ^= *= <> <= >= == =~ !~ /= != ... <<= >>= ~~ !~~
-      &&= ||= //= <=> A k f w F n C Y U G v P S
+      **= &&= ||= //= <=> A k f w F n C Y U G v P S
       #;
 
     my @spaces_left_side = qw<
@@ -3018,8 +3018,9 @@ sub initialize_whitespace_hashes {
     >;
     push( @spaces_left_side, '#' );    # avoids warning message
 
+    # c349: moved **= from @spaces_right_side to @spaces_both_sides
     my @spaces_right_side = qw<
-      ; } ) ] R J ++ -- **=
+      ; } ) ] R J ++ --
     >;
     push( @spaces_right_side, ',' );    # avoids warning message
 

@@ -2,6 +2,11 @@
 
 ## 2024 02 02.02
 
+    - The operator ``**=`` now has spaces on both sides by default. Previously,
+      there was no space on the left.  This change makes its spacing the same
+      as all other assignment operators. The previous behavior can be obtained
+      with the parameter setting -nwls='**='.
+
     - The option --file-size-order, or -fso is now the default. When
       perltidy is given a list of multiple filenames to process, they
       are sorted by size and processed in order of increasing size.
