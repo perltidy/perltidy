@@ -5465,7 +5465,6 @@ sub pad_signed_number_columns {
 
         my @alignments     = @{ $line->{'ralignments'} };
         my $rfields        = $line->{'rfields'};
-        my $rfield_lengths = $line->{'rfield_lengthss'};
         my $rpatterns      = $line->{'rpatterns'};
         my $rtokens        = $line->{'rtokens'};
 
