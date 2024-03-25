@@ -49,15 +49,17 @@ use constant SPACE        => q{ };
 #                 sub _flush_group_lines
 # CODE SECTION 6: Pad Signed Number Columns
 #                 sub pad_signed_number_columns
-# CODE SECTION 7: Output Step A
+# CODE SECTION 7: Pad Wide Equals Columns
+#                 sub pad_wide_equals_columns
+# CODE SECTION 8: Output Step A
 #                 sub valign_output_step_A
-# CODE SECTION 8: Output Step B
+# CODE SECTION 9: Output Step B
 #                 sub valign_output_step_B
-# CODE SECTION 9: Output Step C
+# CODE SECTION 10: Output Step C
 #                 sub valign_output_step_C
-# CODE SECTION 10: Output Step D
+# CODE SECTION 11: Output Step D
 #                 sub valign_output_step_D
-# CODE SECTION 11: Summary
+# CODE SECTION 12: Summary
 #                 sub report_anything_unusual
 
 ##################################################################
@@ -227,6 +229,7 @@ my (
     $rOpts_valign_side_comments,
     $rOpts_valign_signed_numbers,
     $rOpts_valign_signed_numbers_limit,
+    $rOpts_valign_wide_equals,
 
     $require_tabs,
 
@@ -301,6 +304,7 @@ sub check_options {
     $rOpts_valign_signed_numbers    = $rOpts->{'valign-signed-numbers'};
     $rOpts_valign_signed_numbers_limit =
       $rOpts->{'valign-signed-numbers-limit'};
+    $rOpts_valign_wide_equals = $rOpts->{'valign-wide-equals'};
 
     return;
 } ## end sub check_options
@@ -1781,7 +1785,11 @@ sub _flush_group_lines {
     pad_signed_number_columns($rgroup_lines)
       if ($rOpts_valign_signed_numbers);
 
-    # STEP 7: Output the lines.
+    # STEP 7: pad wide equals
+    pad_wide_equals_columns($rgroup_lines)
+      if ($rOpts_valign_wide_equals);
+
+    # STEP 8: Output the lines.
     # All lines in this group have the same leading spacing and maximum line
     # length
     my $group_leader_length       = $rgroup_lines->[0]->{'leading_space_count'};
@@ -4893,23 +4901,21 @@ sub min_max_median {
 } ## end sub min_max_median
 
 sub end_signed_number_column {
-    my ( $rgroup_lines, $rcol_hash, $ix_last, $ending_alignment ) = @_;
+    my ( $rgroup_lines, $rcol_hash, $ix_last ) = @_;
 
     # Finish formatting a column of unsigned numbers
     # Given:
     #   $rgroup_lines - the current vertical aligment group of lines
     #   $rcol_hash    - a hash of information about this vertical column
     #   $ix_last      - index of the last line of this vertical column
-    #   $ending_alignment - true if this ends a vertical alignment col
     # Task:
     #   If this is a mixture of signed and unsigned numbers, then add a
     #   single space before the unsigned numbers to improve appearance.
     return unless ($rcol_hash);
-    my $jcol               = $rcol_hash->{jcol};
-    my $unsigned           = $rcol_hash->{unsigned_count};
-    my $signed             = $rcol_hash->{signed_count};
-    my $starting_alignment = $rcol_hash->{starting_alignment};
-    my $rsigned_lines      = $rcol_hash->{rsigned_lines};
+    my $jcol          = $rcol_hash->{jcol};
+    my $unsigned      = $rcol_hash->{unsigned_count};
+    my $signed        = $rcol_hash->{signed_count};
+    my $rsigned_lines = $rcol_hash->{rsigned_lines};
 
     if ( !$signed && $unsigned ) {
         DEVEL_MODE
@@ -5463,10 +5469,10 @@ sub pad_signed_number_columns {
         $jmax = $line->{'jmax'};
         my $jmax_change = $jmax ne $jmax_last;
 
-        my @alignments     = @{ $line->{'ralignments'} };
-        my $rfields        = $line->{'rfields'};
-        my $rpatterns      = $line->{'rpatterns'};
-        my $rtokens        = $line->{'rtokens'};
+        my @alignments = @{ $line->{'ralignments'} };
+        my $rfields    = $line->{'rfields'};
+        my $rpatterns  = $line->{'rpatterns'};
+        my $rtokens    = $line->{'rtokens'};
 
         #-----------------------------------------------
         # Check for a reduction in the number of columns
@@ -5483,7 +5489,7 @@ sub pad_signed_number_columns {
                     && $rcol_hash->{unsigned_count} )
                 {
                     end_signed_number_column( $rgroup_lines, $rcol_hash,
-                        $ix_line - 1, 1 );
+                        $ix_line - 1 );
                 }
                 delete $column_info{$jcol};
             }
@@ -5518,13 +5524,11 @@ sub pad_signed_number_columns {
             #-----------------------------------------
             # Decide if this is a new alignment column
             #-----------------------------------------
-            my $is_new_alignment = $jcol >= $jmax_last;
-            my $alignment        = $alignments[$jcol];
-            my $old_col          = $columns[$jcol];
-            my $col              = $alignment->{column};
+            my $alignment = $alignments[$jcol];
+            my $old_col   = $columns[$jcol];
+            my $col       = $alignment->{column};
             $columns[$jcol] = $col;
             if ( defined($old_col) && $old_col != $col ) {
-                $is_new_alignment = 1;
                 foreach my $jcol_old ( keys %column_info ) {
                     next if ( $jcol_old < $jcol );
                     my $rcol_hash = $column_info{$jcol_old};
@@ -5532,7 +5536,7 @@ sub pad_signed_number_columns {
                         && $rcol_hash->{unsigned_count} )
                     {
                         end_signed_number_column( $rgroup_lines, $rcol_hash,
-                            $ix_line - 1, 1 );
+                            $ix_line - 1 );
                     }
                     delete $column_info{$jcol_old};
                 }
@@ -5541,9 +5545,9 @@ sub pad_signed_number_columns {
             # A new padded sign column can only start at an alignment change
             my $rcol_hash = $column_info{$jcol};
 
-            #----------------------------------------------------------------
-            # Examine this field, looking for for signed and unsigned numbers
-            #----------------------------------------------------------------
+            #------------------------------------------------------------
+            # Examine this field, looking for signed and unsigned numbers
+            #------------------------------------------------------------
             my $field   = $rfields->[$jcol];
             my $pattern = $rpatterns->[$jcol];
 
@@ -5666,10 +5670,8 @@ sub pad_signed_number_columns {
                     if (   $rcol_hash->{signed_count}
                         && $rcol_hash->{unsigned_count} )
                     {
-                        end_signed_number_column(
-                            $rgroup_lines, $rcol_hash,
-                            $ix_line - 1,  $is_new_alignment
-                        );
+                        end_signed_number_column( $rgroup_lines, $rcol_hash,
+                            $ix_line - 1 );
                     }
                     delete $column_info{$jcol};
                     $rcol_hash = undef;
@@ -5677,10 +5679,9 @@ sub pad_signed_number_columns {
             }
 
             if (DEBUG_VSN) {
-                if ( !$is_new_alignment ) { $is_new_alignment = 0 }
                 my $exists = defined($rcol_hash);
                 print
-"VSN: line=$ix_line change=$jmax_change jcol=$jcol field=$field new ok?=$is_new_alignment exists?=$exists unsigned?=$is_unsigned_number signed?=$is_signed_number\n";
+"VSN: line=$ix_line change=$jmax_change jcol=$jcol field=$field exists?=$exists unsigned?=$is_unsigned_number signed?=$is_signed_number\n";
             }
 
             #---------------------------------------
@@ -5692,15 +5693,14 @@ sub pad_signed_number_columns {
 
                 my $rsigned_lines = $is_signed_number ? [$ix_line] : [];
                 $column_info{$jcol} = {
-                    unsigned_count     => $is_unsigned_number,
-                    signed_count       => $is_signed_number,
-                    pos_start_number   => $pos_start_number,
-                    char_end_part1     => $char_end_part1,
-                    ix_first           => $ix_line,
-                    col                => $col,
-                    jcol               => $jcol,
-                    rsigned_lines      => $rsigned_lines,
-                    starting_alignment => $is_new_alignment,
+                    unsigned_count   => $is_unsigned_number,
+                    signed_count     => $is_signed_number,
+                    pos_start_number => $pos_start_number,
+                    char_end_part1   => $char_end_part1,
+                    ix_first         => $ix_line,
+                    col              => $col,
+                    jcol             => $jcol,
+                    rsigned_lines    => $rsigned_lines,
                 };
             }
 
@@ -5723,14 +5723,292 @@ sub pad_signed_number_columns {
     foreach my $jcol ( keys %column_info ) {
         my $rcol_hash = $column_info{$jcol};
         if ( $rcol_hash->{signed_count} && $rcol_hash->{unsigned_count} ) {
-            end_signed_number_column( $rgroup_lines, $rcol_hash, $ix_line, 1 );
+            end_signed_number_column( $rgroup_lines, $rcol_hash, $ix_line );
         }
     }
     return;
 } ## end sub pad_signed_number_columns
 
+#########################################
+# CODE SECTION 7: Pad Wide Equals Columns
+#########################################
+
+use constant DEBUG_WEC => 0;
+
+sub end_wide_equals_column {
+    my ( $rgroup_lines, $rcol_hash, $ix_last ) = @_;
+
+    # Finish formatting a column of wide equals
+    # Given:
+    #   $rgroup_lines - the current vertical aligment group of lines
+    #   $rcol_hash    - a hash of information about this vertical column
+    #   $ix_last      - index of the last line of this vertical column
+
+    return unless ($rcol_hash);
+    my $jcol      = $rcol_hash->{jcol};
+    my $col       = $rcol_hash->{col};
+    my $min_width = $rcol_hash->{min_width};
+    my $max_width = $rcol_hash->{max_width};
+    my $rwidths   = $rcol_hash->{rwidths};
+    my $ix_first  = $rcol_hash->{ix_first};
+
+    # check for skipped lines, shouldn't happen
+    my $nlines = $ix_last - $ix_first + 1;
+    my $num    = @{$rwidths};
+    if ( $num != $nlines ) {
+        my $line    = $rgroup_lines->[$ix_last];
+        my $rfields = $line->{'rfields'};
+        my $text    = join EMPTY_STRING, @{$rfields};
+        DEVEL_MODE && Fault(<<EOM);
+We seem to have miscounted lines, please check:
+nlines=$nlines
+num saved=$num
+min width=$min_width
+max width=$max_width
+j=$jcol
+ix_first=$ix_first
+ix_last=$ix_last
+text=$text
+EOM
+        return;
+    }
+
+    # loop over all lines of this vertical alignment column
+    foreach my $item ( @{$rwidths} ) {
+        my ( $ix, $width ) = @{$item};
+        my $line           = $rgroup_lines->[$ix];
+        my $rfields        = $line->{'rfields'};
+        my $rfield_lengths = $line->{'rfield_lengths'};
+
+        # add leading spaces to the shorter equality tokens to get
+        # vertical alignment of the '=' signs
+        my $pad = $max_width - $width;
+        if ( $pad > 0 ) {
+            my $jmax  = $line->{'jmax'};
+            my $jcolp = $jcol + 1;
+
+            # Check space and increase column width if necessary and possible
+            my @alignments = @{ $line->{'ralignments'} };
+            my $alignment  = $alignments[$jcolp];
+            my $colp       = $alignment->{column};
+            my $lenp       = $rfield_lengths->[$jcolp];
+            my $avail      = $colp - $col;
+            my $excess     = $lenp + $pad - $avail;
+            if ( $excess > 0 ) {
+                my $padding_available = $line->get_available_space_on_right();
+                if ( $excess <= $padding_available ) {
+                    $line->increase_field_width( $jcolp, $excess );
+                }
+                else {
+                    $pad = 0;
+                }
+            }
+
+            # increase the space
+            $rfields->[$jcolp] = ( SPACE x $pad ) . $rfields->[$jcolp];
+            $rfield_lengths->[$jcolp] += $pad;
+
+            0 && print <<EOM;
+jcol=$jcol col=$col
+jcolp=$jcolp colp=$colp
+jmax=$jmax
+avail=$avail
+len=$rfield_lengths->[$jcolp];
+text='$rfields->[$jcolp]'
+pad=$pad
+EOM
+        }
+    }
+    return;
+} ## end sub end_wide_equals_column
+
+sub pad_wide_equals_columns {
+    my ($rgroup_lines) = @_;
+
+    # Given:
+    #   $rgroup_lines = the current vertical alignment group of lines
+    # Task:
+    #   Look for columns of aligned equals tokens, some of which may be
+    #   things like '-=', '&&=', etc.  Increase the field length of the
+    #   previous field by 1 or 2 spaces where necessary and possible so
+    #   that alignment of all '=' occurs.  For example, given
+
+    #       $j    /= 2;
+    #       $pow2 = $pow2 * $pow2;
+
+    # In this case we want to add a leading space '=' term to get
+    #       $j    /= 2;
+    #       $pow2  = $pow2 * $pow2;
+
+    # The logic here is somewhat similar to sub pad_signed_number_columns
+
+    return unless ($rOpts_valign_wide_equals);
+
+    my %column_info;
+    my @columns;
+
+    #----------------
+    # loop over lines
+    #----------------
+    my $ix_line = -1;
+    my $jmax    = -1;
+    foreach my $line ( @{$rgroup_lines} ) {
+        $ix_line++;
+        my $jmax_last = $jmax;
+        $jmax = $line->{'jmax'};
+        my $jmax_change = $jmax ne $jmax_last;
+
+        my @alignments = @{ $line->{'ralignments'} };
+        my $rfields    = $line->{'rfields'};
+        my $rtokens    = $line->{'rtokens'};
+
+        #-----------------------------------------------
+        # Check for a reduction in the number of columns
+        #-----------------------------------------------
+        if ( $jmax < $jmax_last ) {
+
+            foreach my $jcol ( keys %column_info ) {
+
+                # end any stranded columns on the right
+                next if ( $jcol < $jmax );
+                my $rcol_hash = $column_info{$jcol};
+                next unless ($rcol_hash);
+                if ( $rcol_hash->{max_width} > $rcol_hash->{min_width} ) {
+                    end_wide_equals_column( $rgroup_lines, $rcol_hash,
+                        $ix_line - 1 );
+                }
+                delete $column_info{$jcol};
+            }
+        }
+
+        #--------------------------------------------------
+        # Loop over fields except last field (side comment)
+        #--------------------------------------------------
+        for my $jcol ( 0 .. $jmax - 1 ) {
+
+            #-----------------------------------------
+            # Decide if this is a new alignment column
+            #-----------------------------------------
+            my $alignment = $alignments[$jcol];
+            my $old_col   = $columns[$jcol];
+            my $col       = $alignment->{column};
+            $columns[$jcol] = $col;
+            if ( defined($old_col) && $old_col != $col ) {
+                foreach my $jcol_old ( keys %column_info ) {
+                    next if ( $jcol_old < $jcol );
+                    my $rcol_hash = $column_info{$jcol_old};
+                    if ( $rcol_hash->{max_width} > $rcol_hash->{min_width} ) {
+                        end_wide_equals_column( $rgroup_lines, $rcol_hash,
+                            $ix_line - 1 );
+                    }
+                    delete $column_info{$jcol_old};
+                }
+            }
+
+            # A new wide equals column can only start at an alignment change
+            my $rcol_hash = $column_info{$jcol};
+
+            #------------------------------------------------------
+            # Examine this field, looking for equals or wide equals
+            #------------------------------------------------------
+            my $field_next = $rfields->[ $jcol + 1 ];
+            my $token      = $rtokens->[$jcol];
+
+            # See if this is an equals alignment group;
+            # indicated by alignment token of '=' followed by a digit
+            my $len_equals_symbol = 0;
+            if (   length($token) > 1
+                && substr( $token, 0, 1 ) eq '='
+                && $is_digit_char{ substr( $token, 1, 1 ) } )
+            {
+
+                # find the actual equality symbol which starts the next field
+                # i.e. '=' or '**=' or '-=' etc. We just need its length.
+                my $pos = index( $field_next, '=' );
+                if ( $pos >= 0 && $pos <= 2 ) {
+                    $len_equals_symbol = $pos + 1;
+                }
+            }
+
+            # if a column has not started..
+            if ( !$rcol_hash ) {
+
+                # give up if this is cannot start a new column
+                next if ( !$len_equals_symbol );
+
+                # otherwise continue on to start a new column
+
+            }
+
+            # if a column has been started...
+            else {
+
+                # and this cannot be added to it
+                if ( !$len_equals_symbol || $rcol_hash->{col} ne $col ) {
+
+                    # then end the current column and start over
+                    if ( $rcol_hash->{max_width} > $rcol_hash->{min_width} ) {
+                        end_wide_equals_column( $rgroup_lines, $rcol_hash,
+                            $ix_line - 1 );
+                    }
+                    delete $column_info{$jcol};
+                    $rcol_hash = undef;
+                }
+            }
+
+            if (DEBUG_WEC) {
+                my $exists = defined($rcol_hash);
+                print
+"WEA: line=$ix_line change=$jmax_change jcol=$jcol field=$field_next exists?=$exists equals?=$len_equals_symbol\n";
+            }
+
+            #---------------------------------------
+            # Either start a new column, if possible
+            #---------------------------------------
+            if ( !defined($rcol_hash) ) {
+
+                next if ( !$len_equals_symbol );
+
+                $column_info{$jcol} = {
+                    ix_first  => $ix_line,
+                    col       => $col,
+                    jcol      => $jcol,
+                    min_width => $len_equals_symbol,
+                    max_width => $len_equals_symbol,
+                    rwidths   => [ [ $ix_line, $len_equals_symbol ] ],
+                };
+            }
+
+            #------------------------------
+            # or extend the existing column
+            #------------------------------
+            else {
+                if ( $len_equals_symbol > $rcol_hash->{max_width} ) {
+                    $rcol_hash->{max_width} = $len_equals_symbol;
+                }
+                if ( $len_equals_symbol < $rcol_hash->{min_width} ) {
+                    $rcol_hash->{min_width} = $len_equals_symbol;
+                }
+                push @{ $rcol_hash->{rwidths} },
+                  [ $ix_line, $len_equals_symbol ];
+            }
+        }
+    }
+
+    #-------------------------------------
+    # Loop to finish any remaining columns
+    #-------------------------------------
+    foreach my $jcol ( keys %column_info ) {
+        my $rcol_hash = $column_info{$jcol};
+        if ( $rcol_hash->{max_width} > $rcol_hash->{min_width} ) {
+            end_wide_equals_column( $rgroup_lines, $rcol_hash, $ix_line );
+        }
+    }
+    return;
+} ## end sub pad_wide_equals_columns
+
 ###############################
-# CODE SECTION 7: Output Step A
+# CODE SECTION 8: Output Step A
 ###############################
 
 sub valign_output_step_A {
@@ -5908,7 +6186,7 @@ sub get_output_line_number {
 } ## end sub get_output_line_number
 
 ###############################
-# CODE SECTION 8: Output Step B
+# CODE SECTION 9: Output Step B
 ###############################
 
 {    ## closure for sub valign_output_step_B
@@ -6428,9 +6706,9 @@ sub get_output_line_number {
     } ## end sub valign_output_step_B
 }
 
-###############################
-# CODE SECTION 9: Output Step C
-###############################
+################################
+# CODE SECTION 10: Output Step C
+################################
 
 {    ## closure for sub valign_output_step_C
 
@@ -6563,7 +6841,7 @@ sub get_output_line_number {
 }
 
 ###############################
-# CODE SECTION 10: Output Step D
+# CODE SECTION 11: Output Step D
 ###############################
 
 sub add_leading_tabs {
@@ -6684,7 +6962,7 @@ sub valign_output_step_D {
 } ## end sub valign_output_step_D
 
 ##########################
-# CODE SECTION 11: Summary
+# CODE SECTION 12: Summary
 ##########################
 
 sub report_anything_unusual {

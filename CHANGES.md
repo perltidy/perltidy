@@ -2,6 +2,31 @@
 
 ## 2024 02 02.02
 
+    - Add option --valign-wide-equals, or -vwe, for issue git #135.
+      Setting this parameter causes the following assignment operators
+
+         = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
+
+      to be aligned vertically with the ending = all aligned. For example,
+      here is the default formatting of a snippet from perltidy itself:
+
+            $str .= SPACE x $total_pad_count;
+            $str_len += $total_pad_count;
+            $total_pad_count = 0;
+            $str .= $rfields->[$j];
+            $str_len += $rfield_lengths->[$j];
+
+      And here is the same code formatted with B<-vme>:
+
+            # perltidy -vme
+            $str             .= SPACE x $total_pad_count;
+            $str_len         += $total_pad_count;
+            $total_pad_count  = 0;
+            $str             .= $rfields->[$j];
+            $str_len         += $rfield_lengths->[$j];
+
+      This option is off by default to avoid changing existing formatting.
+
     - In the option --dump-block-summary, the number of sub arguments indicated
       for each sub now includes any leading object variable passed with
       an arrow-operator call.  Previously the count would have been decreased

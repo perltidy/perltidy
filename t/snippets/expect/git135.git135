@@ -1,0 +1,39 @@
+# simple alignments
+$j    /= 2;
+$pow2  = $pow2 * $pow2;
+
+@tmp              = reverse split( /\//, $date );
+$tmp[1]          -= 1;
+$tmp[2]          -= 1900;
+$epoch            = timelocal( 0, 0, 0, @tmp );
+$$dow_ref{$date}  = $day = ( localtime $epoch )[6];
+
+$state{rate}     *= $rate_multiplier;
+$state{catalyst}  = $catalyst;
+$state{_trail}   .= ", catalysed ($file:$line)";
+
+# trailing alignments
+$self->{'_expect'}    ||= $e  || 'UNKNOWN';
+$self->{'_s'}           = $s  || 'UNKNOWN';
+$self->{'_word_size'}   = $w  || 'UNKNOWN';
+$self->{'_t1'}          = $t1 || 'UNKNOWN';
+
+$v    = "'" . $v unless $v =~ /^'/;
+$v   .= "'"      unless $v =~ /'$/;
+$hex .= " $v";
+
+$mask |= $catmask;
+$mask |= $DeadBits{$word}               if $fatal;
+$mask  = ~( ~$mask | $DeadBits{$word} ) if $no_fatal;
+
+{
+    {
+        {
+            # line limit exceeded if we align final '=' and 'if'
+            my $row  = $list_count;
+            $row    /= 2        if $main::config_parms{html_category_cols} == 2;
+            $height = $row * 25 if $row * 25 < $height;
+        }
+    }
+}
+

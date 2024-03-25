@@ -3547,6 +3547,7 @@ sub generate_options {
     $add_option->( 'valign-if-unless',                          'viu',   '!' );
     $add_option->( 'valign-signed-numbers',                     'vsn',   '!' );
     $add_option->( 'valign-signed-numbers-limit',               'vsnl',  '=i' );
+    $add_option->( 'valign-wide-equals',                        'vwe',   '!' );
     $add_option->( 'extended-block-tightness',                  'xbt',   '!' );
     $add_option->( 'extended-block-tightness-list',             'xbtl',  '=s' );
 

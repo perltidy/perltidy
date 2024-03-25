@@ -266,7 +266,7 @@ BEGIN {
 
 sub DESTROY {
     my $self = shift;
-    $self->_decrement_count();
+    _decrement_count();
     return;
 }
 

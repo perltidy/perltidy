@@ -10,6 +10,8 @@
 #7 dia.dia2
 #8 dia.dia3
 #9 git134.def
+#10 git135.def
+#11 git135.git135
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -35,6 +37,7 @@ BEGIN {
 -ias='][ }->{ ]->{ }->['
 ----------
         'git125' => "-ssp=0",
+        'git135' => "--valign-wide-equals",
         'vsn1'   => <<'----------',
 -vsn
 -gnu
@@ -90,6 +93,44 @@ sub foo {
 
     return;
 }
+----------
+
+        'git135' => <<'----------',
+# simple alignments
+$j /= 2;
+$pow2 = $pow2 * $pow2;
+
+@tmp = reverse split( /\//, $date );
+$tmp[1] -= 1;
+$tmp[2] -= 1900;
+$epoch = timelocal( 0, 0, 0, @tmp );
+$$dow_ref{$date} = $day = ( localtime $epoch )[6];
+
+$state{rate} *= $rate_multiplier;
+$state{catalyst} = $catalyst;
+$state{_trail} .= ", catalysed ($file:$line)";
+
+# trailing alignments
+$self->{'_expect'} ||= $e || 'UNKNOWN';
+$self->{'_s'}         = $s  || 'UNKNOWN';
+$self->{'_word_size'} = $w  || 'UNKNOWN';
+$self->{'_t1'}        = $t1 || 'UNKNOWN';
+
+$v    = "'" . $v unless $v =~ /^'/;
+$v   .= "'"      unless $v =~ /'$/;
+$hex .= " $v";
+
+$mask |= $catmask;
+$mask |= $DeadBits{$word}               if $fatal;
+$mask  = ~( ~$mask | $DeadBits{$word} ) if $no_fatal;
+
+{{{
+            # line limit exceeded if we align final '=' and 'if'
+            my $row  = $list_count;
+            $row    /= 2        if $main::config_parms{html_category_cols} == 2;
+            $height = $row * 25 if $row * 25 < $height;
+}}}
+
 ----------
 
         'vsn' => <<'----------',
@@ -287,6 +328,98 @@ sub foo {
     return;
 }
 #9...........
+        },
+
+        'git135.def' => {
+            source => "git135",
+            params => "def",
+            expect => <<'#10...........',
+# simple alignments
+$j /= 2;
+$pow2 = $pow2 * $pow2;
+
+@tmp = reverse split( /\//, $date );
+$tmp[1] -= 1;
+$tmp[2] -= 1900;
+$epoch = timelocal( 0, 0, 0, @tmp );
+$$dow_ref{$date} = $day = ( localtime $epoch )[6];
+
+$state{rate} *= $rate_multiplier;
+$state{catalyst} = $catalyst;
+$state{_trail} .= ", catalysed ($file:$line)";
+
+# trailing alignments
+$self->{'_expect'} ||= $e || 'UNKNOWN';
+$self->{'_s'}         = $s  || 'UNKNOWN';
+$self->{'_word_size'} = $w  || 'UNKNOWN';
+$self->{'_t1'}        = $t1 || 'UNKNOWN';
+
+$v = "'" . $v unless $v =~ /^'/;
+$v .= "'" unless $v =~ /'$/;
+$hex .= " $v";
+
+$mask |= $catmask;
+$mask |= $DeadBits{$word} if $fatal;
+$mask = ~( ~$mask | $DeadBits{$word} ) if $no_fatal;
+
+{
+    {
+        {
+            # line limit exceeded if we align final '=' and 'if'
+            my $row = $list_count;
+            $row /= 2           if $main::config_parms{html_category_cols} == 2;
+            $height = $row * 25 if $row * 25 < $height;
+        }
+    }
+}
+
+#10...........
+        },
+
+        'git135.git135' => {
+            source => "git135",
+            params => "git135",
+            expect => <<'#11...........',
+# simple alignments
+$j    /= 2;
+$pow2  = $pow2 * $pow2;
+
+@tmp              = reverse split( /\//, $date );
+$tmp[1]          -= 1;
+$tmp[2]          -= 1900;
+$epoch            = timelocal( 0, 0, 0, @tmp );
+$$dow_ref{$date}  = $day = ( localtime $epoch )[6];
+
+$state{rate}     *= $rate_multiplier;
+$state{catalyst}  = $catalyst;
+$state{_trail}   .= ", catalysed ($file:$line)";
+
+# trailing alignments
+$self->{'_expect'}    ||= $e  || 'UNKNOWN';
+$self->{'_s'}           = $s  || 'UNKNOWN';
+$self->{'_word_size'}   = $w  || 'UNKNOWN';
+$self->{'_t1'}          = $t1 || 'UNKNOWN';
+
+$v    = "'" . $v unless $v =~ /^'/;
+$v   .= "'"      unless $v =~ /'$/;
+$hex .= " $v";
+
+$mask |= $catmask;
+$mask |= $DeadBits{$word}               if $fatal;
+$mask  = ~( ~$mask | $DeadBits{$word} ) if $no_fatal;
+
+{
+    {
+        {
+            # line limit exceeded if we align final '=' and 'if'
+            my $row  = $list_count;
+            $row    /= 2        if $main::config_parms{html_category_cols} == 2;
+            $height = $row * 25 if $row * 25 < $height;
+        }
+    }
+}
+
+#11...........
         },
     };
 

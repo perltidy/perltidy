@@ -5251,6 +5251,34 @@ normally both in view.
 
 =back
 
+=item B<Aligning assignment operators with --valign-wide-equals or -vwe>
+
+The following assignment operators are aligned independently by default:
+
+      = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
+
+Setting B<--valign-wide-equals>, or B<-vwe>, causes them to be vertically
+alligned together with the trailing B<=> all aligned. For example, here
+is the default formatting for some code with several of these operators:
+
+            $str .= SPACE x $total_pad_count;
+            $str_len += $total_pad_count;
+            $total_pad_count = 0;
+            $str .= $rfields->[$j];
+            $str_len += $rfield_lengths->[$j];
+
+And here is the same code formatted with B<-vme>:
+
+            # perltidy -vme
+            $str             .= SPACE x $total_pad_count;
+            $str_len         += $total_pad_count;
+            $total_pad_count  = 0;
+            $str             .= $rfields->[$j];
+            $str_len         += $rfield_lengths->[$j];
+
+This option was added for issue git #135 and can improve readability, but it is
+off by default to avoid changing existing formatting.
+
 =back
 
 =head2 Extended Syntax

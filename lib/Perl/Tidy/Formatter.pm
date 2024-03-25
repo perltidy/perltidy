@@ -263,6 +263,7 @@ my (
     $rOpts_valign_code,
     $rOpts_valign_side_comments,
     $rOpts_valign_if_unless,
+    $rOpts_valign_wide_equals,
     $rOpts_whitespace_cycle,
     $rOpts_extended_block_tightness,
     $rOpts_extended_line_up_parentheses,
@@ -2566,6 +2567,7 @@ sub initialize_global_option_vars {
     $rOpts_valign_code               = $rOpts->{'valign-code'};
     $rOpts_valign_side_comments      = $rOpts->{'valign-side-comments'};
     $rOpts_valign_if_unless          = $rOpts->{'valign-if-unless'};
+    $rOpts_valign_wide_equals        = $rOpts->{'valign-wide-equals'};
     $rOpts_variable_maximum_line_length =
       $rOpts->{'variable-maximum-line-length'};
 
@@ -6993,7 +6995,7 @@ EOM
             }
             my $rarg = { seqno => $seqno };
             $self->count_sub_args($rarg);
-            my $count     = $rarg->{shift_count};
+            my $count = $rarg->{shift_count};
             if ( !defined($count) ) { $count = '*' }
 
             $type .= '(' . $count . ')';
@@ -7013,7 +7015,7 @@ EOM
 
             my $rarg = { seqno => $seqno };
             $self->count_sub_args($rarg);
-            my $count     = $rarg->{shift_count};
+            my $count = $rarg->{shift_count};
             if ( !defined($count) ) { $count = '*' }
 
             $type .= '(' . $count . ')';
@@ -31285,6 +31287,10 @@ EOM
                 && !$is_not_vertical_alignment_token{$token} )
             {
                 $alignment_type = $token;
+
+                if ( $rOpts_valign_wide_equals && $is_assignment{$type} ) {
+                    $alignment_type = '=';
+                }
 
                 # Do not align a terminal token.  Although it might
                 # occasionally look ok to do this, this has been found to be
