@@ -4171,6 +4171,33 @@
 </ul>
 
 </dd>
+<dt id="Aligning-assignment-operators-with---valign-wide-equals-or--vwe"><b>Aligning assignment operators with --valign-wide-equals or -vwe</b></dt>
+<dd>
+
+<p>The following assignment operators are aligned independently by default:</p>
+
+<pre><code>      = **= += *= &amp;= &lt;&lt;= &amp;&amp;= -= /= |= &gt;&gt;= ||= //= .= %= ^= x=</code></pre>
+
+<p>Setting <b>--valign-wide-equals</b>, or <b>-vwe</b>, causes them to be vertically alligned together with the trailing <b>=</b> all aligned. For example, here is the default formatting for some code with several of these operators:</p>
+
+<pre><code>            $str .= SPACE x $total_pad_count;
+            $str_len += $total_pad_count;
+            $total_pad_count = 0;
+            $str .= $rfields-&gt;[$j];
+            $str_len += $rfield_lengths-&gt;[$j];</code></pre>
+
+<p>And here is the same code formatted with <b>-vme</b>:</p>
+
+<pre><code>            # perltidy -vme
+            $str             .= SPACE x $total_pad_count;
+            $str_len         += $total_pad_count;
+            $total_pad_count  = 0;
+            $str             .= $rfields-&gt;[$j];
+            $str_len         += $rfield_lengths-&gt;[$j];</code></pre>
+
+<p>This option was added for issue git #135 and can improve readability, but it is off by default to avoid changing existing formatting.</p>
+
+</dd>
 </dl>
 
 <h2 id="Extended-Syntax">Extended Syntax</h2>
@@ -4438,7 +4465,7 @@
 
 <p><b>--no-timestamp</b> or <b>-nts</b> will eliminate any time stamps in output files to prevent differences in dates from causing test installation scripts to fail. There are just a couple of places where timestamps normally occur. One is in the headers of html files, and another is when the <b>-cscw</b> option is selected. The default is to allow timestamps (<b>--timestamp</b> or <b>-ts</b>).</p>
 
-<p><b>--file-size-order</b> or <b>-fso</b> will cause files to be processed in order of increasing size, when multiple files are being processed. This is useful during program development, when large numbers of files with varying sizes are processed, because it can reduce virtual memory usage.</p>
+<p><b>--file-size-order</b> or <b>-fso</b> will cause files to be processed in order of increasing size, when multiple files are being processed. This is particularly useful during program development, when large numbers of files with varying sizes are processed, because it can reduce virtual memory usage. This is the default and can be deactivated with <b>-nfso</b>.</p>
 
 <p><b>--maximum-file-size-mb=n</b> or <b>-maxfs=n</b> specifies the maximum file size in megabytes that perltidy will attempt to format. This parameter is provided to avoid causing system problems by accidentally attempting to format an extremely large data file. Most perl scripts are less than about 2 MB in size. The integer <b>n</b> has a default value of 10, so perltidy will skip formatting files which have a size greater than 10 MB. The command to increase the limit to 20 MB for example would be</p>
 
@@ -4517,7 +4544,7 @@
 
 <p>This feature was developed to help identify complex sections of code as an aid in refactoring. The McCabe complexity measure follows the definition used by Perl::Critic. By default the table contains these values for subroutines, but the user may request them for any or all blocks of code or packages. For blocks which are loops nested within loops, a postfix &#39;+&#39; to the <code>type</code> is added to indicate possible code complexity. Although the table does not otherwise indicate which blocks are nested in other blocks, this can be determined by computing and comparing the block ending line numbers.</p>
 
-<p>For subroutines, the number of call arguments (args) is listed in parentheses in the <code>type</code> column. For example, <code>sub(9)</code> indicates a sub with 9 args. Subroutines whose arg count cannot easily be determined are indicated as <code>sub(*)</code>. The count does not include a leading variable named <b>$self</b> or <b>$class</b>.</p>
+<p>For subroutines, the number of call arguments (args) is listed in parentheses in the <code>type</code> column. For example, <code>sub(9)</code> indicates a sub with 9 args. Subroutines whose arg count cannot easily be determined are indicated as <code>sub(*)</code>. The count includes any leading object passed in a method call (such as <b>$self</b>).</p>
 
 <p>By default the table lists subroutines with more than 20 <code>code_lines</code>, but this can be changed with the following two parameters:</p>
 
@@ -5032,7 +5059,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20240202.02</p>
+<p>This man page documents perltidy version 20240202.03</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

@@ -1697,15 +1697,13 @@ my @boolfunc =
         $titles
              .= ( $timestamp
                   ? format_date($timestamp)
-                  : "" )
-             . ";";
+                  : "" ) . ";";
 
         # S2
         $titles
              .= ( $timestamp
                   ? format_date($timestamp)
-                  : "" )
-             . ";";
+                  : "" ) . ";";
 
 ==> b1049 <==
             # s1
@@ -1814,7 +1812,7 @@ my @boolfunc =
 ==> b1055 <==
       # S1
       my @tests =
-        ( [$x],
+        (   [$x],
             [ [ [
 "aa",
 "b",
@@ -1828,7 +1826,7 @@ my @boolfunc =
 
       # S2
       my @tests =
-        ( [$x],
+        (   [$x],
             [ [ [
 "aa",
 "b",
@@ -3382,7 +3380,7 @@ is_deeply(
 {
         my %tests = (
                 -8589934592 =>
-                    [ 9,
+                    [   9,
                         -203,
 qr/Oct \d+ .* 1697$/
                     ],
@@ -3396,7 +3394,7 @@ qr/Dec \d+ .* 1969$/
 {
         my %tests = (
                 -8589934592 =>
-                    [ 9,
+                    [   9,
                         -203,
 qr/Oct \d+ .* 1697$/
                     ],

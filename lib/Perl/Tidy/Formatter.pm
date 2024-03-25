@@ -75,7 +75,7 @@ use constant SPACE        => q{ };
 use Carp;
 use English    qw( -no_match_vars );
 use List::Util qw( min max first );    # min, max first are in Perl 5.8
-our $VERSION = '20240202.02';
+our $VERSION = '20240202.03';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -2322,8 +2322,7 @@ sub initialize_old_breakpoint_controls {
         if (@conflicts) {
             my $msg = join( "\n  ",
 " Conflict: These conflicts with --ignore-old-breakponts (-iob) will be turned off:",
-                @conflicts )
-              . "\n";
+                @conflicts ) . "\n";
             Warn($msg);
         }
 

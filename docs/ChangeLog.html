@@ -1,8 +1,53 @@
 <h1>Perltidy Change Log</h1>
 
-<h2>2024 02 02.02</h2>
+<h2>2024 02 02.03</h2>
 
-<pre><code>- The option --valign-signed-numbers, or -vsn is now the default. It
+<pre><code>- Add option --valign-wide-equals, or -vwe, for issue git #135.
+  Setting this parameter causes the following assignment operators
+
+     = **= += *= &amp;= &lt;&lt;= &amp;&amp;= -= /= |= &gt;&gt;= ||= //= .= %= ^= x=
+
+  to be aligned vertically with the ending = all aligned. For example,
+  here is the default formatting of a snippet of code:
+
+        $str .= SPACE x $total_pad_count;
+        $str_len += $total_pad_count;
+        $total_pad_count = 0;
+        $str .= $rfields-&gt;[$j];
+        $str_len += $rfield_lengths-&gt;[$j];
+
+  And here is the same code formatted with -vwe:
+
+        # perltidy -vwe
+        $str             .= SPACE x $total_pad_count;
+        $str_len         += $total_pad_count;
+        $total_pad_count  = 0;
+        $str             .= $rfields-&gt;[$j];
+        $str_len         += $rfield_lengths-&gt;[$j];
+
+  This option currently is off by default to avoid changing existing formatting.
+
+- In the option --dump-block-summary, the number of sub arguments indicated
+  for each sub now includes any leading object variable passed with
+  an arrow-operator call.  Previously the count would have been decreased
+  by one in this case. This change is needed for compatibility with future
+  updates.
+
+- The operator ``**=`` now has spaces on both sides by default. Previously,
+  there was no space on the left.  This change makes its spacing the same
+  as all other assignment operators. The previous behavior can be obtained
+  with the parameter setting -nwls='**='.
+
+- The option --file-size-order, or -fso is now the default. When
+  perltidy is given a list of multiple filenames to process, they
+  are sorted by size and processed in order of increasing size.
+  This can significantly reduce memory usage by Perl.  This
+  option has always been used in testing, where typically several
+  jobs each operating on thousands of filenames are running at the
+  same time and competing for system resources.  If this option
+  is not wanted for some reason, it can be deactivated with -nfso.
+
+- The option --valign-signed-numbers, or -vsn is now the default. It
   was introduced in the previous release has been found to significantly
   improve the overall appearance of columns of signed and unsigned
   numbers.  It will change formatting slightly in scripts with columns
