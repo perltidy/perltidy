@@ -1,0 +1,11 @@
+                # issue c352, recombine a small terminal quote
+                $text .= filter_blocks( $code,
+                    line( substr( $source, 0, $pos[0] ), $line ) ) . ")";
+                print( ( $Pipe->ResizeBuffer($NewSize) == $NewSize )
+                    ? "Successful"
+                    : "Unsucessful" ) . "!\n\n";
+                my $func =
+                  'encode_utf8('
+                  . ( !defined $str ? 'undef'
+                    : is_utf8($str) ? '$utf8_str'
+                    :                 '$ascii_str' ) . ')';

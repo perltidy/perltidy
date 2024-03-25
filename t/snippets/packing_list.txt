@@ -412,6 +412,8 @@
 ../snippets29.t	dia.dia2
 ../snippets29.t	dia.dia3
 ../snippets29.t	git134.def
+../snippets29.t	git135.def
+../snippets29.t	git135.git135
 ../snippets3.t	ce_wn1.ce_wn
 ../snippets3.t	ce_wn1.def
 ../snippets3.t	colin.colin
@@ -552,5 +554,4 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets29.t	git135.def
-../snippets29.t	git135.git135
+../snippets29.t	c352.def

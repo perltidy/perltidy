@@ -23940,6 +23940,11 @@ EOM
                   )
             );
             return if ( !$combine_ok );
+
+            # added for issue c352
+            if ($this_line_is_semicolon_terminated) {
+                $forced_breakpoint_to_go[$iend_1] = 0;
+            }
         }
         else {
             # not a special type
@@ -24173,6 +24178,11 @@ EOM
             );
 
             return if ( !$combine_ok );
+
+            # added for issue c352
+            if ($this_line_is_semicolon_terminated) {
+                $forced_breakpoint_to_go[$iend_1] = 0;
+            }
         }
 
         # handle leading keyword..

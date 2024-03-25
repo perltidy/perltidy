@@ -12,6 +12,7 @@
 #9 git134.def
 #10 git135.def
 #11 git135.git135
+#12 c352.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -53,6 +54,13 @@ BEGIN {
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'c352' => <<'----------',
+                # issue c352, recombine a small terminal quote
+                $text .= filter_blocks( $code, line( substr( $source, 0, $pos[0] ), $line ) ) . ")";
+                print( ( $Pipe->ResizeBuffer($NewSize) == $NewSize ) ? "Successful" : "Unsucessful" ) . "!\n\n";
+                my $func = 'encode_utf8(' . ( !defined $str ? 'undef' : is_utf8($str) ? '$utf8_str' : '$ascii_str' ) . ')';
+----------
 
         'dia' => <<'----------',
 return $this->{'content'}[$row][$col];
@@ -420,6 +428,24 @@ $mask  = ~( ~$mask | $DeadBits{$word} ) if $no_fatal;
 }
 
 #11...........
+        },
+
+        'c352.def' => {
+            source => "c352",
+            params => "def",
+            expect => <<'#12...........',
+                # issue c352, recombine a small terminal quote
+                $text .= filter_blocks( $code,
+                    line( substr( $source, 0, $pos[0] ), $line ) ) . ")";
+                print( ( $Pipe->ResizeBuffer($NewSize) == $NewSize )
+                    ? "Successful"
+                    : "Unsucessful" ) . "!\n\n";
+                my $func =
+                  'encode_utf8('
+                  . ( !defined $str ? 'undef'
+                    : is_utf8($str) ? '$utf8_str'
+                    :                 '$ascii_str' ) . ')';
+#12...........
         },
     };
 
