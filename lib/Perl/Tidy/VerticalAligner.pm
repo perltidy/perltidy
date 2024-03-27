@@ -7,6 +7,7 @@ use Carp;
 
 our $VERSION = '20240202.03';
 use English qw( -no_match_vars );
+use Scalar::Util 'refaddr';
 use Perl::Tidy::VerticalAligner::Alignment;
 use Perl::Tidy::VerticalAligner::Line;
 
@@ -5773,27 +5774,82 @@ EOM
         return;
     }
 
+    #------------------------------------------------------
     # loop over all lines of this vertical alignment column
+    #------------------------------------------------------
+    my ( $current_alignment, $starting_colp );
     foreach my $item ( @{$rwidths} ) {
         my ( $ix, $width ) = @{$item};
-        my $line           = $rgroup_lines->[$ix];
-        my $rfields        = $line->{'rfields'};
-        my $rfield_lengths = $line->{'rfield_lengths'};
+        my $line = $rgroup_lines->[$ix];
 
         # add leading spaces to the shorter equality tokens to get
         # vertical alignment of the '=' signs
+        my $jmax  = $line->{'jmax'};
+        my $jcolp = $jcol + 1;
+
+        my @alignments = @{ $line->{'ralignments'} };
+        my $alignment  = $alignments[$jcolp];
+        my $colp       = $alignment->{column};
+
+        #------------------------------------------------------------
+        # Transfer column width changes between equivalent alignments
+        #------------------------------------------------------------
+
+        # This step keeps alignments to the right correct in case the
+        # alignment object changes but the actual alignment col does not.
+        # It is extremely rare for this to occur. Issue c353.
+
+        # nothing to do if no more real alignments on right
+        if ( $jcolp >= $jmax - 1 ) {
+            $current_alignment = undef;
+        }
+
+        # handle new rhs alignment
+        elsif ( !$current_alignment ) {
+            $current_alignment = $alignment;
+            $starting_colp     = $colp;
+        }
+
+        # handle change in existing alignment
+        elsif ( refaddr($alignment) != refaddr($current_alignment) ) {
+
+            # completely new rhs
+            if ( $starting_colp != $colp ) {
+                $starting_colp = $colp;
+            }
+            else {
+
+                # alignment transfer - see if we must increase width
+                my $current_colp = $current_alignment->{column};
+                if ( $current_colp > $colp ) {
+                    my $excess = $current_colp - $colp;
+                    my $padding_available =
+                      $line->get_available_space_on_right();
+                    if ( $excess <= $padding_available ) {
+                        $line->increase_field_width( $jcolp, $excess );
+                        $colp = $alignment->{column};
+                    }
+                }
+            }
+            $current_alignment = $alignment;
+        }
+        else {
+            # continuing with same alignment
+        }
+
+        #-----------------------
+        # add any needed padding
+        #-----------------------
         my $pad = $max_width - $width;
         if ( $pad > 0 ) {
-            my $jmax  = $line->{'jmax'};
-            my $jcolp = $jcol + 1;
 
-            # Check space and increase column width if necessary and possible
-            my @alignments = @{ $line->{'ralignments'} };
-            my $alignment  = $alignments[$jcolp];
-            my $colp       = $alignment->{column};
-            my $lenp       = $rfield_lengths->[$jcolp];
-            my $avail      = $colp - $col;
-            my $excess     = $lenp + $pad - $avail;
+            my $rfields        = $line->{'rfields'};
+            my $rfield_lengths = $line->{'rfield_lengths'};
+
+            my $lenp   = $rfield_lengths->[$jcolp];
+            my $avail  = $colp - $col;
+            my $excess = $lenp + $pad - $avail;
+
             if ( $excess > 0 ) {
                 my $padding_available = $line->get_available_space_on_right();
                 if ( $excess <= $padding_available ) {
@@ -5807,16 +5863,6 @@ EOM
             # increase the space
             $rfields->[$jcolp] = ( SPACE x $pad ) . $rfields->[$jcolp];
             $rfield_lengths->[$jcolp] += $pad;
-
-            0 && print <<EOM;
-jcol=$jcol col=$col
-jcolp=$jcolp colp=$colp
-jmax=$jmax
-avail=$avail
-len=$rfield_lengths->[$jcolp];
-text='$rfields->[$jcolp]'
-pad=$pad
-EOM
         }
     }
     return;

@@ -13,6 +13,8 @@
 #10 git135.def
 #11 git135.git135
 #12 c352.def
+#13 c353.c353
+#14 c353.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -30,6 +32,10 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
+        'c353' => <<'----------',
+--valign-wide-equals
+--valign-if-unless
+----------
         'def'  => "",
         'dia1' => "-dia",
         'dia2' => "-aia",
@@ -60,6 +66,23 @@ BEGIN {
                 $text .= filter_blocks( $code, line( substr( $source, 0, $pos[0] ), $line ) ) . ")";
                 print( ( $Pipe->ResizeBuffer($NewSize) == $NewSize ) ? "Successful" : "Unsucessful" ) . "!\n\n";
                 my $func = 'encode_utf8(' . ( !defined $str ? 'undef' : is_utf8($str) ? '$utf8_str' : '$ascii_str' ) . ')';
+----------
+
+        'c353' => <<'----------',
+@ns        = split( /, ?/, join( ',', @ns ) );
+@cnames    = split( /, ?/, join( ',', @cnames ) );
+$recurse   = 1       unless ( defined $recurse );
+$port      = 53      unless ( defined $port );
+$srcport   = 0       unless ( defined $srcport );
+$ttl       = 30 * 60 unless ( defined $ttl );
+$hash      = 32      if ( defined $hash && $hash <= 0 );
+$hash      = 63      if ( defined $hash && $hash > 63 );
+$unique    = 1       unless ( defined $hash || defined $unique );
+$unique  ||= $hash   if (1);
+
+$basepath  = $CWD unless length($basepath);
+$basepath .= '/'  if -d $basepath && $basepath !~ m#/$#;
+
 ----------
 
         'dia' => <<'----------',
@@ -446,6 +469,48 @@ $mask  = ~( ~$mask | $DeadBits{$word} ) if $no_fatal;
                     : is_utf8($str) ? '$utf8_str'
                     :                 '$ascii_str' ) . ')';
 #12...........
+        },
+
+        'c353.c353' => {
+            source => "c353",
+            params => "c353",
+            expect => <<'#13...........',
+@ns        = split( /, ?/, join( ',', @ns ) );
+@cnames    = split( /, ?/, join( ',', @cnames ) );
+$recurse   = 1       unless ( defined $recurse );
+$port      = 53      unless ( defined $port );
+$srcport   = 0       unless ( defined $srcport );
+$ttl       = 30 * 60 unless ( defined $ttl );
+$hash      = 32      if ( defined $hash && $hash <= 0 );
+$hash      = 63      if ( defined $hash && $hash > 63 );
+$unique    = 1       unless ( defined $hash || defined $unique );
+$unique  ||= $hash   if (1);
+
+$basepath  = $CWD unless length($basepath);
+$basepath .= '/'  if -d $basepath && $basepath !~ m#/$#;
+
+#13...........
+        },
+
+        'c353.def' => {
+            source => "c353",
+            params => "def",
+            expect => <<'#14...........',
+@ns      = split( /, ?/, join( ',', @ns ) );
+@cnames  = split( /, ?/, join( ',', @cnames ) );
+$recurse = 1       unless ( defined $recurse );
+$port    = 53      unless ( defined $port );
+$srcport = 0       unless ( defined $srcport );
+$ttl     = 30 * 60 unless ( defined $ttl );
+$hash    = 32 if ( defined $hash && $hash <= 0 );
+$hash    = 63 if ( defined $hash && $hash > 63 );
+$unique  = 1 unless ( defined $hash || defined $unique );
+$unique ||= $hash if (1);
+
+$basepath = $CWD unless length($basepath);
+$basepath .= '/' if -d $basepath && $basepath !~ m#/$#;
+
+#14...........
         },
     };
 
