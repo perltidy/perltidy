@@ -5777,7 +5777,11 @@ EOM
     #------------------------------------------------------
     # loop over all lines of this vertical alignment column
     #------------------------------------------------------
-    my ( $current_alignment, $starting_colp );
+
+    my (
+        $current_alignment, $starting_colp,
+        $current_line,      @previous_linked_lines
+    );
     foreach my $item ( @{$rwidths} ) {
         my ( $ix, $width ) = @{$item};
         my $line = $rgroup_lines->[$ix];
@@ -5801,25 +5805,32 @@ EOM
 
         # nothing to do if no more real alignments on right
         if ( $jcolp >= $jmax - 1 ) {
-            $current_alignment = undef;
+            $current_alignment     = undef;
+            $current_line          = undef;
+            @previous_linked_lines = ();
         }
 
         # handle new rhs alignment
         elsif ( !$current_alignment ) {
-            $current_alignment = $alignment;
-            $starting_colp     = $colp;
+            $current_alignment     = $alignment;
+            $current_line          = $line;
+            $starting_colp         = $colp;
+            @previous_linked_lines = ();
         }
 
         # handle change in existing alignment
         elsif ( refaddr($alignment) != refaddr($current_alignment) ) {
 
-            # completely new rhs
+            # change rhs alignment column - new vertical group on right
             if ( $starting_colp != $colp ) {
-                $starting_colp = $colp;
+                $starting_colp         = $colp;
+                @previous_linked_lines = ();
             }
             else {
 
-                # alignment transfer - see if we must increase width
+                # Same starting alignment col on right, but different alignment
+                # object. See if we must increase width of this new alignment
+                # object.
                 my $current_colp = $current_alignment->{column};
                 if ( $current_colp > $colp ) {
                     my $excess = $current_colp - $colp;
@@ -5830,8 +5841,13 @@ EOM
                         $colp = $alignment->{column};
                     }
                 }
+
+                # remember the previous line in case we have to go back and
+                # increasse its width
+                push @previous_linked_lines, $current_line;
             }
             $current_alignment = $alignment;
+            $current_line      = $line;
         }
         else {
             # continuing with same alignment
@@ -5851,16 +5867,30 @@ EOM
             my $excess = $lenp + $pad - $avail;
 
             if ( $excess > 0 ) {
+
                 my $padding_available = $line->get_available_space_on_right();
                 if ( $excess <= $padding_available ) {
                     $line->increase_field_width( $jcolp, $excess );
+
+                    # Increase space of any previous linked lines
+                    foreach my $line_prev (@previous_linked_lines) {
+                        $padding_available =
+                          $line_prev->get_available_space_on_right();
+                        if ( $excess <= $padding_available ) {
+                            $line_prev->increase_field_width( $jcolp, $excess );
+                        }
+                        else {
+                            last;
+                        }
+                    }
                 }
                 else {
                     $pad = 0;
                 }
+
             }
 
-            # increase the space
+            # Add spaces
             $rfields->[$jcolp] = ( SPACE x $pad ) . $rfields->[$jcolp];
             $rfield_lengths->[$jcolp] += $pad;
         }

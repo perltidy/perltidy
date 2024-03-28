@@ -83,6 +83,18 @@ $unique  ||= $hash   if (1);
 $basepath  = $CWD unless length($basepath);
 $basepath .= '/'  if -d $basepath && $basepath !~ m#/$#;
 
+$$hr  = $1 || $5 || $9 || 0;    # 9 is undef, but 5 is defined..
+$$mr  = $2 || $6 || 0;
+$$sr  = $3 || $7 || 0;
+$ampm = $4 || $8 || $10;
+$$tzr = $11;
+$$hr += 12 if $ampm and "\U$ampm" eq "PM" && $$hr != 12;
+$$hr = 0 if $$hr == 12 && "\U$ampm" eq "AM";
+$$hr = 0 if $$hr == 24;
+
+$map = $DEFAULT_MAP               unless defined $map;
+$map = $DEFAULT_PATH . "/" . $map unless $map =~ m|/|;
+$map .= $DEFAULT_EXT unless $map =~ m|/[^/]+\.[^/]+$|;
 ----------
 
         'dia' => <<'----------',
@@ -489,6 +501,18 @@ $unique  ||= $hash   if (1);
 $basepath  = $CWD unless length($basepath);
 $basepath .= '/'  if -d $basepath && $basepath !~ m#/$#;
 
+$$hr   = $1 || $5 || $9 || 0;    # 9 is undef, but 5 is defined..
+$$mr   = $2 || $6 || 0;
+$$sr   = $3 || $7 || 0;
+$ampm  = $4 || $8 || $10;
+$$tzr  = $11;
+$$hr  += 12 if $ampm and "\U$ampm" eq "PM" && $$hr != 12;
+$$hr   = 0  if $$hr == 12                  && "\U$ampm" eq "AM";
+$$hr   = 0  if $$hr == 24;
+
+$map  = $DEFAULT_MAP               unless defined $map;
+$map  = $DEFAULT_PATH . "/" . $map unless $map =~ m|/|;
+$map .= $DEFAULT_EXT               unless $map =~ m|/[^/]+\.[^/]+$|;
 #13...........
         },
 
@@ -510,6 +534,18 @@ $unique ||= $hash if (1);
 $basepath = $CWD unless length($basepath);
 $basepath .= '/' if -d $basepath && $basepath !~ m#/$#;
 
+$$hr  = $1 || $5 || $9 || 0;    # 9 is undef, but 5 is defined..
+$$mr  = $2 || $6 || 0;
+$$sr  = $3 || $7 || 0;
+$ampm = $4 || $8 || $10;
+$$tzr = $11;
+$$hr += 12 if $ampm and "\U$ampm" eq "PM" && $$hr != 12;
+$$hr = 0 if $$hr == 12 && "\U$ampm" eq "AM";
+$$hr = 0 if $$hr == 24;
+
+$map = $DEFAULT_MAP               unless defined $map;
+$map = $DEFAULT_PATH . "/" . $map unless $map =~ m|/|;
+$map .= $DEFAULT_EXT unless $map =~ m|/[^/]+\.[^/]+$|;
 #14...........
         },
     };
