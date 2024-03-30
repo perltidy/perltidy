@@ -135,9 +135,11 @@ BEGIN {
 } ## end BEGIN
 
 sub DESTROY {
+    my $self = shift;
 
     # required to avoid call to AUTOLOAD in some versions of perl
-}
+    return;
+} ## end sub DESTROY
 
 sub AUTOLOAD {
 
@@ -926,6 +928,7 @@ EOM
         dump-block-summary
         dump-unusual-variables
         dump-mixed-call-parens
+        dump-mismatched-calls
         )
       )
     {
@@ -3715,13 +3718,15 @@ sub generate_options {
     $add_option->( 'want-call-parens',             'wcp',  '=s' );
     $add_option->( 'nowant-call-parens',           'nwcp', '=s' );
 
+    $add_option->( 'warn-mismatched-call-types',          'wmct',  '=s' );
+    $add_option->( 'warn-mismatched-call-cutoff',         'wmcc',  '=i' );
+    $add_option->( 'warn-mismatched-call-exclusion-list', 'wmcxl', '=s' );
+
     $add_option->( 'add-interbracket-arrows',       'aia', '!' );
     $add_option->( 'delete-interbracket-arrows',    'dia', '!' );
     $add_option->( 'warn-interbracket-arrows',      'wia', '!' );
     $add_option->( 'interbracket-arrow-style',      'ias', '=s' );
     $add_option->( 'interbracket-arrow-complexity', 'iac', '=i' );
-
-    $add_option->( 'warn-mixed-arg-counts', 'wmac', '!' );
 
     ########################################
     $category = 13;    # Debugging
@@ -3734,6 +3739,7 @@ sub generate_options {
     $add_option->( 'dump-defaults',                   'ddf',   '!' );
     $add_option->( 'dump-integer-option-range',       'dior',  '!' );
     $add_option->( 'dump-long-names',                 'dln',   '!' );
+    $add_option->( 'dump-mismatched-calls',           'dmc',   '!' );
     $add_option->( 'dump-mixed-call-parens',          'dmcp',  '!' );
     $add_option->( 'dump-options',                    'dop',   '!' );
     $add_option->( 'dump-profile',                    'dpro',  '!' );
@@ -3865,6 +3871,7 @@ sub generate_options {
       maximum-unexpected-errors=0
       memoize
       minimum-space-to-comment=4
+      warn-mismatched-call-cutoff=4
       nobrace-left-and-indent
       nocuddled-else
       nodelete-old-whitespace
@@ -4023,6 +4030,7 @@ sub generate_options {
         'maximum-line-length'                       => [ 0, undef ],
         'maximum-unexpected-errors'                 => [ 0, undef ],
         'minimum-space-to-comment'                  => [ 0, undef ],
+        'warn-mismatched-call-cutoff'               => [ 0, undef ],
         'one-line-block-nesting'                    => [ 0, 1 ],
         'one-line-block-semicolons'                 => [ 0, 2 ],
         'paren-tightness'                           => [ 0, 2 ],
@@ -4617,28 +4625,43 @@ EOM
                 # Undo any options which cause premature exit.  They are not
                 # appropriate for a config file, and it could be hard to
                 # diagnose the cause of the premature exit.
+
+                # These are options include dump switches of the form
+                # '--dump-xxx-xxx!'.
+                my @dump_commands =
+                  grep { /^(dump-.*)!$/ } @{$roption_string};
+                foreach (@dump_commands) { s/!$// }
+
+                # Here is a current list of these @dump_commands:
+                #  dump-block-summary
+                #  dump-cuddled-block-list
+                #  dump-defaults
+                #  dump-integer-option-range
+                #  dump-long-names
+                #  dump-mismatched-calls
+                #  dump-mixed-call-parens
+                #  dump-options
+                #  dump-profile
+                #  dump-short-names
+                #  dump-token-types
+                #  dump-unusual-variables
+                #  dump-want-left-space
+                #  dump-want-right-space
+
+                # The following two dump configuration parameters which
+                # take =i or =s would still be allowed:
+                #  dump-block-minimum-lines',        'dbl',   '=i' );
+                #  dump-block-types',                'dbt',   '=s' );
+
                 foreach (
+                    @dump_commands,
                     qw{
-                    dump-cuddled-block-list
-                    dump-defaults
-                    dump-integer-option_range
-                    dump-long-names
-                    dump-options
-                    dump-profile
-                    dump-short-names
-                    dump-token-types
-                    dump-want-left-space
-                    dump-want-right-space
-                    dump-block-summary
-                    dump-unusual-variables
-                    dump-mixed-call-parens
                     help
                     stylesheet
                     version
                     }
                   )
                 {
-
                     if ( defined( $Opts{$_} ) ) {
                         delete $Opts{$_};
                         Warn("ignoring --$_ in config file: $config_file\n");

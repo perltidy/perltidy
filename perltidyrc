@@ -15,6 +15,10 @@
 # warn if any of the 'unusual' variables are seen
 --warn-variable-types='*'
 
+# warn if call arg counts differ from sub definitions
+# (requires version > 20240202.03)
+--warn-mismatched-call-types='*'
+
 # user-defined subs must have args in parens
 --want-call-parens='&'
 

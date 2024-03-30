@@ -25,7 +25,22 @@
             $str             .= $rfields->[$j];
             $str_len         += $rfield_lengths->[$j];
 
-      This option currently is off by default to avoid changing existing formatting.
+      This option currently is off by default to avoid changing existing
+      formatting.
+
+    - Previously, a line break was made before a short concatenated terminal
+      quoted string, such as "\n", if the previous line had a greater
+      starting indentation. The break is now placed after the short quote.
+      This keeps code a little more compact. For example:
+
+    # old rule: break before "\n" here because '$name' has more indentation:
+    my $html = $this->SUPER::genObject( $query, $bindNode, $field . ":$var",
+        $name, "remove", "UNCHECKED" )
+      . "\n";
+
+    # new rule: break after a short terminal quote like "\n" for compactness;
+    my $html = $this->SUPER::genObject( $query, $bindNode, $field . ":$var",
+        $name, "remove", "UNCHECKED" ) . "\n";
 
     - In the option --dump-block-summary, the number of sub arguments indicated
       for each sub now includes any leading object variable passed with
@@ -1445,7 +1460,7 @@
     - fixed issue git#13, needless trailing whitespace in error message
 
     - fixed issue git#9: if the -ce (--cuddled-else) flag is used,
-      do not try to form new one line blocks for a block type 
+      do not try to form new one line blocks for a block type
       specified with -cbl, particularly map, sort, grep
 
     - iteration speedup for unchanged code.  Previously, when iterations were

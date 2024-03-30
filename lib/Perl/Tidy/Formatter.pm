@@ -103,7 +103,7 @@ EOM
 
 sub DESTROY {
     my $self = shift;
-    $self->_decrement_count();
+    _decrement_count();
     return;
 }
 
@@ -388,6 +388,10 @@ my (
     %warn_variable_types,
     %is_warn_variable_excluded_name,
 
+    # INITIALIZER: sub initialize_warn_mismatched_call_types
+    %warn_mismatched_call_types,
+    %is_warn_mismatched_call_excluded_name,
+
     # regex patterns for text identification.
     # Most can be configured by user parameters.
     # Most are initialized in a sub make_**_pattern during configuration.
@@ -625,6 +629,12 @@ BEGIN {
         _no_vertical_tightness_flags_ => $i++,
         _last_vt_type_                => $i++,
         _rwant_arrow_before_seqno_    => $i++,
+
+        # these vars are defined after call to respace tokens:
+        _rK_package_list_               => $i++,
+        _rK_sub_by_seqno_               => $i++,
+        _ris_my_sub_by_seqno_           => $i++,
+        _rsub_call_paren_info_by_seqno_ => $i++,
 
         _LAST_SELF_INDEX_ => $i - 1,
     };
@@ -998,6 +1008,13 @@ sub new {
     $self->[_rblock_type_of_seqno_]    = {};
     $self->[_ris_asub_block_]          = {};
     $self->[_ris_sub_block_]           = {};
+
+    # Variables for --warn-mismatched-call-types and
+    #               --dump-mismatched-calls
+    $self->[_rK_package_list_]               = [];
+    $self->[_rsub_call_paren_info_by_seqno_] = {};
+    $self->[_rK_sub_by_seqno_]               = {};
+    $self->[_ris_my_sub_by_seqno_]           = {};
 
     # Mostly list characteristics and processing flags
     $self->[_rtype_count_by_seqno_]      = {};
@@ -1449,6 +1466,8 @@ sub check_options {
     initialize_call_paren_style();
 
     initialize_warn_variable_types();
+
+    initialize_warn_mismatched_call_types();
 
     make_bli_pattern();
 
@@ -6584,6 +6603,15 @@ EOM
       if ( %warn_variable_types
         && $self->[_logger_object_] );
 
+    $self->warn_mismatched_calls()
+      if ( $rOpts->{'warn-mismatched-call-types'}
+        && $self->[_logger_object_] );
+
+    if ( $rOpts->{'dump-mismatched-calls'} ) {
+        $self->dump_mismatched_calls();
+        Exit(0);
+    }
+
     if ( $rOpts->{'dump-mixed-call-parens'} ) {
         $self->dump_mixed_call_parens();
         Exit(0);
@@ -9415,7 +9443,7 @@ sub dump_unusual_variables {
     # process a --dump-unusual-variables(-duv) command
 
     my $rlines = $self->scan_variable_usage();
-    return unless ( @{$rlines} );
+    return unless ( $rlines && @{$rlines} );
 
     # output for multiple types
     my $output_string = <<EOM;
@@ -9548,7 +9576,7 @@ sub warn_variable_types {
     return unless (%warn_variable_types);
 
     my $rwarnings = $self->scan_variable_usage( \%warn_variable_types );
-    return unless ( @{$rwarnings} );
+    return unless ( $rwarnings && @{$rwarnings} );
 
     my $message = "Begin scan for --$wv_key=$wv_option\n";
     $message .= <<EOM;
@@ -10379,16 +10407,16 @@ my $CODE_type;
 my $rwhitespace_flags;
 
 # new index K of package or class statements
-my @K_package_list;
+my $rK_package_list;
 
 # info about list of sub call args
-my %sub_call_paren_info_by_seqno;
+my $rsub_call_paren_info_by_seqno;
 
 # index K of the preceding 'S' token for a sub
-my %K_sub_by_seqno;
+my $rK_sub_by_seqno;
 
 # true for a 'my' sub
-my %is_my_sub_by_seqno;
+my $ris_my_sub_by_seqno;
 
 sub initialize_respace_tokens_closure {
 
@@ -10420,6 +10448,11 @@ sub initialize_respace_tokens_closure {
     $rblock_type_of_seqno      = $self->[_rblock_type_of_seqno_];
     $rwant_arrow_before_seqno  = $self->[_rwant_arrow_before_seqno_];
     $ris_sub_block             = $self->[_ris_sub_block_];
+
+    $rK_package_list               = $self->[_rK_package_list_];
+    $rsub_call_paren_info_by_seqno = $self->[_rsub_call_paren_info_by_seqno_];
+    $rK_sub_by_seqno               = $self->[_rK_sub_by_seqno_];
+    $ris_my_sub_by_seqno           = $self->[_ris_my_sub_by_seqno_];
 
     %K_first_here_doc_by_seqno = ();
 
@@ -10458,11 +10491,6 @@ sub initialize_respace_tokens_closure {
     $K_closing_container = $self->[_K_closing_container_] = {};
 
     @K_sequenced_token_list = ();
-
-    @K_package_list               = ();
-    %sub_call_paren_info_by_seqno = ();
-    %K_sub_by_seqno               = ();
-    %is_my_sub_by_seqno           = ();
 
     return;
 
@@ -10667,18 +10695,6 @@ sub respace_tokens {
     # update the token limits of each line
     ( $severe_error, $rqw_lines ) = $self->resync_lines_and_tokens();
 
-    # look for possible errors in call arg counts
-    if ( !$severe_error && $rOpts->{'warn-mixed-arg-counts'} ) {
-        $self->cross_check_sub_call_args(
-            {
-                rK_package_list               => \@K_package_list,
-                rsub_call_paren_info_by_seqno => \%sub_call_paren_info_by_seqno,
-                rK_sub_by_seqno               => \%K_sub_by_seqno,
-                ris_my_sub_by_seqno           => \%is_my_sub_by_seqno,
-            }
-        );
-    }
-
     return ( $severe_error, $rqw_lines );
 } ## end sub respace_tokens
 
@@ -10849,7 +10865,7 @@ sub respace_tokens_inner_loop {
                             '&' )
                       )
                     {
-                        $sub_call_paren_info_by_seqno{$type_sequence} = {
+                        $rsub_call_paren_info_by_seqno->{$type_sequence} = {
                             token_mm => $last_last_nonblank_code_token,
                             type_mm  => $last_last_nonblank_code_type,
                             token_m  => $last_nonblank_code_token,
@@ -10860,9 +10876,9 @@ sub respace_tokens_inner_loop {
 
                 # At a sub block, save info to cross check arg counts
                 elsif ( $ris_sub_block->{$type_sequence} ) {
-                    $K_sub_by_seqno{$type_sequence} = $K_last_S;
+                    $rK_sub_by_seqno->{$type_sequence} = $K_last_S;
                     if ($K_last_S_is_my) {
-                        $is_my_sub_by_seqno{$type_sequence} = 1;
+                        $ris_my_sub_by_seqno->{$type_sequence} = 1;
                     }
                 }
                 else {
@@ -10988,7 +11004,7 @@ sub respace_tokens_inner_loop {
 
                 # remember the new K of this package; this may be
                 # off by 1 if a blank gets inserted before it
-                push @K_package_list, scalar @{$rLL_new};
+                push @{$rK_package_list}, scalar @{$rLL_new};
             }
             else {
                 # Could be something like '* STDERR' or '$ debug'
@@ -12842,6 +12858,27 @@ sub parent_seqno_by_K {
     return $parent_seqno;
 } ## end sub parent_seqno_by_K
 
+sub parent_sub_seqno {
+    my ( $self, $seqno_paren ) = @_;
+
+    # Find sequence number of the sub which contains a given sequenced item
+
+    # Given:
+    #  $seqno_paren = sequence number of a token within the sub
+    # Returns:
+    #  $seqno of the sub, or
+    #  nothing if no sub found
+    return unless defined($seqno_paren);
+    my $parent_seqno = $seqno_paren;
+    while ( $parent_seqno = $self->[_rparent_of_seqno_]->{$parent_seqno} ) {
+        last if ( $parent_seqno == SEQ_ROOT );
+        if ( $self->[_ris_sub_block_]->{$parent_seqno} ) {
+            return $parent_seqno;
+        }
+    }
+    return;
+} ## end sub parent_sub_seqno
+
 sub is_in_block_by_i {
     my ( $self, $i ) = @_;
 
@@ -13285,13 +13322,13 @@ sub count_list_args {
         next if ( $type eq '#' );
 
         # Only look at top-level tokens
-        my $level = $rLL->[$K_opening]->[_LEVEL_];
+        my $level = $rLL->[$KK]->[_LEVEL_];
         next if ( $level > $level_opening + 1 );
 
         my $token = $rLL->[$KK]->[_TOKEN_];
 
         # handle identifiers
-        if ( $type eq 'i' ) {
+        if ( $type eq 'i' || $type eq 't' ) {
             my $sigil = substr( $token, 0, 1 );
 
             # Give up if we find list sigils
@@ -13320,6 +13357,11 @@ sub count_list_args {
             $arg_count++;
         }
 
+        # treat fat commas as commas
+        elsif ( $type eq '=>' ) {
+            $arg_count++;
+        }
+
         else {
             # continue search
         }
@@ -13336,6 +13378,13 @@ sub count_list_args {
 
 # A constant to limit backward searches
 use constant MANY_TOKENS => 100;
+
+my %is_shift_pop;
+
+BEGIN {
+    my @q = qw(shift pop);
+    @is_shift_pop{@q} = (1) x scalar(@q);
+}
 
 sub count_sub_args {
     my ( $self, $item ) = @_;
@@ -13463,8 +13512,11 @@ sub count_sub_args {
             }
 
             # Give up if we find an indexed ref to $_[..]
-            elsif ( length($token) >= 5 && substr( $token, 0, 3 ) eq '$_[' ) {
-                return;
+            elsif ( $token eq '$_' ) {
+                my $Kn = $self->K_next_code($KK);
+                if ( $Kn && $rLL->[$Kn]->[_TOKEN_] eq '[' ) {
+                    return;
+                }
             }
 
             else {
@@ -13472,37 +13524,70 @@ sub count_sub_args {
             }
         }
 
-        #-------------------
-        # look for '=shift;'
-        #-------------------
-        elsif ( $token eq 'shift' && $type eq 'k' ) {
+        #------------------------------
+        # look for '=shift;' or '=pop;'
+        #------------------------------
+        elsif ( $type eq 'k' ) {
+            if ( $is_shift_pop{$token} ) {
 
-            # look for 'shift;' and count as 1 arg
-            my $Kp     = $self->K_next_code($KK);
-            my $type_p = defined($Kp) ? $rLL->[$Kp]->[_TYPE_] : ';';
-            if ( $type_p eq ';' || $is_closing_type{$type_p} ) {
-                my $level = $rLL->[$KK]->[_LEVEL_];
+                # look for 'shift;' and count as 1 arg
+                my $Kp      = $self->K_next_code($KK);
+                my $type_p  = ';';
+                my $token_p = ';';
 
-                # Give up on lower level shifts
-                return unless ( $level == $level_opening + 1 );
+                if ( defined($Kp) ) {
+                    $type_p  = $rLL->[$Kp]->[_TYPE_];
+                    $token_p = $rLL->[$Kp]->[_TOKEN_];
+                }
 
-                $shift_count++;
+                # FIXME: needs work. consider checking for what cannot follow
+                my $is_arg =
+                  (      $type_p eq ';'
+                      || $type_p eq ','
+                      || $is_closing_type{$type_p}
+                      || $type_p eq '&&'
+                      || $type_p eq '||'
+                      || $type_p eq 'k' && $is_and_or{$token_p} );
 
-                # OLD:
-                # Do not count leading '$self = shift' or '$class = shift'
-                #                        |    |   |
-                #                    $K_mm  $K_m  $KK
-                if ( $shift_count == 1 && !$self_name ) {
-                    my $K_m = $self->K_previous_code($KK);
-                    return unless ( defined($K_m) );
-                    my $type_m = $rLL->[$K_m]->[_TYPE_];
-                    if ( $type_m eq '=' ) {
+                if ( !$is_arg && $token_p eq '(' ) {
+                    my $Kpp = $self->K_next_code($Kp);
+                    if ( defined($Kpp) ) {
+                        my $type_pp  = $rLL->[$Kpp]->[_TYPE_];
+                        my $token_pp = $rLL->[$Kpp]->[_TOKEN_];
+                        if (   $token_pp eq ')'
+                            || $token_pp eq '@_' && $type_pp eq 'i' )
+                        {
+                            $is_arg = 1;
+                        }
+                    }
+                }
 
-                        my $K_mm = $self->K_previous_code($K_m);
-                        return unless defined($K_mm);
-                        if ( $rLL->[$K_mm]->[_TYPE_] eq 'i' ) {
-                            my $token_mm = $rLL->[$K_mm]->[_TOKEN_];
-                            $self_name = $token_mm;
+##              if (   $type_p ne 'i'
+##                  && $type_p ne 't' )    ##&& !$is_opening_type{$type_p} )
+                if ($is_arg) {
+                    my $level = $rLL->[$KK]->[_LEVEL_];
+
+                    # Give up on lower level shifts
+                    return unless ( $level == $level_opening + 1 );
+
+                    $shift_count++;
+
+                    # OLD:
+                    # Do not count leading '$self = shift' or '$class = shift'
+                    #                        |    |   |
+                    #                    $K_mm  $K_m  $KK
+                    if ( $shift_count == 1 && !$self_name ) {
+                        my $K_m = $self->K_previous_code($KK);
+                        return unless ( defined($K_m) );
+                        my $type_m = $rLL->[$K_m]->[_TYPE_];
+                        if ( $type_m eq '=' ) {
+
+                            my $K_mm = $self->K_previous_code($K_m);
+                            return unless defined($K_mm);
+                            if ( $rLL->[$K_mm]->[_TYPE_] eq 'i' ) {
+                                my $token_mm = $rLL->[$K_mm]->[_TOKEN_];
+                                $self_name = $token_mm;
+                            }
                         }
                     }
                 }
@@ -13527,6 +13612,11 @@ sub count_sub_args {
                 }
             }
         }
+        elsif ( $type eq 'Q' ) {
+
+            # TODO: look for @_ in an interpolated quote
+            # See coding for types 'Q' and 'h' in sub scan_variable_usage
+        }
         else {
             # continue search
         }
@@ -13539,12 +13629,12 @@ sub count_sub_args {
 
 sub sub_def_info_maker {
 
-    my ( $self, $rhash ) = @_;
+    my ( $self, $rpackage_lookup_list ) = @_;
 
-    my $rpackage_lookup_list          = $rhash->{rpackage_lookup_list};
-    my $rsub_call_paren_info_by_seqno = $rhash->{rsub_call_paren_info_by_seqno};
-    my $rK_sub_by_seqno               = $rhash->{rK_sub_by_seqno};
-    my $ris_my_sub_by_seqno           = $rhash->{ris_my_sub_by_seqno};
+    my $rK_sub_by_seqno     = $self->[_rK_sub_by_seqno_];
+    my $ris_my_sub_by_seqno = $self->[_ris_my_sub_by_seqno_];
+    my $rsub_call_paren_info_by_seqno =
+      $self->[_rsub_call_paren_info_by_seqno_];
 
     # Returns: \%sub_info_hash, which contains sub call info:
     #  $sub_info_hash->{$package::$name}->{
@@ -13633,16 +13723,22 @@ EOM
         }
         $package = 'main' unless ($package);
 
+        my $lno  = $rLL->[$Ko]->[_LINE_INDEX_] + 1;
         my $item = {
-            seqno   => $seqno,
-            K_sub   => $K_sub,
-            package => $package,
-            name    => $name,
+            seqno       => $seqno,
+            K_sub       => $K_sub,
+            package     => $package,
+            name        => $name,
+            line_number => $lno,
         };
 
         # Get arg count info
         $self->count_sub_args($item);
 
+        # Store the sub info by sequence number
+        $ris_sub_block->{$seqno} = $item;
+
+        # and by package::name
         my $key = $package . '::' . $name;
         $sub_info_hash{$key} = $item;
     }
@@ -13651,23 +13747,19 @@ EOM
 
 sub update_sub_call_paren_info {
 
-    my ( $self, $rhash ) = @_;
+    my ( $self, $rpackage_lookup_list ) = @_;
 
     # Update the hash of info about the call parameters with arg counts
     # and package. It contains the sequence number of each paren and
     # type of call, and we must add the arg count and package.
-
-    # Given:
-    #   $rpackage_lookup_list = ref to list for finding packages
-    #   $rsub_call_paren_info_by_seqno = the hash to be updated
-    my $rpackage_lookup_list          = $rhash->{rpackage_lookup_list};
-    my $rsub_call_paren_info_by_seqno = $rhash->{rsub_call_paren_info_by_seqno};
 
     my $rLL                  = $self->[_rLL_];
     my $K_opening_container  = $self->[_K_opening_container_];
     my $K_closing_container  = $self->[_K_closing_container_];
     my $rK_next_seqno_by_K   = $self->[_rK_next_seqno_by_K_];
     my $rtype_count_by_seqno = $self->[_rtype_count_by_seqno_];
+    my $rsub_call_paren_info_by_seqno =
+      $self->[_rsub_call_paren_info_by_seqno_];
 
     my @package_stack = reverse( @{$rpackage_lookup_list} );
     my ( $current_package, $Kbegin, $Kend ) = @{ pop @package_stack };
@@ -13750,6 +13842,16 @@ sub update_sub_call_paren_info {
             $arg_count += 1;
         }
 
+        # The arg count is undefined if there are non-scalars in the list
+        if ($arg_count) {
+            $item->{seqno_list}   = $seqno;
+            $item->{is_signature} = 0;
+            $item->{shift_count}  = 0;
+            $item->{self_name}    = EMPTY_STRING;
+            $self->count_list_args($item);
+            $arg_count = $item->{shift_count};
+        }
+
         my $call_type   = $is_ampersand_call ? '&' : EMPTY_STRING;
         my $caller_name = EMPTY_STRING;
         if ( $type_mm eq '->' ) {
@@ -13770,126 +13872,496 @@ sub update_sub_call_paren_info {
         $item->{line_number} = $line_number;
         $item->{call_type}   = $call_type;
         $item->{caller_name} = $caller_name;
+        $item->{seqno}       = $seqno;
     }
     return;
 } ## end sub update_sub_call_paren_info
 
-sub cross_check_sub_call_args {
+sub cross_check_call_args {
 
-    my ( $self, $rhash ) = @_;
+    my ( $self, $warn_mode ) = @_;
 
-    # This sub implements --warn-mixed-call-args
+    # Input parameter:
+    #  $warn_mode = true  for --warn-mismatched-call-types
+    #  $warn_mode = false for --dump-mismatched-calls
 
-    my $rK_package_list               = $rhash->{rK_package_list};
-    my $rsub_call_paren_info_by_seqno = $rhash->{rsub_call_paren_info_by_seqno};
-    my $rK_sub_by_seqno               = $rhash->{K_sub_by_seqno};
-    my $ris_my_sub_by_seqno           = $rhash->{ris_my_sub_by_seqno};
+    # The current possible checks are indicated by these letters:
+    # a = both method and non-method calls to a sub
+    #     - even for two subs in a different package
+    # c = call arg counts differ from from number expected by a sub
+    #     - except for undercount if expecting N or less (N=2 or 3 by default)
 
-    # TODO:
-    # - This is issue c319
-    # - still needs coding for specific error checks, below
-    # - need to handle 'my' subs specially (package is parent seqno)
-    #   (need hash by basename to check for them)
-    # - need to check call parens for @ or % terms
-    # - be sure all changes to common routines work with --dump-block-summary
-    # - needs optimization
-    #   - maybe use simple comma check in first pass, then go back and
-    #     do detailed check only if needed.
-    #   - detailed check could scan args for '@' and '%', and continue to
-    #     look for 'defined($var)' if a call parameter is missing
+    # initialize for dump mode
+    my $ris_mismatched_call_type          = { 'a' => 1, 'c' => 1 };
+    my $mismatched_call_cutoff            = 0;
+    my $ris_mismatched_call_excluded_name = {};
 
-    my $rLL = $self->[_rLL_];
+    if ($warn_mode) {
+        $ris_mismatched_call_type = \%warn_mismatched_call_types;
+        $mismatched_call_cutoff   = $rOpts->{'warn-mismatched-call-cutoff'};
+        $ris_mismatched_call_excluded_name =
+          \%is_warn_mismatched_call_excluded_name;
+    }
 
-    #-----------------
-    # Get package info
-    #-----------------
+    # hardwired name exclusions
+    $ris_mismatched_call_excluded_name->{AUTOLOAD} = 1;
+    $ris_mismatched_call_excluded_name->{DESTROY}  = 1;
+
+    my $rLL                 = $self->[_rLL_];
+    my $rK_package_list     = $self->[_rK_package_list_];
+    my $rK_sub_by_seqno     = $self->[_rK_sub_by_seqno_];
+    my $ris_my_sub_by_seqno = $self->[_ris_my_sub_by_seqno_];
+    my $rsub_call_paren_info_by_seqno =
+      $self->[_rsub_call_paren_info_by_seqno_];
+
+    #----------------------------
+    # Make a package lookup table
+    #----------------------------
     my $rpackage_lists       = $self->package_info_maker($rK_package_list);
     my $rpackage_lookup_list = $rpackage_lists->{'rpackage_lookup_list'};
-    $rhash->{rpackage_lookup_list} = $rpackage_lookup_list;
 
     #-----------------------------------
     # Get arg counts for sub definitions
     #-----------------------------------
-    my $rsub_info = $self->sub_def_info_maker($rhash);
+    my $rsub_info = $self->sub_def_info_maker($rpackage_lookup_list);
 
     #-------------------------------------------
     # Update sub call paren info with arg counts
     #-------------------------------------------
-    $self->update_sub_call_paren_info($rhash);
+    $self->update_sub_call_paren_info($rpackage_lookup_list);
 
-    #--------------------------------------------------------------------
-    # Cross-check sub call lists with each other and with sub definitions
-    #--------------------------------------------------------------------
+    # Names commonly used like '$self'. This list will be augmented as we go.
+    my %self_names = ( '$self' => 1, '$class' => 1 );
 
-    # Examine sub calls and partition into these categories:
+    # Hash to combine info for subs and calls
+    my %common_hash;
 
-    # 1. Those for which a sub is not defined
-    #    - ignore for method calls, not enough information
-    #    - otherwise, for multiple calls, compare counts and note differences
-    my %no_sub_def;
+    #---------------------------------------------
+    # First split the calls into direct and method
+    #---------------------------------------------
+    my @method_call_seqnos;
+    foreach my $seqno ( keys %{$rsub_call_paren_info_by_seqno} ) {
+        my $rcall_item = $rsub_call_paren_info_by_seqno->{$seqno};
+        my $package    = $rcall_item->{package};
+        my $name       = $rcall_item->{name};
+        my $key        = $package . '::' . $name;
+        if ( $rcall_item->{call_type} eq '->' ) {
+            push @method_call_seqnos,                     $seqno;
+            push @{ $common_hash{$key}->{method_calls} }, $rcall_item;
+        }
+        else {
+            push @{ $common_hash{$key}->{direct_calls} }, $rcall_item;
+        }
+    }
 
-    # 2. Those for which a sub is defined but arg count was not possible
-    #    - for multiple calls, check for method vs non-method calls
-    my %no_sub_arg_count;
+    #----------------------------------------------
+    # Now split method calls into self and external
+    #----------------------------------------------
+    foreach my $seqno (@method_call_seqnos) {
+        my $rcall_item  = $rsub_call_paren_info_by_seqno->{$seqno};
+        my $package     = $rcall_item->{package};
+        my $name        = $rcall_item->{name};
+        my $caller_name = $rcall_item->{caller_name};
+        my $key         = $package . '::' . $name;
+        my $is_self_call;
 
-    # 3. Those which disagree in arg count with a sub definition.
-    #    These require a closer look. Either:
-    #    2a. The problem is that the arg lists contain non-scalars, or
-    #    2b. A warning may be needed
-    my %disagree_with_sub_def;
+        # Find the sub which contains this call
+        my $seqno_sub = $self->parent_sub_seqno($seqno);
+        if ($seqno_sub) {
+            my $item = $self->[_ris_sub_block_]->{$seqno_sub};
 
-    # 4. Those which agree in arg count with a sub definition.
-    #    Nothing further needs to be done with these.
-    my %agree_with_sub_def;
+            # look for a first arg like '$self' which matches the
+            # name of the calling object, like '$self->'
+            if (   $item
+                && $item->{self_name}
+                && $item->{self_name} eq $caller_name )
+            {
+                # assume that the first arg of the sub is its object
+                # if no direct calls to the sub were seen
+                my $key_sub = $item->{package} . '::' . $item->{name};
+                $is_self_call = !$common_hash{$key_sub}->{direct_calls};
+            }
+        }
 
+        # Save this method call as either an internal (self) or external call
+        if ($is_self_call) {
+            push @{ $common_hash{$key}->{self_calls} }, $rcall_item;
+        }
+        else {
+            push @{ $common_hash{$key}->{external_method_calls} }, $rcall_item;
+            $rcall_item->{is_external_call} = 1;
+        }
+    }
+
+    #-------------------------------------------------------------------------
+    # Loop to compare call methods and arg counts of calls and sub definitions
+    #-------------------------------------------------------------------------
     foreach my $seqno ( keys %{$rsub_call_paren_info_by_seqno} ) {
 
         my $rcall_item = $rsub_call_paren_info_by_seqno->{$seqno};
+
+        # Skip external method calls
+        next if ( $rcall_item->{is_external_call} );
 
         my $arg_count   = $rcall_item->{arg_count};
         my $package     = $rcall_item->{package};
         my $name        = $rcall_item->{name};
         my $line_number = $rcall_item->{line_number};
         my $call_type   = $rcall_item->{call_type};
+        my $caller_name = $rcall_item->{caller_name};
         my $key         = $package . '::' . $name;
-        if ( !defined($arg_count) ) { next }
 
+        my ( $shift_count, $self_name );
         my $rsub_item = $rsub_info->{$key};
-
-        # 1. sub not defined
-        if ( !defined($rsub_item) ) {
-            push @{ $no_sub_def{$key} }, $rcall_item;
-            next;
-        }
-        my $shift_count = $rsub_item->{shift_count};
-        my $self_name   = $rsub_item->{self_name};
-
-        # 2. sub defined but arg count was not possible
-        if ( !defined($shift_count) ) {
-            push @{ $no_sub_arg_count{$key} }, $rcall_item;
-            next;
+        if ( defined($rsub_item) ) {
+            $common_hash{$key}->{rsub_item} = $rsub_item;
+            $shift_count                    = $rsub_item->{shift_count};
+            $self_name                      = $rsub_item->{self_name};
         }
 
-        my $match =
-            $call_type eq '->'
-          ? $arg_count == $shift_count - 1
-          : $arg_count == $shift_count;
+        # compare caller/sub arg counts if posible
+        if ( defined($shift_count) && defined($arg_count) ) {
 
-        # 3. disagree in arg count with a sub definition.
-        if ( !$match ) {
-            push @{ $disagree_with_sub_def{$key} }, $rcall_item;
-            next;
+            if ( $call_type eq '->' ) { $arg_count += 1 }
+            my $excess = $arg_count - $shift_count;
+
+            my $max = $common_hash{$key}->{max_arg_count};
+            my $min = $common_hash{$key}->{min_arg_count};
+            if ( !defined($max) || $arg_count > $max ) {
+                $common_hash{$key}->{max_arg_count} = $arg_count;
+            }
+            if ( !defined($min) || $arg_count < $min ) {
+                $common_hash{$key}->{min_arg_count} = $arg_count;
+            }
+
+            if ( !$excess ) {
+                if ( $call_type eq '->' ) { $self_names{$self_name}++; }
+                push @{ $common_hash{$key}->{matching_count} }, $rcall_item;
+            }
+            elsif ( $excess > 0 ) {
+                push @{ $common_hash{$key}->{over_count} }, $rcall_item;
+            }
+            else {
+                push @{ $common_hash{$key}->{under_count} }, $rcall_item;
+            }
         }
-
-        # 4. agree in arg count with a sub definition.
-        push @{ $agree_with_sub_def{$key} }, $rcall_item;
     }
 
-    # TODO:
-    # next step is to try to resolve disagreements or issue warnings
+    #--------------------
+    # Now look for issues
+    #--------------------
+    my @warnings;
+
+    # Look at each key:
+    foreach my $key ( keys %common_hash ) {
+        my $item = $common_hash{$key};
+
+        #-------------------------------------
+        # Check for mixed method/direct calls:
+        #-------------------------------------
+        my $rsub_item = $item->{rsub_item};
+        next unless defined($rsub_item);
+
+        my $name = $rsub_item->{name};
+        next if ( $ris_mismatched_call_excluded_name->{$name} );
+
+        my $lno         = $rsub_item->{line_number};
+        my $shift_count = $rsub_item->{shift_count};
+        $shift_count = '*' unless defined($shift_count);
+
+        my $rmethod_calls = $item->{method_calls};
+        my $rself_calls   = $item->{self_calls};
+        my $rdirect_calls = $item->{direct_calls};
+        my $num_self      = defined($rself_calls)   ? @{$rself_calls}   : 0;
+        my $num_direct    = defined($rdirect_calls) ? @{$rdirect_calls} : 0;
+        my $num_method    = defined($rmethod_calls) ? @{$rmethod_calls} : 0;
+        my $max_arg_count = $item->{max_arg_count};
+        my $min_arg_count = $item->{min_arg_count};
+        $max_arg_count = '*' unless defined($max_arg_count);
+        $min_arg_count = '*' unless defined($min_arg_count);
+
+        my $rmatching_count = $item->{matching_count};
+        my $rover_count     = $item->{over_count};
+        my $runder_count    = $item->{under_count};
+        my $num_matching_count =
+          defined($rmatching_count) ? @{$rmatching_count} : 0;
+        my $num_over_count  = defined($rover_count)  ? @{$rover_count}  : 0;
+        my $num_under_count = defined($runder_count) ? @{$runder_count} : 0;
+
+        # 'a': subs with both self-> and direct calls
+        if ( $num_self && $num_direct && $ris_mismatched_call_type->{'a'} ) {
+
+            my $lines_self_calls   = stringify_line_range($rself_calls);
+            my $lines_direct_calls = stringify_line_range($rdirect_calls);
+            my $self_name          = $rsub_item->{self_name};
+            if ( !defined($self_name) ) { $self_name = EMPTY_STRING }
+            my $ess1 = $num_self > 1   ? 's' : EMPTY_STRING;
+            my $ess2 = $num_direct > 1 ? 's' : EMPTY_STRING;
+            my $str  = $self_name . '->call' . $ess1;
+            my $note =
+"$num_self $str($lines_self_calls) and $num_direct call$ess2($lines_direct_calls)";
+            push @warnings,
+              {
+                line_number   => $lno,
+                letter        => 'arrows',
+                name          => $name,
+                shift_count   => $shift_count,
+                min_arg_count => $min_arg_count,
+                max_arg_count => $max_arg_count,
+                note          => $note,
+              };
+        }
+
+        #-----------------------------------
+        # Check for variable call arg counts
+        #-----------------------------------
+
+        # Ignore calls to a sub which was not defined in this file
+        if ( !defined($rsub_item) ) {
+        }
+
+        # Ignore calls to subs for which a specific positive arg count
+        # could not be determined.
+        elsif ( !$rsub_item->{shift_count} ) {
+        }
+
+        # Handle issue 'c': number of call args differs from sub declaration
+        elsif ( ( $num_over_count || $num_under_count )
+            && $ris_mismatched_call_type->{'c'} )
+        {
+
+            # Skip the warning for small lists with undercount
+            my $expect = $num_self ? $shift_count : $shift_count + 1;
+            if (   $num_over_count
+                || $expect > $mismatched_call_cutoff )
+            {
+                my $lines_over_count  = stringify_line_range($rover_count);
+                my $lines_under_count = stringify_line_range($runder_count);
+                my $total             = $num_direct + $num_self;
+                my $note;
+                my $letter = 'count';
+                if ( $num_over_count && $num_under_count ) {
+                    $note =
+"calls with both excess args ($lines_over_count) and missing args($lines_under_count)";
+                }
+                elsif ($num_over_count) {
+                    $note =
+"excess args at $num_over_count of $total calls($lines_over_count)";
+                }
+                else {
+                    $note =
+"undefined args at $num_under_count of $total calls($lines_under_count)";
+                }
+
+                push @warnings,
+                  {
+                    line_number   => $lno,
+                    letter        => $letter,
+                    name          => $name,
+                    shift_count   => $shift_count,
+                    min_arg_count => $min_arg_count,
+                    max_arg_count => $max_arg_count,
+                    note          => $note,
+                  };
+            }
+        }
+        else {
+            # nothing to do
+        }
+    }
+
+    if (@warnings) {
+        @warnings = sort {
+                 $a->{line_number} <=> $b->{line_number}
+              || $a->{letter} cmp $b->{letter}
+        } @warnings;
+    }
+
+    return \@warnings;
+} ## end sub cross_check_call_args
+
+sub stringify_line_range {
+    my ($rcalls) = @_;
+    my $string = EMPTY_STRING;
+    if ( $rcalls && @{$rcalls} ) {
+        my $num     = @{$rcalls};
+        my $lno_beg = $rcalls->[0]->{line_number};
+        my $lno_end = $rcalls->[-1]->{line_number};
+        if ( $num == 1 ) {
+            $string = "line $lno_beg";
+        }
+        elsif ( $num == 2 ) {
+            $string = "lines $lno_beg,$lno_end";
+        }
+        else {
+            $string = "lines $lno_beg..$lno_end";
+        }
+    }
+    return $string;
+} ## end sub stringify_line_range
+
+sub initialize_warn_mismatched_call_types {
+
+    # Initialization for:
+    #    --warn-mismatched-call-types=s and
+    #    --warn-mismatched-call-exclusion-list=s
+    %warn_mismatched_call_types            = ();
+    %is_warn_mismatched_call_excluded_name = ();
+
+    # Note: coding here is similar to sub initialize_warn_variable_types
+
+    #-----------------------------------
+    # Parse --warn-mismatched-call-types
+    #-----------------------------------
+    my $wmct_key    = 'warn-mismatched-call-types';
+    my $wmct_option = $rOpts->{$wmct_key};
+    return unless ($wmct_option);
+
+    # Specific options:
+    #  a - mismatched arrow operator calls
+    #  c - call arg count mismatch
+
+    # Other controls:
+    #  0 - none of the above
+    #  1 - all of the above
+    #  * - all of the above
+
+    # Example:
+    #  -wmct='a c' : do check types 'a' and 'c'
+    #  -wmct='c'   : do check type 'c'
+
+    my @all_opts = qw(a c);
+    my %is_valid_option;
+    @is_valid_option{@all_opts} = (1) x scalar(@all_opts);
+
+    # allow comma separators
+    $wmct_option =~ s/,/ /g;
+
+    my @opts = split_words($wmct_option);
+    return unless (@opts);
+
+    # check a single item
+    if ( @opts == 1 ) {
+        my $opt = $opts[0];
+
+        # Split a single option of bundled letters like 'ac' into 'a c'
+        # but give a warning because this may not be allowed in the future
+        if ( length($opt) > 1 ) {
+            @opts = split //, $opt;
+            Warn("Please use space-separated letters in --$wmct_key\n");
+        }
+        elsif ( $opt eq '*' || $opt eq '1' ) {
+            @opts = keys %is_valid_option;
+        }
+        elsif ( $opt eq '0' ) {
+            return;
+        }
+        else {
+            # should be one of a c - catch any error below
+        }
+    }
+
+    my $msg = EMPTY_STRING;
+    foreach my $opt (@opts) {
+        if ( $is_valid_option{$opt} ) {
+            $warn_mismatched_call_types{$opt} = 1;
+        }
+        else {
+            if ( $opt =~ /^[01\*]$/ ) {
+                $msg .=
+                  "--$wmct_key cannot contain $opt mixed with other options\n";
+            }
+            else {
+                $msg .= "--$wmct_key has unexpected symbol: '$opt'\n";
+            }
+        }
+    }
+    if ($msg) { Die($msg) }
+
+    #--------------------------------------------
+    # Parse --warn-mismatched-call-exclusion-list
+    #--------------------------------------------
+    my $wmcxl_key      = 'warn-mismatched-call-exclusion-list';
+    my $excluded_names = $rOpts->{$wmcxl_key};
+    if ($excluded_names) {
+        $excluded_names =~ s/,/ /g;
+        my @xl      = split_words($excluded_names);
+        my $err_msg = EMPTY_STRING;
+        foreach my $name (@xl) {
+            if ( $name !~ /^[\$\@\%]?\w+$/ ) {
+                $err_msg .= "-wmcxl has unexpected name: '$name'\n";
+            }
+        }
+        if ($err_msg) { Die($err_msg) }
+        @is_warn_mismatched_call_excluded_name{@xl} = (1) x scalar(@xl);
+    }
+    return;
+} ## end sub initialize_warn_mismatched_call_types
+
+sub warn_mismatched_calls {
+    my ($self) = @_;
+
+    # process a --warn-mismatched-call-types command
+
+    # additional control parameters are:
+    # - mismatched-call-exclusion-list
+    # - warn-mismatched-call-count-cutoff
+
+    my $wmc_key    = 'warn-mismatched-call-types';
+    my $wmc_option = $rOpts->{$wmc_key};
+
+    my $rwarnings = $self->cross_check_call_args(1);
+    return unless ( $rwarnings && @{$rwarnings} );
+
+    my $output_string = "Begin scan for --$wmc_key=$wmc_option\n";
+    $output_string .= <<EOM;
+Line:Mismatch:Name:#args:Min:Max: note
+EOM
+
+    # output the results, ignoring any excluded names
+    foreach my $item ( @{$rwarnings} ) {
+        my $lno           = $item->{line_number};
+        my $letter        = $item->{letter};
+        my $name          = $item->{name};
+        my $shift_count   = $item->{shift_count};
+        my $min_arg_count = $item->{min_arg_count};
+        my $max_arg_count = $item->{max_arg_count};
+        my $note          = $item->{note};
+        $output_string .=
+"$lno:$letter:$name:$shift_count:$min_arg_count:$max_arg_count: $note\n";
+    }
+    $output_string .= "End scan for --$wmc_key=$wmc_option:\n";
+    warning($output_string);
 
     return;
-} ## end sub cross_check_sub_call_args
+} ## end sub warn_mismatched_calls
+
+sub dump_mismatched_calls {
+    my ($self) = @_;
+
+    # process a --dump-mismatched-calls command
+
+    my $rwarnings = $self->cross_check_call_args(0);
+    return unless ( $rwarnings && @{$rwarnings} );
+##Issues   a=arrow and non-arrow calls    c=call arg count mismatch
+    my $output_string = <<EOM;
+Line:Mismatch:Name:#args:Min:Max: note
+EOM
+    foreach my $item ( @{$rwarnings} ) {
+        my $lno           = $item->{line_number};
+        my $letter        = $item->{letter};
+        my $name          = $item->{name};
+        my $note          = $item->{note};
+        my $shift_count   = $item->{shift_count};
+        my $min_arg_count = $item->{min_arg_count};
+        my $max_arg_count = $item->{max_arg_count};
+        $output_string .=
+"$lno:$letter:$name:$shift_count:$min_arg_count:$max_arg_count: $note\n";
+        $output_string .= "$lno:$letter:$name: $note\n";
+    }
+    print {*STDOUT} $output_string;
+    return;
+} ## end sub dump_mismatched_calls
 
 sub check_for_old_break {
     my ( $self, $KK, $rkeep_break_hash, $rbreak_hash ) = @_;
@@ -34036,7 +34508,7 @@ sub make_paren_name {
                         $is_leading,          $opening_exists
                       )
                       = $self->get_opening_indentation( $ibeg, $ri_first,
-                        $ri_last, $rindentation_list );
+                        $ri_last, $rindentation_list, undef );
                     my $indentation = $leading_spaces_beg;
                     if ( defined($opening_indentation)
                         && get_spaces($indentation) >
@@ -34061,7 +34533,7 @@ sub make_paren_name {
                     $is_leading,          $opening_exists
                   )
                   = $self->get_opening_indentation( $ibeg, $ri_first, $ri_last,
-                    $rindentation_list );
+                    $rindentation_list, undef );
                 my $indentation = $leading_spaces_beg;
                 if ( defined($opening_indentation)
                     && get_spaces($indentation) >
@@ -34181,7 +34653,7 @@ sub make_paren_name {
                 $is_leading,          $opening_exists
               )
               = $self->get_opening_indentation( $ibeg, $ri_first, $ri_last,
-                $rindentation_list );
+                $rindentation_list, undef );
             if ($is_leading) { $adjust_indentation = 2; }
         }
         else {

@@ -863,6 +863,8 @@ EOM
             'interbracket-arrow-style' => [ ']{', ']->{', '][', ']->[', '}[', '}->[', '}{', '}->{'],
 
             'warn-variable-types' => [ '0', '1' ],
+            'warn-mismatched-call-types' => [ '0', '1' ],
+            'warn-mismatched-call-cutoff' => [ 0, 5 ],
 
             'space-backslash-quote'         => [ 0, 2 ],
             'block-brace-tightness'         => [ 0, 2 ],
