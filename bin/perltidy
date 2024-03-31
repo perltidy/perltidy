@@ -5208,7 +5208,8 @@ values to have leading signs placed in their own column. For example:
         [  10.9,        10.9,             11 ],
     );
 
-The current default alignment is strict left justification:
+The default is B<-vsn>.  This can be turned off to get is strict left
+justification:
 
     # perltidy -nvsn
     my @correct = (
@@ -5218,8 +5219,6 @@ The current default alignment is strict left justification:
         [ -123456.001, -80.080,          0 ],
         [ 10.9,        10.9,             11 ],
     );
-
-In a future release B<-vsn> will become the default.
 
 Some points regarding B<-vsn> are:
 
@@ -5242,7 +5241,7 @@ B<-vsnl=N>. This value controls formatting of very long columns of numbers and
 should not normally need to be changed.  To see its purpose, consider a very
 long column of just unsigned numbers, say 1000 lines. If we add a single
 negative number, it is undesirable to move all of the other numbers over by one
-space. This would create many lines of file differences but not really improve
+space. This could create many lines of file differences but not really improve
 the appearance when a local section of the table was viewed. The number B<N>
 avoids this problem by not adding extra indentation to a run of more than B<N>
 lines of unsigned numbers.  The default value, B<N=20>, is set to be a number
@@ -6050,6 +6049,103 @@ removed, then C<||> must be changed to C<or>:
 
 Otherwise, the C<||> will operate on C<$infile> rather than the return value of
 C<open>.
+
+=item B<Use --dump-mismatched-args to find function calls with args not matching sub declarations>
+
+The parameter B<--dump-mismatched-args>, or B<-dma>, causes perltidy to
+examine the definitions of subroutines in a file, and calls to those subs,
+and report any apparent differences.  Like all B<--dump> commands, it
+writes its report to standard output and exits immediately.  For example
+
+    perltidy -dma somefile.pl >results.txt
+
+Two types of issues are reported, types B<a> and B<c>:
+
+=over 4
+
+=item B<a:> calls made to a sub both with and without the B<arrow> operator
+
+For example the following two lines would be reported as a mismatch:
+
+     Fault();
+
+and
+
+     $self->Fault();
+
+This may or may not be an error, but it is worth checking.
+
+=item B<c:> the B<count> of call args differs from a sub definition
+
+If a sub appears to expect a specific number of args, and is called with
+more or less than this number, then a mismatch will be reported. For example
+
+     sub do_something {
+         my $self=shift;
+         my ($v1,$v2)=@_;
+         ...
+     }
+
+    $self->do_something(43);
+
+In this case, the sub is expecting a total of three args (C<$self>, C<$v1>, and
+C<$v2>) but only receives two (C<$self> and C<42>), so a mismatch is reported.
+This is not necessarily an error because the sub may allow for this
+possibility. This sometimes happens as a code evolves to have new
+functionality.  But it can be a source of confusion, and it could be an error,
+so it is worth checking.
+
+=back
+
+B<Some Limitations:>
+
+=over 4
+
+=item *
+Only sub definitions within the file being processed are checked. Anonymous subs and lexical subs (introduced with 'my') are not currently checked.
+
+=item *
+The number of arguments expected by a sub is determined by scanning the initial
+lines of the sub for extractions from C<@_>.  If args are extracted or used in
+later code, then that sub will be skipped, or the analysis could be in error.
+
+=item *
+Only calls which appear to be to subs defined within the file are checked.
+
+=item *
+Sub calls made without parentheses around the args are not checked.
+
+=back
+
+=item B<Use --warn-mismatched-arg-types=s to produce a warning for function calls with args not matching sub declarations>
+
+The parameter B<--warn-mismatched-arg-types=s>, or B<-wmat=s>, can be used to
+produce a warning message when perltidy formats a file and certain of the above
+mismatchs is detected during formatting.  Both checks may be requested with
+B<-wmat='*'> or B<-wmat=1>.
+
+The default is not to do any of these checks, which can also be indicated with B<-wmat=0>.
+
+To restrict the check to a specific warning type, set the string equal to the letter of that warning, either B<a> or B<c>.  For example
+
+   perltidy -wmat='*' somefile.pl
+
+will format F<somefile.pl> and report any call arg mismatches found.
+
+A companion control parameter B<--warn-mismatched-arg-exclusion-list>, or
+B<-wmaxl=string>, can be given to skip the warning checks for a list of
+subroutine names.
+
+Another control parameter B<--warn-mismatched-arg-cutoff-count=n>, or
+B<-wmacc=n>, can be used to avoid warnings when the identified number of args
+passed to a sub is less than the number of args expected by the sub, and both
+are less than or equal to B<n>.  This number B<n> is the number of
+args from the point of view of the sub definition, so an object passed
+with an arrow operator counts as one arg.  Many programs will need to
+use a small integer value for B<n> to pass without errors. The default
+value is B<n=4>, but this should be reduced if possible.  The minimum
+possible value of B<n> for a program can be determined by running the
+dump version, B<-dma>, on that program.
 
 =back
 

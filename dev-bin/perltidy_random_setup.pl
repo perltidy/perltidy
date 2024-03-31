@@ -860,11 +860,12 @@ EOM
             'output-line-ending'            => [ 'dos',  'win', 'mac', 'unix' ],
             'extended-block-tightness-list' => [ 'k',    't',   'kt' ],
 
-            'interbracket-arrow-style' => [ ']{', ']->{', '][', ']->[', '}[', '}->[', '}{', '}->{'],
+            'interbracket-arrow-style' =>
+              [ ']{', ']->{', '][', ']->[', '}[', '}->[', '}{', '}->{' ],
 
-            'warn-variable-types' => [ '0', '1' ],
-            'warn-mismatched-call-types' => [ '0', '1' ],
-            'warn-mismatched-call-cutoff' => [ 0, 5 ],
+            'warn-variable-types'              => [ '0', '1' ],
+            'warn-mismatched-arg-types'        => [ '0', '1' ],
+            'warn-mismatched-arg-count-cutoff' => [ 0,   5 ],
 
             'space-backslash-quote'         => [ 0, 2 ],
             'block-brace-tightness'         => [ 0, 2 ],
@@ -906,7 +907,7 @@ EOM
             'space-signature-paren' => [ 0, 2 ],
             'break-after-labels'    => [ 0, 2 ],
 
-            'want-call-parens'   => [ '&', 'open', 'close' ],
+            'want-call-parens'   => [ '&',   'open', 'close' ],
             'nowant-call-parens' => [ 'pop', 'open' ],
 
             'want-trailing-commas' => [ '0', '*', 'm', 'b', 'h', 'i', ' ' ],

@@ -2,6 +2,25 @@
 
 ## 2024 02 02.03
 
+    - Add options --dump-mismatched-args (or -dma) and
+      --warn-mismatched-arg-types=s (or -wmat=s).  These options look
+      for and report instances where the number of args expected by a
+      sub appear to differ from the number passed to the sub.  The -dump
+      version writes the results for a single file to standard output
+      and exits:
+
+         perltidy -dma somefile.pl >results.txt
+
+      The -warn version formats as normal but reports any issues as warnings in
+      the error file:
+
+         perltidy -wmat=1 somefile.pl
+
+      It takes a string parameter which is 1 or '*' to activate all checks.
+      It may be customized with two additional parameters if necessary to
+      avoid needless warnings, --warn-mismatched-arg-exclusion-list=s and
+      --warn-mismatched-arg-count-cutoff=n. These are explained in the manual.
+
     - Add option --valign-wide-equals, or -vwe, for issue git #135.
       Setting this parameter causes the following assignment operators
 

@@ -306,6 +306,7 @@ my (
     %is_anon_sub_brace_follower,
     %is_anon_sub_1_brace_follower,
     %is_other_brace_follower,
+    %is_kwU,
 
     # INITIALIZER: sub check_options
     $controlled_comma_style,
@@ -388,9 +389,9 @@ my (
     %warn_variable_types,
     %is_warn_variable_excluded_name,
 
-    # INITIALIZER: sub initialize_warn_mismatched_call_types
-    %warn_mismatched_call_types,
-    %is_warn_mismatched_call_excluded_name,
+    # INITIALIZER: sub initialize_warn_mismatched_arg_types
+    %warn_mismatched_arg_types,
+    %is_warn_mismatched_arg_excluded_name,
 
     # regex patterns for text identification.
     # Most can be configured by user parameters.
@@ -896,6 +897,10 @@ BEGIN {
     push @obf, ',';
     @is_other_brace_follower{@obf} = (1) x scalar(@obf);
 
+    # 'k'=builtin keyword, 'U'=user defined sub, 'w'=unknown bareword
+    @q = qw( k w U );
+    @is_kwU{@q} = (1) x scalar(@q);
+
 } ## end BEGIN
 
 {    ## begin closure to count instances
@@ -1009,8 +1014,8 @@ sub new {
     $self->[_ris_asub_block_]          = {};
     $self->[_ris_sub_block_]           = {};
 
-    # Variables for --warn-mismatched-call-types and
-    #               --dump-mismatched-calls
+    # Variables for --warn-mismatched-arg-types and
+    #               --dump-mismatched-args
     $self->[_rK_package_list_]               = [];
     $self->[_rsub_call_paren_info_by_seqno_] = {};
     $self->[_rK_sub_by_seqno_]               = {};
@@ -1467,7 +1472,7 @@ sub check_options {
 
     initialize_warn_variable_types();
 
-    initialize_warn_mismatched_call_types();
+    initialize_warn_mismatched_arg_types();
 
     make_bli_pattern();
 
@@ -6603,12 +6608,12 @@ EOM
       if ( %warn_variable_types
         && $self->[_logger_object_] );
 
-    $self->warn_mismatched_calls()
-      if ( $rOpts->{'warn-mismatched-call-types'}
+    $self->warn_mismatched_args()
+      if ( $rOpts->{'warn-mismatched-arg-types'}
         && $self->[_logger_object_] );
 
-    if ( $rOpts->{'dump-mismatched-calls'} ) {
-        $self->dump_mismatched_calls();
+    if ( $rOpts->{'dump-mismatched-args'} ) {
+        $self->dump_mismatched_args();
         Exit(0);
     }
 
@@ -9651,13 +9656,11 @@ sub dump_mixed_call_parens {
       and cmp continue do else elsif eq ge gt le lt ne not or xor );
     @skip_keywords{@q} = (1) x scalar(@q);
 
-    # Types which will be checked:
-    # 'k'=builtin keyword, 'U'=user defined sub, 'w'=unknown bareword
-    my %is_kwU = ( 'k' => 1, 'w' => 1, 'U' => 1 );
-
     my %call_counts;
     foreach my $KK ( 0 .. @{$rLL} - 1 ) {
 
+        # Types which will be checked:
+        # 'k'=builtin keyword, 'U'=user defined sub, 'w'=unknown bareword
         next unless ( $is_kwU{ $rLL->[$KK]->[_TYPE_] } );
 
         my $type  = $rLL->[$KK]->[_TYPE_];
@@ -9767,10 +9770,6 @@ sub scan_call_parens {
     return unless (%call_paren_style);
     my $opt_name = 'want-call-parens';
 
-    # Types which will be checked:
-    # 'k'=builtin keyword, 'U'=user defined sub, 'w'=unknown bareword
-    my %is_kwU = ( 'k' => 1, 'w' => 1, 'U' => 1 );
-
     my $rwarnings = [];
 
     #---------------------
@@ -9779,6 +9778,8 @@ sub scan_call_parens {
     my $rLL = $self->[_rLL_];
     foreach my $KK ( 0 .. @{$rLL} - 1 ) {
 
+        # Types which will be checked:
+        # 'k'=builtin keyword, 'U'=user defined sub, 'w'=unknown bareword
         next unless ( $is_kwU{ $rLL->[$KK]->[_TYPE_] } );
 
         # Are we looking for this word?
@@ -13275,6 +13276,19 @@ sub package_info_maker {
     };
 } ## end sub package_info_maker
 
+use constant DEBUG_COUNT => 0;
+
+# A missing paren after these does not indicate a parenless function with
+# multiple call args.  See also %skip_keywords in sub dump_mixed_call_parens.
+my %is_non_function_call_keyword;
+
+BEGIN {
+    my @q = qw(my our local state
+      and cmp continue do else elsif eq ge gt le lt ne not or xor
+      undef defined length ord delete scalar );
+    @is_non_function_call_keyword{@q} = (1) x scalar(@q);
+}
+
 sub count_list_args {
     my ( $self, $rarg_list ) = @_;
 
@@ -13331,8 +13345,18 @@ sub count_list_args {
         if ( $type eq 'i' || $type eq 't' ) {
             my $sigil = substr( $token, 0, 1 );
 
-            # Give up if we find list sigils
-            if ( $sigil eq '%' || $sigil eq '@' ) { return }
+            # Give up if we find list sigils not preceded by 'scalar'
+            if ( $sigil eq '%' || $sigil eq '@' ) {
+                my $K_last = $self->K_previous_code($KK);
+                if ( defined($K_last) ) {
+                    my $type_last  = $rLL->[$K_last]->[_TYPE_];
+                    my $token_last = $rLL->[$K_last]->[_TOKEN_];
+                    next if ( $type_last eq 'k' && $token_last eq 'scalar' );
+                    next if ( $type_last eq '+' );
+                    next if ( $type_last eq q{\\} );
+                }
+                return;
+            }
 
             elsif ($sigil eq '$'
                 && !$is_signature
@@ -13360,6 +13384,28 @@ sub count_list_args {
         # treat fat commas as commas
         elsif ( $type eq '=>' ) {
             $arg_count++;
+        }
+
+        # give up at a paren-less call
+        elsif ( $is_kwU{$type} ) {
+            next if ( $type eq 'k' && $is_non_function_call_keyword{$token} );
+            my $Kn = $self->K_next_code($KK);
+            next unless defined($Kn);
+            my $token_Kn = $rLL->[$Kn]->[_TOKEN_];
+            next
+              if ( $token_Kn eq '('
+                || $token_Kn eq ')'
+                || $token_Kn eq '=>'
+                || $token_Kn eq '->'
+                || $token_Kn eq ',' );
+
+            if (DEBUG_COUNT) {
+                my $lno               = $rLL->[$KK]->[_LINE_INDEX_] + 1;
+                my $input_stream_name = get_input_stream_name();
+                print {*STDERR}
+"DEBUG_COUNT: file $input_stream_name line=$lno type=$type tok=$token token_Kn=$token_Kn\n";
+            }
+            return;
         }
 
         else {
@@ -13882,8 +13928,8 @@ sub cross_check_call_args {
     my ( $self, $warn_mode ) = @_;
 
     # Input parameter:
-    #  $warn_mode = true  for --warn-mismatched-call-types
-    #  $warn_mode = false for --dump-mismatched-calls
+    #  $warn_mode = true  for --warn-mismatched-arg-types
+    #  $warn_mode = false for --dump-mismatched-args
 
     # The current possible checks are indicated by these letters:
     # a = both method and non-method calls to a sub
@@ -13893,14 +13939,15 @@ sub cross_check_call_args {
 
     # initialize for dump mode
     my $ris_mismatched_call_type          = { 'a' => 1, 'c' => 1 };
-    my $mismatched_call_cutoff            = 0;
+    my $mismatched_arg_count_cutoff       = 0;
     my $ris_mismatched_call_excluded_name = {};
 
     if ($warn_mode) {
-        $ris_mismatched_call_type = \%warn_mismatched_call_types;
-        $mismatched_call_cutoff   = $rOpts->{'warn-mismatched-call-cutoff'};
+        $ris_mismatched_call_type = \%warn_mismatched_arg_types;
+        $mismatched_arg_count_cutoff =
+          $rOpts->{'warn-mismatched-arg-count-cutoff'};
         $ris_mismatched_call_excluded_name =
-          \%is_warn_mismatched_call_excluded_name;
+          \%is_warn_mismatched_arg_excluded_name;
     }
 
     # hardwired name exclusions
@@ -13931,6 +13978,7 @@ sub cross_check_call_args {
     $self->update_sub_call_paren_info($rpackage_lookup_list);
 
     # Names commonly used like '$self'. This list will be augmented as we go.
+    # NOTE: This is not currently used but might be in the future.
     my %self_names = ( '$self' => 1, '$class' => 1 );
 
     # Hash to combine info for subs and calls
@@ -14133,7 +14181,7 @@ sub cross_check_call_args {
             # Skip the warning for small lists with undercount
             my $expect = $num_self ? $shift_count : $shift_count + 1;
             if (   $num_over_count
-                || $expect > $mismatched_call_cutoff )
+                || $expect > $mismatched_arg_count_cutoff )
             {
                 my $lines_over_count  = stringify_line_range($rover_count);
                 my $lines_under_count = stringify_line_range($runder_count);
@@ -14184,9 +14232,10 @@ sub stringify_line_range {
     my ($rcalls) = @_;
     my $string = EMPTY_STRING;
     if ( $rcalls && @{$rcalls} ) {
-        my $num     = @{$rcalls};
-        my $lno_beg = $rcalls->[0]->{line_number};
-        my $lno_end = $rcalls->[-1]->{line_number};
+        my @sorted  = sort { $a <=> $b } @{$rcalls};
+        my $num     = @sorted;
+        my $lno_beg = $sorted[0]->{line_number};
+        my $lno_end = $sorted[-1]->{line_number};
         if ( $num == 1 ) {
             $string = "line $lno_beg";
         }
@@ -14200,20 +14249,20 @@ sub stringify_line_range {
     return $string;
 } ## end sub stringify_line_range
 
-sub initialize_warn_mismatched_call_types {
+sub initialize_warn_mismatched_arg_types {
 
     # Initialization for:
-    #    --warn-mismatched-call-types=s and
-    #    --warn-mismatched-call-exclusion-list=s
-    %warn_mismatched_call_types            = ();
-    %is_warn_mismatched_call_excluded_name = ();
+    #    --warn-mismatched-arg-types=s and
+    #    --warn-mismatched-arg-exclusion-list=s
+    %warn_mismatched_arg_types            = ();
+    %is_warn_mismatched_arg_excluded_name = ();
 
     # Note: coding here is similar to sub initialize_warn_variable_types
 
     #-----------------------------------
-    # Parse --warn-mismatched-call-types
+    # Parse --warn-mismatched-arg-types
     #-----------------------------------
-    my $wmct_key    = 'warn-mismatched-call-types';
+    my $wmct_key    = 'warn-mismatched-arg-types';
     my $wmct_option = $rOpts->{$wmct_key};
     return unless ($wmct_option);
 
@@ -14264,7 +14313,7 @@ sub initialize_warn_mismatched_call_types {
     my $msg = EMPTY_STRING;
     foreach my $opt (@opts) {
         if ( $is_valid_option{$opt} ) {
-            $warn_mismatched_call_types{$opt} = 1;
+            $warn_mismatched_arg_types{$opt} = 1;
         }
         else {
             if ( $opt =~ /^[01\*]$/ ) {
@@ -14279,9 +14328,9 @@ sub initialize_warn_mismatched_call_types {
     if ($msg) { Die($msg) }
 
     #--------------------------------------------
-    # Parse --warn-mismatched-call-exclusion-list
+    # Parse --warn-mismatched-arg-exclusion-list
     #--------------------------------------------
-    my $wmcxl_key      = 'warn-mismatched-call-exclusion-list';
+    my $wmcxl_key      = 'warn-mismatched-arg-exclusion-list';
     my $excluded_names = $rOpts->{$wmcxl_key};
     if ($excluded_names) {
         $excluded_names =~ s/,/ /g;
@@ -14293,27 +14342,27 @@ sub initialize_warn_mismatched_call_types {
             }
         }
         if ($err_msg) { Die($err_msg) }
-        @is_warn_mismatched_call_excluded_name{@xl} = (1) x scalar(@xl);
+        @is_warn_mismatched_arg_excluded_name{@xl} = (1) x scalar(@xl);
     }
     return;
-} ## end sub initialize_warn_mismatched_call_types
+} ## end sub initialize_warn_mismatched_arg_types
 
-sub warn_mismatched_calls {
+sub warn_mismatched_args {
     my ($self) = @_;
 
-    # process a --warn-mismatched-call-types command
+    # process a --warn-mismatched-arg-types command
 
     # additional control parameters are:
-    # - mismatched-call-exclusion-list
+    # - mismatched-arg-exclusion-list
     # - warn-mismatched-call-count-cutoff
 
-    my $wmc_key    = 'warn-mismatched-call-types';
-    my $wmc_option = $rOpts->{$wmc_key};
+    my $wma_key    = 'warn-mismatched-arg-types';
+    my $wma_option = $rOpts->{$wma_key};
 
     my $rwarnings = $self->cross_check_call_args(1);
     return unless ( $rwarnings && @{$rwarnings} );
 
-    my $output_string = "Begin scan for --$wmc_key=$wmc_option\n";
+    my $output_string = "Begin scan for --$wma_key=$wma_option\n";
     $output_string .= <<EOM;
 Line:Mismatch:Name:#args:Min:Max: note
 EOM
@@ -14330,16 +14379,16 @@ EOM
         $output_string .=
 "$lno:$letter:$name:$shift_count:$min_arg_count:$max_arg_count: $note\n";
     }
-    $output_string .= "End scan for --$wmc_key=$wmc_option:\n";
+    $output_string .= "End scan for --$wma_key=$wma_option:\n";
     warning($output_string);
 
     return;
-} ## end sub warn_mismatched_calls
+} ## end sub warn_mismatched_args
 
-sub dump_mismatched_calls {
+sub dump_mismatched_args {
     my ($self) = @_;
 
-    # process a --dump-mismatched-calls command
+    # process a --dump-mismatched-args command
 
     my $rwarnings = $self->cross_check_call_args(0);
     return unless ( $rwarnings && @{$rwarnings} );
@@ -14357,11 +14406,10 @@ EOM
         my $max_arg_count = $item->{max_arg_count};
         $output_string .=
 "$lno:$letter:$name:$shift_count:$min_arg_count:$max_arg_count: $note\n";
-        $output_string .= "$lno:$letter:$name: $note\n";
     }
     print {*STDOUT} $output_string;
     return;
-} ## end sub dump_mismatched_calls
+} ## end sub dump_mismatched_args
 
 sub check_for_old_break {
     my ( $self, $KK, $rkeep_break_hash, $rbreak_hash ) = @_;
@@ -33073,7 +33121,6 @@ sub xlp_tweak {
     my %operator_map;
     my %is_k_w_n_C_bang;
     my %is_my_local_our;
-    my %is_kwU;
     my %is_use_like;
     my %is_binary_type;
     my %is_binary_keyword;
@@ -33130,10 +33177,6 @@ sub xlp_tweak {
         # parenless name
         @q = qw( use );
         @is_use_like{@q} = (1) x scalar(@q);
-
-        # leading token types which may be used to make a container name
-        @q = qw( k w U );
-        @is_kwU{@q} = (1) x scalar(@q);
 
         # token types which prevent using leading word as a container name
         @q = qw(
@@ -33648,6 +33691,7 @@ sub xlp_tweak {
             }
 
             # The container name is only built of certain types:
+            # 'k'=builtin keyword, 'U'=user defined sub, 'w'=unknown bareword
             last if ( !$is_kwU{$type} );
 
             # Normally it is made of one word, but two words for 'use'

@@ -928,7 +928,7 @@ EOM
         dump-block-summary
         dump-unusual-variables
         dump-mixed-call-parens
-        dump-mismatched-calls
+        dump-mismatched-args
         )
       )
     {
@@ -3718,9 +3718,9 @@ sub generate_options {
     $add_option->( 'want-call-parens',             'wcp',  '=s' );
     $add_option->( 'nowant-call-parens',           'nwcp', '=s' );
 
-    $add_option->( 'warn-mismatched-call-types',          'wmct',  '=s' );
-    $add_option->( 'warn-mismatched-call-cutoff',         'wmcc',  '=i' );
-    $add_option->( 'warn-mismatched-call-exclusion-list', 'wmcxl', '=s' );
+    $add_option->( 'warn-mismatched-arg-types',          'wmat',  '=s' );
+    $add_option->( 'warn-mismatched-arg-count-cutoff',   'wmacc', '=i' );
+    $add_option->( 'warn-mismatched-arg-exclusion-list', 'wmaxl', '=s' );
 
     $add_option->( 'add-interbracket-arrows',       'aia', '!' );
     $add_option->( 'delete-interbracket-arrows',    'dia', '!' );
@@ -3739,7 +3739,7 @@ sub generate_options {
     $add_option->( 'dump-defaults',                   'ddf',   '!' );
     $add_option->( 'dump-integer-option-range',       'dior',  '!' );
     $add_option->( 'dump-long-names',                 'dln',   '!' );
-    $add_option->( 'dump-mismatched-calls',           'dmc',   '!' );
+    $add_option->( 'dump-mismatched-args',            'dma',   '!' );
     $add_option->( 'dump-mixed-call-parens',          'dmcp',  '!' );
     $add_option->( 'dump-options',                    'dop',   '!' );
     $add_option->( 'dump-profile',                    'dpro',  '!' );
@@ -3871,7 +3871,7 @@ sub generate_options {
       maximum-unexpected-errors=0
       memoize
       minimum-space-to-comment=4
-      warn-mismatched-call-cutoff=4
+      warn-mismatched-arg-count-cutoff=4
       nobrace-left-and-indent
       nocuddled-else
       nodelete-old-whitespace
@@ -4030,7 +4030,7 @@ sub generate_options {
         'maximum-line-length'                       => [ 0, undef ],
         'maximum-unexpected-errors'                 => [ 0, undef ],
         'minimum-space-to-comment'                  => [ 0, undef ],
-        'warn-mismatched-call-cutoff'               => [ 0, undef ],
+        'warn-mismatched-arg-count-cutoff'          => [ 0, undef ],
         'one-line-block-nesting'                    => [ 0, 1 ],
         'one-line-block-semicolons'                 => [ 0, 2 ],
         'paren-tightness'                           => [ 0, 2 ],
@@ -4638,7 +4638,7 @@ EOM
                 #  dump-defaults
                 #  dump-integer-option-range
                 #  dump-long-names
-                #  dump-mismatched-calls
+                #  dump-mismatched-args
                 #  dump-mixed-call-parens
                 #  dump-options
                 #  dump-profile
