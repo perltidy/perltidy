@@ -14062,9 +14062,14 @@ sub cross_check_call_args {
         my ( $shift_count, $self_name );
         my $rsub_item = $rsub_info->{$key};
         if ( defined($rsub_item) ) {
-            $common_hash{$key}->{rsub_item} = $rsub_item;
-            $shift_count                    = $rsub_item->{shift_count};
-            $self_name                      = $rsub_item->{self_name};
+
+            # skip 'my' subs for now, they need special treatment
+            my $seqno_sub = $rsub_item->{seqno};
+            if ( !$ris_my_sub_by_seqno->{$seqno_sub} ) {
+                $common_hash{$key}->{rsub_item} = $rsub_item;
+                $shift_count                    = $rsub_item->{shift_count};
+                $self_name                      = $rsub_item->{self_name};
+            }
         }
 
         # compare caller/sub arg counts if posible
