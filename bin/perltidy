@@ -6137,15 +6137,17 @@ B<-wmaxl=string>, can be given to skip the warning checks for a list of
 subroutine names.
 
 Another control parameter B<--warn-mismatched-arg-cutoff-count=n>, or
-B<-wmacc=n>, can be used to avoid warnings when the identified number of args
-passed to a sub is less than the number of args expected by the sub, and both
-are less than or equal to B<n>.  This number B<n> is the number of
-args from the point of view of the sub definition, so an object passed
-with an arrow operator counts as one arg.  Many programs will need to
-use a small integer value for B<n> to pass without errors. The default
-value is B<n=4>, but this should be reduced if possible.  The minimum
-possible value of B<n> for a program can be determined by running the
-dump version, B<-dma>, on that program.
+B<-wmacc=n>, can be used to avoid warnings when a sub is called with fewer args
+than expected, and the number of args expected is not greater than B<n>.  This
+number B<n> is the number of args from the point of view of the sub definition,
+so an object like C<$self> passed with an arrow operator counts as one arg.
+
+The default value is B<n=4>. This has been found to allow most programs to pass
+without warnings, but it should be reduced if possible for better error
+checking.  The minimum possible value of B<n> for a program can be determined
+by running with -wmacc=0, or by running the -dump version. The output shows,
+for each mismatch, the number of args expected by a sub plus the range of the
+number of args actually passed to it.
 
 =back
 
