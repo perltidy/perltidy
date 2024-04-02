@@ -10510,7 +10510,7 @@ sub respace_tokens {
     # Set $severe_error=true if processing must terminate immediately
     my ( $severe_error, $rqw_lines );
 
-    # We change any spaces in --indent-only mode
+    # We do not change any spaces in --indent-only mode
     if ( $rOpts->{'indent-only'} ) {
 
         # We need to define lengths for -indent-only to avoid undefs, even
@@ -13719,7 +13719,8 @@ sub sub_def_info_maker {
         # Find the previous type 'S' token with the sub name..
         # may need to back up 1 token if spaces were deleted
         my $K_sub = $rK_sub_by_seqno->{$seqno};
-        my $type  = $rLL->[$K_sub]->[_TYPE_];
+        next unless ( defined($K_sub) );
+        my $type = $rLL->[$K_sub]->[_TYPE_];
         if ( $type ne 'S' ) {
             $K_sub -= 1;
             $type = $rLL->[$K_sub]->[_TYPE_];
@@ -14257,19 +14258,36 @@ sub stringify_line_range {
 sub initialize_warn_mismatched_arg_types {
 
     # Initialization for:
+    #    --dump-mismatched-args
     #    --warn-mismatched-arg-types=s and
     #    --warn-mismatched-arg-exclusion-list=s
     %warn_mismatched_arg_types            = ();
     %is_warn_mismatched_arg_excluded_name = ();
+
+    # The --dump-mismatched-args needs data structures which are not
+    # available with -io. Since it causes immediate exit without formatting,
+    # we can turn off --indent-only to allow it to work.
+    if ( $rOpts->{'dump-mismatched-args'} ) {
+        if ( $rOpts->{'indent-only'} ) {
+            $rOpts->{'indent-only'} = 0;
+        }
+    }
 
     # Note: coding here is similar to sub initialize_warn_variable_types
 
     #-----------------------------------
     # Parse --warn-mismatched-arg-types
     #-----------------------------------
-    my $wmct_key    = 'warn-mismatched-arg-types';
-    my $wmct_option = $rOpts->{$wmct_key};
-    return unless ($wmct_option);
+    my $wmat_key    = 'warn-mismatched-arg-types';
+    my $wmat_option = $rOpts->{$wmat_key};
+    return unless ($wmat_option);
+
+    # The -indent-only option skips production of data structures needed by
+    # the --warn-mismatched-args
+    if ( $rOpts->{'indent-only'} ) {
+        Warn("Note: '--$wmat_key' is ignored if '--indent-only' is set\n");
+        return;
+    }
 
     # Specific options:
     #  a - mismatched arrow operator calls
@@ -14281,17 +14299,17 @@ sub initialize_warn_mismatched_arg_types {
     #  * - all of the above
 
     # Example:
-    #  -wmct='a c' : do check types 'a' and 'c'
-    #  -wmct='c'   : do check type 'c'
+    #  -wmat='a c' : do check types 'a' and 'c'
+    #  -wmat='c'   : do check type 'c'
 
     my @all_opts = qw(a c);
     my %is_valid_option;
     @is_valid_option{@all_opts} = (1) x scalar(@all_opts);
 
     # allow comma separators
-    $wmct_option =~ s/,/ /g;
+    $wmat_option =~ s/,/ /g;
 
-    my @opts = split_words($wmct_option);
+    my @opts = split_words($wmat_option);
     return unless (@opts);
 
     # check a single item
@@ -14302,7 +14320,7 @@ sub initialize_warn_mismatched_arg_types {
         # but give a warning because this may not be allowed in the future
         if ( length($opt) > 1 ) {
             @opts = split //, $opt;
-            Warn("Please use space-separated letters in --$wmct_key\n");
+            Warn("Please use space-separated letters in --$wmat_key\n");
         }
         elsif ( $opt eq '*' || $opt eq '1' ) {
             @opts = keys %is_valid_option;
@@ -14323,10 +14341,10 @@ sub initialize_warn_mismatched_arg_types {
         else {
             if ( $opt =~ /^[01\*]$/ ) {
                 $msg .=
-                  "--$wmct_key cannot contain $opt mixed with other options\n";
+                  "--$wmat_key cannot contain $opt mixed with other options\n";
             }
             else {
-                $msg .= "--$wmct_key has unexpected symbol: '$opt'\n";
+                $msg .= "--$wmat_key has unexpected symbol: '$opt'\n";
             }
         }
     }
@@ -14397,7 +14415,6 @@ sub dump_mismatched_args {
 
     my $rwarnings = $self->cross_check_call_args(0);
     return unless ( $rwarnings && @{$rwarnings} );
-##Issues   a=arrow and non-arrow calls    c=call arg count mismatch
     my $output_string = <<EOM;
 Line:Mismatch:Name:#args:Min:Max: note
 EOM
