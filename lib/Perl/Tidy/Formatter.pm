@@ -13278,15 +13278,69 @@ sub package_info_maker {
 
 use constant DEBUG_COUNT => 0;
 
-# A missing paren after these does not indicate a parenless function with
-# multiple call args.  See also %skip_keywords in sub dump_mixed_call_parens.
-my %is_non_function_call_keyword;
+my %is_non_interfering_keyword;
+my %is_keyword_returning_scalar;
 
 BEGIN {
-    my @q = qw(my our local state
-      and cmp continue do else elsif eq ge gt le lt ne not or xor
-      undef defined length ord delete scalar );
-    @is_non_function_call_keyword{@q} = (1) x scalar(@q);
+
+    # Builtin keywords which do not interfere with counting args.
+    # They do not produce arrays and do not consume more than one arg, so
+    # following parens are not required.
+    my @q = qw(
+      abs
+      and
+      chr
+      cmp
+      continue
+      cos
+      defined
+      delete
+      do
+      else
+      elsif
+      eq
+      exp
+      fc
+      ge
+      gt
+      hex
+      int
+      lc
+      lcfirst
+      le
+      length
+      local
+      log
+      lt
+      my
+      ne
+      not
+      oct
+      or
+      ord
+      ord
+      our
+      pop
+      pos
+      rand
+      ref
+      scalar
+      shift
+      sin
+      sqrt
+      srand
+      state
+      uc
+      ucfirst
+      undef
+      xor
+    );
+    @is_non_interfering_keyword{@q} = (1) x scalar(@q);
+
+    # Builtin keywords possibly taking multiple parameters but returning a
+    # scalar value. These can be handled if the args are in parens.
+    @q = qw(substr join);
+    @is_keyword_returning_scalar{@q} = (1) x scalar(@q);
 }
 
 sub count_list_args {
@@ -13386,19 +13440,33 @@ sub count_list_args {
             $arg_count++;
         }
 
-        # give up at a paren-less call
+        # check for a paren-less call
         elsif ( $is_kwU{$type} ) {
-            next if ( $type eq 'k' && $is_non_function_call_keyword{$token} );
+
+            # Something like 'length $str' is ok
+            next if ( $type eq 'k' && $is_non_interfering_keyword{$token} );
+
+            # Certain subsequent tokens prevent problems
             my $Kn = $self->K_next_code($KK);
             next unless defined($Kn);
             my $token_Kn = $rLL->[$Kn]->[_TOKEN_];
             next
-              if ( $token_Kn eq '('
-                || $token_Kn eq ')'
+              if ( $token_Kn eq ')'
                 || $token_Kn eq '=>'
                 || $token_Kn eq '->'
                 || $token_Kn eq ',' );
 
+            # Certain keywords returning scalars are okay if not made
+            # as paren-less calls
+            next
+              if ( $type eq 'k'
+                && $token_Kn eq '('
+                && $is_keyword_returning_scalar{$token} );
+
+            # Otherwise, the safe thing is to give up because a function call:
+            # -might be paren-less with multiple args, or
+            # -it might return a list (i.e. splice, split, localtime, ...)
+            # which will interfere with counting args
             if (DEBUG_COUNT) {
                 my $lno               = $rLL->[$KK]->[_LINE_INDEX_] + 1;
                 my $input_stream_name = get_input_stream_name();
@@ -14064,7 +14132,8 @@ sub cross_check_call_args {
         my $rsub_item = $rsub_info->{$key};
         if ( defined($rsub_item) ) {
 
-            # skip 'my' subs for now, they need special treatment
+            # skip 'my' subs for now, they need special treatment. If
+            # anonymous subs are added, 'my' subs could also be added then.
             my $seqno_sub = $rsub_item->{seqno};
             if ( !$ris_my_sub_by_seqno->{$seqno_sub} ) {
                 $common_hash{$key}->{rsub_item} = $rsub_item;
