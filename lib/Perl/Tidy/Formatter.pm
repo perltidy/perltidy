@@ -13494,11 +13494,44 @@ sub count_list_args {
 use constant MANY_TOKENS => 100;
 
 my %is_shift_pop;
+my %is_scalar_sigil;
+my %is_array_sigil;
 
 BEGIN {
     my @q = qw(shift pop);
-    @is_shift_pop{@q} = (1) x scalar(@q);
+    @is_shift_pop{@q}    = (1) x scalar(@q);
+    @q                   = qw( $ * & );
+    @is_scalar_sigil{@q} = (1) x scalar(@q);
+    @q                   = qw( @ % );
+    @is_array_sigil{@q}  = (1) x scalar(@q);
 }
+
+sub count_prototype_args {
+    my ($string) = @_;
+
+    # Given
+    #  $string = a string with a prototype in parens, such as '($$;$)'
+    # Return
+    #  $count = specific number of args expected, or
+    #           undef if number of args can vary
+    my @chars = split //, $string;
+    my $count = 0;
+    while ( my $ch = shift(@chars) ) {
+        if    ( !defined($ch) )         { return }
+        elsif ( $ch eq ';' )            { return }
+        elsif ( $is_array_sigil{$ch} )  { return }
+        elsif ( $is_scalar_sigil{$ch} ) { $count++ }
+        elsif ( $ch eq q{\\} ) {
+            $ch = shift @chars;
+            return unless defined($ch);
+            $count++;
+        }
+        elsif ( $ch eq '(' ) { last if ($count) }
+        elsif ( $ch eq ')' ) { last }
+        else                 { next }
+    }
+    return $count;
+} ## end sub count_prototype_args
 
 sub count_sub_args {
     my ( $self, $item ) = @_;
@@ -13547,6 +13580,22 @@ sub count_sub_args {
         if ( !defined($K_sub) ) { $K_sub = 'undef' }
         Fault("Bad K_sub=$K_sub, opening=$K_opening_block\n");
         return;
+    }
+
+    #----------------------------------
+    # Check for and process a prototype
+    #----------------------------------
+    my $sub_token  = $rLL->[$K_sub]->[_TOKEN_];
+    my $iproto_beg = index( $sub_token, '(' );
+    if ( $iproto_beg > 0 ) {
+        my $iproto_end = index( $sub_token, ')', $iproto_beg );
+        if ( $iproto_end > $iproto_beg ) {
+            my $prototype =
+              substr( $sub_token, $iproto_beg, $iproto_end - $iproto_beg + 1 );
+            my $prototype_count = count_prototype_args($prototype);
+            $item->{prototype}       = $prototype;
+            $item->{prototype_count} = $prototype_count;
+        }
     }
 
     #---------------------------------------
@@ -13761,9 +13810,29 @@ sub count_sub_args {
         }
     }
 
-    # for a sequence of pure shifts, require no intervening statements at depth
-    return if ($dubious_if_shift_only);
+    # If we arrive here, we only saw a sequence of shifts. The count has some
+    # uncertainty so we have to be careful...
 
+    # Require consistency with any prototype count
+    if ( $item->{prototype} ) {
+        my $prototype_count = $item->{prototype_count};
+        return unless ( defined($prototype_count) );
+
+        # The prototype count does not include any '$self', so we have
+        # to allow a difference of one
+        if (   $shift_count != $prototype_count
+            && $shift_count != $prototype_count + 1 )
+        {
+            return;
+        }
+    }
+
+    # Otherwise give up if uncertainty was noted above
+    else {
+        return if ($dubious_if_shift_only);
+    }
+
+    # Looks ok
     $item->{shift_count} = $shift_count;
     $item->{self_name}   = $self_name;
     return;
