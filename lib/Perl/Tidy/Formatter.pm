@@ -13339,7 +13339,7 @@ BEGIN {
 
     # Builtin keywords possibly taking multiple parameters but returning a
     # scalar value. These can be handled if the args are in parens.
-    @q = qw(substr join);
+    @q = qw(substr join atan2);
     @is_keyword_returning_scalar{@q} = (1) x scalar(@q);
 }
 
@@ -13576,8 +13576,11 @@ sub count_sub_args {
     my $level_opening = $rLL->[$K_opening]->[_LEVEL_];
 
     # Count number of 'shift;' at the top level
-    my $shift_count = 0;
-    my $self_name   = EMPTY_STRING;
+    my $shift_count          = 0;
+    my $self_name            = EMPTY_STRING;
+    my $semicolon_count      = 0;
+    my $deep_semicolon_count = 0;
+    my $dubious_if_shift_only;
 
     foreach my $KK ( $K_opening + 1 .. $K_closing - 1 ) {
 
@@ -13645,63 +13648,80 @@ sub count_sub_args {
             if ( $is_shift_pop{$token} ) {
 
                 # look for 'shift;' and count as 1 arg
-                my $Kp      = $self->K_next_code($KK);
-                my $type_p  = ';';
-                my $token_p = ';';
+                my $Kp = $self->K_next_code($KK);
+                return unless defined($Kp);
+                my $type_p  = $rLL->[$Kp]->[_TYPE_];
+                my $token_p = $rLL->[$Kp]->[_TOKEN_];
 
-                if ( defined($Kp) ) {
+                # look for any of these with shift or pop:
+                # shift;
+                # shift @_;
+                # shift();
+                # shift(@_);
+
+                # remove any opening paren
+                my $in_parens;
+                if ( $token_p eq '(' ) {
+                    $in_parens = 1;
+                    $Kp        = $self->K_next_code($Kp);
+                    return unless defined($Kp);
                     $type_p  = $rLL->[$Kp]->[_TYPE_];
                     $token_p = $rLL->[$Kp]->[_TOKEN_];
                 }
 
-                # FIXME: needs work. consider checking for what cannot follow
-                my $is_arg =
-                  (      $type_p eq ';'
-                      || $type_p eq ','
-                      || $is_closing_type{$type_p}
-                      || $type_p eq '&&'
-                      || $type_p eq '||'
-                      || $type_p eq 'k' && $is_and_or{$token_p} );
+                # look for '@_'
+                if ( $type_p eq 'i' || $type_p eq 't' ) {
 
-                if ( !$is_arg && $token_p eq '(' ) {
-                    my $Kpp = $self->K_next_code($Kp);
-                    if ( defined($Kpp) ) {
-                        my $type_pp  = $rLL->[$Kpp]->[_TYPE_];
-                        my $token_pp = $rLL->[$Kpp]->[_TOKEN_];
-                        if (   $token_pp eq ')'
-                            || $token_pp eq '@_' && $type_pp eq 'i' )
-                        {
-                            $is_arg = 1;
-                        }
-                    }
+                    # keep going if not @_
+                    next if ( $token_p ne '@_' );
+
+                    $Kp = $self->K_next_code($Kp);
+                    return unless defined($Kp);
+                    $type_p  = $rLL->[$Kp]->[_TYPE_];
+                    $token_p = $rLL->[$Kp]->[_TOKEN_];
                 }
 
-##              if (   $type_p ne 'i'
-##                  && $type_p ne 't' )    ##&& !$is_opening_type{$type_p} )
-                if ($is_arg) {
-                    my $level = $rLL->[$KK]->[_LEVEL_];
+                # remove any closing paren
+                if ( $in_parens && $token_p eq ')' ) {
+                    $Kp = $self->K_next_code($Kp);
+                    return unless defined($Kp);
+                    $type_p  = $rLL->[$Kp]->[_TYPE_];
+                    $token_p = $rLL->[$Kp]->[_TOKEN_];
+                }
 
-                    # Give up on lower level shifts
-                    return unless ( $level == $level_opening + 1 );
+                # Just give up if this shift is not followed by a semicolon or
+                # closing brace. This is the safe thing to do to avoid false
+                # errors. There are too many ways for problems to arise.
+                # Especially if the next token is one of '||' '//' 'or'.
+                return if ( $type_p ne ';' && $Kp ne $K_closing );
+                my $level = $rLL->[$KK]->[_LEVEL_];
 
-                    $shift_count++;
+                # Give up on lower level shifts
+                return unless ( $level == $level_opening + 1 );
 
-                    # OLD:
-                    # Do not count leading '$self = shift' or '$class = shift'
-                    #                        |    |   |
-                    #                    $K_mm  $K_m  $KK
-                    if ( $shift_count == 1 && !$self_name ) {
-                        my $K_m = $self->K_previous_code($KK);
-                        return unless ( defined($K_m) );
-                        my $type_m = $rLL->[$K_m]->[_TYPE_];
-                        if ( $type_m eq '=' ) {
+                # If we get to the end without finding '(..) = @_;' then
+                # we will consider the count unreliable if we saw a 'pop'
+                # or if a previous block contained other statements.
+                $dubious_if_shift_only ||= $token eq 'pop';
+                $dubious_if_shift_only ||= $deep_semicolon_count;
 
-                            my $K_mm = $self->K_previous_code($K_m);
-                            return unless defined($K_mm);
-                            if ( $rLL->[$K_mm]->[_TYPE_] eq 'i' ) {
-                                my $token_mm = $rLL->[$K_mm]->[_TOKEN_];
-                                $self_name = $token_mm;
-                            }
+                $shift_count++;
+
+                # OLD:
+                # Do not count leading '$self = shift' or '$class = shift'
+                #                        |    |   |
+                #                    $K_mm  $K_m  $KK
+                if ( $shift_count == 1 && !$self_name ) {
+                    my $K_m = $self->K_previous_code($KK);
+                    return unless ( defined($K_m) );
+                    my $type_m = $rLL->[$K_m]->[_TYPE_];
+                    if ( $type_m eq '=' ) {
+
+                        my $K_mm = $self->K_previous_code($K_m);
+                        return unless defined($K_mm);
+                        if ( $rLL->[$K_mm]->[_TYPE_] eq 'i' ) {
+                            my $token_mm = $rLL->[$K_mm]->[_TOKEN_];
+                            $self_name = $token_mm;
                         }
                     }
                 }
@@ -13726,6 +13746,11 @@ sub count_sub_args {
                 }
             }
         }
+        elsif ( $type eq ';' ) {
+            $semicolon_count++;
+            my $level = $rLL->[$KK]->[_LEVEL_];
+            if ( $level > $level_opening + 1 ) { $deep_semicolon_count++ }
+        }
         elsif ( $type eq 'Q' ) {
 
             # TODO: look for @_ in an interpolated quote
@@ -13735,6 +13760,10 @@ sub count_sub_args {
             # continue search
         }
     }
+
+    # for a sequence of pure shifts, require no intervening statements at depth
+    return if ($dubious_if_shift_only);
+
     $item->{shift_count} = $shift_count;
     $item->{self_name}   = $self_name;
     return;
