@@ -6102,18 +6102,20 @@ B<Some Limitations:>
 =over 4
 
 =item *
-Only sub definitions within the file being processed are checked. Anonymous subs and lexical subs (introduced with 'my') are not currently checked.
+Only subs for which the call args are unpacked in an orderly manner at the beginning of the sub from C<@_>, directly and/or with C<shift> operations, are checked.  Subs for which this does not appear to be the case are skipped.
 
 =item *
-The number of arguments expected by a sub is determined by scanning the initial
-lines of the sub for extractions from C<@_>.  If args are extracted or used in
-later code, then that sub will be skipped, or the analysis could be in error.
+Subs which appear to have no args are not checked. This is necessary to avoid false warnings when a sub actually uses args in a complex way.
 
 =item *
 Only calls which appear to be to subs defined within the file are checked.
 
 =item *
 Sub calls made without parentheses around the args are not checked.
+
+=item *
+Anonymous subs and lexical subs (introduced with 'my') are not currently
+checked.
 
 =back
 
@@ -6128,26 +6130,35 @@ The default is not to do any of these checks, which can also be indicated with B
 
 To restrict the check to a specific warning type, set the string equal to the letter of that warning, either B<a> or B<c>.  For example
 
-   perltidy -wmat='*' somefile.pl
+   perltidy -wmat='c' somefile.pl
 
-will format F<somefile.pl> and report any call arg mismatches found.
+will format F<somefile.pl> and report any call arg count mismatches found but
+will skip checking for arrow-type mismatches.
 
 A companion control parameter B<--warn-mismatched-arg-exclusion-list>, or
 B<-wmaxl=string>, can be given to skip the warning checks for a list of
 subroutine names.
 
-Another control parameter B<--warn-mismatched-arg-cutoff-count=n>, or
-B<-wmacc=n>, can be used to avoid warnings when a sub is called with fewer args
-than expected, and the number of args expected is not greater than B<n>.  This
-number B<n> is the number of args from the point of view of the sub definition,
-so an object like C<$self> passed with an arrow operator counts as one arg.
+Another control parameter B<--warn-mismatched-arg-undercount-cutoff=n>, or
+B<-wmauc=n>, can be used to avoid undercount warnings when the number of
+args expected is B<n> or less.  Please note that this number B<n> is the number
+of args from the point of view of the sub definition, so an object like
+C<$self> passed with an arrow operator counts as one arg.
 
 The default value is B<n=4>. This has been found to allow most programs to pass
 without warnings, but it should be reduced if possible for better error
 checking.  The minimum possible value of B<n> for a program can be determined
-by running with -wmacc=0, or by running the -dump version. The output shows,
+by running with -wmauc=0, or by running the -dump version. The output shows,
 for each mismatch, the number of args expected by a sub plus the range of the
 number of args actually passed to it.
+
+For example
+
+   perltidy -wmat='*' -wmaxl='new' -wmauc=2 somefile.pl
+
+means format F<somefile.pl> as usual and check for all mismatch types. But skip
+checking for any sub named C<new>, and only warn of undercounts for subs
+expecting more than 2 args.
 
 =back
 

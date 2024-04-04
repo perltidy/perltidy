@@ -14106,13 +14106,13 @@ sub cross_check_call_args {
 
     # initialize for dump mode
     my $ris_mismatched_call_type          = { 'a' => 1, 'c' => 1 };
-    my $mismatched_arg_count_cutoff       = 0;
+    my $mismatched_arg_undercount_cutoff  = 0;
     my $ris_mismatched_call_excluded_name = {};
 
     if ($warn_mode) {
         $ris_mismatched_call_type = \%warn_mismatched_arg_types;
-        $mismatched_arg_count_cutoff =
-          $rOpts->{'warn-mismatched-arg-count-cutoff'};
+        $mismatched_arg_undercount_cutoff =
+          $rOpts->{'warn-mismatched-arg-undercount-cutoff'};
         $ris_mismatched_call_excluded_name =
           \%is_warn_mismatched_arg_excluded_name;
     }
@@ -14354,7 +14354,7 @@ sub cross_check_call_args {
             # Skip the warning for small lists with undercount
             my $expect = $num_self ? $shift_count : $shift_count + 1;
             if (   $num_over_count
-                || $expect > $mismatched_arg_count_cutoff )
+                || $expect > $mismatched_arg_undercount_cutoff )
             {
                 my $lines_over_count  = stringify_line_range($rover_count);
                 my $lines_under_count = stringify_line_range($runder_count);
@@ -14371,7 +14371,7 @@ sub cross_check_call_args {
                 }
                 else {
                     $note =
-"undefined args at $num_under_count of $total calls($lines_under_count)";
+"missing args at $num_under_count of $total calls($lines_under_count)";
                 }
 
                 push @warnings,
@@ -14545,7 +14545,7 @@ sub warn_mismatched_args {
 
     # additional control parameters are:
     # - mismatched-arg-exclusion-list
-    # - warn-mismatched-call-count-cutoff
+    # - warn-mismatched-arg-undercount-cutoff
 
     my $wma_key    = 'warn-mismatched-arg-types';
     my $wma_option = $rOpts->{$wma_key};
