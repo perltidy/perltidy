@@ -14307,7 +14307,8 @@ sub stringify_line_range {
     my ($rcalls) = @_;
     my $string = EMPTY_STRING;
     if ( $rcalls && @{$rcalls} ) {
-        my @sorted  = sort { $a <=> $b } @{$rcalls};
+        my @sorted =
+          sort { $a->{line_number} <=> $b->{line_number} } @{$rcalls};
         my $num     = @sorted;
         my $lno_beg = $sorted[0]->{line_number};
         my $lno_end = $sorted[-1]->{line_number};
