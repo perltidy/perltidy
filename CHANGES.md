@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2024 02 02.03
+## 2024 02 02.04
 
     - Add options --dump-mismatched-args (or -dma) and
       --warn-mismatched-arg-types=s (or -wmat=s).  These options look
@@ -19,7 +19,7 @@
       It takes a string parameter which is 1 or '*' to activate all checks.
       It may be customized with two additional parameters if necessary to
       avoid needless warnings, --warn-mismatched-arg-exclusion-list=s and
-      --warn-mismatched-arg-count-cutoff=n. These are explained in the manual.
+      --warn-mismatched-arg-undercount-cutoff=n. These are explained in the manual.
 
     - Add option --valign-wide-equals, or -vwe, for issue git #135.
       Setting this parameter causes the following assignment operators

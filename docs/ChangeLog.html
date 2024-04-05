@@ -1,8 +1,27 @@
 <h1>Perltidy Change Log</h1>
 
-<h2>2024 02 02.03</h2>
+<h2>2024 02 02.04</h2>
 
-<pre><code>- Add option --valign-wide-equals, or -vwe, for issue git #135.
+<pre><code>- Add options --dump-mismatched-args (or -dma) and
+  --warn-mismatched-arg-types=s (or -wmat=s).  These options look
+  for and report instances where the number of args expected by a
+  sub appear to differ from the number passed to the sub.  The -dump
+  version writes the results for a single file to standard output
+  and exits:
+
+     perltidy -dma somefile.pl &gt;results.txt
+
+  The -warn version formats as normal but reports any issues as warnings in
+  the error file:
+
+     perltidy -wmat=1 somefile.pl
+
+  It takes a string parameter which is 1 or '*' to activate all checks.
+  It may be customized with two additional parameters if necessary to
+  avoid needless warnings, --warn-mismatched-arg-exclusion-list=s and
+  --warn-mismatched-arg-undercount-cutoff=n. These are explained in the manual.
+
+- Add option --valign-wide-equals, or -vwe, for issue git #135.
   Setting this parameter causes the following assignment operators
 
      = **= += *= &amp;= &lt;&lt;= &amp;&amp;= -= /= |= &gt;&gt;= ||= //= .= %= ^= x=
@@ -25,7 +44,22 @@
         $str             .= $rfields-&gt;[$j];
         $str_len         += $rfield_lengths-&gt;[$j];
 
-  This option currently is off by default to avoid changing existing formatting.
+  This option currently is off by default to avoid changing existing
+  formatting.
+
+- Previously, a line break was made before a short concatenated terminal
+  quoted string, such as "\n", if the previous line had a greater
+  starting indentation. The break is now placed after the short quote.
+  This keeps code a little more compact. For example:
+
+# old rule: break before "\n" here because '$name' has more indentation:
+my $html = $this-&gt;SUPER::genObject( $query, $bindNode, $field . ":$var",
+    $name, "remove", "UNCHECKED" )
+  . "\n";
+
+# new rule: break after a short terminal quote like "\n" for compactness;
+my $html = $this-&gt;SUPER::genObject( $query, $bindNode, $field . ":$var",
+    $name, "remove", "UNCHECKED" ) . "\n";
 
 - In the option --dump-block-summary, the number of sub arguments indicated
   for each sub now includes any leading object variable passed with
@@ -1466,7 +1500,7 @@ signatures.  Reformatting with the current version will fix the problem.
 - fixed issue git#13, needless trailing whitespace in error message
 
 - fixed issue git#9: if the -ce (--cuddled-else) flag is used,
-  do not try to form new one line blocks for a block type 
+  do not try to form new one line blocks for a block type
   specified with -cbl, particularly map, sort, grep
 
 - iteration speedup for unchanged code.  Previously, when iterations were

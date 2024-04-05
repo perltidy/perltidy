@@ -4142,7 +4142,7 @@
         [  10.9,        10.9,             11 ],
     );</code></pre>
 
-<p>The current default alignment is strict left justification:</p>
+<p>The default is <b>-vsn</b>. This can be turned off to get is strict left justification:</p>
 
 <pre><code>    # perltidy -nvsn
     my @correct = (
@@ -4152,8 +4152,6 @@
         [ -123456.001, -80.080,          0 ],
         [ 10.9,        10.9,             11 ],
     );</code></pre>
-
-<p>In a future release <b>-vsn</b> will become the default.</p>
 
 <p>Some points regarding <b>-vsn</b> are:</p>
 
@@ -4165,7 +4163,7 @@
 <li><p>This option is mainly limited to lists of comma-separated numbers. For multiline lists of numbers, having trailing commas can sometimes improve the results. If missing, perltidy can add them for example with parameters <b>-wtc=b -atc</b>. See <a href="#Adding-and-Deleting-Commas">&quot;Adding and Deleting Commas&quot;</a>.</p>
 
 </li>
-<li><p>This option has a control parameter <b>--valign-signed-number-limit=N</b>, or <b>-vsnl=N</b>. This value controls formatting of very long columns of numbers and should not normally need to be changed. To see its purpose, consider a very long column of just unsigned numbers, say 1000 lines. If we add a single negative number, it is undesirable to move all of the other numbers over by one space. This would create many lines of file differences but not really improve the appearance when a local section of the table was viewed. The number <b>N</b> avoids this problem by not adding extra indentation to a run of more than <b>N</b> lines of unsigned numbers. The default value, <b>N=20</b>, is set to be a number of lines for which the ends of a long column of unsigned numbers are not normally both in view.</p>
+<li><p>This option has a control parameter <b>--valign-signed-number-limit=N</b>, or <b>-vsnl=N</b>. This value controls formatting of very long columns of numbers and should not normally need to be changed. To see its purpose, consider a very long column of just unsigned numbers, say 1000 lines. If we add a single negative number, it is undesirable to move all of the other numbers over by one space. This could create many lines of file differences but not really improve the appearance when a local section of the table was viewed. The number <b>N</b> avoids this problem by not adding extra indentation to a run of more than <b>N</b> lines of unsigned numbers. The default value, <b>N=20</b>, is set to be a number of lines for which the ends of a long column of unsigned numbers are not normally both in view.</p>
 
 </li>
 </ul>
@@ -4746,6 +4744,97 @@
 <p>Otherwise, the <code>||</code> will operate on <code>$infile</code> rather than the return value of <code>open</code>.</p>
 
 </dd>
+<dt id="Use---dump-mismatched-args-to-find-function-calls-with-args-not-matching-sub-declarations"><b>Use --dump-mismatched-args to find function calls with args not matching sub declarations</b></dt>
+<dd>
+
+<p>The parameter <b>--dump-mismatched-args</b>, or <b>-dma</b>, causes perltidy to examine the definitions of subroutines in a file, and calls to those subs, and report any apparent differences. Like all <b>--dump</b> commands, it writes its report to standard output and exits immediately. For example</p>
+
+<pre><code>    perltidy -dma somefile.pl &gt;results.txt</code></pre>
+
+<p>Two types of issues are reported, types <b>a</b> and <b>c</b>:</p>
+
+<dl>
+
+<dt id="a:-calls-made-to-a-sub-both-with-and-without-the-arrow-operator"><b>a:</b> calls made to a sub both with and without the <b>arrow</b> operator</dt>
+<dd>
+
+<p>For example the following two lines would be reported as a mismatch:</p>
+
+<pre><code>     Fault();</code></pre>
+
+<p>and</p>
+
+<pre><code>     $self-&gt;Fault();</code></pre>
+
+<p>This may or may not be an error, but it is worth checking.</p>
+
+</dd>
+<dt id="c:-the-count-of-call-args-differs-from-a-sub-definition"><b>c:</b> the <b>count</b> of call args differs from a sub definition</dt>
+<dd>
+
+<p>If a sub appears to expect a specific number of args, and is called with more or less than this number, then a mismatch will be reported. For example</p>
+
+<pre><code>     sub do_something {
+         my $self=shift;
+         my ($v1,$v2)=@_;
+         ...
+     }
+
+    $self-&gt;do_something(43);</code></pre>
+
+<p>In this case, the sub is expecting a total of three args (<code>$self</code>, <code>$v1</code>, and <code>$v2</code>) but only receives two (<code>$self</code> and <code>42</code>), so a mismatch is reported. This is not necessarily an error because the sub may allow for this possibility. This sometimes happens as a code evolves to have new functionality. But it can be a source of confusion, and it could be an error, so it is worth checking.</p>
+
+</dd>
+</dl>
+
+<p><b>Some Limitations:</b></p>
+
+<ul>
+
+<li><p>Only subs for which the call args are unpacked in an orderly manner at the beginning of the sub from <code>@_</code>, directly and/or with <code>shift</code> operations, are checked. Subs for which this does not appear to be the case are skipped.</p>
+
+</li>
+<li><p>Subs which appear to have no args are not checked. This is necessary to avoid false warnings when a sub actually uses args in a complex way.</p>
+
+</li>
+<li><p>Only calls which appear to be to subs defined within the file are checked.</p>
+
+</li>
+<li><p>Sub calls made without parentheses around the args are not checked.</p>
+
+</li>
+<li><p>Anonymous subs and lexical subs (introduced with &#39;my&#39;) are not currently checked.</p>
+
+</li>
+</ul>
+
+</dd>
+<dt id="Use---warn-mismatched-arg-types-s-to-produce-a-warning-for-function-calls-with-args-not-matching-sub-declarations"><b>Use --warn-mismatched-arg-types=s to produce a warning for function calls with args not matching sub declarations</b></dt>
+<dd>
+
+<p>The parameter <b>--warn-mismatched-arg-types=s</b>, or <b>-wmat=s</b>, can be used to produce a warning message when perltidy formats a file and certain of the above mismatchs is detected during formatting. Both checks may be requested with <b>-wmat=&#39;*&#39;</b> or <b>-wmat=1</b>.</p>
+
+<p>The default is not to do any of these checks, which can also be indicated with <b>-wmat=0</b>.</p>
+
+<p>To restrict the check to a specific warning type, set the string equal to the letter of that warning, either <b>a</b> or <b>c</b>. For example</p>
+
+<pre><code>   perltidy -wmat=&#39;c&#39; somefile.pl</code></pre>
+
+<p>will format <i>somefile.pl</i> and report any call arg count mismatches found but will skip checking for arrow-type mismatches.</p>
+
+<p>A companion control parameter <b>--warn-mismatched-arg-exclusion-list</b>, or <b>-wmaxl=string</b>, can be given to skip the warning checks for a list of subroutine names.</p>
+
+<p>Another control parameter <b>--warn-mismatched-arg-undercount-cutoff=n</b>, or <b>-wmauc=n</b>, can be used to avoid undercount warnings when the number of args expected is <b>n</b> or less. Please note that this number <b>n</b> is the number of args from the point of view of the sub definition, so an object like <code>$self</code> passed with an arrow operator counts as one arg.</p>
+
+<p>The default value is <b>n=4</b>. This has been found to allow most programs to pass without warnings, but it should be reduced if possible for better error checking. The minimum possible value of <b>n</b> for a program can be determined by running with -wmauc=0, or by running the -dump version. The output shows, for each mismatch, the number of args expected by a sub plus the range of the number of args actually passed to it.</p>
+
+<p>For example</p>
+
+<pre><code>   perltidy -wmat=&#39;*&#39; -wmaxl=&#39;new&#39; -wmauc=2 somefile.pl</code></pre>
+
+<p>means format <i>somefile.pl</i> as usual and check for all mismatch types. But skip checking for any sub named <code>new</code>, and only warn of undercounts for subs expecting more than 2 args.</p>
+
+</dd>
 </dl>
 
 <h2 id="Working-with-MakeMaker-AutoLoader-and-SelfLoader"><b>Working with MakeMaker, AutoLoader and SelfLoader</b></h2>
@@ -5059,7 +5148,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20240202.03</p>
+<p>This man page documents perltidy version 20240202.04</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 
