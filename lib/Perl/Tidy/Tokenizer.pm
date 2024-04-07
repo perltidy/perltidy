@@ -9115,7 +9115,7 @@ EOM
       RETURN:
 
         DEBUG_SCAN_ID && do {
-            my ( $a, $b, $c ) = caller;
+            my ( $a, $b, $c ) = caller();
             print {*STDOUT}
 "SCANID: called from $a $b $c with tok, i, state, identifier =$tok_begin, $i_begin, $id_scan_state_begin, $identifier_begin\n";
             print {*STDOUT}

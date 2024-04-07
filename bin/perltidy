@@ -6102,7 +6102,7 @@ B<Some Limitations:>
 =over 4
 
 =item *
-Only subs for which the call args are unpacked in an orderly manner at the beginning of the sub from C<@_>, directly and/or with C<shift> operations, are checked.  Subs for which this does not appear to be the case are skipped.
+The only subs which these checks are made are those for which the call args are unpacked in an orderly manner at the beginning of the sub from C<@_>, directly and/or with C<shift> operations.
 
 =item *
 Subs which appear to have no args are not checked. This is necessary to avoid false warnings when a sub actually uses args in a complex way.

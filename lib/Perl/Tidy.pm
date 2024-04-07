@@ -5516,7 +5516,7 @@ sub Win_Config_Locs {
     # 9x/Me box.  Contributed by: Yves Orton.
 
     my ( $rpending_complaint, $os ) = @_;
-    if ( !$os ) { $os = Win_OS_Type(); }
+    if ( !$os ) { $os = Win_OS_Type($rpending_complaint) }
 
     return unless $os;
 
