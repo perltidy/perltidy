@@ -25880,10 +25880,6 @@ sub break_lines_inner_loop {
 
     ) = @_;
 
-    if ( DEVEL_MODE && ( my $count = @_ ) != ( my $expected_count = 8 ) ) {
-        Fault("arg count $count expected to be $expected_count\n");
-    }
-
     # Given:
     #   $i_begin               = first index of range
     #   $i_last_break          = index of previous break
@@ -33965,10 +33961,6 @@ sub make_paren_name {
 
         ) = @_;
 
-        if ( DEVEL_MODE && ( my $count = @_ ) != ( my $expected_count = 9 ) ) {
-            Fault("arg count $count expected to be $expected_count\n");
-        }
-
         #--------------------------------------------------------------
         # This routine makes any necessary adjustments to get the final
         # indentation of a line in the Formatter.
@@ -34482,10 +34474,6 @@ sub make_paren_name {
             $seqno_qw_closing,
 
         ) = @_;
-
-        if ( DEVEL_MODE && ( my $count = @_ ) != ( my $expected_count = 10 ) ) {
-            Fault("arg count $count expected to be $expected_count\n");
-        }
 
         my $adjust_indentation         = 0;
         my $default_adjust_indentation = $adjust_indentation;
@@ -35016,10 +35004,6 @@ sub set_vertical_tightness_flags {
         $closing_side_comment
 
     ) = @_;
-
-    if ( DEVEL_MODE && ( my $count = @_ ) != ( my $expected_count = 9 ) ) {
-        Fault("arg count $count expected to be $expected_count\n");
-    }
 
     # Define vertical tightness controls for the nth line of a batch.
     # Note: do not call this sub for a block comment or if

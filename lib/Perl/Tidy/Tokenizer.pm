@@ -7745,10 +7745,6 @@ sub scan_bare_identifier_do {
 
     ) = @_;
 
-    if ( DEVEL_MODE && ( my $count = @_ ) != ( my $expected_count = 8 ) ) {
-        $self->Fault("arg count $count expected to be $expected_count\n");
-    }
-
     my $i_begin = $i;
     my $package = undef;
 
@@ -7984,10 +7980,6 @@ sub scan_id_do {
         $max_token_index
 
     ) = @_;
-
-    if ( DEVEL_MODE && ( my $count = @_ ) != ( my $expected_count = 8 ) ) {
-        $self->Fault("arg count $count expected to be $expected_count\n");
-    }
 
     use constant DEBUG_NSCAN => 0;
     my $type = EMPTY_STRING;
@@ -8872,10 +8864,6 @@ sub do_scan_package {
             $container_type
 
         ) = @_;
-
-        if ( DEVEL_MODE && ( my $count = @_ ) != ( my $expected_count = 8 ) ) {
-            $self->Fault("arg count $count expected to be $expected_count\n");
-        }
 
         # return flag telling caller to split the pretoken
         my $split_pretoken_flag;
@@ -10122,10 +10110,6 @@ sub find_here_doc {
 
     ) = @_;
 
-    if ( DEVEL_MODE && ( my $count = @_ ) != ( my $expected_count = 7 ) ) {
-        $self->Fault("arg count $count expected to be $expected_count\n");
-    }
-
     my $ibeg                 = $i;
     my $found_target         = 0;
     my $here_doc_target      = EMPTY_STRING;
@@ -10269,10 +10253,6 @@ sub do_quote {
 
     ) = @_;
 
-    if ( DEVEL_MODE && ( my $count = @_ ) != ( my $expected_count = 12 ) ) {
-        $self->Fault("arg count $count expected to be $expected_count\n");
-    }
-
     my $quoted_string;
     if ( $in_quote == 2 ) {    # two quotes/quoted_string_1s to follow
         my $ibeg = $i;
@@ -10388,10 +10368,6 @@ sub follow_quoted_string {
         $max_token_index,
 
     ) = @_;
-
-    if ( DEVEL_MODE && ( my $count = @_ ) != ( my $expected_count = 9 ) ) {
-        $self->Fault("arg count $count expected to be $expected_count\n");
-    }
 
     my ( $tok, $end_tok );
     my $i             = $i_beg - 1;
