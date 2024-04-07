@@ -863,9 +863,9 @@ EOM
             'interbracket-arrow-style' =>
               [ ']{', ']->{', '][', ']->[', '}[', '}->[', '}{', '}->{' ],
 
-            'warn-variable-types'              => [ '0', '1' ],
-            'warn-mismatched-arg-types'        => [ '0', '1' ],
-            'warn-mismatched-arg-count-cutoff' => [ 0,   5 ],
+            'warn-variable-types'                   => [ '0', '1' ],
+            'warn-mismatched-arg-types'             => [ '0', '1' ],
+            'warn-mismatched-arg-undercount-cutoff' => [ 0,   5 ],
 
             'space-backslash-quote'         => [ 0, 2 ],
             'block-brace-tightness'         => [ 0, 2 ],
