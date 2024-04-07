@@ -27105,7 +27105,10 @@ EOM
             # must be closing .. fixes c102
             elsif ( $depth == $current_depth - 1 && $is_closing_type{$type} ) {
 
-                $self->break_lists_decreasing_depth();
+                # Note that $rbond_strength_bias will not get changed by this
+                # call. It gets changed in the call to set_comma_breakpoints
+                # at the end of this routine for commas not in lists.
+                $self->break_lists_decreasing_depth($rbond_strength_bias);
 
                 $comma_follows_last_closing_token =
                   $next_nonblank_type eq ',' || $next_nonblank_type eq '=>';
@@ -27679,6 +27682,10 @@ EOM
         # - breaks at opening and closing containers if needed by selected
         #   formatting styles
         # These breaks are made by calling sub 'set_forced_breakpoint'
+
+        # Note that $rbond_strength_bias is passed to sub
+        # set_comma_breakpoints, but it will not be changed.  It only gets
+        # changed by later calls for incomplete lists.
 
         $self->check_for_new_minimum_depth( $depth, $parent_seqno_to_go[$i] )
           if ( $depth < $minimum_depth );
