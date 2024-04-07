@@ -476,7 +476,8 @@ sub make_abbreviated_names {
     my ( $class, $rexpansion ) = @_;
 
     # abbreviations for color/bold/italic properties
-    while ( my ( $short_name, $long_name ) = each %short_to_long_names ) {
+    foreach my $short_name ( keys %short_to_long_names ) {
+        my $long_name = $short_to_long_names{$short_name};
         ${$rexpansion}{"hc$short_name"}  = ["html-color-$long_name"];
         ${$rexpansion}{"hb$short_name"}  = ["html-bold-$long_name"];
         ${$rexpansion}{"hi$short_name"}  = ["html-italic-$long_name"];
@@ -548,7 +549,8 @@ sub check_options {
     # setup property lookup tables for tokens based on their short names
     # every token type has a short name, and will use these tables
     # to do the html markup
-    while ( my ( $short_name, $long_name ) = each %short_to_long_names ) {
+    foreach my $short_name ( keys %short_to_long_names ) {
+        my $long_name = $short_to_long_names{$short_name};
         $html_color{$short_name}  = $rOpts->{"html-color-$long_name"};
         $html_bold{$short_name}   = $rOpts->{"html-bold-$long_name"};
         $html_italic{$short_name} = $rOpts->{"html-italic-$long_name"};
