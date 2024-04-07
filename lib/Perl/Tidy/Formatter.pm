@@ -12522,8 +12522,6 @@ sub store_new_token {
         # Be Careful: we are working on the top of the new stack, on a token
         # which has been stored.
 
-        my $rcopy = copy_token_as_type( $rLL_new->[$Ktop], 'b', SPACE );
-
         $rLL_new->[$Ktop]->[_TOKEN_]        = $token;
         $rLL_new->[$Ktop]->[_TOKEN_LENGTH_] = length($token);
         $rLL_new->[$Ktop]->[_TYPE_]         = $type;
@@ -12539,9 +12537,6 @@ sub store_new_token {
                 $self->[_rtype_count_by_seqno_]->{$seqno}->{$type}++;
             }
         }
-
-        # Then store a new blank
-        ## $self->store_token($rcopy);
     }
     else {
 
@@ -13124,7 +13119,6 @@ sub package_info_maker {
     #  which are two lists with useful information on all packages
 
     my $rLL                 = $self->[_rLL_];
-    my $rlines              = $self->[_rlines_];
     my $K_closing_container = $self->[_K_closing_container_];
     my $Klimit              = @{$rLL} - 1;
 
@@ -13843,10 +13837,7 @@ sub sub_def_info_maker {
 
     my ( $self, $rpackage_lookup_list ) = @_;
 
-    my $rK_sub_by_seqno     = $self->[_rK_sub_by_seqno_];
-    my $ris_my_sub_by_seqno = $self->[_ris_my_sub_by_seqno_];
-    my $rsub_call_paren_info_by_seqno =
-      $self->[_rsub_call_paren_info_by_seqno_];
+    my $rK_sub_by_seqno = $self->[_rK_sub_by_seqno_];
 
     # Returns: \%sub_info_hash, which contains sub call info:
     #  $sub_info_hash->{$package::$name}->{
@@ -13864,11 +13855,8 @@ sub sub_def_info_maker {
 
     my $rLL                  = $self->[_rLL_];
     my $K_opening_container  = $self->[_K_opening_container_];
-    my $K_closing_container  = $self->[_K_closing_container_];
     my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
     my $ris_sub_block        = $self->[_ris_sub_block_];
-    my $rK_next_seqno_by_K   = $self->[_rK_next_seqno_by_K_];
-    my $rtype_count_by_seqno = $self->[_rtype_count_by_seqno_];
 
     my @package_stack = reverse( @{$rpackage_lookup_list} );
     my ( $current_package, $Kbegin, $Kend ) = @{ pop @package_stack };
@@ -13969,7 +13957,6 @@ sub update_sub_call_paren_info {
     my $rLL                  = $self->[_rLL_];
     my $K_opening_container  = $self->[_K_opening_container_];
     my $K_closing_container  = $self->[_K_closing_container_];
-    my $rK_next_seqno_by_K   = $self->[_rK_next_seqno_by_K_];
     my $rtype_count_by_seqno = $self->[_rtype_count_by_seqno_];
     my $rsub_call_paren_info_by_seqno =
       $self->[_rsub_call_paren_info_by_seqno_];
@@ -14121,9 +14108,7 @@ sub cross_check_call_args {
     $ris_mismatched_call_excluded_name->{AUTOLOAD} = 1;
     $ris_mismatched_call_excluded_name->{DESTROY}  = 1;
 
-    my $rLL                 = $self->[_rLL_];
     my $rK_package_list     = $self->[_rK_package_list_];
-    my $rK_sub_by_seqno     = $self->[_rK_sub_by_seqno_];
     my $ris_my_sub_by_seqno = $self->[_ris_my_sub_by_seqno_];
     my $rsub_call_paren_info_by_seqno =
       $self->[_rsub_call_paren_info_by_seqno_];
@@ -23407,7 +23392,7 @@ sub break_equals {
             my $ibeg_2 = $ri_beg->[$nn];
 
             # Define certain good joint tokens
-            my ( $itok, $itokp, $itokm );
+            my $itok;
             foreach my $itest ( $iend_1, $ibeg_2 ) {
                 my $type = $types_to_go[$itest];
                 if (   $is_math_op{$type}
@@ -31038,7 +31023,6 @@ EOM
     }
     my ( $ibeg, $iend );
     foreach my $n ( 0 .. $nmax ) {
-        my $ibeg_m = $ibeg;
         my $iend_m = $iend;
         $ibeg = $ri_first->[$n];
         $iend = $ri_last->[$n];
@@ -33512,7 +33496,7 @@ sub xlp_tweak {
                 && $levels_to_go[$ibeg] eq $levels_to_go[$iterm] )
             {
                 $container_name{'0'} =
-                  make_uncontained_comma_name( $iterm, $ibeg, $iend );
+                  make_uncontained_comma_name( $iterm, $ibeg );
             }
         }
 
@@ -33851,7 +33835,7 @@ sub xlp_tweak {
     } ## end sub make_alignment_patterns
 
     sub make_uncontained_comma_name {
-        my ( $iterm, $ibeg, $iend ) = @_;
+        my ( $iterm, $ibeg ) = @_;
 
         # Make a container name by combining all leading barewords,
         # keywords and functions.
@@ -36352,7 +36336,6 @@ sub wrapup {
 
     my $first_tabbing_disagreement = $self->[_first_tabbing_disagreement_];
     my $last_tabbing_disagreement  = $self->[_last_tabbing_disagreement_];
-    my $tabbing_disagreement_count = $self->[_tabbing_disagreement_count_];
     my $in_tabbing_disagreement    = $self->[_in_tabbing_disagreement_];
 
     if ($first_tabbing_disagreement) {

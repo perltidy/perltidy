@@ -6373,8 +6373,7 @@ sub get_output_line_number {
         my $level_end                 = $rinput->{level_end};
         my $maximum_line_length       = $rinput->{maximum_line_length};
 
-        my ( $open_or_close, $opening_flag, $closing_flag, $seqno, $valid,
-            $seqno_beg, $seqno_end );
+        my ( $open_or_close, $seqno_beg );
         if ($rvertical_tightness_flags) {
 
             $open_or_close = $rvertical_tightness_flags->{_vt_type};

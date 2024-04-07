@@ -7991,7 +7991,7 @@ sub scan_id_do {
 
     use constant DEBUG_NSCAN => 0;
     my $type = EMPTY_STRING;
-    my ( $i_beg, $pos_beg );
+    my $i_beg;
 
     #print "NSCAN:entering i=$i, tok=$tok, type=$type, state=$id_scan_state\n";
     #my ($a,$b,$c) = caller;

@@ -428,10 +428,11 @@ BEGIN {
 
 sub make_getopt_long_names {
     my ( $class, $rgetopt_names ) = @_;
-    while ( my ( $short_name, $name ) = each %short_to_long_names ) {
-        push @{$rgetopt_names}, "html-color-$name=s";
-        push @{$rgetopt_names}, "html-italic-$name!";
-        push @{$rgetopt_names}, "html-bold-$name!";
+    foreach my $short_name ( keys %short_to_long_names ) {
+        my $long_name = $short_to_long_names{$short_name};
+        push @{$rgetopt_names}, "html-color-$long_name=s";
+        push @{$rgetopt_names}, "html-italic-$long_name!";
+        push @{$rgetopt_names}, "html-bold-$long_name!";
     }
     push @{$rgetopt_names}, "html-color-background=s";
     push @{$rgetopt_names}, "html-linked-style-sheet=s";
@@ -688,7 +689,6 @@ sub pod_to_html {
     # return 1 if success, 0 otherwise
     my ( $self, $pod_string, $css_string, $toc_string, $rpre_string_stack ) =
       @_;
-    my $input_file   = $self->{_input_file};
     my $title        = $self->{_title};
     my $success_flag = 0;
 
@@ -990,7 +990,6 @@ sub make_frame {
     #  $html_filename contains the no-frames html output
     #  $rtoc is a reference to an array with the table of contents
     my ( $self, $rtoc ) = @_;
-    my $input_file    = $self->{_input_file};
     my $html_filename = $self->{_html_file};
     my $toc_filename  = $self->{_toc_filename};
     my $src_filename  = $self->{_src_filename};

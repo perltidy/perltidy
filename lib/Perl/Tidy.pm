@@ -3350,7 +3350,6 @@ sub generate_options {
     my %expansion       = ();
     my %option_category = ();
     my %option_range    = ();
-    my $rexpansion      = \%expansion;
     my %integer_option_range;
 
     # names of categories in manual
