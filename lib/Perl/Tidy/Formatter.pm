@@ -9987,7 +9987,6 @@ sub interbracket_arrow_check {
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
     my $K_opening_container = $self->[_K_opening_container_];
-    my $K_closing_container = $self->[_K_closing_container_];
 
     my @lno_del;
     my @lno_add;

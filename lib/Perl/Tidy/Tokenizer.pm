@@ -5456,8 +5456,6 @@ EOM
         $indent_flag     = 0;
         $peeked_ahead    = 0;
 
-        my $starting_level_in_tokenizer = $level_in_tokenizer;
-
         $self->tokenizer_main_loop();
 
         #-------------------------------------------------
