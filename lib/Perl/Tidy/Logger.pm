@@ -377,7 +377,7 @@ sub warning {
     # Report errors to .ERR file (or stdout)
     # Given:
     #    $msg             = a string with the warning message
-    #    $msg_line_number = optional line number to display
+    #    $msg_line_number = optional line number prefix
 
     use constant WARNING_LIMIT => 50;
 
