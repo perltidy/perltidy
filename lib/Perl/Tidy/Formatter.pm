@@ -13433,6 +13433,11 @@ sub count_list_args {
             $arg_count++;
         }
 
+        # an '=' in a signature indicates an optional arg
+        elsif ( $type eq '=' ) {
+            return if ($is_signature);
+        }
+
         # check for a paren-less call
         elsif ( $is_kwU{$type} ) {
 
