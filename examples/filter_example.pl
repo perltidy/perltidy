@@ -1,12 +1,15 @@
 #!/usr/bin/perl -w
 use Perl::Tidy;
 
-# Illustrate use of prefilter and postfilter parameters to perltidy.  
+# Illustrate use of prefilter and postfilter parameters to perltidy.
 # This example program uses a prefilter it to convert the 'method'
 # keyword to 'sub', and a postfilter to convert back, so that perltidy will
-# work for Method::Signature::Simple code.  
-# NOTE: This program illustrates the use of filters but has not been
-# extensively tested.  
+# work for Method::Signature::Simple code.
+
+# NOTE:
+# In the current version of perltidy this can be accomplished simply
+# by using --sub-alias-list=method.  However, this remains a good example
+# of the use of prefilters and postfilters.
 
 # usage:
 #   perl filter_example.pl filter_example.in
@@ -17,10 +20,10 @@ use Perl::Tidy;
 # 2. Then perltidy formats the code
 # 3. Then the postfilter changes 'sub METHOD_' to 'method ' everywhere.
 # (This assumes that there are no methods named METHOD_*, and that the keyword
-# method always begins a line in the input file).  
+# method always begins a line in the input file).
 #
-# Debugging hints: 
-# 1. Try commenting out the postfilter and running with 
+# Debugging hints:
+# 1. Try commenting out the postfilter and running with
 # the --notidy option to see what the prefilter alone is doing.
 # 2. Then run with both pre- and post ters with --notidy to be sure
 # that the postfilter properly undoes the prefilter.
@@ -49,9 +52,9 @@ use Method::Signatures::Simple;
     }
 
     # attributes
-    method foo : lvalue { $self->{foo} 
+    method foo : lvalue { $self->{foo}
 }
 
  # change invocant name
-    method 
+    method
 foo ($class: $bar) { $class->bar($bar) }
