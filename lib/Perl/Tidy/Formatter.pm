@@ -6556,13 +6556,6 @@ Something may be wrong; formatting will be skipped.
 EOM
     }
 
-    # Dump any requested block summary data
-    if ( $rOpts->{'dump-block-summary'} ) {
-        if ($severe_error) { Exit(1) }
-        $self->dump_block_summary();
-        Exit(0);
-    }
-
     #----------------------------------------------------------------
     # Output file verbatim if severe error or no formatting requested
     #----------------------------------------------------------------
@@ -6609,6 +6602,12 @@ EOM
         $self->set_ci();
 
         $self->find_multiline_qw($rqw_lines);
+    }
+
+    # Dump any requested block summary data
+    if ( $rOpts->{'dump-block-summary'} ) {
+        $self->dump_block_summary();
+        Exit(0);
     }
 
     # Dump variable usage info if requested
