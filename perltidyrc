@@ -16,8 +16,8 @@
 --warn-variable-types='*'
 
 # warn if call arg counts differ from sub definitions
-# (requires version > 20240202.03)
---warn-mismatched-arg-types='*'
+# (requires version > 20240202.04)
+--warn-mismatched-args
 
 # user-defined subs must have args in parens
 --want-call-parens='&'
