@@ -6097,7 +6097,7 @@ so it is worth checking.
 
 =back
 
-B<Some Limitations:>
+B<Some Current Limitations:>
 
 =over 4
 
@@ -6105,28 +6105,42 @@ B<Some Limitations:>
 The only subs which these checks are made are those for which the call args are unpacked in an orderly manner at the beginning of the sub from C<@_>, directly and/or with C<shift> operations.
 
 =item *
-Subs which appear to have no args are not checked. This is necessary to avoid false warnings when a sub actually uses args in a complex way.
+Subs which appear to have no args are not checked. This restriction is
+currently necessary to avoid false warnings when a sub actually uses args in a
+complex way.
 
 =item *
-Only calls which appear to be to subs defined within the file are checked.
+Only calls which appear to be to subs defined within the file being
+processed are checked. The file may contain any number of packages.
 
 =item *
 Sub calls made without parentheses around the args are not checked.
 
 =item *
-Anonymous subs and lexical subs (introduced with 'my') are not currently
+Anonymous subs and lexical subs (introduced with C<my>) are not currently
 checked.
 
 =back
 
-=item B<Use --warn-mismatched-arg-types=s to produce a warning for function calls with args not matching sub declarations>
+Some of these restrictions may be removed in the future.
 
-The parameter B<--warn-mismatched-arg-types=s>, or B<-wmat=s>, can be used to
-produce a warning message when perltidy formats a file and certain of the above
-mismatchs is detected during formatting.  Both checks may be requested with
-B<-wmat='*'> or B<-wmat=1>.
+=item B<Use --warn-mismatched-args to produce a warning for function calls with
+args not matching sub declarations>.
 
-The default is not to do any of these checks, which can also be indicated with B<-wmat=0>.
+This is similar to the B<-dump> parameter described above
+except that any mismatches are reported in the error file and
+otherwise formatting continues normally.  Thus
+
+    perltidy -wma somefile.pl
+
+means format F<somefile.pl> and report any mismatched arg errors found.
+Several companion controls are available to avoid unwanted error messages:
+
+=over 4
+
+=item *
+B<--warn-mismatched-arg-types=s>, or B<-wmat=s>, can be used to
+select specific tests, either type B<a> (arrow test) or B<c> (mismatched counts). Both checks may be requested with B<-wmat='*'> or B<-wmat=1>. This is the default.
 
 To restrict the check to a specific warning type, set the string equal to the letter of that warning, either B<a> or B<c>.  For example
 
@@ -6135,11 +6149,14 @@ To restrict the check to a specific warning type, set the string equal to the le
 will format F<somefile.pl> and report any call arg count mismatches found but
 will skip checking for arrow-type mismatches.
 
-A companion control parameter B<--warn-mismatched-arg-exclusion-list>, or
-B<-wmaxl=string>, can be given to skip the warning checks for a list of
-subroutine names.
+=item *
+B<--warn-mismatched-arg-exclusion-list>, or B<-wmaxl=string>, can be given to
+skip the warning checks for a list of subroutine names, entered as a quoted
+string of space- or comma-separated names. All subs with those names will be
+skipped, regardless of package.
 
-Another control parameter B<--warn-mismatched-arg-undercount-cutoff=n>, or
+=item *
+B<--warn-mismatched-arg-undercount-cutoff=n>, or
 B<-wmauc=n>, can be used to avoid undercount warnings when the number of
 args expected is B<n> or less.  Please note that this number B<n> is the number
 of args from the point of view of the sub definition, so an object like
@@ -6147,18 +6164,21 @@ C<$self> passed with an arrow operator counts as one arg.
 
 The default value is B<n=4>. This has been found to allow most programs to pass
 without warnings, but it should be reduced if possible for better error
-checking.  The minimum possible value of B<n> for a program can be determined
-by running with -wmauc=0, or by running the -dump version. The output shows,
-for each mismatch, the number of args expected by a sub plus the range of the
-number of args actually passed to it.
+checking.  The minimum possible value of B<n> needed to avoid triggering an
+error for a program can be determined by running with B<-wmauc=0>, or by
+running with B<--dump-mismatched-args>. The output shows, for each mismatch,
+the number of args expected by a sub plus the range of the number of args
+actually passed to it.
 
-For example
+To illustrate these controls,
 
-   perltidy -wmat='*' -wmaxl='new' -wmauc=2 somefile.pl
+   perltidy -wma -wmat='c' -wmaxl='new old' -wmauc=2 somefile.pl
 
-means format F<somefile.pl> as usual and check for all mismatch types. But skip
-checking for any sub named C<new>, and only warn of undercounts for subs
-expecting more than 2 args.
+means format F<somefile.pl> as usual and check for mismatched counts but not
+arrows. Skip checking for any sub named C<new> or C<old>, and only warn of
+undercounts for subs expecting more than 2 args.
+
+=back
 
 =back
 
@@ -6471,21 +6491,21 @@ The following list shows all short parameter names which allow a prefix
  aws    b      baa    baao   bar    bbao   bbb    bbc    bbs    bl
  bli    boa    boc    bok    bol    bom    bos    bot    cblx   ce
  conv   cpb    cs     csc    cscb   cscw   dac    dbc    dbs    dcbl
- dcsc   ddf    dia    dior   dln    dmcp   dnl    dop    dp     dpro
- drc    dsc    dsm    dsn    dtc    dtt    duv    dwic   dwls   dwrs
- dws    eos    f      fpva   frm    fs     fso    gcs    hbc    hbcm
- hbco   hbh    hbhh   hbi    hbj    hbk    hbm    hbn    hbp    hbpd
- hbpu   hbq    hbs    hbsc   hbv    hbw    hent   hic    hicm   hico
- hih    hihh   hii    hij    hik    him    hin    hip    hipd   hipu
- hiq    his    hisc   hiv    hiw    hsc    html   ibc    icb    icp
- iob    ipc    isbc   iscl   kgb    kgbd   kgbi   kis    lal    log
- lop    lp     lsl    mem    nib    ohbr   okw    ola    olc    oll
- olq    opr    opt    osbc   osbr   otr    ple    pod    pvl    q
- sac    sbc    sbl    scbb   schb   scp    scsb   sct    se     sfp
- sfs    skp    sob    sobb   sohb   sop    sosb   sot    ssc    st
- sts    t      tac    tbc    toc    tp     tqw    trp    ts     tsc
- tso    vbc    vc     viu    vmll   vsc    vsn    w      wfc    wia
- wme    wn     x      xbt    xci    xlp    xs
+ dcsc   ddf    dia    dior   dln    dma    dmcp   dnl    dop    dp
+ dpro   drc    dsc    dsm    dsn    dtc    dtt    duv    dwic   dwls
+ dwrs   dws    eos    f      fpva   frm    fs     fso    gcs    hbc
+ hbcm   hbco   hbh    hbhh   hbi    hbj    hbk    hbm    hbn    hbp
+ hbpd   hbpu   hbq    hbs    hbsc   hbv    hbw    hent   hic    hicm
+ hico   hih    hihh   hii    hij    hik    him    hin    hip    hipd
+ hipu   hiq    his    hisc   hiv    hiw    hsc    html   ibc    icb
+ icp    iob    ipc    isbc   iscl   kgb    kgbd   kgbi   kis    lal
+ log    lop    lp     lsl    mem    nib    ohbr   okw    ola    olc
+ oll    olq    opr    opt    osbc   osbr   otr    ple    pod    pvl
+ q      sac    sbc    sbl    scbb   schb   scp    scsb   sct    se
+ sfp    sfs    skp    sob    sobb   sohb   sop    sosb   sot    ssc
+ st     sts    t      tac    tbc    toc    tp     tqw    trp    ts
+ tsc    tso    vbc    vc     viu    vmll   vsc    vsn    vwe    w
+ wfc    wia    wma    wme    wn     x      xbt    xci    xlp    xs
 
 Equivalently, the prefix 'no' or 'no-' on the corresponding long names may be
 used.

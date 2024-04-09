@@ -389,7 +389,7 @@ my (
     %warn_variable_types,
     %is_warn_variable_excluded_name,
 
-    # INITIALIZER: sub initialize_warn_mismatched_arg_types
+    # INITIALIZER: sub initialize_warn_mismatched_args
     %warn_mismatched_arg_types,
     %is_warn_mismatched_arg_excluded_name,
 
@@ -1014,7 +1014,7 @@ sub new {
     $self->[_ris_asub_block_]          = {};
     $self->[_ris_sub_block_]           = {};
 
-    # Variables for --warn-mismatched-arg-types and
+    # Variables for --warn-mismatched-args and
     #               --dump-mismatched-args
     $self->[_rK_package_list_]               = [];
     $self->[_rsub_call_paren_info_by_seqno_] = {};
@@ -1472,7 +1472,7 @@ sub check_options {
 
     initialize_warn_variable_types();
 
-    initialize_warn_mismatched_arg_types();
+    initialize_warn_mismatched_args();
 
     make_bli_pattern();
 
@@ -1489,6 +1489,21 @@ sub check_options {
     if ( $rOpts->{'dump-cuddled-block-list'} ) {
         dump_cuddled_block_list(*STDOUT);
         Exit(0);
+    }
+
+    # --indent-only skips the call to sub respace_tokens, which defines
+    # some essential data structures needed by some dump routines,
+    # or might be in the future. Since there is an immediate exit after a
+    # dump, we can turn off indent-only to get these structures for a -dump.
+    if ( $rOpts->{'indent-only'} ) {
+
+        if ( $rOpts->{'dump-mismatched-args'} ) {
+            $rOpts->{'indent-only'} = 0;
+        }
+
+        if ( $rOpts->{'dump-block-summary'} ) {
+            $rOpts->{'indent-only'} = 0;
+        }
     }
 
     initialize_line_up_parentheses();
@@ -6609,7 +6624,7 @@ EOM
         && $self->[_logger_object_] );
 
     $self->warn_mismatched_args()
-      if ( $rOpts->{'warn-mismatched-arg-types'}
+      if ( $rOpts->{'warn-mismatched-args'}
         && $self->[_logger_object_] );
 
     if ( $rOpts->{'dump-mismatched-args'} ) {
@@ -14086,7 +14101,7 @@ sub cross_check_call_args {
     my ( $self, $warn_mode ) = @_;
 
     # Input parameter:
-    #  $warn_mode = true  for --warn-mismatched-arg-types
+    #  $warn_mode = true  for --warn-mismatched-args
     #  $warn_mode = false for --dump-mismatched-args
 
     # The current possible checks are indicated by these letters:
@@ -14412,23 +14427,15 @@ sub stringify_line_range {
     return $string;
 } ## end sub stringify_line_range
 
-sub initialize_warn_mismatched_arg_types {
+sub initialize_warn_mismatched_args {
 
     # Initialization for:
-    #    --dump-mismatched-args
-    #    --warn-mismatched-arg-types=s and
+    #    --warn-mismatched-args
+    #    --warn-mismatched-arg-types=s
     #    --warn-mismatched-arg-exclusion-list=s
     %warn_mismatched_arg_types            = ();
     %is_warn_mismatched_arg_excluded_name = ();
-
-    # The --dump-mismatched-args needs data structures which are not
-    # available with -io. Since it causes immediate exit without formatting,
-    # we can turn off --indent-only to allow it to work.
-    if ( $rOpts->{'dump-mismatched-args'} ) {
-        if ( $rOpts->{'indent-only'} ) {
-            $rOpts->{'indent-only'} = 0;
-        }
-    }
+    return unless $rOpts->{'warn-mismatched-args'};
 
     # Note: coding here is similar to sub initialize_warn_variable_types
 
@@ -14437,12 +14444,13 @@ sub initialize_warn_mismatched_arg_types {
     #-----------------------------------
     my $wmat_key    = 'warn-mismatched-arg-types';
     my $wmat_option = $rOpts->{$wmat_key};
-    return unless ($wmat_option);
+    $wmat_option = '1' unless defined($wmat_option);
 
     # The -indent-only option skips production of data structures needed by
     # the --warn-mismatched-args
     if ( $rOpts->{'indent-only'} ) {
-        Warn("Note: '--$wmat_key' is ignored if '--indent-only' is set\n");
+        my $wma_key = 'warn-mismatched-args';
+        Warn("Note: '--$wma_key' is ignored if '--indent-only' is set\n");
         return;
     }
 
@@ -14525,24 +14533,23 @@ sub initialize_warn_mismatched_arg_types {
         @is_warn_mismatched_arg_excluded_name{@xl} = (1) x scalar(@xl);
     }
     return;
-} ## end sub initialize_warn_mismatched_arg_types
+} ## end sub initialize_warn_mismatched_args
 
 sub warn_mismatched_args {
     my ($self) = @_;
 
-    # process a --warn-mismatched-arg-types command
+    # process a --warn-mismatched-args command
 
     # additional control parameters are:
-    # - mismatched-arg-exclusion-list
+    # - warn-mismatched-arg-types
+    # - warn-mismatched-arg-exclusion-list
     # - warn-mismatched-arg-undercount-cutoff
-
-    my $wma_key    = 'warn-mismatched-arg-types';
-    my $wma_option = $rOpts->{$wma_key};
 
     my $rwarnings = $self->cross_check_call_args(1);
     return unless ( $rwarnings && @{$rwarnings} );
 
-    my $output_string = "Begin scan for --$wma_key=$wma_option\n";
+    my $wma_key       = 'warn-mismatched-args';
+    my $output_string = "Begin scan for --$wma_key\n";
     $output_string .= <<EOM;
 Line:Mismatch:Name:#args:Min:Max: note
 EOM
@@ -14559,7 +14566,7 @@ EOM
         $output_string .=
 "$lno:$letter:$name:$shift_count:$min_arg_count:$max_arg_count: $note\n";
     }
-    $output_string .= "End scan for --$wma_key=$wma_option:\n";
+    $output_string .= "End scan for --$wma_key\n";
     warning($output_string);
 
     return;
