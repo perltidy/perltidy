@@ -632,10 +632,11 @@ BEGIN {
         _rwant_arrow_before_seqno_    => $i++,
 
         # these vars are defined after call to respace tokens:
-        _rK_package_list_               => $i++,
-        _rK_sub_by_seqno_               => $i++,
-        _ris_my_sub_by_seqno_           => $i++,
-        _rsub_call_paren_info_by_seqno_ => $i++,
+        _rK_package_list_                => $i++,
+        _rK_sub_by_seqno_                => $i++,
+        _ris_my_sub_by_seqno_            => $i++,
+        _rsub_call_paren_info_by_seqno_  => $i++,
+        _runderscore_array_ref_by_seqno_ => $i++,
 
         _LAST_SELF_INDEX_ => $i - 1,
     };
@@ -1016,10 +1017,11 @@ sub new {
 
     # Variables for --warn-mismatched-args and
     #               --dump-mismatched-args
-    $self->[_rK_package_list_]               = [];
-    $self->[_rsub_call_paren_info_by_seqno_] = {};
-    $self->[_rK_sub_by_seqno_]               = {};
-    $self->[_ris_my_sub_by_seqno_]           = {};
+    $self->[_rK_package_list_]                = [];
+    $self->[_rsub_call_paren_info_by_seqno_]  = {};
+    $self->[_runderscore_array_ref_by_seqno_] = {};
+    $self->[_rK_sub_by_seqno_]                = {};
+    $self->[_ris_my_sub_by_seqno_]            = {};
 
     # Mostly list characteristics and processing flags
     $self->[_rtype_count_by_seqno_]      = {};
@@ -10425,6 +10427,7 @@ my $rK_package_list;
 
 # info about list of sub call args
 my $rsub_call_paren_info_by_seqno;
+my $runderscore_array_ref_by_seqno;
 
 # index K of the preceding 'S' token for a sub
 my $rK_sub_by_seqno;
@@ -10463,10 +10466,11 @@ sub initialize_respace_tokens_closure {
     $rwant_arrow_before_seqno  = $self->[_rwant_arrow_before_seqno_];
     $ris_sub_block             = $self->[_ris_sub_block_];
 
-    $rK_package_list               = $self->[_rK_package_list_];
-    $rsub_call_paren_info_by_seqno = $self->[_rsub_call_paren_info_by_seqno_];
-    $rK_sub_by_seqno               = $self->[_rK_sub_by_seqno_];
-    $ris_my_sub_by_seqno           = $self->[_ris_my_sub_by_seqno_];
+    $rK_package_list                = $self->[_rK_package_list_];
+    $rsub_call_paren_info_by_seqno  = $self->[_rsub_call_paren_info_by_seqno_];
+    $runderscore_array_ref_by_seqno = $self->[_runderscore_array_ref_by_seqno_];
+    $rK_sub_by_seqno                = $self->[_rK_sub_by_seqno_];
+    $ris_my_sub_by_seqno            = $self->[_ris_my_sub_by_seqno_];
 
     %K_first_here_doc_by_seqno = ();
 
@@ -10893,6 +10897,13 @@ sub respace_tokens_inner_loop {
                     $rK_sub_by_seqno->{$type_sequence} = $K_last_S;
                     if ($K_last_S_is_my) {
                         $ris_my_sub_by_seqno->{$type_sequence} = 1;
+                    }
+                }
+
+                # Look for '$_[' for mismatched arg checks
+                elsif ( $token eq '[' ) {
+                    if ( $last_nonblank_code_token eq '$_' ) {
+                        $runderscore_array_ref_by_seqno->{$type_sequence} = 1;
                     }
                 }
                 else {
@@ -12870,18 +12881,21 @@ sub parent_seqno_by_K {
 sub parent_sub_seqno {
     my ( $self, $seqno_paren ) = @_;
 
-    # Find sequence number of the sub which contains a given sequenced item
+    # Find sequence number of the sub or asub which contains a given sequenced
+    # item
 
     # Given:
     #  $seqno_paren = sequence number of a token within the sub
     # Returns:
-    #  $seqno of the sub, or
+    #  $seqno of the sub (or asub), or
     #  nothing if no sub found
     return unless defined($seqno_paren);
     my $parent_seqno = $seqno_paren;
     while ( $parent_seqno = $self->[_rparent_of_seqno_]->{$parent_seqno} ) {
         last if ( $parent_seqno == SEQ_ROOT );
-        if ( $self->[_ris_sub_block_]->{$parent_seqno} ) {
+        if (   $self->[_ris_sub_block_]->{$parent_seqno}
+            || $self->[_ris_asub_block_]->{$parent_seqno} )
+        {
             return $parent_seqno;
         }
     }
@@ -13855,8 +13869,6 @@ sub sub_def_info_maker {
 
     my ( $self, $rpackage_lookup_list ) = @_;
 
-    my $rK_sub_by_seqno = $self->[_rK_sub_by_seqno_];
-
     # Returns: \%sub_info_hash, which contains sub call info:
     #  $sub_info_hash->{$package::$name}->{
     #      seqno        => $seqno,
@@ -13869,12 +13881,26 @@ sub sub_def_info_maker {
     #      self_name    => name of first arg
     #  }
 
-    # TODO: set package to be parent seqno for my sub
+    # TODO: set package to be parent seqno for 'my' sub
 
     my $rLL                  = $self->[_rLL_];
     my $K_opening_container  = $self->[_K_opening_container_];
     my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
     my $ris_sub_block        = $self->[_ris_sub_block_];
+    my $rK_sub_by_seqno      = $self->[_rK_sub_by_seqno_];
+    my $runderscore_array_ref_by_seqno =
+      $self->[_runderscore_array_ref_by_seqno_];
+
+    # Find subs with '$_['; their arg count is considered indefinite
+    my $runderscore_array_ref_by_sub_seqno = {};
+    foreach my $seqno ( keys %{$runderscore_array_ref_by_seqno} ) {
+
+        # Find the sub or asub which contains this $_[
+        my $seqno_sub = $self->parent_sub_seqno($seqno);
+        if ($seqno_sub) {
+            push @{ $runderscore_array_ref_by_sub_seqno->{$seqno_sub} }, $seqno;
+        }
+    }
 
     my @package_stack = reverse( @{$rpackage_lookup_list} );
     my ( $current_package, $Kbegin, $Kend ) = @{ pop @package_stack };
@@ -13951,8 +13977,11 @@ EOM
             line_number => $lno,
         };
 
-        # Get arg count info
-        $self->count_sub_args($item);
+        # Get arg count info if no '$_[' seen in this sub;
+        # otherwise arg count is considered indefinite.
+        if ( !defined( $runderscore_array_ref_by_sub_seqno->{$seqno} ) ) {
+            $self->count_sub_args($item);
+        }
 
         # Store the sub info by sequence number
         $ris_sub_block->{$seqno} = $item;
@@ -14186,6 +14215,8 @@ sub cross_check_call_args {
         # Find the sub which contains this call
         my $seqno_sub = $self->parent_sub_seqno($seqno);
         if ($seqno_sub) {
+
+            # NOTE: calls within asubs are currently skipped
             my $item = $self->[_ris_sub_block_]->{$seqno_sub};
 
             # look for a first arg like '$self' which matches the
