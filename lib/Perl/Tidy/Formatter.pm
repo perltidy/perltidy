@@ -633,6 +633,7 @@ BEGIN {
 
         # these vars are defined after call to respace tokens:
         _rK_package_list_                => $i++,
+        _rK_at_underscore_list_          => $i++,
         _rK_sub_by_seqno_                => $i++,
         _ris_my_sub_by_seqno_            => $i++,
         _rsub_call_paren_info_by_seqno_  => $i++,
@@ -1018,6 +1019,7 @@ sub new {
     # Variables for --warn-mismatched-args and
     #               --dump-mismatched-args
     $self->[_rK_package_list_]                = [];
+    $self->[_rK_at_underscore_list_]          = [];
     $self->[_rsub_call_paren_info_by_seqno_]  = {};
     $self->[_runderscore_array_ref_by_seqno_] = {};
     $self->[_rK_sub_by_seqno_]                = {};
@@ -10425,6 +10427,9 @@ my $rwhitespace_flags;
 # new index K of package or class statements
 my $rK_package_list;
 
+# new index K of @_ tokens
+my $rK_at_underscore_list;
+
 # info about list of sub call args
 my $rsub_call_paren_info_by_seqno;
 my $runderscore_array_ref_by_seqno;
@@ -10467,6 +10472,7 @@ sub initialize_respace_tokens_closure {
     $ris_sub_block             = $self->[_ris_sub_block_];
 
     $rK_package_list                = $self->[_rK_package_list_];
+    $rK_at_underscore_list          = $self->[_rK_at_underscore_list_];
     $rsub_call_paren_info_by_seqno  = $self->[_rsub_call_paren_info_by_seqno_];
     $runderscore_array_ref_by_seqno = $self->[_runderscore_array_ref_by_seqno_];
     $rK_sub_by_seqno                = $self->[_rK_sub_by_seqno_];
@@ -11030,6 +11036,14 @@ sub respace_tokens_inner_loop {
                 # remember the new K of this package; this may be
                 # off by 1 if a blank gets inserted before it
                 push @{$rK_package_list}, scalar @{$rLL_new};
+            }
+            elsif ( $type eq 'i' ) {
+                if ( $token eq '@_' ) {
+
+                    # remember the new K of this @_; this may be
+                    # off by 1 if a blank gets inserted before it
+                    push @{$rK_at_underscore_list}, scalar @{$rLL_new};
+                }
             }
             else {
                 # Could be something like '* STDERR' or '$ debug'
@@ -13563,8 +13577,9 @@ sub count_sub_args {
     my ( $self, $item ) = @_;
 
     # Given: hash ref with
-    #   seqno => $seqno_block = sequence number of a sub block
-    #   K_sub => $K_sub = index of the corresponding keyword 'sub'
+    #   seqno  => $seqno_block = sequence number of a sub block
+    #   K_sub  => $K_sub = index of the corresponding keyword 'sub'
+    #   K_last_at_underscore  => optional: index K of last ref to @_
 
     # Updates hash ref with values for keys:
     #   shift_count  => absolute number of args
@@ -13573,8 +13588,16 @@ sub count_sub_args {
     #   is_signature => true if args are in a signature
     # But these keys are left undefined if they cannot be determined
 
-    my $seqno_block = $item->{seqno};
-    my $K_sub       = $item->{K_sub};
+    my $seqno_block          = $item->{seqno};
+    my $K_sub                = $item->{K_sub};
+    my $K_last_at_underscore = $item->{K_last_at_underscore};
+
+    # Note on '$K_last_at_underscore': if we exit with only seeing shifts,
+    # but a pre-scan saw @_ somewhere after the last K, then the count
+    # is dubious and we do a simple return
+    if ( !defined($K_last_at_underscore) ) { $K_last_at_underscore = 0 }
+
+    my $saw_pop_at_underscore;
 
     my $rLL             = $self->[_rLL_];
     my $K_opening_block = $self->[_K_opening_container_]->{$seqno_block};
@@ -13651,13 +13674,12 @@ sub count_sub_args {
     my $level_opening = $rLL->[$K_opening]->[_LEVEL_];
 
     # Count number of 'shift;' at the top level
-    my $shift_count          = 0;
-    my $self_name            = EMPTY_STRING;
-    my $semicolon_count      = 0;
-    my $deep_semicolon_count = 0;
-    my $dubious_if_shift_only;
+    my $shift_count                      = 0;
+    my $self_name                        = EMPTY_STRING;
+    my $semicolon_count_after_last_shift = 0;
 
-    foreach my $KK ( $K_opening + 1 .. $K_closing - 1 ) {
+    my $KK = $K_opening;
+    while ( ++$KK < $K_closing ) {
 
         my $type = $rLL->[$KK]->[_TYPE_];
         next if ( $type eq 'b' );
@@ -13777,15 +13799,18 @@ sub count_sub_args {
                 # If we get to the end without finding '(..) = @_;' then
                 # we will consider the count unreliable if we saw a 'pop'
                 # or if a previous block contained other statements.
-                $dubious_if_shift_only ||= $token eq 'pop';
-                $dubious_if_shift_only ||= $deep_semicolon_count;
+                $saw_pop_at_underscore ||= $token eq 'pop';
 
                 $shift_count++;
+                $semicolon_count_after_last_shift = 0;
 
-                # OLD:
-                # Do not count leading '$self = shift' or '$class = shift'
-                #                        |    |   |
-                #                    $K_mm  $K_m  $KK
+                # Skip past any parens and @_; let the semicolon be seen next
+                if ( $KK < $Kp - 1 ) { $KK = $Kp - 1 }
+
+                # Save self name:
+                #    '$self = shift'
+                #      |    |   |
+                #  $K_mm  $K_m  $KK
                 if ( $shift_count == 1 && !$self_name ) {
                     my $K_m = $self->K_previous_code($KK);
                     return unless ( defined($K_m) );
@@ -13801,6 +13826,23 @@ sub count_sub_args {
                     }
                 }
             }
+            elsif ( $is_if_unless{$token} ) {
+
+                # Give up and exit at 'if' or 'unless' if we have seen a few
+                # semicolons following the last 'shift'. The number '2' here
+                # has been found to work well.
+                if ( $semicolon_count_after_last_shift > 2 ) {
+                    if (  !$saw_pop_at_underscore
+                        && $KK >= $K_last_at_underscore )
+                    {
+                        $item->{shift_count} = $shift_count;
+                        $item->{self_name}   = $self_name;
+                    }
+                    return;
+                }
+            }
+            else {
+            }
         }
 
         # Check for a container boundary
@@ -13815,20 +13857,27 @@ sub count_sub_args {
                 if (   $self->[_ris_sub_block_]->{$seqno_test}
                     || $self->[_ris_asub_block_]->{$seqno_test} )
                 {
-                    $item->{shift_count} = $shift_count;
-                    $item->{self_name}   = $self_name;
+                    if (  !$saw_pop_at_underscore
+                        && $KK >= $K_last_at_underscore )
+                    {
+                        $item->{shift_count} = $shift_count;
+                        $item->{self_name}   = $self_name;
+                    }
                     return;
                 }
             }
         }
         elsif ( $type eq ';' ) {
-            $semicolon_count++;
-            my $level = $rLL->[$KK]->[_LEVEL_];
-            if ( $level > $level_opening + 1 ) { $deep_semicolon_count++ }
+            $semicolon_count_after_last_shift++;
         }
         elsif ( $type eq 'Q' ) {
 
             # TODO: look for @_ in an interpolated quote
+            # See coding for types 'Q' and 'h' in sub scan_variable_usage
+        }
+        elsif ( $type eq 'h' ) {
+
+            # TODO: look for @_ in an interpolated here doc
             # See coding for types 'Q' and 'h' in sub scan_variable_usage
         }
         else {
@@ -13853,14 +13902,12 @@ sub count_sub_args {
         }
     }
 
-    # Otherwise give up if uncertainty was noted above
-    else {
-        return if ($dubious_if_shift_only);
+    if (  !$saw_pop_at_underscore
+        && $KK >= $K_last_at_underscore )
+    {
+        $item->{shift_count} = $shift_count;
+        $item->{self_name}   = $self_name;
     }
-
-    # Looks ok
-    $item->{shift_count} = $shift_count;
-    $item->{self_name}   = $self_name;
     return;
 
 } ## end sub count_sub_args
@@ -13883,15 +13930,18 @@ sub sub_def_info_maker {
 
     # TODO: set package to be parent seqno for 'my' sub
 
-    my $rLL                  = $self->[_rLL_];
-    my $K_opening_container  = $self->[_K_opening_container_];
-    my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
-    my $ris_sub_block        = $self->[_ris_sub_block_];
-    my $rK_sub_by_seqno      = $self->[_rK_sub_by_seqno_];
+    my $rLL                   = $self->[_rLL_];
+    my $K_opening_container   = $self->[_K_opening_container_];
+    my $rblock_type_of_seqno  = $self->[_rblock_type_of_seqno_];
+    my $ris_sub_block         = $self->[_ris_sub_block_];
+    my $rK_sub_by_seqno       = $self->[_rK_sub_by_seqno_];
+    my $rK_at_underscore_list = $self->[_rK_at_underscore_list_];
     my $runderscore_array_ref_by_seqno =
       $self->[_runderscore_array_ref_by_seqno_];
 
+    #---------------------------------------------------------------
     # Find subs with '$_['; their arg count is considered indefinite
+    #---------------------------------------------------------------
     my $runderscore_array_ref_by_sub_seqno = {};
     foreach my $seqno ( keys %{$runderscore_array_ref_by_seqno} ) {
 
@@ -13902,6 +13952,31 @@ sub sub_def_info_maker {
         }
     }
 
+    #----------------------------------------------------------
+    # Find subs with @_; this is used to validate the arg count
+    #----------------------------------------------------------
+    my $rK_at_underscore_list_by_sub_seqno = {};
+    foreach my $KK ( @{$rK_at_underscore_list} ) {
+
+        # Find the sub or asub which contains this @_;
+        my $seqno_sub;
+        my $parent_seqno = $self->parent_seqno_by_K($KK);
+        if (   $self->[_ris_sub_block_]->{$parent_seqno}
+            || $self->[_ris_asub_block_]->{$parent_seqno} )
+        {
+            $seqno_sub = $parent_seqno;
+        }
+        else {
+            $seqno_sub = $self->parent_sub_seqno($parent_seqno);
+        }
+        if ($seqno_sub) {
+            push @{ $rK_at_underscore_list_by_sub_seqno->{$seqno_sub} }, $KK;
+        }
+    }
+
+    #----------------------------------
+    # Main loop over subs to count args
+    #----------------------------------
     my @package_stack = reverse( @{$rpackage_lookup_list} );
     my ( $current_package, $Kbegin, $Kend ) = @{ pop @package_stack };
     my %sub_info_hash;
@@ -13968,25 +14043,33 @@ EOM
         }
         $package = 'main' unless ($package);
 
+        # Find index '$K' of the last '@_' in this sub, if any
+        my $K_last_at_underscore = 0;
+        my $rKlist = $rK_at_underscore_list_by_sub_seqno->{$seqno};
+        if ( defined($rKlist) ) {
+            $K_last_at_underscore = $rKlist->[-1];
+        }
+
+        # Make a hash of info for this sub
         my $lno  = $rLL->[$Ko]->[_LINE_INDEX_] + 1;
         my $item = {
-            seqno       => $seqno,
-            K_sub       => $K_sub,
-            package     => $package,
-            name        => $name,
-            line_number => $lno,
+            seqno                => $seqno,
+            K_sub                => $K_sub,
+            package              => $package,
+            name                 => $name,
+            line_number          => $lno,
+            K_last_at_underscore => $K_last_at_underscore,
         };
 
-        # Get arg count info if no '$_[' seen in this sub;
-        # otherwise arg count is considered indefinite.
-        if ( !defined( $runderscore_array_ref_by_sub_seqno->{$seqno} ) ) {
+        # Count the args unless we saw '$_[...'
+        if ( !$runderscore_array_ref_by_sub_seqno->{$seqno} ) {
             $self->count_sub_args($item);
         }
 
         # Store the sub info by sequence number
         $ris_sub_block->{$seqno} = $item;
 
-        # and by package::name
+        # and also by package::name
         my $key = $package . '::' . $name;
         $sub_info_hash{$key} = $item;
     }
