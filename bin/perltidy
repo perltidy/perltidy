@@ -6097,32 +6097,32 @@ so it is worth checking.
 
 =back
 
-B<Some Current Limitations:>
+B<Some Limitations:>
 
 =over 4
 
 =item *
-The only subs which these checks are made are those for which the call args are unpacked in an orderly manner at the beginning of the sub from C<@_>, directly and/or with C<shift> operations.
+Checks are only made for subs which appear to unpack call args in an orderly
+manner at the beginning of the sub from C<@_>, directly and/or with C<shift>
+operations.
 
 =item *
 Subs which appear to have no args are not checked. This restriction is
-currently necessary to avoid false warnings when a sub actually uses args in a
+necessary to avoid false warnings when a sub actually uses args in a
 complex way.
 
 =item *
 Only calls which appear to be to subs defined within the file being
-processed are checked. The file may contain any number of packages.
+processed are checked.
 
 =item *
 Sub calls made without parentheses around the args are not checked.
 
 =item *
-Anonymous subs and lexical subs (introduced with C<my>) are not currently
-checked.
+Anonymous subs and lexical subs (introduced with C<my>) are not checked.
 
 =back
 
-Some of these restrictions may be removed in the future.
 
 =item B<Use --warn-mismatched-args to produce a warning for function calls with
 args not matching sub declarations>.
