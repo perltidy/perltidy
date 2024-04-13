@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2024 02 02.04
+## 2024 02 02.05
 
     - Add options --dump-mismatched-args (or -dma) and
       --warn-mismatched-arg (or -wma).  These options look
@@ -16,10 +16,13 @@
 
          perltidy -wma somefile.pl
 
-      It may be customized with three additional parameters if necessary to
-      avoid needless warnings, --warn-mismatched-arg-types=s,
-      --warn-mismatched-arg-exclusion-list=s and
-      --warn-mismatched-arg-undercount-cutoff=n.
+      The -warn version may be customized with three additional parameters if
+      necessary to avoid needless warnings:
+
+      --warn-mismatched-arg-types=s (or -wmat=s),
+      --warn-mismatched-arg-exclusion-list=s (or -wmaxl=s), and
+      --warn-mismatched-arg-undercount-cutoff=n (or -wmauc=n).
+
       These are explained in the manual.
 
     - Add option --valign-wide-equals, or -vwe, for issue git #135.
@@ -92,13 +95,11 @@
 
       It makes the following checks and changes:
       - Repeated commas like ',,' are removed with a warning
-      - Repeated fat commas like '=> =>' are removed with a
-        warning
+      - Repeated fat commas like '=> =>' are removed with a warning
       - The combination '=>,' produces a warning but is not changed
       These warnings are only output if --warning-output, or -w, is set.
 
-      This is now the DEFAULT Behavior.
-      Use --nodelete-repeated-commas, or -ndrc, to turn this option off.
+      Use --nodelete-repeated-commas, or -ndrc, to retain repeated commas.
 
     - Added control --delete-interbracket-arrows, or -dia, to delete optional
       hash ref and array ref arrows between brackets as in the following
@@ -115,7 +116,8 @@
         # perltidy -aia
         return $self->{'commandline'}->{'arg_list'}->[0]->[0]->{'hostgroups'};
 
-     The manual describes additional controls for selective adding and deleting.
+     The manual describes additional controls for adding and deleting
+     just selected interbracket arrows.
 
 ## 2024 02 02
 

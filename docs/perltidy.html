@@ -2942,7 +2942,7 @@
 <dt id="drc---delete-repeated-commas"><b>-drc</b>, <b>--delete-repeated-commas</b></dt>
 <dd>
 
-<p>Repeated commas in a list are undesirable and can be removed with this flag. For example, given this list with a repeated comma</p>
+<p>This option causes repeated commas to be removed. For example, given this list with a repeated comma</p>
 
 <pre><code>      ignoreSpec( $file, &quot;file&quot;,, \%spec, \%Rspec );</code></pre>
 
@@ -2972,7 +2972,7 @@
 </li>
 </ul>
 
-<p>This feature is on by default. Use <b>-ndrc</b> to turn it off.</p>
+<p>This option is on by default. Use <b>-ndrc</b> to turn it off.</p>
 
 </dd>
 <dt id="want-trailing-commas-s-or--wtc-s---add-trailing-commas-or--atc-and---delete-trailing-commas-or--dtc"><b>--want-trailing-commas=s</b> or <b>-wtc=s</b>, <b>--add-trailing-commas</b> or <b>-atc</b>, and <b>--delete-trailing-commas</b> or <b>-dtc</b></dt>
@@ -4791,30 +4791,36 @@
 
 <ul>
 
-<li><p>Only subs for which the call args are unpacked in an orderly manner at the beginning of the sub from <code>@_</code>, directly and/or with <code>shift</code> operations, are checked. Subs for which this does not appear to be the case are skipped.</p>
+<li><p>Checks are only made for subs which appear to unpack call args in an orderly manner at the beginning of the sub from <code>@_</code>, directly and/or with <code>shift</code> operations.</p>
 
 </li>
-<li><p>Subs which appear to have no args are not checked. This is necessary to avoid false warnings when a sub actually uses args in a complex way.</p>
+<li><p>Subs which appear to have no args are not checked. This restriction is necessary to avoid false warnings when a sub actually uses args in a complex way.</p>
 
 </li>
-<li><p>Only calls which appear to be to subs defined within the file are checked.</p>
+<li><p>Only calls which appear to be to subs defined within the file being processed are checked.</p>
 
 </li>
 <li><p>Sub calls made without parentheses around the args are not checked.</p>
 
 </li>
-<li><p>Anonymous subs and lexical subs (introduced with &#39;my&#39;) are not currently checked.</p>
+<li><p>Anonymous subs and lexical subs (introduced with <code>my</code>) are not checked.</p>
 
 </li>
 </ul>
 
 </dd>
-<dt id="Use---warn-mismatched-arg-types-s-to-produce-a-warning-for-function-calls-with-args-not-matching-sub-declarations"><b>Use --warn-mismatched-arg-types=s to produce a warning for function calls with args not matching sub declarations</b></dt>
+<dt id="Use---warn-mismatched-args-to-produce-a-warning-for-function-calls-with-args-not-matching-sub-declarations"><b>Use --warn-mismatched-args to produce a warning for function calls with args not matching sub declarations</b>.</dt>
 <dd>
 
-<p>The parameter <b>--warn-mismatched-arg-types=s</b>, or <b>-wmat=s</b>, can be used to produce a warning message when perltidy formats a file and certain of the above mismatchs is detected during formatting. Both checks may be requested with <b>-wmat=&#39;*&#39;</b> or <b>-wmat=1</b>.</p>
+<p>This is similar to the <b>-dump</b> parameter described above except that any mismatches are reported in the error file and otherwise formatting continues normally. Thus</p>
 
-<p>The default is not to do any of these checks, which can also be indicated with <b>-wmat=0</b>.</p>
+<pre><code>    perltidy -wma somefile.pl</code></pre>
+
+<p>means format <i>somefile.pl</i> and report any mismatched arg errors found. Several companion controls are available to avoid unwanted error messages:</p>
+
+<ul>
+
+<li><p><b>--warn-mismatched-arg-types=s</b>, or <b>-wmat=s</b>, can be used to select specific tests, either type <b>a</b> (arrow test) or <b>c</b> (mismatched counts). Both checks may be requested with <b>-wmat=&#39;*&#39;</b> or <b>-wmat=1</b>. This is the default.</p>
 
 <p>To restrict the check to a specific warning type, set the string equal to the letter of that warning, either <b>a</b> or <b>c</b>. For example</p>
 
@@ -4822,17 +4828,22 @@
 
 <p>will format <i>somefile.pl</i> and report any call arg count mismatches found but will skip checking for arrow-type mismatches.</p>
 
-<p>A companion control parameter <b>--warn-mismatched-arg-exclusion-list</b>, or <b>-wmaxl=string</b>, can be given to skip the warning checks for a list of subroutine names.</p>
+</li>
+<li><p><b>--warn-mismatched-arg-exclusion-list</b>, or <b>-wmaxl=string</b>, can be given to skip the warning checks for a list of subroutine names, entered as a quoted string of space- or comma-separated names. All subs with those names will be skipped, regardless of package.</p>
 
-<p>Another control parameter <b>--warn-mismatched-arg-undercount-cutoff=n</b>, or <b>-wmauc=n</b>, can be used to avoid undercount warnings when the number of args expected is <b>n</b> or less. Please note that this number <b>n</b> is the number of args from the point of view of the sub definition, so an object like <code>$self</code> passed with an arrow operator counts as one arg.</p>
+</li>
+<li><p><b>--warn-mismatched-arg-undercount-cutoff=n</b>, or <b>-wmauc=n</b>, can be used to avoid undercount warnings when the number of args expected is <b>n</b> or less. Please note that this number <b>n</b> is the number of args from the point of view of the sub definition, so an object like <code>$self</code> passed with an arrow operator counts as one arg.</p>
 
-<p>The default value is <b>n=4</b>. This has been found to allow most programs to pass without warnings, but it should be reduced if possible for better error checking. The minimum possible value of <b>n</b> for a program can be determined by running with -wmauc=0, or by running the -dump version. The output shows, for each mismatch, the number of args expected by a sub plus the range of the number of args actually passed to it.</p>
+<p>The default value is <b>n=4</b>. This has been found to allow most programs to pass without warnings, but it should be reduced if possible for better error checking. The minimum possible value of <b>n</b> needed to avoid triggering an error for a program can be determined by running with <b>-wmauc=0</b>, or by running with <b>--dump-mismatched-args</b>. The output shows, for each mismatch, the number of args expected by a sub plus the range of the number of args actually passed to it.</p>
 
-<p>For example</p>
+<p>To illustrate these controls,</p>
 
-<pre><code>   perltidy -wmat=&#39;*&#39; -wmaxl=&#39;new&#39; -wmauc=2 somefile.pl</code></pre>
+<pre><code>   perltidy -wma -wmat=&#39;c&#39; -wmaxl=&#39;new old&#39; -wmauc=2 somefile.pl</code></pre>
 
-<p>means format <i>somefile.pl</i> as usual and check for all mismatch types. But skip checking for any sub named <code>new</code>, and only warn of undercounts for subs expecting more than 2 args.</p>
+<p>means format <i>somefile.pl</i> as usual and check for mismatched counts but not arrows. Skip checking for any sub named <code>new</code> or <code>old</code>, and only warn of undercounts for subs expecting more than 2 args.</p>
+
+</li>
+</ul>
 
 </dd>
 </dl>
@@ -5056,21 +5067,21 @@
  aws    b      baa    baao   bar    bbao   bbb    bbc    bbs    bl
  bli    boa    boc    bok    bol    bom    bos    bot    cblx   ce
  conv   cpb    cs     csc    cscb   cscw   dac    dbc    dbs    dcbl
- dcsc   ddf    dia    dior   dln    dmcp   dnl    dop    dp     dpro
- drc    dsc    dsm    dsn    dtc    dtt    duv    dwic   dwls   dwrs
- dws    eos    f      fpva   frm    fs     fso    gcs    hbc    hbcm
- hbco   hbh    hbhh   hbi    hbj    hbk    hbm    hbn    hbp    hbpd
- hbpu   hbq    hbs    hbsc   hbv    hbw    hent   hic    hicm   hico
- hih    hihh   hii    hij    hik    him    hin    hip    hipd   hipu
- hiq    his    hisc   hiv    hiw    hsc    html   ibc    icb    icp
- iob    ipc    isbc   iscl   kgb    kgbd   kgbi   kis    lal    log
- lop    lp     lsl    mem    nib    ohbr   okw    ola    olc    oll
- olq    opr    opt    osbc   osbr   otr    ple    pod    pvl    q
- sac    sbc    sbl    scbb   schb   scp    scsb   sct    se     sfp
- sfs    skp    sob    sobb   sohb   sop    sosb   sot    ssc    st
- sts    t      tac    tbc    toc    tp     tqw    trp    ts     tsc
- tso    vbc    vc     viu    vmll   vsc    vsn    w      wfc    wia
- wme    wn     x      xbt    xci    xlp    xs</code></pre>
+ dcsc   ddf    dia    dior   dln    dma    dmcp   dnl    dop    dp
+ dpro   drc    dsc    dsm    dsn    dtc    dtt    duv    dwic   dwls
+ dwrs   dws    eos    f      fpva   frm    fs     fso    gcs    hbc
+ hbcm   hbco   hbh    hbhh   hbi    hbj    hbk    hbm    hbn    hbp
+ hbpd   hbpu   hbq    hbs    hbsc   hbv    hbw    hent   hic    hicm
+ hico   hih    hihh   hii    hij    hik    him    hin    hip    hipd
+ hipu   hiq    his    hisc   hiv    hiw    hsc    html   ibc    icb
+ icp    iob    ipc    isbc   iscl   kgb    kgbd   kgbi   kis    lal
+ log    lop    lp     lsl    mem    nib    ohbr   okw    ola    olc
+ oll    olq    opr    opt    osbc   osbr   otr    ple    pod    pvl
+ q      sac    sbc    sbl    scbb   schb   scp    scsb   sct    se
+ sfp    sfs    skp    sob    sobb   sohb   sop    sosb   sot    ssc
+ st     sts    t      tac    tbc    toc    tp     tqw    trp    ts
+ tsc    tso    vbc    vc     viu    vmll   vsc    vsn    vwe    w
+ wfc    wia    wma    wme    wn     x      xbt    xci    xlp    xs</code></pre>
 
 <p>Equivalently, the prefix &#39;no&#39; or &#39;no-&#39; on the corresponding long names may be used.</p>
 
@@ -5148,7 +5159,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20240202.04</p>
+<p>This man page documents perltidy version 20240202.05</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

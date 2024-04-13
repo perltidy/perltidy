@@ -1,9 +1,9 @@
 <h1>Perltidy Change Log</h1>
 
-<h2>2024 02 02.04</h2>
+<h2>2024 02 02.05</h2>
 
 <pre><code>- Add options --dump-mismatched-args (or -dma) and
-  --warn-mismatched-arg-types=s (or -wmat=s).  These options look
+  --warn-mismatched-arg (or -wma).  These options look
   for and report instances where the number of args expected by a
   sub appear to differ from the number passed to the sub.  The -dump
   version writes the results for a single file to standard output
@@ -14,12 +14,16 @@
   The -warn version formats as normal but reports any issues as warnings in
   the error file:
 
-     perltidy -wmat=1 somefile.pl
+     perltidy -wma somefile.pl
 
-  It takes a string parameter which is 1 or '*' to activate all checks.
-  It may be customized with two additional parameters if necessary to
-  avoid needless warnings, --warn-mismatched-arg-exclusion-list=s and
-  --warn-mismatched-arg-undercount-cutoff=n. These are explained in the manual.
+  The -warn version may be customized with three additional parameters if
+  necessary to avoid needless warnings:
+
+  --warn-mismatched-arg-types=s (or -wmat=s),
+  --warn-mismatched-arg-exclusion-list=s (or -wmaxl=s), and
+  --warn-mismatched-arg-undercount-cutoff=n (or -wmauc=n).
+
+  These are explained in the manual.
 
 - Add option --valign-wide-equals, or -vwe, for issue git #135.
   Setting this parameter causes the following assignment operators
@@ -91,13 +95,11 @@ my $html = $this-&gt;SUPER::genObject( $query, $bindNode, $field . ":$var",
 
   It makes the following checks and changes:
   - Repeated commas like ',,' are removed with a warning
-  - Repeated fat commas like '=&gt; =&gt;' are removed with a
-    warning
+  - Repeated fat commas like '=&gt; =&gt;' are removed with a warning
   - The combination '=&gt;,' produces a warning but is not changed
   These warnings are only output if --warning-output, or -w, is set.
 
-  This is now the DEFAULT Behavior.
-  Use --nodelete-repeated-commas, or -ndrc, to turn this option off.
+  Use --nodelete-repeated-commas, or -ndrc, to retain repeated commas.
 
 - Added control --delete-interbracket-arrows, or -dia, to delete optional
   hash ref and array ref arrows between brackets as in the following
@@ -114,7 +116,8 @@ my $html = $this-&gt;SUPER::genObject( $query, $bindNode, $field . ":$var",
     # perltidy -aia
     return $self-&gt;{'commandline'}-&gt;{'arg_list'}-&gt;[0]-&gt;[0]-&gt;{'hostgroups'};
 
- The manual describes additional controls for selective adding and deleting.
+ The manual describes additional controls for adding and deleting
+ just selected interbracket arrows.
 </code></pre>
 
 <h2>2024 02 02</h2>

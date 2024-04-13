@@ -3697,7 +3697,7 @@ Here is an example.
 
 =item B<-drc>,  B<--delete-repeated-commas>
 
-Repeated commas in a list are undesirable and can be removed with this flag.
+This option causes repeated commas to be removed.
 For example, given this list with a repeated comma
 
       ignoreSpec( $file, "file",, \%spec, \%Rspec );
@@ -3736,7 +3736,7 @@ set.
 
 =back
 
-This feature is on by default.  Use B<-ndrc> to turn it off.
+This option is on by default.  Use B<-ndrc> to turn it off.
 
 =item B<--want-trailing-commas=s> or B<-wtc=s>, B<--add-trailing-commas> or B<-atc>, and B<--delete-trailing-commas> or B<-dtc>
 
@@ -6604,7 +6604,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20240202.04
+This man page documents perltidy version 20240202.05
 
 =head1 BUG REPORTS
 
