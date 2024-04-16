@@ -241,6 +241,7 @@ my (
     $rOpts_maximum_consecutive_blank_lines,
     $rOpts_maximum_fields_per_table,
     $rOpts_maximum_line_length,
+    $rOpts_minimize_continuation_indentation,
     $rOpts_one_line_block_semicolons,
     $rOpts_opening_brace_always_on_right,
     $rOpts_outdent_keywords,
@@ -2583,8 +2584,10 @@ sub initialize_global_option_vars {
     $rOpts_logical_padding = $rOpts->{'logical-padding'};
     $rOpts_maximum_consecutive_blank_lines =
       $rOpts->{'maximum-consecutive-blank-lines'};
-    $rOpts_maximum_fields_per_table  = $rOpts->{'maximum-fields-per-table'};
-    $rOpts_maximum_line_length       = $rOpts->{'maximum-line-length'};
+    $rOpts_maximum_fields_per_table = $rOpts->{'maximum-fields-per-table'};
+    $rOpts_maximum_line_length      = $rOpts->{'maximum-line-length'};
+    $rOpts_minimize_continuation_indentation =
+      $rOpts->{'minimize-continuation-indentation'};
     $rOpts_one_line_block_semicolons = $rOpts->{'one-line-block-semicolons'};
     $rOpts_opening_brace_always_on_right =
       $rOpts->{'opening-brace-always-on-right'};
@@ -24021,11 +24024,16 @@ EOM
 
             # do not recombine if we would skip in indentation levels
             if ( $n < $nmax ) {
-                my $if_next = $ri_beg->[ $n + 1 ];
+
+                my $if_next       = $ri_beg->[ $n + 1 ];
+                my $level_1       = $levels_to_go[$ibeg_1];
+                my $level_2       = $levels_to_go[$ibeg_2];
+                my $level_if_next = $levels_to_go[$if_next];
+
                 next
                   if (
-                       $levels_to_go[$ibeg_1] < $levels_to_go[$ibeg_2]
-                    && $levels_to_go[$ibeg_2] < $levels_to_go[$if_next]
+                       $level_1 < $level_2
+                    && $level_2 < $level_if_next
 
                     # but an isolated 'if (' is undesirable
                     && !(
@@ -25137,7 +25145,7 @@ EOM
             $forced_breakpoint_to_go[$iend_1] = 0;
         }
         else {
-            # not a special type
+
         }
         return ( 1, $bs_tweak );
     } ## end sub recombine_section_3
@@ -32465,6 +32473,98 @@ sub get_seqno {
     return ($seqno);
 } ## end sub get_seqno
 
+sub undo_contained_ci {
+    my ( $self, $ri_first, $ri_last ) = @_;
+
+    # Undo ci for a sequence of lines in a container which all have both ci
+    # and a jump in level. Written for issue git #137. This mainly occurs
+    # in code with very long quotes when -nolq is set.  Examples:
+
+    #    diag( 'Test run performed at: '
+    #            . DateTime->now
+    #            . ' with Moose '
+    #            . ( Moose->VERSION || 'git repo' ) );
+    #    $d = sqrt( ( $x->[$x_l] - $x->[$x_r] )**2 +
+    #            ( $y->[$x_l] - $y->[$x_r] )**2 );
+
+    # These all involve lines with ci within a complete container, where the
+    # batch ends in ');' or '];' or '};' with possible side comment.  The
+    # opening container token does not end a line, and this causes the double
+    # jump.
+
+    my $rLL      = $self->[_rLL_];
+    my $max_line = @{$ri_first} - 1;
+    return if ( $max_line < 1 );
+
+    my $ibeg_max = $ri_first->[$max_line];
+    my $iend_max = $ri_last->[$max_line];
+    my $i_opening;
+    my $line_last;
+
+    # Look for Case 1: last line begins with ');'
+    if ( $is_closing_token{ $tokens_to_go[$ibeg_max] } ) {
+        my $i_n = $inext_to_go[$ibeg_max];
+        return if ( $i_n < $ibeg_max || $i_n > $iend_max );
+        return if ( $types_to_go[$i_n] ne ';' );
+        $i_opening = $mate_index_to_go[$ibeg_max];
+        return if ( !defined($i_opening) || $i_opening <= 0 );
+        $line_last = $max_line - 1;
+    }
+
+    # Look for Case 2: last line has some text which ends with ');'
+    else {
+        my $i_t = $iend_max;
+        if ( $types_to_go[$i_t] eq '#' ) {
+            $i_t = iprev_to_go($i_t);
+        }
+        return if ( $i_t <= $ibeg_max );
+        return if ( $types_to_go[$i_t] ne ';' );
+        $i_t = iprev_to_go($i_t);
+        return if ( $i_t <= $ibeg_max );
+        return if ( !$is_closing_token{ $tokens_to_go[$i_t] } );
+        $i_opening = $mate_index_to_go[$i_t];
+        return if ( !defined($i_opening) || $i_opening < 0 );
+        $line_last = $max_line;
+    }
+
+    # Scan backwards to the line with the opening container,
+    # looking for a set of lines with ci to remove which have
+    # the same level and ci as the final line of the group
+    my $ibeg_last  = $ri_first->[$line_last];
+    my $level_last = $levels_to_go[$ibeg_last];
+    return unless ( $ci_levels_to_go[$ibeg_last] );
+
+    # do not change ci under -lp control
+    return if ( ref( $reduced_spaces_to_go[$ibeg_last] ) );
+
+    my $line_start = $line_last;
+    foreach my $line ( reverse( 0 .. $line_last ) ) {
+        my $ibeg = $ri_first->[$line];
+        return if ( ref( $reduced_spaces_to_go[$ibeg] ) );
+        last   if ( !$ci_levels_to_go[$ibeg] );
+        last   if ( $levels_to_go[$ibeg] != $level_last );
+        $line_start = $line;
+    }
+
+    # There must be a jump in level and ci from the line before the start,
+    # and it must contain the opening container token.
+    my $line_o = $line_start - 1;
+    return if ( $line_o < 0 );
+    my $ibeg_o = $ri_first->[$line_o];
+    my $iend_o = $ri_last->[$line_o];
+    return if ( $ci_levels_to_go[$ibeg_o] );
+    return if ( $levels_to_go[$ibeg_o] >= $level_last );
+    return if ( $i_opening < $ibeg_o || $i_opening > $iend_o );
+
+    # ok to undo the ci of this group
+    foreach my $line_t ( $line_start .. $line_last ) {
+        my $ibeg_t = $ri_first->[$line_t];
+        $ci_levels_to_go[$ibeg_t]      = 0;
+        $leading_spaces_to_go[$ibeg_t] = $reduced_spaces_to_go[$ibeg_t];
+    }
+    return;
+} ## end sub undo_contained_ci
+
 {
     my %undo_extended_ci;
 
@@ -32522,6 +32622,7 @@ sub get_seqno {
             }
         }
 
+        my $line_double_jump;
         foreach my $line ( 0 .. $max_line ) {
 
             my $ibeg = $ri_first->[$line];
@@ -32554,6 +32655,14 @@ sub get_seqno {
                 my $ibeg_last = $ri_first->[ $line - 1 ];
                 my $lev       = $levels_to_go[$ibeg];
                 my $lev_last  = $levels_to_go[$ibeg_last];
+
+                # set flag for calling undo_contained_ci
+                if (   $lev == $lev_last + 1
+                    && $ci_levels_to_go[$ibeg]
+                    && !$ci_levels_to_go[$ibeg_last] )
+                {
+                    $line_double_jump = $line;
+                }
 
                 # if we have started a chain..
                 if ($line_1) {
@@ -32626,6 +32735,7 @@ sub get_seqno {
                         }
                     }
                 }
+
             }
 
             #-------------------------------------
@@ -32693,6 +32803,13 @@ sub get_seqno {
                     $undo_extended_ci{$seqno} = 1;
                 }
             }
+        }
+
+        #-------------------------------------
+        # Undo ci in containers if -mci is set
+        #-------------------------------------
+        if ( $line_double_jump && $rOpts_minimize_continuation_indentation ) {
+            $self->undo_contained_ci( $ri_first, $ri_last );
         }
 
         return;
