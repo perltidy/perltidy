@@ -622,6 +622,26 @@
               )</code></pre>
 
 </dd>
+<dt id="mci---minimize-continuation-indentation"><b>-mci</b>, <b>--minimize-continuation-indentation</b></dt>
+<dd>
+
+<p>This flag allows perltidy to remove continuation indentation in some special cases where it is not really unnecessary. For a simple example, the default formatting for the following snippet is:</p>
+
+<pre><code>        # perltidy -nmci
+        $self-&gt;blurt( &quot;Error: No INPUT definition for type &#39;$type&#39;, typekind &#39;&quot;
+              . $type-&gt;xstype
+              . &quot;&#39; found&quot; );</code></pre>
+
+<p>The second and third lines are one level deep in a container, and are also statement continuations, so they get indented by the sum of the <b>-i</b> value and the <b>-ci</b> value. If this flag is set, the indentation is reduced by <b>-ci</b> spaces, giving</p>
+
+<pre><code>        # perltidy -mci
+        $self-&gt;blurt( &quot;Error: No INPUT definition for type &#39;$type&#39;, typekind &#39;&quot;
+            . $type-&gt;xstype
+            . &quot;&#39; found&quot; );</code></pre>
+
+<p>This flag is currently off by default, but it could become the default in a future version.</p>
+
+</dd>
 <dt id="sil-n---starting-indentation-level-n"><b>-sil=n</b> <b>--starting-indentation-level=n</b></dt>
 <dd>
 
@@ -5075,13 +5095,14 @@
  hico   hih    hihh   hii    hij    hik    him    hin    hip    hipd
  hipu   hiq    his    hisc   hiv    hiw    hsc    html   ibc    icb
  icp    iob    ipc    isbc   iscl   kgb    kgbd   kgbi   kis    lal
- log    lop    lp     lsl    mem    nib    ohbr   okw    ola    olc
- oll    olq    opr    opt    osbc   osbr   otr    ple    pod    pvl
- q      sac    sbc    sbl    scbb   schb   scp    scsb   sct    se
- sfp    sfs    skp    sob    sobb   sohb   sop    sosb   sot    ssc
- st     sts    t      tac    tbc    toc    tp     tqw    trp    ts
- tsc    tso    vbc    vc     viu    vmll   vsc    vsn    vwe    w
- wfc    wia    wma    wme    wn     x      xbt    xci    xlp    xs</code></pre>
+ log    lop    lp     lsl    mci    mem    nib    ohbr   okw    ola
+ olc    oll    olq    opr    opt    osbc   osbr   otr    ple    pod
+ pvl    q      sac    sbc    sbl    scbb   schb   scp    scsb   sct
+ se     sfp    sfs    skp    sob    sobb   sohb   sop    sosb   sot
+ ssc    st     sts    t      tac    tbc    toc    tp     tqw    trp
+ ts     tsc    tso    vbc    vc     viu    vmll   vsc    vsn    vwe
+ w      wfc    wia    wma    wme    wn     x      xbt    xci    xlp
+ xs</code></pre>
 
 <p>Equivalently, the prefix &#39;no&#39; or &#39;no-&#39; on the corresponding long names may be used.</p>
 
@@ -5159,7 +5180,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20240202.05</p>
+<p>This man page documents perltidy version 20240202.06</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

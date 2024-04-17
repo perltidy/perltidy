@@ -557,3 +557,5 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
+../snippets29.t	git137.def
+../snippets29.t	git137.git137

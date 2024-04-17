@@ -1,6 +1,30 @@
 # Perltidy Change Log
 
-## 2024 02 02.05
+## 2024 02 02.06
+
+    - Add option --minimize-continuation-indentation, -mci (see git #137).
+      This flag allows perltidy to remove continuation indentation in some
+      special cases where it is not really unnecessary. For a simple example,
+      the default formatting for the following snippet is:
+
+        # perltidy -nmci
+        $self->blurt( "Error: No INPUT definition for type '$type', typekind '"
+              . $type->xstype
+              . "' found" );
+
+      The second and third lines are one level deep in a container, and
+      are also statement continuations, so they get indented by the sum
+      of the -i value and the -ci value.  If this flag is set, the
+      indentation is reduced by -ci spaces, giving
+
+        # perltidy -mci
+        $self->blurt( "Error: No INPUT definition for type '$type', typekind '"
+            . $type->xstype
+            . "' found" );
+
+      This situation is relatively rare except in code which has long
+      quoted strings and the -nolq flag is also set.  This flag is currently
+      off by default, but it could become the default in a future version.
 
     - Add options --dump-mismatched-args (or -dma) and
       --warn-mismatched-arg (or -wma).  These options look

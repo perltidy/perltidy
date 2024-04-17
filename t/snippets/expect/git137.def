@@ -1,0 +1,12 @@
+generate_error( msg =>
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+);
+
+subtype 'USState' => as Str => where {
+    (        exists $STATES->{code2state}{ uc($_) }
+          || exists $STATES->{state2code}{ uc($_) } );
+};
+
+$self->blurt( "Error: No INPUT definition for type '$type', typekind '"
+      . $type->xstype
+      . "' found" );

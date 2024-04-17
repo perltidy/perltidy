@@ -15,6 +15,8 @@
 #12 c352.def
 #13 c353.c353
 #14 c353.def
+#15 git137.def
+#16 git137.git137
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -45,6 +47,7 @@ BEGIN {
 ----------
         'git125' => "-ssp=0",
         'git135' => "--valign-wide-equals",
+        'git137' => "-mci -nolq -ci=4",
         'vsn1'   => <<'----------',
 -vsn
 -gnu
@@ -174,6 +177,21 @@ $mask  = ~( ~$mask | $DeadBits{$word} ) if $no_fatal;
             $height = $row * 25 if $row * 25 < $height;
 }}}
 
+----------
+
+        'git137' => <<'----------',
+generate_error( msg =>
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+);
+
+subtype 'USState' => as Str => where {
+    (        exists $STATES->{code2state}{ uc($_) }
+          || exists $STATES->{state2code}{ uc($_) } );
+};
+
+$self->blurt( "Error: No INPUT definition for type '$type', typekind '"
+      . $type->xstype
+      . "' found" );
 ----------
 
         'vsn' => <<'----------',
@@ -547,6 +565,44 @@ $map = $DEFAULT_MAP               unless defined $map;
 $map = $DEFAULT_PATH . "/" . $map unless $map =~ m|/|;
 $map .= $DEFAULT_EXT unless $map =~ m|/[^/]+\.[^/]+$|;
 #14...........
+        },
+
+        'git137.def' => {
+            source => "git137",
+            params => "def",
+            expect => <<'#15...........',
+generate_error( msg =>
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+);
+
+subtype 'USState' => as Str => where {
+    (        exists $STATES->{code2state}{ uc($_) }
+          || exists $STATES->{state2code}{ uc($_) } );
+};
+
+$self->blurt( "Error: No INPUT definition for type '$type', typekind '"
+      . $type->xstype
+      . "' found" );
+#15...........
+        },
+
+        'git137.git137' => {
+            source => "git137",
+            params => "git137",
+            expect => <<'#16...........',
+generate_error( msg =>
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+);
+
+subtype 'USState' => as Str => where {
+    (      exists $STATES->{code2state}{ uc($_) }
+        || exists $STATES->{state2code}{ uc($_) } );
+};
+
+$self->blurt( "Error: No INPUT definition for type '$type', typekind '"
+    . $type->xstype
+    . "' found" );
+#16...........
         },
     };
 
