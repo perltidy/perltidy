@@ -2,6 +2,13 @@
 
 ## 2024 02 02.06
 
+    - Fix issue git #138 involving -xlp (--extended-line-up-parentheses).
+      When multiple-line quotes and regexes have long secondary lines, these
+      line lengths could influencing some spacing and indentation, but they
+      should not have since perltidy has no control over their indentation.
+      This has been fixed. This will mainly influence code which uses -xlp
+      and has long multi-line quotes.
+
     - Add option --minimize-continuation-indentation, -mci (see git #137).
       This flag allows perltidy to remove continuation indentation in some
       special cases where it is not really unnecessary. For a simple example,

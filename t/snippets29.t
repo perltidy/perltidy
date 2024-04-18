@@ -17,6 +17,8 @@
 #14 c353.def
 #15 git137.def
 #16 git137.git137
+#17 git138.def
+#18 git138.git138
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -48,7 +50,11 @@ BEGIN {
         'git125' => "-ssp=0",
         'git135' => "--valign-wide-equals",
         'git137' => "-mci -nolq -ci=4",
-        'vsn1'   => <<'----------',
+        'git138' => <<'----------',
+-xlp
+-vt=2
+----------
+        'vsn1' => <<'----------',
 -vsn
 -gnu
 ----------
@@ -192,6 +198,19 @@ subtype 'USState' => as Str => where {
 $self->blurt( "Error: No INPUT definition for type '$type', typekind '"
       . $type->xstype
       . "' found" );
+----------
+
+        'git138' => <<'----------',
+my $sth = $dbh->prepare( "select * from accountlines
+  where (borrowernumber = ?) and (amountoutstanding<>0)
+  order by date"
+);
+$VAR1 = [ 'method',
+          1,
+          'prepare',
+          'SELECT table_name, table_owner, num_rows FROM iitables
+                  where table_owner != \'$ingres\' and table_owner != \'DBA\''
+];
 ----------
 
         'vsn' => <<'----------',
@@ -603,6 +622,42 @@ $self->blurt( "Error: No INPUT definition for type '$type', typekind '"
     . $type->xstype
     . "' found" );
 #16...........
+        },
+
+        'git138.def' => {
+            source => "git138",
+            params => "def",
+            expect => <<'#17...........',
+my $sth = $dbh->prepare(
+    "select * from accountlines
+  where (borrowernumber = ?) and (amountoutstanding<>0)
+  order by date"
+);
+$VAR1 = [
+    'method',
+    1,
+    'prepare',
+    'SELECT table_name, table_owner, num_rows FROM iitables
+                  where table_owner != \'$ingres\' and table_owner != \'DBA\''
+];
+#17...........
+        },
+
+        'git138.git138' => {
+            source => "git138",
+            params => "git138",
+            expect => <<'#18...........',
+my $sth = $dbh->prepare( "select * from accountlines
+  where (borrowernumber = ?) and (amountoutstanding<>0)
+  order by date"
+);
+$VAR1 = [ 'method',
+          1,
+          'prepare',
+          'SELECT table_name, table_owner, num_rows FROM iitables
+                  where table_owner != \'$ingres\' and table_owner != \'DBA\''
+];
+#18...........
         },
     };
 

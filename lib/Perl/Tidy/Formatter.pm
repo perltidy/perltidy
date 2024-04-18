@@ -18118,6 +18118,17 @@ sub is_fragile_block_type {
                 }
             }
 
+            # If starting in quote type Q we have no control over indentation
+            # so just ignore the length of this token (see git #138)
+            elsif ( $rLL->[$K_first]->[_TYPE_] eq 'Q' ) {
+                if ( $line_of_tokens->{_starting_in_quote} ) {
+                    $K_begin_loop = $K_first + 1;
+                    next if ( $K_begin_loop > $K_last );
+                }
+            }
+            else {
+            }
+
             $K_start_multiline_qw = undef;
 
             # Find the terminal token, before any side comment

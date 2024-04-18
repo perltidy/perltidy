@@ -1,0 +1,10 @@
+my $sth = $dbh->prepare( "select * from accountlines
+  where (borrowernumber = ?) and (amountoutstanding<>0)
+  order by date"
+);
+$VAR1 = [ 'method',
+          1,
+          'prepare',
+          'SELECT table_name, table_owner, num_rows FROM iitables
+                  where table_owner != \'$ingres\' and table_owner != \'DBA\''
+];
