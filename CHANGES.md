@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2024 02 02.06
+## 2024 02 02.07
 
     - Fix issue git #138 involving -xlp (--extended-line-up-parentheses).
       When multiple-line quotes and regexes have long secondary lines, these
