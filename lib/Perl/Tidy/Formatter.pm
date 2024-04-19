@@ -69,6 +69,7 @@ use warnings;
 use constant DEVEL_MODE   => 0;
 use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };
+use constant BACKSLASH    => q{\\};
 
 { #<<< A non-indenting brace to contain all lexical variables
 
@@ -308,6 +309,7 @@ my (
     %is_anon_sub_1_brace_follower,
     %is_other_brace_follower,
     %is_kwU,
+    %is_re_match_op,
 
     # INITIALIZER: sub check_options
     $controlled_comma_style,
@@ -633,12 +635,12 @@ BEGIN {
         _rwant_arrow_before_seqno_    => $i++,
 
         # these vars are defined after call to respace tokens:
-        _rK_package_list_                => $i++,
-        _rK_at_underscore_list_          => $i++,
-        _rK_sub_by_seqno_                => $i++,
-        _ris_my_sub_by_seqno_            => $i++,
-        _rsub_call_paren_info_by_seqno_  => $i++,
-        _runderscore_array_ref_by_seqno_ => $i++,
+        _rK_package_list_                 => $i++,
+        _rK_AT_underscore_by_sub_seqno_   => $i++,
+        _rK_sub_by_seqno_                 => $i++,
+        _ris_my_sub_by_seqno_             => $i++,
+        _rsub_call_paren_info_by_seqno_   => $i++,
+        _rDOLLAR_underscore_by_sub_seqno_ => $i++,
 
         _LAST_SELF_INDEX_ => $i - 1,
     };
@@ -904,6 +906,10 @@ BEGIN {
     @q = qw( k w U );
     @is_kwU{@q} = (1) x scalar(@q);
 
+    # regular expression match operators
+    @q = qw( =~ !~);
+    @is_re_match_op{@q} = (1) x scalar(@q);
+
 } ## end BEGIN
 
 {    ## begin closure to count instances
@@ -1019,12 +1025,12 @@ sub new {
 
     # Variables for --warn-mismatched-args and
     #               --dump-mismatched-args
-    $self->[_rK_package_list_]                = [];
-    $self->[_rK_at_underscore_list_]          = [];
-    $self->[_rsub_call_paren_info_by_seqno_]  = {};
-    $self->[_runderscore_array_ref_by_seqno_] = {};
-    $self->[_rK_sub_by_seqno_]                = {};
-    $self->[_ris_my_sub_by_seqno_]            = {};
+    $self->[_rK_package_list_]                 = [];
+    $self->[_rK_AT_underscore_by_sub_seqno_]   = {};
+    $self->[_rsub_call_paren_info_by_seqno_]   = {};
+    $self->[_rDOLLAR_underscore_by_sub_seqno_] = {};
+    $self->[_rK_sub_by_seqno_]                 = {};
+    $self->[_ris_my_sub_by_seqno_]             = {};
 
     # Mostly list characteristics and processing flags
     $self->[_rtype_count_by_seqno_]      = {};
@@ -8584,7 +8590,6 @@ sub scan_variable_usage {
     my $K_closing_container  = $self->[_K_closing_container_];
     my $rK_next_seqno_by_K   = $self->[_rK_next_seqno_by_K_];
 
-    my %is_re_match_op = ( '=~' => 1, '!~'    => 1 );
     my %is_my_state    = ( 'my' => 1, 'state' => 1 );
     my %is_valid_sigil = ( '$'  => 1, '@'     => 1, '%' => 1 );
 
@@ -9344,7 +9349,7 @@ EOM
                     if ( $ix_HERE < $ix_line ) { $ix_HERE = $ix_line }
 
                     # collect the here doc text
-                    my $ix_max    = @{$rlines};
+                    my $ix_max    = @{$rlines} - 1;
                     my $here_text = EMPTY_STRING;
                     while ( ++$ix_HERE <= $ix_max ) {
                         my $lhash = $rlines->[$ix_HERE];
@@ -9376,7 +9381,7 @@ EOM
 
                 # is this an interpolated quote?
                 my $interpolated;
-                if ( $line_of_tokens->{_starting_in_quote} ) {
+                if ( $KK == $Kfirst && $line_of_tokens->{_starting_in_quote} ) {
                     $interpolated = $in_interpolated_quote;
                 }
                 else {
@@ -9404,8 +9409,11 @@ EOM
                     $scan_quoted_text->($token);
                 }
 
-                if ( $line_of_tokens->{_ending_in_quote} ) {
+                if ( $KK == $Klast && $line_of_tokens->{_ending_in_quote} ) {
                     $in_interpolated_quote = $interpolated;
+                }
+                else {
+                    $in_interpolated_quote = 0;
                 }
             }
             else {
@@ -10396,6 +10404,7 @@ my $rtype_count_by_seqno;
 my $rblock_type_of_seqno;
 my $rwant_arrow_before_seqno;
 my $ris_sub_block;
+my $ris_asub_block;
 
 my $K_opening_container;
 my $K_closing_container;
@@ -10415,6 +10424,8 @@ my %seqno_stack;
 my %K_old_opening_by_seqno;
 my $depth_next;
 my $depth_next_max;
+my @sub_seqno_stack;
+my $current_sub_seqno;
 
 my $cumulative_length;
 
@@ -10431,11 +10442,11 @@ my $rwhitespace_flags;
 my $rK_package_list;
 
 # new index K of @_ tokens
-my $rK_at_underscore_list;
+my $rK_AT_underscore_by_sub_seqno;
 
 # info about list of sub call args
 my $rsub_call_paren_info_by_seqno;
-my $runderscore_array_ref_by_seqno;
+my $rDOLLAR_underscore_by_sub_seqno;
 
 # index K of the preceding 'S' token for a sub
 my $rK_sub_by_seqno;
@@ -10473,13 +10484,15 @@ sub initialize_respace_tokens_closure {
     $rblock_type_of_seqno      = $self->[_rblock_type_of_seqno_];
     $rwant_arrow_before_seqno  = $self->[_rwant_arrow_before_seqno_];
     $ris_sub_block             = $self->[_ris_sub_block_];
+    $ris_asub_block            = $self->[_ris_asub_block_];
 
-    $rK_package_list                = $self->[_rK_package_list_];
-    $rK_at_underscore_list          = $self->[_rK_at_underscore_list_];
-    $rsub_call_paren_info_by_seqno  = $self->[_rsub_call_paren_info_by_seqno_];
-    $runderscore_array_ref_by_seqno = $self->[_runderscore_array_ref_by_seqno_];
-    $rK_sub_by_seqno                = $self->[_rK_sub_by_seqno_];
-    $ris_my_sub_by_seqno            = $self->[_ris_my_sub_by_seqno_];
+    $rK_package_list               = $self->[_rK_package_list_];
+    $rK_AT_underscore_by_sub_seqno = $self->[_rK_AT_underscore_by_sub_seqno_];
+    $rsub_call_paren_info_by_seqno = $self->[_rsub_call_paren_info_by_seqno_];
+    $rDOLLAR_underscore_by_sub_seqno =
+      $self->[_rDOLLAR_underscore_by_sub_seqno_];
+    $rK_sub_by_seqno     = $self->[_rK_sub_by_seqno_];
+    $ris_my_sub_by_seqno = $self->[_ris_my_sub_by_seqno_];
 
     %K_first_here_doc_by_seqno = ();
 
@@ -10495,6 +10508,9 @@ sub initialize_respace_tokens_closure {
     %K_old_opening_by_seqno = ();    # Note: old K index
     $depth_next             = 0;
     $depth_next_max         = 0;
+
+    @sub_seqno_stack   = ();
+    $current_sub_seqno = 0;
 
     # we will be setting token lengths as we go
     $cumulative_length = 0;
@@ -10806,6 +10822,12 @@ sub respace_tokens_inner_loop {
                         $self->add_phantom_semicolon($KK)
                           if $rOpts->{'add-semicolons'};
                     }
+
+                    if (   $ris_sub_block->{$type_sequence}
+                        || $ris_asub_block->{$type_sequence} )
+                    {
+                        $current_sub_seqno = pop @sub_seqno_stack;
+                    }
                 }
 
                 #----------------------------------------------------------
@@ -10907,13 +10929,23 @@ sub respace_tokens_inner_loop {
                     if ($K_last_S_is_my) {
                         $ris_my_sub_by_seqno->{$type_sequence} = 1;
                     }
+                    push @sub_seqno_stack, $current_sub_seqno;
+                    $current_sub_seqno = $type_sequence;
+                }
+                elsif ( $ris_asub_block->{$type_sequence} ) {
+                    push @sub_seqno_stack, $current_sub_seqno;
+                    $current_sub_seqno = $type_sequence;
                 }
 
                 # Look for '$_[' for mismatched arg checks
-                elsif ( $token eq '[' ) {
-                    if ( $last_nonblank_code_token eq '$_' ) {
-                        $runderscore_array_ref_by_seqno->{$type_sequence} = 1;
-                    }
+                elsif ($token eq '['
+                    && $last_nonblank_code_token eq '$_'
+                    && $current_sub_seqno )
+                {
+                    push
+                      @{ $rDOLLAR_underscore_by_sub_seqno->{$current_sub_seqno}
+                      },
+                      $type_sequence;
                 }
                 else {
                     ## not a special opening token
@@ -11041,11 +11073,13 @@ sub respace_tokens_inner_loop {
                 push @{$rK_package_list}, scalar @{$rLL_new};
             }
             elsif ( $type eq 'i' ) {
-                if ( $token eq '@_' ) {
+                if ( $token eq '@_' && $current_sub_seqno ) {
 
                     # remember the new K of this @_; this may be
                     # off by 1 if a blank gets inserted before it
-                    push @{$rK_at_underscore_list}, scalar @{$rLL_new};
+                    push
+                      @{ $rK_AT_underscore_by_sub_seqno->{$current_sub_seqno} },
+                      scalar @{$rLL_new};
                 }
             }
             else {
@@ -13581,7 +13615,6 @@ sub count_sub_args {
 
     # Given: hash ref with
     #   seqno  => $seqno_block = sequence number of a sub block
-    #   K_sub  => $K_sub = index of the corresponding keyword 'sub'
     #   K_last_at_underscore  => optional: index K of last ref to @_
 
     # Updates hash ref with values for keys:
@@ -13591,19 +13624,62 @@ sub count_sub_args {
     #   is_signature => true if args are in a signature
     # But these keys are left undefined if they cannot be determined
 
-    my $seqno_block          = $item->{seqno};
-    my $K_sub                = $item->{K_sub};
-    my $K_last_at_underscore = $item->{K_last_at_underscore};
+    my $seqno_block = $item->{seqno};
+    return unless ($seqno_block);
 
+    # Pull out optional optimization flag. If this is true then there
+    # may be calls to this sub with args, so we should to do a full
+    # search of the entire sub if this would cause a -wma warning.
+    my $saw_call_with_args = $item->{saw_call_with_args};
+
+    # Do not count the args if we saw '$_[...'
+    if ( $self->[_rDOLLAR_underscore_by_sub_seqno_]->{$seqno_block} ) {
+        return;
+    }
+
+    # Find index '$K' of the last '@_' in this sub, if any
     # Note on '$K_last_at_underscore': if we exit with only seeing shifts,
     # but a pre-scan saw @_ somewhere after the last K, then the count
     # is dubious and we do a simple return
-    if ( !defined($K_last_at_underscore) ) { $K_last_at_underscore = 0 }
+    my $K_last_at_underscore = 0;
+    my $rKlist = $self->[_rK_AT_underscore_by_sub_seqno_]->{$seqno_block};
+    if ( defined($rKlist) ) {
+        $K_last_at_underscore = $rKlist->[-1];
+    }
 
     my $saw_pop_at_underscore;
 
     my $rLL             = $self->[_rLL_];
     my $K_opening_block = $self->[_K_opening_container_]->{$seqno_block};
+    my $rlines          = $self->[_rlines_];
+    my $Klimit          = @{$rLL} - 1;
+    my $ix_HERE_END     = -1;
+
+    # Optimization: find the previous type 'S' token with the sub name .. this
+    # was saved by sub respace_tokens. May need to back up 1 token if spaces
+    # were deleted.  This is only defined for named subs, not anonymous subs.
+    my $K_sub = $self->[_rK_sub_by_seqno_]->{$seqno_block};
+    if ( defined($K_sub) ) {
+        my $type = $rLL->[$K_sub]->[_TYPE_];
+        if ( $type ne 'S' ) {
+            $K_sub -= 1;
+            $type = $rLL->[$K_sub]->[_TYPE_];
+            if ( $type ne 'S' ) {
+                if (DEVEL_MODE) {
+                    my $token = $rLL->[$K_sub]->[_TOKEN_];
+                    my $lno   = $rLL->[$K_sub]->[_LINE_INDEX_] + 1;
+                    my $block_type =
+                      $self->[_rblock_type_of_seqno_]->{$seqno_block};
+                    Fault(<<EOM);
+line $lno: Bad Ksub=$K_sub for block $seqno_block,
+expecting type 'S' and token=$block_type
+found type '$type' and token='$token'
+EOM
+                }
+                $K_sub = undef;
+            }
+        }
+    }
 
     #---------------------------------------------------------------
     # Scan backward from the opening brace to find the keyword 'sub'
@@ -13680,6 +13756,7 @@ sub count_sub_args {
     my $shift_count                      = 0;
     my $self_name                        = EMPTY_STRING;
     my $semicolon_count_after_last_shift = 0;
+    my $in_interpolated_quote;
 
     my $KK = $K_opening;
     while ( ++$KK < $K_closing ) {
@@ -13712,9 +13789,9 @@ sub count_sub_args {
                 my $token_mm = $rLL->[$K_mm]->[_TOKEN_];
                 my $seqno_mm = $rLL->[$K_mm]->[_TYPE_SEQUENCE_];
 
-                #------------------------------------
-                # Count args in the list ( ... ) = @_;
-                #------------------------------------
+                #-----------------------------------------------
+                # RETURN 1: Count args in the list ( ... ) = @_;
+                #-----------------------------------------------
                 if ( $seqno_mm && $token_mm eq ')' ) {
                     $item->{seqno_list}   = $seqno_mm;
                     $item->{is_signature} = 0;
@@ -13831,10 +13908,13 @@ sub count_sub_args {
             }
             elsif ( $is_if_unless{$token} ) {
 
+                # RETURN 2: Optional early return.
                 # Give up and exit at 'if' or 'unless' if we have seen a few
                 # semicolons following the last 'shift'. The number '2' here
                 # has been found to work well.
                 if ( $semicolon_count_after_last_shift > 2 ) {
+
+                    # FIXME: should also look at call counts
                     if (  !$saw_pop_at_underscore
                         && $KK >= $K_last_at_underscore )
                     {
@@ -13854,34 +13934,112 @@ sub count_sub_args {
 
                 my $seqno_test = $rLL->[$KK]->[_TYPE_SEQUENCE_];
 
-                #----------------------------------------------------------
-                # End search if we reach a sub declearation within this sub
-                #----------------------------------------------------------
+                #-------------------------------------------------
+                # If we reach a sub declearation within this sub..
+                #-------------------------------------------------
                 if (   $self->[_ris_sub_block_]->{$seqno_test}
                     || $self->[_ris_asub_block_]->{$seqno_test} )
                 {
-                    if (  !$saw_pop_at_underscore
-                        && $KK >= $K_last_at_underscore )
-                    {
-                        $item->{shift_count} = $shift_count;
-                        $item->{self_name}   = $self_name;
-                    }
-                    return;
+                    # skip past this sub and keep going
+                    my $Kc = $self->[_K_closing_container_]->{$seqno_test};
+                    $KK = $Kc;
+##                    if (  !$saw_pop_at_underscore
+##                        && $KK >= $K_last_at_underscore )
+##                    {
+##                        $item->{shift_count} = $shift_count;
+##                        $item->{self_name}   = $self_name;
+##                    }
+##                    return;
                 }
             }
         }
         elsif ( $type eq ';' ) {
             $semicolon_count_after_last_shift++;
         }
+
+        # scan a quote for @_ and $_[
         elsif ( $type eq 'Q' ) {
 
-            # TODO: look for @_ in an interpolated quote
-            # See coding for types 'Q' and 'h' in sub scan_variable_usage
+            my $K_last_code = $self->K_previous_code($KK);
+            next unless $K_last_code;
+            my $K_last_type = $rLL->[$K_last_code]->[_TYPE_];
+            if ( $K_last_type eq 'Q' ) {
+
+                # starting in quote : use old interpolation value
+            }
+            elsif ( $is_re_match_op{$K_last_type} ) {
+                $in_interpolated_quote = 1;
+            }
+
+            # is not interpolated for leading operators: qw q tr y '
+            elsif ( $token =~ /^(qw | q[^qrx] | tr | [y\'] )/x ) {
+                $in_interpolated_quote = 0;
+            }
+
+            # is interpolated for everything else
+            else {
+                $in_interpolated_quote = 1;
+            }
+
+            # look for '@_' and '$_[' in an interpolated quote
+            next unless ($in_interpolated_quote);
+            my $pos;
+            $pos = index( $token, '@_' );
+            return
+              if ( $pos == 0
+                || $pos > 0 && substr( $token, $pos - 1, 1 ) ne BACKSLASH );
+
+            $pos = index( $token, '$_[' );
+            return
+              if ( $pos == 0
+                || $pos > 0 && substr( $token, $pos - 1, 1 ) ne BACKSLASH );
         }
+
+        # scan here text for @_ and $_[
         elsif ( $type eq 'h' ) {
 
-            # TODO: look for @_ in an interpolated here doc
-            # See coding for types 'Q' and 'h' in sub scan_variable_usage
+            # see get_here_text.in
+            next if $token !~ /^ [^<]* << [~]? \' /x;
+            my $here_text = EMPTY_STRING;                  ##BOOGA
+            my $ix_line   = $rLL->[$KK]->[_LINE_INDEX_];
+            my $ix_HERE   = $ix_HERE_END;
+            if ( $ix_HERE < $ix_line ) { $ix_HERE = $ix_line }
+            my $ix_max = @{$rlines} - 1;
+            while ( ++$ix_HERE <= $ix_max ) {
+                my $lhash = $rlines->[$ix_HERE];
+                my $ltype = $lhash->{_line_type};
+                if ( $ltype eq 'HERE' ) {
+                    $here_text .= $lhash->{_line_text};
+                    next;
+                }
+                elsif ( $ltype eq 'HERE_END' ) {
+                    $ix_HERE_END = $ix_HERE;
+                    last;
+                }
+                else {
+                    DEVEL_MODE
+                      && Fault("line_type=$ltype should be HERE..\n");
+                    return;
+                }
+            }
+            if ($here_text) {
+                my $pos;
+                $pos = index( $here_text, '@_' );
+                return
+                  if (
+                    $pos == 0
+                    || ( $pos > 0
+                        && substr( $here_text, $pos - 1, 1 ) ne BACKSLASH )
+                  );
+
+                $pos = index( $here_text, '$_[' );
+                return
+                  if (
+                    $pos == 0
+                    || ( $pos > 0
+                        && substr( $here_text, $pos - 1, 1 ) ne BACKSLASH )
+                  );
+            }
         }
         else {
             # continue search
@@ -13905,6 +14063,7 @@ sub count_sub_args {
         }
     }
 
+    # RETURN 3: End return
     if (  !$saw_pop_at_underscore
         && $KK >= $K_last_at_underscore )
     {
@@ -13917,14 +14076,13 @@ sub count_sub_args {
 
 sub sub_def_info_maker {
 
-    my ( $self, $rpackage_lookup_list ) = @_;
+    my ( $self, $rpackage_lookup_list, $rprelim_call_info ) = @_;
 
     # Returns: \%sub_info_hash, which contains sub call info:
     #  $sub_info_hash->{$package::$name}->{
     #      seqno        => $seqno,
     #      package      => $package,
     #      name         => $name,
-    #      K_sub        => $Ksub,
     #      seqno_list   => $seqno of the paren list of args
     #      shift_count  => number of args
     #      is_signature => true if seqno_list is a sub signature
@@ -13933,49 +14091,10 @@ sub sub_def_info_maker {
 
     # TODO: set package to be parent seqno for 'my' sub
 
-    my $rLL                   = $self->[_rLL_];
-    my $K_opening_container   = $self->[_K_opening_container_];
-    my $rblock_type_of_seqno  = $self->[_rblock_type_of_seqno_];
-    my $ris_sub_block         = $self->[_ris_sub_block_];
-    my $rK_sub_by_seqno       = $self->[_rK_sub_by_seqno_];
-    my $rK_at_underscore_list = $self->[_rK_at_underscore_list_];
-    my $runderscore_array_ref_by_seqno =
-      $self->[_runderscore_array_ref_by_seqno_];
-
-    #---------------------------------------------------------------
-    # Find subs with '$_['; their arg count is considered indefinite
-    #---------------------------------------------------------------
-    my $runderscore_array_ref_by_sub_seqno = {};
-    foreach my $seqno ( keys %{$runderscore_array_ref_by_seqno} ) {
-
-        # Find the sub or asub which contains this $_[
-        my $seqno_sub = $self->parent_sub_seqno($seqno);
-        if ($seqno_sub) {
-            push @{ $runderscore_array_ref_by_sub_seqno->{$seqno_sub} }, $seqno;
-        }
-    }
-
-    #----------------------------------------------------------
-    # Find subs with @_; this is used to validate the arg count
-    #----------------------------------------------------------
-    my $rK_at_underscore_list_by_sub_seqno = {};
-    foreach my $KK ( @{$rK_at_underscore_list} ) {
-
-        # Find the sub or asub which contains this @_;
-        my $seqno_sub;
-        my $parent_seqno = $self->parent_seqno_by_K($KK);
-        if (   $self->[_ris_sub_block_]->{$parent_seqno}
-            || $self->[_ris_asub_block_]->{$parent_seqno} )
-        {
-            $seqno_sub = $parent_seqno;
-        }
-        else {
-            $seqno_sub = $self->parent_sub_seqno($parent_seqno);
-        }
-        if ($seqno_sub) {
-            push @{ $rK_at_underscore_list_by_sub_seqno->{$seqno_sub} }, $KK;
-        }
-    }
+    my $rLL                  = $self->[_rLL_];
+    my $K_opening_container  = $self->[_K_opening_container_];
+    my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
+    my $ris_sub_block        = $self->[_ris_sub_block_];
 
     #----------------------------------
     # Main loop over subs to count args
@@ -13992,32 +14111,14 @@ sub sub_def_info_maker {
         }
         my $block_type = $rblock_type_of_seqno->{$seqno};
 
-        # Find the previous type 'S' token with the sub name..
-        # may need to back up 1 token if spaces were deleted
-        my $K_sub = $rK_sub_by_seqno->{$seqno};
-        next unless ( defined($K_sub) );
-        my $type = $rLL->[$K_sub]->[_TYPE_];
-        if ( $type ne 'S' ) {
-            $K_sub -= 1;
-            $type = $rLL->[$K_sub]->[_TYPE_];
-            if ( $type ne 'S' ) {
-                if (DEVEL_MODE) {
-                    my $token = $rLL->[$K_sub]->[_TOKEN_];
-                    my $lno   = $rLL->[$K_sub]->[_LINE_INDEX_] + 1;
-                    Fault(<<EOM);
-line $lno: Bad Ksub=$K_sub for block $seqno,
-expecting type 'S' and token=$block_type
-type '$type' and token='$token'
-EOM
-                }
-                next;
-            }
-        }
+        #-----------------------------
+        # Get the sub name and package
+        #-----------------------------
 
-        # what we want:
-        #      $block_type               $name
-        # 'sub setidentifier($)'    => 'setidentifier'
-        # 'method setidentifier($)' => 'setidentifier'
+        # Examples of what we want to extract from '$block_type':
+        #   $block_type                   $name
+        #   'sub setidentifier($)'    => 'setidentifier'
+        #   'method setidentifier($)' => 'setidentifier'
         # Examples:
         # "sub hello", "sub hello($)", "sub hello     ($)"
         # There will be a single space after 'sub' but any number before
@@ -14046,34 +14147,32 @@ EOM
         }
         $package = 'main' unless ($package);
 
-        # Find index '$K' of the last '@_' in this sub, if any
-        my $K_last_at_underscore = 0;
-        my $rKlist = $rK_at_underscore_list_by_sub_seqno->{$seqno};
-        if ( defined($rKlist) ) {
-            $K_last_at_underscore = $rKlist->[-1];
-        }
-
         # Make a hash of info for this sub
         my $lno  = $rLL->[$Ko]->[_LINE_INDEX_] + 1;
         my $item = {
-            seqno                => $seqno,
-            K_sub                => $K_sub,
-            package              => $package,
-            name                 => $name,
-            line_number          => $lno,
-            K_last_at_underscore => $K_last_at_underscore,
+            seqno       => $seqno,
+            package     => $package,
+            name        => $name,
+            line_number => $lno,
         };
 
-        # Count the args unless we saw '$_[...'
-        if ( !$runderscore_array_ref_by_sub_seqno->{$seqno} ) {
-            $self->count_sub_args($item);
-        }
+        my $key = $package . '::' . $name;
+
+        # Set flag indicating if args may be expected to allow optimization
+        my $call_item = $rprelim_call_info->{$key};
+        $item->{saw_call_with_args} =
+          defined($call_item) && $call_item->{max_arg_count};
+
+        # Add a count of the number of args
+        $self->count_sub_args($item);
 
         # Store the sub info by sequence number
+        # FIXME: this would be better going into a new hash rather than
+        # overwriting the old hash, even though is works, to avoid confusion.
+        # Also, it would be preferable work with just a single hash
         $ris_sub_block->{$seqno} = $item;
 
         # and also by package::name
-        my $key = $package . '::' . $name;
         $sub_info_hash{$key} = $item;
     }
     return \%sub_info_hash;
@@ -14225,7 +14324,7 @@ sub cross_check_call_args {
     #     - except for undercount if expecting N or less (N=2 or 3 by default)
 
     # initialize for dump mode
-    my $ris_mismatched_call_type          = { 'a' => 1, 'c' => 1 };
+    my $ris_mismatched_call_type          = { 'a' => 1, 'c' => 1, 'i' => 1 };
     my $mismatched_arg_undercount_cutoff  = 0;
     my $ris_mismatched_call_excluded_name = {};
 
@@ -14252,15 +14351,46 @@ sub cross_check_call_args {
     my $rpackage_lists       = $self->package_info_maker($rK_package_list);
     my $rpackage_lookup_list = $rpackage_lists->{'rpackage_lookup_list'};
 
-    #-----------------------------------
-    # Get arg counts for sub definitions
-    #-----------------------------------
-    my $rsub_info = $self->sub_def_info_maker($rpackage_lookup_list);
-
     #-------------------------------------------
     # Update sub call paren info with arg counts
     #-------------------------------------------
     $self->update_sub_call_paren_info($rpackage_lookup_list);
+
+    #----------------------------------
+    # Preliminary min and max call args
+    #----------------------------------
+
+    # This is preliminary because some of the calls will eventually be
+    # rejected if they appear to be to external objects. This info is
+    # needed to optimize the sub arg search in the case of zero args.
+    my %upper_bound_call_info;
+    foreach my $seqno ( keys %{$rsub_call_paren_info_by_seqno} ) {
+        my $rcall_item = $rsub_call_paren_info_by_seqno->{$seqno};
+
+        my $call_type = $rcall_item->{call_type};
+        my $package   = $rcall_item->{package};
+        my $name      = $rcall_item->{name};
+        my $arg_count = $rcall_item->{arg_count};
+
+        next unless defined($arg_count);
+        if ( $call_type eq '->' ) { $arg_count += 1 }
+        my $key = $package . '::' . $name;
+        my $max = $upper_bound_call_info{$key}->{max_arg_count};
+        my $min = $upper_bound_call_info{$key}->{min_arg_count};
+        if ( !defined($max) || $arg_count > $max ) {
+            $upper_bound_call_info{$key}->{max_arg_count} = $arg_count;
+        }
+        if ( !defined($min) || $arg_count < $min ) {
+            $upper_bound_call_info{$key}->{min_arg_count} = $arg_count;
+        }
+    }
+
+    #-----------------------------------
+    # Get arg counts for sub definitions
+    #-----------------------------------
+    my $rsub_info =
+      $self->sub_def_info_maker( $rpackage_lookup_list,
+        \%upper_bound_call_info );
 
     # Names commonly used like '$self'. This list will be augmented as we go.
     # NOTE: This is not currently used but might be in the future.
@@ -14429,7 +14559,7 @@ sub cross_check_call_args {
         my $num_over_count  = defined($rover_count)  ? @{$rover_count}  : 0;
         my $num_under_count = defined($runder_count) ? @{$runder_count} : 0;
 
-        # 'a': subs with both self-> and direct calls
+        # issue 'a': subs with both self-> and direct calls
         if ( $num_self && $num_direct && $ris_mismatched_call_type->{'a'} ) {
 
             my $lines_self_calls   = stringify_line_range($rself_calls);
@@ -14461,39 +14591,19 @@ sub cross_check_call_args {
         if ( !defined($rsub_item) ) {
         }
 
-        # Ignore calls to subs for which a specific positive arg count
-        # could not be determined.
+        # issue 'i': subs for which a specific positive arg count
+        # could not be determined or is zero.
         elsif ( !$rsub_item->{shift_count} ) {
-        }
+            if ( $ris_mismatched_call_type->{'i'} ) {
+                my $letter = 'i';
 
-        # Handle issue 'c': number of call args differs from sub declaration
-        elsif ( ( $num_over_count || $num_under_count )
-            && $ris_mismatched_call_type->{'c'} )
-        {
+                # skip *:*:* and 0:0:0
+                next
+                  if ( $shift_count eq $min_arg_count
+                    && $shift_count eq $max_arg_count );
 
-            # Skip the warning for small lists with undercount
-            my $expect = $num_self ? $shift_count : $shift_count + 1;
-            if (   $num_over_count
-                || $expect > $mismatched_arg_undercount_cutoff )
-            {
-                my $lines_over_count  = stringify_line_range($rover_count);
-                my $lines_under_count = stringify_line_range($runder_count);
-                my $total             = $num_direct + $num_self;
-                my $note;
-                my $letter = 'count';
-                if ( $num_over_count && $num_under_count ) {
-                    $note =
-"calls with both excess args ($lines_over_count) and missing args($lines_under_count)";
-                }
-                elsif ($num_over_count) {
-                    $note =
-"excess args at $num_over_count of $total calls($lines_over_count)";
-                }
-                else {
-                    $note =
-"missing args at $num_under_count of $total calls($lines_under_count)";
-                }
-
+                my $note = "indeterminate";
+                if ( !defined($shift_count) ) { $shift_count = '*' }
                 push @warnings,
                   {
                     line_number   => $lno,
@@ -14506,6 +14616,48 @@ sub cross_check_call_args {
                   };
             }
         }
+
+        # issue 'c': number of call args differs from sub declaration
+        elsif ( $num_over_count || $num_under_count ) {
+            if ( $ris_mismatched_call_type->{'c'} ) {
+
+                # Skip the warning for small lists with undercount
+                if (   $num_over_count
+                    || $shift_count > $mismatched_arg_undercount_cutoff )
+                {
+                    my $lines_over_count  = stringify_line_range($rover_count);
+                    my $lines_under_count = stringify_line_range($runder_count);
+                    my $total             = $num_direct + $num_self;
+                    my $note;
+                    my $letter = 'count';
+                    if ( $num_over_count && $num_under_count ) {
+                        $note =
+"calls with both excess args ($lines_over_count) and missing args($lines_under_count)";
+                    }
+                    elsif ($num_over_count) {
+                        $note =
+"excess args at $num_over_count of $total calls($lines_over_count)";
+                    }
+                    else {
+                        $note =
+"missing args at $num_under_count of $total calls($lines_under_count)";
+                    }
+
+                    push @warnings,
+                      {
+                        line_number   => $lno,
+                        letter        => $letter,
+                        name          => $name,
+                        shift_count   => $shift_count,
+                        min_arg_count => $min_arg_count,
+                        max_arg_count => $max_arg_count,
+                        note          => $note,
+                      };
+                }
+            }
+        }
+
+        # issue 'e': no mismatch
         else {
             # nothing to do
         }
