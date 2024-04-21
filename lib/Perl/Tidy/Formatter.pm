@@ -14681,7 +14681,7 @@ sub cross_check_call_args {
 
                 # Skip the warning for small lists with undercount
                 if (   $ris_mismatched_call_type->{'u'}
-                    && $shift_count >= $mismatched_arg_undercount_cutoff )
+                    && $shift_count > $mismatched_arg_undercount_cutoff )
                 {
                     my $lines_under_count = stringify_line_range($runder_count);
                     my $total             = $num_direct + $num_self;
@@ -15784,6 +15784,26 @@ sub setup_new_weld_measurements {
                 }
             }
             $Knext = $rK_next_seqno_by_K->[$Knext];
+        }
+    }
+
+    # fix c1468 - do not measure from a leading opening block brace -
+    # which is not a one-line block
+    if (   $Kref < $Kouter_opening
+        && $Kref == $Kfirst
+        && $rLL->[$Kref]->[_TOKEN_] eq '{' )
+    {
+        my $seqno_ref = $rLL->[$Kref]->[_TYPE_SEQUENCE_];
+        if ($seqno_ref) {
+            my $block_type = $self->[_rblock_type_of_seqno_]->{$seqno_ref};
+            if ($block_type) {
+                my $Kref_c   = $self->[_K_closing_container_]->{$seqno_ref};
+                my $ln_ref_o = $rLL->[$Kref]->[_LINE_INDEX_];
+                my $ln_ref_c = $rLL->[$Kref_c]->[_LINE_INDEX_];
+                if ( $ln_ref_c > $ln_ref_o ) {
+                    $Kref = $self->K_next_nonblank($Kref);
+                }
+            }
         }
     }
 

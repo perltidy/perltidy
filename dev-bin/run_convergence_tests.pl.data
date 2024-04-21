@@ -12044,6 +12044,37 @@ sub new{
 --square-bracket-tightness=2
 --brace-vertical-tightness=1
 
+==> b1468.in <==
+foreach $n (
+     qw( msm ali ) )
+{    foreach $e ( qw(
+          uc16
+          ) )
+     {
+          #
+     }
+}
+
+foreach $n (
+     qw( msm ali ) )
+{
+     foreach $e ( qw(
+          uc16
+     ) )
+     {
+          #
+     }
+}
+
+==> b1468.par <==
+--maximum-line-length=21
+--indent-columns=5
+--weld-nested-containers
+--paren-vertical-tightness-closing=2
+--stack-opening-paren
+--block-brace-vertical-tightness=1
+--nodelete-old-newlines
+
 ==> b148.in <==
 # state 1
 @yydgoto=(

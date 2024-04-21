@@ -8167,6 +8167,27 @@ sub new{
                   transmit => 2,
             }];
 
+==> b1468 <==
+foreach $n (
+     qw( msm ali ) )
+{    foreach $e ( qw(
+          uc16
+          ) )
+     {
+          #
+     }
+}
+
+foreach $n (
+     qw( msm ali ) )
+{    foreach $e ( qw(
+          uc16
+          ) )
+     {
+          #
+     }
+}
+
 ==> b148 <==
 # state 1
 @yydgoto=(
