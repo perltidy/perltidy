@@ -12953,6 +12953,30 @@ sub parent_sub_seqno {
     return;
 } ## end sub parent_sub_seqno
 
+sub parent_sub_seqno_by_K {
+    my ( $self, $KK ) = @_;
+
+    # Find sequence number of the sub or asub which contains a given token
+    # Given:
+    #  $K = index K of a token
+    # Returns:
+    #  $seqno of the sub (or asub), or
+    #  nothing if no sub found
+    return unless defined($KK);
+
+    my $seqno_sub;
+    my $parent_seqno = $self->parent_seqno_by_K($KK);
+    if (   $self->[_ris_sub_block_]->{$parent_seqno}
+        || $self->[_ris_asub_block_]->{$parent_seqno} )
+    {
+        $seqno_sub = $parent_seqno;
+    }
+    else {
+        $seqno_sub = $self->parent_sub_seqno($parent_seqno);
+    }
+    return $seqno_sub;
+} ## end sub parent_sub_seqno_by_K
+
 sub is_in_block_by_i {
     my ( $self, $i ) = @_;
 
@@ -13630,7 +13654,7 @@ sub count_sub_args {
     # Pull out optional optimization flag. If this is true then there
     # may be calls to this sub with args, so we should to do a full
     # search of the entire sub if this would cause a -wma warning.
-    my $saw_call_with_args = $item->{saw_call_with_args};
+    my $max_arg_count = $item->{max_arg_count};
 
     # Do not count the args if we saw '$_[...'
     if ( $self->[_rDOLLAR_underscore_by_sub_seqno_]->{$seqno_block} ) {
@@ -13742,9 +13766,9 @@ EOM
         return;
     }
 
-    #------------------------------------------------------------
-    # Otherwise look for =shift; and =@_; within sub block braces
-    #------------------------------------------------------------
+    #-------------------------------------------------------------
+    # Main loop: look for =shift; and =@_; within sub block braces
+    #-------------------------------------------------------------
     my $seqno     = $seqno_block;
     my $K_opening = $self->[_K_opening_container_]->{$seqno};
     my $K_closing = $self->[_K_closing_container_]->{$seqno};
@@ -13768,10 +13792,10 @@ EOM
         my $token = $rLL->[$KK]->[_TOKEN_];
         if ( $type eq 'i' ) {
 
-            #--------------
             # look for '@_'
-            #--------------
             if ( $token eq '@_' ) {
+
+                # Found '@_': the search will end here
                 my $level = $rLL->[$KK]->[_LEVEL_];
 
                 # Give up upon finding @_ at a lower level
@@ -13789,9 +13813,7 @@ EOM
                 my $token_mm = $rLL->[$K_mm]->[_TOKEN_];
                 my $seqno_mm = $rLL->[$K_mm]->[_TYPE_SEQUENCE_];
 
-                #-----------------------------------------------
-                # RETURN 1: Count args in the list ( ... ) = @_;
-                #-----------------------------------------------
+                #  Count args in the list ( ... ) = @_;
                 if ( $seqno_mm && $token_mm eq ')' ) {
                     $item->{seqno_list}   = $seqno_mm;
                     $item->{is_signature} = 0;
@@ -13807,8 +13829,19 @@ EOM
 
             # Give up if we find an indexed ref to $_[..]
             elsif ( $token eq '$_' ) {
+
+                # Found $_: currently the search ends at '$_['
+                # TODO: eventually this can be handled
                 my $Kn = $self->K_next_code($KK);
                 if ( $Kn && $rLL->[$Kn]->[_TOKEN_] eq '[' ) {
+                    return;
+                }
+            }
+
+            # Give up at something like '&func;'
+            elsif ( substr( $token, 0, 1 ) eq '&' ) {
+                my $Kn = $self->K_next_code($KK);
+                if ( $Kn && $rLL->[$Kn]->[_TOKEN_] ne '(' ) {
                     return;
                 }
             }
@@ -13908,20 +13941,25 @@ EOM
             }
             elsif ( $is_if_unless{$token} ) {
 
-                # RETURN 2: Optional early return.
+                #-------------------------------
+                # RETURN: Optional early return.
+                #-------------------------------
                 # Give up and exit at 'if' or 'unless' if we have seen a few
                 # semicolons following the last 'shift'. The number '2' here
                 # has been found to work well.
                 if ( $semicolon_count_after_last_shift > 2 ) {
-
-                    # FIXME: should also look at call counts
-                    if (  !$saw_pop_at_underscore
-                        && $KK >= $K_last_at_underscore )
+                    if ( !defined($max_arg_count)
+                        || $max_arg_count <= $shift_count )
                     {
-                        $item->{shift_count} = $shift_count;
-                        $item->{self_name}   = $self_name;
+
+                        if (  !$saw_pop_at_underscore
+                            && $KK >= $K_last_at_underscore )
+                        {
+                            $item->{shift_count} = $shift_count;
+                            $item->{self_name}   = $self_name;
+                        }
+                        return;
                     }
-                    return;
                 }
             }
             else {
@@ -13934,22 +13972,15 @@ EOM
 
                 my $seqno_test = $rLL->[$KK]->[_TYPE_SEQUENCE_];
 
-                #-------------------------------------------------
-                # If we reach a sub declearation within this sub..
-                #-------------------------------------------------
+                #---------------------------------------------
+                # Skip past a sub declearation within this sub
+                #---------------------------------------------
                 if (   $self->[_ris_sub_block_]->{$seqno_test}
                     || $self->[_ris_asub_block_]->{$seqno_test} )
                 {
-                    # skip past this sub and keep going
                     my $Kc = $self->[_K_closing_container_]->{$seqno_test};
+                    return unless ( $Kc && $Kc > $KK );
                     $KK = $Kc;
-##                    if (  !$saw_pop_at_underscore
-##                        && $KK >= $K_last_at_underscore )
-##                    {
-##                        $item->{shift_count} = $shift_count;
-##                        $item->{self_name}   = $self_name;
-##                    }
-##                    return;
                 }
             }
         }
@@ -14000,7 +14031,7 @@ EOM
 
             # see get_here_text.in
             next if $token !~ /^ [^<]* << [~]? \' /x;
-            my $here_text = EMPTY_STRING;                  ##BOOGA
+            my $here_text = EMPTY_STRING;
             my $ix_line   = $rLL->[$KK]->[_LINE_INDEX_];
             my $ix_HERE   = $ix_HERE_END;
             if ( $ix_HERE < $ix_line ) { $ix_HERE = $ix_line }
@@ -14063,13 +14094,12 @@ EOM
         }
     }
 
-    # RETURN 3: End return
-    if (  !$saw_pop_at_underscore
-        && $KK >= $K_last_at_underscore )
-    {
-        $item->{shift_count} = $shift_count;
-        $item->{self_name}   = $self_name;
-    }
+    #--------------------------------
+    # the whole file has been scanned
+    #--------------------------------
+    # TODO: handle pure refs to '$['
+    $item->{shift_count} = $shift_count;
+    $item->{self_name}   = $self_name;
     return;
 
 } ## end sub count_sub_args
@@ -14160,8 +14190,7 @@ sub sub_def_info_maker {
 
         # Set flag indicating if args may be expected to allow optimization
         my $call_item = $rprelim_call_info->{$key};
-        $item->{saw_call_with_args} =
-          defined($call_item) && $call_item->{max_arg_count};
+        $item->{max_arg_count} = $call_item->{max_arg_count};
 
         # Add a count of the number of args
         $self->count_sub_args($item);
@@ -14320,11 +14349,13 @@ sub cross_check_call_args {
     # The current possible checks are indicated by these letters:
     # a = both method and non-method calls to a sub
     #     - even for two subs in a different package
-    # c = call arg counts differ from from number expected by a sub
-    #     - except for undercount if expecting N or less (N=2 or 3 by default)
+    # o = overcount: call arg counts exceed number expected by a sub
+    # u = undercount: call arg counts less than number expected by a sub
+    #     - except if expecting N or less (N=4 by default)
+    # i = indeterminate: expected number of args was not determined
 
     # initialize for dump mode
-    my $ris_mismatched_call_type          = { 'a' => 1, 'c' => 1, 'i' => 1 };
+    my $ris_mismatched_call_type = { 'a' => 1, 'o' => 1, 'u' => 1, 'i' => 1 };
     my $mismatched_arg_undercount_cutoff  = 0;
     my $ris_mismatched_call_excluded_name = {};
 
@@ -14446,6 +14477,9 @@ sub cross_check_call_args {
                 my $key_sub = $item->{package} . '::' . $item->{name};
                 $is_self_call = !$common_hash{$key_sub}->{direct_calls};
             }
+
+            # TODO: else see if $caller_name is blessed in this sub
+            # This is a low priority update
         }
 
         # Save this method call as either an internal (self) or external call
@@ -14574,7 +14608,7 @@ sub cross_check_call_args {
             push @warnings,
               {
                 line_number   => $lno,
-                letter        => 'arrows',
+                letter        => 'a',
                 name          => $name,
                 shift_count   => $shift_count,
                 min_arg_count => $min_arg_count,
@@ -14591,19 +14625,17 @@ sub cross_check_call_args {
         if ( !defined($rsub_item) ) {
         }
 
-        # issue 'i': subs for which a specific positive arg count
-        # could not be determined or is zero.
-        elsif ( !$rsub_item->{shift_count} ) {
+        # issue 'i': indeterminate. Could not determine a specific arg count
+        elsif ( !defined( $rsub_item->{shift_count} ) ) {
             if ( $ris_mismatched_call_type->{'i'} ) {
                 my $letter = 'i';
 
-                # skip *:*:* and 0:0:0
+                # skip *:*:* (no disagreement - call counts also indeterminate)
                 next
                   if ( $shift_count eq $min_arg_count
                     && $shift_count eq $max_arg_count );
 
-                my $note = "indeterminate";
-                if ( !defined($shift_count) ) { $shift_count = '*' }
+                my $note = "indeterminate sub arg count";
                 push @warnings,
                   {
                     line_number   => $lno,
@@ -14617,31 +14649,19 @@ sub cross_check_call_args {
             }
         }
 
-        # issue 'c': number of call args differs from sub declaration
-        elsif ( $num_over_count || $num_under_count ) {
-            if ( $ris_mismatched_call_type->{'c'} ) {
+        # check counts
+        else {
 
-                # Skip the warning for small lists with undercount
-                if (   $num_over_count
-                    || $shift_count > $mismatched_arg_undercount_cutoff )
-                {
-                    my $lines_over_count  = stringify_line_range($rover_count);
-                    my $lines_under_count = stringify_line_range($runder_count);
-                    my $total             = $num_direct + $num_self;
+            # issue 'o': overcount
+            if ($num_over_count) {
+                if ( $ris_mismatched_call_type->{'o'} ) {
+
+                    my $lines_over_count = stringify_line_range($rover_count);
+                    my $total            = $num_direct + $num_self;
                     my $note;
-                    my $letter = 'count';
-                    if ( $num_over_count && $num_under_count ) {
-                        $note =
-"calls with both excess args ($lines_over_count) and missing args($lines_under_count)";
-                    }
-                    elsif ($num_over_count) {
-                        $note =
+                    my $letter = 'o';
+                    $note =
 "excess args at $num_over_count of $total calls($lines_over_count)";
-                    }
-                    else {
-                        $note =
-"missing args at $num_under_count of $total calls($lines_under_count)";
-                    }
 
                     push @warnings,
                       {
@@ -14655,11 +14675,33 @@ sub cross_check_call_args {
                       };
                 }
             }
-        }
 
-        # issue 'e': no mismatch
-        else {
-            # nothing to do
+            # issue 'u': undercount
+            if ($num_under_count) {
+
+                # Skip the warning for small lists with undercount
+                if (   $ris_mismatched_call_type->{'u'}
+                    && $shift_count >= $mismatched_arg_undercount_cutoff )
+                {
+                    my $lines_under_count = stringify_line_range($runder_count);
+                    my $total             = $num_direct + $num_self;
+                    my $note;
+                    my $letter = 'u';
+                    $note =
+"missing args at $num_under_count of $total calls($lines_under_count)";
+
+                    push @warnings,
+                      {
+                        line_number   => $lno,
+                        letter        => $letter,
+                        name          => $name,
+                        shift_count   => $shift_count,
+                        min_arg_count => $min_arg_count,
+                        max_arg_count => $max_arg_count,
+                        note          => $note,
+                      };
+                }
+            }
         }
     }
 
@@ -14724,7 +14766,8 @@ sub initialize_warn_mismatched_args {
 
     # Specific options:
     #  a - mismatched arrow operator calls
-    #  c - call arg count mismatch
+    #  o - overcount
+    #  u - undercount
 
     # Other controls:
     #  0 - none of the above
@@ -14732,10 +14775,10 @@ sub initialize_warn_mismatched_args {
     #  * - all of the above
 
     # Example:
-    #  -wmat='a c' : do check types 'a' and 'c'
-    #  -wmat='c'   : do check type 'c'
+    #  -wmat='a o' : do check types 'a' and 'o'
+    #  -wmat='u'   : do check type 'u'
 
-    my @all_opts = qw(a c);
+    my @all_opts = qw(a o u);
     my %is_valid_option;
     @is_valid_option{@all_opts} = (1) x scalar(@all_opts);
 
@@ -14749,7 +14792,7 @@ sub initialize_warn_mismatched_args {
     if ( @opts == 1 ) {
         my $opt = $opts[0];
 
-        # Split a single option of bundled letters like 'ac' into 'a c'
+        # Split a single option of bundled letters like 'ao' into 'a o'
         # but give a warning because this may not be allowed in the future
         if ( length($opt) > 1 ) {
             @opts = split //, $opt;
@@ -14762,7 +14805,7 @@ sub initialize_warn_mismatched_args {
             return;
         }
         else {
-            # should be one of a c - catch any error below
+            # should be one of a o u - catch any error below
         }
     }
 

@@ -6083,7 +6083,7 @@ writes its report to standard output and exits immediately.  For example
 
     perltidy -dma somefile.pl >results.txt
 
-Two types of issues are reported, types B<a> and B<c>:
+Four types of issues are reported, types B<a>, B<o>, B<u>, and B<i>:
 
 =over 4
 
@@ -6097,27 +6097,29 @@ and
 
      $self->Fault();
 
-This may or may not be an error, but it is worth checking.
+This may or may not be an error, but it is worth checking. It might become an
+error in the future if sub C<Fault> starts to access C<$self>.
 
-=item B<c:> the B<count> of call args differs from a sub definition
+=item B<o:> (B<overcount): the number of call args exceeds the expected number.
 
-If a sub appears to expect a specific number of args, and is called with
-more or less than this number, then a mismatch will be reported. For example
+=item B<u:> (B<undercount): the number of call args is less than the expected number.
 
-     sub do_something {
+For example
+
+     sub gnab_gib {
          my $self=shift;
          my ($v1,$v2)=@_;
          ...
      }
 
-    $self->do_something(43);
+     $self->gnab_gib(42);
 
 In this case, the sub is expecting a total of three args (C<$self>, C<$v1>, and
-C<$v2>) but only receives two (C<$self> and C<42>), so a mismatch is reported.
-This is not necessarily an error because the sub may allow for this
-possibility. This sometimes happens as a code evolves to have new
-functionality.  But it can be a source of confusion, and it could be an error,
-so it is worth checking.
+C<$v2>) but only receives two (C<$self> and C<42>), so an undercount is
+reported.  This is not necessarily an error because the sub may allow for this
+possibility, but it is worth checking.  The simple static processing done by perltidy cannot determine which sub args are optional.
+
+=item B<i:> B<indeterminate:> a specific number of expected args for a sub could not be determined, but it is called with a specific number. This issue is reported for the B<--dump-> option but not the B<--warn-> option.
 
 =back
 
@@ -6126,18 +6128,10 @@ B<Some Limitations:>
 =over 4
 
 =item *
-Checks are only made for subs which appear to unpack call args in an orderly
-manner at the beginning of the sub from C<@_>, directly and/or with C<shift>
-operations.
-
-=item *
-Subs which appear to have no args are not checked. This restriction is
-necessary to avoid false warnings when a sub actually uses args in a
-complex way.
-
-=item *
-Only calls which appear to be to subs defined within the file being
-processed are checked.
+This option works best for subs which unpack call args in an orderly
+manner near the beginning of the sub from C<@_> and/or with C<shift>
+operations.  If individual elements of the @_ array are directly
+accessed then the number of sub args is considered indeterminate.
 
 =item *
 Sub calls made without parentheses around the args are not checked.
@@ -6145,33 +6139,34 @@ Sub calls made without parentheses around the args are not checked.
 =item *
 Anonymous subs and lexical subs (introduced with C<my>) are not checked.
 
-=back
+=item *
+Only calls which appear to be to subs defined within the file being
+processed are checked. But note that a file may contain multiple packages.
 
+=back
 
 =item B<Use --warn-mismatched-args to produce a warning for function calls with
 args not matching sub declarations>.
 
-This is similar to the B<-dump> parameter described above
-except that any mismatches are reported in the error file and
-otherwise formatting continues normally.  Thus
+This is similar to the B<-dump> parameter described above except that any
+mismatches are reported in the error file and otherwise formatting continues
+normally.  Thus
 
     perltidy -wma somefile.pl
 
-means format F<somefile.pl> and report any mismatched arg errors found.
 Several companion controls are available to avoid unwanted error messages:
 
 =over 4
 
 =item *
 B<--warn-mismatched-arg-types=s>, or B<-wmat=s>, can be used to
-select specific tests, either type B<a> (arrow test) or B<c> (mismatched counts). Both checks may be requested with B<-wmat='*'> or B<-wmat=1>. This is the default.
+select specific tests, type B<a> (arrow test) or B<o> (overcounts) or B<u> (undercounts). All checks may be requested with B<-wmat='*'> or B<-wmat=1>. This is the default.
 
-To restrict the check to a specific warning type, set the string equal to the letter of that warning, either B<a> or B<c>.  For example
+To restrict the check to a specific warning type, set the string equal to the letter of that warning, any B<a>, B<o>, or B<u>.  For example
 
-   perltidy -wmat='c' somefile.pl
+   perltidy -wmat='a o' somefile.pl
 
-will format F<somefile.pl> and report any call arg count mismatches found but
-will skip checking for arrow-type mismatches.
+will format F<somefile.pl> and report any arrow-type mismatches and overcount mismatches, but will skip undercount mismatches.
 
 =item *
 B<--warn-mismatched-arg-exclusion-list>, or B<-wmaxl=string>, can be given to
@@ -6196,11 +6191,11 @@ actually passed to it.
 
 To illustrate these controls,
 
-   perltidy -wma -wmat='c' -wmaxl='new old' -wmauc=2 somefile.pl
+   perltidy -wma -wmat='o u' -wmaxl='new old' -wmauc=2 somefile.pl
 
-means format F<somefile.pl> as usual and check for mismatched counts but not
-arrows. Skip checking for any sub named C<new> or C<old>, and only warn of
-undercounts for subs expecting more than 2 args.
+means format F<somefile.pl> as usual and check for mismatched overcounts and
+undercounts but not arrows. Skip checking for any sub named C<new> or C<old>,
+and only warn of undercounts for subs expecting more than 2 args.
 
 =back
 
