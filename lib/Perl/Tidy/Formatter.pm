@@ -14016,7 +14016,8 @@ EOM
                     || $self->[_ris_asub_block_]->{$seqno_test} )
                 {
                     my $Kc = $self->[_K_closing_container_]->{$seqno_test};
-                    return unless ( $Kc && $Kc > $KK );
+                    return if ( !$Kc );
+                    return if ( $Kc <= $KK );
                     $KK = $Kc;
                 }
             }
@@ -14541,9 +14542,21 @@ sub cross_check_call_args {
             if ( defined($shift_count_max) ) { $shift_count_max++ }
         }
 
-        # overwrite values found with the standard method
+        # For calls with '&' to subs with prototypes, use the upper bound of
+        # the prototype max and the max found by scanning the script.
+        my $shift_count_max_amp = $shift_count_max;
+        if ( defined($shift_count_max) ) {
+            my $standard_max = $rsub_item->{shift_count_max};
+            if ( !defined($standard_max) || $standard_max > $shift_count_max ) {
+                $shift_count_max_amp = $standard_max;
+            }
+        }
+        $rsub_item->{shift_count_max_amp} = $shift_count_max_amp;
+
+        # overwrite values found by scanning the script with prototype values
         $rsub_item->{shift_count_min} = $shift_count_min;
         $rsub_item->{shift_count_max} = $shift_count_max;
+
     }
 
     #-------------------------------------------------------------------------
@@ -14575,7 +14588,10 @@ sub cross_check_call_args {
                 $common_hash{$key}->{rsub_item} = $rsub_item;
                 $shift_count_min                = $rsub_item->{shift_count_min};
                 $shift_count_max                = $rsub_item->{shift_count_max};
-                $self_name                      = $rsub_item->{self_name};
+                if ( $call_type eq '&' && $rsub_item->{prototype} ) {
+                    $shift_count_max = $rsub_item->{shift_count_max_amp};
+                }
+                $self_name = $rsub_item->{self_name};
             }
         }
 
