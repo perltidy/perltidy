@@ -4486,7 +4486,7 @@ sub _process_command_line {
                 }
             }
             if ( !-e $config_file ) {
-                Warn(
+                Die(
                     "cannot find file given with -pro=$config_file: $OS_ERROR\n"
                 );
                 $config_file = EMPTY_STRING;
@@ -4568,8 +4568,9 @@ EOM
         if ($config_file) {
             $rconfig_string = stream_slurp($config_file);
             if ( !defined($rconfig_string) ) {
-                ${$rconfig_file_chatter} .=
-                  "# $config_file exists but cannot be opened\n";
+                Die(
+"exiting because profile '$config_file' could not be opened\n"
+                );
             }
         }
 
