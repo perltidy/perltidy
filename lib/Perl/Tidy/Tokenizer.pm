@@ -9293,9 +9293,10 @@ EOM
         # regex below uses [A-Za-z] rather than \w
         # This is the old regex which has been replaced:
         # $input_line =~ m/\G(\s*\([^\)\(\}\{\,#]*\))?  # PROTO
+        # Added '=' for issue c362
         my $saw_opening_paren = $input_line =~ /\G\s*\(/;
         if (
-            $input_line =~ m{\G(\s*\([^\)\(\}\{\,#A-Za-z]*\))?  # PROTO
+            $input_line =~ m{\G(\s*\([^\)\(\}\{\,#A-Za-z=]*\))?  # PROTO
             (\s*:)?                              # ATTRS leading ':'
             }gcx
             && ( $1 || $2 )
