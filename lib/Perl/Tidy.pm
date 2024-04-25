@@ -3872,7 +3872,7 @@ sub generate_options {
       maximum-unexpected-errors=0
       memoize
       minimum-space-to-comment=4
-      warn-mismatched-arg-undercount-cutoff=4
+      warn-mismatched-arg-undercount-cutoff=3
       nobrace-left-and-indent
       nocuddled-else
       nodelete-old-whitespace

@@ -18,6 +18,7 @@
 # warn if call arg counts differ from sub definitions
 # (requires version > 20240202.04)
 --warn-mismatched-args
+--warn-mismatched-arg-undercount-cutoff=4
 
 # user-defined subs must have args in parens
 --want-call-parens='&'

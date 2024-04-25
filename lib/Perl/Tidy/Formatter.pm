@@ -7054,7 +7054,7 @@ EOM
             }
             my $rarg = { seqno => $seqno };
             $self->count_sub_args($rarg);
-            my $count = $rarg->{shift_count};
+            my $count = $rarg->{shift_count_min};
             if ( !defined($count) ) { $count = '*' }
 
             $type .= '(' . $count . ')';
@@ -7074,7 +7074,7 @@ EOM
 
             my $rarg = { seqno => $seqno };
             $self->count_sub_args($rarg);
-            my $count = $rarg->{shift_count};
+            my $count = $rarg->{shift_count_min};
             if ( !defined($count) ) { $count = '*' }
 
             $type .= '(' . $count . ')';
@@ -13444,11 +13444,11 @@ sub count_list_args {
 
     my $seqno        = $rarg_list->{seqno_list};
     my $is_signature = $rarg_list->{is_signature};
-    my $shift_count  = $is_signature ? 0            : $rarg_list->{shift_count};
+    my $shift_count  = $is_signature ? 0 : $rarg_list->{shift_count_min};
     my $self_name    = $is_signature ? EMPTY_STRING : $rarg_list->{self_name};
 
     # return undef if we return early
-    $rarg_list->{shift_count} = undef;
+    $rarg_list->{shift_count_min} = undef;
 
     # Given:
     #   $seqno        = sequence number of a list for counting items
@@ -13475,6 +13475,7 @@ sub count_list_args {
 
     my $level_opening = $rLL->[$K_opening]->[_LEVEL_];
     my $arg_count     = $shift_count;
+    my $arg_count_min;
 
     #--------------------------------------------------------
     # Main loop to scan the container looking for list items.
@@ -13538,7 +13539,9 @@ sub count_list_args {
 
         # an '=' in a signature indicates an optional arg
         elsif ( $type eq '=' ) {
-            return if ($is_signature);
+            if ( $is_signature && !defined($arg_count_min) ) {
+                $arg_count_min = $arg_count;
+            }
         }
 
         # check for a paren-less call
@@ -13585,8 +13588,12 @@ sub count_list_args {
     # Increase the count by 1 if the list does not have a trailing comma
     my $K_last = $self->K_previous_code($K_closing);
     if ( $rLL->[$K_last]->[_TYPE_] ne ',' ) { $arg_count++ }
-    $rarg_list->{shift_count} = $arg_count;
-    $rarg_list->{self_name}   = $self_name;
+    if ( !defined($arg_count_min) ) {
+        $arg_count_min = $arg_count;
+    }
+    $rarg_list->{shift_count_min} = $arg_count_min;
+    $rarg_list->{shift_count_max} = $arg_count;
+    $rarg_list->{self_name}       = $self_name;
     return;
 
 } ## end sub count_list_args
@@ -13612,26 +13619,40 @@ sub count_prototype_args {
 
     # Given
     #  $string = a string with a prototype in parens, such as '($$;$)'
-    # Return
-    #  $count = specific number of args expected, or
-    #           undef if number of args can vary
-    my @chars = split //, $string;
-    my $count = 0;
+    # Returns ($count_min, $count_max)
+    #  $count_min = min specific number of args expected, or
+    #               undef if number of args can vary
+    #  $count_max = max specific number of args expected, or
+    #               undef if number of args can vary
+    my @chars     = split //, $string;
+    my $count_min = 0;
+    my $count_max = 0;
+    my $saw_semicolon;
+    my $bump_count = sub {
+        $count_max++;
+        $count_min++ if ( !$saw_semicolon );
+        return;
+    };
+    my $saw_array = sub {
+        $count_max = undef;
+        $count_min = undef if ( !$saw_semicolon );
+        return;
+    };
     while ( my $ch = shift(@chars) ) {
-        if    ( !defined($ch) )         { return }
-        elsif ( $ch eq ';' )            { return }
-        elsif ( $is_array_sigil{$ch} )  { return }
-        elsif ( $is_scalar_sigil{$ch} ) { $count++ }
+        if    ( !defined($ch) )                 { $saw_array->(); last }
+        elsif ( $ch eq '(' )                    { last if ($count_min) }
+        elsif ( $ch eq ')' )                    { last }
+        elsif ( $ch eq ';' && !$saw_semicolon ) { $saw_semicolon = 1 }
+        elsif ( $is_array_sigil{$ch} )          { $saw_array->(); last }
+        elsif ( $is_scalar_sigil{$ch} )         { $bump_count->(); }
         elsif ( $ch eq q{\\} ) {
             $ch = shift @chars;
-            return unless defined($ch);
-            $count++;
+            last unless defined($ch);
+            $bump_count->();
         }
-        elsif ( $ch eq '(' ) { last if ($count) }
-        elsif ( $ch eq ')' ) { last }
-        else                 { next }
+        else { next }
     }
-    return $count;
+    return ( $count_min, $count_max );
 } ## end sub count_prototype_args
 
 sub count_sub_args {
@@ -13642,11 +13663,13 @@ sub count_sub_args {
     #   K_last_at_underscore  => optional: index K of last ref to @_
 
     # Updates hash ref with values for keys:
-    #   shift_count  => absolute number of args
+    #   shift_count_min  => minimum absolute number of args
+    #   shift_count_max  => maximum absolute number of args
     #   self_name    => name of first arg (if it can be determined)
     #   is_signature => true if args are in a signature
-    #   is_signature => true if args are in a signature
-    # But these keys are left undefined if they cannot be determined
+    # These keys are left undefined if they cannot be determined.
+    # 'shift_count_min' and 'shift_count_max' are the same except for
+    # a signature or prototype.
 
     my $seqno_block = $item->{seqno};
     return unless ($seqno_block);
@@ -13744,9 +13767,14 @@ EOM
         if ( $iproto_end > $iproto_beg ) {
             my $prototype =
               substr( $sub_token, $iproto_beg, $iproto_end - $iproto_beg + 1 );
-            my $prototype_count = count_prototype_args($prototype);
-            $item->{prototype}       = $prototype;
-            $item->{prototype_count} = $prototype_count;
+            my ( $prototype_count_min, $prototype_count_max ) =
+              count_prototype_args($prototype);
+            $item->{prototype}           = $prototype;
+            $item->{prototype_count_min} = $prototype_count_min;
+            $item->{prototype_count_max} = $prototype_count_max;
+
+            # Since we don't yet know if we must add 1 for a method call, we
+            # will just continue normally and let the caller figure it out.
         }
     }
 
@@ -13763,6 +13791,8 @@ EOM
         $item->{seqno_list}   = $seqno_list;
         $item->{is_signature} = 1;
         $self->count_list_args($item);
+
+        # We are finished for a signature list
         return;
     }
 
@@ -13801,6 +13831,11 @@ EOM
                 # Give up upon finding @_ at a lower level
                 return unless ( $level == $level_opening + 1 );
 
+                # Look ahead for ';'
+                my $K_p = $self->K_next_code($KK);
+                return unless ($K_p);
+                return unless ( $rLL->[$K_p]->[_TYPE_] eq ';' );
+
                 # Look back for ' = @_'
                 my $K_m = $self->K_previous_code($KK);
                 return unless defined($K_m);
@@ -13815,10 +13850,11 @@ EOM
 
                 #  Count args in the list ( ... ) = @_;
                 if ( $seqno_mm && $token_mm eq ')' ) {
-                    $item->{seqno_list}   = $seqno_mm;
-                    $item->{is_signature} = 0;
-                    $item->{shift_count}  = $shift_count;
-                    $item->{self_name}    = $self_name;
+                    $item->{seqno_list}      = $seqno_mm;
+                    $item->{is_signature}    = 0;
+                    $item->{shift_count_min} = $shift_count;
+                    $item->{shift_count_max} = $shift_count;
+                    $item->{self_name}       = $self_name;
                     $self->count_list_args($item);
                     return;
                 }
@@ -13955,8 +13991,9 @@ EOM
                         if (  !$saw_pop_at_underscore
                             && $KK >= $K_last_at_underscore )
                         {
-                            $item->{shift_count} = $shift_count;
-                            $item->{self_name}   = $self_name;
+                            $item->{shift_count_min} = $shift_count;
+                            $item->{shift_count_max} = $shift_count;
+                            $item->{self_name}       = $self_name;
                         }
                         return;
                     }
@@ -14077,29 +14114,12 @@ EOM
         }
     }
 
-    # If we arrive here, we only saw a sequence of shifts. The count has some
-    # uncertainty so we have to be careful...
-
-    # Require consistency with any prototype count
-    if ( $item->{prototype} ) {
-        my $prototype_count = $item->{prototype_count};
-        return unless ( defined($prototype_count) );
-
-        # The prototype count does not include any '$self', so we have
-        # to allow a difference of one
-        if (   $shift_count != $prototype_count
-            && $shift_count != $prototype_count + 1 )
-        {
-            return;
-        }
-    }
-
     #--------------------------------
     # the whole file has been scanned
     #--------------------------------
-    # TODO: handle pure refs to '$['
-    $item->{shift_count} = $shift_count;
-    $item->{self_name}   = $self_name;
+    $item->{shift_count_min} = $shift_count;
+    $item->{shift_count_max} = $shift_count;
+    $item->{self_name}       = $self_name;
     return;
 
 } ## end sub count_sub_args
@@ -14305,12 +14325,12 @@ sub update_sub_call_paren_info {
 
         # The arg count is undefined if there are non-scalars in the list
         if ($arg_count) {
-            $item->{seqno_list}   = $seqno;
-            $item->{is_signature} = 0;
-            $item->{shift_count}  = 0;
-            $item->{self_name}    = EMPTY_STRING;
+            $item->{seqno_list}      = $seqno;
+            $item->{is_signature}    = 0;
+            $item->{shift_count_min} = 0;
+            $item->{self_name}       = EMPTY_STRING;
             $self->count_list_args($item);
-            $arg_count = $item->{shift_count};
+            $arg_count = $item->{shift_count_min};
         }
 
         my $call_type   = $is_ampersand_call ? '&' : EMPTY_STRING;
@@ -14402,10 +14422,16 @@ sub cross_check_call_args {
         my $package   = $rcall_item->{package};
         my $name      = $rcall_item->{name};
         my $arg_count = $rcall_item->{arg_count};
+        my $key       = $package . '::' . $name;
 
         next unless defined($arg_count);
-        if ( $call_type eq '->' ) { $arg_count += 1 }
-        my $key = $package . '::' . $name;
+        if ( $call_type eq '->' ) {
+            $arg_count += 1;
+            $upper_bound_call_info{$key}->{method_call_count}++;
+        }
+        else {
+            $upper_bound_call_info{$key}->{direct_call_count}++;
+        }
         my $max = $upper_bound_call_info{$key}->{max_arg_count};
         my $min = $upper_bound_call_info{$key}->{min_arg_count};
         if ( !defined($max) || $arg_count > $max ) {
@@ -14422,10 +14448,6 @@ sub cross_check_call_args {
     my $rsub_info =
       $self->sub_def_info_maker( $rpackage_lookup_list,
         \%upper_bound_call_info );
-
-    # Names commonly used like '$self'. This list will be augmented as we go.
-    # NOTE: This is not currently used but might be in the future.
-    my %self_names = ( '$self' => 1, '$class' => 1 );
 
     # Hash to combine info for subs and calls
     my %common_hash;
@@ -14492,6 +14514,38 @@ sub cross_check_call_args {
         }
     }
 
+    #-------------------------------
+    # Loop to merge prototype counts
+    #-------------------------------
+    foreach my $key ( keys %common_hash ) {
+        my $rsub_item = $rsub_info->{$key};
+        next if ( !defined($rsub_item) );
+        next if ( !$rsub_item->{prototype} );
+        my $item          = $common_hash{$key};
+        my $rdirect_calls = $item->{direct_calls};
+        my $rself_calls   = $item->{self_calls};
+        my $num_direct    = defined($rdirect_calls) ? @{$rdirect_calls} : 0;
+        my $num_self      = defined($rself_calls)   ? @{$rself_calls}   : 0;
+
+        # Use prototype values if given and
+        #   - all calls are direct, or
+        #   - all calls are self (in which case count increases by 1)
+        # For mixed direct/self calls, just ignore the prototype. This
+        # will appear as a type 'a' mismatch.
+        next if ( $num_self && $num_direct );
+
+        my $shift_count_min = $rsub_item->{prototype_count_min};
+        my $shift_count_max = $rsub_item->{prototype_count_max};
+        if ($num_self) {
+            if ( defined($shift_count_min) ) { $shift_count_min++ }
+            if ( defined($shift_count_max) ) { $shift_count_max++ }
+        }
+
+        # overwrite values found with the standard method
+        $rsub_item->{shift_count_min} = $shift_count_min;
+        $rsub_item->{shift_count_max} = $shift_count_max;
+    }
+
     #-------------------------------------------------------------------------
     # Loop to compare call methods and arg counts of calls and sub definitions
     #-------------------------------------------------------------------------
@@ -14510,7 +14564,7 @@ sub cross_check_call_args {
         my $caller_name = $rcall_item->{caller_name};
         my $key         = $package . '::' . $name;
 
-        my ( $shift_count, $self_name );
+        my ( $shift_count_min, $shift_count_max, $self_name );
         my $rsub_item = $rsub_info->{$key};
         if ( defined($rsub_item) ) {
 
@@ -14519,16 +14573,17 @@ sub cross_check_call_args {
             my $seqno_sub = $rsub_item->{seqno};
             if ( !$ris_my_sub_by_seqno->{$seqno_sub} ) {
                 $common_hash{$key}->{rsub_item} = $rsub_item;
-                $shift_count                    = $rsub_item->{shift_count};
+                $shift_count_min                = $rsub_item->{shift_count_min};
+                $shift_count_max                = $rsub_item->{shift_count_max};
                 $self_name                      = $rsub_item->{self_name};
             }
         }
 
         # compare caller/sub arg counts if posible
-        if ( defined($shift_count) && defined($arg_count) ) {
+        if ( defined($shift_count_min) && defined($arg_count) ) {
 
             if ( $call_type eq '->' ) { $arg_count += 1 }
-            my $excess = $arg_count - $shift_count;
+            my $excess = $arg_count - $shift_count_min;
 
             my $max = $common_hash{$key}->{max_arg_count};
             my $min = $common_hash{$key}->{min_arg_count};
@@ -14539,15 +14594,18 @@ sub cross_check_call_args {
                 $common_hash{$key}->{min_arg_count} = $arg_count;
             }
 
-            if ( !$excess ) {
-                if ( $call_type eq '->' ) { $self_names{$self_name}++; }
-                push @{ $common_hash{$key}->{matching_count} }, $rcall_item;
+            if ( $excess < 0 ) {
+                push @{ $common_hash{$key}->{under_count} }, $rcall_item;
             }
             elsif ( $excess > 0 ) {
-                push @{ $common_hash{$key}->{over_count} }, $rcall_item;
+                if ( defined($shift_count_max) ) {
+                    $excess = $arg_count - $shift_count_max;
+                    if ( $excess > 0 ) {
+                        push @{ $common_hash{$key}->{over_count} }, $rcall_item;
+                    }
+                }
             }
             else {
-                push @{ $common_hash{$key}->{under_count} }, $rcall_item;
             }
         }
     }
@@ -14570,26 +14628,27 @@ sub cross_check_call_args {
         my $name = $rsub_item->{name};
         next if ( $ris_mismatched_call_excluded_name->{$name} );
 
-        my $lno         = $rsub_item->{line_number};
-        my $shift_count = $rsub_item->{shift_count};
-        $shift_count = '*' unless defined($shift_count);
-
+        my $lno           = $rsub_item->{line_number};
         my $rmethod_calls = $item->{method_calls};
         my $rself_calls   = $item->{self_calls};
         my $rdirect_calls = $item->{direct_calls};
         my $num_self      = defined($rself_calls)   ? @{$rself_calls}   : 0;
         my $num_direct    = defined($rdirect_calls) ? @{$rdirect_calls} : 0;
         my $num_method    = defined($rmethod_calls) ? @{$rmethod_calls} : 0;
+
+        my $shift_count_min = $rsub_item->{shift_count_min};
+        my $shift_count_max = $rsub_item->{shift_count_max};
+
+        $shift_count_max = '*' unless defined($shift_count_max);
+        $shift_count_min = '*' unless defined($shift_count_min);
+
         my $max_arg_count = $item->{max_arg_count};
         my $min_arg_count = $item->{min_arg_count};
         $max_arg_count = '*' unless defined($max_arg_count);
         $min_arg_count = '*' unless defined($min_arg_count);
 
-        my $rmatching_count = $item->{matching_count};
         my $rover_count     = $item->{over_count};
         my $runder_count    = $item->{under_count};
-        my $num_matching_count =
-          defined($rmatching_count) ? @{$rmatching_count} : 0;
         my $num_over_count  = defined($rover_count)  ? @{$rover_count}  : 0;
         my $num_under_count = defined($runder_count) ? @{$runder_count} : 0;
 
@@ -14607,13 +14666,14 @@ sub cross_check_call_args {
 "$num_self $str($lines_self_calls) and $num_direct call$ess2($lines_direct_calls)";
             push @warnings,
               {
-                line_number   => $lno,
-                letter        => 'a',
-                name          => $name,
-                shift_count   => $shift_count,
-                min_arg_count => $min_arg_count,
-                max_arg_count => $max_arg_count,
-                note          => $note,
+                line_number     => $lno,
+                letter          => 'a',
+                name            => $name,
+                shift_count_min => $shift_count_min,
+                shift_count_max => $shift_count_max,
+                min_arg_count   => $min_arg_count,
+                max_arg_count   => $max_arg_count,
+                note            => $note,
               };
         }
 
@@ -14626,25 +14686,26 @@ sub cross_check_call_args {
         }
 
         # issue 'i': indeterminate. Could not determine a specific arg count
-        elsif ( !defined( $rsub_item->{shift_count} ) ) {
+        elsif ( $shift_count_min eq '*' ) {
             if ( $ris_mismatched_call_type->{'i'} ) {
                 my $letter = 'i';
 
                 # skip *:*:* (no disagreement - call counts also indeterminate)
                 next
-                  if ( $shift_count eq $min_arg_count
-                    && $shift_count eq $max_arg_count );
+                  if ( $shift_count_min eq $min_arg_count
+                    && $shift_count_min eq $max_arg_count );
 
                 my $note = "indeterminate sub arg count";
                 push @warnings,
                   {
-                    line_number   => $lno,
-                    letter        => $letter,
-                    name          => $name,
-                    shift_count   => $shift_count,
-                    min_arg_count => $min_arg_count,
-                    max_arg_count => $max_arg_count,
-                    note          => $note,
+                    line_number     => $lno,
+                    letter          => $letter,
+                    name            => $name,
+                    shift_count_min => $shift_count_min,
+                    shift_count_max => $shift_count_max,
+                    min_arg_count   => $min_arg_count,
+                    max_arg_count   => $max_arg_count,
+                    note            => $note,
                   };
             }
         }
@@ -14665,13 +14726,14 @@ sub cross_check_call_args {
 
                     push @warnings,
                       {
-                        line_number   => $lno,
-                        letter        => $letter,
-                        name          => $name,
-                        shift_count   => $shift_count,
-                        min_arg_count => $min_arg_count,
-                        max_arg_count => $max_arg_count,
-                        note          => $note,
+                        line_number     => $lno,
+                        letter          => $letter,
+                        name            => $name,
+                        shift_count_min => $shift_count_min,
+                        shift_count_max => $shift_count_max,
+                        min_arg_count   => $min_arg_count,
+                        max_arg_count   => $max_arg_count,
+                        note            => $note,
                       };
                 }
             }
@@ -14681,7 +14743,7 @@ sub cross_check_call_args {
 
                 # Skip the warning for small lists with undercount
                 if (   $ris_mismatched_call_type->{'u'}
-                    && $shift_count > $mismatched_arg_undercount_cutoff )
+                    && $shift_count_min > $mismatched_arg_undercount_cutoff )
                 {
                     my $lines_under_count = stringify_line_range($runder_count);
                     my $total             = $num_direct + $num_self;
@@ -14692,13 +14754,14 @@ sub cross_check_call_args {
 
                     push @warnings,
                       {
-                        line_number   => $lno,
-                        letter        => $letter,
-                        name          => $name,
-                        shift_count   => $shift_count,
-                        min_arg_count => $min_arg_count,
-                        max_arg_count => $max_arg_count,
-                        note          => $note,
+                        line_number     => $lno,
+                        letter          => $letter,
+                        name            => $name,
+                        shift_count_min => $shift_count_min,
+                        shift_count_max => $shift_count_max,
+                        min_arg_count   => $min_arg_count,
+                        max_arg_count   => $max_arg_count,
+                        note            => $note,
                       };
                 }
             }
@@ -14867,13 +14930,18 @@ EOM
 
     # output the results, ignoring any excluded names
     foreach my $item ( @{$rwarnings} ) {
-        my $lno           = $item->{line_number};
-        my $letter        = $item->{letter};
-        my $name          = $item->{name};
-        my $shift_count   = $item->{shift_count};
-        my $min_arg_count = $item->{min_arg_count};
-        my $max_arg_count = $item->{max_arg_count};
-        my $note          = $item->{note};
+        my $lno             = $item->{line_number};
+        my $letter          = $item->{letter};
+        my $name            = $item->{name};
+        my $shift_count_min = $item->{shift_count_min};
+        my $shift_count_max = $item->{shift_count_min};
+        my $min_arg_count   = $item->{min_arg_count};
+        my $max_arg_count   = $item->{max_arg_count};
+        my $note            = $item->{note};
+        my $shift_count =
+            $shift_count_min eq $shift_count_max
+          ? $shift_count_min
+          : "$shift_count_min-$shift_count_max";
         $output_string .=
 "$lno:$letter:$name:$shift_count:$min_arg_count:$max_arg_count: $note\n";
     }
@@ -14894,13 +14962,18 @@ sub dump_mismatched_args {
 Line:Mismatch:Name:#args:Min:Max: note
 EOM
     foreach my $item ( @{$rwarnings} ) {
-        my $lno           = $item->{line_number};
-        my $letter        = $item->{letter};
-        my $name          = $item->{name};
-        my $note          = $item->{note};
-        my $shift_count   = $item->{shift_count};
-        my $min_arg_count = $item->{min_arg_count};
-        my $max_arg_count = $item->{max_arg_count};
+        my $lno             = $item->{line_number};
+        my $letter          = $item->{letter};
+        my $name            = $item->{name};
+        my $note            = $item->{note};
+        my $shift_count_min = $item->{shift_count_min};
+        my $shift_count_max = $item->{shift_count_max};
+        my $min_arg_count   = $item->{min_arg_count};
+        my $max_arg_count   = $item->{max_arg_count};
+        my $shift_count =
+            $shift_count_min eq $shift_count_max
+          ? $shift_count_min
+          : "$shift_count_min-$shift_count_max";
         $output_string .=
 "$lno:$letter:$name:$shift_count:$min_arg_count:$max_arg_count: $note\n";
     }

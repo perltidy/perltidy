@@ -6181,7 +6181,7 @@ args expected is B<n> or less.  Please note that this number B<n> is the number
 of args from the point of view of the sub definition, so an object like
 C<$self> passed with an arrow operator counts as one arg.
 
-The default value is B<n=4>. This has been found to allow most programs to pass
+The default value is B<n=3>. This has been found to allow most programs to pass
 without warnings, but it should be reduced if possible for better error
 checking.  The minimum possible value of B<n> needed to avoid triggering an
 error for a program can be determined by running with B<-wmauc=0>, or by
