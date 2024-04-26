@@ -6100,9 +6100,9 @@ and
 This may or may not be an error, but it is worth checking. It might become an
 error in the future if sub C<Fault> starts to access C<$self>.
 
-=item B<o:> (B<overcount): the number of call args exceeds the expected number.
+=item B<o:> (B<overcount>): the number of call args exceeds the expected number.
 
-=item B<u:> (B<undercount): the number of call args is less than the expected number.
+=item B<u:> (B<undercount>): the number of call args is less than the expected number.
 
 For example
 
@@ -6123,9 +6123,13 @@ possibility, but it is worth checking.  The simple static processing done by per
 
 =back
 
-B<Some Limitations:>
+B<Notes and Limitations:>
 
 =over 4
+
+=item *
+When prototypes or signatures are given, they are used to determine the
+expected number of sub arguments. Otherwise, the sub text is scanned.
 
 =item *
 This option works best for subs which unpack call args in an orderly
@@ -6175,19 +6179,20 @@ string of space- or comma-separated names. All subs with those names will be
 skipped, regardless of package.
 
 =item *
-B<--warn-mismatched-arg-undercount-cutoff=n>, or
-B<-wmauc=n>, can be used to avoid undercount warnings when the number of
-args expected is B<n> or less.  Please note that this number B<n> is the number
-of args from the point of view of the sub definition, so an object like
-C<$self> passed with an arrow operator counts as one arg.
+B<--warn-mismatched-arg-undercount-cutoff=n>, or B<-wmauc=n>, can be used to
+avoid undercount warnings when the number of args expected is B<n> or less.
+Please note that this number B<n> is the number of args from the point of
+view of the sub definition, so an object like C<$self> passed with an arrow
+operator counts as one arg.
 
-The default value is B<n=3>. This has been found to allow most programs to pass
-without warnings, but it should be reduced if possible for better error
+The default value is B<n=3>. This has been found to allow most programs to
+pass without warnings, but it should be reduced if possible for better error
 checking.  The minimum possible value of B<n> needed to avoid triggering an
-error for a program can be determined by running with B<-wmauc=0>, or by
-running with B<--dump-mismatched-args>. The output shows, for each mismatch,
-the number of args expected by a sub plus the range of the number of args
-actually passed to it.
+error for a program can be determined by running with B<-wma -wmauc=0>.  If
+there are undercount errors, a note at the bottom of the error output
+indicates the value of B<n> required to avoid reporting them.
+
+=back
 
 To illustrate these controls,
 
@@ -6196,8 +6201,6 @@ To illustrate these controls,
 means format F<somefile.pl> as usual and check for mismatched overcounts and
 undercounts but not arrows. Skip checking for any sub named C<new> or C<old>,
 and only warn of undercounts for subs expecting more than 2 args.
-
-=back
 
 =back
 

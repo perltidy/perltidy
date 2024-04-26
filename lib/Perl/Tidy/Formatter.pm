@@ -9481,7 +9481,7 @@ sub dump_unusual_variables {
 
     # output for multiple types
     my $output_string = <<EOM;
-Issues abbreviations  u=unused  r=reused  s=multi-sigil  p=package crossing
+Issue abbreviations  u=unused  r=reused  s=multi-sigil  p=package crossing
 Line:Issue: Var: note
 EOM
     foreach my $item ( @{$rlines} ) {
@@ -14630,6 +14630,8 @@ sub cross_check_call_args {
     # Now look for issues
     #--------------------
     my @warnings;
+    my $max_shift_count_with_undercount = 0;
+    my $number_of_undercount_warnings   = 0;
 
     # Look at each key:
     foreach my $key ( keys %common_hash ) {
@@ -14757,6 +14759,10 @@ sub cross_check_call_args {
             # issue 'u': undercount
             if ($num_under_count) {
 
+                if ( $shift_count_min > $max_shift_count_with_undercount ) {
+                    $max_shift_count_with_undercount = $shift_count_min;
+                }
+
                 # Skip the warning for small lists with undercount
                 if (   $ris_mismatched_call_type->{'u'}
                     && $shift_count_min > $mismatched_arg_undercount_cutoff )
@@ -14768,6 +14774,7 @@ sub cross_check_call_args {
                     $note =
 "missing args at $num_under_count of $total calls($lines_under_count)";
 
+                    $number_of_undercount_warnings++;
                     push @warnings,
                       {
                         line_number     => $lno,
@@ -14791,7 +14798,13 @@ sub cross_check_call_args {
         } @warnings;
     }
 
-    return \@warnings;
+    my $hint = EMPTY_STRING;
+    if ($number_of_undercount_warnings) {
+        $hint = <<EOM;
+Note: use -wmauc=$max_shift_count_with_undercount or greater to prevent undercount warnings in this file
+EOM
+    }
+    return ( \@warnings, $hint );
 } ## end sub cross_check_call_args
 
 sub stringify_line_range {
@@ -14935,13 +14948,14 @@ sub warn_mismatched_args {
     # - warn-mismatched-arg-exclusion-list
     # - warn-mismatched-arg-undercount-cutoff
 
-    my $rwarnings = $self->cross_check_call_args(1);
+    my ( $rwarnings, $hint ) = $self->cross_check_call_args(1);
     return unless ( $rwarnings && @{$rwarnings} );
 
     my $wma_key       = 'warn-mismatched-args';
     my $output_string = "Begin scan for --$wma_key\n";
     $output_string .= <<EOM;
-Line:Mismatch:Name:#args:Min:Max: note
+Issue abbreviations a=arrow mismatch u=undercount o=overcount
+Line:Issue:Name:#args:Min:Max: note
 EOM
 
     # output the results, ignoring any excluded names
@@ -14961,6 +14975,7 @@ EOM
         $output_string .=
 "$lno:$letter:$name:$shift_count:$min_arg_count:$max_arg_count: $note\n";
     }
+    if ($hint) { $output_string .= $hint }
     $output_string .= "End scan for --$wma_key\n";
     warning($output_string);
 
@@ -14972,10 +14987,11 @@ sub dump_mismatched_args {
 
     # process a --dump-mismatched-args command
 
-    my $rwarnings = $self->cross_check_call_args(0);
+    my ( $rwarnings, $hint ) = $self->cross_check_call_args(0);
     return unless ( $rwarnings && @{$rwarnings} );
     my $output_string = <<EOM;
-Line:Mismatch:Name:#args:Min:Max: note
+Issue abbreviations a=arrow mismatch u=undercount o=overcount i=indeterminate
+Line:Issue:Name:#args:Min:Max: note
 EOM
     foreach my $item ( @{$rwarnings} ) {
         my $lno             = $item->{line_number};
