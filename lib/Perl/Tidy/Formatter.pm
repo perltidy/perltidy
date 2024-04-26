@@ -14964,7 +14964,7 @@ EOM
         my $letter          = $item->{letter};
         my $name            = $item->{name};
         my $shift_count_min = $item->{shift_count_min};
-        my $shift_count_max = $item->{shift_count_min};
+        my $shift_count_max = $item->{shift_count_max};
         my $min_arg_count   = $item->{min_arg_count};
         my $max_arg_count   = $item->{max_arg_count};
         my $note            = $item->{note};
