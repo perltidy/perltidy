@@ -14378,12 +14378,15 @@ sub cross_check_call_args {
     # initialize for dump mode
     my $ris_mismatched_call_type = { 'a' => 1, 'o' => 1, 'u' => 1, 'i' => 1 };
     my $mismatched_arg_undercount_cutoff  = 0;
+    my $mismatched_arg_overcount_cutoff   = 0;
     my $ris_mismatched_call_excluded_name = {};
 
     if ($warn_mode) {
         $ris_mismatched_call_type = \%warn_mismatched_arg_types;
         $mismatched_arg_undercount_cutoff =
           $rOpts->{'warn-mismatched-arg-undercount-cutoff'};
+        $mismatched_arg_overcount_cutoff =
+          $rOpts->{'warn-mismatched-arg-overcount-cutoff'};
         $ris_mismatched_call_excluded_name =
           \%is_warn_mismatched_arg_excluded_name;
     }
@@ -14733,7 +14736,9 @@ sub cross_check_call_args {
 
             # issue 'o': overcount
             if ($num_over_count) {
-                if ( $ris_mismatched_call_type->{'o'} ) {
+                if (   $ris_mismatched_call_type->{'o'}
+                    && $shift_count_max >= $mismatched_arg_overcount_cutoff )
+                {
 
                     my $lines_over_count = stringify_line_range($rover_count);
                     my $total            = $num_direct + $num_self;
@@ -14765,7 +14770,7 @@ sub cross_check_call_args {
 
                 # Skip the warning for small lists with undercount
                 if (   $ris_mismatched_call_type->{'u'}
-                    && $shift_count_min > $mismatched_arg_undercount_cutoff )
+                    && $shift_count_min >= $mismatched_arg_undercount_cutoff )
                 {
                     my $lines_under_count = stringify_line_range($runder_count);
                     my $total             = $num_direct + $num_self;
@@ -14800,8 +14805,9 @@ sub cross_check_call_args {
 
     my $hint = EMPTY_STRING;
     if ($number_of_undercount_warnings) {
+        my $wmauc_min = $max_shift_count_with_undercount + 1;
         $hint = <<EOM;
-Note: use -wmauc=$max_shift_count_with_undercount or greater to prevent undercount warnings in this file
+Note: use -wmauc=$wmauc_min or greater to prevent undercount warnings in this file
 EOM
     }
     return ( \@warnings, $hint );

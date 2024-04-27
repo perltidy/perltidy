@@ -3721,6 +3721,7 @@ sub generate_options {
     $add_option->( 'warn-mismatched-args',                  'wma',   '!' );
     $add_option->( 'warn-mismatched-arg-types',             'wmat',  '=s' );
     $add_option->( 'warn-mismatched-arg-undercount-cutoff', 'wmauc', '=i' );
+    $add_option->( 'warn-mismatched-arg-overcount-cutoff',  'wmaoc', '=i' );
     $add_option->( 'warn-mismatched-arg-exclusion-list',    'wmaxl', '=s' );
 
     $add_option->( 'add-interbracket-arrows',       'aia', '!' );
@@ -3872,7 +3873,8 @@ sub generate_options {
       maximum-unexpected-errors=0
       memoize
       minimum-space-to-comment=4
-      warn-mismatched-arg-undercount-cutoff=3
+      warn-mismatched-arg-undercount-cutoff=4
+      warn-mismatched-arg-overcount-cutoff=1
       nobrace-left-and-indent
       nocuddled-else
       nodelete-old-whitespace
@@ -4032,6 +4034,7 @@ sub generate_options {
         'maximum-unexpected-errors'                 => [ 0, undef ],
         'minimum-space-to-comment'                  => [ 0, undef ],
         'warn-mismatched-arg-undercount-cutoff'     => [ 0, undef ],
+        'warn-mismatched-arg-overcount-cutoff'      => [ 0, undef ],
         'one-line-block-nesting'                    => [ 0, 1 ],
         'one-line-block-semicolons'                 => [ 0, 2 ],
         'paren-tightness'                           => [ 0, 2 ],

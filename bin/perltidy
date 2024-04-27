@@ -6128,10 +6128,6 @@ B<Notes and Limitations:>
 =over 4
 
 =item *
-When prototypes or signatures are given, they are used to determine the
-expected number of sub arguments. Otherwise, the sub text is scanned.
-
-=item *
 This option works best for subs which unpack call args in an orderly
 manner near the beginning of the sub from C<@_> and/or with C<shift>
 operations.  If individual elements of the @_ array are directly
@@ -6146,6 +6142,10 @@ Anonymous subs and lexical subs (introduced with C<my>) are not checked.
 =item *
 Only calls which appear to be to subs defined within the file being
 processed are checked. But note that a file may contain multiple packages.
+
+=item *
+When prototypes or signatures are given, they are used to determine the
+expected number of sub arguments. Otherwise, the sub text is scanned.
 
 =back
 
@@ -6180,17 +6180,23 @@ skipped, regardless of package.
 
 =item *
 B<--warn-mismatched-arg-undercount-cutoff=n>, or B<-wmauc=n>, can be used to
-avoid undercount warnings when the number of args expected is B<n> or less.
+avoid B<undercount> warnings when the expected number of args is less than B<n>.
 Please note that this number B<n> is the number of args from the point of
 view of the sub definition, so an object like C<$self> passed with an arrow
 operator counts as one arg.
 
-The default value is B<n=3>. This has been found to allow most programs to
+The default value is B<n=4>. This has been found to allow most programs to
 pass without warnings, but it should be reduced if possible for better error
 checking.  The minimum possible value of B<n> needed to avoid triggering an
 error for a program can be determined by running with B<-wma -wmauc=0>.  If
 there are undercount errors, a note at the bottom of the error output
 indicates the value of B<n> required to avoid reporting them.
+
+=item *
+B<--warn-mismatched-arg-overcount-cutoff=n>, or B<-wmaoc=n>, can be used to
+avoid B<overcount> warnings when the expected number of args is less than B<n>.
+The default value is B<n=1>. This avoids warning messages for subroutines
+which are dummy placeholders for future development.
 
 =back
 
