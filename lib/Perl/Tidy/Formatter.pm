@@ -14118,9 +14118,11 @@ EOM
     #--------------------------------
     # the whole file has been scanned
     #--------------------------------
-    $item->{shift_count_min} = $shift_count;
-    $item->{shift_count_max} = $shift_count;
-    $item->{self_name}       = $self_name;
+    if ( !$saw_pop_at_underscore ) {
+        $item->{shift_count_min} = $shift_count;
+        $item->{shift_count_max} = $shift_count;
+        $item->{self_name}       = $self_name;
+    }
     return;
 
 } ## end sub count_sub_args
