@@ -1640,11 +1640,9 @@ sub initialize_grep_and_friends {
         }
     }
 
-    ##@q = qw(sort map grep eval);
     %is_sort_map_grep_eval = %is_sort_map_grep;
     $is_sort_map_grep_eval{'eval'} = 1;
 
-    ##@q = qw(sort map grep eval do);
     %is_sort_map_grep_eval_do = %is_sort_map_grep_eval;
     $is_sort_map_grep_eval_do{'do'} = 1;
 
@@ -1653,7 +1651,6 @@ sub initialize_grep_and_friends {
     # we could remove sub and use ASUB pattern to also handle a
     # prototype/signature.  But that would slow things down and would probably
     # never be useful.
-    ##@q = qw( do sub eval sort map grep );
     %is_block_with_ci = %is_sort_map_grep_eval_do;
     $is_block_with_ci{'sub'} = 1;
 
@@ -12708,7 +12705,6 @@ sub check_Q {
         && $next_nonblank_token =~ /^[; \)\}]$/
 
         # scalar is not declared
-        ##                      =~ /^(my|our|local)$/
         && !( $type_0 eq 'k' && $is_my_our_local{$token_0} )
       )
     {
@@ -14132,8 +14128,11 @@ sub sub_def_info_maker {
 
     my ( $self, $rpackage_lookup_list, $rprelim_call_info ) = @_;
 
-    # Returns: \%sub_info_hash, which contains sub call info:
-    #  $sub_info_hash->{$package::$name}->{
+    # Returns two hash references:
+    #    \%sub_info_by_seqno,
+    #    \%sub_seqno_by_key,
+    # where
+    #     $sub_info_by_seqno{seqno} = {
     #      seqno        => $seqno,
     #      package      => $package,
     #      name         => $name,
@@ -14142,8 +14141,12 @@ sub sub_def_info_maker {
     #      is_signature => true if seqno_list is a sub signature
     #      self_name    => name of first arg
     #  }
+    # and
+    #    $sub_seqno_by_key{'package::name'} = seqno;
+    # which gives the seqno for a sub name
 
-    # TODO: set package to be parent seqno for 'my' sub
+    # TODO: possible future update:
+    # package name for 'my' sub and anonymous sub will be parent sub seqno
 
     my $rLL                  = $self->[_rLL_];
     my $K_opening_container  = $self->[_K_opening_container_];
@@ -14155,7 +14158,8 @@ sub sub_def_info_maker {
     #----------------------------------
     my @package_stack = reverse( @{$rpackage_lookup_list} );
     my ( $current_package, $Kbegin, $Kend ) = @{ pop @package_stack };
-    my %sub_info_hash;
+    my %sub_info_by_seqno;
+    my %sub_seqno_by_key;
     foreach my $seqno ( sort { $a <=> $b } keys %{$ris_sub_block} ) {
 
         # update the current package
@@ -14220,15 +14224,12 @@ sub sub_def_info_maker {
         $self->count_sub_args($item);
 
         # Store the sub info by sequence number
-        # FIXME: this would be better going into a new hash rather than
-        # overwriting the old hash, even though is works, to avoid confusion.
-        # Also, it would be preferable work with just a single hash
-        $ris_sub_block->{$seqno} = $item;
+        $sub_info_by_seqno{$seqno} = $item;
 
-        # and also by package::name
-        $sub_info_hash{$key} = $item;
+        # and save the sub sequence number indexed by sub name
+        $sub_seqno_by_key{$key} = $seqno;
     }
-    return \%sub_info_hash;
+    return ( \%sub_info_by_seqno, \%sub_seqno_by_key );
 } ## end sub sub_def_info_maker
 
 sub update_sub_call_paren_info {
@@ -14270,7 +14271,7 @@ sub update_sub_call_paren_info {
         my $item    = $rsub_call_paren_info_by_seqno->{$seqno};
         my $name    = $item->{token_m};
         my $type_mm = $item->{type_mm};
-        ## These values are available but currently unused:
+        ## These values are available but currently unused: [TODO: maybe remove]
         ## my $type_m   = $item->{type_m};
         ## my $token_mm = $item->{token_mm};
 
@@ -14452,7 +14453,7 @@ sub cross_check_call_args {
     #-----------------------------------
     # Get arg counts for sub definitions
     #-----------------------------------
-    my $rsub_info =
+    my ( $rsub_info_by_seqno, $rsub_seqno_by_key ) =
       $self->sub_def_info_maker( $rpackage_lookup_list,
         \%upper_bound_call_info );
 
@@ -14493,7 +14494,7 @@ sub cross_check_call_args {
         if ($seqno_sub) {
 
             # NOTE: calls within asubs are currently skipped
-            my $item = $self->[_ris_sub_block_]->{$seqno_sub};
+            my $item = $rsub_info_by_seqno->{$seqno_sub};
 
             # look for a first arg like '$self' which matches the
             # name of the calling object, like '$self->'
@@ -14525,8 +14526,9 @@ sub cross_check_call_args {
     # Loop to merge prototype counts
     #-------------------------------
     foreach my $key ( keys %common_hash ) {
-        my $rsub_item = $rsub_info->{$key};
-        next if ( !defined($rsub_item) );
+        my $seqno_sub = $rsub_seqno_by_key->{$key};
+        next if ( !defined($seqno_sub) );
+        my $rsub_item = $rsub_info_by_seqno->{$seqno_sub};
         next if ( !$rsub_item->{prototype} );
         my $item          = $common_hash{$key};
         my $rdirect_calls = $item->{direct_calls};
@@ -14534,12 +14536,10 @@ sub cross_check_call_args {
         my $num_direct    = defined($rdirect_calls) ? @{$rdirect_calls} : 0;
         my $num_self      = defined($rself_calls)   ? @{$rself_calls}   : 0;
 
-        # Use prototype values if given and
-        #   - all calls are direct, or
-        #   - all calls are self (in which case count increases by 1)
-        # For mixed direct/self calls, just ignore the prototype. This
-        # will appear as a type 'a' mismatch.
-        next if ( $num_self && $num_direct );
+        # Use prototype values if given and all calls are direct
+        # Otherwise, ignore the prototype.
+        next if ($num_self);
+        next if ( !$num_direct );
 
         my $shift_count_min = $rsub_item->{prototype_count_min};
         my $shift_count_max = $rsub_item->{prototype_count_max};
@@ -14584,12 +14584,13 @@ sub cross_check_call_args {
         my $key         = $package . '::' . $name;
 
         my ( $shift_count_min, $shift_count_max, $self_name );
-        my $rsub_item = $rsub_info->{$key};
-        if ( defined($rsub_item) ) {
+        my $seqno_sub = $rsub_seqno_by_key->{$key};
+        if ( defined($seqno_sub) ) {
+
+            my $rsub_item = $rsub_info_by_seqno->{$seqno_sub};
 
             # skip 'my' subs for now, they need special treatment. If
             # anonymous subs are added, 'my' subs could also be added then.
-            my $seqno_sub = $rsub_item->{seqno};
             if ( !$ris_my_sub_by_seqno->{$seqno_sub} ) {
                 $common_hash{$key}->{rsub_item} = $rsub_item;
                 $shift_count_min                = $rsub_item->{shift_count_min};
@@ -14780,7 +14781,7 @@ sub cross_check_call_args {
                     my $note;
                     my $letter = 'u';
                     $note =
-"missing args at $num_under_count of $total calls($lines_under_count)";
+"arg undercount at $num_under_count of $total calls($lines_under_count)";
 
                     $number_of_undercount_warnings++;
                     push @warnings,
@@ -21838,7 +21839,6 @@ sub starting_one_line_block {
                 #     ; # very long comment......
                 # so we do not need to include the length of the comment, which
                 # would break the block. Project 'bioperl' has coding like this.
-                ##    !~ /^(if|else|elsif|unless)$/
                 if (  !$is_if_unless_elsif_else{$block_type}
                     || $K_last == $Ki_nonblank )
                 {

@@ -219,7 +219,6 @@ sub streamhandle {
             if ( $mode =~ /[rR]/ ) {
 
                 # RT#97159; part 1 of 2: updated to use 'can'
-                ##if ( $ref eq 'IO::File' || defined &{ $ref . "::getline" } ) {
                 if ( $ref->can('getline') ) {
                     $New = sub { $filename };
                 }
@@ -239,7 +238,6 @@ EOM
             if ( $mode =~ /[wW]/ ) {
 
                 # RT#97159; part 2 of 2: updated to use 'can'
-                ##if ( $ref eq 'IO::File' || defined &{ $ref . "::print" } ) {
                 if ( $ref->can('print') ) {
                     $New = sub { $filename };
                 }
