@@ -6393,12 +6393,13 @@ EOM
             # here. (A recent update will probably not even allow negative
             # levels to arrive here any longer).
 
-            my $seqno = EMPTY_STRING;
+            my @tokary;
 
             # Handle tokens with sequence numbers ...
             # note the ++ increment hidden here for efficiency
             if ( $rtype_sequence->[ ++$j ] ) {
-                $seqno = $rtype_sequence->[$j];
+                my $seqno = $rtype_sequence->[$j];
+                $tokary[_TYPE_SEQUENCE_] = $seqno;
                 my $sign = 1;
                 if ( $is_opening_token{$token} ) {
                     $self->[_K_opening_container_]->{$seqno} = @{$rLL};
@@ -6496,6 +6497,9 @@ EOM
                 push @{$rSS}, $sign * $seqno;
 
             }
+            else {
+                $tokary[_TYPE_SEQUENCE_] = EMPTY_STRING;
+            }
 
             # Here we are storing the first five variables per token. The
             # remaining token variables will be added later as follows:
@@ -6504,13 +6508,10 @@ EOM
             #  _CI_LEVEL_          is added by sub set_ci
             # So all token variables are available for use after sub set_ci.
 
-            my @tokary;
-
-            $tokary[_TOKEN_]         = $token;
-            $tokary[_TYPE_]          = $rtoken_type->[$j];
-            $tokary[_TYPE_SEQUENCE_] = $seqno;
-            $tokary[_LEVEL_]         = $rlevels->[$j];
-            $tokary[_LINE_INDEX_]    = $line_index;
+            $tokary[_TOKEN_]      = $token;
+            $tokary[_TYPE_]       = $rtoken_type->[$j];
+            $tokary[_LEVEL_]      = $rlevels->[$j];
+            $tokary[_LINE_INDEX_] = $line_index;
 
             push @{$rLL}, \@tokary;
 
