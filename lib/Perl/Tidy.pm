@@ -1161,7 +1161,7 @@ sub make_file_extension {
     my ( $self, $extension, $default ) = @_;
 
     # '$extension' is the first choice (usually a user entry)
-    # '$default'   is a backup extension
+    # '$default'   is an optional backup extension
 
     $extension = EMPTY_STRING unless defined($extension);
     $extension =~ s/^\s+//;

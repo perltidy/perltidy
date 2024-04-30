@@ -1333,6 +1333,11 @@ sub check_token_array {
     # interface to Perl::Tidy::Logger routines
     sub warning {
         my ( $msg, $msg_line_number ) = @_;
+
+        # Issue a warning message
+        # Given:
+        #   $msg = text of warning
+        #   $msg_line_number = optional line number prefix
         if ($logger_object) {
             $logger_object->warning( $msg, $msg_line_number );
         }
@@ -1341,6 +1346,11 @@ sub check_token_array {
 
     sub complain {
         my ( $msg, $msg_line_number ) = @_;
+
+        # Issue a complaint message
+        # Given:
+        #   $msg = text of complaint
+        #   $msg_line_number = optional line number prefix
         if ($logger_object) {
             $logger_object->complain( $msg, $msg_line_number );
         }
@@ -12735,7 +12745,10 @@ sub copy_token_as_type {
 sub K_next_code {
     my ( $self, $KK, $rLL ) = @_;
 
-    # return the index K of the next nonblank, non-comment token
+    # return the index of the next nonblank, non-comment token after $KK
+    # Given:
+    #   $KK  = index of the token in $rLL
+    #   $rLL = optional array to use (default is $self->[_rLL_])
     return if ( !defined($KK) );
     return if ( $KK < 0 );
 
@@ -12762,10 +12775,15 @@ sub K_next_code {
 } ## end sub K_next_code
 
 sub K_next_nonblank {
+
     my ( $self, $KK, $rLL ) = @_;
 
-    # return the index K of the next nonblank token, or
+    # Return the index of the next nonblank token after $KK, or
     # return undef if none
+    # Given:
+    #   $KK  = index of the token in $rLL
+    #   $rLL = optional array to use (default is $self->[_rLL_])
+
     # NOTE: does not skip over the leading type 'q' of a hanging side comment
     # (use K_next_code)
     return if ( !defined($KK) );
@@ -12805,9 +12823,13 @@ sub K_next_nonblank {
 
 sub K_previous_code {
 
-    # return the index K of the previous nonblank, non-comment token
-    # Call with $KK=undef to start search at the top of the array
     my ( $self, $KK, $rLL ) = @_;
+
+    # Return the index of the previous nonblank, non-comment token before $KK
+    # Given:
+    #   $KK  = index of the token in $rLL
+    #   $rLL = optional array to use (default is $self->[_rLL_])
+    # Call with $KK=undef to start search at the top of the array
 
     # use the standard array unless given otherwise
     $rLL = $self->[_rLL_] unless ( defined($rLL) );
@@ -12839,11 +12861,15 @@ sub K_previous_code {
 
 sub K_previous_nonblank {
 
-    # return index of previous nonblank token before item K;
+    my ( $self, $KK, $rLL ) = @_;
+
+    # Return index of previous nonblank token before item $KK;
+    # Given:
+    #   $KK  = index of the token in $rLL
+    #   $rLL = optional array to use (default is $self->[_rLL_])
     # Call with $KK=undef to start search at the top of the array
     # NOTE: does not skip over the leading type 'q' of a hanging side comment
     # (use K_previous_code)
-    my ( $self, $KK, $rLL ) = @_;
 
     # use the standard array unless given otherwise
     $rLL = $self->[_rLL_] unless ( defined($rLL) );
@@ -13644,8 +13670,8 @@ sub count_prototype_args {
             $saw_semicolon = 1;
             $bump_count->() if ( !$count_min );
         }
-        elsif ( $is_array_sigil{$ch} )          { $saw_array->(); last }
-        elsif ( $is_scalar_sigil{$ch} )         { $bump_count->(); }
+        elsif ( $is_array_sigil{$ch} )  { $saw_array->(); last }
+        elsif ( $is_scalar_sigil{$ch} ) { $bump_count->(); }
         elsif ( $ch eq q{\\} ) {
             $ch = shift @chars;
             last unless defined($ch);
@@ -19496,8 +19522,12 @@ EOM
 
     sub kgb_end_group {
 
-        # end a group of keywords
         my ( $self, $bad_ending ) = @_;
+
+        # End a group of keywords:
+        #  $bad_ending = false if group ends ok
+        #                true  if group ends badly (strange pattern)
+
         if ( defined($ibeg) && $ibeg >= 0 ) {
 
             # then handle sufficiently large groups
@@ -20026,6 +20056,10 @@ EOM
     sub create_one_line_block {
 
         # set index starting next one-line block
+        # Given:
+        #   $index_start_one_line_block = starting index in _to_go array
+        #   undef => end current one-line block
+        #
         # call with no args to delete the current one-line block
         ($index_start_one_line_block) = @_;
         return;
@@ -20360,8 +20394,10 @@ EOM
     sub flush {
         my ( $self, $CODE_type_flush ) = @_;
 
-        # sub flush is called to output any tokens in the pipeline, so that
+        # Sub flush is called to output any tokens in the pipeline, so that
         # an alternate source of lines can be written in the correct order
+        # Optional parameter:
+        #   $CODE_type_flush = 'BL' for flushing to insert a blank line
 
         $index_start_one_line_block = undef;
 
@@ -30228,11 +30264,14 @@ sub total_line_length {
 
 sub excess_line_length {
 
-    # return number of characters by which a line of tokens ($ibeg..$iend)
-    # exceeds the allowable line length.
-    # NOTE: profiling shows that efficiency of this routine is essential.
-
     my ( $self, $ibeg, $iend, $ignore_right_weld ) = @_;
+
+    # Return number of characters by which a line of tokens ($ibeg..$iend)
+    # exceeds the allowable line length.
+    # Given:
+    #   $ibeg, $iend = range of indexes of this line in the _to_go arrays
+    #   $ignore_right_weld = optional flag = true to exclude any right weld
+    # NOTE: profiling shows that efficiency of this routine is essential.
 
     # Start with the leading spaces on this line ...
     my $excess = $leading_spaces_to_go[$ibeg];
@@ -32082,6 +32121,10 @@ EOM
 sub check_batch_summed_lengths {
 
     my ( $self, $msg ) = @_;
+
+    # Debug routine for summed lengths
+    #   $msg = optional debug message
+
     $msg = EMPTY_STRING unless defined($msg);
     my $rLL = $self->[_rLL_];
 
@@ -36833,6 +36876,10 @@ sub wrapup {
     # This is the last routine called when a file is formatted.
     # Flush buffer and write any informative messages
     my ( $self, $severe_error ) = @_;
+
+    # Optional parameter:
+    #   $severe_error = true if program is ending on an error
+    #                   false for normal end
 
     $self->flush();
     my $file_writer_object = $self->[_file_writer_object_];

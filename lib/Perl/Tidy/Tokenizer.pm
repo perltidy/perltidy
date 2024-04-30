@@ -2267,9 +2267,13 @@ EOM
 
     sub peeked_ahead {
         my $flag = shift;
+
+        # get/set the closure flag '$peeked_ahead'
+        # - set $peeked_ahead to $flag if given, then
+        # - return current value
         $peeked_ahead = defined($flag) ? $flag : $peeked_ahead;
         return $peeked_ahead;
-    }
+    } ## end sub peeked_ahead
 
     # ------------------------------------------------------------
     # end of tokenizer variable access and manipulation routines
@@ -2957,6 +2961,11 @@ EOM
     # a sub to warn if token found where operator expected
     sub error_if_expecting_OPERATOR {
         my ( $self, $thing ) = @_;
+
+        # Issue warning on error if expecting operator
+        # Given: $thing = the unexpected token or issue
+        #               = undef to use current pre-token
+
         if ( $expecting == OPERATOR ) {
             if ( !defined($thing) ) { $thing = $tok }
             $self->report_unexpected(
