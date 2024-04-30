@@ -4951,7 +4951,6 @@ EOM
     # Form groups of unsigned numbers from the list of signed numbers.
     #-----------------------------------------------------------------
     my @unsigned_subgroups;
-    my $ix_u             = $rsigned_lines->[0];
     my $ix_last_negative = $ix_first - 1;
     my %is_signed;
     foreach my $ix ( @{$rsigned_lines} ) {
@@ -5115,7 +5114,6 @@ EOM
     my $movable_count = 0;
     foreach my $item (@unsigned_subgroups) {
         my ( $ix_min, $ix_max ) = @{$item};
-        my $num = $ix_max - $ix_min + 1;
         foreach my $ix ( $ix_min .. $ix_max ) {
             my $line                = $rgroup_lines->[$ix];
             my $leading_space_count = $line->{'leading_space_count'};

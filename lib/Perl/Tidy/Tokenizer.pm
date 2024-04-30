@@ -3652,16 +3652,6 @@ EOM
             ( $i, $type ) =
               $self->find_angle_operator_termination( $input_line, $i,
                 $rtoken_map, $expecting, $max_token_index );
-
-            ##  This message is not very helpful and quite confusing if the above
-            ##  routine decided not to write a message with the line number.
-            ##  if ( $type eq '<' && $expecting == TERM ) {
-            ##      $self->error_if_expecting_TERM();
-            ##      $self->interrupt_logfile();
-            ##      $self->warning("Unterminated <> operator?\n");
-            ##      $self->resume_logfile();
-            ##  }
-
         }
         else {
         }
@@ -4470,7 +4460,6 @@ EOM
         elsif ( $tok eq 'elsif' ) {
             if (
 
-                ## !~ /^(if|elsif|unless)$/
                 !$is_if_elsif_unless{$last_nonblank_block_type}
 
                 # Allow isolated blocks of any kind during editing
@@ -4495,13 +4484,11 @@ EOM
             # patched for SWITCH/CASE
             if (
 
-                ## !~ /^(if|elsif|unless|case|when)$/
                 !$is_if_elsif_unless_case_when{$last_nonblank_block_type}
 
                 # patch to avoid an unwanted error message for
                 # the case of a parenless 'case' (RT 105484):
                 # switch ( 1 ) { case x { 2 } else { } }
-                ## !~ /^(if|elsif|unless|case|when)$/
                 && !$is_if_elsif_unless_case_when{$statement_type}
 
                 # Allow isolated blocks of any kind during editing (c272)
@@ -6538,7 +6525,6 @@ sub operator_expected {
     #     use Module VERSION LIST
     # We could avoid this exception by writing a special sub to parse 'use'
     # statements and perhaps mark these numbers with a new type V (for VERSION)
-    ##elsif ( $last_nonblank_type =~ /^[nv]$/ ) {
     if ( $is_n_v{$last_nonblank_type} ) {
         if ( $statement_type eq 'use' ) {
             return UNKNOWN;
@@ -6958,7 +6944,6 @@ sub decide_if_code_block {
                 # it is a comma which is not a pattern delimiter except for qw
                 (
                     $pre_types[$j] eq ','
-                    ## !~ /^(s|m|y|tr|qr|q|qq|qx)$/
                     && !$is_q_qq_qx_qr_s_y_tr_m{ $pre_tokens[$jbeg] }
                 )
 
@@ -9066,8 +9051,6 @@ EOM
                     # In something like '$${' we have type '$$' (and only
                     # part of an identifier)
                     && !( $identifier =~ /\$$/ && $tok eq '{' )
-
-                    ## && ( $identifier !~ /^(sub |package )$/ )
                     && $identifier ne 'sub '
                     && $identifier ne 'package '
                   )
@@ -10406,7 +10389,6 @@ sub follow_quoted_string {
         while ( $i < $max_token_index ) {
             $tok = $rtokens->[ ++$i ];
 
-            ##if ( $tok !~ /^\s*$/ ) {
             if ( $rtoken_type->[$i] ne 'b' ) {
 
                 if ( ( $tok eq '#' ) && ($allow_quote_comments) ) {

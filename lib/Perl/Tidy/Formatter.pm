@@ -12979,12 +12979,15 @@ sub parent_sub_seqno {
 sub parent_sub_seqno_by_K {
     my ( $self, $KK ) = @_;
 
+    # NOTE: not currently called but keep for possible future development
+
     # Find sequence number of the sub or asub which contains a given token
     # Given:
     #  $K = index K of a token
     # Returns:
     #  $seqno of the sub (or asub), or
     #  nothing if no sub found
+
     return unless defined($KK);
 
     my $seqno_sub;
@@ -13726,7 +13729,6 @@ sub count_sub_args {
     my $rLL             = $self->[_rLL_];
     my $K_opening_block = $self->[_K_opening_container_]->{$seqno_block};
     my $rlines          = $self->[_rlines_];
-    my $Klimit          = @{$rLL} - 1;
     my $ix_HERE_END     = -1;
 
     # Optimization: find the previous type 'S' token with the sub name .. this
@@ -14605,13 +14607,11 @@ sub cross_check_call_args {
         # Skip external method calls
         next if ( $rcall_item->{is_external_call} );
 
-        my $arg_count   = $rcall_item->{arg_count};
-        my $package     = $rcall_item->{package};
-        my $name        = $rcall_item->{name};
-        my $line_number = $rcall_item->{line_number};
-        my $call_type   = $rcall_item->{call_type};
-        my $caller_name = $rcall_item->{caller_name};
-        my $key         = $package . '::' . $name;
+        my $arg_count = $rcall_item->{arg_count};
+        my $package   = $rcall_item->{package};
+        my $name      = $rcall_item->{name};
+        my $call_type = $rcall_item->{call_type};
+        my $key       = $package . '::' . $name;
 
         my ( $shift_count_min, $shift_count_max, $self_name );
         my $seqno_sub = $rsub_seqno_by_key->{$key};
@@ -14689,7 +14689,6 @@ sub cross_check_call_args {
         my $rdirect_calls = $item->{direct_calls};
         my $num_self      = defined($rself_calls)   ? @{$rself_calls}   : 0;
         my $num_direct    = defined($rdirect_calls) ? @{$rdirect_calls} : 0;
-        my $num_method    = defined($rmethod_calls) ? @{$rmethod_calls} : 0;
 
         my $shift_count_min = $rsub_item->{shift_count_min};
         my $shift_count_max = $rsub_item->{shift_count_max};
@@ -14987,6 +14986,7 @@ sub warn_mismatched_args {
     # - warn-mismatched-arg-types
     # - warn-mismatched-arg-exclusion-list
     # - warn-mismatched-arg-undercount-cutoff
+    # - warn-mismatched-arg-overcount-cutoff
 
     my ( $rwarnings, $hint ) = $self->cross_check_call_args(1);
     return unless ( $rwarnings && @{$rwarnings} );
@@ -18100,9 +18100,8 @@ EOM
     # works well but is currently only activated when the -xci flag is set.
     # The reason is to avoid unexpected changes in formatting.
     if ($rOpts_extended_continuation_indentation) {
-        while ( my ( $qw_seqno_x, $rKrange ) =
-            each %{$rKrange_multiline_qw_by_seqno} )
-        {
+        foreach my $qw_seqno_x ( keys %{$rKrange_multiline_qw_by_seqno} ) {
+            my $rKrange = $rKrange_multiline_qw_by_seqno->{$qw_seqno_x};
             my ( $Kbeg, $Kend ) = @{$rKrange};
 
             # require isolated closing token
@@ -18136,9 +18135,8 @@ EOM
     # multiline quotes
     if ( $rOpts_line_up_parentheses && !$rOpts_extended_line_up_parentheses ) {
 
-        while ( my ( $qw_seqno_x, $rKrange ) =
-            each %{$rKrange_multiline_qw_by_seqno} )
-        {
+        foreach my $qw_seqno_x ( keys %{$rKrange_multiline_qw_by_seqno} ) {
+            my $rKrange = $rKrange_multiline_qw_by_seqno->{$qw_seqno_x};
             my ( $Kbeg, $Kend ) = @{$rKrange};
             my $parent_seqno = $self->parent_seqno_by_K($Kend);
             next unless ($parent_seqno);
@@ -26217,7 +26215,7 @@ sub break_long_lines {
         #------------------------------------------------------------------
         # Find the best next breakpoint based on token-token bond strengths
         #------------------------------------------------------------------
-        my ( $i_lowest, $lowest_strength, $leading_alignment_type, $Msg ) =
+        my ( $i_lowest, $lowest_strength, $Msg ) =
           $self->break_lines_inner_loop(
 
             $i_begin,
@@ -26404,7 +26402,6 @@ sub break_lines_inner_loop {
     # Returns:
     #   $i_lowest               = index of best breakpoint
     #   $lowest_strength        = 'bond strength' at best breakpoint
-    #   $leading_alignment_type = special token type after break
     #   $Msg                    = string of debug info
 
     my $Msg                    = EMPTY_STRING;
@@ -26876,7 +26873,7 @@ sub break_lines_inner_loop {
     # We will break at imax if no other break was found.
     if ( $i_lowest < 0 ) { $i_lowest = $imax }
 
-    return ( $i_lowest, $lowest_strength, $leading_alignment_type, $Msg );
+    return ( $i_lowest, $lowest_strength, $Msg );
 } ## end sub break_lines_inner_loop
 
 sub do_colon_breaks {
@@ -32879,7 +32876,6 @@ sub undo_contained_ci {
     # opening container token does not end a line, and this causes the double
     # jump.
 
-    my $rLL      = $self->[_rLL_];
     my $max_line = @{$ri_first} - 1;
     return if ( $max_line < 1 );
 
