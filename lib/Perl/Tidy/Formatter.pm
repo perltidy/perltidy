@@ -13640,6 +13640,10 @@ sub count_prototype_args {
         elsif ( $ch eq '(' )                    { last if ($count_min) }
         elsif ( $ch eq ')' )                    { last }
         elsif ( $ch eq ';' && !$saw_semicolon ) { $saw_semicolon = 1 }
+        elsif ( $ch eq '_' && !$saw_semicolon ) {
+            $saw_semicolon = 1;
+            $bump_count->() if ( !$count_min );
+        }
         elsif ( $is_array_sigil{$ch} )          { $saw_array->(); last }
         elsif ( $is_scalar_sigil{$ch} )         { $bump_count->(); }
         elsif ( $ch eq q{\\} ) {
