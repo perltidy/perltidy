@@ -5281,7 +5281,7 @@ The following assignment operators are aligned independently by default:
       = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
 
 Setting B<--valign-wide-equals>, or B<-vwe>, causes them to be vertically
-alligned together with the trailing B<=> all aligned. For example, here
+aligned together with the trailing B<=> all aligned. For example, here
 is the default formatting for some code with several of these operators:
 
             $str .= SPACE x $total_pad_count;
