@@ -4529,6 +4529,19 @@ sub _process_command_line {
         }
     }
 
+    # The above commands processed before disambiguation and then Exited.  So
+    # we need to check below to see if the user entered something like
+    # '-dump-t' or '-he'. This will slip past here and not get processed.
+    my %early_exit_commands = (
+        'help'                      => 'h',
+        'version'                   => 'v',
+        'dump-defaults'             => 'ddf',
+        'dump-integer-option-range' => 'dior',
+        'dump-long-names'           => 'dln',
+        'dump-short-names'          => 'dsn',
+        'dump-token-types'          => 'dtt',
+    );
+
     if ( $saw_dump_profile && $saw_ignore_profile ) {
         Warn("No profile to dump because of -npro\n");
         Exit(1);
@@ -4682,6 +4695,16 @@ EOM
     local $SIG{'__WARN__'} = sub { Warn( $_[0] ) };
     if ( !GetOptions( \%Opts, @{$roption_string} ) ) {
         Die("Error on command line; for help try 'perltidy -h'\n");
+    }
+
+    # Catch ambiguous entries which should have exited above (c333)
+    foreach my $long_name ( keys %early_exit_commands ) {
+        if ( $Opts{$long_name} ) {
+            my $short_name = $early_exit_commands{$long_name};
+            Die(<<EOM);
+Ambigiguos entry; please enter '--$long_name' or '-$short_name'
+EOM
+        }
     }
 
     # reset Getopt::Long configuration back to its previous value
