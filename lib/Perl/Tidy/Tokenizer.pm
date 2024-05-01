@@ -3247,7 +3247,6 @@ EOM
             $statement_type = $container_type;
         }
 
-        #    /^(for|foreach)$/
         if ( $is_for_foreach{ $rparen_type->[$paren_depth] } ) {
             my $num_sc = $rparen_semicolon_count->[$paren_depth];
             if ( $num_sc > 0 && $num_sc != 2 ) {
@@ -3292,7 +3291,6 @@ EOM
         $statement_type = EMPTY_STRING;
         $want_paren     = EMPTY_STRING;
 
-        #    /^(for|foreach)$/
         if ( $is_for_foreach{ $rparen_type->[$paren_depth] } )
         {    # mark ; in for loop
 

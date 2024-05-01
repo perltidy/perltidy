@@ -2929,12 +2929,10 @@ sub initialize_interbracket_arrow_style {
     # and check other parameters for conflicts
     my $name_add    = 'add-interbracket-arrows';
     my $name_delete = 'delete-interbracket-arrows';
-    my $name_warn   = 'warn-interbracket-arrows';
     my $name_style  = 'interbracket-arrow-style';
 
     my $opt_add    = $rOpts->{$name_add};
     my $opt_delete = $rOpts->{$name_delete};
-    my $opt_warn   = $rOpts->{$name_warn};
     my $opt_style  = $rOpts->{$name_style};
 
     if ( $opt_add && $opt_delete && !$opt_style ) {
@@ -4283,23 +4281,18 @@ EOM
           # retain any space after here doc operator ( hereerr.t)
           || $typel eq 'h'
 
-          # be careful with a space around ++ and --, to avoid ambiguity as to
+          # Be careful with a space around ++ and --, to avoid ambiguity as to
           # which token it applies
           || ( $typer eq 'pp' || $typer eq 'mm' ) && $tokenl !~ /^[\;\{\(\[]/
           || ( $typel eq '++' || $typel eq '--' )
           && $tokenr !~ /^[\;\}\)\]]/
 
-          # need space after foreach my; for example, this will fail in
-          # older versions of Perl:
+          # Need space after 'for my' or 'foreach my';
+          # for example, this will fail in older versions of Perl:
           # foreach my$ft(@filetypes)...
-          || (
-            $tokenl eq 'my'
-
+          || ( $tokenl eq 'my'
             && $tokenr_leading_ch eq '$'
-
-            #  /^(for|foreach)$/
-            && $is_for_foreach{$tokenll}
-          )
+            && $is_for_foreach{$tokenll} )
 
           # Keep space after $^ if needed to avoid forming a different
           # special variable (issue c068). For example:
@@ -14489,7 +14482,7 @@ sub cross_check_call_args {
       $self->sub_def_info_maker( $rpackage_lookup_list,
         \%upper_bound_call_info );
 
-    # Hash to combine info for subs and calls
+    # Hash to hold combined info for subs and calls
     my %common_hash;
 
     #---------------------------------------------
@@ -14502,8 +14495,7 @@ sub cross_check_call_args {
         my $name       = $rcall_item->{name};
         my $key        = $package . '::' . $name;
         if ( $rcall_item->{call_type} eq '->' ) {
-            push @method_call_seqnos,                     $seqno;
-            push @{ $common_hash{$key}->{method_calls} }, $rcall_item;
+            push @method_call_seqnos, $seqno;
         }
         else {
             push @{ $common_hash{$key}->{direct_calls} }, $rcall_item;
@@ -14525,23 +14517,25 @@ sub cross_check_call_args {
         my $seqno_sub = $self->parent_sub_seqno($seqno);
         if ($seqno_sub) {
 
-            # NOTE: calls within asubs are currently skipped
+            # NOTE: calls within anonymous subs are currently skipped
+            # but could eventually be included.
             my $item = $rsub_info_by_seqno->{$seqno_sub};
 
-            # look for a first arg like '$self' which matches the
+            # Key assumptions for deciding if a call is to an internal sub:
+            # 1. Look for a first arg like '$self' which matches the
             # name of the calling object, like '$self->'
             if (   $item
                 && $item->{self_name}
                 && $item->{self_name} eq $caller_name )
             {
-                # assume that the first arg of the sub is its object
+                # 2. Assume that the first arg of the sub is its object
                 # if no direct calls to the sub were seen
                 my $key_sub = $item->{package} . '::' . $item->{name};
                 $is_self_call = !$common_hash{$key_sub}->{direct_calls};
             }
 
             # TODO: else see if $caller_name is blessed in this sub
-            # This is a low priority update
+            # This is low priority.
         }
 
         # Save this method call as either an internal (self) or external call
@@ -14549,7 +14543,6 @@ sub cross_check_call_args {
             push @{ $common_hash{$key}->{self_calls} }, $rcall_item;
         }
         else {
-            push @{ $common_hash{$key}->{external_method_calls} }, $rcall_item;
             $rcall_item->{is_external_call} = 1;
         }
     }
@@ -14674,9 +14667,7 @@ sub cross_check_call_args {
     foreach my $key ( keys %common_hash ) {
         my $item = $common_hash{$key};
 
-        #-------------------------------------
         # Check for mixed method/direct calls:
-        #-------------------------------------
         my $rsub_item = $item->{rsub_item};
         next unless defined($rsub_item);
 
@@ -14684,7 +14675,6 @@ sub cross_check_call_args {
         next if ( $ris_mismatched_call_excluded_name->{$name} );
 
         my $lno           = $rsub_item->{line_number};
-        my $rmethod_calls = $item->{method_calls};
         my $rself_calls   = $item->{self_calls};
         my $rdirect_calls = $item->{direct_calls};
         my $num_self      = defined($rself_calls)   ? @{$rself_calls}   : 0;
@@ -14706,7 +14696,9 @@ sub cross_check_call_args {
         my $num_over_count  = defined($rover_count)  ? @{$rover_count}  : 0;
         my $num_under_count = defined($runder_count) ? @{$runder_count} : 0;
 
+        #--------------------------------------------------
         # issue 'a': subs with both self-> and direct calls
+        #--------------------------------------------------
         if ( $num_self && $num_direct && $ris_mismatched_call_type->{'a'} ) {
 
             my $lines_self_calls   = stringify_line_range($rself_calls);
@@ -14731,15 +14723,15 @@ sub cross_check_call_args {
               };
         }
 
-        #-----------------------------------
-        # Check for variable call arg counts
-        #-----------------------------------
-
+        #---------------------------------------------------------
         # Ignore calls to a sub which was not defined in this file
+        #---------------------------------------------------------
         if ( !defined($rsub_item) ) {
         }
 
+        #-------------------------------------------------------------------
         # issue 'i': indeterminate. Could not determine a specific arg count
+        #-------------------------------------------------------------------
         elsif ( $shift_count_min eq '*' ) {
             if ( $ris_mismatched_call_type->{'i'} ) {
                 my $letter = 'i';
@@ -14767,7 +14759,9 @@ sub cross_check_call_args {
         # check counts
         else {
 
+            #---------------------
             # issue 'o': overcount
+            #---------------------
             if ($num_over_count) {
                 if (   $ris_mismatched_call_type->{'o'}
                     && $shift_count_max >= $mismatched_arg_overcount_cutoff )
@@ -14794,7 +14788,9 @@ sub cross_check_call_args {
                 }
             }
 
+            #----------------------
             # issue 'u': undercount
+            #----------------------
             if ($num_under_count) {
 
                 if ( $shift_count_min > $max_shift_count_with_undercount ) {

@@ -3418,7 +3418,7 @@ sub match_line_pairs {
                     if ( $pat_m ne $pat ) {
                         my $pad =
                           $rfield_lengths->[$i] - $rfield_lengths_m->[$i];
-                        my ( $match_code, $rmsg ) = compare_patterns(
+                        my $match_code = compare_patterns(
                             {
                                 group_level => $group_level,
                                 tok         => $tok,
@@ -3585,7 +3585,7 @@ sub compare_patterns {
       && $return_code
       && print {*STDOUT} "no match because $GoToMsg\n";
 
-    return ( $return_code, \$GoToMsg );
+    return $return_code;
 
 } ## end sub compare_patterns
 
