@@ -1144,7 +1144,7 @@ sub new {
     if (DEVEL_MODE) {
         my @non_existant;
         foreach ( 0 .. _LAST_SELF_INDEX_ ) {
-            if ( !exists( $self->[$_] ) ) {
+            if ( !exists $self->[$_] ) {
                 push @non_existant, $_;
             }
         }
@@ -1443,7 +1443,7 @@ sub split_words {
     return unless $str;
     $str =~ s/\s+$//;
     $str =~ s/^\s+//;
-    return split( /\s+/, $str );
+    return split /\s+/, $str;
 } ## end sub split_words
 
 ###########################################
@@ -1986,7 +1986,7 @@ sub initialize_space_after_keyword {
     if ( my @q = split_words( $rOpts->{'nospace-after-keyword'} ) ) {
 
         # -nsak='*' selects all the above keywords
-        if ( @q == 1 && $q[0] eq '*' ) { @q = keys(%space_after_keyword) }
+        if ( @q == 1 && $q[0] eq '*' ) { @q = keys %space_after_keyword }
         @space_after_keyword{@q} = (0) x scalar(@q);
     }
 
@@ -9741,6 +9741,7 @@ sub dump_mixed_call_parens {
 
     my $output_string = <<EOM;
 counts with and without call parens made by --dump-mixed-call-parens
+use -wcp=s and/or nwcp=s to find line numbers, where s is a string of words
 types are 'k'=builtin keyword 'U'=user sub  'w'=other word
 type:word:+count:-count
 EOM
@@ -10916,10 +10917,8 @@ sub respace_tokens_inner_loop {
                       )
                     {
                         $rsub_call_paren_info_by_seqno->{$type_sequence} = {
-                            token_mm => $last_last_nonblank_code_token,
-                            type_mm  => $last_last_nonblank_code_type,
-                            token_m  => $last_nonblank_code_token,
-                            type_m   => $last_nonblank_code_type,
+                            type_mm => $last_last_nonblank_code_type,
+                            token_m => $last_nonblank_code_token,
                         };
                     }
                 }
@@ -13657,7 +13656,7 @@ sub count_prototype_args {
         $count_min = undef if ( !$saw_semicolon );
         return;
     };
-    while ( my $ch = shift(@chars) ) {
+    while ( my $ch = shift @chars ) {
         if    ( !defined($ch) )                 { $saw_array->(); last }
         elsif ( $ch eq '(' )                    { last if ($count_min) }
         elsif ( $ch eq ')' )                    { last }
@@ -13889,7 +13888,6 @@ EOM
             elsif ( $token eq '$_' ) {
 
                 # Found $_: currently the search ends at '$_['
-                # TODO: eventually this can be handled
                 my $Kn = $self->K_next_code($KK);
                 if ( $Kn && $rLL->[$Kn]->[_TOKEN_] eq '[' ) {
                     return;
@@ -14296,9 +14294,6 @@ sub update_sub_call_paren_info {
         my $item    = $rsub_call_paren_info_by_seqno->{$seqno};
         my $name    = $item->{token_m};
         my $type_mm = $item->{type_mm};
-        ## These values are available but currently unused: [TODO: maybe remove]
-        ## my $type_m   = $item->{type_m};
-        ## my $token_mm = $item->{token_mm};
 
         # find function and package
         my $is_ampersand_call;
@@ -14307,6 +14302,18 @@ sub update_sub_call_paren_info {
         if ( substr( $name, 0, 1 ) eq '&' ) {
             $is_ampersand_call = 1;
             $name              = substr( $name, 1 );
+        }
+
+        my $call_type   = $is_ampersand_call ? '&' : EMPTY_STRING;
+        my $caller_name = EMPTY_STRING;
+        if ( $type_mm eq '->' ) {
+            $call_type = '->';
+            my $K_m   = $self->K_previous_code($Ko);
+            my $K_mm  = $self->K_previous_code($K_m);
+            my $K_mmm = $self->K_previous_code($K_mm);
+            if ( defined($K_mmm) && $rLL->[$K_mmm]->[_TYPE_] eq 'i' ) {
+                $caller_name = $rLL->[$K_mmm]->[_TOKEN_];
+            }
         }
 
         # look for explicit package on name
@@ -14361,18 +14368,6 @@ sub update_sub_call_paren_info {
             $item->{self_name}       = EMPTY_STRING;
             $self->count_list_args($item);
             $arg_count = $item->{shift_count_min};
-        }
-
-        my $call_type   = $is_ampersand_call ? '&' : EMPTY_STRING;
-        my $caller_name = EMPTY_STRING;
-        if ( $type_mm eq '->' ) {
-            $call_type = '->';
-            my $K_m   = $self->K_previous_code($Ko);
-            my $K_mm  = $self->K_previous_code($K_m);
-            my $K_mmm = $self->K_previous_code($K_mm);
-            if ( defined($K_mmm) && $rLL->[$K_mmm]->[_TYPE_] eq 'i' ) {
-                $caller_name = $rLL->[$K_mmm]->[_TOKEN_];
-            }
         }
 
         # update the hash of info for this item
@@ -26024,7 +26019,7 @@ sub correct_lp_indentation_pass_1 {
     return unless (@ilist);
 
     my $max_line = @{$ri_first} - 1;
-    my $inext    = shift(@ilist);
+    my $inext    = shift @ilist;
 
     # loop over lines, checking length of each with a one-line block
     my ( $ibeg, $iend );

@@ -5748,7 +5748,24 @@ perltidy development.
 
 Perltidy reports any obvious issues that are found during formatting, such as
 unbalanced braces. But several parameters are available for making certain
-additional checks for issues which might be of interest to a programmer.
+additional checks for issues which might be of interest to a programmer.  These
+parameters fall into two categories as indicated by their prefix, B<--dump-> or
+B<--warn->:
+
+=over 4
+
+=item *
+The B<--dump-> parameters read a file, write information to the standard output,
+and then exit without doing any formatting.
+
+=item *
+The B<--warn-> parameters, on the other hand, cause perltidy to function
+normally but issue warnings to the error output when certain conditions are
+encountered.
+
+=back
+
+Some of these have associated control parameters.
 
 =over 4
 
@@ -6078,7 +6095,7 @@ C<open>.
 
 The parameter B<--dump-mismatched-args>, or B<-dma>, causes perltidy to
 examine the definitions of subroutines in a file, and calls to those subs,
-and report any apparent differences.  Like all B<--dump> commands, it
+and report certain differences.  Like all B<--dump> commands, it
 writes its report to standard output and exits immediately.  For example
 
     perltidy -dma somefile.pl >results.txt
@@ -6143,10 +6160,6 @@ Anonymous subs and lexical subs (introduced with C<my>) are not checked.
 Only calls which appear to be to subs defined within the file being
 processed are checked. But note that a file may contain multiple packages.
 
-=item *
-When prototypes or signatures are given, they are used to determine the
-expected number of sub arguments. Otherwise, the sub text is scanned.
-
 =back
 
 =item B<Use --warn-mismatched-args to produce a warning for function calls with
@@ -6196,7 +6209,7 @@ indicates the value of B<n> required to avoid reporting them.
 B<--warn-mismatched-arg-overcount-cutoff=n>, or B<-wmaoc=n>, can be used to
 avoid B<overcount> warnings when the expected number of args is less than B<n>.
 The default value is B<n=1>. This avoids warning messages for subroutines
-which are dummy placeholders for future development.
+which are dummy placeholders for possible expansion.
 
 =back
 

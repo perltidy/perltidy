@@ -2,6 +2,56 @@
 
 ## 2024 02 02.07
 
+    - The option --valign-signed-numbers, or -vsn is now the default. It
+      was introduced in the previous release has been found to significantly
+      improve the overall appearance of columns of signed and unsigned
+      numbers.  It will change formatting slightly in scripts with columns
+      of vertically aligned numbers, and can be deactivated with -nvsn.
+
+    - Previously, a line break was made before a short concatenated terminal
+      quoted string, such as "\n", if the previous line had a greater
+      starting indentation. The break is now placed after the short quote.
+      This keeps code a little more compact. For example:
+
+    # old rule: break before "\n" here because '$name' has more indentation:
+    my $html = $this->SUPER::genObject( $query, $bindNode, $field . ":$var",
+        $name, "remove", "UNCHECKED" )
+      . "\n";
+
+    # new rule: break after a short terminal quote like "\n" for compactness;
+    my $html = $this->SUPER::genObject( $query, $bindNode, $field . ":$var",
+        $name, "remove", "UNCHECKED" ) . "\n";
+
+    - The option --delete-repeated-commas is now the default.
+
+      It makes the following checks and changes:
+      - Repeated commas like ',,' are removed with a warning
+      - Repeated fat commas like '=> =>' are removed with a warning
+      - The combination '=>,' produces a warning but is not changed
+      These warnings are only output if --warning-output, or -w, is set.
+
+      Use --nodelete-repeated-commas, or -ndrc, to retain repeated commas.
+
+    - The operator ``**=`` now has spaces on both sides by default. Previously,
+      there was no space on the left.  This change makes its spacing the same
+      as all other assignment operators. The previous behavior can be obtained
+      with the parameter setting -nwls='**='.
+
+    - The option --file-size-order, or -fso is now the default. When
+      perltidy is given a list of multiple filenames to process, they
+      are sorted by size and processed in order of increasing size.
+      This can significantly reduce memory usage by Perl.  This
+      option has always been used in testing, where typically several
+      jobs each operating on thousands of filenames are running at the
+      same time and competing for system resources.  If this option
+      is not wanted for some reason, it can be deactivated with -nfso.
+
+    - In the option --dump-block-summary, the number of sub arguments indicated
+      for each sub now includes any leading object variable passed with
+      an arrow-operator call.  Previously the count would have been decreased
+      by one in this case. This change is needed for compatibility with future
+      updates.
+
     - Fix issue git #138 involving -xlp (--extended-line-up-parentheses).
       When multiple-line quotes and regexes have long secondary lines, these
       line lengths could influencing some spacing and indentation, but they
@@ -47,12 +97,13 @@
 
          perltidy -wma somefile.pl
 
-      The -warn version may be customized with three additional parameters if
-      necessary to avoid needless warnings:
+      The -warn version may be customized with the following additional parameters
+      if necessary to avoid needless warnings:
 
       --warn-mismatched-arg-types=s (or -wmat=s),
       --warn-mismatched-arg-exclusion-list=s (or -wmaxl=s), and
       --warn-mismatched-arg-undercount-cutoff=n (or -wmauc=n).
+      --warn-mismatched-arg-overcount-cutoff=n (or -wmaoc=n).
 
       These are explained in the manual.
 
@@ -81,56 +132,6 @@
 
       This option currently is off by default to avoid changing existing
       formatting.
-
-    - Previously, a line break was made before a short concatenated terminal
-      quoted string, such as "\n", if the previous line had a greater
-      starting indentation. The break is now placed after the short quote.
-      This keeps code a little more compact. For example:
-
-    # old rule: break before "\n" here because '$name' has more indentation:
-    my $html = $this->SUPER::genObject( $query, $bindNode, $field . ":$var",
-        $name, "remove", "UNCHECKED" )
-      . "\n";
-
-    # new rule: break after a short terminal quote like "\n" for compactness;
-    my $html = $this->SUPER::genObject( $query, $bindNode, $field . ":$var",
-        $name, "remove", "UNCHECKED" ) . "\n";
-
-    - In the option --dump-block-summary, the number of sub arguments indicated
-      for each sub now includes any leading object variable passed with
-      an arrow-operator call.  Previously the count would have been decreased
-      by one in this case. This change is needed for compatibility with future
-      updates.
-
-    - The operator ``**=`` now has spaces on both sides by default. Previously,
-      there was no space on the left.  This change makes its spacing the same
-      as all other assignment operators. The previous behavior can be obtained
-      with the parameter setting -nwls='**='.
-
-    - The option --file-size-order, or -fso is now the default. When
-      perltidy is given a list of multiple filenames to process, they
-      are sorted by size and processed in order of increasing size.
-      This can significantly reduce memory usage by Perl.  This
-      option has always been used in testing, where typically several
-      jobs each operating on thousands of filenames are running at the
-      same time and competing for system resources.  If this option
-      is not wanted for some reason, it can be deactivated with -nfso.
-
-    - The option --valign-signed-numbers, or -vsn is now the default. It
-      was introduced in the previous release has been found to significantly
-      improve the overall appearance of columns of signed and unsigned
-      numbers.  It will change formatting slightly in scripts with columns
-      of vertically aligned numbers, and can be deactivated with -nvsn.
-
-    - The option --delete-repeated-commas is now the default.
-
-      It makes the following checks and changes:
-      - Repeated commas like ',,' are removed with a warning
-      - Repeated fat commas like '=> =>' are removed with a warning
-      - The combination '=>,' produces a warning but is not changed
-      These warnings are only output if --warning-output, or -w, is set.
-
-      Use --nodelete-repeated-commas, or -ndrc, to retain repeated commas.
 
     - Added control --delete-interbracket-arrows, or -dia, to delete optional
       hash ref and array ref arrows between brackets as in the following
