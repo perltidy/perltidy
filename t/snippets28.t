@@ -37,7 +37,10 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
-        'ame'    => "--add-missing-else",
+        'ame' => <<'----------',
+--add-missing-else
+--add-missing-else-comment="NEED COMMENT"
+----------
         'c269'   => "-ame",
         'def'    => "",
         'git116' => "-viu",
@@ -387,7 +390,7 @@ sub hello {
     if    ( $level == 3 ) { $val = $global{'section'} }
     elsif ( $level == 2 ) { $val = $global{'chapter'} }
     else {
-        ##FIXME - added with perltidy -ame
+        #NEED COMMENT
     }
 #14...........
         },

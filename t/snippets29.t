@@ -19,6 +19,7 @@
 #16 git137.git137
 #17 git138.def
 #18 git138.git138
+#19 vsn.vsn3
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -62,6 +63,10 @@ BEGIN {
 # turn off vsn with -vsnl
 -vsn
 -vsnl=0
+----------
+        'vsn3' => <<'----------',
+# turn off vsn
+-nvsn
 ----------
     };
 
@@ -658,6 +663,25 @@ $VAR1 = [ 'method',
                   where table_owner != \'$ingres\' and table_owner != \'DBA\''
 ];
 #18...........
+        },
+
+        'vsn.vsn3' => {
+            source => "vsn",
+            params => "vsn3",
+            expect => <<'#19...........',
+@data = (
+    [ "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th" ],
+    [ 1,     2,     5,     6,     3,     1.5,   -1,    -3,    -4 ],
+    [ -4,    -3,    1,     1,     -3,    -1.5,  -2,    -1,    0 ],
+    [ 9,     8,     9,     8.4,   7.1,   7.5,   8,     3,     -3 ],
+    [ 0.1,   0.2,   0.5,   0.4,   0.3,   0.5,   0.1,   0,     0.4 ],
+);
+
+$s->drawLine( 35,  0 );
+$s->drawLine( 0,   10 );
+$s->drawLine( -35, 0 );
+$s->drawLine( 0,   -10 );
+#19...........
         },
     };
 
