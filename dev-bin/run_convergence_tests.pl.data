@@ -12075,6 +12075,32 @@ foreach $n (
 --block-brace-vertical-tightness=1
 --nodelete-old-newlines
 
+==> b1469.in <==
+my @outer =
+        (
+         [
+          'a1', 'a2', 'a3',
+         ], [
+          'b1', 'b2', 'b3',
+         ], [
+          'c1', 'c2', 'c3',
+         ],
+        );
+
+my @outer = (
+ [ 'a1', 'a2', 'a3', ],
+ [ 'b1', 'b2', 'b3', ],
+ [ 'c1', 'c2', 'c3', ],
+);
+
+==> b1469.par <==
+--maximum-line-length=35
+--indent-columns=1
+--continuation-indentation=8
+--extended-continuation-indentation
+--break-before-paren=2
+--opening-square-bracket-right
+
 ==> b148.in <==
 # state 1
 @yydgoto=(

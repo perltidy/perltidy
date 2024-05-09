@@ -17480,10 +17480,18 @@ sub break_before_list_opening_containers {
         # decide if a list is complex.  For now it is only applied when -lp
         # and -vmll are used, but eventually it may become the standard method.
         # Fixes b1274, b1275, and others, including b1099.
+        # Update: case b1469 also had this type of problem; it had the
+        # combination ci>i and used -xci. This is just a band-aid; eventually
+        # it might be best if all cases use this logic, but that would change
+        # existing formatting.
         if ( $break_option == 2 ) {
 
+            my $b1469 = $rOpts_continuation_indentation > $rOpts_indent_columns
+              && $rOpts_extended_continuation_indentation;
+
             if (   $rOpts_line_up_parentheses
-                || $rOpts_variable_maximum_line_length )
+                || $rOpts_variable_maximum_line_length
+                || $b1469 )
             {
 
                 # Start with the basic definition of a complex list...
