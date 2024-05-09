@@ -637,6 +637,7 @@ BEGIN {
         # these vars are defined after call to respace tokens:
         _rK_package_list_                 => $i++,
         _rK_AT_underscore_by_sub_seqno_   => $i++,
+        _rK_bless_by_sub_seqno_           => $i++,
         _rK_sub_by_seqno_                 => $i++,
         _ris_my_sub_by_seqno_             => $i++,
         _rsub_call_paren_info_by_seqno_   => $i++,
@@ -1027,6 +1028,7 @@ sub new {
     #               --dump-mismatched-args
     $self->[_rK_package_list_]                 = [];
     $self->[_rK_AT_underscore_by_sub_seqno_]   = {};
+    $self->[_rK_bless_by_sub_seqno_]           = {};
     $self->[_rsub_call_paren_info_by_seqno_]   = {};
     $self->[_rDOLLAR_underscore_by_sub_seqno_] = {};
     $self->[_rK_sub_by_seqno_]                 = {};
@@ -10446,6 +10448,9 @@ my $rK_package_list;
 # new index K of @_ tokens
 my $rK_AT_underscore_by_sub_seqno;
 
+# new index K of bless tokens
+my $rK_bless_by_sub_seqno;
+
 # info about list of sub call args
 my $rsub_call_paren_info_by_seqno;
 my $rDOLLAR_underscore_by_sub_seqno;
@@ -10490,6 +10495,7 @@ sub initialize_respace_tokens_closure {
 
     $rK_package_list               = $self->[_rK_package_list_];
     $rK_AT_underscore_by_sub_seqno = $self->[_rK_AT_underscore_by_sub_seqno_];
+    $rK_bless_by_sub_seqno         = $self->[_rK_bless_by_sub_seqno_];
     $rsub_call_paren_info_by_seqno = $self->[_rsub_call_paren_info_by_seqno_];
     $rDOLLAR_underscore_by_sub_seqno =
       $self->[_rDOLLAR_underscore_by_sub_seqno_];
@@ -11080,6 +11086,15 @@ sub respace_tokens_inner_loop {
                     push
                       @{ $rK_AT_underscore_by_sub_seqno->{$current_sub_seqno} },
                       scalar @{$rLL_new};
+                }
+
+                # Remember new K and name of blessed object for -dma option
+                if (   $last_nonblank_code_token eq 'bless'
+                    && $last_nonblank_code_type eq 'k'
+                    && $current_sub_seqno )
+                {
+                    push @{ $rK_bless_by_sub_seqno->{$current_sub_seqno} },
+                      [ scalar @{$rLL_new}, $token ];
                 }
             }
             else {
@@ -13472,7 +13487,7 @@ sub count_list_args {
     #   $seqno        = sequence number of a list for counting items
     #   $is_signature = true if this is a sub signature list
     #   $shift_count  = starting number of '$var=shift;' items to include
-    #   $self_name    = first arg name
+    #   $self_name    = first arg name, if known
 
     # Return:
     #   - the number of args, or
@@ -13533,6 +13548,7 @@ sub count_list_args {
                 && !$arg_count )
             {
                 $self_name = $token;
+                $rarg_list->{self_name} = $self_name;
             }
 
             # Give up if we find an indexed ref to $_[..]
@@ -13611,7 +13627,6 @@ sub count_list_args {
     }
     $rarg_list->{shift_count_min} = $arg_count_min;
     $rarg_list->{shift_count_max} = $arg_count;
-    $rarg_list->{self_name}       = $self_name;
     return;
 
 } ## end sub count_list_args
@@ -14419,10 +14434,12 @@ sub cross_check_call_args {
     $ris_mismatched_call_excluded_name->{AUTOLOAD} = 1;
     $ris_mismatched_call_excluded_name->{DESTROY}  = 1;
 
+    my $K_opening_container = $self->[_K_opening_container_];
     my $rK_package_list     = $self->[_rK_package_list_];
     my $ris_my_sub_by_seqno = $self->[_ris_my_sub_by_seqno_];
     my $rsub_call_paren_info_by_seqno =
       $self->[_rsub_call_paren_info_by_seqno_];
+    my $rK_bless_by_sub_seqno = $self->[_rK_bless_by_sub_seqno_];
 
     #----------------------------
     # Make a package lookup table
@@ -14515,22 +14532,49 @@ sub cross_check_call_args {
             # NOTE: calls within anonymous subs are currently skipped
             # but could eventually be included.
             my $item = $rsub_info_by_seqno->{$seqno_sub};
+            if ($item) {
 
-            # Key assumptions for deciding if a call is to an internal sub:
-            # 1. Look for a first arg like '$self' which matches the
-            # name of the calling object, like '$self->'
-            if (   $item
-                && $item->{self_name}
-                && $item->{self_name} eq $caller_name )
-            {
-                # 2. Assume that the first arg of the sub is its object
-                # if no direct calls to the sub were seen
-                my $key_sub = $item->{package} . '::' . $item->{name};
-                $is_self_call = !$common_hash{$key_sub}->{direct_calls};
+                # Key assumptions for deciding if a call is to an internal sub:
+                # 1. Look for a first arg like '$self' which matches the
+                # name of the calling object, like '$self->'
+                if (   $item->{self_name}
+                    && $item->{self_name} eq $caller_name )
+                {
+                    # 2. Assume that the first arg of the sub is its object
+                    # if no direct calls to the sub were seen
+                    my $key_sub = $item->{package} . '::' . $item->{name};
+                    $is_self_call = !$common_hash{$key_sub}->{direct_calls};
+                }
+
+                # 3. If not, see if the name was blessed in the containing sub
+                else {
+                    my $rK_bless_list = $rK_bless_by_sub_seqno->{$seqno_sub};
+                    if ($rK_bless_list) {
+                        my $Ko = $K_opening_container->{$seqno};
+                        foreach my $blessing ( @{$rK_bless_list} ) {
+
+                            # Index K and blessed name were stored with sub
+                            my ( $K_blessed, $name_blessed ) = @{$blessing};
+
+                            # name of blessed object must match
+                            next if ( $name_blessed ne $caller_name );
+
+                            # bless must be at top sub level
+                            my $parent_seqno =
+                              $self->parent_seqno_by_K($K_blessed);
+                            next
+                              if (!$parent_seqno
+                                || $parent_seqno != $seqno_sub );
+
+                            # bless must be before the call
+                            next if ( $K_blessed > $Ko );
+
+                            $is_self_call = 1;
+                            last;
+                        }
+                    }
+                }
             }
-
-            # TODO: else see if $caller_name is blessed in this sub
-            # This is low priority.
         }
 
         # Save this method call as either an internal (self) or external call
