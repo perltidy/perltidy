@@ -4196,7 +4196,7 @@
 
 <pre><code>      = **= += *= &amp;= &lt;&lt;= &amp;&amp;= -= /= |= &gt;&gt;= ||= //= .= %= ^= x=</code></pre>
 
-<p>Setting <b>--valign-wide-equals</b>, or <b>-vwe</b>, causes them to be vertically alligned together with the trailing <b>=</b> all aligned. For example, here is the default formatting for some code with several of these operators:</p>
+<p>Setting <b>--valign-wide-equals</b>, or <b>-vwe</b>, causes them to be vertically aligned together with the trailing <b>=</b> all aligned. For example, here is the default formatting for some code with several of these operators:</p>
 
 <pre><code>            $str .= SPACE x $total_pad_count;
             $str_len += $total_pad_count;
@@ -4536,7 +4536,19 @@
 
 <h2 id="Analyzing-Code">Analyzing Code</h2>
 
-<p>Perltidy reports any obvious issues that are found during formatting, such as unbalanced braces. But several parameters are available for making certain additional checks for issues which might be of interest to a programmer.</p>
+<p>Perltidy reports any obvious issues that are found during formatting, such as unbalanced braces. But several parameters are available for making certain additional checks for issues which might be of interest to a programmer. These parameters fall into two categories as indicated by their prefix, <b>--dump-</b> or <b>--warn-</b>:</p>
+
+<ul>
+
+<li><p>The <b>--dump-</b> parameters read a file, write information to the standard output, and then exit without doing any formatting.</p>
+
+</li>
+<li><p>The <b>--warn-</b> parameters, on the other hand, cause perltidy to function normally but issue warnings to the error output when certain conditions are encountered.</p>
+
+</li>
+</ul>
+
+<p>Some of these have associated control parameters.</p>
 
 <dl>
 
@@ -4767,11 +4779,11 @@
 <dt id="Use---dump-mismatched-args-to-find-function-calls-with-args-not-matching-sub-declarations"><b>Use --dump-mismatched-args to find function calls with args not matching sub declarations</b></dt>
 <dd>
 
-<p>The parameter <b>--dump-mismatched-args</b>, or <b>-dma</b>, causes perltidy to examine the definitions of subroutines in a file, and calls to those subs, and report any apparent differences. Like all <b>--dump</b> commands, it writes its report to standard output and exits immediately. For example</p>
+<p>The parameter <b>--dump-mismatched-args</b>, or <b>-dma</b>, causes perltidy to examine the definitions of subroutines in a file, and calls to those subs, and report certain differences. Like all <b>--dump</b> commands, it writes its report to standard output and exits immediately. For example</p>
 
 <pre><code>    perltidy -dma somefile.pl &gt;results.txt</code></pre>
 
-<p>Two types of issues are reported, types <b>a</b> and <b>c</b>:</p>
+<p>Four types of issues are reported, types <b>a</b>, <b>o</b>, <b>u</b>, and <b>i</b>:</p>
 
 <dl>
 
@@ -4786,44 +4798,49 @@
 
 <pre><code>     $self-&gt;Fault();</code></pre>
 
-<p>This may or may not be an error, but it is worth checking.</p>
+<p>This may or may not be an error, but it is worth checking. It might become an error in the future if sub <code>Fault</code> starts to access <code>$self</code>.</p>
 
 </dd>
-<dt id="c:-the-count-of-call-args-differs-from-a-sub-definition"><b>c:</b> the <b>count</b> of call args differs from a sub definition</dt>
+<dt id="o:-overcount-:-the-number-of-call-args-exceeds-the-expected-number"><b>o:</b> (<b>overcount</b>): the number of call args exceeds the expected number.</dt>
 <dd>
 
-<p>If a sub appears to expect a specific number of args, and is called with more or less than this number, then a mismatch will be reported. For example</p>
+</dd>
+<dt id="u:-undercount-:-the-number-of-call-args-is-less-than-the-expected-number"><b>u:</b> (<b>undercount</b>): the number of call args is less than the expected number.</dt>
+<dd>
 
-<pre><code>     sub do_something {
+<p>For example</p>
+
+<pre><code>     sub gnab_gib {
          my $self=shift;
          my ($v1,$v2)=@_;
          ...
      }
 
-    $self-&gt;do_something(43);</code></pre>
+     $self-&gt;gnab_gib(42);</code></pre>
 
-<p>In this case, the sub is expecting a total of three args (<code>$self</code>, <code>$v1</code>, and <code>$v2</code>) but only receives two (<code>$self</code> and <code>42</code>), so a mismatch is reported. This is not necessarily an error because the sub may allow for this possibility. This sometimes happens as a code evolves to have new functionality. But it can be a source of confusion, and it could be an error, so it is worth checking.</p>
+<p>In this case, the sub is expecting a total of three args (<code>$self</code>, <code>$v1</code>, and <code>$v2</code>) but only receives two (<code>$self</code> and <code>42</code>), so an undercount is reported. This is not necessarily an error because the sub may allow for this possibility, but it is worth checking. The simple static processing done by perltidy cannot determine which sub args are optional.</p>
+
+</dd>
+<dt id="i:-indeterminate:-a-specific-number-of-expected-args-for-a-sub-could-not-be-determined-but-it-is-called-with-a-specific-number.-This-issue-is-reported-for-the---dump--option-but-not-the---warn--option"><b>i:</b> <b>indeterminate:</b> a specific number of expected args for a sub could not be determined, but it is called with a specific number. This issue is reported for the <b>--dump-</b> option but not the <b>--warn-</b> option.</dt>
+<dd>
 
 </dd>
 </dl>
 
-<p><b>Some Limitations:</b></p>
+<p><b>Notes and Limitations:</b></p>
 
 <ul>
 
-<li><p>Checks are only made for subs which appear to unpack call args in an orderly manner at the beginning of the sub from <code>@_</code>, directly and/or with <code>shift</code> operations.</p>
-
-</li>
-<li><p>Subs which appear to have no args are not checked. This restriction is necessary to avoid false warnings when a sub actually uses args in a complex way.</p>
-
-</li>
-<li><p>Only calls which appear to be to subs defined within the file being processed are checked.</p>
+<li><p>This option works best for subs which unpack call args in an orderly manner near the beginning of the sub from <code>@_</code> and/or with <code>shift</code> operations. If individual elements of the @_ array are directly accessed then the number of sub args is considered indeterminate.</p>
 
 </li>
 <li><p>Sub calls made without parentheses around the args are not checked.</p>
 
 </li>
 <li><p>Anonymous subs and lexical subs (introduced with <code>my</code>) are not checked.</p>
+
+</li>
+<li><p>Only calls which appear to be to subs defined within the file being processed are checked. But note that a file may contain multiple packages.</p>
 
 </li>
 </ul>
@@ -4836,34 +4853,37 @@
 
 <pre><code>    perltidy -wma somefile.pl</code></pre>
 
-<p>means format <i>somefile.pl</i> and report any mismatched arg errors found. Several companion controls are available to avoid unwanted error messages:</p>
+<p>Several companion controls are available to avoid unwanted error messages:</p>
 
 <ul>
 
-<li><p><b>--warn-mismatched-arg-types=s</b>, or <b>-wmat=s</b>, can be used to select specific tests, either type <b>a</b> (arrow test) or <b>c</b> (mismatched counts). Both checks may be requested with <b>-wmat=&#39;*&#39;</b> or <b>-wmat=1</b>. This is the default.</p>
+<li><p><b>--warn-mismatched-arg-types=s</b>, or <b>-wmat=s</b>, can be used to select specific tests, type <b>a</b> (arrow test) or <b>o</b> (overcounts) or <b>u</b> (undercounts). All checks may be requested with <b>-wmat=&#39;*&#39;</b> or <b>-wmat=1</b>. This is the default.</p>
 
-<p>To restrict the check to a specific warning type, set the string equal to the letter of that warning, either <b>a</b> or <b>c</b>. For example</p>
+<p>To restrict the check to a specific warning type, set the string equal to the letter of that warning, any <b>a</b>, <b>o</b>, or <b>u</b>. For example</p>
 
-<pre><code>   perltidy -wmat=&#39;c&#39; somefile.pl</code></pre>
+<pre><code>   perltidy -wmat=&#39;a o&#39; somefile.pl</code></pre>
 
-<p>will format <i>somefile.pl</i> and report any call arg count mismatches found but will skip checking for arrow-type mismatches.</p>
+<p>will format <i>somefile.pl</i> and report any arrow-type mismatches and overcount mismatches, but will skip undercount mismatches.</p>
 
 </li>
 <li><p><b>--warn-mismatched-arg-exclusion-list</b>, or <b>-wmaxl=string</b>, can be given to skip the warning checks for a list of subroutine names, entered as a quoted string of space- or comma-separated names. All subs with those names will be skipped, regardless of package.</p>
 
 </li>
-<li><p><b>--warn-mismatched-arg-undercount-cutoff=n</b>, or <b>-wmauc=n</b>, can be used to avoid undercount warnings when the number of args expected is <b>n</b> or less. Please note that this number <b>n</b> is the number of args from the point of view of the sub definition, so an object like <code>$self</code> passed with an arrow operator counts as one arg.</p>
+<li><p><b>--warn-mismatched-arg-undercount-cutoff=n</b>, or <b>-wmauc=n</b>, can be used to avoid <b>undercount</b> warnings when the expected number of args is less than <b>n</b>. Please note that this number <b>n</b> is the number of args from the point of view of the sub definition, so an object like <code>$self</code> passed with an arrow operator counts as one arg.</p>
 
-<p>The default value is <b>n=4</b>. This has been found to allow most programs to pass without warnings, but it should be reduced if possible for better error checking. The minimum possible value of <b>n</b> needed to avoid triggering an error for a program can be determined by running with <b>-wmauc=0</b>, or by running with <b>--dump-mismatched-args</b>. The output shows, for each mismatch, the number of args expected by a sub plus the range of the number of args actually passed to it.</p>
+<p>The default value is <b>n=4</b>. This has been found to allow most programs to pass without warnings, but it should be reduced if possible for better error checking. The minimum possible value of <b>n</b> needed to avoid triggering an error for a program can be determined by running with <b>-wma -wmauc=0</b>. If there are undercount errors, a note at the bottom of the error output indicates the value of <b>n</b> required to avoid reporting them.</p>
 
-<p>To illustrate these controls,</p>
-
-<pre><code>   perltidy -wma -wmat=&#39;c&#39; -wmaxl=&#39;new old&#39; -wmauc=2 somefile.pl</code></pre>
-
-<p>means format <i>somefile.pl</i> as usual and check for mismatched counts but not arrows. Skip checking for any sub named <code>new</code> or <code>old</code>, and only warn of undercounts for subs expecting more than 2 args.</p>
+</li>
+<li><p><b>--warn-mismatched-arg-overcount-cutoff=n</b>, or <b>-wmaoc=n</b>, can be used to avoid <b>overcount</b> warnings when the expected number of args is less than <b>n</b>. The default value is <b>n=1</b>. This avoids warning messages for subroutines which are dummy placeholders for possible expansion.</p>
 
 </li>
 </ul>
+
+<p>To illustrate these controls,</p>
+
+<pre><code>   perltidy -wma -wmat=&#39;o u&#39; -wmaxl=&#39;new old&#39; -wmauc=2 somefile.pl</code></pre>
+
+<p>means format <i>somefile.pl</i> as usual and check for mismatched overcounts and undercounts but not arrows. Skip checking for any sub named <code>new</code> or <code>old</code>, and only warn of undercounts for subs expecting more than 2 args.</p>
 
 </dd>
 </dl>
@@ -5180,7 +5200,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20240202.07</p>
+<p>This man page documents perltidy version 20240511</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

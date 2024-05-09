@@ -1,26 +1,14 @@
 # Perltidy Change Log
 
-## 2024 02 02.07
+## 2024 05 11
 
     - The option --valign-signed-numbers, or -vsn is now the default. It
       was introduced in the previous release has been found to significantly
       improve the overall appearance of columns of signed and unsigned
-      numbers.  It will change formatting slightly in scripts with columns
-      of vertically aligned numbers, and can be deactivated with -nvsn.
-
-    - Previously, a line break was made before a short concatenated terminal
-      quoted string, such as "\n", if the previous line had a greater
-      starting indentation. The break is now placed after the short quote.
-      This keeps code a little more compact. For example:
-
-    # old rule: break before "\n" here because '$name' has more indentation:
-    my $html = $this->SUPER::genObject( $query, $bindNode, $field . ":$var",
-        $name, "remove", "UNCHECKED" )
-      . "\n";
-
-    # new rule: break after a short terminal quote like "\n" for compactness;
-    my $html = $this->SUPER::genObject( $query, $bindNode, $field . ":$var",
-        $name, "remove", "UNCHECKED" ) . "\n";
+      numbers.  See the previous Change Log entry for an example.
+      This will change the formatting in scripts with columns
+      of vertically aligned signed and unsigned numbers.
+      Use -nvsn to turn this option off and avoid this change.
 
     - The option --delete-repeated-commas is now the default.
 
@@ -31,6 +19,20 @@
       These warnings are only output if --warning-output, or -w, is set.
 
       Use --nodelete-repeated-commas, or -ndrc, to retain repeated commas.
+
+    - Previously, a line break was always made before a concatenated
+      quoted string, such as "\n", if the previous line had a greater
+      starting indentation. An exception is now made for a short concatenated
+      terminal quote.  This keeps code a little more compact. For example:
+
+    # basic rule: break before "\n" here because '$name' has more indentation:
+    my $html = $this->SUPER::genObject( $query, $bindNode, $field . ":$var",
+        $name, "remove", "UNCHECKED" )
+      . "\n";
+
+    # modified rule: make an exception for a short terminal quote like "\n"
+    my $html = $this->SUPER::genObject( $query, $bindNode, $field . ":$var",
+        $name, "remove", "UNCHECKED" ) . "\n";
 
     - The operator ``**=`` now has spaces on both sides by default. Previously,
       there was no space on the left.  This change makes its spacing the same

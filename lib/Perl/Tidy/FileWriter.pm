@@ -16,7 +16,7 @@
 package Perl::Tidy::FileWriter;
 use strict;
 use warnings;
-our $VERSION = '20240202.07';
+our $VERSION = '20240511';
 
 use constant DEVEL_MODE   => 0;
 use constant EMPTY_STRING => q{};
@@ -152,6 +152,7 @@ sub new {
     my ( $class, $line_sink_object, $rOpts, $logger_object ) = @_;
 
     my $self = [];
+    bless $self, $class;
     $self->[_logger_object_]               = $logger_object;
     $self->[_rOpts_]                       = $rOpts;
     $self->[_output_line_number_]          = 1;
@@ -197,7 +198,6 @@ EOM
     }
     $self->[_input_stream_name_] = $input_stream_name;
 
-    bless $self, $class;
     return $self;
 } ## end sub new
 
