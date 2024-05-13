@@ -88,6 +88,8 @@ sub new {
     # arrow_count        =>  # how many =>'s
 
     my $self = [];
+    bless $self, $class;
+
     $self->[_spaces_]             = $input_hash{spaces};
     $self->[_level_]              = $input_hash{level};
     $self->[_ci_level_]           = $input_hash{ci_level};
@@ -104,7 +106,6 @@ sub new {
     $self->[_standard_spaces_]    = $input_hash{standard_spaces};
     $self->[_K_extra_space_]      = $input_hash{K_extra_space};
 
-    bless $self, $class;
     return $self;
 } ## end sub new
 
@@ -114,8 +115,8 @@ sub permanently_decrease_available_spaces {
     # at one indentation item.  NOTE: if there are child nodes, their
     # total SPACES must be reduced by the caller.
 
-    my ( $item, $spaces_needed ) = @_;
-    my $available_spaces = $item->get_available_spaces();
+    my ( $self, $spaces_needed ) = @_;
+    my $available_spaces = $self->get_available_spaces();
     my $deleted_spaces =
       ( $available_spaces > $spaces_needed )
       ? $spaces_needed
@@ -123,11 +124,11 @@ sub permanently_decrease_available_spaces {
 
     # Fixed for c085; a zero value must remain unchanged unless the closed
     # flag has been set.
-    my $closed = $item->get_closed();
-    $item->decrease_available_spaces($deleted_spaces)
+    my $closed = $self->get_closed();
+    $self->decrease_available_spaces($deleted_spaces)
       if ( $available_spaces != 0 || $closed >= 0 );
-    $item->decrease_SPACES($deleted_spaces);
-    $item->set_recoverable_spaces(0);
+    $self->decrease_SPACES($deleted_spaces);
+    $self->set_recoverable_spaces(0);
 
     return $deleted_spaces;
 } ## end sub permanently_decrease_available_spaces
@@ -138,15 +139,15 @@ sub tentatively_decrease_available_spaces {
     # for an indentation item.  We may want to undo this later.  NOTE: if
     # there are child nodes, their total SPACES must be reduced by the
     # caller.
-    my ( $item, $spaces_needed ) = @_;
-    my $available_spaces = $item->get_available_spaces();
+    my ( $self, $spaces_needed ) = @_;
+    my $available_spaces = $self->get_available_spaces();
     my $deleted_spaces =
       ( $available_spaces > $spaces_needed )
       ? $spaces_needed
       : $available_spaces;
-    $item->decrease_available_spaces($deleted_spaces);
-    $item->decrease_SPACES($deleted_spaces);
-    $item->increase_recoverable_spaces($deleted_spaces);
+    $self->decrease_available_spaces($deleted_spaces);
+    $self->decrease_SPACES($deleted_spaces);
+    $self->increase_recoverable_spaces($deleted_spaces);
     return $deleted_spaces;
 } ## end sub tentatively_decrease_available_spaces
 
