@@ -987,6 +987,7 @@ sub new {
     # Initialize the $self array reference.
     # To add an item, first add a constant index in the BEGIN block above.
     my $self = [];
+    bless $self, $class;
 
     # Basic data structures...
     $self->[_rlines_] = [];    # = ref to array of lines of the file
@@ -1154,8 +1155,6 @@ sub new {
             Fault("These indexes in self not initialized: (@non_existant)\n");
         }
     }
-
-    bless $self, $class;
 
     # Safety check..this is not a class yet
     if ( _increment_count() > 1 ) {
@@ -12962,21 +12961,19 @@ sub parent_seqno_by_K {
 sub parent_sub_seqno {
     my ( $self, $seqno_paren ) = @_;
 
-    # Find sequence number of the sub or asub which contains a given sequenced
-    # item
+    # Find sequence number of the named sub (not asub) which contains a given
+    # sequenced item
 
     # Given:
     #  $seqno_paren = sequence number of a token within the sub
     # Returns:
-    #  $seqno of the sub (or asub), or
+    #  $seqno of the sub, or
     #  nothing if no sub found
     return unless defined($seqno_paren);
     my $parent_seqno = $seqno_paren;
     while ( $parent_seqno = $self->[_rparent_of_seqno_]->{$parent_seqno} ) {
         last if ( $parent_seqno == SEQ_ROOT );
-        if (   $self->[_ris_sub_block_]->{$parent_seqno}
-            || $self->[_ris_asub_block_]->{$parent_seqno} )
-        {
+        if ( $self->[_ris_sub_block_]->{$parent_seqno} ) {
             return $parent_seqno;
         }
     }
@@ -12988,20 +12985,18 @@ sub parent_sub_seqno_by_K {
 
     # NOTE: not currently called but keep for possible future development
 
-    # Find sequence number of the sub or asub which contains a given token
+    # Find sequence number of the named sub which contains a given token
     # Given:
     #  $K = index K of a token
     # Returns:
-    #  $seqno of the sub (or asub), or
+    #  $seqno of the sub, or
     #  nothing if no sub found
 
     return unless defined($KK);
 
     my $seqno_sub;
     my $parent_seqno = $self->parent_seqno_by_K($KK);
-    if (   $self->[_ris_sub_block_]->{$parent_seqno}
-        || $self->[_ris_asub_block_]->{$parent_seqno} )
-    {
+    if ( $self->[_ris_sub_block_]->{$parent_seqno} ) {
         $seqno_sub = $parent_seqno;
     }
     else {
@@ -14528,9 +14523,6 @@ sub cross_check_call_args {
         # Find the sub which contains this call
         my $seqno_sub = $self->parent_sub_seqno($seqno);
         if ($seqno_sub) {
-
-            # NOTE: calls within anonymous subs are currently skipped
-            # but could eventually be included.
             my $item = $rsub_info_by_seqno->{$seqno_sub};
             if ($item) {
 
