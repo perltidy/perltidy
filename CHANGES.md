@@ -1,5 +1,12 @@
 # Perltidy Change Log
 
+## 2024 05 11.01
+
+    - Fix issue git #142, test failure installing on perl versions before
+      version 5.10.  The error caused the new parameter
+      -interbracket-arrow-style=s not to work. Except for this limitation,
+      Version 20240511 will work on older perl versions.
+
 ## 2024 05 11
 
     - The option --valign-signed-numbers, or -vsn is now the default. It
