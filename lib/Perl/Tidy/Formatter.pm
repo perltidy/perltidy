@@ -2971,13 +2971,13 @@ EOM
         $pos_last = pos($opt_style);
         if (
             $opt_style =~ m{
-             \G
+             \G(?:      #    fix git #142
                (\s+)    # 1. whitespace
              | ([\}\]]) # 2. closing bracket
              | (->)     # 3. arrow
              | ([\[\{]) # 4. opening bracket
              | (.*)     # 5. something else, error
-
+             )
             }gcx
           )
         {
