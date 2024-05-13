@@ -996,7 +996,8 @@ letter which is used to limit the selection further depending on the type of
 token immediately before the paren.  The possible letters are currently 'k',
 'K', 'f', 'F', 'w', and 'W', with these meanings for matching whatever precedes an opening paren:
 
- 'k' matches if the previous nonblank token is a perl built-in keyword (such as 'if', 'while'),
+ 'k' matches if the previous nonblank token is a perl built-in keyword
+     (such as 'if', 'while'),
  'K' matches if 'k' does not, meaning that the previous token is not a keyword.
  'f' matches if the previous token is a function other than a keyword.
  'F' matches if 'f' does not.
@@ -3769,9 +3770,18 @@ trailing commas but they are not required.  By default, perltidy does not add
 or delete trailing commas, but it is possible to manipulate them with the
 following set of three related parameters:
 
-  --want-trailing-commas=s, -wtc=s - defines where trailing commas are wanted
-  --add-trailing-commas,    -atc   - gives permission to add trailing commas to match the style wanted
-  --delete-trailing-commas, -dtc   - gives permission to delete trailing commas which do not match the style wanted
+=over 4
+
+=item *
+B<--want-trailing-commas=s, -wtc=s> - defines where trailing commas are wanted
+
+=item *
+B<--add-trailing-commas,    -atc>   - gives permission to add trailing commas to match the style wanted
+
+=item *
+B<--delete-trailing-commas, -dtc>   - gives permission to delete trailing commas which do not match the style wanted
+
+=back
 
 The parameter B<--want-trailing-commas=s>, or B<-wtc=s>, defines a preferred style.  The string B<s> indicates which lists should get trailing commas, as follows:
 
@@ -3837,7 +3847,8 @@ the type of token immediately before the opening paren.  The possible letters
 are currently 'k', 'K', 'f', 'F', 'w', and 'W', with these meanings for
 matching whatever precedes an opening paren:
 
- 'k' matches if the previous nonblank token is a perl built-in keyword (such as 'if', 'while'),
+ 'k' matches if the previous nonblank token is a perl built-in keyword
+     (such as 'if', 'while'),
  'K' matches if 'k' does not, meaning that the previous token is not a keyword.
  'f' matches if the previous token is a function other than a keyword.
  'F' matches if 'f' does not.
@@ -4364,7 +4375,8 @@ these meanings (these are the same as used in the
 B<--weld-nested-exclusion-list> and B<--line-up-parentheses-exclusion-list>
 parameters):
 
- 'k' matches if the previous nonblank token is a perl built-in keyword (such as 'if', 'while'),
+ 'k' matches if the previous nonblank token is a perl built-in keyword
+     (such as 'if', 'while'),
  'K' matches if 'k' does not, meaning that the previous token is not a keyword.
  'f' matches if the previous token is a function other than a keyword.
  'F' matches if 'f' does not.
