@@ -745,7 +745,8 @@
 
 <p>A second optional item of information which can be given for parentheses is an alphanumeric letter which is used to limit the selection further depending on the type of token immediately before the paren. The possible letters are currently &#39;k&#39;, &#39;K&#39;, &#39;f&#39;, &#39;F&#39;, &#39;w&#39;, and &#39;W&#39;, with these meanings for matching whatever precedes an opening paren:</p>
 
-<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl built-in keyword (such as &#39;if&#39;, &#39;while&#39;),
+<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl built-in keyword
+     (such as &#39;if&#39;, &#39;while&#39;),
  &#39;K&#39; matches if &#39;k&#39; does not, meaning that the previous token is not a keyword.
  &#39;f&#39; matches if the previous token is a function other than a keyword.
  &#39;F&#39; matches if &#39;f&#39; does not.
@@ -3000,9 +3001,18 @@
 
 <p>A trailing comma is a comma following the last item of a list. Perl allows trailing commas but they are not required. By default, perltidy does not add or delete trailing commas, but it is possible to manipulate them with the following set of three related parameters:</p>
 
-<pre><code>  --want-trailing-commas=s, -wtc=s - defines where trailing commas are wanted
-  --add-trailing-commas,    -atc   - gives permission to add trailing commas to match the style wanted
-  --delete-trailing-commas, -dtc   - gives permission to delete trailing commas which do not match the style wanted</code></pre>
+<ul>
+
+<li><p><b>--want-trailing-commas=s, -wtc=s</b> - defines where trailing commas are wanted</p>
+
+</li>
+<li><p><b>--add-trailing-commas, -atc</b> - gives permission to add trailing commas to match the style wanted</p>
+
+</li>
+<li><p><b>--delete-trailing-commas, -dtc</b> - gives permission to delete trailing commas which do not match the style wanted</p>
+
+</li>
+</ul>
 
 <p>The parameter <b>--want-trailing-commas=s</b>, or <b>-wtc=s</b>, defines a preferred style. The string <b>s</b> indicates which lists should get trailing commas, as follows:</p>
 
@@ -3053,7 +3063,8 @@
 
 <p>For parentheses, an additional item of information which can be given is an alphanumeric letter which is used to limit the selection further depending on the type of token immediately before the opening paren. The possible letters are currently &#39;k&#39;, &#39;K&#39;, &#39;f&#39;, &#39;F&#39;, &#39;w&#39;, and &#39;W&#39;, with these meanings for matching whatever precedes an opening paren:</p>
 
-<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl built-in keyword (such as &#39;if&#39;, &#39;while&#39;),
+<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl built-in keyword
+     (such as &#39;if&#39;, &#39;while&#39;),
  &#39;K&#39; matches if &#39;k&#39; does not, meaning that the previous token is not a keyword.
  &#39;f&#39; matches if the previous token is a function other than a keyword.
  &#39;F&#39; matches if &#39;f&#39; does not.
@@ -3070,7 +3081,7 @@
 
 <ul>
 
-<li><p>For the implementation of these parameters, a <b>list</b> is basically taken to be a container of items (parens, square brackets, or braces), which is not a code block, with one or more commas. These parameters only apply to something that fits this definition of a list.</p>
+<li><p>For the implementation of these parameters, a <b>list</b> is basically taken to be a container of items (parens, square brackets, or braces), which is not a code block, with one or more commas or fat commas. These parameters only apply to something that fits this definition of a list.</p>
 
 <p>Note that a paren-less list of parameters is not a list by this definition, so these parameters have no effect on a paren-less list.</p>
 
@@ -3490,7 +3501,8 @@
 
 <p>It is possible to be more specific in matching parentheses by preceding them with a letter. The possible letters are &#39;k&#39;, &#39;K&#39;, &#39;f&#39;, &#39;F&#39;, &#39;w&#39;, and &#39;W&#39;, with these meanings (these are the same as used in the <b>--weld-nested-exclusion-list</b> and <b>--line-up-parentheses-exclusion-list</b> parameters):</p>
 
-<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl built-in keyword (such as &#39;if&#39;, &#39;while&#39;),
+<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl built-in keyword
+     (such as &#39;if&#39;, &#39;while&#39;),
  &#39;K&#39; matches if &#39;k&#39; does not, meaning that the previous token is not a keyword.
  &#39;f&#39; matches if the previous token is a function other than a keyword.
  &#39;F&#39; matches if &#39;f&#39; does not.
@@ -5200,7 +5212,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20240511</p>
+<p>This man page documents perltidy version 20240511.02</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

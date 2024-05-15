@@ -1,6 +1,9 @@
 # Perltidy Change Log
 
-## 2024 05 11.01
+## 2024 05 11.02
+
+    - Fix issue git #143, extend -add-trailing-commas to apply to a list
+      with just a fat comma.
 
     - Fix issue git #142, test failure installing on perl versions before
       version 5.10.  The error caused the new parameter
