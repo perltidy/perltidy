@@ -421,6 +421,7 @@
 ../snippets29.t	git137.git137
 ../snippets29.t	git138.def
 ../snippets29.t	git138.git138
+../snippets29.t	vsn.vsn3
 ../snippets3.t	ce_wn1.ce_wn
 ../snippets3.t	ce_wn1.def
 ../snippets3.t	colin.colin
@@ -561,4 +562,5 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets29.t	vsn.vsn3
+../snippets30.t	git143.def
+../snippets30.t	git143.git143

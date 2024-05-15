@@ -378,7 +378,7 @@ $dasm_frame->Button(
 
 my $no_index_1_1 =
   { 'map' =>
-      { ':key' => { name => \&string, list => { value => \&string }, }, }, };
+      { ':key' => { name => \&string, list => { value => \&string, }, }, }, };
 
 #2...........
         },

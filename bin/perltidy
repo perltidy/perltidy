@@ -3870,8 +3870,8 @@ Here are some points to note regarding adding and deleting trailing commas:
 
 For the implementation of these parameters, a B<list> is basically taken to be
 a container of items (parens, square brackets, or braces), which is not a code
-block, with one or more commas.  These parameters only apply to something that
-fits this definition of a list.
+block, with one or more commas or fat commas.  These parameters only apply to
+something that fits this definition of a list.
 
 Note that a paren-less list of parameters is not a list by this definition, so
 these parameters have no effect on a paren-less list.

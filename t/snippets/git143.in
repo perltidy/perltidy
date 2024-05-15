@@ -1,0 +1,7 @@
+# include '=>' in comma count to allow adding trailing comma here
+            my %strips = (
+                1 => [
+                    [ [ 1750, 150, ], [ 1850, 150, ], ],
+                    [ [ 1950, 150, ], [ 2050, 150, ], ],
+                ]
+            );

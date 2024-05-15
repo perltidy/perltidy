@@ -10845,7 +10845,7 @@ sub respace_tokens_inner_loop {
                     # if this is a list ..
                     my $rtype_count = $rtype_count_by_seqno->{$type_sequence};
                     if (   $rtype_count
-                        && $rtype_count->{','}
+                        && ( $rtype_count->{','} || $rtype_count->{'=>'} )
                         && !$rtype_count->{';'}
                         && !$rtype_count->{'f'} )
                     {
@@ -11265,6 +11265,18 @@ EOM
                 else {
                     complain( "deleted repeated '=>'\n", $lno );
                     next;
+                }
+            }
+
+            # remember input line index of first '=>' if -wtc is used
+            if (%trailing_comma_rules) {
+                my $seqno = $seqno_stack{ $depth_next - 1 };
+                if ( defined($seqno)
+                    && !defined( $self->[_rfirst_comma_line_index_]->{$seqno} )
+                  )
+                {
+                    $self->[_rfirst_comma_line_index_]->{$seqno} =
+                      $rtoken_vars->[_LINE_INDEX_];
                 }
             }
         }
@@ -12395,7 +12407,10 @@ sub match_trailing_comma_rule {
     return unless ($type_sequence);
     my $closing_token = $rLL->[$KK]->[_TOKEN_];
     my $rtype_count   = $self->[_rtype_count_by_seqno_]->{$type_sequence};
-    return unless ( defined($rtype_count) && $rtype_count->{','} );
+    return unless defined($rtype_count);
+    my $comma_count     = $rtype_count->{','};
+    my $fat_comma_count = $rtype_count->{'=>'};
+    return unless ( $comma_count || $fat_comma_count );
     my $is_permanently_broken =
       $self->[_ris_permanently_broken_]->{$type_sequence};
 
@@ -12456,7 +12471,7 @@ sub match_trailing_comma_rule {
     # 'm' matches a Multiline list
     #-----------------------------
     elsif ( $trailing_comma_style eq 'm' ) {
-        $match = $is_multiline;
+        $match = $is_multiline && $comma_count;
     }
 
     #----------------------------------
@@ -12480,7 +12495,7 @@ sub match_trailing_comma_rule {
 
         # There must be no more than one comma per line for both 'h' and 'i'
         # The new_comma_count here will include the trailing comma.
-        my $new_comma_count = $rtype_count->{','};
+        my $new_comma_count = $comma_count;
         $new_comma_count += 1 if ($if_add);
         my $excess_commas = $new_comma_count - $line_diff_commas - 1;
         if ( $excess_commas > 0 ) {
@@ -12521,13 +12536,28 @@ sub match_trailing_comma_rule {
             }
         }
 
-        # a list of key=>value pairs with at least 2 fat commas is a match
-        # for both 'h' and 'i'
-        my $fat_comma_count = $rtype_count->{'=>'};
-        if ( !$match && $fat_comma_count && $fat_comma_count >= 2 ) {
+        # check fat commas
+        if (
+              !$match
+            && $fat_comma_count
+            && (
 
-            # comma count (including trailer) and fat comma count must differ by
-            # by no more than 1. This allows for some small variations.
+                # - a list of key=>value pairs with at least 2 fat commas is a
+                # match for both 'h' and 'i'
+                $fat_comma_count >= 2
+
+                # - an isolated fat comma is a match for type 'h'
+                || (   $fat_comma_count == 1
+                    && $new_comma_count == 1
+                    && $if_add
+                    && $trailing_comma_style eq 'h' )
+            )
+          )
+        {
+
+            # but comma count (including trailer) and fat comma count must
+            # differ by by no more than 1. This allows for some small
+            # variations.
             my $comma_diff = $new_comma_count - $fat_comma_count;
             $match = ( $comma_diff >= -1 && $comma_diff <= 1 );
         }
