@@ -13885,7 +13885,6 @@ EOM
                     $item->{is_signature}    = 0;
                     $item->{shift_count_min} = $shift_count;
                     $item->{shift_count_max} = $shift_count;
-                    $item->{self_name}       = $self_name;
                     $self->count_list_args($item);
                     return;
                 }
@@ -14001,6 +14000,10 @@ EOM
                         if ( $rLL->[$K_mm]->[_TYPE_] eq 'i' ) {
                             my $token_mm = $rLL->[$K_mm]->[_TOKEN_];
                             $self_name = $token_mm;
+
+                            # we store self_name immediately because it will
+                            # be needed even if we cannot get an arg count
+                            $item->{self_name} = $self_name;
                         }
                     }
                 }
@@ -14023,7 +14026,6 @@ EOM
                         {
                             $item->{shift_count_min} = $shift_count;
                             $item->{shift_count_max} = $shift_count;
-                            $item->{self_name}       = $self_name;
                         }
                         return;
                     }
@@ -14151,7 +14153,6 @@ EOM
     if ( !$saw_pop_at_underscore ) {
         $item->{shift_count_min} = $shift_count;
         $item->{shift_count_max} = $shift_count;
-        $item->{self_name}       = $self_name;
     }
     return;
 
