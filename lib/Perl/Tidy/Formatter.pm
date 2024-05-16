@@ -12419,6 +12419,28 @@ sub match_trailing_comma_rule {
     my $K_opening = $self->[_K_opening_container_]->{$type_sequence};
     return if ( !defined($K_opening) );
 
+    # Do not add a comma which will be deleted by
+    # --delete-weld-interfering commas (b1471)
+    if (   $if_add
+        && $rOpts_delete_weld_interfering_commas
+        && !$comma_count
+        && $is_closing_type{$last_nonblank_code_type} )
+    {
+        # Back up to the previous token
+        my $Kpp = $self->K_previous_nonblank( undef, $rLL_new );
+        if ( defined($Kpp) ) {
+            my $seqno_pp = $rLL_new->[$Kpp]->[_TYPE_SEQUENCE_];
+            my $type_pp  = $rLL_new->[$Kpp]->[_TYPE_];
+
+            # The containers would have to be nesting, so
+            # sequence numbers must differ by 1
+            return
+              if ( $seqno_pp
+                && $is_closing_type{$type_pp}
+                && ( $seqno_pp == $type_sequence + 1 ) );
+        }
+    }
+
     # multiline definition 1: opening and closing tokens on different lines
     my $iline_o                  = $rLL_new->[$K_opening]->[_LINE_INDEX_];
     my $iline_c                  = $rLL->[$KK]->[_LINE_INDEX_];
