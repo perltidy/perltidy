@@ -1315,9 +1315,8 @@ sub backup_method_copy {
 "problem re-opening $input_file for write for -b option; check file and directory permissions: $OS_ERROR\n"
       );
 
-    if ( $self->[_is_encoded_data_] ) {
-        binmode $fout, ":raw:encoding(UTF-8)";
-    }
+    if ( $self->[_is_encoded_data_] ) { binmode $fout, ":raw:encoding(UTF-8)" }
+    else                              { binmode $fout }
 
     # Now copy the formatted output to it..
     # output must be SCALAR ref..
@@ -1454,9 +1453,8 @@ sub backup_method_move {
 "problem re-opening $input_file for write for -b option; check file and directory permissions: $OS_ERROR\n"
       );
 
-    if ( $self->[_is_encoded_data_] ) {
-        binmode $fout, ":raw:encoding(UTF-8)";
-    }
+    if ( $self->[_is_encoded_data_] ) { binmode $fout, ":raw:encoding(UTF-8)" }
+    else                              { binmode $fout }
 
     # Now copy the formatted output to it..
     # output must be SCALAR ref..
