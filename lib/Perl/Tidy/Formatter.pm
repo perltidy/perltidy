@@ -2179,29 +2179,9 @@ sub initialize_token_break_preferences {
         $break_before_container_types{'('} = $_ if $_ && $_ > 0;
     }
 
-    #--------------------------------------------------------------
-    # The combination -lp -iob -vmll -bbx=2 can be unstable (b1266)
-    #--------------------------------------------------------------
-    # The -vmll and -lp parameters do not really work well together.
-    # To avoid instabilities, we will change any -bbx=2 to -bbx=1 (stable).
-    # NOTE: we could make this more precise by looking at any exclusion
-    # flags for -lp, and allowing -bbx=2 for excluded types.
-    if (   $rOpts->{'variable-maximum-line-length'}
-        && $rOpts->{'ignore-old-breakpoints'}
-        && $rOpts->{'line-up-parentheses'} )
-    {
-        my @changed;
-        foreach my $key ( keys %break_before_container_types ) {
-            if ( $break_before_container_types{$key} == 2 ) {
-                $break_before_container_types{$key} = 1;
-                push @changed, $key;
-            }
-        }
-        if (@changed) {
+    # Note: a fix for b1266 previously here is now covered by the
+    # updates for b1470, b1474, so it has been removed.
 
-            # we could write a warning here
-        }
-    }
     return;
 } ## end sub initialize_token_break_preferences
 
@@ -27106,6 +27086,11 @@ sub do_colon_breaks {
             # boost tol for combination -lp -xci
             if ($rOpts_extended_continuation_indentation) {
                 $lp_tol_boost = 2;
+
+                # and one more for -lp -xci -vmll (b1470, b1474, b1266)
+                if ($rOpts_variable_maximum_line_length) {
+                    $lp_tol_boost = max( 2, $rOpts_indent_columns );
+                }
             }
 
             # boost tol for combination -lp and any -vtc > 0, but only for

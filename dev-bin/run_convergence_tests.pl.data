@@ -12101,6 +12101,22 @@ my @outer = (
 --break-before-paren=2
 --opening-square-bracket-right
 
+==> b1470.in <==
+         $opt= {
+                  iparse(  { Maxiter => 200, Eps => 1e-4, }, ifhref($opt) )
+         };
+
+         $opt= { iparse( { Maxiter => 200, Eps => 1e-4, },
+                           ifhref($opt) ) };
+
+==> b1470.par <==
+--maximum-line-length=59
+--indent-columns=9
+--line-up-parentheses
+--variable-maximum-line-length
+--extended-continuation-indentation
+--nowant-left-space='='
+
 ==> b1471.in <==
 my @global_ops = (
     { "|" => sub { $_[0] unless $_[1]; } },
@@ -12116,6 +12132,22 @@ my @global_ops = (
 --add-trailing-commas
 --want-trailing-commas='*'
 --delete-weld-interfering-commas
+
+==> b1474.in <==
+         $opt = {iparse( {Maxiter => 200, Eps => 1e-4,},
+                           ifhref($opt) )};
+         $opt = {
+                  iparse(  {Maxiter => 200, Eps => 1e-4,}, ifhref($opt) )
+         };
+
+==> b1474.par <==
+--maximum-line-length=59
+--indent-columns=9
+--continuation-indentation=6
+--line-up-parentheses
+--variable-maximum-line-length
+--extended-continuation-indentation
+--brace-tightness=2
 
 ==> b148.in <==
 # state 1
