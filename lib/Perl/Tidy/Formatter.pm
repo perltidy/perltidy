@@ -13568,9 +13568,7 @@ sub count_list_args {
                 }
                 return;
             }
-
             elsif ($sigil eq '$'
-                && !$is_signature
                 && !$self_name
                 && !$arg_count )
             {
@@ -13743,9 +13741,16 @@ sub count_sub_args {
     # search of the entire sub if this would cause a -wma warning.
     my $max_arg_count = $item->{max_arg_count};
 
-    # Do not count the args if we saw '$_[...'
-    if ( $self->[_rDOLLAR_underscore_by_sub_seqno_]->{$seqno_block} ) {
-        return;
+    # Do not count the args if we saw '$_[...' but try to get the self name
+    my $rseqno_DOLLAR_underscore =
+      $self->[_rDOLLAR_underscore_by_sub_seqno_]->{$seqno_block};
+    my $K_DOLLAR_underscore;
+    if ($rseqno_DOLLAR_underscore) {
+        my $seqno_DOLLAR = $rseqno_DOLLAR_underscore->[0];
+        if ($seqno_DOLLAR) {
+            $K_DOLLAR_underscore =
+              $self->[_K_opening_container_]->{$seqno_DOLLAR};
+        }
     }
 
     # Find index '$K' of the last '@_' in this sub, if any
@@ -13875,8 +13880,12 @@ EOM
     my $semicolon_count_after_last_shift = 0;
     my $in_interpolated_quote;
 
-    my $KK = $K_opening;
-    while ( ++$KK < $K_closing ) {
+    my $KK    = $K_opening;
+    my $K_end = $K_closing;
+    if ( $K_DOLLAR_underscore && $K_DOLLAR_underscore < $K_end ) {
+        $K_end = $K_DOLLAR_underscore;
+    }
+    while ( ++$KK < $K_end ) {
 
         my $type = $rLL->[$KK]->[_TYPE_];
         next if ( $type eq 'b' );
@@ -14040,6 +14049,13 @@ EOM
                     }
                 }
             }
+            elsif ( $token eq 'bless' ) {
+
+                # Could look for something like the following:
+                #  my $self = bless {}, $class;
+                #  my $self = bless {}, shift;
+
+            }
             elsif ( $is_if_unless{$token} ) {
 
                 #-------------------------------
@@ -14182,7 +14198,7 @@ EOM
     #--------------------------------
     # the whole file has been scanned
     #--------------------------------
-    if ( !$saw_pop_at_underscore ) {
+    if ( !$saw_pop_at_underscore && $K_end == $K_closing ) {
         $item->{shift_count_min} = $shift_count;
         $item->{shift_count_max} = $shift_count;
     }
@@ -14426,6 +14442,8 @@ sub update_sub_call_paren_info {
     return;
 } ## end sub update_sub_call_paren_info
 
+use constant DEBUG_SELF => 0;
+
 sub cross_check_call_args {
 
     my ( $self, $warn_mode ) = @_;
@@ -14545,12 +14563,13 @@ sub cross_check_call_args {
     #----------------------------------------------
     # Now split method calls into self and external
     #----------------------------------------------
+    my @debug_warnings;
     foreach my $seqno (@method_call_seqnos) {
-        my $rcall_item  = $rsub_call_paren_info_by_seqno->{$seqno};
-        my $package     = $rcall_item->{package};
-        my $name        = $rcall_item->{name};
-        my $caller_name = $rcall_item->{caller_name};
-        my $key         = $package . '::' . $name;
+        my $rcall_item       = $rsub_call_paren_info_by_seqno->{$seqno};
+        my $package          = $rcall_item->{package};
+        my $name             = $rcall_item->{name};
+        my $caller_name      = $rcall_item->{caller_name};
+        my $key_receiver_sub = $package . '::' . $name;
         my $is_self_call;
 
         # Find the sub which contains this call
@@ -14559,20 +14578,57 @@ sub cross_check_call_args {
             my $item = $rsub_info_by_seqno->{$seqno_sub};
             if ($item) {
 
-                # Key assumptions for deciding if a call is to an internal sub:
-                # 1. Look for a first arg like '$self' which matches the
-                # name of the calling object, like '$self->'
-                if (   $item->{self_name}
-                    && $item->{self_name} eq $caller_name )
+                # Decide if a call is to an internal sub by several methods:
+
+                #---------------------------------------------------
+                # Try 1: caller name matches self_name of parent sub
+                #---------------------------------------------------
+                my $key_parent_sub   = $item->{package} . '::' . $item->{name};
+                my $parent_self_name = $item->{self_name};
+                my $caller_is_dollar_self = $caller_name eq '$self';
+                if (
+                       $parent_self_name
+                    && $parent_self_name eq $caller_name
+                    && (  !$common_hash{$key_parent_sub}->{direct_calls}
+                        || $caller_is_dollar_self )
+                  )
                 {
-                    # 2. Assume that the first arg of the sub is its object
-                    # if no direct calls to the sub were seen
-                    my $key_sub = $item->{package} . '::' . $item->{name};
-                    $is_self_call = !$common_hash{$key_sub}->{direct_calls};
+                    $is_self_call = 1;
                 }
 
-                # 3. If not, see if the name was blessed in the containing sub
-                else {
+                #----------------------------------------------------
+                # Try 2. caller is '$self' and parent name is '$class
+                #----------------------------------------------------
+                if (  !$is_self_call
+                    && $caller_is_dollar_self
+                    && $parent_self_name
+                    && $parent_self_name eq '$class' )
+                {
+                    $is_self_call = 1;
+                }
+
+                #--------------------------------------------------
+                # Try 3. caller name and receiver names are '$self'
+                #--------------------------------------------------
+                if ( !$is_self_call && $caller_is_dollar_self ) {
+                    my $seqno_sub_called =
+                      $rsub_seqno_by_key->{$key_receiver_sub};
+                    if ($seqno_sub_called) {
+                        my $item_called =
+                          $rsub_info_by_seqno->{$seqno_sub_called};
+                        my $receiver = $item_called->{self_name};
+                        if ( $receiver && $receiver eq $caller_name ) {
+                            $is_self_call = 1;
+                        }
+                    }
+                }
+
+                #---------------------------------------------------------
+                # Try 4. See if the name was blessed in the containing sub
+                #---------------------------------------------------------
+                if ( !$is_self_call ) {
+                    my $item_self = $item->{self_name};
+                    $item_self = 'undef' unless $item_self;
                     my $rK_bless_list = $rK_bless_by_sub_seqno->{$seqno_sub};
                     if ($rK_bless_list) {
                         my $Ko = $K_opening_container->{$seqno};
@@ -14599,16 +14655,66 @@ sub cross_check_call_args {
                         }
                     }
                 }
+
+                if (   DEBUG_SELF
+                    && !$is_self_call
+                    && $caller_name eq '$self'
+                    && $seqno_sub )
+                {
+                    my $Ko_sub = $K_opening_container->{$seqno_sub};
+                    my $ln_sub = $self->[_rLL_]->[$Ko_sub]->[_LINE_INDEX_] + 1;
+                    my $Ko     = $K_opening_container->{$seqno};
+                    my $ln     = $self->[_rLL_]->[$Ko]->[_LINE_INDEX_] + 1;
+                    my $parent_self   = $item->{self_name};
+                    my $receiver_self = 'missing';
+                    my $seqno_sub_called =
+                      $rsub_seqno_by_key->{$key_receiver_sub};
+                    if ($seqno_sub_called) {
+                        my $item_called =
+                          $rsub_info_by_seqno->{$seqno_sub_called};
+                        $receiver_self = $item_called->{self_name};
+                    }
+                    if ( !$parent_self )   { $parent_self   = 'undef' }
+                    if ( !$receiver_self ) { $receiver_self = 'undef' }
+                    push @debug_warnings,
+                      {
+                        Ko              => $Ko,
+                        caller_name     => $caller_name,
+                        parent_self     => $parent_self,
+                        receiver_self   => $receiver_self,
+                        sub_called      => $name,
+                        line_number     => $ln,
+                        line_number_sub => $ln_sub,
+                      };
+                }
             }
         }
 
         # Save this method call as either an internal (self) or external call
         if ($is_self_call) {
-            push @{ $common_hash{$key}->{self_calls} }, $rcall_item;
+            push @{ $common_hash{$key_receiver_sub}->{self_calls} },
+              $rcall_item;
         }
         else {
             $rcall_item->{is_external_call} = 1;
+
         }
+    }
+
+    if ( DEBUG_SELF && @debug_warnings ) {
+        @debug_warnings = sort { $a->{Ko} <=> $b->{Ko} } @debug_warnings;
+        my $output_string = EMPTY_STRING;
+        foreach my $item (@debug_warnings) {
+            my $caller_name   = $item->{caller_name};
+            my $parent_self   = $item->{parent_self};
+            my $receiver_self = $item->{receiver_self};
+            my $sub_called    = $item->{name};
+            my $line_number   = $item->{line_number};
+            my $ln_sub        = $item->{line_number_sub};
+            $output_string .=
+"external self call at line $line_number with parent self=$parent_self to sub at line=$ln_sub with receiver self=$receiver_self\n";
+        }
+        warning($output_string);
     }
 
     #-------------------------------
@@ -15063,15 +15169,16 @@ EOM
         my $lno             = $item->{line_number};
         my $letter          = $item->{letter};
         my $name            = $item->{name};
+        my $note            = $item->{note};
         my $shift_count_min = $item->{shift_count_min};
         my $shift_count_max = $item->{shift_count_max};
         my $min_arg_count   = $item->{min_arg_count};
         my $max_arg_count   = $item->{max_arg_count};
-        my $note            = $item->{note};
-        my $shift_count =
-            $shift_count_min eq $shift_count_max
-          ? $shift_count_min
-          : "$shift_count_min-$shift_count_max";
+        my $shift_count     = $shift_count_min;
+
+        if ( $shift_count_min ne '*' && $shift_count_min ne $shift_count_max ) {
+            $shift_count = "$shift_count_min-$shift_count_max";
+        }
         $output_string .=
 "$lno:$letter:$name:$shift_count:$min_arg_count:$max_arg_count: $note\n";
     }
@@ -15102,10 +15209,11 @@ EOM
         my $shift_count_max = $item->{shift_count_max};
         my $min_arg_count   = $item->{min_arg_count};
         my $max_arg_count   = $item->{max_arg_count};
-        my $shift_count =
-            $shift_count_min eq $shift_count_max
-          ? $shift_count_min
-          : "$shift_count_min-$shift_count_max";
+        my $shift_count     = $shift_count_min;
+
+        if ( $shift_count_min ne '*' && $shift_count_min ne $shift_count_max ) {
+            $shift_count = "$shift_count_min-$shift_count_max";
+        }
         $output_string .=
 "$lno:$letter:$name:$shift_count:$min_arg_count:$max_arg_count: $note\n";
     }
