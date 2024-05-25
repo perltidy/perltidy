@@ -4584,8 +4584,11 @@ EOM
 "exiting because profile '$config_file' could not be opened\n"
                 );
             }
+            filter_unknown_options(
+                $rconfig_string, $roption_category,
+                $rexpansion,     $rconfig_file_chatter
+            );
         }
-
         if ($saw_dump_profile) {
             dump_config_file( $rconfig_string, $config_file,
                 $rconfig_file_chatter );
@@ -4608,7 +4611,7 @@ EOM
 
                 if ( !GetOptions( \%Opts, @{$roption_string} ) ) {
                     Die(
-"Error in this config file: $config_file  \nUse -npro to ignore this file, -h for help'\n"
+"Error in this config file: $config_file  \nUse -npro to ignore this file, -dpro to dump it, -h for help'\n"
                     );
                 }
 
@@ -5581,6 +5584,66 @@ sub dump_config_file {
     }
     return;
 } ## end sub dump_config_file
+
+sub filter_unknown_options {
+
+    my (
+        $rconfig_string, $roption_category,
+        $rexpansion,     $rconfig_file_chatter
+    ) = @_;
+
+    # Look through the configuration file for lines beginning with '---' and
+    # - remove the line if the option is unknown, or
+    # - remove the extra dash if the option is known
+    # See git #146 for discussion
+
+    # Given:
+    #   $rconfig_string = string ref to a .perltidyrc configuration file
+    #   $roption_category = ref to hash with long_names as key
+    #   $rexpansion = ref to hash with abbreviations as key
+    #   $rconfig_file_chatter = messages displayed in --dump-profile
+    #
+    # Update: $rconfig_string and $rconfig_file_chatter
+
+    # quick check to skip most files
+    if ( ${$rconfig_string} !~ /^\s*---\w/m ) { return }
+
+    my @lines = split /^/, ${$rconfig_string};
+    my $new_config_string;
+    my $change_notices = EMPTY_STRING;
+    while ( defined( my $line = shift @lines ) ) {
+        chomp $line;
+
+        # look for lines beginning with '---'
+        if ( $line && $line =~ /^\s*---(\w[\w-]*)/ ) {
+            my $word = $1;
+
+            # first look for a long name or an abbreviation
+            my $is_known = $roption_category->{$word} || $rexpansion->{$word};
+
+            # then look for prefix 'no' or 'no-' on a long name
+            if ( !$is_known && $word =~ s/^no-?// ) {
+                $is_known = $roption_category->{$word};
+            }
+
+            if ( !$is_known ) {
+                $change_notices .= "#  removing unknown option line $line\n";
+                next;
+            }
+            else {
+                $change_notices .= "#  accepting and fixing line $line\n";
+                $line =~ s/-//;
+            }
+        }
+        $new_config_string .= $line . "\n";
+    }
+
+    if ($change_notices) {
+        ${$rconfig_file_chatter} .= "# Filter operations:\n" . $change_notices;
+        ${$rconfig_string} = $new_config_string;
+    }
+    return;
+} ## end sub filter_unknown_options
 
 sub read_config_file {
 
