@@ -13565,6 +13565,7 @@ sub count_list_args {
                     next if ( $type_last eq 'k' && $token_last eq 'scalar' );
                     next if ( $type_last eq '+' );
                     next if ( $type_last eq q{\\} );
+                    next if ( $type_last eq '!' );
                 }
                 return;
             }
