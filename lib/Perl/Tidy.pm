@@ -5603,15 +5603,16 @@ sub filter_unknown_options {
     #   $rexpansion = ref to hash with abbreviations as key
     #   $rconfig_file_chatter = messages displayed in --dump-profile
     #
-    # Update: $rconfig_string and $rconfig_file_chatter
+    # Update:
+    #   $rconfig_string and $rconfig_file_chatter
 
     # quick check to skip most files
     if ( ${$rconfig_string} !~ /^\s*---\w/m ) { return }
 
-    my @lines = split /^/, ${$rconfig_string};
     my $new_config_string;
     my $change_notices = EMPTY_STRING;
-    while ( defined( my $line = shift @lines ) ) {
+    my @lines          = split /^/, ${$rconfig_string};
+    foreach my $line (@lines) {
         chomp $line;
 
         # look for lines beginning with '---'
