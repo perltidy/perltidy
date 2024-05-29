@@ -13742,17 +13742,11 @@ sub count_sub_args {
     # search of the entire sub if this would cause a -wma warning.
     my $max_arg_count = $item->{max_arg_count};
 
-    # Do not count the args if we saw '$_[...' but try to get the self name
-    my $rseqno_DOLLAR_underscore =
-      $self->[_rDOLLAR_underscore_by_sub_seqno_]->{$seqno_block};
-    my $K_DOLLAR_underscore;
-    if ($rseqno_DOLLAR_underscore) {
-        my $seqno_DOLLAR = $rseqno_DOLLAR_underscore->[0];
-        if ($seqno_DOLLAR) {
-            $K_DOLLAR_underscore =
-              $self->[_K_opening_container_]->{$seqno_DOLLAR};
-        }
-    }
+    my $rLL                 = $self->[_rLL_];
+    my $rlines              = $self->[_rlines_];
+    my $K_opening_container = $self->[_K_opening_container_];
+    my $K_closing_container = $self->[_K_closing_container_];
+    my $K_opening_block     = $self->[_K_opening_container_]->{$seqno_block};
 
     # Find index '$K' of the last '@_' in this sub, if any
     # Note on '$K_last_at_underscore': if we exit with only seeing shifts,
@@ -13764,12 +13758,46 @@ sub count_sub_args {
         $K_last_at_underscore = $rKlist->[-1];
     }
 
+    # Note on $_[n]: if there are any shifts of @_ or references to @_, we
+    # cannot use these for a count. Otherwise, we can use the range of n in
+    # $_[n] to get an expected arg count if all indexes n are simple integers.
+    # So for example if we see anything like $_[2+$i] we have to give up.
+    my $at_index_min;
+    my $at_index_max;
+    my $rseqno_DOLLAR_underscore =
+      $self->[_rDOLLAR_underscore_by_sub_seqno_]->{$seqno_block};
+    if ( !defined($rKlist) && $rseqno_DOLLAR_underscore ) {
+        my $ok;
+        foreach my $seqno_DOLLAR ( @{$rseqno_DOLLAR_underscore} ) {
+            $ok = 0;
+            my $Ko = $K_opening_container->{$seqno_DOLLAR};
+            my $Kn = $self->K_next_code($Ko);
+            last unless ($Kn);
+            last unless ( $rLL->[$Kn]->[_TYPE_] eq 'n' );
+            my $token = ( $rLL->[$Kn]->[_TOKEN_] );
+            last unless ( $token =~ /^\d+$/ );
+            my $Knn = $self->K_next_code($Kn);
+            my $Kc  = $K_closing_container->{$seqno_DOLLAR};
+            last unless ( $Knn && $Kc && $Knn == $Kc );
+
+            if ( !defined($at_index_min) || $token < $at_index_min ) {
+                $at_index_min = $token;
+            }
+            if ( !defined($at_index_max) || $token > $at_index_max ) {
+                $at_index_max = $token;
+            }
+            $ok = 1;
+        }
+        if ( !$ok ) {
+            $at_index_min = undef;
+            $at_index_max = undef;
+        }
+    }
+
+    # flag indicating we saw a "pop @_" or just "pop;";
     my $saw_pop_at_underscore;
 
-    my $rLL             = $self->[_rLL_];
-    my $K_opening_block = $self->[_K_opening_container_]->{$seqno_block};
-    my $rlines          = $self->[_rlines_];
-    my $ix_HERE_END     = -1;
+    my $ix_HERE_END = -1;
 
     # Optimization: find the previous type 'S' token with the sub name .. this
     # was saved by sub respace_tokens. May need to back up 1 token if spaces
@@ -13881,19 +13909,17 @@ EOM
     my $semicolon_count_after_last_shift = 0;
     my $in_interpolated_quote;
 
-    my $KK    = $K_opening;
-    my $K_end = $K_closing;
-    if ( $K_DOLLAR_underscore && $K_DOLLAR_underscore < $K_end ) {
-        $K_end = $K_DOLLAR_underscore;
-    }
-    while ( ++$KK < $K_end ) {
+    my $KK = $K_opening;
+    while ( ++$KK < $K_closing ) {
 
         my $type = $rLL->[$KK]->[_TYPE_];
         next if ( $type eq 'b' );
         next if ( $type eq '#' );
 
         my $token = $rLL->[$KK]->[_TOKEN_];
-        if ( $type eq 'i' ) {
+
+        # Note that '$_' here is marked as type 'Z': print $_[0];
+        if ( $type eq 'i' || $type eq 'Z' ) {
 
             # look for '@_'
             if ( $token eq '@_' ) {
@@ -13941,7 +13967,12 @@ EOM
                 # Found $_: currently the search ends at '$_['
                 my $Kn = $self->K_next_code($KK);
                 if ( $Kn && $rLL->[$Kn]->[_TOKEN_] eq '[' ) {
-                    return;
+
+                    # Give up unless we might be able to define a count
+                    # when there are just references to $_[n] values
+                    if ( !defined($at_index_max) || $shift_count ) {
+                        return;
+                    }
                 }
             }
 
@@ -14199,7 +14230,20 @@ EOM
     #--------------------------------
     # the whole file has been scanned
     #--------------------------------
-    if ( !$saw_pop_at_underscore && $K_end == $K_closing ) {
+
+    # if no shifts @_ and no references to @_, look for $[n]
+    if ( defined($at_index_max) && !$shift_count ) {
+        $shift_count = $at_index_max + 1;
+
+## Possible future update: if there is no self_name, maybe use $_[0]
+## but first we need to check for something like 'my $self=$_[0];'
+##        if (!$self_name && $at_index_max == 0) {
+##            $self_name = '$_[0]';
+##            $item->{self_name} = $self_name;
+##        }
+    }
+
+    if ( !$saw_pop_at_underscore ) {
         $item->{shift_count_min} = $shift_count;
         $item->{shift_count_max} = $shift_count;
     }
