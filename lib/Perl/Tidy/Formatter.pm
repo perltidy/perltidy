@@ -9463,7 +9463,7 @@ sub dump_unusual_variables {
 
     # output for multiple types
     my $output_string = <<EOM;
-Issue abbreviations  u=unused  r=reused  s=multi-sigil  p=package crossing
+Issue types are 'u'=unused 'r'=reused 's'=multi-sigil 'p'=package crossing
 Line:Issue: Var: note
 EOM
     foreach my $item ( @{$rlines} ) {
@@ -9596,7 +9596,7 @@ sub warn_variable_types {
 
     my $message = "Begin scan for --$wv_key=$wv_option\n";
     $message .= <<EOM;
-Issue abbreviations  r=reused  s=multi-sigil  p=package crossing
+Issue types are 'r'=reused 's'=multi-sigil 'p'=package crossing
 Line:Issue: Var: note
 EOM
 
@@ -13762,8 +13762,33 @@ sub count_sub_args {
     # cannot use these for a count. Otherwise, we can use the range of n in
     # $_[n] to get an expected arg count if all indexes n are simple integers.
     # So for example if we see anything like $_[2+$i] we have to give up.
+    my $seqno_at_index_min;
     my $at_index_min;
     my $at_index_max;
+
+    my $dollar_underscore_zero_name = sub {
+
+        # Find the first arg name for a sub which references $_[0] and does
+        # not do shifting. There are two possibilities:
+        #   return '$word' in something like '$word = $_[0];'
+        #   return nothing otherwise
+        return unless ( $seqno_at_index_min && $at_index_min == 0 );
+        my $Ko = $K_opening_container->{$seqno_at_index_min};
+        my $Kc = $K_closing_container->{$seqno_at_index_min};
+        return unless ( $Ko && $Kc );
+        my $K_semicolon = $self->K_next_code($Kc);
+        return unless ( $K_semicolon && $rLL->[$K_semicolon]->[_TYPE_] eq ';' );
+        my $K_m = $self->K_previous_code($Ko);
+        return unless ( $K_m && $rLL->[$K_m]->[_TOKEN_] eq '$_' );
+        my $K_mm = $self->K_previous_code($K_m);
+        return unless ( $K_mm && $rLL->[$K_mm]->[_TYPE_] eq '=' );
+        my $K_mmm = $self->K_previous_code($K_mm);
+        return unless ( $K_mmm && $rLL->[$K_mmm]->[_TYPE_] eq 'i' );
+        my $name = $rLL->[$K_mmm]->[_TOKEN_];
+        return unless ( $name =~ /^\$\w/ );
+        return $name;
+    };
+
     my $rseqno_DOLLAR_underscore =
       $self->[_rDOLLAR_underscore_by_sub_seqno_]->{$seqno_block};
     if ( !defined($rKlist) && $rseqno_DOLLAR_underscore ) {
@@ -13782,6 +13807,9 @@ sub count_sub_args {
 
             if ( !defined($at_index_min) || $token < $at_index_min ) {
                 $at_index_min = $token;
+                if ( !defined($seqno_at_index_min) ) {
+                    $seqno_at_index_min = $seqno_DOLLAR;
+                }
             }
             if ( !defined($at_index_max) || $token > $at_index_max ) {
                 $at_index_max = $token;
@@ -13954,6 +13982,9 @@ EOM
                     $item->{shift_count_min} = $shift_count;
                     $item->{shift_count_max} = $shift_count;
                     $self->count_list_args($item);
+
+                    # NOTE: this could disagree with $_[n] usage; we
+                    # ignore this for now.
                     return;
                 }
 
@@ -14235,12 +14266,14 @@ EOM
     if ( defined($at_index_max) && !$shift_count ) {
         $shift_count = $at_index_max + 1;
 
-## Possible future update: if there is no self_name, maybe use $_[0]
-## but first we need to check for something like 'my $self=$_[0];'
-##        if (!$self_name && $at_index_max == 0) {
-##            $self_name = '$_[0]';
-##            $item->{self_name} = $self_name;
-##        }
+        # Create a self name like '$_[0]' if we can't find user-defined name.
+        # Then any sub calls with '$_[0]->' will be recognized as self
+        # calls by sub cross_check_call_args.
+        if ( !$self_name && $at_index_min == 0 ) {
+            $self_name         = $dollar_underscore_zero_name->();
+            $self_name         = '$_[0]' unless ($self_name);
+            $item->{self_name} = $self_name;
+        }
     }
 
     if ( !$saw_pop_at_underscore ) {
@@ -14377,6 +14410,33 @@ sub update_sub_call_paren_info {
     my @package_stack = reverse( @{$rpackage_lookup_list} );
     my ( $current_package, $Kbegin, $Kend ) = @{ pop @package_stack };
 
+    my $is_dollar_underscore_zero = sub {
+
+        my ($K_closing_bracket) = @_;
+
+        # Given:
+        #   $K_closing_bracket - index of a ']'
+        # Return:
+        #   true of this is the end of '$_[0]'
+        #   false otherwise
+        #
+        #  return $_[0]->PP_decode_json(...
+        #             |
+        #             ---$K_closing_bracket
+        return unless ($K_closing_bracket);
+        my $seqno = $rLL->[$K_closing_bracket]->[_TYPE_SEQUENCE_];
+        return unless ($seqno);
+        my $Ko = $K_opening_container->{$seqno};
+        return unless ($Ko);
+        my $Knum = $self->K_next_code($Ko);
+        return unless ( $Knum && $rLL->[$Knum]->[_TOKEN_] eq '0' );
+        my $Kc = $self->K_next_code($Knum);
+        return unless ( $Kc eq $K_closing_bracket );
+        my $K_p = $self->K_previous_code($Ko);
+        return unless ( $rLL->[$K_p]->[_TOKEN_] eq '$_' );
+        return 1;
+    };
+
     #----------------------------------------------
     # Loop over sequence numbers of all call parens
     #----------------------------------------------
@@ -14408,15 +14468,26 @@ sub update_sub_call_paren_info {
             $name              = substr( $name, 1 );
         }
 
-        my $call_type   = $is_ampersand_call ? '&' : EMPTY_STRING;
+        my $call_type = $is_ampersand_call ? '&' : EMPTY_STRING;
+
         my $caller_name = EMPTY_STRING;
         if ( $type_mm eq '->' ) {
             $call_type = '->';
             my $K_m   = $self->K_previous_code($Ko);
             my $K_mm  = $self->K_previous_code($K_m);
             my $K_mmm = $self->K_previous_code($K_mm);
-            if ( defined($K_mmm) && $rLL->[$K_mmm]->[_TYPE_] eq 'i' ) {
-                $caller_name = $rLL->[$K_mmm]->[_TOKEN_];
+            if ( defined($K_mmm) ) {
+                my $type_mmm  = $rLL->[$K_mmm]->[_TYPE_];
+                my $token_mmm = $rLL->[$K_mmm]->[_TOKEN_];
+                if ( $type_mmm eq 'i' ) {
+                    $caller_name = $token_mmm;
+                }
+                elsif ( $token_mmm eq ']' ) {
+                    if ( $is_dollar_underscore_zero->($K_mmm) ) {
+                        $caller_name = '$_[0]';
+                    }
+                }
+                else { }
             }
         }
 
@@ -14625,20 +14696,22 @@ sub cross_check_call_args {
 
                 # Decide if a call is to an internal sub by several methods:
 
-                #---------------------------------------------------
-                # Try 1: caller name matches self_name of parent sub
-                #---------------------------------------------------
                 my $key_parent_sub   = $item->{package} . '::' . $item->{name};
                 my $parent_self_name = $item->{self_name};
                 my $caller_is_dollar_self = $caller_name eq '$self';
-                if (
-                       $parent_self_name
-                    && $parent_self_name eq $caller_name
-                    && (  !$common_hash{$key_parent_sub}->{direct_calls}
-                        || $caller_is_dollar_self )
-                  )
-                {
-                    $is_self_call = 1;
+
+                #------------------------------------------------
+                # Try 1: parent sub self name matches caller name
+                #------------------------------------------------
+                if ($parent_self_name) {
+                    if (
+                        $parent_self_name eq $caller_name
+                        && (  !$common_hash{$key_parent_sub}->{direct_calls}
+                            || $caller_is_dollar_self )
+                      )
+                    {
+                        $is_self_call = 1;
+                    }
                 }
 
                 #----------------------------------------------------
@@ -14742,7 +14815,6 @@ sub cross_check_call_args {
         }
         else {
             $rcall_item->{is_external_call} = 1;
-
         }
     }
 
@@ -15205,7 +15277,7 @@ sub warn_mismatched_args {
     my $wma_key       = 'warn-mismatched-args';
     my $output_string = "Begin scan for --$wma_key\n";
     $output_string .= <<EOM;
-Issue abbreviations a=arrow mismatch u=undercount o=overcount
+Issue types are 'a'=arrow mismatch 'u'=undercount 'o'=overcount
 Line:Issue:Name:#args:Min:Max: note
 EOM
 
@@ -15242,7 +15314,7 @@ sub dump_mismatched_args {
     my ( $rwarnings, $hint ) = $self->cross_check_call_args(0);
     return unless ( $rwarnings && @{$rwarnings} );
     my $output_string = <<EOM;
-Issue abbreviations a=arrow mismatch u=undercount o=overcount i=indeterminate
+Issue types 'a'=arrow mismatch 'u'=undercount 'o'=overcount 'i'=indeterminate
 Line:Issue:Name:#args:Min:Max: note
 EOM
     foreach my $item ( @{$rwarnings} ) {
