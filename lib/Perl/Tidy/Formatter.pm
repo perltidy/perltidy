@@ -14735,7 +14735,13 @@ sub cross_check_call_args {
                         my $item_called =
                           $rsub_info_by_seqno->{$seqno_sub_called};
                         my $receiver = $item_called->{self_name};
-                        if ( $receiver && $receiver eq $caller_name ) {
+                        if (
+                            $receiver
+                            && (   $receiver eq $caller_name
+                                || $receiver eq '$class'
+                                || $receiver eq '$_[0]' )
+                          )
+                        {
                             $is_self_call = 1;
                         }
                     }
@@ -14780,29 +14786,46 @@ sub cross_check_call_args {
                     && $seqno_sub )
                 {
                     my $Ko_sub = $K_opening_container->{$seqno_sub};
-                    my $ln_sub = $self->[_rLL_]->[$Ko_sub]->[_LINE_INDEX_] + 1;
-                    my $Ko     = $K_opening_container->{$seqno};
-                    my $ln     = $self->[_rLL_]->[$Ko]->[_LINE_INDEX_] + 1;
-                    my $parent_self   = $item->{self_name};
+                    my $ln_parent =
+                      $self->[_rLL_]->[$Ko_sub]->[_LINE_INDEX_] + 1;
+                    my $Ko          = $K_opening_container->{$seqno};
+                    my $ln          = $self->[_rLL_]->[$Ko]->[_LINE_INDEX_] + 1;
+                    my $parent_self = $item->{self_name};
                     my $receiver_self = 'missing';
+                    my $ln_receiver   = 'undef';
                     my $seqno_sub_called =
                       $rsub_seqno_by_key->{$key_receiver_sub};
+
                     if ($seqno_sub_called) {
                         my $item_called =
                           $rsub_info_by_seqno->{$seqno_sub_called};
                         $receiver_self = $item_called->{self_name};
+                        my $Ko_receiver =
+                          $K_opening_container->{$seqno_sub_called};
+                        $ln_receiver =
+                          $self->[_rLL_]->[$Ko_receiver]->[_LINE_INDEX_] + 1;
                     }
+
+                    # use DEBUG_SELF=3 to see missing subs
+                    else {
+                        next if ( DEBUG_SELF < 3 );
+                    }
+
+                    # use DEBUG_SELF=2 to see undef-self-undef
+                    next
+                      if ( DEBUG_SELF < 2 && !$parent_self && !$receiver_self );
                     if ( !$parent_self )   { $parent_self   = 'undef' }
                     if ( !$receiver_self ) { $receiver_self = 'undef' }
                     push @debug_warnings,
                       {
-                        Ko              => $Ko,
-                        caller_name     => $caller_name,
-                        parent_self     => $parent_self,
-                        receiver_self   => $receiver_self,
-                        sub_called      => $name,
-                        line_number     => $ln,
-                        line_number_sub => $ln_sub,
+                        Ko            => $Ko,
+                        caller_name   => $caller_name,
+                        parent_self   => $parent_self,
+                        receiver_self => $receiver_self,
+                        sub_called    => $name,
+                        line_number   => $ln,
+                        ln_parent     => $ln_parent,
+                        ln_receiver   => $ln_receiver,
                       };
                 }
             }
@@ -14825,11 +14848,12 @@ sub cross_check_call_args {
             my $caller_name   = $item->{caller_name};
             my $parent_self   = $item->{parent_self};
             my $receiver_self = $item->{receiver_self};
-            my $sub_called    = $item->{name};
+            my $sub_called    = $item->{sub_called};
             my $line_number   = $item->{line_number};
-            my $ln_sub        = $item->{line_number_sub};
+            my $ln_parent     = $item->{ln_parent};
+            my $ln_receiver   = $item->{ln_receiver};
             $output_string .=
-"external self call at line $line_number with parent self=$parent_self to sub at line=$ln_sub with receiver self=$receiver_self\n";
+"$line_number: \$self->$sub_called in parent line $ln_parent with self=$parent_self to receiver line $ln_receiver with self=$receiver_self\n";
         }
         warning($output_string);
     }
