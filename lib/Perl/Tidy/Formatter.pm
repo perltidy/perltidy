@@ -637,7 +637,7 @@ BEGIN {
         # these vars are defined after call to respace tokens:
         _rK_package_list_                 => $i++,
         _rK_AT_underscore_by_sub_seqno_   => $i++,
-        _rK_bless_by_sub_seqno_           => $i++,
+        _rK_first_self_by_sub_seqno_      => $i++,
         _rK_sub_by_seqno_                 => $i++,
         _ris_my_sub_by_seqno_             => $i++,
         _rsub_call_paren_info_by_seqno_   => $i++,
@@ -1029,7 +1029,7 @@ sub new {
     #               --dump-mismatched-args
     $self->[_rK_package_list_]                 = [];
     $self->[_rK_AT_underscore_by_sub_seqno_]   = {};
-    $self->[_rK_bless_by_sub_seqno_]           = {};
+    $self->[_rK_first_self_by_sub_seqno_]      = {};
     $self->[_rsub_call_paren_info_by_seqno_]   = {};
     $self->[_rDOLLAR_underscore_by_sub_seqno_] = {};
     $self->[_rK_sub_by_seqno_]                 = {};
@@ -10427,8 +10427,8 @@ my $rK_package_list;
 # new index K of @_ tokens
 my $rK_AT_underscore_by_sub_seqno;
 
-# new index K of bless tokens
-my $rK_bless_by_sub_seqno;
+# new index K of $self tokens
+my $rK_first_self_by_sub_seqno;
 
 # info about list of sub call args
 my $rsub_call_paren_info_by_seqno;
@@ -10474,7 +10474,7 @@ sub initialize_respace_tokens_closure {
 
     $rK_package_list               = $self->[_rK_package_list_];
     $rK_AT_underscore_by_sub_seqno = $self->[_rK_AT_underscore_by_sub_seqno_];
-    $rK_bless_by_sub_seqno         = $self->[_rK_bless_by_sub_seqno_];
+    $rK_first_self_by_sub_seqno    = $self->[_rK_first_self_by_sub_seqno_];
     $rsub_call_paren_info_by_seqno = $self->[_rsub_call_paren_info_by_seqno_];
     $rDOLLAR_underscore_by_sub_seqno =
       $self->[_rDOLLAR_underscore_by_sub_seqno_];
@@ -11067,13 +11067,10 @@ sub respace_tokens_inner_loop {
                       scalar @{$rLL_new};
                 }
 
-                # Remember new K and name of blessed object for -dma option
-                if (   $last_nonblank_code_token eq 'bless'
-                    && $last_nonblank_code_type eq 'k'
-                    && $current_sub_seqno )
-                {
-                    push @{ $rK_bless_by_sub_seqno->{$current_sub_seqno} },
-                      [ scalar @{$rLL_new}, $token ];
+                # Remember new K of the first '$self' in a sub for -dma option
+                if ( $token eq '$self' && $current_sub_seqno ) {
+                    $rK_first_self_by_sub_seqno->{$current_sub_seqno} ||=
+                      scalar @{$rLL_new};
                 }
             }
             else {
@@ -14576,6 +14573,8 @@ sub cross_check_call_args {
     #     - except if expecting N or less (N=4 by default)
     # i = indeterminate: expected number of args was not determined
 
+    my $rLL = $self->[_rLL_];
+
     # initialize for dump mode
     my $ris_mismatched_call_type = { 'a' => 1, 'o' => 1, 'u' => 1, 'i' => 1 };
     my $mismatched_arg_undercount_cutoff  = 0;
@@ -14601,7 +14600,7 @@ sub cross_check_call_args {
     my $ris_my_sub_by_seqno = $self->[_ris_my_sub_by_seqno_];
     my $rsub_call_paren_info_by_seqno =
       $self->[_rsub_call_paren_info_by_seqno_];
-    my $rK_bless_by_sub_seqno = $self->[_rK_bless_by_sub_seqno_];
+    my $rK_first_self_by_sub_seqno = $self->[_rK_first_self_by_sub_seqno_];
 
     #----------------------------
     # Make a package lookup table
@@ -14680,6 +14679,7 @@ sub cross_check_call_args {
     # Now split method calls into self and external
     #----------------------------------------------
     my @debug_warnings;
+    my %try_3_cache;
     foreach my $seqno (@method_call_seqnos) {
         my $rcall_item       = $rsub_call_paren_info_by_seqno->{$seqno};
         my $package          = $rcall_item->{package};
@@ -14695,7 +14695,6 @@ sub cross_check_call_args {
             if ($item) {
 
                 # Decide if a call is to an internal sub by several methods:
-
                 my $key_parent_sub   = $item->{package} . '::' . $item->{name};
                 my $parent_self_name = $item->{self_name};
                 my $caller_is_dollar_self = $caller_name eq '$self';
@@ -14704,6 +14703,8 @@ sub cross_check_call_args {
                 # Try 1: parent sub self name matches caller name
                 #------------------------------------------------
                 if ($parent_self_name) {
+
+                    # and the only calls to parent sub, if any, are arrow calls.
                     if (
                         $parent_self_name eq $caller_name
                         && (  !$common_hash{$key_parent_sub}->{direct_calls}
@@ -14714,20 +14715,9 @@ sub cross_check_call_args {
                     }
                 }
 
-                #----------------------------------------------------
-                # Try 2. caller is '$self' and parent name is '$class
-                #----------------------------------------------------
-                if (  !$is_self_call
-                    && $caller_is_dollar_self
-                    && $parent_self_name
-                    && $parent_self_name eq '$class' )
-                {
-                    $is_self_call = 1;
-                }
-
-                #--------------------------------------------------
-                # Try 3. caller name and receiver names are '$self'
-                #--------------------------------------------------
+                #-------------------------------------------------------------
+                # Try 2. caller='$self', receiver='$self', '$class', '$_[0]'
+                #-------------------------------------------------------------
                 if ( !$is_self_call && $caller_is_dollar_self ) {
                     my $seqno_sub_called =
                       $rsub_seqno_by_key->{$key_receiver_sub};
@@ -14747,50 +14737,90 @@ sub cross_check_call_args {
                     }
                 }
 
-                #---------------------------------------------------------
-                # Try 4. See if the name was blessed in the containing sub
-                #---------------------------------------------------------
-                if ( !$is_self_call ) {
-                    my $item_self = $item->{self_name};
-                    $item_self = 'undef' unless $item_self;
-                    my $rK_bless_list = $rK_bless_by_sub_seqno->{$seqno_sub};
-                    if ($rK_bless_list) {
-                        my $Ko = $K_opening_container->{$seqno};
-                        foreach my $blessing ( @{$rK_bless_list} ) {
+                #-------------------------------------------------------
+                # Try 3. Caller is '$self', look at first '$self' in sub
+                #-------------------------------------------------------
+                if ( !$is_self_call && $caller_is_dollar_self ) {
 
-                            # Index K and blessed name were stored with sub
-                            my ( $K_blessed, $name_blessed ) = @{$blessing};
+                    $is_self_call = $try_3_cache{$seqno_sub};
 
-                            # name of blessed object must match
-                            next if ( $name_blessed ne $caller_name );
+                    if ( !defined($is_self_call) ) {
 
-                            # bless must be at top sub level
-                            my $parent_seqno =
-                              $self->parent_seqno_by_K($K_blessed);
-                            next
-                              if (!$parent_seqno
-                                || $parent_seqno != $seqno_sub );
+                        $is_self_call = 0;
+                        my $K_first_self =
+                          $rK_first_self_by_sub_seqno->{$seqno_sub};
 
-                            # bless must be before the call
-                            next if ( $K_blessed > $Ko );
+                        # an index K stored by respace_tokens may be 1 low
+                        $K_first_self++
+                          if ( $K_first_self
+                            && $rLL->[$K_first_self]->[_TYPE_] eq 'b' );
 
+                        my $Kn     = $self->K_next_code($K_first_self);
+                        my $type_n = $Kn ? $rLL->[$Kn]->[_TYPE_] : 'b';
+
+                        #-----------------------------------------
+                        # Try 3a. if "$self->" then assume OO call
+                        #-----------------------------------------
+                        if ( $type_n eq '->' ) {
                             $is_self_call = 1;
-                            last;
+
+                            # Reduce the call arg count by 1 in this case
+                            # because it looks this is an OO system which
+                            # hides the $self call arg.
+                            # NOTE: to be sure, we could scan all sub args
+                            # in advance to check that all first sub args
+                            # are not named $self
+                            if ( defined( $rcall_item->{arg_count} ) ) {
+                                $rcall_item->{arg_count} -= 1;
+                            }
                         }
+
+                        #--------------------------
+                        # Try 3b. "$self = bless"
+                        #--------------------------
+                        elsif ( $type_n eq '=' ) {
+                            my $Knn = $self->K_next_code($Kn);
+                            $is_self_call =
+                              $Knn && $rLL->[$Knn]->[_TOKEN_] eq 'bless';
+                        }
+
+                        #--------------------------------------------
+                        # Try 3c. "bless $self," or "bless my $self,"
+                        #--------------------------------------------
+                        elsif ( $type_n eq ',' ) {
+                            my $Kp = $self->K_previous_code($K_first_self);
+                            if ( $Kp && $rLL->[$Kp]->[_TYPE_] eq 'k' ) {
+                                my $token_p = $rLL->[$Kp]->[_TOKEN_];
+
+                                if ( $token_p eq 'bless' ) {
+                                    $is_self_call = 1;
+                                }
+                                elsif ( $token_p eq 'my' ) {
+                                    my $Kpp = $self->K_previous_code($Kp);
+                                    $is_self_call = $Kpp
+                                      && $rLL->[$Kpp]->[_TOKEN_] eq 'bless';
+                                }
+                                else { }
+                            }
+                        }
+
+                        # none of the above
+                        else { }
+
+                        $try_3_cache{$seqno_sub} = $is_self_call;
                     }
                 }
 
                 if (   DEBUG_SELF
                     && !$is_self_call
-                    && $caller_name eq '$self'
+                    && $caller_is_dollar_self
                     && $seqno_sub )
                 {
-                    my $Ko_sub = $K_opening_container->{$seqno_sub};
-                    my $ln_parent =
-                      $self->[_rLL_]->[$Ko_sub]->[_LINE_INDEX_] + 1;
-                    my $Ko          = $K_opening_container->{$seqno};
-                    my $ln          = $self->[_rLL_]->[$Ko]->[_LINE_INDEX_] + 1;
-                    my $parent_self = $item->{self_name};
+                    my $Ko_sub        = $K_opening_container->{$seqno_sub};
+                    my $ln_parent     = $rLL->[$Ko_sub]->[_LINE_INDEX_] + 1;
+                    my $Ko            = $K_opening_container->{$seqno};
+                    my $ln            = $rLL->[$Ko]->[_LINE_INDEX_] + 1;
+                    my $parent_self   = $item->{self_name};
                     my $receiver_self = 'missing';
                     my $ln_receiver   = 'undef';
                     my $seqno_sub_called =
@@ -14802,8 +14832,7 @@ sub cross_check_call_args {
                         $receiver_self = $item_called->{self_name};
                         my $Ko_receiver =
                           $K_opening_container->{$seqno_sub_called};
-                        $ln_receiver =
-                          $self->[_rLL_]->[$Ko_receiver]->[_LINE_INDEX_] + 1;
+                        $ln_receiver = $rLL->[$Ko_receiver]->[_LINE_INDEX_] + 1;
                     }
 
                     # use DEBUG_SELF=3 to see missing subs
@@ -14938,7 +14967,6 @@ sub cross_check_call_args {
 
         # compare caller/sub arg counts if posible
         if ( defined($shift_count_min) && defined($arg_count) ) {
-
             if ( $call_type eq '->' ) { $arg_count += 1 }
             my $excess = $arg_count - $shift_count_min;
 
