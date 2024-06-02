@@ -76,7 +76,7 @@ use constant BACKSLASH    => q{\\};
 use Carp;
 use English    qw( -no_match_vars );
 use List::Util qw( min max first );    # min, max first are in Perl 5.8
-our $VERSION = '20240511.02';
+our $VERSION = '20240511.03';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -14137,17 +14137,15 @@ EOM
 
                             my $type_mm  = $rLL->[$K_mm]->[_TYPE_];
                             my $token_mm = $rLL->[$K_mm]->[_TOKEN_];
+                            my $seqno_mm = $rLL->[$K_mm]->[_TYPE_SEQUENCE_];
 
                             # check for $self in parens, like ($self)=shift
-                            if ( $token_mm eq ')' ) {
-                                my $seqno_mm = $rLL->[$K_mm]->[_TYPE_SEQUENCE_];
-                                if ($seqno_mm) {
-                                    my $Ko = $K_opening_container->{$seqno_mm};
-                                    $K_mm = $self->K_next_code($Ko);
-                                    if ($K_mm) {
-                                        $type_mm  = $rLL->[$K_mm]->[_TYPE_];
-                                        $token_mm = $rLL->[$K_mm]->[_TOKEN_];
-                                    }
+                            if ( $seqno_mm && $token_mm eq ')' ) {
+                                my $Ko = $K_opening_container->{$seqno_mm};
+                                $K_mm = $self->K_next_code($Ko);
+                                if ($K_mm) {
+                                    $type_mm  = $rLL->[$K_mm]->[_TYPE_];
+                                    $token_mm = $rLL->[$K_mm]->[_TOKEN_];
                                 }
                             }
 

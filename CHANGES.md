@@ -1,6 +1,16 @@
 # Perltidy Change Log
 
-## 2024 05 11.02
+## 2024 05 11.03
+
+    - A option was added to filter unimplemented parameters from perltidy
+      configuration files, suggested in git #146.  If a line in the config
+      file begins with three dashes followed by a parameter name
+      (rather than two), then the line will be removed if the parameter is
+      unknown. Otherwise, a dash will be removed to make the line valid.
+
+    - Parameters --dump-mismatched-args (or -dma) and
+      --warn-mismatched-arg (or -wma) have been updated to catch more
+      arg count issues.
 
     - Fix issue git #143, extend -add-trailing-commas to apply to a list
       with just a fat comma.
