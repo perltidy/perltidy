@@ -3222,6 +3222,7 @@ sub set_whitespace_flags {
 
     my $j_tight_closing_paren = -1;
     my $rLL                   = $self->[_rLL_];
+    my $K_closing_container   = $self->[_K_closing_container_];
     my $jmax                  = @{$rLL} - 1;
 
     %opening_container_inside_ws = ();
@@ -3300,7 +3301,6 @@ sub set_whitespace_flags {
         # Handle space on the inside of opening braces.
         #---------------------------------------------------------------
 
-        #    /^[L\{\(\[]$/
         if ($last_type_is_opening) {
 
             $last_type_is_opening = 0;
@@ -3349,7 +3349,9 @@ sub set_whitespace_flags {
                 # to bt=1.  Note that here we must set tightness=1 and not 2 so
                 # that the closing space is also avoided
                 # (via the $j_tight_closing_paren flag in coding)
-                if ( $type eq 'w' && $token =~ /^\^/ ) { $tightness_here = 1 }
+                if ( $type eq 'w' && substr( $token, 0, 1 ) eq '^' ) {
+                    $tightness_here = 1;
+                }
 
                 #=============================================================
 
@@ -3359,11 +3361,15 @@ sub set_whitespace_flags {
                 elsif ( $tightness_here > 1 ) {
                     $ws = WS_NO;
                 }
+                elsif ( $token eq '<<>>' ) {
+
+                    # double diamond is usually spaced
+                    $ws = WS_YES;
+                }
                 else {
 
                     # find the index of the closing token
-                    my $j_closing =
-                      $self->[_K_closing_container_]->{$last_seqno};
+                    my $j_closing = $K_closing_container->{$last_seqno};
 
                     # If the closing token is less than five characters ahead
                     # we must take a closer look
@@ -3372,11 +3378,20 @@ sub set_whitespace_flags {
                         && $rLL->[$j_closing]->[_TYPE_SEQUENCE_] eq
                         $last_seqno )
                     {
-                        $ws =
-                          ws_in_container( $j, $j_closing, $rLL, $type, $token,
-                            $last_token );
-                        if ( $ws == WS_NO ) {
+                        # quick check
+                        if ( $j + 1 >= $j_closing ) {
+                            $ws                    = WS_NO;
                             $j_tight_closing_paren = $j_closing;
+                        }
+
+                        # slow check
+                        else {
+                            $ws =
+                              ws_in_container( $j, $j_closing, $rLL, $type,
+                                $token, $last_token );
+                            if ( $ws == WS_NO ) {
+                                $j_tight_closing_paren = $j_closing;
+                            }
                         }
                     }
                     else {
@@ -3524,7 +3539,6 @@ sub set_whitespace_flags {
         #---------------------------------------------------------------
         # Whitespace Rules Section 4:
         #---------------------------------------------------------------
-        #    /^[L\{\(\[]$/
         elsif ( $is_opening_type{$type} ) {
 
             $last_type_is_opening = 1;
@@ -3842,22 +3856,25 @@ sub ws_in_container {
     #  WS_NO  if there is just one token in the container (with exceptions)
     #  WS_YES otherwise
 
-    #------------------------------------
-    # Look forward for the closing token;
-    #------------------------------------
-    if ( $j + 1 > $j_closing ) { return WS_NO }
+    # double diamond is usually spaced
+    if ( $token eq '<<>>' ) { return WS_YES }
 
-    # Patch to count '-foo' as single token so that
-    # each of  $a{-foo} and $a{foo} and $a{'foo'} do
-    # not get spaces with default formatting.
+    # quick check
+    if ( $j + 1 >= $j_closing ) { return WS_NO }
+
+    # special cases...
+
+    # Count '-foo' as single token so that each of
+    #    $a{-foo} and $a{foo} and $a{'foo'}
+    # do not get spaces with default formatting.
     my $j_here = $j;
     ++$j_here
       if ( $token eq '-'
         && $last_token eq '{'
         && $rLL->[ $j + 1 ]->[_TYPE_] eq 'w' );
 
-    # Patch to count a sign separated from a number as a single token, as
-    # in the following line. Otherwise, it takes two steps to converge:
+    # Count a sign separated from a number as a single token, as in the
+    # following line. Otherwise, it takes two steps to converge:
     #    deg2rad(-  0.5)
     if (   ( $type eq 'm' || $type eq 'p' )
         && $j < $j_closing + 1
@@ -3868,33 +3885,16 @@ sub ws_in_container {
         $j_here = $j + 2;
     }
 
-    # $j_next is where a closing token should be if the container has
-    # just a "single" token
-    if ( $j_here + 1 > $j_closing ) { return WS_NO }
+    # recheck..
+    if ( $j_here + 1 >= $j_closing ) { return WS_NO }
+
+    # check for a blank after the first token
     my $j_next =
       ( $rLL->[ $j_here + 1 ]->[_TYPE_] eq 'b' )
       ? $j_here + 2
       : $j_here + 1;
 
-    #-----------------------------------------------------------------
-    # Now decide: if we get to the closing token we will keep it tight
-    #-----------------------------------------------------------------
-    if (
-        $j_next == $j_closing
-
-        # OLD PROBLEM: but watch out for this: [ [ ]    (misc.t)
-        # No longer necessary because of the previous check on sequence numbers
-        ##&& $last_token ne $token
-
-        # double diamond is usually spaced
-        && $token ne '<<>>'
-
-      )
-    {
-        return WS_NO;
-    }
-
-    return WS_YES;
+    return $j_next == $j_closing ? WS_NO : WS_YES;
 
 } ## end sub ws_in_container
 
@@ -14741,8 +14741,7 @@ sub cross_check_call_args {
     my $ris_my_sub_by_seqno = $self->[_ris_my_sub_by_seqno_];
     my $rsub_call_paren_info_by_seqno =
       $self->[_rsub_call_paren_info_by_seqno_];
-    my $rK_bless_by_sub_seqno      = $self->[_rK_bless_by_sub_seqno_];
-
+    my $rK_bless_by_sub_seqno = $self->[_rK_bless_by_sub_seqno_];
 
     #----------------------------
     # Make a package lookup table
