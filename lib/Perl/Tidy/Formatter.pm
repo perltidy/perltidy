@@ -34623,13 +34623,20 @@ sub xlp_tweak {
         my %token_count;
         for my $i ( $ibeg .. $iend ) {
 
+            my $type = $types_to_go[$i];
+
+            # handle a blank space
+            if ( $type eq 'b' ) {
+                $patterns[$j] .= $type;
+                next;
+            }
+
             #-------------------------------------------------------------
             # Part 1: keep track of containers balanced on this line only.
             #-------------------------------------------------------------
             # These are used below to prevent unwanted cross-line alignments.
             # Unbalanced containers already avoid aligning across
             # container boundaries.
-            my $type = $types_to_go[$i];
             if ( $type_sequence_to_go[$i] ) {
                 my $token = $tokens_to_go[$i];
                 if ( $is_opening_token{$token} ) {
@@ -34848,11 +34855,7 @@ sub xlp_tweak {
             # Part 3: continue accumulating the next pattern
             #-----------------------------------------------
 
-            if ( $type eq 'b' ) {
-                $patterns[$j] .= $type;
-            }
-
-            elsif ( $is_k_w_n_C_bang{$type} ) {
+            if ( $is_k_w_n_C_bang{$type} ) {
 
                 # for keywords we have to use the actual text
                 if ( $type eq 'k' ) {
