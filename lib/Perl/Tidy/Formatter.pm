@@ -14610,6 +14610,90 @@ sub update_sub_call_paren_info {
     return;
 } ## end sub update_sub_call_paren_info
 
+{
+    #-----------------------------------------------------
+    # Sub to look at first use of $self in a specified sub
+    #-----------------------------------------------------
+    my %try_3_cache;
+    my %is_oo_call_cache;
+
+    sub initialize_try_3_cache {
+
+        # must be called once per file before first call to sub try_3
+        %try_3_cache      = ();
+        %is_oo_call_cache = ();
+    }
+
+    sub try_3 {
+        my ( $self, $seqno_sub ) = @_;
+
+        # Try to decide if a sub call with '$self->' is a call to an
+        # internal sub by looking at the first '$self' usage.
+
+        # Name 'try_3' came from this being the third try by calling sub
+
+        # Given:
+        #   $seqno_sub = sequence number of sub to be checked
+        # Return:
+        #   $is_self_call = true if this is an internal $self-> call
+        #                   based on the first $self in the sub.
+        #   $is_oo_call   = true if a call '$self->' appears to be
+        #         within an OO framework which hides the $self arg.
+        # This uses the variable _rK_first_self_by_sub_seqno_ which
+        # is set by sub respace_tokens.
+
+        my $is_self_call = $try_3_cache{$seqno_sub};
+        my $is_oo_call   = $is_oo_call_cache{$seqno_sub};
+
+        if ( !defined($is_self_call) ) {
+            $is_self_call = 0;
+            $is_oo_call   = 0;
+
+            my $rLL = $self->[_rLL_];
+            my $K_first_self =
+              $self->[_rK_first_self_by_sub_seqno_]->{$seqno_sub};
+
+            # an index K stored by respace_tokens may be 1 low
+            $K_first_self++
+              if ( $K_first_self
+                && $rLL->[$K_first_self]->[_TYPE_] eq 'b' );
+
+            my $Kn     = $self->K_next_code($K_first_self);
+            my $type_n = $Kn ? $rLL->[$Kn]->[_TYPE_] : 'b';
+
+            #-----------------------------------------
+            # Try 3a. if "$self->" then assume OO call
+            #-----------------------------------------
+            if ( $type_n eq '->' ) {
+                $is_self_call = 1;
+
+                # Also set a flag to reduce the call arg count by 1
+                # because it looks this is an OO system which
+                # hides the $self call arg.
+                # NOTE: to be sure, we could scan all sub args
+                # in advance to check that all first sub args
+                # are not named $self
+                $is_oo_call = 1;
+            }
+
+            #--------------------------
+            # Try 3b. "$self = bless"
+            #--------------------------
+            elsif ( $type_n eq '=' ) {
+                my $Knn = $self->K_next_code($Kn);
+                $is_self_call = $Knn && $rLL->[$Knn]->[_TOKEN_] eq 'bless';
+            }
+
+            # none of the above
+            else { }
+
+            $try_3_cache{$seqno_sub}      = $is_self_call;
+            $is_oo_call_cache{$seqno_sub} = $is_oo_call;
+        }
+        return ( $is_self_call, $is_oo_call );
+    }
+}
+
 use constant DEBUG_SELF => 0;
 
 sub cross_check_call_args {
@@ -14636,6 +14720,8 @@ sub cross_check_call_args {
     my $mismatched_arg_overcount_cutoff   = 0;
     my $ris_mismatched_call_excluded_name = {};
 
+    $self->initialize_try_3_cache();
+
     if ($warn_mode) {
         $ris_mismatched_call_type = \%warn_mismatched_arg_types;
         $mismatched_arg_undercount_cutoff =
@@ -14655,107 +14741,8 @@ sub cross_check_call_args {
     my $ris_my_sub_by_seqno = $self->[_ris_my_sub_by_seqno_];
     my $rsub_call_paren_info_by_seqno =
       $self->[_rsub_call_paren_info_by_seqno_];
-    my $rK_first_self_by_sub_seqno = $self->[_rK_first_self_by_sub_seqno_];
     my $rK_bless_by_sub_seqno      = $self->[_rK_bless_by_sub_seqno_];
 
-    #----------------------------------------------
-    # Sub to look at first $self in a specified sub
-    #----------------------------------------------
-    my %try_3_cache;
-    my %is_oo_call_by_sub_seqno;
-    my $try_3 = sub {
-        my ($seqno_sub_parent) = @_;
-
-        # Try to decide if a sub call with '$self->' is a call to an
-        # internal sub by looking at the first '$self' usage.
-
-        # Given:
-        #   $seqno_sub_parent = sequence number of a parent sub
-        # Return:
-        #   $is_self_call = true if this is an internal $self-> call
-        #                   based on the first $self in the sub.
-        # and define a hash %is_oo_call.. which is true if a call
-        # '$self->' appears to be within an OO framework which hides
-        # the $self arg.
-
-        my $is_self_call = $try_3_cache{$seqno_sub_parent};
-        if ( !defined($is_self_call) ) {
-
-            $is_self_call = 0;
-            my $K_first_self = $rK_first_self_by_sub_seqno->{$seqno_sub_parent};
-
-            # an index K stored by respace_tokens may be 1 low
-            $K_first_self++
-              if ( $K_first_self
-                && $rLL->[$K_first_self]->[_TYPE_] eq 'b' );
-
-            my $Kn     = $self->K_next_code($K_first_self);
-            my $type_n = $Kn ? $rLL->[$Kn]->[_TYPE_] : 'b';
-
-            #-----------------------------------------
-            # Try 3a. if "$self->" then assume OO call
-            #-----------------------------------------
-            if ( $type_n eq '->' ) {
-                $is_self_call = 1;
-
-                # Set a flag to reduce the call arg count by 1
-                # because it looks this is an OO system which
-                # hides the $self call arg.
-                # NOTE: to be sure, we could scan all sub args
-                # in advance to check that all first sub args
-                # are not named $self
-                $is_oo_call_by_sub_seqno{$seqno_sub_parent} = 1;
-            }
-
-            #--------------------------
-            # Try 3b. "$self = bless"
-            #--------------------------
-            elsif ( $type_n eq '=' ) {
-                my $Knn = $self->K_next_code($Kn);
-                $is_self_call = $Knn && $rLL->[$Knn]->[_TOKEN_] eq 'bless';
-            }
-
-            #-------------------------------------
-            # Try 3c. "bless $self" and variations
-            #-------------------------------------
-            elsif ( $type_n eq ',' ) {
-
-                # Note: this should also be caught by Try 2 above
-                # so this code is currently redundant.
-                # Retain for now but maybe remove eventually.
-                my $Kp = $self->K_previous_code($K_first_self);
-                if ( $Kp && $rLL->[$Kp]->[_TYPE_] eq 'k' ) {
-                    my $token_p = $rLL->[$Kp]->[_TOKEN_];
-
-                    # bless $self,
-                    if ( $token_p eq 'bless' ) {
-                        $is_self_call = 1;
-                    }
-
-                    # bless my $self,
-                    elsif ( $token_p eq 'my' ) {
-                        my $Kpp = $self->K_previous_code($Kp);
-                        $is_self_call = $Kpp
-                          && $rLL->[$Kpp]->[_TOKEN_] eq 'bless';
-                    }
-
-                    # bless ( $self,
-                    elsif ( $token_p eq '(' ) {
-                        my $Kpp = $self->K_previous_code($Kp);
-                        $is_self_call = $Kpp
-                          && $rLL->[$Kpp]->[_TOKEN_] eq 'bless';
-                    }
-                    else { }
-                }
-            }
-
-            # none of the above
-            else { }
-
-            $try_3_cache{$seqno_sub_parent} = $is_self_call;
-        }
-        return $is_self_call;
-    };
 
     #----------------------------
     # Make a package lookup table
@@ -14913,10 +14900,8 @@ sub cross_check_call_args {
                 # Try 3. Caller is '$self'; look at first '$self' in sub
                 #-------------------------------------------------------
                 if ( !$is_self_call && $caller_is_dollar_self ) {
-                    $is_self_call = $try_3->($seqno_sub_parent);
-                    if ( $is_oo_call_by_sub_seqno{$seqno_sub_parent} ) {
-                        $rcall_item->{is_oo_call} = 1;
-                    }
+                    ( $is_self_call, $rcall_item->{is_oo_call} ) =
+                      $self->try_3($seqno_sub_parent);
                 }
 
                 #-------------------------------------------------------------
