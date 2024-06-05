@@ -13852,9 +13852,8 @@ sub count_sub_args {
 
     my $ix_HERE_END = -1;
 
-    # Optimization: find the previous type 'S' token with the sub name .. this
-    # was saved by sub respace_tokens. May need to back up 1 token if spaces
-    # were deleted.  This is only defined for named subs, not anonymous subs.
+    # See if sub respace tokens saved the index of the previous type 'S'.
+    # May need to back up 1 token if spaces were deleted.
     my $K_sub = $self->[_rK_sub_by_seqno_]->{$seqno_block};
     if ( defined($K_sub) ) {
         my $type = $rLL->[$K_sub]->[_TYPE_];
@@ -13873,6 +13872,9 @@ expecting type 'S' and token=$block_type
 found type '$type' and token='$token'
 EOM
                 }
+
+                # This probably shouldn't happen, but try to keep going
+                # with the help of the next loop.
                 $K_sub = undef;
             }
         }
@@ -13882,18 +13884,25 @@ EOM
     # Scan backward from the opening brace to find the keyword 'sub'
     #---------------------------------------------------------------
     if ( !defined($K_sub) ) {
+
+        # We normally only arrive here for anonymous subs. But also
+        # if --indent-only is set because respace_tokens is skipped.
         my $Kt_min = $K_opening_block - MANY_TOKENS;
         if ( $Kt_min < 0 ) { $Kt_min = 0 }
         foreach my $Kt ( reverse( $Kt_min .. $K_opening_block ) ) {
             my $token = $rLL->[$Kt]->[_TOKEN_];
             my $type  = $rLL->[$Kt]->[_TYPE_];
-            if (
-                substr( $token, 0, 3 ) eq 'sub'
-                && (   $type eq 'S'
-                    || $type eq 'k'
-                    || $type eq 'i' )
-              )
+            if ( $type eq 'S' ) {
+
+                # type 'S' could be 'method xxx' or '$fn=sub () {' - see c372
+                $K_sub = $Kt;
+                last;
+            }
+            if ( ( $type eq 'k' || $type eq 'i' )
+                && substr( $token, 0, 3 ) eq 'sub' )
             {
+
+                # anonymous subs are type 'k'
                 $K_sub = $Kt;
                 last;
             }
