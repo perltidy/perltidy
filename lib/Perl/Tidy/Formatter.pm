@@ -13743,6 +13743,84 @@ sub count_prototype_args {
     return ( $count_min, $count_max );
 } ## end sub count_prototype_args
 
+sub find_sub_token {
+
+    my ( $self, $seqno_block ) = @_;
+
+    # Given:
+    #   $seqno_block = sequence number of a sub block brace
+    # Return:
+    #   $Ksub = index of the actual 'sub' token for the sub
+    #           this will include the name of a named sub, and any prototype
+    #   undef   if cannot find it; this is not a critical sub, so no heroics
+    #
+    # Notation:
+    #
+    #    sub find_sub_token {
+    #    |                  |
+    #    $Ksub              --$K_opening_container for $seqno_block
+
+    my $rLL = $self->[_rLL_];
+
+    # See if sub respace_tokens saved the index of the previous type 'S'
+    # for us. May need to back up 1 token if spaces were deleted.
+    my $K_sub = $self->[_rK_sub_by_seqno_]->{$seqno_block};
+    if ( defined($K_sub) ) {
+        my $type = $rLL->[$K_sub]->[_TYPE_];
+        if ( $type ne 'S' ) {
+            $K_sub -= 1;
+            $type = $rLL->[$K_sub]->[_TYPE_];
+            if ( $type ne 'S' ) {
+                if (DEVEL_MODE) {
+                    my $token = $rLL->[$K_sub]->[_TOKEN_];
+                    my $lno   = $rLL->[$K_sub]->[_LINE_INDEX_] + 1;
+                    my $block_type =
+                      $self->[_rblock_type_of_seqno_]->{$seqno_block};
+                    Fault(<<EOM);
+line $lno: Bad Ksub=$K_sub for block $seqno_block,
+expecting type 'S' and token=$block_type
+found type '$type' and token='$token'
+EOM
+                }
+
+                # This shouldn't happen, but try to keep going
+                # with the help of the search loop below.
+                $K_sub = undef;
+            }
+        }
+    }
+
+    # Must search for it...
+    # Scan backward from the opening brace to find the keyword 'sub'
+    if ( !defined($K_sub) ) {
+
+        # We normally only arrive here for anonymous subs. But also
+        # if --indent-only is set because respace_tokens is skipped.
+        my $K_opening_block = $self->[_K_opening_container_]->{$seqno_block};
+        my $Kt_min          = $K_opening_block - MANY_TOKENS;
+        if ( $Kt_min < 0 ) { $Kt_min = 0 }
+        foreach my $Kt ( reverse( $Kt_min .. $K_opening_block ) ) {
+            my $token = $rLL->[$Kt]->[_TOKEN_];
+            my $type  = $rLL->[$Kt]->[_TYPE_];
+            if ( $type eq 'S' ) {
+
+                # type 'S' could be 'method xxx' or '$fn=sub () {' - see c372
+                $K_sub = $Kt;
+                last;
+            }
+            if ( ( $type eq 'k' || $type eq 'i' )
+                && substr( $token, 0, 3 ) eq 'sub' )
+            {
+
+                # anonymous subs are type 'k'
+                $K_sub = $Kt;
+                last;
+            }
+        }
+    }
+    return $K_sub;
+} ## end sub find_sub_token
+
 sub count_sub_args {
     my ( $self, $item ) = @_;
 
@@ -13852,62 +13930,7 @@ sub count_sub_args {
 
     my $ix_HERE_END = -1;
 
-    # See if sub respace tokens saved the index of the previous type 'S'.
-    # May need to back up 1 token if spaces were deleted.
-    my $K_sub = $self->[_rK_sub_by_seqno_]->{$seqno_block};
-    if ( defined($K_sub) ) {
-        my $type = $rLL->[$K_sub]->[_TYPE_];
-        if ( $type ne 'S' ) {
-            $K_sub -= 1;
-            $type = $rLL->[$K_sub]->[_TYPE_];
-            if ( $type ne 'S' ) {
-                if (DEVEL_MODE) {
-                    my $token = $rLL->[$K_sub]->[_TOKEN_];
-                    my $lno   = $rLL->[$K_sub]->[_LINE_INDEX_] + 1;
-                    my $block_type =
-                      $self->[_rblock_type_of_seqno_]->{$seqno_block};
-                    Fault(<<EOM);
-line $lno: Bad Ksub=$K_sub for block $seqno_block,
-expecting type 'S' and token=$block_type
-found type '$type' and token='$token'
-EOM
-                }
-
-                # This probably shouldn't happen, but try to keep going
-                # with the help of the next loop.
-                $K_sub = undef;
-            }
-        }
-    }
-
-    #---------------------------------------------------------------
-    # Scan backward from the opening brace to find the keyword 'sub'
-    #---------------------------------------------------------------
-    if ( !defined($K_sub) ) {
-
-        # We normally only arrive here for anonymous subs. But also
-        # if --indent-only is set because respace_tokens is skipped.
-        my $Kt_min = $K_opening_block - MANY_TOKENS;
-        if ( $Kt_min < 0 ) { $Kt_min = 0 }
-        foreach my $Kt ( reverse( $Kt_min .. $K_opening_block ) ) {
-            my $token = $rLL->[$Kt]->[_TOKEN_];
-            my $type  = $rLL->[$Kt]->[_TYPE_];
-            if ( $type eq 'S' ) {
-
-                # type 'S' could be 'method xxx' or '$fn=sub () {' - see c372
-                $K_sub = $Kt;
-                last;
-            }
-            if ( ( $type eq 'k' || $type eq 'i' )
-                && substr( $token, 0, 3 ) eq 'sub' )
-            {
-
-                # anonymous subs are type 'k'
-                $K_sub = $Kt;
-                last;
-            }
-        }
-    }
+    my $K_sub = $self->find_sub_token($seqno_block);
 
     # shouldn't happen:
     if ( !defined($K_sub) || $K_sub >= $K_opening_block ) {
@@ -14631,7 +14654,7 @@ sub update_sub_call_paren_info {
         # must be called once per file before first call to sub try_3
         %try_3_cache      = ();
         %is_oo_call_cache = ();
-    }
+    } ## end sub initialize_try_3_cache
 
     sub try_3 {
         my ( $self, $seqno_sub ) = @_;
@@ -14700,7 +14723,7 @@ sub update_sub_call_paren_info {
             $is_oo_call_cache{$seqno_sub} = $is_oo_call;
         }
         return ( $is_self_call, $is_oo_call );
-    }
+    } ## end sub try_3
 }
 
 use constant DEBUG_SELF => 0;
