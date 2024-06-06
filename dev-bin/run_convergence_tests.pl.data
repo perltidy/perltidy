@@ -12149,6 +12149,23 @@ my @global_ops = (
 --extended-continuation-indentation
 --brace-tightness=2
 
+==> b1475.in <==
+run_sub (
+         ->$blah{ say "ok 5" ; } ) ;
+
+run_sub ( ->$blah{ say "ok 5" ; }
+) ;
+
+
+==> b1475.par <==
+--maximum-line-length=36
+--extended-continuation-indentation
+--paren-vertical-tightness=2
+--extended-line-up-parentheses
+--space-function-paren
+--space-terminal-semicolon
+--break-at-old-method-breakpoints
+
 ==> b148.in <==
 # state 1
 @yydgoto=(

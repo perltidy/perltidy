@@ -8243,6 +8243,14 @@ my @global_ops = (
                   iparse(  {Maxiter => 200, Eps => 1e-4,}, ifhref($opt) )
          };
 
+==> b1475 <==
+run_sub (
+         ->$blah{ say "ok 5" ; } ) ;
+
+run_sub (
+         ->$blah{ say "ok 5" ; } ) ;
+
+
 ==> b148 <==
 # state 1
 @yydgoto=(

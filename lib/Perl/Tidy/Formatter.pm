@@ -15650,6 +15650,12 @@ sub keep_old_line_breaks {
             # leading '->' use a value of 2 which causes a soft
             # break rather than a hard break
             if ( $type eq '->' ) {
+
+                # ignore -bom after an opening token ( a syntax error, b1475 )
+                my $Kp = $self->K_previous_nonblank($Kfirst);
+                next if ( !defined($Kp) );
+                next if ( $is_opening_type{ $rLL->[$Kp]->[_TYPE_] } );
+
                 $rbreak_before_Kfirst->{$Kfirst} = 2;
             }
 
