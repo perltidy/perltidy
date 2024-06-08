@@ -5571,6 +5571,16 @@ and B<--dump-short-names>, all described below, may all be helpful.
 
 =back
 
+=item B<Skipping a line with an unknown parameter>
+
+Versions of perltidy greater than 20240511 have an option to filter
+unrecognized parameters from a perltidy command file.  If a line in the file
+begins with B<three dashes> followed by a parameter name (rather than one or
+two), then the line will be removed if the parameter is unknown. Otherwise, a
+dash will be removed to make the line valid.  This option was added to allow a
+single command file to be used during the transition to a new version of
+perltidy.
+
 =item B<Creating a new abbreviation>
 
 A special notation is available for use in a F<.perltidyrc> file
@@ -6159,9 +6169,9 @@ B<Notes and Limitations:>
 =item *
 This option works best for subs which unpack call args in an orderly manner
 near the beginning of the sub from C<@_> and/or with C<shift> operations.  It
-will also work for some other common cases, such as direct access to individual
-elements of the @_ array. However if the coding for arg extraction is complex
-then the number of sub args will be considered indeterminate.
+will also work for direct access to specific elements of the @_ array.  However
+if the coding for arg extraction is complex then the number of sub args will be
+considered indeterminate and a count cannot be checked.
 
 =item *
 Sub calls made without parentheses around the args are not checked.

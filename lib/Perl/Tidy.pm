@@ -4724,6 +4724,8 @@ EOM
 sub make_grep_alias_string {
     my ($rOpts) = @_;
 
+    # pre-process the --grep-alias-list parameter
+
     # Defaults: list operators in List::Util
     # Possible future additions:  pairfirst pairgrep pairmap
     my $default_string = join SPACE, qw(
@@ -5649,6 +5651,20 @@ sub filter_unknown_options {
 sub read_config_file {
 
     my ( $rconfig_string, $config_file, $rexpansion ) = @_;
+
+    # Read and process the contents of a perltidyrc command file
+
+    # Given:
+    #   $rconfig_string = ref to the file as a string
+    #   $config_file = name of the file, for error reporting
+    #   $rexpansion = ref to hash of abbreviations; if this config file defines
+    #                 any abbreviations they will be added to it
+
+    # Return:
+    #   \@config_list = ref to final parameters and values which will be
+    #     placed in @ARGV for processing by GetOptions
+    #   $death_message = error message returned if a fatal error occurs
+
     my @config_list = ();
 
     # file is bad if non-empty $death_message is returned
@@ -5754,6 +5770,15 @@ sub strip_comment {
 
     # Strip any comment from a command line
     my ( $instr, $config_file, $line_no ) = @_;
+
+    # Given:
+    #   $instr = string with the text of an input line
+    #   $config_file = filename, for error messages
+    #   $line_no = line number, for error messages
+    # Return:
+    #   string with any comment removed
+    #   $msg = any error message
+
     my $msg = EMPTY_STRING;
 
     # check for full-line comment
