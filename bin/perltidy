@@ -6157,10 +6157,11 @@ B<Notes and Limitations:>
 =over 4
 
 =item *
-This option works best for subs which unpack call args in an orderly
-manner near the beginning of the sub from C<@_> and/or with C<shift>
-operations.  If individual elements of the @_ array are directly
-accessed then the number of sub args is considered indeterminate.
+This option works best for subs which unpack call args in an orderly manner
+near the beginning of the sub from C<@_> and/or with C<shift> operations.  It
+will also work for some other common cases, such as direct access to individual
+elements of the @_ array. However if the coding for arg extraction is complex
+then the number of sub args will be considered indeterminate.
 
 =item *
 Sub calls made without parentheses around the args are not checked.
@@ -6179,7 +6180,7 @@ args not matching sub declarations>.
 
 This is similar to the B<-dump> parameter described above except that any
 mismatches are reported in the error file and otherwise formatting continues
-normally.  Thus
+normally.  The basic usage is
 
     perltidy -wma somefile.pl
 
