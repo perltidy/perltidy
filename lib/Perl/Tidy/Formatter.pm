@@ -8525,6 +8525,123 @@ sub set_CODE_type {
     return \@ix_side_comments;
 } ## end sub set_CODE_type
 
+my %is_my_state = ( 'my' => 1, 'state' => 1 );
+
+BEGIN {
+    my @q = qw ( my state );
+    @is_my_state{@q} = (1) x scalar(@q);
+}
+
+sub block_seqno_of_paren_keyword {
+
+    my ( $self, $KK ) = @_;
+
+    # Find brace at '){' after keyword such as for, foreach, ...
+    # SEE ALSO: sub block_seqno_of_paren_seqno
+
+    # Given:
+    #   $KK = index of a keyword followed by parens and block '... ( ) {'
+    #         such as 'for', 'foreach', 'while', 'if', 'elsif' ..
+    # Return:
+    #   $seqno of the opening block brace for this keyword, if any
+    #   $K_end_iterator = index of the last token of an iterator, if any
+    # or
+    #   nothing if not found
+
+    #         'for my $var (..) { ... }'
+    #           ^               ^
+    #           |               |
+    #           --$KK           --$seqno of brace that we want
+
+    my $rLL = $self->[_rLL_];
+
+    # look ahead for an opening paren
+    my $K_paren = $self->[_rK_next_seqno_by_K_]->[$KK];
+    return unless defined($K_paren);
+    my $token_paren = $rLL->[$K_paren]->[_TOKEN_];
+    return unless ( $token_paren eq '(' );
+
+    # found a paren, but does it belong to this keyword?
+    my $seqno_paren = $rLL->[$K_paren]->[_TYPE_SEQUENCE_];
+
+    # see if this opening paren immediately follows the keyword
+    my $K_n = $self->K_next_code($KK);
+    return unless $K_n;
+
+    # is it the next token? this is the common case
+    my $K_end_iterator;
+    my $saw_my;
+    my $token_KK = $rLL->[$KK]->[_TOKEN_];
+    if ( $K_n != $K_paren ) {
+
+        # look for 'for $var (', 'for my $var (', 'for my (', 'for $var ('
+        if ( $is_for_foreach{$token_KK} ) {
+            my $type_K_n  = $rLL->[$K_n]->[_TYPE_];
+            my $token_K_n = $rLL->[$K_n]->[_TOKEN_];
+
+            # skip past a 'my'
+            if ( $type_K_n eq 'k' ) {
+                if ( $is_my_state{$token_K_n} ) {
+                    $K_n    = $self->K_next_code($K_n);
+                    $saw_my = 1;
+                }
+                else { return }
+            }
+
+            # skip an identifier
+            if ( $K_n && $K_n != $K_paren && $rLL->[$K_n]->[_TYPE_] eq 'i' ) {
+                $K_n = $self->K_next_code($K_n);
+
+                # force this iterator to be entered as new lexical
+                $K_end_iterator = $K_paren;
+            }
+        }
+    }
+
+    # we must be at the paren
+    return unless ( $K_n && $K_n == $K_paren );
+
+    # now jump to the closing paren
+    $K_paren = $self->[_K_closing_container_]->{$seqno_paren};
+
+    # then look for the opening brace immediately after it
+    my $K_brace = $self->K_next_code($K_paren);
+    return unless ($K_brace);
+
+    # check for experimental 'for list': for my ( $a, $b) (@list) {
+    #                                              ^
+    if (   $rLL->[$K_brace]->[_TOKEN_] eq '('
+        && !$K_end_iterator
+        && $is_for_foreach{$token_KK} )
+    {
+        if ( !$saw_my ) { $K_end_iterator = $K_brace }
+        my $seqno_test = $rLL->[$K_brace]->[_TYPE_SEQUENCE_];
+        my $K_test     = $self->[_K_closing_container_]->{$seqno_test};
+        return unless $K_test;
+        $K_brace = $self->K_next_code($K_test);
+        return unless ($K_brace);
+    }
+
+    return unless ( $rLL->[$K_brace]->[_TOKEN_] eq '{' );
+    my $seqno_brace = $rLL->[$K_brace]->[_TYPE_SEQUENCE_];
+    return unless ($seqno_brace);
+    my $block_type = $self->[_rblock_type_of_seqno_]->{$seqno_brace};
+
+    # Verify that this is the correct brace
+    if ( $block_type ne $token_KK ) {
+
+        # If not, this is unexpected and should be investigated
+        # (the block type may have been mis-marked)
+        my $lno = $rLL->[$KK]->[_LINE_INDEX_] + 1;
+        DEVEL_MODE && Fault(<<EOM);
+at line $lno: found block type $block_type: expecting $token_KK - please check
+EOM
+        return;
+    }
+
+    return ( $seqno_brace, $K_end_iterator );
+} ## end sub block_seqno_of_paren_keyword
+
 sub scan_variable_usage {
 
     my ( $self, $roption ) = @_;
@@ -8574,8 +8691,7 @@ sub scan_variable_usage {
     my $K_closing_container  = $self->[_K_closing_container_];
     my $rK_next_seqno_by_K   = $self->[_rK_next_seqno_by_K_];
 
-    my %is_my_state    = ( 'my' => 1, 'state' => 1 );
-    my %is_valid_sigil = ( '$'  => 1, '@'     => 1, '%' => 1 );
+    my %is_valid_sigil = ( '$' => 1, '@' => 1, '%' => 1 );
 
     # Variables defining current state:
     my $current_package = 'package main';
@@ -8837,123 +8953,6 @@ sub scan_variable_usage {
     };
 
     #-------------------------------------------------------------
-    # sub to look for '){' after keyword such as for, foreach, ...
-    #-------------------------------------------------------------
-    my $seqno_brace_after_paren = sub {
-
-        my ($KK) = @_;
-
-        # Given:
-        #   $KK = index of the keyword followed by parens and block '... ( ) {'
-        #         such as 'for', 'foreach', 'while', 'if', 'elsif' ..
-        # Return:
-        #   - $seqno of the opening block brace for this keyword, if any
-        #   - nothing otherwise
-
-        #         'for my $var (..) { ... }'
-        #           ^               ^
-        #           |               |
-        #           --$KK           --$seqno of brace that we want
-
-        # look ahead for an opening paren
-        my $K_paren = $rK_next_seqno_by_K->[$KK];
-        return unless defined($K_paren);
-        my $token_paren = $rLL->[$K_paren]->[_TOKEN_];
-        return unless ( $token_paren eq '(' );
-
-        # found a paren, but does it belong to this keyword?
-        my $seqno_paren = $rLL->[$K_paren]->[_TYPE_SEQUENCE_];
-
-        # see if this opening paren immediately follows the keyword
-        my $K_n = $self->K_next_code($KK);
-        return unless $K_n;
-
-        # is it the next token? this is the common case
-        my $K_end_iterator;
-        my $saw_my;
-        my $token_KK = $rLL->[$KK]->[_TOKEN_];
-        if ( $K_n != $K_paren ) {
-
-            # look for 'for $var (', 'for my $var (', 'for my (', 'for $var ('
-            if ( $is_for_foreach{$token_KK} ) {
-                my $type_K_n  = $rLL->[$K_n]->[_TYPE_];
-                my $token_K_n = $rLL->[$K_n]->[_TOKEN_];
-
-                # skip past a 'my'
-                if ( $type_K_n eq 'k' ) {
-                    if ( $is_my_state{$token_K_n} ) {
-                        $K_n    = $self->K_next_code($K_n);
-                        $saw_my = 1;
-                    }
-                    else { return }
-                }
-
-                # skip an identifier
-                if ( $K_n && $K_n != $K_paren && $rLL->[$K_n]->[_TYPE_] eq 'i' )
-                {
-                    $K_n = $self->K_next_code($K_n);
-
-                    # force this iterator to be entered as new lexical
-                    $K_end_iterator = $K_paren;
-                }
-            }
-        }
-
-        # we must be at the paren
-        return unless ( $K_n && $K_n == $K_paren );
-
-        # now jump to the closing paren
-        $K_paren = $self->[_K_closing_container_]->{$seqno_paren};
-
-        # then look for the opening brace immediately after it
-        my $K_brace = $self->K_next_code($K_paren);
-        return unless ($K_brace);
-
-        # check for experimental 'for list': for my ( $a, $b) (@list) {
-        #                                              ^
-        if (   $rLL->[$K_brace]->[_TOKEN_] eq '('
-            && !$K_end_iterator
-            && $is_for_foreach{$token_KK} )
-        {
-            if ( !$saw_my ) { $K_end_iterator = $K_brace }
-            my $seqno_test = $rLL->[$K_brace]->[_TYPE_SEQUENCE_];
-            my $K_test     = $self->[_K_closing_container_]->{$seqno_test};
-            return unless $K_test;
-            $K_brace = $self->K_next_code($K_test);
-            return unless ($K_brace);
-        }
-
-        return unless ( $rLL->[$K_brace]->[_TOKEN_] eq '{' );
-        my $seqno_brace = $rLL->[$K_brace]->[_TYPE_SEQUENCE_];
-        return unless ($seqno_brace);
-        my $block_type = $rblock_type_of_seqno->{$seqno_brace};
-
-        # Verify that this is the correct brace
-        if ( $block_type ne $token_KK ) {
-
-            # If not, this is unexpected and should be investigated
-            # (the block type may have been mis-marked)
-            my $lno = $rLL->[$KK]->[_LINE_INDEX_] + 1;
-            DEVEL_MODE && Fault(<<EOM);
-at line $lno: found block type $block_type: expecting $token_KK - please check
-EOM
-            return;
-        }
-
-        # Found the brace. Mark an iterator as a new lexical variable in order
-        # to catch something like:
-        #    my $i;
-        #    foreach $i(...) { }
-        # where the iterator $i is not the same as the first $i,
-        # We should be beyond any existing $K_end_my, but check anyway:
-        if ( $K_end_iterator && $K_end_iterator > $K_end_my ) {
-            $K_end_my   = $K_end_iterator;
-            $my_keyword = $token_KK;
-        }
-        return ($seqno_brace);
-    };
-
-    #-------------------------------------------------------------
     # sub to find the next opening brace seqno of an if-elsif- chain
     #-------------------------------------------------------------
     my $push_next_if_chain = sub {
@@ -8979,7 +8978,8 @@ EOM
         #           --$KK     --$seqno of brace that we want
         #
         if ( $rLL->[$K_n]->[_TOKEN_] eq 'elsif' ) {
-            $seqno_block = $seqno_brace_after_paren->($K_n);
+            ( $seqno_block, my $K_last_iterator ) =
+              $self->block_seqno_of_paren_keyword($K_n);
         }
 
         # For an 'else' the brace will be the next token
@@ -9211,8 +9211,21 @@ EOM
                 # such as 'for my $var (..) { ... }'
                 #--------------------------------------------------
                 elsif ( $is_if_unless_while_until_for_foreach{$token} ) {
-                    my $seqno_brace = $seqno_brace_after_paren->($KK);
+                    my ( $seqno_brace, $K_end_iterator ) =
+                      $self->block_seqno_of_paren_keyword($KK);
                     if ($seqno_brace) {
+
+                        # Found the brace. Mark an iterator as a new lexical
+                        # variable in order to catch something like:
+                        #    my $i;
+                        #    foreach $i(...) { }
+                        # where the iterator $i is not the same as the first
+                        # $i, We should be beyond any existing $K_end_my, but
+                        # check anyway:
+                        if ( $K_end_iterator && $K_end_iterator > $K_end_my ) {
+                            $K_end_my   = $K_end_iterator;
+                            $my_keyword = $token;
+                        }
 
                         # Variables created between these keywords and their
                         # opening brace have special scope rules. We will
@@ -9622,6 +9635,9 @@ sub block_seqno_of_paren_seqno {
 
     my ( $self, $seqno_paren ) = @_;
 
+    # Find brace at '){' after paren of keyword such as for, foreach, ...
+    # SEE ALSO: sub block_seqno_of_paren_keyword
+
     # Given:
     #  $seqno_paren = sequence number of the paren following a keyword which
     #    may either introduce a block or be a trailing statement modifier,
@@ -9636,9 +9652,6 @@ sub block_seqno_of_paren_seqno {
     #     |   | K_opening_brace => return sequno of this brace
     #     |   K_closing_paren
     #     $seqno_paren = seqno of this paren pair
-
-    # NOTE: sub '$seqno_brace_after_paren' in sub 'scan_variable_usage' is
-    # similar but sufficiently different that the two subs cannot be merged.
 
     return unless $seqno_paren;
     my $K_closing_paren = $self->[_K_closing_container_]->{$seqno_paren};
@@ -10829,6 +10842,8 @@ sub respace_tokens_inner_loop {
                 else {
 
                     # if this is a list ..
+                    # NOTE: the final determination of what is a list is in sub
+                    # respace_post_loop_ops. This is a close approximation.
                     my $rtype_count = $rtype_count_by_seqno->{$type_sequence};
                     if (   $rtype_count
                         && ( $rtype_count->{','} || $rtype_count->{'=>'} )
