@@ -511,11 +511,24 @@ sub get_recoverable_spaces {
 use constant DEBUG_VALIGN      => 0;
 use constant SC_LONG_LINE_DIFF => 12;
 
+my %is_opening_token;
 my %is_closing_token;
+my %is_digit_char;
+my %is_plus_or_minus;
 
 BEGIN {
-    my @q = qw< } ) ] >;
+
+    my @q = qw< { ( [ >;
+    @is_opening_token{@q} = (1) x scalar(@q);
+
+    @q = qw< } ) ] >;
     @is_closing_token{@q} = (1) x scalar(@q);
+
+    @q = qw( 0 1 2 3 4 5 6 7 8 9 );
+    @is_digit_char{@q} = (1) x scalar(@q);
+
+    @q = qw( + - );
+    @is_plus_or_minus{@q} = (1) x scalar(@q);
 }
 
 #--------------------------------------------
@@ -1736,7 +1749,7 @@ sub _flush_group_lines {
     #------------------------------------------------------------------------
 
     # STEP 1: Remove most unmatched tokens. They block good alignments.
-    my ( $max_lev_diff, $saw_side_comment ) =
+    my ( $max_lev_diff, $saw_side_comment, $saw_signed_number ) =
       delete_unmatched_tokens( $rgroup_lines, $group_level );
 
     # STEP 2: Sweep top to bottom, forming subgroups of lines with exactly
@@ -1784,7 +1797,7 @@ sub _flush_group_lines {
 
     # STEP 6: add sign padding to columns numbers if needed
     pad_signed_number_columns($rgroup_lines)
-      if ($rOpts_valign_signed_numbers);
+      if ( $saw_signed_number && $rOpts_valign_signed_numbers );
 
     # STEP 7: pad wide equals
     pad_wide_equals_columns($rgroup_lines)
@@ -2858,8 +2871,9 @@ EOM
         # This will prevent them from interfering with the final alignment.
 
         # Returns:
-        my $max_lev_diff     = 0;    # used to avoid a call to prune_tree
-        my $saw_side_comment = 0;    # used to avoid a call for side comments
+        my $max_lev_diff      = 0;    # used to avoid a call to prune_tree
+        my $saw_side_comment  = 0;    # used to avoid a call for side comments
+        my $saw_signed_number = 0;    # used to avoid a call for -vsn
 
         # Handle no lines -- shouldn't happen
         return unless @{$rlines};
@@ -2870,7 +2884,7 @@ EOM
             my $jmax   = $line->{'jmax'};
             my $length = $line->{'rfield_lengths'}->[$jmax];
             $saw_side_comment = $length > 0;
-            return ( $max_lev_diff, $saw_side_comment );
+            return ( $max_lev_diff, $saw_side_comment, $saw_signed_number );
         }
 
         # ignore hanging side comments in these operations
@@ -2882,7 +2896,8 @@ EOM
 
         # nothing to do if all lines were hanging side comments
         my $jmax = @{$rnew_lines} - 1;
-        return ( $max_lev_diff, $saw_side_comment ) if ( $jmax < 0 );
+        return ( $max_lev_diff, $saw_side_comment, $saw_signed_number )
+          if ( $jmax < 0 );
 
         #----------------------------------------------------
         # Create a hash of alignment token info for each line
@@ -2920,9 +2935,10 @@ EOM
         #--------------------------------------------
         # PASS 3: compare all lines for common tokens
         #--------------------------------------------
-        match_line_pairs( $rlines, $rnew_lines, \@subgroups, $group_level );
+        $saw_signed_number =
+          match_line_pairs( $rlines, $rnew_lines, \@subgroups, $group_level );
 
-        return ( $max_lev_diff, $saw_side_comment );
+        return ( $max_lev_diff, $saw_side_comment, $saw_signed_number );
     } ## end sub delete_unmatched_tokens
 
     sub make_alignment_info {
@@ -3326,6 +3342,9 @@ sub match_line_pairs {
     my ( $line, $rtokens, $rpatterns, $rfield_lengths, $imax, $list_type,
         $ci_level );
 
+    # Return parameter to avoid calls to sub pad_signed_number_columns
+    my $saw_signed_number;
+
     # loop over subgroups
     foreach my $item ( @{$rsubgroups} ) {
         my ( $jbeg, $jend ) = @{$item};
@@ -3350,6 +3369,23 @@ sub match_line_pairs {
             $imax           = @{$rtokens} - 2;
             $list_type      = $line->{'list_type'};
             $ci_level       = $line->{'ci_level'};
+
+            # Quick approxmiate check for signed numbers in this line.
+            # This speeds up large runs by about 0.5%
+            if ( !$saw_signed_number ) {
+
+                my $rfields = $line->{'rfields'};
+                foreach my $i ( 0 .. $imax + 1 ) {
+                    next if ( index( $rpatterns->[$i], 'n' ) < 0 );
+                    my $field = $rfields->[$i];
+                    if (   index( $field, '-' ) >= 0
+                        || index( $field, '+' ) >= 0 )
+                    {
+                        $saw_signed_number = 1;
+                        last;
+                    }
+                }
+            }
 
             # nothing to do for first line
             next if ( $jj == $jbeg );
@@ -3461,7 +3497,7 @@ sub match_line_pairs {
             }
         }
     }
-    return;
+    return $saw_signed_number;
 } ## end sub match_line_pairs
 
 sub compare_patterns {
@@ -4854,10 +4890,7 @@ sub align_side_comments {
 
 use constant DEBUG_VSN => 0;
 
-my %is_digit_char;
-my %is_plus_or_minus;
 my %is_leading_sign_pattern;
-my %is_opening_token;
 
 BEGIN {
 
@@ -4870,14 +4903,6 @@ BEGIN {
 
     @is_leading_sign_pattern{@q} = (1) x scalar(@q);
 
-    @q = qw( 0 1 2 3 4 5 6 7 8 9 );
-    @is_digit_char{@q} = (1) x scalar(@q);
-
-    @q = qw( + - );
-    @is_plus_or_minus{@q} = (1) x scalar(@q);
-
-    @q = qw< { ( [ >;
-    @is_opening_token{@q} = (1) x scalar(@q);
 }
 
 sub min_max_median {
