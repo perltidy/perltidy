@@ -32731,7 +32731,6 @@ EOM
     # for efficient access by sub .._token_loop needs.
     my $ralignment_type_to_go;
     my $ralignment_counts;
-    my $ralignment_hash_by_line;
 
     sub set_vertical_alignment_markers {
 
@@ -32753,9 +32752,8 @@ EOM
         #----------------------------
         # Initialize return variables
         #----------------------------
-        $ralignment_type_to_go   = [];
-        $ralignment_counts       = [];
-        $ralignment_hash_by_line = [];
+        $ralignment_type_to_go = [];
+        $ralignment_counts     = [];
 
         # NOTE: closing side comments can insert up to 2 additional tokens
         # beyond the original $max_index_to_go, so we need to check ri_last for
@@ -32828,7 +32826,6 @@ EOM
 
             if ( !$do_not_align ) {
                 $ralignment_type_to_go->[$max_i] = '#';
-                $ralignment_hash_by_line->[$max_line]->{$max_i} = '#';
                 $ralignment_counts->[$max_line]++;
             }
         }
@@ -32862,8 +32859,7 @@ EOM
         }
 
       RETURN:
-        return ( $ralignment_type_to_go, $ralignment_counts,
-            $ralignment_hash_by_line );
+        return ( $ralignment_type_to_go, $ralignment_counts );
     } ## end sub set_vertical_alignment_markers
 
     my %is_dot_question_colon;
@@ -32886,9 +32882,6 @@ EOM
         # three closure variables needed by sub 'make_alignment_patterns':
         #  $ralignment_type_to_go - alignment type of tokens, like '=', if any
         #  $ralignment_counts - number of alignment tokens in the line
-        #  $ralignment_hash - this contains all of the alignments for this
-        #    line.  It is not yet used but is available for future coding in
-        #    case there is a need to do a preliminary scan of alignment tokens.
 
         my $level_beg = $levels_to_go[$ibeg];
         my $token_beg = $tokens_to_go[$ibeg];
@@ -32896,7 +32889,6 @@ EOM
 
         my $last_vertical_alignment_BEFORE_index = -1;
         my $vert_last_nonblank_type              = $type_beg;
-        my $vert_last_nonblank_token             = $token_beg;
 
         # ----------------------------------------------------------------
         # Initialization code merged from 'sub delete_needless_alignments'
@@ -32932,11 +32924,11 @@ EOM
         # --------------------------------------------
         # Loop over each token in this output line ...
         # --------------------------------------------
+        my $type;
         foreach my $i ( $ibeg + 1 .. $iend ) {
 
-            next if ( $types_to_go[$i] eq 'b' );
+            next if ( ( $type = $types_to_go[$i] ) eq 'b' );
 
-            my $type  = $types_to_go[$i];
             my $token = $tokens_to_go[$i];
             my $alignment_type;
 
@@ -32981,7 +32973,6 @@ EOM
                     if ( $ralignment_type_to_go->[$imate] ) {
                         $ralignment_type_to_go->[$imate] = EMPTY_STRING;
                         $ralignment_counts->[$line]--;
-                        delete $ralignment_hash_by_line->[$line]->{$imate};
                     }
                     pop @imatch_list;
                 }
@@ -33098,7 +33089,7 @@ EOM
                     #    elsif ( $b ) { &b }
                     #          ^-------------------aligned parens
                     if ( $vert_last_nonblank_type eq 'k'
-                        && !$is_if_unless_elsif{$vert_last_nonblank_token} )
+                        && !$is_if_unless_elsif{ $tokens_to_go[ $i - 2 ] } )
                     {
                         $alignment_type = EMPTY_STRING;
                     }
@@ -33199,14 +33190,12 @@ EOM
 
                 else {
                     $ralignment_type_to_go->[$i] = $alignment_type;
-                    $ralignment_hash_by_line->[$line]->{$i} = $alignment_type;
                     $ralignment_counts->[$line]++;
                     push @imatch_list, $i;
                 }
             }
 
-            $vert_last_nonblank_type  = $type;
-            $vert_last_nonblank_token = $token;
+            $vert_last_nonblank_type = $type;
         }
         return;
     } ## end sub set_vertical_alignment_markers_token_loop
@@ -33325,15 +33314,15 @@ sub make_vertical_alignments {
     #---------------------------------------------------------
     # Step 1: Define the alignment tokens for the entire batch
     #---------------------------------------------------------
-    my ( $ralignment_type_to_go, $ralignment_counts, $ralignment_hash_by_line );
+    my ( $ralignment_type_to_go, $ralignment_counts );
 
     # We only need to make this call if vertical alignment of code is
     # requested or if a line might have a side comment.
     if (   $rOpts_valign_code
         || $types_to_go[$max_index_to_go] eq '#' )
     {
-        ( $ralignment_type_to_go, $ralignment_counts, $ralignment_hash_by_line )
-          = $self->set_vertical_alignment_markers( $ri_first, $ri_last );
+        ( $ralignment_type_to_go, $ralignment_counts ) =
+          $self->set_vertical_alignment_markers( $ri_first, $ri_last );
     }
 
     #----------------------------------------------
@@ -33352,7 +33341,6 @@ sub make_vertical_alignments {
             $iend,
             $ralignment_type_to_go,
             $ralignment_counts->[$line],
-            $ralignment_hash_by_line->[$line]
 
         );
         push @{$rline_alignments}, $rtok_fld_pat_len;
@@ -34542,7 +34530,6 @@ sub xlp_tweak {
             $iend,
             $ralignment_type_to_go,
             $alignment_count,
-            $ralignment_hash
 
         ) = @_;
 
@@ -34555,9 +34542,6 @@ sub xlp_tweak {
         #  $ibeg, $iend - index range of this line in the _to_go arrays
         #  $ralignment_type_to_go - alignment type of tokens, like '=', if any
         #  $alignment_count - number of alignment tokens in the line
-        #  $ralignment_hash - this contains all of the alignments for this
-        #    line.  It is not yet used but is available for future coding in
-        #    case there is a need to do a preliminary scan of alignment tokens.
 
         # The arrays which are created contain strings that can be tested by
         # the vertical aligner to see if consecutive lines can be aligned
@@ -34577,23 +34561,6 @@ sub xlp_tweak {
         #   field.  These should normally each match before alignment is
         #   allowed, even when the alignment tokens match.
         # @field_lengths - the display width of each field
-
-        if (DEVEL_MODE) {
-            my $new_count = 0;
-            if ( defined($ralignment_hash) ) {
-                $new_count = keys %{$ralignment_hash};
-            }
-            my $old_count = $alignment_count;
-            $old_count = 0 unless ($old_count);
-            if ( $new_count != $old_count ) {
-                my $K   = $K_to_go[$ibeg];
-                my $rLL = $self->[_rLL_];
-                my $lnl = $rLL->[$K]->[_LINE_INDEX_];
-                Fault(
-"alignment hash token count gives count=$new_count but old count is $old_count near line=$lnl\n"
-                );
-            }
-        }
 
         # -------------------------------------
         # Shortcut for lines without alignments
