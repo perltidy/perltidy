@@ -5526,9 +5526,15 @@ sub pad_signed_number_columns {
                 my $old_col   = $columns[$jcol];
                 my $col       = $alignment->{column};
 
-                # only do this if the text has a leading digit
-                if (   $col < $old_col
-                    && $rfields->[$jcol] =~ /^[+-]?\d/ )
+                if (
+                    $col < $old_col
+
+                    # only do this if the text has a leading digit
+                    && $rfields->[$jcol] =~ /^([+-]?)\d/
+
+                    # and a signed number has been seen - issue c375
+                    && ( $1 || $column_info{$jcol}->{signed_count} )
+                  )
                 {
                     my $spaces_needed = $old_col - $col;
                     my $spaces_available =
