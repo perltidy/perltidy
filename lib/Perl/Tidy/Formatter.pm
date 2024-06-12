@@ -3282,12 +3282,12 @@ sub set_whitespace_flags {
     # main loop over all tokens to define the whitespace flags
     my $last_type_is_opening;
     my $j = -1;
+    my $type;
     foreach my $rtokh ( @{$rLL} ) {
 
         $j++;
 
-        my $type = $rtokh->[_TYPE_];
-        if ( $type eq 'b' ) {
+        if ( ( $type = $rtokh->[_TYPE_] ) eq 'b' ) {
             $rwhitespace_flags->[$j] = WS_OPTIONAL;
             next;
         }
@@ -7564,12 +7564,11 @@ sub set_ci {
     foreach my $rtoken_K ( @{$rLL} ) {
 
         $KK++;
-        $type = $rtoken_K->[_TYPE_];
 
         #------------------
         # Section 1. Blanks
         #------------------
-        if ( $type eq 'b' ) {
+        if ( ( $type = $rtoken_K->[_TYPE_] ) eq 'b' ) {
 
             $rtoken_K->[_CI_LEVEL_] = $ci_next;
 
@@ -10755,16 +10754,16 @@ sub respace_tokens_inner_loop {
     # Loop to copy all tokens on one line, making any spacing changes,
     # while also collecting information needed by later subs.
     #-----------------------------------------------------------------
+    my $type;
     foreach my $KK ( $Kfirst .. $Klast ) {
 
         # Update closure variable needed by sub store_token
         $Ktoken_vars = $KK;
 
         my $rtoken_vars = $rLL->[$KK];
-        my $type        = $rtoken_vars->[_TYPE_];
 
         # Handle a blank space ...
-        if ( $type eq 'b' ) {
+        if ( ( $type = $rtoken_vars->[_TYPE_] ) eq 'b' ) {
 
             # Delete it if not wanted by whitespace rules
             # or we are deleting all whitespace
@@ -19194,10 +19193,10 @@ sub is_fragile_block_type {
         #----------------------------------
         # Loop over tokens on this line ...
         #----------------------------------
+        my $type;
         foreach my $KK ( $K_begin_loop .. $K_terminal ) {
 
-            my $type = $rLL->[$KK]->[_TYPE_];
-            next if ( $type eq 'b' );
+            next if ( ( $type = $rLL->[$KK]->[_TYPE_] ) eq 'b' );
 
             #------------------------
             # Handle sequenced tokens
@@ -34632,12 +34631,11 @@ sub xlp_tweak {
 
         $patterns[0] = EMPTY_STRING;
         my %token_count;
+        my $type;
         for my $i ( $ibeg .. $iend ) {
 
-            my $type = $types_to_go[$i];
-
             # handle a blank space
-            if ( $type eq 'b' ) {
+            if ( ( $type = $types_to_go[$i] ) eq 'b' ) {
                 $patterns[$j] .= $type;
                 next;
             }
@@ -34974,7 +34972,6 @@ sub xlp_tweak {
         my $ilast_blank;
         for ( $ibeg .. $iterm ) {
             my $type = $types_to_go[$_];
-
             if ( $type eq 'b' ) {
                 $ilast_blank = $_;
                 next;
