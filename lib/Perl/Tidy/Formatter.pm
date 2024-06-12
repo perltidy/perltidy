@@ -14668,6 +14668,7 @@ sub update_sub_call_paren_info {
         # must be called once per file before first call to sub try_3
         %try_3_cache      = ();
         %is_oo_call_cache = ();
+        return;
     } ## end sub initialize_try_3_cache
 
     sub try_3 {

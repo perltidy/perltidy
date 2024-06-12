@@ -8,6 +8,7 @@
 
 # Some useful links:
 # https://metacpan.org/dist/Perl-Critic/view/lib/Perl/Critic/PolicySummary.pod
+# https://metacpan.org/pod/Perl::Critic::PolicySummary
 # https://manpages.ubuntu.com/manpages/xenial/man1/perlcritic.1p.html
 # https://perlmaven.com/perl-critic
 
@@ -58,6 +59,11 @@ short_subroutine_statements = 2
 # which has about 25 lines between open and close, largely comments.
 [InputOutput::RequireBriefOpen]
 lines=30
+
+# Perltidy modules IOScalar.pm and IOScalarArray.pm provide a print function,
+# but I had to turn this off because the 'allow' option does not seem to work
+[-Subroutines::ProhibitBuiltinHomonyms]
+# allow=print
 
 #---------------------------------------------------
 # Policies to be skipped or adjusted for severity=3:

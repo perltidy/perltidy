@@ -94,8 +94,7 @@ EOM
     return $self->[0]->[$i];
 } ## end sub getline
 
-sub print    ## no critic (Subroutines::ProhibitBuiltinHomonyms)
-{
+sub print {
     my ( $self, $msg ) = @_;
     my $mode = $self->[1];
     if ( $mode ne 'w' ) {
