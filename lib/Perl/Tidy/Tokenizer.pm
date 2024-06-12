@@ -1144,7 +1144,7 @@ sub show_indentation_table {
     push @output_lines, <<EOM;
 Table of nesting level differences at closing braces.
 This might help localize brace errors if the file was previously formatted.
-line:  (brace level) - (level expected from old indentation)
+line: error=[new brace level]-[old indentation level]
 EOM
     foreach my $i (@pre_indexes) {
         my $lno  = $rhistory_line_number->[$i];
