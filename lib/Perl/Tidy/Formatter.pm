@@ -7037,7 +7037,7 @@ EOM
                 }
             }
             my $rarg = { seqno => $seqno };
-            $self->count_sub_args($rarg);
+            $self->count_sub_input_args($rarg);
             my $count = $rarg->{shift_count_min};
             if ( !defined($count) ) { $count = '*' }
 
@@ -7057,7 +7057,7 @@ EOM
             $name =~ s/\(.*$//;
 
             my $rarg = { seqno => $seqno };
-            $self->count_sub_args($rarg);
+            $self->count_sub_input_args($rarg);
             my $count = $rarg->{shift_count_min};
             if ( !defined($count) ) { $count = '*' }
 
@@ -13835,18 +13835,19 @@ EOM
     return $K_sub;
 } ## end sub find_sub_token
 
-sub count_sub_args {
+sub count_sub_input_args {
     my ( $self, $item ) = @_;
 
-    # Given: hash ref with
+    # Given: $item = hash ref with
     #   seqno  => $seqno_block = sequence number of a sub block
-    #   K_last_at_underscore  => optional: index K of last ref to @_
+    #   max_arg_count => optional optimization flag, see note below
 
-    # Updates hash ref with values for keys:
-    #   shift_count_min  => minimum absolute number of args
-    #   shift_count_max  => maximum absolute number of args
+    # Updates hash ref $item with values for keys:
+    #   shift_count_min  => minimum absolute number of input args
+    #   shift_count_max  => maximum absolute number of input args
     #   self_name    => name of first arg (if it can be determined)
     #   is_signature => true if args are in a signature
+    #   .. plus several other quantities of interest to the caller
     # These keys are left undefined if they cannot be determined.
     # 'shift_count_min' and 'shift_count_max' are the same except for
     # a signature or prototype.
@@ -14380,7 +14381,7 @@ sub count_sub_args {
     }
     return;
 
-} ## end sub count_sub_args
+} ## end sub count_sub_input_args
 
 sub sub_def_info_maker {
 
@@ -14478,8 +14479,8 @@ sub sub_def_info_maker {
         my $call_item = $rprelim_call_info->{$key};
         $item->{max_arg_count} = $call_item->{max_arg_count};
 
-        # Add a count of the number of args
-        $self->count_sub_args($item);
+        # Add a count of the number of input args
+        $self->count_sub_input_args($item);
 
         # Store the sub info by sequence number
         $sub_info_by_seqno{$seqno} = $item;
