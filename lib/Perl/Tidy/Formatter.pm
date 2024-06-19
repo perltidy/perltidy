@@ -13528,6 +13528,7 @@ BEGIN {
       uc
       ucfirst
       undef
+      wantarray
       xor
     );
     @is_non_interfering_keyword{@q} = (1) x scalar(@q);
@@ -13541,61 +13542,218 @@ BEGIN {
 sub count_list_args {
     my ( $self, $rarg_list ) = @_;
 
-    my $seqno        = $rarg_list->{seqno_list};
-    my $is_signature = $rarg_list->{is_signature};
-    my $shift_count  = $is_signature ? 0 : $rarg_list->{shift_count_min};
-    my $self_name    = $is_signature ? EMPTY_STRING : $rarg_list->{self_name};
-
-    # return undef if we return early
-    $rarg_list->{shift_count_min} = undef;
-
     # Given:
-    #   $seqno        = sequence number of a list for counting items
+    #   $seqno_list   = sequence number of a paren of list to be counted, or
+    #   $K_list_start = starting index of list (for 'return' lists)
+    #   $shift_count_min  = starting min arg count items to include
+    #   $shift_count_max  = starting max arg count items to include
     #   $is_signature = true if this is a sub signature list
-    #   $shift_count  = starting number of '$var=shift;' items to include
-    #   $self_name    = first arg name, if known
+    #   $self_name    = name of first arg found
 
     # Return:
-    #   - the number of args, or
-    #   - '*' if the number cannot be determined in a simple way
-    #   - '*' if the list contains non-scalar items
+    #   -shift_count_min  => starting min arg count items to include, or
+    #      undef if a specific number was not determined
+    #   -shift_count_max  => starting max arg count items to include
+    #      undef if a specific number was not determined
+    #   -self_name => possibly updated name of first arg
+    #   -initialized => a hash entry maintained by this routine
+    #     for keeping track of repeated calls for 'return' lists
 
     # Method:
-    #   - the basic idea is to count commas within the parens
-    #   - for non-signature lists, do not count an initial
-    #     '$self' or '$class' variable
+    #   - The basic method is to count commas, but
+    #   - if we encounter sigils @ or % or other problems which prevent a
+    #     count, then we do a simple return; the count will then be indefinite.
+
+    # Set the counts to undef in case we have to do a simple return upon
+    # encountering an indeterminate list count
+    my $shift_count_min_input = $rarg_list->{shift_count_min};
+    my $shift_count_max_input = $rarg_list->{shift_count_max};
+    $rarg_list->{shift_count_min} = undef;
+    $rarg_list->{shift_count_max} = undef;
+
+    my $seqno_list   = $rarg_list->{seqno_list};
+    my $K_list_start = $rarg_list->{K_list_start};
+    my $is_signature = $rarg_list->{is_signature};
+    my $self_name    = $is_signature ? EMPTY_STRING : $rarg_list->{self_name};
 
     my $rLL = $self->[_rLL_];
+    my $K_list_end;
 
-    return unless ( defined($seqno) );
-    my $K_opening = $self->[_K_opening_container_]->{$seqno};
-    my $K_closing = $self->[_K_closing_container_]->{$seqno};
-    return unless ( defined($K_closing) );
+    # Input option 1: $seqno_list is a container
+    my $is_return_list;
+    if ( defined($seqno_list) ) {
+        $K_list_start = $self->[_K_opening_container_]->{$seqno_list};
+        $K_list_end   = $self->[_K_closing_container_]->{$seqno_list};
+        return unless ( defined($K_list_end) );
+    }
 
-    my $level_opening = $rLL->[$K_opening]->[_LEVEL_];
-    my $arg_count     = $shift_count;
+    # Input option 2: $K_list_start is the index of a token,
+    # such as 'return', which has trailing args to count.
+    elsif ( defined($K_list_start) ) {
+
+        # Skip past a leading blank if necessary
+        if ( $rLL->[$K_list_start]->[_TYPE_] eq 'b' ) { $K_list_start++ }
+
+        $is_return_list = $rLL->[$K_list_start]->[_TYPE_] eq 'k'
+          && $rLL->[$K_list_start]->[_TOKEN_] eq 'return';
+        $K_list_end = @{$rLL} - 1;
+
+        # number of returns are initialized on the first call
+        if ( !$rarg_list->{initialized} ) {
+            $shift_count_min_input    = undef;
+            $shift_count_max_input    = 0;
+            $rarg_list->{initialized} = 1;
+        }
+        else {
+            if (   !defined($shift_count_min_input)
+                && !defined($shift_count_max_input) )
+            {
+                return;
+            }
+        }
+    }
+
+    else {
+        DEVEL_MODE && Fault("Neither seqno_list nor K_list_start defined\n");
+        return;
+    }
+
+    # Initialize the arg count for this call.  We start with any 'shift' counts
+    # previously seen if this is not a signature or 'return' list
+    my $arg_count = 0;
+    if ( $seqno_list && $shift_count_min_input && !$is_signature ) {
+        $arg_count = $shift_count_min_input;
+    }
+
+    # For signature lists we need to remember a minimum
     my $arg_count_min;
+
+    my @seqno_stack;
+    if ($seqno_list) { push @seqno_stack, $seqno_list }
 
     #--------------------------------------------------------
     # Main loop to scan the container looking for list items.
     #--------------------------------------------------------
-    foreach my $KK ( $K_opening + 1 .. $K_closing - 1 ) {
+    my $KK = $K_list_start;
+    my $KK_last_last_nb;
+    my $KK_last_nb;
+    my $KK_this_nb = $K_list_start;
+    while ( ++$KK < $K_list_end ) {
 
         my $type = $rLL->[$KK]->[_TYPE_];
         next if ( $type eq 'b' );
         next if ( $type eq '#' );
-
-        # Only look at top-level tokens
-        my $level = $rLL->[$KK]->[_LEVEL_];
-        next if ( $level > $level_opening + 1 );
-
+        $KK_last_last_nb = $KK_last_nb;
+        $KK_last_nb      = $KK_this_nb;
+        $KK_this_nb      = $KK;
         my $token = $rLL->[$KK]->[_TOKEN_];
 
+        # Handle a sequenced item
+        if ( my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_] ) {
+
+            if ( $is_opening_type{$type} ) {
+                if ( $token eq '(' ) {
+
+                    # not a list..
+                    if ( !$self->is_list_by_seqno($seqno) ) {
+
+                        # enter a list slice, such as '(caller)[1,2]'
+                        my $Kc = $self->[_K_closing_container_]->{$seqno};
+                        last if ( !$Kc );
+                        my $Kn = $self->K_next_code($Kc);
+                        if ( $Kn && $rLL->[$Kn]->[_TOKEN_] eq '[' ) {
+                            my $seqno_next = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
+                            if (   $seqno_next
+                                && $self->is_list_by_seqno($seqno_next) )
+                            {
+                                $KK = $Kn;
+                                push @seqno_stack, $seqno_next;
+                                next;
+                            }
+                        }
+                    }
+
+                    # a list..
+                    else {
+
+                        # Descend into a paren list in some special cases:
+                        if ( $is_return_list && $KK_last_nb ) {
+
+                            # 'return ('
+                            my $ok = $rLL->[$KK_last_nb]->[_TOKEN_] eq 'return'
+                              && $rLL->[$KK_last_nb]->[_TYPE_] eq 'k';
+
+                            # 'wantarray ? ('
+                            $ok ||=
+                                 $KK_last_last_nb
+                              && $rLL->[$KK_last_nb]->[_TYPE_] eq '?'
+                              && $rLL->[$KK_last_last_nb]->[_TOKEN_] eq
+                              'wantarray';
+
+                            # ',('
+                            $ok ||= $rLL->[$KK_last_nb]->[_TYPE_] eq ',';
+
+                            if ($ok) {
+                                push @seqno_stack, $seqno;
+                                next;
+                            }
+                        }
+                    }
+                }
+
+                # Otherwise skip past this container
+                my $Kc = $self->[_K_closing_container_]->{$seqno};
+                $KK = $Kc;
+                next;
+            }
+            elsif ( $is_closing_type{$type} ) {
+                my $seqno_test = pop @seqno_stack;
+                if ( $seqno_test && $seqno_test eq $seqno ) {
+                    next;
+                }
+                last;
+            }
+            elsif ( $type eq '?' ) {
+
+                # continue scanning ternary for 'return wantarray ?'
+                if (   $KK_last_last_nb
+                    && $rLL->[$KK_last_nb]->[_TOKEN_] eq 'wantarray'
+                    && $rLL->[$KK_last_nb]->[_TYPE_] eq 'k'
+                    && $rLL->[$KK_last_last_nb]->[_TOKEN_] eq 'return'
+                    && $rLL->[$KK_last_last_nb]->[_TYPE_] eq 'k' )
+                {
+                    push @seqno_stack, $seqno;
+                    next;
+                }
+
+                # Otherwise skip
+                my $Kc = $self->[_K_closing_ternary_]->{$seqno};
+                $KK = $Kc;
+                next;
+            }
+            elsif ( $type eq ':' ) {
+                my $seqno_test = pop @seqno_stack;
+                if ( $seqno_test && $seqno_test eq $seqno ) {
+
+                    # for wantarray ternary, assume one item after ':'
+                    # TODO: if wantarray was preceded by '!' then we should
+                    # swap the two counts here
+                    $arg_count_min = 1;
+                    last;
+                }
+                last;
+            }
+            else {
+                DEVEL_MODE
+                  && Fault("unexpected seqno=$seqno for type='$type'\n");
+            }
+        }
+
         # handle identifiers
-        if ( $type eq 'i' || $type eq 't' ) {
+        elsif ( $type eq 'i' || $type eq 't' ) {
             my $sigil = substr( $token, 0, 1 );
 
-            # Give up if we find list sigils not preceded by 'scalar'
+            # give up if we find list sigils not preceded by 'scalar'
             if ( $sigil eq '%' || $sigil eq '@' ) {
                 my $K_last = $self->K_previous_code($KK);
                 if ( defined($K_last) ) {
@@ -13608,6 +13766,8 @@ sub count_list_args {
                 }
                 return;
             }
+
+            # remember the name of the first item, maybe something like '$self'
             elsif ($sigil eq '$'
                 && !$self_name
                 && !$arg_count )
@@ -13615,12 +13775,6 @@ sub count_list_args {
                 $self_name = $token;
                 $rarg_list->{self_name} = $self_name;
             }
-
-            # Give up if we find an indexed ref to $_[..]
-            elsif ( length($token) >= 5 && substr( $token, 0, 3 ) eq '$_[' ) {
-                return;
-            }
-
             else {
                 # continue search
             }
@@ -13679,17 +13833,35 @@ sub count_list_args {
             return;
         }
 
+        # a ';' terminates a parenless list
+        elsif ( $type eq ';' ) {
+            last;
+        }
+
         else {
             # continue search
         }
     }
 
     # Increase the count by 1 if the list does not have a trailing comma
-    my $K_last = $self->K_previous_code($K_closing);
-    if ( $rLL->[$K_last]->[_TYPE_] ne ',' ) { $arg_count++ }
+    if (   defined($KK_this_nb)
+        && $KK_this_nb > $K_list_start
+        && $rLL->[$KK_this_nb]->[_TYPE_] ne ',' )
+    {
+        $arg_count++;
+    }
+
     if ( !defined($arg_count_min) ) {
         $arg_count_min = $arg_count;
     }
+
+    # return list counts include ranges of all returns in a sub
+    if ($is_return_list) {
+        $arg_count     = max( $arg_count, $shift_count_max_input );
+        $arg_count_min = min( $arg_count_min, $shift_count_min_input )
+          if ( defined($shift_count_min_input) );
+    }
+
     $rarg_list->{shift_count_min} = $arg_count_min;
     $rarg_list->{shift_count_max} = $arg_count;
     return;
