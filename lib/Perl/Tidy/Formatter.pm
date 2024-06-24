@@ -639,6 +639,7 @@ BEGIN {
         _rK_AT_underscore_by_sub_seqno_   => $i++,
         _rK_first_self_by_sub_seqno_      => $i++,
         _rK_bless_by_sub_seqno_           => $i++,
+        _rK_return_by_sub_seqno_          => $i++,
         _rK_sub_by_seqno_                 => $i++,
         _ris_my_sub_by_seqno_             => $i++,
         _rsub_call_paren_info_by_seqno_   => $i++,
@@ -1032,6 +1033,7 @@ sub new {
     $self->[_rK_AT_underscore_by_sub_seqno_]   = {};
     $self->[_rK_first_self_by_sub_seqno_]      = {};
     $self->[_rK_bless_by_sub_seqno_]           = {};
+    $self->[_rK_return_by_sub_seqno_]          = {};
     $self->[_rsub_call_paren_info_by_seqno_]   = {};
     $self->[_rDOLLAR_underscore_by_sub_seqno_] = {};
     $self->[_rK_sub_by_seqno_]                 = {};
@@ -10447,6 +10449,9 @@ my $rK_first_self_by_sub_seqno;
 # new index K of first 'bless' for each sub
 my $rK_bless_by_sub_seqno;
 
+# new index K of 'return' for each sub
+my $rK_return_by_sub_seqno;
+
 # info about list of sub call args
 my $rsub_call_paren_info_by_seqno;
 my $rDOLLAR_underscore_by_sub_seqno;
@@ -10493,6 +10498,7 @@ sub initialize_respace_tokens_closure {
     $rK_AT_underscore_by_sub_seqno = $self->[_rK_AT_underscore_by_sub_seqno_];
     $rK_first_self_by_sub_seqno    = $self->[_rK_first_self_by_sub_seqno_];
     $rK_bless_by_sub_seqno         = $self->[_rK_bless_by_sub_seqno_];
+    $rK_return_by_sub_seqno        = $self->[_rK_return_by_sub_seqno_];
     $rsub_call_paren_info_by_seqno = $self->[_rsub_call_paren_info_by_seqno_];
     $rDOLLAR_underscore_by_sub_seqno =
       $self->[_rDOLLAR_underscore_by_sub_seqno_];
@@ -11116,6 +11122,18 @@ sub respace_tokens_inner_loop {
             }
             else {
                 # Could be something like '* STDERR' or '$ debug'
+            }
+        }
+
+        # handle keywords
+        elsif ( $type eq 'k' ) {
+            if ( $token eq 'return' ) {
+
+                # remember the new K of this 'return; this may be
+                # off by 1 if a blank gets inserted before it
+                push
+                  @{ $rK_return_by_sub_seqno->{$current_sub_seqno} },
+                  scalar @{$rLL_new};
             }
         }
 
@@ -13611,6 +13629,21 @@ sub count_list_args {
                 return;
             }
         }
+
+        # Optimization for common case of simple return
+        my $Kn = $self->K_next_code($K_list_start);
+        return unless ($Kn);
+        my $type_n = $rLL->[$Kn]->[_TYPE_];
+        if (   $type_n eq ';'
+            || $is_closing_type{$type_n}
+            || ( $type_n eq 'k' && $is_if_unless{ $rLL->[$Kn]->[_TOKEN_] } ) )
+        {
+            $shift_count_min_input = 0 unless defined($shift_count_min_input);
+            $shift_count_max_input = 0 unless defined($shift_count_max_input);
+            $rarg_list->{shift_count_min} = $shift_count_min_input;
+            $rarg_list->{shift_count_max} = $shift_count_max_input;
+            return;
+        }
     }
 
     else {
@@ -13631,18 +13664,30 @@ sub count_list_args {
     my @seqno_stack;
     if ($seqno_list) { push @seqno_stack, $seqno_list }
 
-    #--------------------------------------------------------
-    # Main loop to scan the container looking for list items.
-    #--------------------------------------------------------
     my $KK = $K_list_start;
     my $KK_last_last_nb;
     my $KK_last_nb;
     my $KK_this_nb = $K_list_start;
+
+    my $backup_on_last = sub {
+
+        # exclude the latest token upon encountering end of list
+        # to avoid adding 1 extra comma at the end
+        $KK_this_nb      = $KK_last_nb;
+        $KK_last_nb      = $KK_last_last_nb;
+        $KK_last_last_nb = undef;
+        return;
+    };
+
+    #--------------------------------------------------------
+    # Main loop to scan the container looking for list items.
+    #--------------------------------------------------------
     while ( ++$KK < $K_list_end ) {
 
         my $type = $rLL->[$KK]->[_TYPE_];
         next if ( $type eq 'b' );
         next if ( $type eq '#' );
+        last if ( $type eq ';' );
         $KK_last_last_nb = $KK_last_nb;
         $KK_last_nb      = $KK_this_nb;
         $KK_this_nb      = $KK;
@@ -13659,7 +13704,7 @@ sub count_list_args {
 
                         # enter a list slice, such as '(caller)[1,2]'
                         my $Kc = $self->[_K_closing_container_]->{$seqno};
-                        last if ( !$Kc );
+                        if ( !$Kc ) { $backup_on_last->(); last }
                         my $Kn = $self->K_next_code($Kc);
                         if ( $Kn && $rLL->[$Kn]->[_TOKEN_] eq '[' ) {
                             my $seqno_next = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
@@ -13709,16 +13754,21 @@ sub count_list_args {
             elsif ( $is_closing_type{$type} ) {
                 my $seqno_test = pop @seqno_stack;
                 if ( $seqno_test && $seqno_test eq $seqno ) {
+
+                    # hide all closing tokens to avoid adding an extra
+                    # comma at the end at something like '$x,)'
+                    $backup_on_last->();
                     next;
                 }
+                $backup_on_last->();
                 last;
             }
             elsif ( $type eq '?' ) {
 
                 # continue scanning ternary for 'return wantarray ?'
-                if (   $KK_last_last_nb
-                    && $rLL->[$KK_last_nb]->[_TOKEN_] eq 'wantarray'
+                if (   $rLL->[$KK_last_nb]->[_TOKEN_] eq 'wantarray'
                     && $rLL->[$KK_last_nb]->[_TYPE_] eq 'k'
+                    && $KK_last_last_nb
                     && $rLL->[$KK_last_last_nb]->[_TOKEN_] eq 'return'
                     && $rLL->[$KK_last_last_nb]->[_TYPE_] eq 'k' )
                 {
@@ -13726,7 +13776,7 @@ sub count_list_args {
                     next;
                 }
 
-                # Otherwise skip
+                # otherwise skip past this ternary
                 my $Kc = $self->[_K_closing_ternary_]->{$seqno};
                 $KK = $Kc;
                 next;
@@ -13739,8 +13789,10 @@ sub count_list_args {
                     # TODO: if wantarray was preceded by '!' then we should
                     # swap the two counts here
                     $arg_count_min = 1;
+                    $backup_on_last->();
                     last;
                 }
+                $backup_on_last->();
                 last;
             }
             else {
@@ -13757,12 +13809,12 @@ sub count_list_args {
             if ( $sigil eq '%' || $sigil eq '@' ) {
                 my $K_last = $self->K_previous_code($KK);
                 if ( defined($K_last) ) {
-                    my $type_last  = $rLL->[$K_last]->[_TYPE_];
-                    my $token_last = $rLL->[$K_last]->[_TOKEN_];
-                    next if ( $type_last eq 'k' && $token_last eq 'scalar' );
-                    next if ( $type_last eq '+' );
+                    my $type_last = $rLL->[$K_last]->[_TYPE_];
+                    next if ( $type_last eq '+' || $type_last eq 'p' );
                     next if ( $type_last eq q{\\} );
                     next if ( $type_last eq '!' );
+                    my $token_last = $rLL->[$K_last]->[_TOKEN_];
+                    next if ( $type_last eq 'k' && $token_last eq 'scalar' );
                 }
                 return;
             }
@@ -13801,7 +13853,17 @@ sub count_list_args {
         elsif ( $is_kwU{$type} ) {
 
             # Something like 'length $str' is ok
-            next if ( $type eq 'k' && $is_non_interfering_keyword{$token} );
+            if ( $type eq 'k' ) {
+
+                # Something like 'length $str' is ok
+                next if ( $is_non_interfering_keyword{$token} );
+
+                # something like return 1 if ...
+                if ( $is_if_unless{$token} ) {
+                    $backup_on_last->();
+                    last;
+                }
+            }
 
             # Certain subsequent tokens prevent problems
             my $Kn = $self->K_next_code($KK);
@@ -13831,11 +13893,6 @@ sub count_list_args {
 "DEBUG_COUNT: file $input_stream_name line=$lno type=$type tok=$token token_Kn=$token_Kn\n";
             }
             return;
-        }
-
-        # a ';' terminates a parenless list
-        elsif ( $type eq ';' ) {
-            last;
         }
 
         else {
@@ -14555,6 +14612,149 @@ sub count_sub_input_args {
 
 } ## end sub count_sub_input_args
 
+use constant DEBUG_RETURN_COUNT => 0;
+
+sub count_sub_return_args {
+    my ( $self, $item ) = @_;
+
+    # Given: $item = hash ref with
+    #   seqno  => sequence number of a sub block
+    # Set values for these keys in '$item':
+    #   return_count_min  => minimum number of output args
+    #                        = undef if indeterminate, such as @list
+    #   return_count_max  => maximum number of output args
+    #                        = undef if indeterminate, such as @list
+    my $seqno_sub = $item->{seqno};
+    return unless ($seqno_sub);
+
+    my $rKlist = $self->[_rK_return_by_sub_seqno_]->{$seqno_sub};
+    return if ( !defined($rKlist) );
+
+    # loop over all return statements in this sub
+    my $rLL   = $self->[_rLL_];
+    my $rhash = {};
+    foreach ( @{$rKlist} ) {
+        my $K_return = $rLL->[$_]->[_TYPE_] eq 'b' ? $_ + 1 : $_;
+        my $type     = $rLL->[$K_return]->[_TYPE_];
+        my $token    = $rLL->[$K_return]->[_TOKEN_];
+        if ( $token ne 'return' ) {
+            DEVEL_MODE && Fault("expecting 'return' but got $token\n");
+            last;
+        }
+        $rhash->{K_list_start} = $K_return;
+        $self->count_list_args($rhash);
+        last if ( !defined( $rhash->{shift_count_max} ) );
+    }
+    $item->{return_count_min} = $rhash->{shift_count_min};
+    $item->{return_count_max} = $rhash->{shift_count_max};
+    if ( DEBUG_RETURN_COUNT > 1 ) {
+        my $min = $item->{return_count_min};
+        my $max = $item->{return_count_max};
+        $min = '*' unless defined($min);
+        $max = '*' unless defined($max);
+        print "DEBUG_RETURN: returning min=$min max=$max\n";
+    }
+    return;
+} ## end sub count_sub_return_args
+
+sub count_return_args_wanted {
+    my ( $self, $item ) = @_;
+
+    # Given: $item = a hash ref with
+    #   seqno_list => sequence number the call arg list of a sub call
+    # Set value for this key in '$item':
+    #   return_count_wanted => number of return items wanted from the call
+    #                        = undef if indeterminate, such as @list
+
+    # get the sequence number of the call arg list for this call
+    my $rLL                 = $self->[_rLL_];
+    my $K_opening_container = $self->[_K_opening_container_];
+    my $seqno_list          = $item->{seqno_list};
+    return unless ($seqno_list);
+    my $Ko   = $K_opening_container->{$seqno_list};
+    my $K_m  = $self->K_previous_code($Ko);
+    my $K_mm = $self->K_previous_code($K_m);
+    return unless ( defined($K_mm) );
+    my $type_m  = $rLL->[$K_m]->[_TYPE_];
+    my $token_m = $rLL->[$K_m]->[_TOKEN_];
+    my $type_mm = $rLL->[$K_mm]->[_TYPE_];
+
+    # start of backwards search depends on the call type...
+    # note: see var $rsub_call_paren_info_by_seqno in sub respace_tokens
+    my $K_equals;
+
+    # 'function('
+    if ( $type_m eq 'U' || $type_m eq 'w' ) {
+        $K_equals = $K_mm;
+    }
+
+    # '->function('
+    elsif ( $type_m eq 'i' && $type_mm eq '->' ) {
+        my $K_mmm = $self->K_previous_code($K_mm);
+        my $K_mm4 = $self->K_previous_code($K_mmm);
+        return unless defined($K_mm4);
+        my $type_mmm = $rLL->[$K_mmm]->[_TYPE_];
+
+        # something like '$self->function('
+        if ( $type_mmm eq 'i' ) {
+            $K_equals = $K_mm4;
+        }
+
+        # something complex like '$hash_of_objects{my_obj}->function('
+        else {
+
+            # TBD:
+            return;
+        }
+    }
+
+    # '&function('
+    elsif ( $type_m eq 'i' && substr( $token_m, 0, 1 ) eq '&' ) {
+        $K_equals = $K_mm;
+    }
+
+    # '$function->('  [ TODO: simple anonymous sub call, not used yet ]
+    elsif ( $type_m eq '->' && $type_mm eq 'i' ) {
+        my $K_mmm = $self->K_previous_code($K_mm);
+        $K_equals = $K_mmm;
+    }
+
+    # error
+    else {
+        DEVEL_MODE
+          && Fault(
+"unexpected call with type_m=$type_m token_m=$token_m type_mm=$type_mm\n"
+          );
+        return;
+    }
+
+    # look for '='
+    if ( !$K_equals || $rLL->[$K_equals]->[_TYPE_] ne '=' ) {
+        return;
+    }
+
+    my $K_c = $self->K_previous_code($K_equals);
+    if ( !$K_c || $rLL->[$K_c]->[_TOKEN_] ne ')' ) {
+
+        # Currently only looking for (list of values)=f(x)
+        # TODO: handle @array = f(x) or $scalar=f(x)
+        return;
+    }
+
+    # count the list of args
+    my $seqno_lhs = $rLL->[$K_c]->[_TYPE_SEQUENCE_];
+    return unless ($seqno_lhs);
+    my $rhash = {};
+    $rhash->{seqno_list} = $seqno_lhs;
+    $self->count_list_args($rhash);
+    my $return_count_wanted = $rhash->{shift_count_max};
+    if ( DEBUG_RETURN_COUNT > 1 ) {
+        print "DEBUG_RETURN_COUNT: want $return_count_wanted\n";
+    }
+    $item->{return_count_wanted} = $return_count_wanted;
+    return;
+} ## end sub count_return_args_wanted
+
 sub sub_def_info_maker {
 
     my ( $self, $rpackage_lookup_list, $rprelim_call_info ) = @_;
@@ -14653,6 +14853,9 @@ sub sub_def_info_maker {
 
         # Add a count of the number of input args
         $self->count_sub_input_args($item);
+
+        # Add a count of the number of return args
+        $self->count_sub_return_args($item);
 
         # Store the sub info by sequence number
         $sub_info_by_seqno{$seqno} = $item;
@@ -14816,6 +15019,9 @@ sub update_sub_call_paren_info {
             $arg_count = $item->{shift_count_min};
         }
 
+        # get the return count expected for this call by scanning to the left
+        $self->count_return_args_wanted($item);
+
         # update the hash of info for this item
         my $line_number = $rLL->[$Ko]->[_LINE_INDEX_] + 1;
         $item->{arg_count}   = $arg_count;
@@ -14824,7 +15030,6 @@ sub update_sub_call_paren_info {
         $item->{line_number} = $line_number;
         $item->{call_type}   = $call_type;
         $item->{caller_name} = $caller_name;
-        $item->{seqno}       = $seqno;
     }
     return;
 } ## end sub update_sub_call_paren_info
@@ -14837,6 +15042,7 @@ sub update_sub_call_paren_info {
     my %is_oo_call_cache;
 
     sub initialize_try_3_cache {
+        my $self = shift;
 
         # must be called once per file before first call to sub try_3
         %try_3_cache      = ();
