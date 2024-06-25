@@ -1,6 +1,14 @@
 # Perltidy Change Log
 
-## 2024 05 11.03
+## 2024 05 11.04
+
+    - Updates for issue git #151:
+      (1) --warn-variable-types=u is now okay if it is on the command line
+      with a named file.
+      (2) --warn-variable-exclusion-list=s now allows leading and/or
+      trailing * on variable names to allow a wildcard match. For example
+      -wvxl='*_unused' is okay.
+      (3) --dump-unusual-variables now outputs the filename.
 
     - A option was added to filter unimplemented parameters from perltidy
       configuration files, suggested in git #146.  If a line in the config

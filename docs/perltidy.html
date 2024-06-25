@@ -4421,6 +4421,12 @@
 </ul>
 
 </dd>
+<dt id="Skipping-a-line-with-an-unknown-parameter"><b>Skipping a line with an unknown parameter</b></dt>
+<dd>
+
+<p>Versions of perltidy greater than 20240511 have an option to filter unrecognized parameters from a perltidy command file. If a line in the file begins with <b>three dashes</b> followed by a parameter name (rather than one or two), then the line will be removed if the parameter is unknown. Otherwise, a dash will be removed to make the line valid. This option was added to allow a single command file to be used during the transition to a new version of perltidy.</p>
+
+</dd>
 <dt id="Creating-a-new-abbreviation"><b>Creating a new abbreviation</b></dt>
 <dd>
 
@@ -4726,13 +4732,15 @@
 
 <p>will process <i>somefile.pl</i> normally but issue a warning if either of the issues &#39;s&#39; or &#39;r&#39;, but not &#39;p&#39;, described above, are encountered.</p>
 
-<p>A limitation is that warnings may not be requested for unused variables, type &#39;u&#39;. The is because this would produce many needless warnings, especially when perltidy is run on small snippets of code from within an editor. So unused variables can only be found with the <b>-duv</b> option described in the previous section.</p>
+<p>The &#39;u&#39; option (unused) has a limitation: it is not allowed in a <i>.perltidyrc</i> configuration file. But it can be used on the command line provided that perltidy is operating on a named file. This rule is necessary to avoid warnings when perltidy is run on small snippets of code from within an editor.</p>
 
-<p>A companion flag, <b>--warn-variable-exclusion-list=string</b>, or <b>-wvxl=string</b>, can be used to skip warning checks for a list of variables. For example,</p>
+<p>A companion flag, <b>--warn-variable-exclusion-list=string</b>, or <b>-wvxl=string</b>, can be used to skip warning checks for a list of variable names. A leading and/or trailing &#39;*&#39; may be placed on any of these variable names to allow a partial match. For example</p>
 
-<pre><code>   perltidy -wvt=&#39;*&#39; -wvxl=&#39;$self $class&#39;  somefile.pl</code></pre>
+<p>For example,</p>
 
-<p>will do all possible checks but not report any warnings for variables <code>$self</code> and <code>$class</code>.</p>
+<pre><code>   perltidy -wvt=&#39;*&#39; -wvxl=&#39;$self $class *_unused&#39;  somefile.pl</code></pre>
+
+<p>will do all possible checks but not report any warnings for variables <code>$self</code>, <code>$class</code>, and for example <code>$value_unused</code>.</p>
 
 </dd>
 <dt id="Use---dump-mixed-call-parens-to-find-functions-called-both-with-and-without-parens"><b>Use --dump-mixed-call-parens to find functions called both with and without parens</b></dt>
@@ -4843,7 +4851,7 @@
 
 <ul>
 
-<li><p>This option works best for subs which unpack call args in an orderly manner near the beginning of the sub from <code>@_</code> and/or with <code>shift</code> operations. If individual elements of the @_ array are directly accessed then the number of sub args is considered indeterminate.</p>
+<li><p>This option works best for subs which unpack call args in an orderly manner near the beginning of the sub from <code>@_</code> and/or with <code>shift</code> operations. It will also work for direct access to specific elements of the @_ array. However if the coding for arg extraction is complex then the number of sub args will be considered indeterminate and a count cannot be checked.</p>
 
 </li>
 <li><p>Sub calls made without parentheses around the args are not checked.</p>
@@ -4861,7 +4869,7 @@
 <dt id="Use---warn-mismatched-args-to-produce-a-warning-for-function-calls-with-args-not-matching-sub-declarations"><b>Use --warn-mismatched-args to produce a warning for function calls with args not matching sub declarations</b>.</dt>
 <dd>
 
-<p>This is similar to the <b>-dump</b> parameter described above except that any mismatches are reported in the error file and otherwise formatting continues normally. Thus</p>
+<p>This is similar to the <b>-dump</b> parameter described above except that any mismatches are reported in the error file and otherwise formatting continues normally. The basic usage is</p>
 
 <pre><code>    perltidy -wma somefile.pl</code></pre>
 
@@ -5212,7 +5220,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20240511.02</p>
+<p>This man page documents perltidy version 20240511.04</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 
