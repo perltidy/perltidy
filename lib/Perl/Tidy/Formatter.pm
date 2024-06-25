@@ -1459,7 +1459,7 @@ sub check_options {
 
     # This routine is called to check the user-supplied run parameters
     # and to configure the control hashes to them.
-    $rOpts = shift;
+    ( $rOpts, my $wvt_in_args, my $num_files ) = @_;
 
     initialize_whitespace_hashes();
 
@@ -1496,7 +1496,7 @@ sub check_options {
 
     initialize_call_paren_style();
 
-    initialize_warn_variable_types();
+    initialize_warn_variable_types( $wvt_in_args, $num_files );
 
     initialize_warn_mismatched_args();
 
@@ -8679,6 +8679,12 @@ sub scan_variable_usage {
         $roption = { 'r' => 1, 's' => 1, 'p' => 1, 'u' => 1 };
     }
 
+    my $issue_type_string = "Issue types are";
+    if ( $roption->{'u'} ) { $issue_type_string .= " 'u'=unused" }
+    if ( $roption->{'r'} ) { $issue_type_string .= " 'r'=reused" }
+    if ( $roption->{'s'} ) { $issue_type_string .= " 's'=multi-sigil" }
+    if ( $roption->{'p'} ) { $issue_type_string .= " 'p'=package crossing" }
+
     # Unpack the control hash
     my $check_sigil         = $roption->{'s'};
     my $check_cross_package = $roption->{'p'};
@@ -9466,7 +9472,7 @@ EOM
     my @sorted =
       sort { $a->{K} <=> $b->{K} || $a->{letter} cmp $b->{letter} } @warnings;
 
-    return \@sorted;
+    return ( \@sorted, $issue_type_string );
 } ## end sub scan_variable_usage
 
 sub dump_unusual_variables {
@@ -9474,12 +9480,15 @@ sub dump_unusual_variables {
 
     # process a --dump-unusual-variables(-duv) command
 
-    my $rlines = $self->scan_variable_usage();
+    my ( $rlines, $issue_type_string ) = $self->scan_variable_usage();
     return unless ( $rlines && @{$rlines} );
+
+    my $input_stream_name = get_input_stream_name();
 
     # output for multiple types
     my $output_string = <<EOM;
-Issue types are 'u'=unused 'r'=reused 's'=multi-sigil 'p'=package crossing
+$input_stream_name: output for --dump-unusual-variables
+$issue_type_string
 Line:Issue: Var: note
 EOM
     foreach my $item ( @{$rlines} ) {
@@ -9498,9 +9507,15 @@ EOM
 
 sub initialize_warn_variable_types {
 
+    my ( $wvt_in_args, $num_files ) = @_;
+
     # Initialization for:
     #    --warn-variable-types=s and
     #    --warn-variable-exclusion-list=s
+    # Given:
+    #   $wvt_in_args = true if the -wvt parameter was on the command line
+    #   $num_files = number of files on the command line
+
     %warn_variable_types            = ();
     %is_warn_variable_excluded_name = ();
 
@@ -9515,17 +9530,18 @@ sub initialize_warn_variable_types {
     #  r - reused scope
     #  s - reused sigil
     #  p - package boundaries crossed by lexical variables
+    #  u - only if -wvt and filename(s) are on command line; see git #151
 
     # Other controls:
     #  0 - none of the above
     #  1 - all of the above
     #  * - all of the above
-    #  u - [NOT AVAILABLE, use --dump-unusual-variables]
 
     # Example:
     #  -wvt='s r'  : do check types 's' and 'r'
 
     my @all_opts = qw(r s p);
+    if ( $wvt_in_args && $num_files ) { push @all_opts, 'u' }
     my %is_valid_option;
     @is_valid_option{@all_opts} = (1) x scalar(@all_opts);
 
@@ -9552,7 +9568,7 @@ sub initialize_warn_variable_types {
             return;
         }
         else {
-            # should be one of r,s,p - catch any error below
+            # should be one of r,s,p, maybe u - catch any error below
         }
     }
 
@@ -9567,9 +9583,16 @@ sub initialize_warn_variable_types {
                   "--$wvt_key cannot contain $opt mixed with other options\n";
             }
             elsif ( $opt eq 'u' ) {
-                Warn(<<EOM);
---$wvt_key=u is not available; use --dump-unusual-variables=u to find unused vars
+                if ( !$wvt_in_args ) {
+                    Warn(<<EOM);
+--$wvt_key=u is not allowed in a .perltidyrc configuration file
 EOM
+                }
+                else {
+                    Warn(<<EOM);
+--$wvt_key=u is only available when processing specific filenames
+EOM
+                }
             }
             else {
                 $msg .= "--$wvt_key has unexpected symbol: '$opt'\n";
@@ -9588,12 +9611,33 @@ EOM
         my @xl      = split_words($excluded_names);
         my $err_msg = EMPTY_STRING;
         foreach my $name (@xl) {
-            if ( $name !~ /^[\$\@\%]?\w+$/ ) {
+            if ( $name =~ /^([\$\@\%\*])?(\w+)(\*)?$/ ) {
+                my $left_star  = $1;
+                my $key        = $2;
+                my $right_star = $3;
+                if ( defined($left_star) ) {
+                    if ( $left_star ne '*' ) {
+                        $key       = $left_star . $key;
+                        $left_star = EMPTY_STRING;
+                    }
+                }
+
+                # Wildcard matching codes:
+                # 1 = no stars
+                # 2 = left star only
+                # 3 = right star only
+                # 4 = both left and right stars
+                my $code = 1;
+                $code += 1 if ($left_star);
+                $code += 2 if ($right_star);
+
+                $is_warn_variable_excluded_name{$key} = $code;
+            }
+            else {
                 $err_msg .= "-wvxl has unexpected name: '$name'\n";
             }
         }
         if ($err_msg) { Die($err_msg) }
-        @is_warn_variable_excluded_name{@xl} = (1) x scalar(@xl);
     }
     return;
 } ## end sub initialize_warn_variable_types
@@ -9607,28 +9651,79 @@ sub warn_variable_types {
     my $wv_option = $rOpts->{$wv_key};
     return unless (%warn_variable_types);
 
-    my $rwarnings = $self->scan_variable_usage( \%warn_variable_types );
+    my ( $rwarnings, $issue_type_string ) =
+      $self->scan_variable_usage( \%warn_variable_types );
     return unless ( $rwarnings && @{$rwarnings} );
 
-    my $message = "Begin scan for --$wv_key=$wv_option\n";
-    $message .= <<EOM;
-Issue types are 'r'=reused 's'=multi-sigil 'p'=package crossing
-Line:Issue: Var: note
-EOM
+    my @wildcard_prefixes;
+    foreach my $key ( keys %is_warn_variable_excluded_name ) {
+        my $val = $is_warn_variable_excluded_name{$key};
+        if ( $val > 1 ) {
+            push @wildcard_prefixes, [ $key, $val ];
+        }
+    }
 
-    # output the results, ignoring any excluded names
+    my $is_excluded = sub {
+
+        my $name = shift;
+
+        # check for direct match
+        if ( $is_warn_variable_excluded_name{$name} ) { return 1 }
+
+        # look for wildcard match
+        foreach (@wildcard_prefixes) {
+            my ( $key, $code ) = @{$_};
+            my $len_key  = length($key);
+            my $len_name = length($name);
+            next if ( $len_name < $len_key );
+
+            # code 2 = left star only
+            if ( $code == 2 ) {
+                if ( substr( $name, -$len_key, $len_key ) eq $key ) { return 1 }
+            }
+
+            # code 3 = right star only
+            elsif ( $code == 3 ) {
+                if ( substr( $name, 0, $len_key ) eq $key ) { return 1 }
+            }
+
+            # code 4 = both left and right stars
+            elsif ( $code == 4 ) {
+                if ( index( $name, $key, 0 ) >= 0 ) { return 1 }
+            }
+            else {
+                DEVEL_MODE && Fault("unexpected code '$code' for '$name'\n");
+            }
+        }
+        return;
+    };
+
+    # loop to form error messages
+    my $message_middle = EMPTY_STRING;
     foreach my $item ( @{$rwarnings} ) {
         my $name = $item->{name};
-        next if ( $is_warn_variable_excluded_name{$name} );
+
+        # ignore excluded names
+        next if ( $is_excluded->($name) );
+
         my $lno     = $item->{line_number};
         my $letter  = $item->{letter};
         my $keyword = $item->{keyword};
         my $note    = $item->{note};
         if ($note) { $note = ": $note" }
-        $message .= "$lno:$letter: $keyword $name$note\n";
+        $message_middle .= "$lno:$letter: $keyword $name$note\n";
     }
-    $message .= "End scan for --$wv_key=$wv_option:\n";
-    warning($message);
+
+    if ($message_middle) {
+        my $message = "Begin scan for --$wv_key=$wv_option\n";
+        $message .= <<EOM;
+$issue_type_string
+Line:Issue: Var: note
+EOM
+        $message .= $message_middle;
+        $message .= "End scan for --$wv_key=$wv_option:\n";
+        warning($message);
+    }
     return;
 } ## end sub warn_variable_types
 

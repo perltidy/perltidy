@@ -839,6 +839,9 @@ EOM
         @ARGV_saved = ( $ARGV[-2], $ARGV[-1] );
     }
 
+    # see if -wvt was entered on the command line before @ARGV is changed
+    my $wvt_in_args = grep { /-(wvt|warn-variable-types)=/ } @ARGV;
+
     #-------------------------
     # get command line options
     #-------------------------
@@ -974,7 +977,7 @@ EOM
     my ( $in_place_modify, $backup_extension, $delete_backup ) =
       $self->check_in_place_modify( $source_stream, $destination_stream );
 
-    Perl::Tidy::Formatter::check_options($rOpts);
+    Perl::Tidy::Formatter::check_options( $rOpts, $wvt_in_args, $num_files );
     Perl::Tidy::Tokenizer::check_options($rOpts);
     Perl::Tidy::VerticalAligner::check_options($rOpts);
     if ( $rOpts->{'format'} eq 'html' ) {
