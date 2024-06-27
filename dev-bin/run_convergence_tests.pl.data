@@ -12166,6 +12166,30 @@ run_sub ( ->$blah{ say "ok 5" ; }
 --space-terminal-semicolon
 --break-at-old-method-breakpoints
 
+==> b1476.in <==
+        $apply->configure(
+            -command => sub
+            {
+                get_button_values_from_panel();
+                execute_decors(0);
+                set_unsaved();
+            }
+        );
+
+        $apply->configure(
+            -command => sub
+            {
+                get_button_values_from_panel();
+                execute_decors(0);
+                set_unsaved();
+            },
+        );
+
+==> b1476.par <==
+--add-trailing-commas
+--want-trailing-commas='h'
+--delete-trailing-commas
+
 ==> b148.in <==
 # state 1
 @yydgoto=(

@@ -8251,6 +8251,23 @@ run_sub (
          ->$blah{ say "ok 5" ; } ) ;
 
 
+==> b1476 <==
+        $apply->configure(
+            -command => sub {
+                get_button_values_from_panel();
+                execute_decors(0);
+                set_unsaved();
+            },
+        );
+
+        $apply->configure(
+            -command => sub {
+                get_button_values_from_panel();
+                execute_decors(0);
+                set_unsaved();
+            },
+        );
+
 ==> b148 <==
 # state 1
 @yydgoto=(

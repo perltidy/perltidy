@@ -12729,7 +12729,7 @@ sub match_trailing_comma_rule {
                 # - an isolated fat comma is a match for type 'h'
                 || (   $fat_comma_count == 1
                     && $new_comma_count == 1
-                    && $if_add
+                    ## && $if_add ## removed to fix b1476
                     && $trailing_comma_style eq 'h' )
             )
           )
