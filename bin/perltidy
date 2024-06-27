@@ -6024,7 +6024,7 @@ warnings when perltidy is run on small snippets of code from within an editor.
 A companion flag, B<--warn-variable-exclusion-list=string>, or B<-wvxl=string>,
 can be used to skip warning checks for a list of variable names.  A leading
 and/or trailing '*' may be placed on any of these variable names to allow a
-partial match. For example
+partial match.
 
 For example,
 

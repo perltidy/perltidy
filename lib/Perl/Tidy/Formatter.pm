@@ -391,6 +391,7 @@ my (
     # INITIALIZER: sub initialize_warn_variable_types
     %warn_variable_types,
     %is_warn_variable_excluded_name,
+    @warn_variable_excluded_wildcards,
 
     # INITIALIZER: sub initialize_warn_mismatched_args
     %warn_mismatched_arg_types,
@@ -9516,8 +9517,9 @@ sub initialize_warn_variable_types {
     #   $wvt_in_args = true if the -wvt parameter was on the command line
     #   $num_files = number of files on the command line
 
-    %warn_variable_types            = ();
-    %is_warn_variable_excluded_name = ();
+    %warn_variable_types              = ();
+    %is_warn_variable_excluded_name   = ();
+    @warn_variable_excluded_wildcards = ();
 
     #----------------------------
     # Parse --warn-variable-types
@@ -9611,13 +9613,22 @@ EOM
         my @xl      = split_words($excluded_names);
         my $err_msg = EMPTY_STRING;
         foreach my $name (@xl) {
-            if ( $name =~ /^([\$\@\%\*])?(\w+)(\*)?$/ ) {
+            if ( $name =~ /^([\$\@\%\*])?(\w+)?(\*)?$/ ) {
                 my $left_star  = $1;
                 my $key        = $2;
                 my $right_star = $3;
                 if ( defined($left_star) ) {
                     if ( $left_star ne '*' ) {
-                        $key       = $left_star . $key;
+                        if ( defined($key) ) {
+
+                            # append sigil to the bareword
+                            $key = $left_star . $key;
+                        }
+                        else {
+
+                            # word not given: '$*' is ok but just '$' is not
+                            if ($right_star) { $key = $left_star }
+                        }
                         $left_star = EMPTY_STRING;
                     }
                 }
@@ -9630,8 +9641,15 @@ EOM
                 my $code = 1;
                 $code += 1 if ($left_star);
                 $code += 2 if ($right_star);
-
-                $is_warn_variable_excluded_name{$key} = $code;
+                if ( !defined($key) ) {
+                    $err_msg .= "-wvxl has unexpected name: '$name'\n";
+                }
+                else {
+                    $is_warn_variable_excluded_name{$key} = $code;
+                    if ( $code != 1 ) {
+                        push @warn_variable_excluded_wildcards, [ $key, $code ];
+                    }
+                }
             }
             else {
                 $err_msg .= "-wvxl has unexpected name: '$name'\n";
@@ -9641,6 +9659,50 @@ EOM
     }
     return;
 } ## end sub initialize_warn_variable_types
+
+sub wildcard_match {
+
+    my ( $name, $rwildcard_match_list ) = @_;
+
+    # Given:
+    #    $name = a string to test for a match
+    #    $rwildcard_match_list = a list of [key,code] pairs:
+    #        key  = a string to match
+    #        code = 2, 3, or 4 is match type (see comments below)
+    # Return:
+    #    true for a match
+    #    false for no match
+
+    # For example, key='$pack' with code=3 is short for '$pack*'
+    # which will match '$package', '$packer', etc
+
+    # Loop over all possible matchs
+    foreach ( @{$rwildcard_match_list} ) {
+        my ( $key, $code ) = @{$_};
+        my $len_key  = length($key);
+        my $len_name = length($name);
+        next if ( $len_name < $len_key );
+
+        # code 2 = left star only
+        if ( $code == 2 ) {
+            if ( substr( $name, -$len_key, $len_key ) eq $key ) { return 1 }
+        }
+
+        # code 3 = right star only
+        elsif ( $code == 3 ) {
+            if ( substr( $name, 0, $len_key ) eq $key ) { return 1 }
+        }
+
+        # code 4 = both left and right stars
+        elsif ( $code == 4 ) {
+            if ( index( $name, $key, 0 ) >= 0 ) { return 1 }
+        }
+        else {
+            DEVEL_MODE && Fault("unexpected code '$code' for '$name'\n");
+        }
+    }
+    return;
+} ## end sub wildcard_match
 
 sub warn_variable_types {
     my ($self) = @_;
@@ -9655,56 +9717,20 @@ sub warn_variable_types {
       $self->scan_variable_usage( \%warn_variable_types );
     return unless ( $rwarnings && @{$rwarnings} );
 
-    my @wildcard_prefixes;
-    foreach my $key ( keys %is_warn_variable_excluded_name ) {
-        my $val = $is_warn_variable_excluded_name{$key};
-        if ( $val > 1 ) {
-            push @wildcard_prefixes, [ $key, $val ];
-        }
-    }
-
-    my $is_excluded = sub {
-
-        my $name = shift;
-
-        # check for direct match
-        if ( $is_warn_variable_excluded_name{$name} ) { return 1 }
-
-        # look for wildcard match
-        foreach (@wildcard_prefixes) {
-            my ( $key, $code ) = @{$_};
-            my $len_key  = length($key);
-            my $len_name = length($name);
-            next if ( $len_name < $len_key );
-
-            # code 2 = left star only
-            if ( $code == 2 ) {
-                if ( substr( $name, -$len_key, $len_key ) eq $key ) { return 1 }
-            }
-
-            # code 3 = right star only
-            elsif ( $code == 3 ) {
-                if ( substr( $name, 0, $len_key ) eq $key ) { return 1 }
-            }
-
-            # code 4 = both left and right stars
-            elsif ( $code == 4 ) {
-                if ( index( $name, $key, 0 ) >= 0 ) { return 1 }
-            }
-            else {
-                DEVEL_MODE && Fault("unexpected code '$code' for '$name'\n");
-            }
-        }
-        return;
-    };
-
     # loop to form error messages
     my $message_middle = EMPTY_STRING;
     foreach my $item ( @{$rwarnings} ) {
         my $name = $item->{name};
 
         # ignore excluded names
-        next if ( $is_excluded->($name) );
+        if (
+            $is_warn_variable_excluded_name{$name}
+            || ( @warn_variable_excluded_wildcards
+                && wildcard_match( $name, \@warn_variable_excluded_wildcards ) )
+          )
+        {
+            next;
+        }
 
         my $lno     = $item->{line_number};
         my $letter  = $item->{letter};
@@ -9831,8 +9857,9 @@ sub dump_mixed_call_parens {
       sort { lc $a->{type} cmp lc $b->{type} || $a->{name} cmp $b->{name} }
       @mixed_counts;
 
-    my $output_string = <<EOM;
-counts with and without call parens made by --dump-mixed-call-parens
+    my $input_stream_name = get_input_stream_name();
+    my $output_string     = <<EOM;
+$input_stream_name: output for --dump-mixed-call-parens
 use -wcp=s and/or nwcp=s to find line numbers, where s is a string of words
 types are 'k'=builtin keyword 'U'=user sub  'w'=other word
 type:word:+count:-count
@@ -15219,11 +15246,7 @@ use constant DEBUG_SELF => 0;
 
 sub cross_check_call_args {
 
-    my ( $self, $warn_mode ) = @_;
-
-    # Input parameter:
-    #  $warn_mode = true  for --warn-mismatched-args
-    #  $warn_mode = false for --dump-mismatched-args
+    my ($self) = @_;
 
     # The current possible checks are indicated by these letters:
     # a = both method and non-method calls to a sub
@@ -15243,7 +15266,8 @@ sub cross_check_call_args {
 
     $self->initialize_try_3_cache();
 
-    if ($warn_mode) {
+    # re-initialize for non-dump mode
+    if ( !$rOpts->{'dump-mismatched-args'} ) {
         $ris_mismatched_call_type = \%warn_mismatched_arg_types;
         $mismatched_arg_undercount_cutoff =
           $rOpts->{'warn-mismatched-arg-undercount-cutoff'};
@@ -15647,7 +15671,7 @@ sub cross_check_call_args {
     #--------------------
     # Now look for issues
     #--------------------
-    my @warnings;
+    my @call_arg_warnings;
     my $max_shift_count_with_undercount = 0;
     my $number_of_undercount_warnings   = 0;
 
@@ -15698,7 +15722,7 @@ sub cross_check_call_args {
             my $str  = $self_name . '->call' . $ess1;
             my $note =
 "$num_self $str($lines_self_calls) and $num_direct call$ess2($lines_direct_calls)";
-            push @warnings,
+            push @call_arg_warnings,
               {
                 line_number     => $lno,
                 letter          => 'a',
@@ -15730,7 +15754,7 @@ sub cross_check_call_args {
                     && $shift_count_min eq $max_arg_count );
 
                 my $note = "indeterminate sub arg count";
-                push @warnings,
+                push @call_arg_warnings,
                   {
                     line_number     => $lno,
                     letter          => $letter,
@@ -15762,7 +15786,7 @@ sub cross_check_call_args {
                     $note =
 "excess args at $num_over_count of $total calls($lines_over_count)";
 
-                    push @warnings,
+                    push @call_arg_warnings,
                       {
                         line_number     => $lno,
                         letter          => $letter,
@@ -15797,7 +15821,7 @@ sub cross_check_call_args {
 "arg undercount at $num_under_count of $total calls($lines_under_count)";
 
                     $number_of_undercount_warnings++;
-                    push @warnings,
+                    push @call_arg_warnings,
                       {
                         line_number     => $lno,
                         letter          => $letter,
@@ -15813,21 +15837,24 @@ sub cross_check_call_args {
         }
     }
 
-    if (@warnings) {
-        @warnings = sort {
+    if (@call_arg_warnings) {
+        @call_arg_warnings = sort {
                  $a->{line_number} <=> $b->{line_number}
               || $a->{letter} cmp $b->{letter}
-        } @warnings;
+        } @call_arg_warnings;
     }
 
-    my $hint = EMPTY_STRING;
+    my $call_arg_hint = EMPTY_STRING;
     if ($number_of_undercount_warnings) {
         my $wmauc_min = $max_shift_count_with_undercount + 1;
-        $hint = <<EOM;
+        $call_arg_hint = <<EOM;
 Note: use -wmauc=$wmauc_min or greater to prevent undercount warnings in this file
 EOM
     }
-    return ( \@warnings, $hint );
+    return {
+        rcall_arg_warnings => \@call_arg_warnings,
+        call_arg_hint      => $call_arg_hint,
+    };
 } ## end sub cross_check_call_args
 
 sub stringify_line_range {
@@ -15972,8 +15999,10 @@ sub warn_mismatched_args {
     # - warn-mismatched-arg-undercount-cutoff
     # - warn-mismatched-arg-overcount-cutoff
 
-    my ( $rwarnings, $hint ) = $self->cross_check_call_args(1);
-    return unless ( $rwarnings && @{$rwarnings} );
+    my $rhash              = $self->cross_check_call_args();
+    my $rcall_arg_warnings = $rhash->{rcall_arg_warnings};
+    my $call_arg_hint      = $rhash->{call_arg_hint};
+    return unless ( $rcall_arg_warnings && @{$rcall_arg_warnings} );
 
     my $wma_key       = 'warn-mismatched-args';
     my $output_string = "Begin scan for --$wma_key\n";
@@ -15983,7 +16012,7 @@ Line:Issue:Name:#args:Min:Max: note
 EOM
 
     # output the results, ignoring any excluded names
-    foreach my $item ( @{$rwarnings} ) {
+    foreach my $item ( @{$rcall_arg_warnings} ) {
         my $lno             = $item->{line_number};
         my $letter          = $item->{letter};
         my $name            = $item->{name};
@@ -16000,7 +16029,7 @@ EOM
         $output_string .=
 "$lno:$letter:$name:$shift_count:$min_arg_count:$max_arg_count: $note\n";
     }
-    if ($hint) { $output_string .= $hint }
+    if ($call_arg_hint) { $output_string .= $call_arg_hint }
     $output_string .= "End scan for --$wma_key\n";
     warning($output_string);
 
@@ -16011,14 +16040,19 @@ sub dump_mismatched_args {
     my ($self) = @_;
 
     # process a --dump-mismatched-args command
+    my $rhash              = $self->cross_check_call_args();
+    my $rcall_arg_warnings = $rhash->{rcall_arg_warnings};
+    my $call_arg_hint      = $rhash->{call_arg_hint};
 
-    my ( $rwarnings, $hint ) = $self->cross_check_call_args(0);
-    return unless ( $rwarnings && @{$rwarnings} );
-    my $output_string = <<EOM;
+    return unless ( $rcall_arg_warnings && @{$rcall_arg_warnings} );
+
+    my $input_stream_name = get_input_stream_name();
+    my $output_string     = <<EOM;
+$input_stream_name: output for --dump-mismatched-args
 Issue types 'a'=arrow mismatch 'u'=undercount 'o'=overcount 'i'=indeterminate
 Line:Issue:Name:#args:Min:Max: note
 EOM
-    foreach my $item ( @{$rwarnings} ) {
+    foreach my $item ( @{$rcall_arg_warnings} ) {
         my $lno             = $item->{line_number};
         my $letter          = $item->{letter};
         my $name            = $item->{name};
