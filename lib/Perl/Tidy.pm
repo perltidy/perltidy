@@ -930,6 +930,7 @@ EOM
         dump-unusual-variables
         dump-mixed-call-parens
         dump-mismatched-args
+        dump-mismatched-returns
         )
       )
     {
@@ -3722,6 +3723,7 @@ sub generate_options {
     $add_option->( 'warn-mismatched-arg-undercount-cutoff', 'wmauc', '=i' );
     $add_option->( 'warn-mismatched-arg-overcount-cutoff',  'wmaoc', '=i' );
     $add_option->( 'warn-mismatched-arg-exclusion-list',    'wmaxl', '=s' );
+    $add_option->( 'warn-mismatched-returns',               'wmr',   '!' );
 
     $add_option->( 'add-interbracket-arrows',       'aia', '!' );
     $add_option->( 'delete-interbracket-arrows',    'dia', '!' );
@@ -3741,6 +3743,7 @@ sub generate_options {
     $add_option->( 'dump-integer-option-range',       'dior',  '!' );
     $add_option->( 'dump-long-names',                 'dln',   '!' );
     $add_option->( 'dump-mismatched-args',            'dma',   '!' );
+    $add_option->( 'dump-mismatched-returns',         'dmr',   '!' );
     $add_option->( 'dump-mixed-call-parens',          'dmcp',  '!' );
     $add_option->( 'dump-options',                    'dop',   '!' );
     $add_option->( 'dump-profile',                    'dpro',  '!' );
@@ -4659,6 +4662,7 @@ EOM
                 #  dump-integer-option-range
                 #  dump-long-names
                 #  dump-mismatched-args
+                #  dump-mismatched-returns
                 #  dump-mixed-call-parens
                 #  dump-options
                 #  dump-profile
