@@ -13693,7 +13693,7 @@ BEGIN {
     @is_keyword_returning_scalar{@q} = (1) x scalar(@q);
 }
 
-sub count_list_args {
+sub count_list_elements {
     my ( $self, $rarg_list ) = @_;
 
     # Given:
@@ -13825,9 +13825,13 @@ sub count_list_args {
     while ( ++$KK < $K_list_end ) {
 
         my $type = $rLL->[$KK]->[_TYPE_];
-        next if ( $type eq 'b' );
-        next if ( $type eq '#' );
-        last if ( $type eq ';' );
+        next   if ( $type eq 'b' );
+        next   if ( $type eq '#' );
+        last   if ( $type eq ';' );
+        return if ( $type eq '..' );
+
+        # i.e., ($str=~/(\d+)(\w+)/) may be a list of n items
+        return if ( $type eq '=~' );
         $KK_last_last_nb = $KK_last_nb;
         $KK_last_nb      = $KK_this_nb;
         $KK_this_nb      = $KK;
@@ -13856,27 +13860,44 @@ sub count_list_args {
                                 next;
                             }
                         }
+
+                        # look for something like return (@list), which will
+                        # not be marked as a list due to lack of a comma
+                        my $KK_n = $self->K_next_code($KK);
+                        if ($KK_n) {
+                            my $type_KK_n = $rLL->[$KK_n]->[_TYPE_];
+                            if ( $type_KK_n eq 't' || $type_KK_n eq 'i' ) {
+                                my $sigil =
+                                  substr( $rLL->[$KK_n]->[_TOKEN_], 0, 1 );
+                                if ( $sigil eq '@' || $sigil eq '%' ) { return }
+                            }
+                        }
                     }
 
                     # a list..
                     else {
 
                         # Descend into a paren list in some special cases:
-                        if ( $is_return_list && $KK_last_nb ) {
+                        if ($KK_last_nb) {
 
-                            # 'return ('
-                            my $ok = $rLL->[$KK_last_nb]->[_TOKEN_] eq 'return'
-                              && $rLL->[$KK_last_nb]->[_TYPE_] eq 'k';
+                            my $token_last = $rLL->[$KK_last_nb]->[_TOKEN_];
+                            my $type_last  = $rLL->[$KK_last_nb]->[_TYPE_];
+
+                            # 'return (' or 'my ('
+                            my $ok = $type_last eq 'k'
+                              && ( $token_last eq 'return'
+                                || $token_last eq 'my' );
+
+                            # ',('
+                            $ok ||= $type_last eq ',';
 
                             # 'wantarray ? ('
                             $ok ||=
                                  $KK_last_last_nb
+                              && $is_return_list
                               && $rLL->[$KK_last_nb]->[_TYPE_] eq '?'
                               && $rLL->[$KK_last_last_nb]->[_TOKEN_] eq
                               'wantarray';
-
-                            # ',('
-                            $ok ||= $rLL->[$KK_last_nb]->[_TYPE_] eq ',';
 
                             if ($ok) {
                                 push @seqno_stack, $seqno;
@@ -13914,6 +13935,11 @@ sub count_list_args {
                 {
                     push @seqno_stack, $seqno;
                     next;
+                }
+
+                # give up in a return list
+                if ($is_return_list) {
+                    return;
                 }
 
                 # otherwise skip past this ternary
@@ -14054,19 +14080,21 @@ sub count_list_args {
 
     # return list counts include ranges of all returns in a sub
     if ($is_return_list) {
+        if ( !defined($shift_count_min_input)
+            || $arg_count < $shift_count_min_input )
+        {
+            $rarg_list->{K_shift_count_min} = $K_list_start;
+            $arg_count_min = $arg_count;
+        }
+        else {
+            $arg_count_min = $shift_count_min_input;
+        }
+
         if ( $arg_count >= $shift_count_max_input ) {
             $rarg_list->{K_shift_count_max} = $K_list_start;
         }
         else {
             $arg_count = $shift_count_max_input;
-        }
-        if ( !defined($shift_count_min_input)
-            || $arg_count < $shift_count_min_input )
-        {
-            $rarg_list->{K_shift_count_min} = $K_list_start;
-        }
-        else {
-            $arg_count_min = $shift_count_min_input;
         }
 ##      $arg_count     = max( $arg_count, $shift_count_max_input );
 ##      $arg_count_min = min( $arg_count_min, $shift_count_min_input )
@@ -14077,7 +14105,7 @@ sub count_list_args {
     $rarg_list->{shift_count_max} = $arg_count;
     return;
 
-} ## end sub count_list_args
+} ## end sub count_list_elements
 
 # A constant to limit backward searches
 use constant MANY_TOKENS => 100;
@@ -14370,7 +14398,7 @@ sub count_sub_input_args {
         my $seqno_list = $rLL->[$Ksub_p]->[_TYPE_SEQUENCE_];
         $item->{seqno_list}   = $seqno_list;
         $item->{is_signature} = 1;
-        $self->count_list_args($item);
+        $self->count_list_elements($item);
 
         # We are finished for a signature list
         return;
@@ -14436,7 +14464,7 @@ sub count_sub_input_args {
                     $item->{is_signature}    = 0;
                     $item->{shift_count_min} = $shift_count;
                     $item->{shift_count_max} = $shift_count;
-                    $self->count_list_args($item);
+                    $self->count_list_elements($item);
 
                     # NOTE: this could disagree with $_[n] usage; we
                     # ignore this for now.
@@ -14798,7 +14826,7 @@ sub count_sub_return_args {
             last;
         }
         $rhash->{K_list_start} = $K_return;
-        $self->count_list_args($rhash);
+        $self->count_list_elements($rhash);
         last if ( !defined( $rhash->{shift_count_max} ) );
     }
     $item->{return_count_min}   = $rhash->{shift_count_min};
@@ -14815,7 +14843,7 @@ sub count_sub_return_args {
     return;
 } ## end sub count_sub_return_args
 
-sub count_return_args_wanted {
+sub count_return_values_wanted {
     my ( $self, $item ) = @_;
 
     # Given: $item = a hash ref with
@@ -14887,6 +14915,9 @@ sub count_return_args_wanted {
     }
 
     # look for '='
+    # Note that this ignores a return via a slice, like
+    #          ($v1,$v2) =(f(x))[1,3]
+    # because this is an array return, and we just want explicit lists
     if ( !$K_equals || $rLL->[$K_equals]->[_TYPE_] ne '=' ) {
         return;
     }
@@ -14904,14 +14935,14 @@ sub count_return_args_wanted {
     return unless ($seqno_lhs);
     my $rhash = {};
     $rhash->{seqno_list} = $seqno_lhs;
-    $self->count_list_args($rhash);
+    $self->count_list_elements($rhash);
     my $return_count_wanted = $rhash->{shift_count_max};
     if ( DEBUG_RETURN_COUNT > 1 ) {
         print "DEBUG_RETURN_COUNT: want $return_count_wanted\n";
     }
     $item->{return_count_wanted} = $return_count_wanted;
     return;
-} ## end sub count_return_args_wanted
+} ## end sub count_return_values_wanted
 
 sub sub_def_info_maker {
 
@@ -15173,12 +15204,12 @@ sub update_sub_call_paren_info {
             $item->{is_signature}    = 0;
             $item->{shift_count_min} = 0;
             $item->{self_name}       = EMPTY_STRING;
-            $self->count_list_args($item);
+            $self->count_list_elements($item);
             $arg_count = $item->{shift_count_min};
         }
 
         # get the return count expected for this call by scanning to the left
-        $self->count_return_args_wanted($item);
+        $self->count_return_values_wanted($item);
 
         # update the hash of info for this item
         my $line_number = $rLL->[$Ko]->[_LINE_INDEX_] + 1;
@@ -15278,6 +15309,10 @@ sub update_sub_call_paren_info {
 
 use constant DEBUG_SELF => 0;
 
+# FIXME: this should be 0 or 1 for testing, 2 for normal work
+use constant RETURN_COUNT_LOWER_BOUND => 0;
+##use constant RETURN_COUNT_LOWER_BOUND => 2;
+
 sub cross_check_call_args {
 
     my ($self) = @_;
@@ -15298,7 +15333,7 @@ sub cross_check_call_args {
     my $mismatched_arg_overcount_cutoff   = 0;
     my $ris_mismatched_call_excluded_name = {};
 
-    my %do_mismatched_return_type = ( 'x' => 1, 'f' => 1 );
+    my %do_mismatched_return_type = ( 'o' => 1, 'u' => 1 );
 
     $self->initialize_self_call_cache();
 
@@ -15718,11 +15753,15 @@ sub cross_check_call_args {
         #--------------------------------------------
         # compare caller/sub return counts if posible
         #--------------------------------------------
-        if (   defined($return_count_wanted)
+        if (   $return_count_wanted
             && defined($return_count_min)
             && defined($return_count_max)
-            && $return_count_wanted > 1 )
+            && $return_count_max >= RETURN_COUNT_LOWER_BOUND
+            && ( $return_count_wanted > 1 || $return_count_min > 1 ) )
         {
+            my $return_count_min_plus =
+              $return_count_min > 1 ? $return_count_min : $return_count_max;
+
             my $max = $common_hash{$key}->{want_count_max};
             my $min = $common_hash{$key}->{want_count_min};
             if ( !defined($max) || $return_count_wanted > $max ) {
@@ -15732,13 +15771,13 @@ sub cross_check_call_args {
                 $common_hash{$key}->{want_count_min} = $return_count_wanted;
             }
 
-            my $excess = $return_count_wanted - $return_count_max;
-            if ( $excess > 0 ) {
+            if ( $return_count_wanted > $return_count_max ) {
                 push @{ $common_hash{$key}->{over_count_return} }, $rcall_item;
             }
-            if ( $excess < 0 ) {
-
-                # NOTE: not yet checking min
+            elsif ( $return_count_wanted < $return_count_min_plus ) {
+                push @{ $common_hash{$key}->{under_count_return} }, $rcall_item;
+            }
+            elsif ( $return_count_min_plus != $return_count_max ) {
                 push @{ $common_hash{$key}->{under_count_return} }, $rcall_item;
             }
             else { }
@@ -15933,13 +15972,11 @@ sub cross_check_call_args {
             }
 
             #--------------------------------------------
-            # return issue 'x': excess return args wanted
+            # return issue 'o': excess return args wanted
             #--------------------------------------------
             if ($num_over_count_return) {
-                my $letter = 'x';
-                if (   $do_mismatched_return_type{$letter}
-                    && $return_count_max >= 2 )    ##FIXME
-                {
+                my $letter = 'o';
+                if ( $do_mismatched_return_type{$letter} ) {
 
                     my $lines_over_count =
                       stringify_line_range($rover_count_return);
@@ -15968,13 +16005,11 @@ sub cross_check_call_args {
             }
 
             #-------------------------------------------
-            # return issue 'f': fewer return args wanted
+            # return issue 'u': fewer return args wanted
             #-------------------------------------------
             if ($num_under_count_return) {
-                my $letter = 'f';
-                if (   $do_mismatched_return_type{$letter}
-                    && $return_count_max >= 2 )    ##FIXME
-                {
+                my $letter = 'u';
+                if ( $do_mismatched_return_type{$letter} ) {
 
                     my $lines_under_count =
                       stringify_line_range($runder_count_return);
@@ -15986,7 +16021,7 @@ sub cross_check_call_args {
                           $rLL->[$K_return_count_max]->[_LINE_INDEX_] + 1;
                     }
                     $note =
-"fewer values wanted at $num_under_count_return of $total calls($lines_under_count)";
+"fewer than max values wanted at $num_under_count_return of $total calls($lines_under_count)";
 
                     push @return_warnings,
                       {
@@ -16235,7 +16270,7 @@ sub warn_mismatched_returns {
     my $wmr_key       = 'warn-mismatched-returns';
     my $output_string = <<EOM;
 Begin scan for --$wmr_key
-Issue types 'f'=fewer wanted 'x'=excess wanted
+Issue types 'u'=under-want 'o'=over-want
 Line:Issue:Name:#Returned:Min_wanted:Max_wanted: note
 EOM
     foreach my $item ( @{$return_warnings} ) {
@@ -16312,7 +16347,7 @@ sub dump_mismatched_returns {
     my $input_stream_name = get_input_stream_name();
     my $output_string     = <<EOM;
 $input_stream_name: output for --dump-mismatched-returns
-Issue types 'u'=undercount 'o'=overcount
+Issue types 'u'=under-want 'o'=over-want
 Line:Issue:Name:#Returned:Min_wanted:Max_wanted: note
 EOM
     foreach my $item ( @{$return_warnings} ) {
