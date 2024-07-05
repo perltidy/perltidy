@@ -14879,14 +14879,23 @@ sub count_return_values_wanted {
     my $seqno_list = $item->{seqno_list};
     return unless ($seqno_list);
 
-    # Give up at a call chain like:
+    # Give up if call is followed by a bound operator, for example
     #     my ( $fh, $tmpfile ) = $self->io()->tempfile( DIR => $dir );
     #                                      |
     #                                      ^--$Kc
     my $rLL  = $self->[_rLL_];
     my $Kc   = $self->[_K_closing_container_]->{$seqno_list};
     my $Kc_n = $self->K_next_code($Kc);
-    if ( $Kc_n && $rLL->[$Kc_n]->[_TYPE_] eq '->' ) { return }
+    if ($Kc_n) {
+        my $type_n = $rLL->[$Kc_n]->[_TYPE_];
+        my $ok     = $type_n eq ';' || $is_closing_type{$type_n};
+        if ( !$ok && $type_n eq 'k' ) {
+            my $token_n = $rLL->[$Kc_n]->[_TOKEN_];
+            $ok ||= $is_if_unless{$token_n};
+            $ok ||= $is_and_or{$token_n};
+        }
+        return unless $ok;
+    }
 
     my $Ko   = $self->[_K_opening_container_]->{$seqno_list};
     my $K_m  = $self->K_previous_code($Ko);
@@ -15348,10 +15357,6 @@ sub update_sub_call_paren_info {
 
 use constant DEBUG_SELF => 0;
 
-# FIXME: this should be 1 for testing, 2 for normal work
-use constant RETURN_COUNT_LOWER_BOUND => 1;
-##use constant RETURN_COUNT_LOWER_BOUND => 2;
-
 sub cross_check_call_args {
 
     my ($self) = @_;
@@ -15804,10 +15809,10 @@ sub cross_check_call_args {
           :                            1;
 
         my $rhs_ok =
-            !defined($rK_return_list)                    ? 0
-          : !defined($return_count_max)                  ? -1
-          : $return_count_max < RETURN_COUNT_LOWER_BOUND ? 0
-          :                                                1;
+            !defined($rK_return_list)   ? 0
+          : !defined($return_count_max) ? -1
+          : $return_count_max < 1       ? 0
+          :                               1;
 
         next if ( $lhs_ok + $rhs_ok <= 0 );
 
