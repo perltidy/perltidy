@@ -397,6 +397,9 @@ my (
     %warn_mismatched_arg_types,
     %is_warn_mismatched_arg_excluded_name,
 
+    # INITIALIZER: sub initialize_warn_mismatched_returns
+    %warn_mismatched_return_types,
+
     # regex patterns for text identification.
     # Most can be configured by user parameters.
     # Most are initialized in a sub make_**_pattern during configuration.
@@ -1502,6 +1505,7 @@ sub check_options {
     initialize_warn_variable_types( $wvt_in_args, $num_files );
 
     initialize_warn_mismatched_args();
+    initialize_warn_mismatched_returns();
 
     make_bli_pattern();
 
@@ -13846,6 +13850,13 @@ sub count_list_elements {
                     # not a list..
                     if ( !$self->is_list_by_seqno($seqno) ) {
 
+                        # always enter a container following 'return', as in:
+                        #   return (find_sub($subname) =~ /^(.*):(\d+)-(\d+)$/);
+                        if ( $is_return_list && $KK_last_nb == $K_list_start ) {
+                            push @seqno_stack, $seqno;
+                            next;
+                        }
+
                         # enter a list slice, such as '(caller)[1,2]'
                         my $Kc = $self->[_K_closing_container_]->{$seqno};
                         if ( !$Kc ) { $backup_on_last->(); last }
@@ -15378,8 +15389,7 @@ sub cross_check_call_args {
         $ris_mismatched_call_excluded_name =
           \%is_warn_mismatched_arg_excluded_name;
 
-        # TODO: update for future --warn options
-        ## %do_mismatched_return_type = ...
+        %do_mismatched_return_type = %warn_mismatched_return_types;
     }
 
     # hardwired name exclusions
@@ -16240,15 +16250,15 @@ sub initialize_warn_mismatched_args {
     #--------------------------------------------
     # Parse --warn-mismatched-arg-exclusion-list
     #--------------------------------------------
-    my $wmcxl_key      = 'warn-mismatched-arg-exclusion-list';
-    my $excluded_names = $rOpts->{$wmcxl_key};
+    my $wmaxl_key      = 'warn-mismatched-arg-exclusion-list';
+    my $excluded_names = $rOpts->{$wmaxl_key};
     if ($excluded_names) {
         $excluded_names =~ s/,/ /g;
         my @xl      = split_words($excluded_names);
         my $err_msg = EMPTY_STRING;
         foreach my $name (@xl) {
             if ( $name !~ /^[\$\@\%]?\w+$/ ) {
-                $err_msg .= "-wmcxl has unexpected name: '$name'\n";
+                $err_msg .= "-wmaxl has unexpected name: '$name'\n";
             }
         }
         if ($err_msg) { Die($err_msg) }
@@ -16256,6 +16266,96 @@ sub initialize_warn_mismatched_args {
     }
     return;
 } ## end sub initialize_warn_mismatched_args
+
+sub initialize_warn_mismatched_returns {
+
+    # Initialization for:
+    #    --warn-mismatched-returns
+    #    --warn-mismatched-return-types=s
+    %warn_mismatched_return_types = ();
+    return unless $rOpts->{'warn-mismatched-returns'};
+
+    # Note: coding here is similar to sub initialize_warn_variable_types
+
+    #-----------------------------------
+    # Parse --warn-mismatched-return-types
+    #-----------------------------------
+    my $wmrt_key    = 'warn-mismatched-return-types';
+    my $wmrt_option = $rOpts->{$wmrt_key};
+    $wmrt_option = '1' unless defined($wmrt_option);
+
+    # The -indent-only option skips production of data structures needed by
+    # the --warn-mismatched-returns
+    if ( $rOpts->{'indent-only'} ) {
+        my $wma_key = 'warn-mismatched-returns';
+        Warn("Note: '--$wma_key' is ignored if '--indent-only' is set\n");
+        return;
+    }
+
+    # Specific options:
+    #  x - no return seen
+    #  o - overcount
+    #  u - undercount
+
+    # Other controls:
+    #  0 - none of the above
+    #  1 - all of the above
+    #  * - all of the above
+
+    # Example:
+    #  -wmrt='a o' : do check types 'a' and 'o'
+    #  -wmrt='x'   : do check type 'x'
+
+    my @all_opts = qw(x o u);
+    my %is_valid_option;
+    @is_valid_option{@all_opts} = (1) x scalar(@all_opts);
+
+    # allow comma separators
+    $wmrt_option =~ s/,/ /g;
+
+    my @opts = split_words($wmrt_option);
+    return unless (@opts);
+
+    # check a single item
+    if ( @opts == 1 ) {
+        my $opt = $opts[0];
+
+        # Split a single option of bundled letters like 'ao' into 'a o'
+        # but give a warning because this may not be allowed in the future
+        if ( length($opt) > 1 ) {
+            @opts = split //, $opt;
+            Warn("Please use space-separated letters in --$wmrt_key\n");
+        }
+        elsif ( $opt eq '*' || $opt eq '1' ) {
+            @opts = keys %is_valid_option;
+        }
+        elsif ( $opt eq '0' ) {
+            return;
+        }
+        else {
+            # should be one of x o u - catch any error below
+        }
+    }
+
+    my $msg = EMPTY_STRING;
+    foreach my $opt (@opts) {
+        if ( $is_valid_option{$opt} ) {
+            $warn_mismatched_return_types{$opt} = 1;
+        }
+        else {
+            if ( $opt =~ /^[01\*]$/ ) {
+                $msg .=
+                  "--$wmrt_key cannot contain $opt mixed with other options\n";
+            }
+            else {
+                $msg .= "--$wmrt_key has unexpected symbol: '$opt'\n";
+            }
+        }
+    }
+    if ($msg) { Die($msg) }
+
+    return;
+} ## end sub initialize_warn_mismatched_returns
 
 sub warn_mismatched {
     my ($self) = @_;

@@ -3724,6 +3724,7 @@ sub generate_options {
     $add_option->( 'warn-mismatched-arg-overcount-cutoff',  'wmaoc', '=i' );
     $add_option->( 'warn-mismatched-arg-exclusion-list',    'wmaxl', '=s' );
     $add_option->( 'warn-mismatched-returns',               'wmr',   '!' );
+    $add_option->( 'warn-mismatched-return-types',          'wmrt',  '=s' );
 
     $add_option->( 'add-interbracket-arrows',       'aia', '!' );
     $add_option->( 'delete-interbracket-arrows',    'dia', '!' );
