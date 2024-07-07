@@ -866,6 +866,7 @@ EOM
             'warn-variable-types'                   => [ '0', '1' ],
             'warn-mismatched-arg-types'             => [ '0', '1' ],
             'warn-mismatched-arg-undercount-cutoff' => [ 0,   5 ],
+            'warn-mismatched-return-types'          => [ '0', '1' ],
 
             'space-backslash-quote'         => [ 0, 2 ],
             'block-brace-tightness'         => [ 0, 2 ],

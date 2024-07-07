@@ -389,16 +389,16 @@ my (
     %call_paren_style,
 
     # INITIALIZER: sub initialize_warn_variable_types
-    %warn_variable_types,
-    %is_warn_variable_excluded_name,
-    @warn_variable_excluded_wildcards,
+    $rwarn_variable_types,
+    $ris_warn_variable_excluded_name,
 
     # INITIALIZER: sub initialize_warn_mismatched_args
-    %warn_mismatched_arg_types,
-    %is_warn_mismatched_arg_excluded_name,
+    $rwarn_mismatched_arg_types,
+    $ris_warn_mismatched_arg_excluded_name,
 
     # INITIALIZER: sub initialize_warn_mismatched_returns
-    %warn_mismatched_return_types,
+    $rwarn_mismatched_return_types,
+    $ris_warn_mismatched_return_excluded_name,
 
     # regex patterns for text identification.
     # Most can be configured by user parameters.
@@ -1504,8 +1504,7 @@ sub check_options {
 
     initialize_warn_variable_types( $wvt_in_args, $num_files );
 
-    initialize_warn_mismatched_args();
-    initialize_warn_mismatched_returns();
+    initialize_warn_mismatched();
 
     make_bli_pattern();
 
@@ -6627,7 +6626,7 @@ EOM
     # Act on -warn-variable-types if requested and the logger is available
     # (the logger is deactivated during iterations)
     $self->warn_variable_types()
-      if ( %warn_variable_types
+      if ( %{$rwarn_variable_types}
         && $self->[_logger_object_] );
 
     if (   $rOpts->{'warn-mismatched-args'}
@@ -8713,7 +8712,6 @@ sub scan_variable_usage {
     my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
     my $ris_sub_block        = $self->[_ris_sub_block_];
     my $K_closing_container  = $self->[_K_closing_container_];
-    my $rK_next_seqno_by_K   = $self->[_rK_next_seqno_by_K_];
 
     my %is_valid_sigil = ( '$' => 1, '@' => 1, '%' => 1 );
 
@@ -9522,29 +9520,17 @@ EOM
     return;
 } ## end sub dump_unusual_variables
 
-sub initialize_warn_variable_types {
+sub initialize_warn_hash {
+    my ( $long_name, $default, $rall_opts, $wvt_in_args ) = @_;
 
-    my ( $wvt_in_args, $num_files ) = @_;
-
-    # Initialization for:
-    #    --warn-variable-types=s and
-    #    --warn-variable-exclusion-list=s
     # Given:
-    #   $wvt_in_args = true if the -wvt parameter was on the command line
-    #   $num_files = number of files on the command line
+    #   $long_name   = full option name
+    #   $default     = default value
+    #   $rall_opts   = all possible options
+    #   $wvt_in_args = special flag for --warn-variable-types only
+    # Return the corresponding option hash
 
-    %warn_variable_types              = ();
-    %is_warn_variable_excluded_name   = ();
-    @warn_variable_excluded_wildcards = ();
-
-    #----------------------------
-    # Parse --warn-variable-types
-    #----------------------------
-    my $wvt_key    = 'warn-variable-types';
-    my $wvt_option = $rOpts->{$wvt_key};
-    return unless ($wvt_option);
-
-    # Specific options:
+    # Example of all possible options for --warn-variable-types=s
     #  r - reused scope
     #  s - reused sigil
     #  p - package boundaries crossed by lexical variables
@@ -9558,16 +9544,27 @@ sub initialize_warn_variable_types {
     # Example:
     #  -wvt='s r'  : do check types 's' and 'r'
 
-    my @all_opts = qw(r s p);
-    if ( $wvt_in_args && $num_files ) { push @all_opts, 'u' }
+    # Other warn options use different letters
+
+    my $rwarn_hash = {};
+
+    if ( !$rall_opts || !@{$rall_opts} ) {
+        Fault("all_options is empty for call with option $long_name\n");
+        return $rwarn_hash;
+    }
+
+    my $user_option_string = $rOpts->{$long_name};
+    if ( !defined($user_option_string) ) { $user_option_string = $default }
+    return $rwarn_hash unless ($user_option_string);
+
     my %is_valid_option;
-    @is_valid_option{@all_opts} = (1) x scalar(@all_opts);
+    @is_valid_option{ @{$rall_opts} } = (1) x scalar( @{$rall_opts} );
 
     # allow comma separators
-    $wvt_option =~ s/,/ /g;
+    $user_option_string =~ s/,/ /g;
 
-    my @opts = split_words($wvt_option);
-    return unless (@opts);
+    my @opts = split_words($user_option_string);
+    return $rwarn_hash unless (@opts);
 
     # check a single item
     if ( @opts == 1 ) {
@@ -9577,13 +9574,13 @@ sub initialize_warn_variable_types {
         # but give a warning because this may not be allowed in the future
         if ( length($opt) > 1 ) {
             @opts = split //, $opt;
-            Warn("Please use space-separated letters in --$wvt_key\n");
+            Warn("Please use space-separated letters in --$long_name\n");
         }
         elsif ( $opt eq '*' || $opt eq '1' ) {
             @opts = keys %is_valid_option;
         }
         elsif ( $opt eq '0' ) {
-            return;
+            return $rwarn_hash;
         }
         else {
             # should be one of r,s,p, maybe u - catch any error below
@@ -9593,37 +9590,41 @@ sub initialize_warn_variable_types {
     my $msg = EMPTY_STRING;
     foreach my $opt (@opts) {
         if ( $is_valid_option{$opt} ) {
-            $warn_variable_types{$opt} = 1;
+            $rwarn_hash->{$opt} = 1;
         }
         else {
             if ( $opt =~ /^[01\*]$/ ) {
                 $msg .=
-                  "--$wvt_key cannot contain $opt mixed with other options\n";
+                  "--$long_name cannot contain $opt mixed with other options\n";
             }
-            elsif ( $opt eq 'u' ) {
+
+            # Special check for -wvt
+            elsif ( $opt eq 'u' && $long_name eq 'warn-variable-types' ) {
                 if ( !$wvt_in_args ) {
                     Warn(<<EOM);
---$wvt_key=u is not allowed in a .perltidyrc configuration file
+--$long_name=u is not allowed in a .perltidyrc configuration file
 EOM
                 }
                 else {
                     Warn(<<EOM);
---$wvt_key=u is only available when processing specific filenames
+--$long_name=u is only available when processing specific filenames
 EOM
                 }
             }
+
             else {
-                $msg .= "--$wvt_key has unexpected symbol: '$opt'\n";
+                $msg .= "--$long_name has unexpected symbol: '$opt'\n";
             }
         }
     }
     if ($msg) { Die($msg) }
+    return $rwarn_hash;
+} ## end sub initialize_warn_hash
 
-    #-------------------------------------
-    # Parse --warn-variable-exclusion-list
-    #-------------------------------------
-    my $wvxl_key       = 'warn-variable-exclusion-list';
-    my $excluded_names = $rOpts->{$wvxl_key};
+sub make_excluded_name_hash {
+    my ($option_name)       = @_;
+    my $rexcluded_name_hash = {};
+    my $excluded_names      = $rOpts->{$option_name};
     if ($excluded_names) {
         $excluded_names =~ s/,/ /g;
         my @xl      = split_words($excluded_names);
@@ -9658,23 +9659,20 @@ EOM
                 $code += 1 if ($left_star);
                 $code += 2 if ($right_star);
                 if ( !defined($key) ) {
-                    $err_msg .= "-wvxl has unexpected name: '$name'\n";
+                    $err_msg .= "--$option_name has unexpected name: '$name'\n";
                 }
                 else {
-                    $is_warn_variable_excluded_name{$key} = $code;
-                    if ( $code != 1 ) {
-                        push @warn_variable_excluded_wildcards, [ $key, $code ];
-                    }
+                    $rexcluded_name_hash->{$key} = $code;
                 }
             }
             else {
-                $err_msg .= "-wvxl has unexpected name: '$name'\n";
+                $err_msg .= "--$option_name has unexpected name: '$name'\n";
             }
         }
         if ($err_msg) { Die($err_msg) }
     }
-    return;
-} ## end sub initialize_warn_variable_types
+    return $rexcluded_name_hash;
+} ## end sub make_excluded_name_hash
 
 sub wildcard_match {
 
@@ -9720,6 +9718,65 @@ sub wildcard_match {
     return;
 } ## end sub wildcard_match
 
+sub initialize_warn_variable_types {
+
+    my ( $wvt_in_args, $num_files ) = @_;
+
+    # Initialization for:
+    #    --warn-variable-types=s and
+    #    --warn-variable-exclusion-list=s
+    # Given:
+    #   $wvt_in_args = true if the -wvt parameter was on the command line
+    #   $num_files = number of files on the command line
+
+    my @all_opts = qw(r s p);
+    if ( $wvt_in_args && $num_files ) { push @all_opts, 'u' }
+    $rwarn_variable_types =
+      initialize_warn_hash( 'warn-variable-types', 0, \@all_opts,
+        $wvt_in_args );
+
+    $ris_warn_variable_excluded_name =
+      make_excluded_name_hash('warn-variable-exclusion-list');
+    return;
+} ## end sub initialize_warn_variable_types
+
+sub filter_excluded_names {
+
+    # Given:
+    #   $rwarnigns = ref to list of warning info hashes
+    #   $rexcluded_name_hash = ref to hash with excluded names
+    # Return updated $rwarnings with excluded names removed
+    my ( $rwarnings, $rexcluded_name_hash ) = @_;
+    if ( @{$rwarnings} && $rexcluded_name_hash ) {
+
+        # Check for exact matches
+        $rwarnings =
+          [ grep { !$rexcluded_name_hash->{ $_->{name} } } @{$rwarnings} ];
+
+        # See if there are any wildcard names
+        my @excluded_wildcards;
+        foreach my $key ( keys %{$rexcluded_name_hash} ) {
+            my $code = $rexcluded_name_hash->{$key};
+            if ( $code != 1 ) {
+                push @excluded_wildcards, [ $key, $code ];
+            }
+        }
+
+        if (@excluded_wildcards) {
+            my @tmp;
+            foreach my $item ( @{$rwarnings} ) {
+                my $name = $item->{name};
+                if ( wildcard_match( $name, \@excluded_wildcards ) ) {
+                    next;
+                }
+                push @tmp, $item;
+            }
+            $rwarnings = \@tmp;
+        }
+    }
+    return $rwarnings;
+} ## end sub filter_excluded_names
+
 sub warn_variable_types {
     my ($self) = @_;
 
@@ -9727,27 +9784,19 @@ sub warn_variable_types {
 
     my $wv_key    = 'warn-variable-types';
     my $wv_option = $rOpts->{$wv_key};
-    return unless (%warn_variable_types);
+    return unless ( %{$rwarn_variable_types} );
 
     my ( $rwarnings, $issue_type_string ) =
-      $self->scan_variable_usage( \%warn_variable_types );
+      $self->scan_variable_usage($rwarn_variable_types);
     return unless ( $rwarnings && @{$rwarnings} );
+
+    $rwarnings =
+      filter_excluded_names( $rwarnings, $ris_warn_variable_excluded_name );
 
     # loop to form error messages
     my $message_middle = EMPTY_STRING;
     foreach my $item ( @{$rwarnings} ) {
-        my $name = $item->{name};
-
-        # ignore excluded names
-        if (
-            $is_warn_variable_excluded_name{$name}
-            || ( @warn_variable_excluded_wildcards
-                && wildcard_match( $name, \@warn_variable_excluded_wildcards ) )
-          )
-        {
-            next;
-        }
-
+        my $name    = $item->{name};
         my $lno     = $item->{line_number};
         my $letter  = $item->{letter};
         my $keyword = $item->{keyword};
@@ -13686,7 +13735,6 @@ BEGIN {
       uc
       ucfirst
       undef
-      wantarray
       xor
     );
     @is_non_interfering_keyword{@q} = (1) x scalar(@q);
@@ -13847,7 +13895,21 @@ sub count_list_elements {
             if ( $is_opening_type{$type} ) {
                 if ( $token eq '(' ) {
 
-                    # not a list..
+                    # Skip past args to args to subs not returning
+                    # lists, like 'pop(' 'length('
+                    if ($KK_last_nb) {
+                        my $token_last = $rLL->[$KK_last_nb]->[_TOKEN_];
+                        my $type_last  = $rLL->[$KK_last_nb]->[_TYPE_];
+                        if (   $type_last eq 'k'
+                            && $is_non_interfering_keyword{$token_last} )
+                        {
+                            my $Kc = $self->[_K_closing_container_]->{$seqno};
+                            $KK = $Kc;
+                            next;
+                        }
+                    }
+
+                    # If not a list..
                     if ( !$self->is_list_by_seqno($seqno) ) {
 
                         # always enter a container following 'return', as in:
@@ -14046,6 +14108,8 @@ sub count_list_elements {
 
                 # Something like 'length $str' is ok
                 next if ( $is_non_interfering_keyword{$token} );
+
+                next if ( $token eq 'wantarray' );
 
                 # something like return 1 if ...
                 if ( $is_if_unless{$token} ) {
@@ -15377,7 +15441,8 @@ sub cross_check_call_args {
     my $mismatched_arg_overcount_cutoff   = 0;
     my $ris_mismatched_call_excluded_name = {};
 
-    my %do_mismatched_return_type = ( 'o' => 1, 'u' => 1, 'x' => 1 );
+    my %do_mismatched_return_type           = ( 'o' => 1, 'u' => 1, 'x' => 1 );
+    my $ris_mismatched_return_excluded_name = {};
 
     $self->initialize_self_call_cache();
 
@@ -15386,15 +15451,18 @@ sub cross_check_call_args {
 
     # initialize if not in a dump mode
     if ( !$is_dump ) {
-        %do_mismatched_call_type = %warn_mismatched_arg_types;
+
+        %do_mismatched_call_type = %{$rwarn_mismatched_arg_types};
         $mismatched_arg_undercount_cutoff =
           $rOpts->{'warn-mismatched-arg-undercount-cutoff'};
         $mismatched_arg_overcount_cutoff =
           $rOpts->{'warn-mismatched-arg-overcount-cutoff'};
         $ris_mismatched_call_excluded_name =
-          \%is_warn_mismatched_arg_excluded_name;
+          $ris_warn_mismatched_arg_excluded_name;
 
-        %do_mismatched_return_type = %warn_mismatched_return_types;
+        %do_mismatched_return_type = %{$rwarn_mismatched_return_types};
+        $ris_mismatched_return_excluded_name =
+          $ris_warn_mismatched_return_excluded_name;
     }
 
     # hardwired name exclusions
@@ -15871,9 +15939,7 @@ sub cross_check_call_args {
         my $rsub_item = $item->{rsub_item};
         next unless defined($rsub_item);
 
-        my $name = $rsub_item->{name};
-        next if ( $ris_mismatched_call_excluded_name->{$name} );
-
+        my $name           = $rsub_item->{name};
         my $lno            = $rsub_item->{line_number};
         my $rK_return_list = $item->{rK_return_list};
         my $rself_calls    = $item->{self_calls};
@@ -16113,20 +16179,12 @@ sub cross_check_call_args {
         }
     }
 
-    if (@call_arg_warnings) {
-        @call_arg_warnings = sort {
-                 $a->{line_number} <=> $b->{line_number}
-              || $a->{letter} cmp $b->{letter}
-        } @call_arg_warnings;
-    }
-
-    if (@return_warnings) {
-        @return_warnings = sort {
-                 $a->{line_number} <=> $b->{line_number}
-              || $a->{letter} cmp $b->{letter}
-        } @return_warnings;
-    }
-
+    my $rcall_arg_warnings = sort_warnings( \@call_arg_warnings );
+    $rcall_arg_warnings = filter_excluded_names( $rcall_arg_warnings,
+        $ris_mismatched_call_excluded_name );
+    my $rreturn_warnings = sort_warnings( \@return_warnings );
+    $rreturn_warnings = filter_excluded_names( $rreturn_warnings,
+        $ris_mismatched_return_excluded_name );
     my $call_arg_hint = EMPTY_STRING;
     if ($number_of_undercount_warnings) {
         my $wmauc_min = $max_shift_count_with_undercount + 1;
@@ -16135,11 +16193,31 @@ Note: use -wmauc=$wmauc_min or greater to prevent undercount warnings in this fi
 EOM
     }
     return {
-        rcall_arg_warnings => \@call_arg_warnings,
+        rcall_arg_warnings => $rcall_arg_warnings,
         call_arg_hint      => $call_arg_hint,
-        return_warnings    => \@return_warnings,
+        return_warnings    => $rreturn_warnings,
     };
 } ## end sub cross_check_call_args
+
+sub sort_warnings {
+
+    # Given:
+    #   $rwarnigns = ref to list of warning info hashes
+    # Return updated $rwarnings
+    #   - Sorted by line number
+    my ($rwarnings) = @_;
+    if ( @{$rwarnings} ) {
+
+        # sort by line number
+        $rwarnings = [
+            sort {
+                     $a->{line_number} <=> $b->{line_number}
+                  || $a->{letter} cmp $b->{letter}
+            } @{$rwarnings}
+        ];
+    }
+    return $rwarnings;
+} ## end sub sort_warnings
 
 sub stringify_line_range {
     my ($rcalls) = @_;
@@ -16163,208 +16241,32 @@ sub stringify_line_range {
     return $string;
 } ## end sub stringify_line_range
 
-sub initialize_warn_mismatched_args {
+sub initialize_warn_mismatched {
 
-    # Initialization for:
-    #    --warn-mismatched-args
-    #    --warn-mismatched-arg-types=s
-    #    --warn-mismatched-arg-exclusion-list=s
-    %warn_mismatched_arg_types            = ();
-    %is_warn_mismatched_arg_excluded_name = ();
-    return unless $rOpts->{'warn-mismatched-args'};
-
-    # Note: coding here is similar to sub initialize_warn_variable_types
-
-    #-----------------------------------
-    # Parse --warn-mismatched-arg-types
-    #-----------------------------------
-    my $wmat_key    = 'warn-mismatched-arg-types';
-    my $wmat_option = $rOpts->{$wmat_key};
-    $wmat_option = '1' unless defined($wmat_option);
-
-    # The -indent-only option skips production of data structures needed by
-    # the --warn-mismatched-args
-    if ( $rOpts->{'indent-only'} ) {
-        my $wma_key = 'warn-mismatched-args';
-        Warn("Note: '--$wma_key' is ignored if '--indent-only' is set\n");
-        return;
-    }
-
-    # Specific options:
     #  a - mismatched arrow operator calls
     #  o - overcount
     #  u - undercount
+    $rwarn_mismatched_arg_types =
+      initialize_warn_hash( 'warn-mismatched-arg-types', 1, [qw(a o u)] );
+    $ris_warn_mismatched_arg_excluded_name =
+      make_excluded_name_hash('warn-mismatched-arg-exclusion-list');
 
-    # Other controls:
-    #  0 - none of the above
-    #  1 - all of the above
-    #  * - all of the above
-
-    # Example:
-    #  -wmat='a o' : do check types 'a' and 'o'
-    #  -wmat='u'   : do check type 'u'
-
-    my @all_opts = qw(a o u);
-    my %is_valid_option;
-    @is_valid_option{@all_opts} = (1) x scalar(@all_opts);
-
-    # allow comma separators
-    $wmat_option =~ s/,/ /g;
-
-    my @opts = split_words($wmat_option);
-    return unless (@opts);
-
-    # check a single item
-    if ( @opts == 1 ) {
-        my $opt = $opts[0];
-
-        # Split a single option of bundled letters like 'ao' into 'a o'
-        # but give a warning because this may not be allowed in the future
-        if ( length($opt) > 1 ) {
-            @opts = split //, $opt;
-            Warn("Please use space-separated letters in --$wmat_key\n");
-        }
-        elsif ( $opt eq '*' || $opt eq '1' ) {
-            @opts = keys %is_valid_option;
-        }
-        elsif ( $opt eq '0' ) {
-            return;
-        }
-        else {
-            # should be one of a o u - catch any error below
-        }
-    }
-
-    my $msg = EMPTY_STRING;
-    foreach my $opt (@opts) {
-        if ( $is_valid_option{$opt} ) {
-            $warn_mismatched_arg_types{$opt} = 1;
-        }
-        else {
-            if ( $opt =~ /^[01\*]$/ ) {
-                $msg .=
-                  "--$wmat_key cannot contain $opt mixed with other options\n";
-            }
-            else {
-                $msg .= "--$wmat_key has unexpected symbol: '$opt'\n";
-            }
-        }
-    }
-    if ($msg) { Die($msg) }
-
-    #--------------------------------------------
-    # Parse --warn-mismatched-arg-exclusion-list
-    #--------------------------------------------
-    my $wmaxl_key      = 'warn-mismatched-arg-exclusion-list';
-    my $excluded_names = $rOpts->{$wmaxl_key};
-    if ($excluded_names) {
-        $excluded_names =~ s/,/ /g;
-        my @xl      = split_words($excluded_names);
-        my $err_msg = EMPTY_STRING;
-        foreach my $name (@xl) {
-            if ( $name !~ /^[\$\@\%]?\w+$/ ) {
-                $err_msg .= "-wmaxl has unexpected name: '$name'\n";
-            }
-        }
-        if ($err_msg) { Die($err_msg) }
-        @is_warn_mismatched_arg_excluded_name{@xl} = (1) x scalar(@xl);
-    }
-    return;
-} ## end sub initialize_warn_mismatched_args
-
-sub initialize_warn_mismatched_returns {
-
-    # Initialization for:
-    #    --warn-mismatched-returns
-    #    --warn-mismatched-return-types=s
-    %warn_mismatched_return_types = ();
-    return unless $rOpts->{'warn-mismatched-returns'};
-
-    # Note: coding here is similar to sub initialize_warn_variable_types
-
-    #-----------------------------------
-    # Parse --warn-mismatched-return-types
-    #-----------------------------------
-    my $wmrt_key    = 'warn-mismatched-return-types';
-    my $wmrt_option = $rOpts->{$wmrt_key};
-    $wmrt_option = '1' unless defined($wmrt_option);
-
-    # The -indent-only option skips production of data structures needed by
-    # the --warn-mismatched-returns
-    if ( $rOpts->{'indent-only'} ) {
-        my $wma_key = 'warn-mismatched-returns';
-        Warn("Note: '--$wma_key' is ignored if '--indent-only' is set\n");
-        return;
-    }
-
-    # Specific options:
     #  x - no return seen
-    #  o - overcount
-    #  u - undercount
-
-    # Other controls:
-    #  0 - none of the above
-    #  1 - all of the above
-    #  * - all of the above
-
-    # Example:
-    #  -wmrt='a o' : do check types 'a' and 'o'
-    #  -wmrt='x'   : do check type 'x'
-
-    my @all_opts = qw(x o u);
-    my %is_valid_option;
-    @is_valid_option{@all_opts} = (1) x scalar(@all_opts);
-
-    # allow comma separators
-    $wmrt_option =~ s/,/ /g;
-
-    my @opts = split_words($wmrt_option);
-    return unless (@opts);
-
-    # check a single item
-    if ( @opts == 1 ) {
-        my $opt = $opts[0];
-
-        # Split a single option of bundled letters like 'ao' into 'a o'
-        # but give a warning because this may not be allowed in the future
-        if ( length($opt) > 1 ) {
-            @opts = split //, $opt;
-            Warn("Please use space-separated letters in --$wmrt_key\n");
-        }
-        elsif ( $opt eq '*' || $opt eq '1' ) {
-            @opts = keys %is_valid_option;
-        }
-        elsif ( $opt eq '0' ) {
-            return;
-        }
-        else {
-            # should be one of x o u - catch any error below
-        }
-    }
-
-    my $msg = EMPTY_STRING;
-    foreach my $opt (@opts) {
-        if ( $is_valid_option{$opt} ) {
-            $warn_mismatched_return_types{$opt} = 1;
-        }
-        else {
-            if ( $opt =~ /^[01\*]$/ ) {
-                $msg .=
-                  "--$wmrt_key cannot contain $opt mixed with other options\n";
-            }
-            else {
-                $msg .= "--$wmrt_key has unexpected symbol: '$opt'\n";
-            }
-        }
-    }
-    if ($msg) { Die($msg) }
-
+    #  o - overwant
+    #  u - underwant
+    $rwarn_mismatched_return_types =
+      initialize_warn_hash( 'warn-mismatched-return-types', 1, [qw(x o u)] );
+    $ris_warn_mismatched_return_excluded_name =
+      make_excluded_name_hash('warn-mismatched-return-exclusion-list');
     return;
-} ## end sub initialize_warn_mismatched_returns
+} ## end sub initialize_warn_mismatched
 
 sub warn_mismatched {
     my ($self) = @_;
+
+    # process both --warn-mismatched-args and --warn-mismatched-returns,
     my $rhash = $self->cross_check_call_args();
+
     if ( $rOpts->{'warn-mismatched-args'} ) {
         my $rcall_arg_warnings = $rhash->{rcall_arg_warnings};
         my $call_arg_hint      = $rhash->{call_arg_hint};
