@@ -6214,9 +6214,9 @@ will format F<somefile.pl> and report any arrow-type mismatches and overcount mi
 =item *
 B<--warn-mismatched-arg-exclusion-list>, or B<-wmaxl=string>, can be given to
 skip the warning checks for a list of subroutine names, entered as a quoted
-string of space- or comma-separated names. All subs with those names will be
-skipped, regardless of package. A leading and/or trailing B<*> on a name may
-be used to indicate a partial string match.
+string of space- or comma-separated names, without a package prefix. All subs
+with those names will be skipped, regardless of package. A leading and/or
+trailing B<*> on a name may be used to indicate a partial string match.
 
 =item *
 B<--warn-mismatched-arg-undercount-cutoff=n>, or B<-wmauc=n>, can be used to
@@ -6274,22 +6274,24 @@ The three issue types are illustrated with the following code
 
     sub old_school {
         ...
-        ( $xc, $yc ); # 2 values, no return statement
+        ( $name, $flags ); # 2 values but no 'return' statement
     }
 
-    sub new_school {
-        ...
-        return ( $xc, $yc );  # 2 values
+    ( $name, $flags ) = old_school();  # type 'x' (no return stmt)
+
+    sub info {
+        ...;
+        return ( $name, $flags );  # 2 values with 'return' statement
     }
 
-    ( $x_old, $y_old ) = old_school($point);            # type 'x' (no return)
-    ( $x_new, $y_new, $z_new ) = new_school($point);    # type 'o' (want 3 > 2)
-    $mid = new_school($point);                          # type 'i' (want 1 < 2)
+    ( $name ) = $self->info();                 # type 'u' (want 1 < 2)
+    ( $name, $flags, $access) = $self->info(); # type 'o' (want 3 > 2)
 
 Issues are only reported when the return transaction involves two or more list
-elements, and only when a specific number can be determined.  The reported
-issues are not necessarily errors, but they might be, or might indicate
-confusing code.
+elements, and only when a specific number can be determined.  Only return
+statements are scanned, so this analysis will not work for all programming
+styles. Reported issues are not necessarily errors, but they might be, or
+they might indicate potentially confusing code.
 
 =item B<Use --warn-mismatched-returns> to issue warnings when the number of requested values may disagree with sub return statements
 
@@ -6319,8 +6321,9 @@ the default.
 =item *
 B<--warn-mismatched-return-exclusion-list>, or B<-wmrxl=string>, can be given to
 skip the warning checks for a list of subroutine names, entered as a quoted
-string of space- or comma-separated names. A leading and/or trailing B<*> may
-be used to indicate a partial string match.
+string of space- or comma-separated names, without a package prefix. All subs
+with those names will be skipped, regardless of package. A leading and/or
+trailing B<*> on a name may be used to indicate a partial string match.
 
 =back
 
