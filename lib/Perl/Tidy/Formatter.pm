@@ -310,6 +310,7 @@ my (
     %is_other_brace_follower,
     %is_kwU,
     %is_re_match_op,
+    %is_my_state,
 
     # INITIALIZER: sub check_options
     $controlled_comma_style,
@@ -916,6 +917,9 @@ BEGIN {
     # regular expression match operators
     @q = qw( =~ !~);
     @is_re_match_op{@q} = (1) x scalar(@q);
+
+    @q = qw ( my state );
+    @is_my_state{@q} = (1) x scalar(@q);
 
 } ## end BEGIN
 
@@ -8542,13 +8546,6 @@ sub set_CODE_type {
     return \@ix_side_comments;
 } ## end sub set_CODE_type
 
-my %is_my_state = ( 'my' => 1, 'state' => 1 );
-
-BEGIN {
-    my @q = qw ( my state );
-    @is_my_state{@q} = (1) x scalar(@q);
-}
-
 sub block_seqno_of_paren_keyword {
 
     my ( $self, $KK ) = @_;
@@ -15942,6 +15939,47 @@ sub cross_check_call_args {
     my $max_shift_count_with_undercount = 0;
     my $number_of_undercount_warnings   = 0;
 
+    my ( $lno, $name );
+
+    my ( $shift_count_min, $shift_count_max, $min_arg_count, $max_arg_count );
+
+    my (
+        $return_count_min, $return_count_max,
+        $want_count_min,   $want_count_max
+    );
+
+    my $push_call_arg_warning = sub {
+        my ( $letter, $note ) = @_;
+        push @call_arg_warnings,
+          {
+            line_number     => $lno,
+            letter          => $letter,
+            name            => $name,
+            shift_count_min => $shift_count_min,
+            shift_count_max => $shift_count_max,
+            min_arg_count   => $min_arg_count,
+            max_arg_count   => $max_arg_count,
+            note            => $note,
+          };
+        return;
+    };
+
+    my $push_return_warning = sub {
+        my ( $letter, $note, $lno_return ) = @_;
+        push @return_warnings,
+          {
+            line_number      => $lno_return,
+            letter           => $letter,
+            name             => $name,
+            return_count_min => $return_count_min,
+            return_count_max => $return_count_max,
+            want_count_min   => $want_count_min,
+            want_count_max   => $want_count_max,
+            note             => $note,
+          };
+        return;
+    };
+
     # Look at each sub call
     foreach my $key ( keys %common_hash ) {
         my $item = $common_hash{$key};
@@ -15950,35 +15988,35 @@ sub cross_check_call_args {
         my $rsub_item = $item->{rsub_item};
         next unless defined($rsub_item);
 
-        my $name           = $rsub_item->{name};
-        my $lno            = $rsub_item->{line_number};
+        $name = $rsub_item->{name};
+        $lno  = $rsub_item->{line_number};
         my $rK_return_list = $item->{rK_return_list};
         my $rself_calls    = $item->{self_calls};
         my $rdirect_calls  = $item->{direct_calls};
         my $num_self       = defined($rself_calls)   ? @{$rself_calls}   : 0;
         my $num_direct     = defined($rdirect_calls) ? @{$rdirect_calls} : 0;
 
-        my $shift_count_min = $rsub_item->{shift_count_min};
-        my $shift_count_max = $rsub_item->{shift_count_max};
+        $shift_count_min = $rsub_item->{shift_count_min};
+        $shift_count_max = $rsub_item->{shift_count_max};
 
         $shift_count_max = '*' unless defined($shift_count_max);
         $shift_count_min = '*' unless defined($shift_count_min);
 
-        my $return_count_min   = $rsub_item->{return_count_min};
-        my $return_count_max   = $rsub_item->{return_count_max};
+        $return_count_min = $rsub_item->{return_count_min};
+        $return_count_max = $rsub_item->{return_count_max};
         my $K_return_count_min = $rsub_item->{K_return_count_min};
         my $K_return_count_max = $rsub_item->{K_return_count_max};
 
         $return_count_max = '*' unless defined($return_count_max);
         $return_count_min = '*' unless defined($return_count_min);
 
-        my $max_arg_count = $item->{max_arg_count};
-        my $min_arg_count = $item->{min_arg_count};
+        $max_arg_count = $item->{max_arg_count};
+        $min_arg_count = $item->{min_arg_count};
         $max_arg_count = '*' unless defined($max_arg_count);
         $min_arg_count = '*' unless defined($min_arg_count);
 
-        my $want_count_min = $item->{want_count_min};
-        my $want_count_max = $item->{want_count_max};
+        $want_count_min = $item->{want_count_min};
+        $want_count_max = $item->{want_count_max};
         $want_count_min = '*' unless defined($want_count_min);
         $want_count_max = '*' unless defined($want_count_max);
 
@@ -16008,17 +16046,7 @@ sub cross_check_call_args {
             my $str  = $self_name . '->call' . $ess1;
             my $note =
 "$num_self $str($lines_self_calls) and $num_direct call$ess2($lines_direct_calls)";
-            push @call_arg_warnings,
-              {
-                line_number     => $lno,
-                letter          => 'a',
-                name            => $name,
-                shift_count_min => $shift_count_min,
-                shift_count_max => $shift_count_max,
-                min_arg_count   => $min_arg_count,
-                max_arg_count   => $max_arg_count,
-                note            => $note,
-              };
+            $push_call_arg_warning->( 'a', $note );
         }
 
         #---------------------------------------------------------
@@ -16033,7 +16061,6 @@ sub cross_check_call_args {
         #-------------------------------------------------------------------
         if ( $shift_count_min eq '*' ) {
             if ( $do_mismatched_call_type{'i'} ) {
-                my $letter = 'i';
 
                 # skip *:*:* (no disagreement - call counts also indeterminate)
                 next
@@ -16041,17 +16068,7 @@ sub cross_check_call_args {
                     && $shift_count_min eq $max_arg_count );
 
                 my $note = "indeterminate sub arg count";
-                push @call_arg_warnings,
-                  {
-                    line_number     => $lno,
-                    letter          => $letter,
-                    name            => $name,
-                    shift_count_min => $shift_count_min,
-                    shift_count_max => $shift_count_max,
-                    min_arg_count   => $min_arg_count,
-                    max_arg_count   => $max_arg_count,
-                    note            => $note,
-                  };
+                $push_call_arg_warning->( 'i', $note );
             }
         }
 
@@ -16068,22 +16085,9 @@ sub cross_check_call_args {
 
                 my $lines_over_count = stringify_line_range($rover_count);
                 my $total            = $num_direct + $num_self;
-                my $note;
-                my $letter = 'o';
-                $note =
+                my $note =
 "excess args at $num_over_count of $total calls($lines_over_count)";
-
-                push @call_arg_warnings,
-                  {
-                    line_number     => $lno,
-                    letter          => $letter,
-                    name            => $name,
-                    shift_count_min => $shift_count_min,
-                    shift_count_max => $shift_count_max,
-                    min_arg_count   => $min_arg_count,
-                    max_arg_count   => $max_arg_count,
-                    note            => $note,
-                  };
+                $push_call_arg_warning->( 'o', $note );
             }
 
             #----------------------
@@ -16101,23 +16105,11 @@ sub cross_check_call_args {
                 {
                     my $lines_under_count = stringify_line_range($runder_count);
                     my $total             = $num_direct + $num_self;
-                    my $note;
-                    my $letter = 'u';
-                    $note =
+                    my $note =
 "arg undercount at $num_under_count of $total calls($lines_under_count)";
 
                     $number_of_undercount_warnings++;
-                    push @call_arg_warnings,
-                      {
-                        line_number     => $lno,
-                        letter          => $letter,
-                        name            => $name,
-                        shift_count_min => $shift_count_min,
-                        shift_count_max => $shift_count_max,
-                        min_arg_count   => $min_arg_count,
-                        max_arg_count   => $max_arg_count,
-                        note            => $note,
-                      };
+                    $push_call_arg_warning->( 'u', $note );
                 }
             }
         }
@@ -16142,17 +16134,7 @@ sub cross_check_call_args {
                   if ( defined($K_return_count_max) );
             }
             if ( $do_mismatched_return_type{$letter} ) {
-                push @return_warnings,
-                  {
-                    line_number      => $lno_return,
-                    letter           => $letter,
-                    name             => $name,
-                    return_count_min => $return_count_min,
-                    return_count_max => $return_count_max,
-                    want_count_min   => $want_count_min,
-                    want_count_max   => $want_count_max,
-                    note             => $note,
-                  };
+                $push_return_warning->( $letter, $note, $lno_return );
             }
         }
 
@@ -16174,18 +16156,7 @@ sub cross_check_call_args {
                 }
                 $note =
 "fewer than max values wanted at $num_under_count_return of $total calls($lines_under_count)";
-
-                push @return_warnings,
-                  {
-                    line_number      => $lno_return,
-                    letter           => $letter,
-                    name             => $name,
-                    return_count_min => $return_count_min,
-                    return_count_max => $return_count_max,
-                    want_count_min   => $want_count_min,
-                    want_count_max   => $want_count_max,
-                    note             => $note,
-                  };
+                $push_return_warning->( $letter, $note, $lno_return );
             }
         }
     }
