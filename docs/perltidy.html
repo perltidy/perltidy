@@ -4734,7 +4734,7 @@
 
 <p>The &#39;u&#39; option (unused) has a limitation: it is not allowed in a <i>.perltidyrc</i> configuration file. But it can be used on the command line provided that perltidy is operating on a named file. This rule is necessary to avoid warnings when perltidy is run on small snippets of code from within an editor.</p>
 
-<p>A companion flag, <b>--warn-variable-exclusion-list=string</b>, or <b>-wvxl=string</b>, can be used to skip warning checks for a list of variable names. A leading and/or trailing &#39;*&#39; may be placed on any of these variable names to allow a partial match. For example</p>
+<p>A companion flag, <b>--warn-variable-exclusion-list=string</b>, or <b>-wvxl=string</b>, can be used to skip warning checks for a list of variable names. A leading and/or trailing &#39;*&#39; may be placed on any of these variable names to allow a partial match.</p>
 
 <p>For example,</p>
 
@@ -4886,7 +4886,7 @@
 <p>will format <i>somefile.pl</i> and report any arrow-type mismatches and overcount mismatches, but will skip undercount mismatches.</p>
 
 </li>
-<li><p><b>--warn-mismatched-arg-exclusion-list</b>, or <b>-wmaxl=string</b>, can be given to skip the warning checks for a list of subroutine names, entered as a quoted string of space- or comma-separated names. All subs with those names will be skipped, regardless of package.</p>
+<li><p><b>--warn-mismatched-arg-exclusion-list</b>, or <b>-wmaxl=string</b>, can be given to skip the warning checks for a list of subroutine names, entered as a quoted string of space- or comma-separated names, without a package prefix. All subs with those names will be skipped, regardless of package. A leading and/or trailing <b>*</b> on a name may be used to indicate a partial string match.</p>
 
 </li>
 <li><p><b>--warn-mismatched-arg-undercount-cutoff=n</b>, or <b>-wmauc=n</b>, can be used to avoid <b>undercount</b> warnings when the expected number of args is less than <b>n</b>. Please note that this number <b>n</b> is the number of args from the point of view of the sub definition, so an object like <code>$self</code> passed with an arrow operator counts as one arg.</p>
@@ -4904,6 +4904,77 @@
 <pre><code>   perltidy -wma -wmat=&#39;o u&#39; -wmaxl=&#39;new old&#39; -wmauc=2 somefile.pl</code></pre>
 
 <p>means format <i>somefile.pl</i> as usual and check for mismatched overcounts and undercounts but not arrows. Skip checking for any sub named <code>new</code> or <code>old</code>, and only warn of undercounts for subs expecting more than 2 args.</p>
+
+</dd>
+<dt id="Use---dump-mismatched-returns-to-find-function-calls-where-the-number-of-requested-values-may-disagree-with-sub-return-statements"><b>Use --dump-mismatched-returns</b> to find function calls where the number of requested values may disagree with sub return statements</dt>
+<dd>
+
+<p>The parameter <b>--dump-mismatched-returns</b>, or <b>-dmr</b>, examines the return side of sub call statements. Like all <b>--dump</b> commands, it writes its report to standard output and exits immediately. For example</p>
+
+<pre><code>    perltidy -dmr somefile.pl &gt;results.txt</code></pre>
+
+<p>Three types of issues are reported:</p>
+
+<dl>
+
+<dt id="x:-calls-requesting-values-from-a-sub-without-a-return-statement"><b>x:</b> calls requesting values from a sub without a return statement.</dt>
+<dd>
+
+</dd>
+<dt id="o:-overwant-:-the-number-of-values-wanted-by-the-caller-exceeds-the-number-returned-by-the-sub"><b>o:</b> (<b>overwant</b>): the number of values wanted by the caller exceeds the number returned by the sub.</dt>
+<dd>
+
+</dd>
+<dt id="u:-underwant-:-the-number-of-values-wanted-by-the-caller-is-less-than-the-number-returned-by-the-sub"><b>u:</b> (<b>underwant</b>): the number of values wanted by the caller is less than the number returned by the sub.</dt>
+<dd>
+
+</dd>
+</dl>
+
+<p>The three issue types are illustrated with the following code</p>
+
+<pre><code>    sub old_school {
+        ...
+        ( $name, $flags ); # 2 values but no &#39;return&#39; statement
+    }
+
+    ( $name, $flags ) = old_school();  # type &#39;x&#39; (no return stmt)
+
+    sub info {
+        ...;
+        return ( $name, $flags );  # 2 values with &#39;return&#39; statement
+    }
+
+    $name = $self-&gt;info();                     # type &#39;u&#39; (want 1 &lt; 2)
+    ( $name, $flags, $access) = $self-&gt;info(); # type &#39;o&#39; (want 3 &gt; 2)</code></pre>
+
+<p>Issues are only reported when the return transaction involves two or more list elements, and only when a specific number can be determined. Only return statements are scanned, so this analysis will not work for all programming styles. Reported issues are not necessarily errors, but they might be, or they might indicate potentially confusing code.</p>
+
+</dd>
+<dt id="Use---warn-mismatched-returns-to-issue-warnings-when-the-number-of-requested-values-may-disagree-with-sub-return-statements"><b>Use --warn-mismatched-returns</b> to issue warnings when the number of requested values may disagree with sub return statements</dt>
+<dd>
+
+<p>This is similar to the <b>-dump</b> parameter described above except that any mismatches are reported in the error file and otherwise formatting continues normally. The basic usage is</p>
+
+<pre><code>    perltidy -wmr somefile.pl</code></pre>
+
+<p>The following companion controls are available to avoid unwanted error messages:</p>
+
+<ul>
+
+<li><p><b>--warn-mismatched-return-types=s</b>, or <b>-wmrt=s</b>, can be used to limit checks.</p>
+
+<p>To restrict the checking, set the string equal to the letter(s) of that warning, any <b>x</b>, <b>o</b>, or <b>u</b>. For example</p>
+
+<pre><code>   perltidy -wmrt=&#39;x o&#39; somefile.pl</code></pre>
+
+<p>will format <i>somefile.pl</i> and report issue types <b>x</b> and <b>o</b> but not type <b>u</b>. All checks may be requested with <b>-wmrt=&#39;*&#39;</b> or <b>-wmrt=1</b>. This is the default.</p>
+
+</li>
+<li><p><b>--warn-mismatched-return-exclusion-list</b>, or <b>-wmrxl=string</b>, can be given to skip the warning checks for a list of subroutine names, entered as a quoted string of space- or comma-separated names, without a package prefix. All subs with those names will be skipped, regardless of package. A leading and/or trailing <b>*</b> on a name may be used to indicate a partial string match.</p>
+
+</li>
+</ul>
 
 </dd>
 </dl>
@@ -5220,7 +5291,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20240511.04</p>
+<p>This man page documents perltidy version 20240511.05</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

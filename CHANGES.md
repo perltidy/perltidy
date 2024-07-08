@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2024 05 11.04
+## 2024 05 11.05
 
     - Add options --dump-mismatched-returns (or -dmr) and
       --warn-mismatched-returns (or -wmr).  These options report function

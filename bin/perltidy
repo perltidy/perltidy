@@ -6248,8 +6248,6 @@ means format F<somefile.pl> as usual and check for mismatched overcounts and
 undercounts but not arrows. Skip checking for any sub named C<new> or C<old>,
 and only warn of undercounts for subs expecting more than 2 args.
 
-=back
-
 =item B<Use --dump-mismatched-returns> to find function calls where the number of requested values may disagree with sub return statements
 
 The parameter B<--dump-mismatched-returns>, or B<-dmr>, examines the return
@@ -6284,7 +6282,7 @@ The three issue types are illustrated with the following code
         return ( $name, $flags );  # 2 values with 'return' statement
     }
 
-    ( $name ) = $self->info();                 # type 'u' (want 1 < 2)
+    $name = $self->info();                     # type 'u' (want 1 < 2)
     ( $name, $flags, $access) = $self->info(); # type 'o' (want 3 > 2)
 
 Issues are only reported when the return transaction involves two or more list
@@ -6324,6 +6322,8 @@ skip the warning checks for a list of subroutine names, entered as a quoted
 string of space- or comma-separated names, without a package prefix. All subs
 with those names will be skipped, regardless of package. A leading and/or
 trailing B<*> on a name may be used to indicate a partial string match.
+
+=back
 
 =back
 
@@ -6750,7 +6750,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20240511.04
+This man page documents perltidy version 20240511.05
 
 =head1 BUG REPORTS
 
