@@ -37403,8 +37403,7 @@ sub set_vertical_tightness_flags {
 
             my $is_semicolon_terminated;
             if ( $n + 1 == $n_last_line ) {
-                my ( $terminal_type, $i_terminal ) =
-                  terminal_type_i( $ibeg_next, $iend_next );
+                my $terminal_type = terminal_type_i( $ibeg_next, $iend_next );
                 $is_semicolon_terminated = $terminal_type eq ';'
                   && $nesting_depth_to_go[$iend_next] <
                   $nesting_depth_to_go[$ibeg_next];
