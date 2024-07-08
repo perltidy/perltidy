@@ -15425,25 +15425,36 @@ sub cross_check_call_args {
 
     my ($self) = @_;
 
-    # The current possible checks are indicated by these letters:
+    # This routine looks for issues for these parameters:
+    #   --dump-mismatched-args
+    #   --warn-mismatched-args
+    #   --dump-mismatched-returns
+    #   --warn-mismatched-returns
+
+    # It returns a hash of values with any warnings found
+
+    my $rLL = $self->[_rLL_];
+
+    # The mismatched-args checks are indicated by these letters:
     # a = both method and non-method calls to a sub
     #     - even for two subs in a different package
     # o = overcount: call arg counts exceed number expected by a sub
     # u = undercount: call arg counts less than number expected by a sub
     #     - except if expecting N or less (N=4 by default)
     # i = indeterminate: expected number of args was not determined
-
-    my $rLL = $self->[_rLL_];
-
-    # initialize for dump mode
     my %do_mismatched_call_type = ( 'a' => 1, 'o' => 1, 'u' => 1, 'i' => 1 );
     my $mismatched_arg_undercount_cutoff  = 0;
     my $mismatched_arg_overcount_cutoff   = 0;
     my $ris_mismatched_call_excluded_name = {};
 
-    my %do_mismatched_return_type           = ( 'o' => 1, 'u' => 1, 'x' => 1 );
+    # The mismatched-returns checks are indicated by these letters:
+    # x = no return statement
+    # o = 'overwant', caller wants more values than available
+    # u = 'underwant', caller wants fewer values than available
+    my %do_mismatched_return_type           = ( 'x' => 1, 'o' => 1, 'u' => 1 );
     my $ris_mismatched_return_excluded_name = {};
 
+    # initialize a cache used for efficiency
     $self->initialize_self_call_cache();
 
     my $is_dump =
@@ -15490,7 +15501,6 @@ sub cross_check_call_args {
     #----------------------------------
     # Preliminary min and max call args
     #----------------------------------
-
     # This is preliminary because some of the calls will eventually be
     # rejected if they appear to be to external objects. This info is
     # needed to optimize the sub arg search in the case of zero args.
@@ -15871,6 +15881,7 @@ sub cross_check_call_args {
         # compare caller/sub return counts if posible
         #--------------------------------------------
 
+        # -1=>no, 0=>either way, 1=>yes
         my $lhs_ok =
            !$return_count_wanted     ? -1
           : $return_count_wanted < 2 ? 0

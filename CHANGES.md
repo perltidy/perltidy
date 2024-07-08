@@ -2,6 +2,27 @@
 
 ## 2024 05 11.04
 
+    - Add options --dump-mismatched-returns (or -dmr) and
+      --warn-mismatched-returns (or -wmr).  These options report function
+      calls where the number of requested values may disagree with sub
+      return statements.  The -dump version writes the results for a single
+      file to standard output and exits:
+
+         perltidy -dmr somefile.pl >results.txt
+
+      The -warn version formats as normal but reports any issues as warnings in
+      the error file:
+
+         perltidy -wmr somefile.pl
+
+      The -warn version may be customized with the following additional
+      parameters if necessary to avoid needless warnings:
+
+      --warn-mismatched-return-types=s (or -wmrt=s),
+      --warn-mismatched-return-exclusion-list=s (or -wmrxl=s)
+
+      These are explained in the manual.
+
     - Updates for issue git #151:
       (1) --warn-variable-types=u is now okay if it is on the command line
       with a named file.
@@ -17,7 +38,7 @@
       unknown. Otherwise, a dash will be removed to make the line valid.
 
     - Parameters --dump-mismatched-args (or -dma) and
-      --warn-mismatched-arg (or -wma) have been updated to catch more
+      --warn-mismatched-args (or -wma) have been updated to catch more
       arg count issues.
 
     - Fix issue git #143, extend -add-trailing-commas to apply to a list
@@ -114,7 +135,7 @@
       off by default, but it could become the default in a future version.
 
     - Add options --dump-mismatched-args (or -dma) and
-      --warn-mismatched-arg (or -wma).  These options look
+      --warn-mismatched-args (or -wma).  These options look
       for and report instances where the number of args expected by a
       sub appear to differ from the number passed to the sub.  The -dump
       version writes the results for a single file to standard output

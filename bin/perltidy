@@ -6215,7 +6215,8 @@ will format F<somefile.pl> and report any arrow-type mismatches and overcount mi
 B<--warn-mismatched-arg-exclusion-list>, or B<-wmaxl=string>, can be given to
 skip the warning checks for a list of subroutine names, entered as a quoted
 string of space- or comma-separated names. All subs with those names will be
-skipped, regardless of package.
+skipped, regardless of package. A leading and/or trailing B<*> on a name may
+be used to indicate a partial string match.
 
 =item *
 B<--warn-mismatched-arg-undercount-cutoff=n>, or B<-wmauc=n>, can be used to
@@ -6246,6 +6247,80 @@ To illustrate these controls,
 means format F<somefile.pl> as usual and check for mismatched overcounts and
 undercounts but not arrows. Skip checking for any sub named C<new> or C<old>,
 and only warn of undercounts for subs expecting more than 2 args.
+
+=back
+
+=item B<Use --dump-mismatched-returns> to find function calls where the number of requested values may disagree with sub return statements
+
+The parameter B<--dump-mismatched-returns>, or B<-dmr>, examines the return
+side of sub call statements.  Like all B<--dump> commands, it writes its report
+to standard output and exits immediately.  For example
+
+    perltidy -dmr somefile.pl >results.txt
+
+Three types of issues are reported:
+
+=over 4
+
+=item B<x:> calls requesting values from a sub without a return statement.
+
+=item B<o:> (B<overwant>): the number of values wanted by the caller exceeds the number returned by the sub.
+
+=item B<u:> (B<underwant>): the number of values wanted by the caller is less than the number returned by the sub.
+
+=back
+
+The three issue types are illustrated with the following code
+
+    sub old_school {
+        ...
+        ( $xc, $yc ); # 2 values, no return statement
+    }
+
+    sub new_school {
+        ...
+        return ( $xc, $yc );  # 2 values
+    }
+
+    ( $x_old, $y_old ) = old_school($point);            # type 'x' (no return)
+    ( $x_new, $y_new, $z_new ) = new_school($point);    # type 'o' (want 3 > 2)
+    $mid = new_school($point);                          # type 'i' (want 1 < 2)
+
+Issues are only reported when the return transaction involves two or more list
+elements, and only when a specific number can be determined.  The reported
+issues are not necessarily errors, but they might be, or might indicate
+confusing code.
+
+=item B<Use --warn-mismatched-returns> to issue warnings when the number of requested values may disagree with sub return statements
+
+This is similar to the B<-dump> parameter described above except that any
+mismatches are reported in the error file and otherwise formatting continues
+normally.  The basic usage is
+
+    perltidy -wmr somefile.pl
+
+The following companion controls are available to avoid unwanted error messages:
+
+=over 4
+
+=item *
+B<--warn-mismatched-return-types=s>, or B<-wmrt=s>, can be used to limit
+checks.
+
+To restrict the checking, set the string equal to the letter(s) of that warning,
+any B<x>, B<o>, or B<u>.  For example
+
+   perltidy -wmrt='x o' somefile.pl
+
+will format F<somefile.pl> and report issue types B<x> and B<o> but not type
+B<u>.  All checks may be requested with B<-wmrt='*'> or B<-wmrt=1>.  This is
+the default.
+
+=item *
+B<--warn-mismatched-return-exclusion-list>, or B<-wmrxl=string>, can be given to
+skip the warning checks for a list of subroutine names, entered as a quoted
+string of space- or comma-separated names. A leading and/or trailing B<*> may
+be used to indicate a partial string match.
 
 =back
 
