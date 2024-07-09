@@ -14862,7 +14862,7 @@ sub count_sub_input_args {
 
         # Create a self name like '$_[0]' if we can't find user-defined name.
         # Then any sub calls with '$_[0]->' will be recognized as self
-        # calls by sub cross_check_call_args.
+        # calls by sub cross_check_sub_calls.
         if ( !$self_name && $at_index_min == 0 ) {
             $self_name         = $dollar_underscore_zero_name->();
             $self_name         = '$_[0]' unless ($self_name);
@@ -15418,7 +15418,7 @@ sub update_sub_call_paren_info {
 
 use constant DEBUG_SELF => 0;
 
-sub cross_check_call_args {
+sub cross_check_sub_calls {
 
     my ($self) = @_;
 
@@ -15950,32 +15950,38 @@ sub cross_check_call_args {
 
     my $push_call_arg_warning = sub {
         my ( $letter, $note ) = @_;
+        my $shift_count = $shift_count_min;
+        if ( $shift_count_min ne '*' && $shift_count_min ne $shift_count_max ) {
+            $shift_count = "$shift_count_min-$shift_count_max";
+        }
+        my $output_line =
+"$lno:$letter:$name:$shift_count:$min_arg_count:$max_arg_count: $note\n";
         push @call_arg_warnings,
           {
-            line_number     => $lno,
-            letter          => $letter,
-            name            => $name,
-            shift_count_min => $shift_count_min,
-            shift_count_max => $shift_count_max,
-            min_arg_count   => $min_arg_count,
-            max_arg_count   => $max_arg_count,
-            note            => $note,
+            line_number => $lno,
+            letter      => $letter,
+            name        => $name,
+            output_line => $output_line,
           };
         return;
     };
 
     my $push_return_warning = sub {
         my ( $letter, $note, $lno_return ) = @_;
+        my $return_count = $return_count_min;
+        if (   $return_count_min ne '*'
+            && $return_count_min ne $return_count_max )
+        {
+            $return_count = "$return_count_min-$return_count_max";
+        }
+        my $output_line =
+"$lno_return:$letter:$name:$return_count:$want_count_min:$want_count_max: $note\n";
         push @return_warnings,
           {
-            line_number      => $lno_return,
-            letter           => $letter,
-            name             => $name,
-            return_count_min => $return_count_min,
-            return_count_max => $return_count_max,
-            want_count_min   => $want_count_min,
-            want_count_max   => $want_count_max,
-            note             => $note,
+            line_number => $lno_return,
+            letter      => $letter,
+            name        => $name,
+            output_line => $output_line,
           };
         return;
     };
@@ -16161,25 +16167,57 @@ sub cross_check_call_args {
         }
     }
 
+    #------------------------------------
+    # Make the mismatched call arg report
+    #------------------------------------
     my $rcall_arg_warnings = sort_warnings( \@call_arg_warnings );
     $rcall_arg_warnings = filter_excluded_names( $rcall_arg_warnings,
         $ris_mismatched_call_excluded_name );
+    my $call_arg_warning_output = EMPTY_STRING;
+    my $call_arg_hint           = EMPTY_STRING;
+    if ( @{$rcall_arg_warnings} ) {
+        my $header =
+          "Issue types are 'a'=arrow mismatch 'u'=undercount 'o'=overcount";
+        if ($is_dump) { $header .= " 'i'=indeterminate" }
+        $call_arg_warning_output = <<EOM;
+$header
+Line:Issue:Name:#args:Min:Max: note
+EOM
+        foreach ( @{$rcall_arg_warnings} ) {
+            $call_arg_warning_output .= $_->{output_line};
+        }
+        if ( !$is_dump && $number_of_undercount_warnings ) {
+            my $wmauc_min = $max_shift_count_with_undercount + 1;
+            $call_arg_hint = <<EOM;
+Note: use -wmauc=$wmauc_min or greater to prevent undercount warnings in this file
+EOM
+            $call_arg_warning_output .= $call_arg_hint;
+        }
+    }
+
+    #----------------------------------
+    # Make the mismatched return report
+    #----------------------------------
     my $rreturn_warnings = sort_warnings( \@return_warnings );
     $rreturn_warnings = filter_excluded_names( $rreturn_warnings,
         $ris_mismatched_return_excluded_name );
-    my $call_arg_hint = EMPTY_STRING;
-    if ($number_of_undercount_warnings) {
-        my $wmauc_min = $max_shift_count_with_undercount + 1;
-        $call_arg_hint = <<EOM;
-Note: use -wmauc=$wmauc_min or greater to prevent undercount warnings in this file
+
+    my $return_warning_output = EMPTY_STRING;
+    if ( @{$rreturn_warnings} ) {
+        $return_warning_output = <<EOM;
+Issue types 'u'=under-want 'o'=over-want 'x'=no return
+Line:Issue:Name:#Returned:Min_wanted:Max_wanted: note
 EOM
+        foreach ( @{$rreturn_warnings} ) {
+            $return_warning_output .= $_->{output_line};
+        }
     }
+
     return {
-        rcall_arg_warnings => $rcall_arg_warnings,
-        call_arg_hint      => $call_arg_hint,
-        return_warnings    => $rreturn_warnings,
+        call_arg_warning_output => $call_arg_warning_output,
+        return_warning_output   => $return_warning_output,
     };
-} ## end sub cross_check_call_args
+} ## end sub cross_check_sub_calls
 
 sub sort_warnings {
 
@@ -16247,177 +16285,67 @@ sub warn_mismatched {
     my ($self) = @_;
 
     # process both --warn-mismatched-args and --warn-mismatched-returns,
-    my $rhash = $self->cross_check_call_args();
+    my $rhash = $self->cross_check_sub_calls();
 
-    if ( $rOpts->{'warn-mismatched-args'} ) {
-        my $rcall_arg_warnings = $rhash->{rcall_arg_warnings};
-        my $call_arg_hint      = $rhash->{call_arg_hint};
-        if ($rcall_arg_warnings) {
-            $self->warn_mismatched_args( $rcall_arg_warnings, $call_arg_hint );
+    my $wma_key = 'warn-mismatched-args';
+    if ( $rOpts->{$wma_key} ) {
+        my $output_lines = $rhash->{call_arg_warning_output};
+        if ($output_lines) {
+            chomp $output_lines;
+            warning(<<EOM);
+Begin scan for --$wma_key
+$output_lines
+End scan for --$wma_key
+EOM
         }
     }
-    if ( $rOpts->{'warn-mismatched-returns'} ) {
-        my $return_warnings = $rhash->{return_warnings};
-        if ($return_warnings) {
-            $self->warn_mismatched_returns($return_warnings);
+
+    my $wmr_key = 'warn-mismatched-returns';
+    if ( $rOpts->{$wmr_key} ) {
+        my $output_lines = $rhash->{return_warning_output};
+        if ($output_lines) {
+            chomp $output_lines;
+            warning(<<EOM);
+Begin scan for --$wmr_key
+$output_lines
+End scan for --$wmr_key
+EOM
         }
     }
     return;
 } ## end sub warn_mismatched
 
-sub warn_mismatched_args {
-    my ( $self, $rcall_arg_warnings, $call_arg_hint ) = @_;
-
-    # process a --warn-mismatched-args command
-
-    # additional control parameters are:
-    # - warn-mismatched-arg-types
-    # - warn-mismatched-arg-exclusion-list
-    # - warn-mismatched-arg-undercount-cutoff
-    # - warn-mismatched-arg-overcount-cutoff
-
-    return unless ( $rcall_arg_warnings && @{$rcall_arg_warnings} );
-
-    my $wma_key       = 'warn-mismatched-args';
-    my $output_string = "Begin scan for --$wma_key\n";
-    $output_string .= <<EOM;
-Issue types are 'a'=arrow mismatch 'u'=undercount 'o'=overcount
-Line:Issue:Name:#args:Min:Max: note
-EOM
-
-    # output the results, ignoring any excluded names
-    foreach my $item ( @{$rcall_arg_warnings} ) {
-        my $lno             = $item->{line_number};
-        my $letter          = $item->{letter};
-        my $name            = $item->{name};
-        my $note            = $item->{note};
-        my $shift_count_min = $item->{shift_count_min};
-        my $shift_count_max = $item->{shift_count_max};
-        my $min_arg_count   = $item->{min_arg_count};
-        my $max_arg_count   = $item->{max_arg_count};
-        my $shift_count     = $shift_count_min;
-
-        if ( $shift_count_min ne '*' && $shift_count_min ne $shift_count_max ) {
-            $shift_count = "$shift_count_min-$shift_count_max";
-        }
-        $output_string .=
-"$lno:$letter:$name:$shift_count:$min_arg_count:$max_arg_count: $note\n";
-    }
-    if ($call_arg_hint) { $output_string .= $call_arg_hint }
-    $output_string .= "End scan for --$wma_key\n";
-    warning($output_string);
-
-    return;
-} ## end sub warn_mismatched_args
-
-sub warn_mismatched_returns {
-    my ( $self, $return_warnings ) = @_;
-
-    # process a --warn-mismatched-returns command
-    return unless ( $return_warnings && @{$return_warnings} );
-    my $wmr_key       = 'warn-mismatched-returns';
-    my $output_string = <<EOM;
-Begin scan for --$wmr_key
-Issue types 'u'=under-want 'o'=over-want 'x'=no return
-Line:Issue:Name:#Returned:Min_wanted:Max_wanted: note
-EOM
-    foreach my $item ( @{$return_warnings} ) {
-        my $lno              = $item->{line_number};
-        my $letter           = $item->{letter};
-        my $name             = $item->{name};
-        my $note             = $item->{note};
-        my $return_count_min = $item->{return_count_min};
-        my $return_count_max = $item->{return_count_max};
-        my $want_count_min   = $item->{want_count_min};
-        my $want_count_max   = $item->{want_count_max};
-        my $return_count     = $return_count_min;
-
-        if (   $return_count_min ne '*'
-            && $return_count_min ne $return_count_max )
-        {
-            $return_count = "$return_count_min-$return_count_max";
-        }
-        $output_string .=
-"$lno:$letter:$name:$return_count:$want_count_min:$want_count_max: $note\n";
-    }
-    $output_string .= "End scan for --$wmr_key\n";
-    warning($output_string);
-
-    return;
-} ## end sub warn_mismatched_returns
-
 sub dump_mismatched_args {
     my ($self) = @_;
 
     # process a --dump-mismatched-args command
-    my $rhash              = $self->cross_check_call_args();
-    my $rcall_arg_warnings = $rhash->{rcall_arg_warnings};
-    my $call_arg_hint      = $rhash->{call_arg_hint};
-
-    return unless ( $rcall_arg_warnings && @{$rcall_arg_warnings} );
-
-    my $input_stream_name = get_input_stream_name();
-    my $output_string     = <<EOM;
+    my $rhash         = $self->cross_check_sub_calls();
+    my $output_string = $rhash->{call_arg_warning_output};
+    if ($output_string) {
+        my $input_stream_name = get_input_stream_name();
+        chomp $output_string;
+        print {*STDOUT} <<EOM;
 $input_stream_name: output for --dump-mismatched-args
-Issue types 'a'=arrow mismatch 'u'=undercount 'o'=overcount 'i'=indeterminate
-Line:Issue:Name:#args:Min:Max: note
+$output_string
 EOM
-    foreach my $item ( @{$rcall_arg_warnings} ) {
-        my $lno             = $item->{line_number};
-        my $letter          = $item->{letter};
-        my $name            = $item->{name};
-        my $note            = $item->{note};
-        my $shift_count_min = $item->{shift_count_min};
-        my $shift_count_max = $item->{shift_count_max};
-        my $min_arg_count   = $item->{min_arg_count};
-        my $max_arg_count   = $item->{max_arg_count};
-        my $shift_count     = $shift_count_min;
-
-        if ( $shift_count_min ne '*' && $shift_count_min ne $shift_count_max ) {
-            $shift_count = "$shift_count_min-$shift_count_max";
-        }
-        $output_string .=
-"$lno:$letter:$name:$shift_count:$min_arg_count:$max_arg_count: $note\n";
     }
-    print {*STDOUT} $output_string;
     return;
 } ## end sub dump_mismatched_args
 
 sub dump_mismatched_returns {
     my ($self) = @_;
 
-    # process a --dump-mismatched-returns
-    my $rhash           = $self->cross_check_call_args();
-    my $return_warnings = $rhash->{return_warnings};
-
-    return unless ( $return_warnings && @{$return_warnings} );
-
-    my $input_stream_name = get_input_stream_name();
-    my $output_string     = <<EOM;
+    # process a --dump-mismatched-returns command
+    my $rhash         = $self->cross_check_sub_calls();
+    my $output_string = $rhash->{return_warning_output};
+    if ($output_string) {
+        my $input_stream_name = get_input_stream_name();
+        chomp $output_string;
+        print {*STDOUT} <<EOM;
 $input_stream_name: output for --dump-mismatched-returns
-Issue types 'u'=under-want 'o'=over-want 'x'=no return
-Line:Issue:Name:#Returned:Min_wanted:Max_wanted: note
+$output_string
 EOM
-    foreach my $item ( @{$return_warnings} ) {
-        my $lno              = $item->{line_number};
-        my $letter           = $item->{letter};
-        my $name             = $item->{name};
-        my $note             = $item->{note};
-        my $return_count_min = $item->{return_count_min};
-        my $return_count_max = $item->{return_count_max};
-        my $want_count_min   = $item->{want_count_min};
-        my $want_count_max   = $item->{want_count_max};
-        my $return_count     = $return_count_min;
-
-        if (   $return_count_min ne '*'
-            && $return_count_min ne $return_count_max )
-        {
-            $return_count = "$return_count_min-$return_count_max";
-        }
-        $output_string .=
-"$lno:$letter:$name:$return_count:$want_count_min:$want_count_max: $note\n";
     }
-    print {*STDOUT} $output_string;
     return;
 } ## end sub dump_mismatched_returns
 
