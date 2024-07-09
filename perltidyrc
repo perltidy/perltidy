@@ -20,6 +20,9 @@
 --warn-mismatched-args
 --warn-mismatched-arg-undercount-cutoff=5
 
+# warn if return count wanted differs from sub return statements
+--warn-mismatched-returns
+
 # user-defined subs must have args in parens
 --want-call-parens='&'
 
