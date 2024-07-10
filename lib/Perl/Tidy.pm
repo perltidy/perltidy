@@ -22,7 +22,7 @@
 #
 #    For brief instructions, try 'perltidy -h'.
 #    For more complete documentation, try 'man perltidy'
-#    or visit http://perltidy.sourceforge.net
+#    or visit the GitHub site https://perltidy.github.io/perltidy/
 #
 #    This script is an example of the default style.  It was formatted with:
 #
@@ -6022,8 +6022,10 @@ Copyright 2000-2024, Steve Hancock
 Perltidy is free software and may be copied under the terms of the GNU
 General Public License, which is included in the distribution files.
 
-Complete documentation for perltidy can be found using 'man perltidy'
-or on the internet at http://perltidy.sourceforge.net.
+Documentation can be found using 'man perltidy'
+or at GitHub      https://perltidy.github.io/perltidy/
+or at metacpan    https://metacpan.org/pod/distribution/Perl-Tidy/bin/perltidy
+or at Sourceforge https://perltidy.sourceforge.net
 EOM
     return;
 } ## end sub show_version
@@ -6223,7 +6225,7 @@ semicolons.
 
 If you are unable to see this entire text, try "perltidy -h | more"
 For more detailed information, and additional options, try "man perltidy",
-or go to the perltidy home page at http://perltidy.sourceforge.net
+or see https://metacpan.org/pod/distribution/Perl-Tidy/bin/perltidy
 EOF
 
     return;
