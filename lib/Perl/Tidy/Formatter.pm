@@ -14180,9 +14180,6 @@ sub count_list_elements {
         else {
             $arg_count = $shift_count_max_input;
         }
-##      $arg_count     = max( $arg_count, $shift_count_max_input );
-##      $arg_count_min = min( $arg_count_min, $shift_count_min_input )
-##        if ( defined($shift_count_min_input) );
     }
 
     $rarg_list->{shift_count_min} = $arg_count_min;
@@ -15878,19 +15875,21 @@ sub cross_check_sub_calls {
         # compare caller/sub return counts if posible
         #--------------------------------------------
 
-        # -1=>no, 0=>either way, 1=>yes
-        my $lhs_ok =
+        # vote to decide if a check should be made:
+        #    -1=>no, 0=>either way, 1=>yes
+        # require >= 1 yes votes and 0 no votes to make a check
+        my $lhs_vote =
            !$return_count_wanted     ? -1
           : $return_count_wanted < 2 ? 0
           :                            1;
 
-        my $rhs_ok =
+        my $rhs_vote =
             !defined($rK_return_list)   ? 0
           : !defined($return_count_max) ? -1
           : $return_count_max < 1       ? 0
           :                               1;
 
-        next if ( $lhs_ok + $rhs_ok <= 0 );
+        next if ( $lhs_vote + $rhs_vote <= 0 );
 
         # ignore min return counts <= 1 if defined
         my $return_count_min_plus = $return_count_min;
@@ -16002,29 +16001,28 @@ sub cross_check_sub_calls {
         my $num_self       = defined($rself_calls)   ? @{$rself_calls}   : 0;
         my $num_direct     = defined($rdirect_calls) ? @{$rdirect_calls} : 0;
 
-        $shift_count_min = $rsub_item->{shift_count_min};
-        $shift_count_max = $rsub_item->{shift_count_max};
-
-        $shift_count_max = '*' unless defined($shift_count_max);
-        $shift_count_min = '*' unless defined($shift_count_min);
-
-        $return_count_min = $rsub_item->{return_count_min};
-        $return_count_max = $rsub_item->{return_count_max};
         my $K_return_count_min = $rsub_item->{K_return_count_min};
         my $K_return_count_max = $rsub_item->{K_return_count_max};
 
-        $return_count_max = '*' unless defined($return_count_max);
-        $return_count_min = '*' unless defined($return_count_min);
+        $shift_count_min  = $rsub_item->{shift_count_min};
+        $shift_count_max  = $rsub_item->{shift_count_max};
+        $return_count_min = $rsub_item->{return_count_min};
+        $return_count_max = $rsub_item->{return_count_max};
+        $min_arg_count    = $item->{min_arg_count};
+        $max_arg_count    = $item->{max_arg_count};
+        $want_count_min   = $item->{want_count_min};
+        $want_count_max   = $item->{want_count_max};
 
-        $max_arg_count = $item->{max_arg_count};
-        $min_arg_count = $item->{min_arg_count};
-        $max_arg_count = '*' unless defined($max_arg_count);
-        $min_arg_count = '*' unless defined($min_arg_count);
+        foreach (
 
-        $want_count_min = $item->{want_count_min};
-        $want_count_max = $item->{want_count_max};
-        $want_count_min = '*' unless defined($want_count_min);
-        $want_count_max = '*' unless defined($want_count_max);
+            $shift_count_min,  $shift_count_max,
+            $return_count_min, $return_count_max,
+            $min_arg_count,    $max_arg_count,
+            $want_count_min,   $want_count_max,
+          )
+        {
+            $_ = '*' unless defined($_);
+        }
 
         my $rover_count     = $item->{over_count};
         my $runder_count    = $item->{under_count};
