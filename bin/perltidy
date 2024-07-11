@@ -823,8 +823,7 @@ B<-ci> spaces, giving
             . $type->xstype
             . "' found" );
 
-This flag is currently off by default, but it could become the default in a
-future version.
+This flag is off by default.
 
 =item B<-sil=n> B<--starting-indentation-level=n>
 
