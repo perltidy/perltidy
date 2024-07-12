@@ -23,6 +23,7 @@
 - compare run time with previous version
 - review tickets at sourceforge (hardly used now, but possible)
 - review/update the CHANGES.md file
+- Check/update copyright date: perltidy and Tidy.pm (2 places)
 - be sure RPerl still works:
   - build and install the latest Perl::Tidy on development machine
   - install the latest RPerl [currently RPerl-7.000000]

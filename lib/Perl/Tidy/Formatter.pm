@@ -13916,9 +13916,30 @@ sub count_list_elements {
                             next;
                         }
 
-                        # enter a list slice, such as '(caller)[1,2]'
                         my $Kc = $self->[_K_closing_container_]->{$seqno};
                         if ( !$Kc ) { $backup_on_last->(); last }
+
+                        # Enter nested parens with inner list
+                        #   ( ( $v1, $v2) )
+                        #   | |         | |
+                        # $KK $Kn   $Kc_p $Kc
+                        if ( $self->[_rhas_list_]->{$seqno} ) {
+                            my $Kc_p = $self->K_previous_code($Kc);
+                            if ( $Kc_p && $rLL->[$Kc_p]->[_TOKEN_] eq ')' ) {
+                                my $seqno_c_p =
+                                  $rLL->[$Kc_p]->[_TYPE_SEQUENCE_];
+                                if ( $seqno_c_p && $seqno_c_p == $seqno + 1 ) {
+                                    my $Kn = $self->K_next_code($KK);
+                                    if ( $Kn && $rLL->[$Kn]->[_TOKEN_] eq '(' )
+                                    {
+                                        push @seqno_stack, $seqno;
+                                        next;
+                                    }
+                                }
+                            }
+                        }
+
+                        # enter a list slice, such as '(caller)[1,2]'
                         my $Kn = $self->K_next_code($Kc);
                         if ( $Kn && $rLL->[$Kn]->[_TOKEN_] eq '[' ) {
                             my $seqno_next = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
@@ -13972,6 +13993,9 @@ sub count_list_elements {
 
                             # ',('
                             $ok ||= $type_last eq ',';
+
+                            # '(('
+                            $ok ||= $token_last eq '(';
 
                             # 'wantarray ? ('
                             $ok ||=
@@ -15026,8 +15050,13 @@ sub count_return_values_wanted {
     my $token_c = $rLL->[$K_c]->[_TOKEN_];
     if ( $token_c ne ')' ) {
 
-        # handle @array = f(x) or $scalar=f(x)
-        if ( $type_c eq 'i' ) {
+        # Handle @array = f(x) or $scalar=f(x)
+        # NOTE: This is deactivated because we only want to do checks
+        # at something like ') ='. Otherwise we risk producing false
+        # warnings.  It could be reactivated in the future to produce
+        # information, but it would need to update some new variable
+        # other than {return_count_wanted}.
+        if ( 0 && $type_c eq 'i' ) {
             my $sigil = substr( $token_c, 0, 1 );
             if ( $sigil eq '$' ) {
                 $item->{return_count_wanted} = 1;
