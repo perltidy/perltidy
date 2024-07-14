@@ -31,7 +31,11 @@
 - Review code, especially any ## commented out sections and "FIXME's"
 - run perlver on all modules to check minimum version; should be 5.8.0
   - The first line in Tidy.pm has the required version of Perl
-  - use perlbrew to do local checks and debugging on earlier versions of perl if desired
+  - use perlbrew to do local checks and debugging on earlier versions of perl
+   - perlbrew list               [show installed versions]
+   - perlbrew available all      [show all available versions]
+   - perlbrew install perl-5.8.0 [install perl-5.8.0, may need to force]
+   - perlbrew use perl-5.8.0     [switch to 5.8.0 in current shell]
 - Run tidyall -a to be sure code is tidied
   - note that I have tidyall set to also run perlcritic right now
 - run podchecker on all .pod files
