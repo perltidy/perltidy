@@ -3509,6 +3509,7 @@ sub generate_options {
     $category = 3;    # Whitespace control
     ########################################
     $add_option->( 'add-trailing-commas',                       'atc',   '!' );
+    $add_option->( 'add-trailing-lone-commas',                  'atlc',  '!' );
     $add_option->( 'add-semicolons',                            'asc',   '!' );
     $add_option->( 'add-whitespace',                            'aws',   '!' );
     $add_option->( 'block-brace-tightness',                     'bbt',   '=i' );
@@ -3516,6 +3517,7 @@ sub generate_options {
     $add_option->( 'delete-old-whitespace',                     'dws',   '!' );
     $add_option->( 'delete-repeated-commas',                    'drc',   '!' );
     $add_option->( 'delete-trailing-commas',                    'dtc',   '!' );
+    $add_option->( 'delete-trailing-lone-commas',               'dtlc',  '!' );
     $add_option->( 'delete-weld-interfering-commas',            'dwic',  '!' );
     $add_option->( 'delete-semicolons',                         'dsm',   '!' );
     $add_option->( 'function-paren-vertical-alignment',         'fpva',  '!' );
@@ -3849,6 +3851,7 @@ sub generate_options {
       cuddled-break-option=1
       delete-old-newlines
       delete-repeated-commas
+      delete-trailing-lone-commas
       delete-semicolons
       dump-block-minimum-lines=20
       dump-block-types=sub

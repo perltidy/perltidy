@@ -202,6 +202,7 @@ my (
     $rOpts_add_newlines,
     $rOpts_add_whitespace,
     $rOpts_add_trailing_commas,
+    $rOpts_add_trailing_lone_commas,
     $rOpts_blank_lines_after_opening_block,
     $rOpts_block_brace_tightness,
     $rOpts_block_brace_vertical_tightness,
@@ -224,6 +225,7 @@ my (
     $rOpts_delete_old_whitespace,
     $rOpts_delete_side_comments,
     $rOpts_delete_trailing_commas,
+    $rOpts_delete_trailing_lone_commas,
     $rOpts_delete_weld_interfering_commas,
     $rOpts_extended_continuation_indentation,
     $rOpts_format_skipping,
@@ -2533,9 +2535,10 @@ sub initialize_global_option_vars {
     # Make global vars for frequently used options for efficiency
     #------------------------------------------------------------
 
-    $rOpts_add_newlines        = $rOpts->{'add-newlines'};
-    $rOpts_add_trailing_commas = $rOpts->{'add-trailing-commas'};
-    $rOpts_add_whitespace      = $rOpts->{'add-whitespace'};
+    $rOpts_add_newlines             = $rOpts->{'add-newlines'};
+    $rOpts_add_trailing_commas      = $rOpts->{'add-trailing-commas'};
+    $rOpts_add_trailing_lone_commas = $rOpts->{'add-trailing-lone-commas'};
+    $rOpts_add_whitespace           = $rOpts->{'add-whitespace'};
     $rOpts_blank_lines_after_opening_block =
       $rOpts->{'blank-lines-after-opening-block'};
     $rOpts_block_brace_tightness = $rOpts->{'block-brace-tightness'};
@@ -2572,6 +2575,8 @@ sub initialize_global_option_vars {
       $rOpts->{'extended-continuation-indentation'};
     $rOpts_delete_side_comments   = $rOpts->{'delete-side-comments'};
     $rOpts_delete_trailing_commas = $rOpts->{'delete-trailing-commas'};
+    $rOpts_delete_trailing_lone_commas =
+      $rOpts->{'delete-trailing-lone-commas'};
     $rOpts_delete_weld_interfering_commas =
       $rOpts->{'delete-weld-interfering-commas'};
     $rOpts_format_skipping   = $rOpts->{'format-skipping'};
@@ -11030,22 +11035,36 @@ sub respace_tokens_inner_loop {
                 #----------------------------------------------------------
                 else {
 
-                    # if this is a list ..
-                    # NOTE: the final determination of what is a list is in sub
-                    # respace_post_loop_ops. This is a close approximation.
+                    # if this looks like a list ..
                     my $rtype_count = $rtype_count_by_seqno->{$type_sequence};
-                    if (   $rtype_count
-                        && ( $rtype_count->{','} || $rtype_count->{'=>'} )
-                        && !$rtype_count->{';'}
-                        && !$rtype_count->{'f'} )
+                    if (   !$rtype_count
+                        || !$rtype_count->{';'} && !$rtype_count->{'f'} )
                     {
 
                         # if NOT preceded by a comma..
                         if ( $last_nonblank_code_type ne ',' ) {
 
                             # insert a comma if requested
-                            if (   $rOpts_add_trailing_commas
-                                && %trailing_comma_rules )
+                            if (
+                                   $rOpts_add_trailing_commas
+                                && %trailing_comma_rules
+
+                                # and...
+                                && (
+
+                                    # ... there is a comma or fat_comma
+                                    $rtype_count
+                                    && (   $rtype_count->{','}
+                                        || $rtype_count->{'=>'} )
+
+                                    # ... or exception for nested container
+                                    || (
+                                        $rOpts_add_trailing_lone_commas
+                                        && $is_closing_type{
+                                            $last_nonblank_code_type}
+                                    )
+                                )
+                              )
                             {
                                 $self->add_trailing_comma( $KK, $Kfirst,
                                     $trailing_comma_rules{$token} );
@@ -11057,8 +11076,15 @@ sub respace_tokens_inner_loop {
 
                             # delete a trailing comma if requested
                             my $deleted;
-                            if (   $rOpts_delete_trailing_commas
-                                && %trailing_comma_rules )
+                            if (
+                                   $rOpts_delete_trailing_commas
+                                && %trailing_comma_rules
+                                && $rtype_count
+                                && $rtype_count->{','}
+                                && (   $rOpts_delete_trailing_lone_commas
+                                    || $rtype_count->{','} > 1
+                                    || $rtype_count->{'=>'} )
+                              )
                             {
                                 $deleted =
                                   $self->delete_trailing_comma( $KK, $Kfirst,
@@ -12626,38 +12652,90 @@ sub match_trailing_comma_rule {
     my $type_sequence = $rLL->[$KK]->[_TYPE_SEQUENCE_];
     return unless ($type_sequence);
     my $closing_token = $rLL->[$KK]->[_TOKEN_];
-    my $rtype_count   = $self->[_rtype_count_by_seqno_]->{$type_sequence};
-    return unless defined($rtype_count);
-    my $comma_count     = $rtype_count->{','};
-    my $fat_comma_count = $rtype_count->{'=>'};
-    return unless ( $comma_count || $fat_comma_count );
     my $is_permanently_broken =
       $self->[_ris_permanently_broken_]->{$type_sequence};
 
-    # Note that _ris_broken_container_ also stores the line diff
-    # but it is not available at this early stage.
     my $K_opening = $self->[_K_opening_container_]->{$type_sequence};
     return if ( !defined($K_opening) );
+    my $iline_first     = $self->[_rfirst_comma_line_index_]->{$type_sequence};
+    my $iline_last      = $rLL_new->[$Kp]->[_LINE_INDEX_];
+    my $rtype_count     = $self->[_rtype_count_by_seqno_]->{$type_sequence};
+    my $comma_count     = 0;
+    my $fat_comma_count = 0;
+    my $comma_count_inner = 0;
 
-    # Do not add a comma which will be deleted by
-    # --delete-weld-interfering commas (b1471)
+    if ($rtype_count) {
+        $comma_count     = $rtype_count->{','};
+        $fat_comma_count = $rtype_count->{'=>'};
+    }
+
+    # Check for cases where adding a lone comma may interfere with welding.
     if (   $if_add
-        && $rOpts_delete_weld_interfering_commas
         && !$comma_count
         && $is_closing_type{$last_nonblank_code_type} )
     {
-        # Back up to the previous token
-        my $Kpp = $self->K_previous_nonblank( undef, $rLL_new );
-        if ( defined($Kpp) ) {
-            my $seqno_pp = $rLL_new->[$Kpp]->[_TYPE_SEQUENCE_];
-            my $type_pp  = $rLL_new->[$Kpp]->[_TYPE_];
 
-            # The containers would have to be nesting, so
-            # sequence numbers must differ by 1
-            return
-              if ( $seqno_pp
-                && $is_closing_type{$type_pp}
-                && ( $seqno_pp == $type_sequence + 1 ) );
+        # check for nesting closing containers
+        my $Kpp = $self->K_previous_nonblank( undef, $rLL_new );
+        return if ( !defined($Kpp) );
+        my $seqno_pp = $rLL_new->[$Kpp]->[_TYPE_SEQUENCE_];
+        my $type_pp  = $rLL_new->[$Kpp]->[_TYPE_];
+
+        # nesting containers have sequence numbers which differ by 1
+        my $is_nesting_right =
+             $seqno_pp
+          && $is_closing_type{$type_pp}
+          && ( $seqno_pp == $type_sequence + 1 );
+
+        # Do not add a comma which will be deleted by
+        # --delete-weld-interfering commas (b1471)
+        if (   $is_nesting_right
+            && $rOpts_delete_weld_interfering_commas )
+        {
+            return;
+        }
+
+        # Must return if no fat comma and not fully nesting
+        if ( !$fat_comma_count ) {
+
+            # containers must be nesting on the right
+            return unless ($is_nesting_right);
+
+            # inner container must have commas
+            my $rtype_count_pp = $self->[_rtype_count_by_seqno_]->{$seqno_pp};
+            return unless ($rtype_count_pp);
+            $comma_count_inner = $rtype_count_pp->{','};
+            my $fat_comma_count_inner = $rtype_count_pp->{'=>'};
+            return if ( !$comma_count_inner );
+            return if ( $comma_count_inner < 2 );
+
+            # and inner container must be multiline
+            $iline_first = $self->[_rfirst_comma_line_index_]->{$seqno_pp};
+            my $iline_c = $rLL_new->[$Kpp]->[_LINE_INDEX_];
+            return if ( !defined($iline_first) );
+            return if ( $iline_c <= $iline_first );
+
+            # the containers must be nesting on the left
+            my $Ktest = $self->K_next_nonblank( $K_opening, $rLL_new );
+            return unless ($Ktest);
+            my $seqno_test = $rLL_new->[$Ktest]->[_TYPE_SEQUENCE_];
+            if ( !$seqno_test || $seqno_test != $seqno_pp ) {
+                return;
+            }
+
+            # if outer container type is paren, must be sub call
+            my $token = $rLL_new->[$K_opening]->[_TOKEN_];
+            if ( $token eq '(' ) {
+                my $Km     = $self->K_previous_nonblank( $K_opening, $rLL_new );
+                my $type_p = $Km ? $rLL_new->[$Km]->[_TYPE_] : 'b';
+                ## see also sub count_return_values_wanted
+                my $is_function_call =
+                     $type_p eq 'U'
+                  || $type_p eq 'i'
+                  || $type_p eq 'w'
+                  || $type_p eq '->';
+                return unless ($is_function_call);
+            }
         }
     }
 
@@ -12668,8 +12746,8 @@ sub match_trailing_comma_rule {
     my $has_multiline_containers = $line_diff_containers > 0;
 
     # multiline definition 2: first and last commas on different lines
-    my $iline_first = $self->[_rfirst_comma_line_index_]->{$type_sequence};
-    my $iline_last  = $rLL_new->[$Kp]->[_LINE_INDEX_];
+    # Note that _ris_broken_container_ also stores the line diff
+    # but it is not available at this early stage.
     my $has_multiline_commas;
     my $line_diff_commas = 0;
     if ( !defined($iline_first) ) {
@@ -12713,7 +12791,7 @@ sub match_trailing_comma_rule {
     # 'm' matches a Multiline list
     #-----------------------------
     elsif ( $trailing_comma_style eq 'm' ) {
-        $match = $is_multiline && $comma_count;
+        $match = $is_multiline && ( $comma_count || $comma_count_inner );
     }
 
     #----------------------------------

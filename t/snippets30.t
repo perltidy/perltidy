@@ -3,6 +3,14 @@
 # Contents:
 #1 git143.def
 #2 git143.git143
+#3 atlc.atlc1
+#4 atlc.atlc2
+#5 atlc.def
+#6 dtlc.def
+#7 dtlc.dtlc1
+#8 dtlc.dtlc2
+#9 git146.def
+#10 git146.git146
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -20,8 +28,18 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
+        'atlc1'  => "-atc -wtc=m",
+        'atlc2'  => "-atlc -atc -wtc=m",
         'def'    => "",
+        'dtlc1'  => "-dtc -wtc=0",
+        'dtlc2'  => "-dtc -wtc=0 -ndtlc",
         'git143' => "-atc -wtc=h",
+        'git146' => <<'----------',
+# testing three dash parameters
+---add-trailing-commas 
+---unknown-future-option
+---wtc=h
+----------
     };
 
     ############################
@@ -29,8 +47,37 @@ BEGIN {
     ############################
     $rsources = {
 
+        'atlc' => <<'----------',
+$self->make_grammar(
+    {
+        iterator => $self->_iterator,
+        parser   => $self,
+        version  => $self->version
+    }
+);
+----------
+
+        'dtlc' => <<'----------',
+$self->make_grammar(
+    {
+        iterator => $self->_iterator,
+        parser   => $self,
+        version  => $self->version,
+    },
+);
+----------
+
         'git143' => <<'----------',
 # include '=>' in comma count to allow adding trailing comma here
+            my %strips = (
+                1 => [
+                    [ [ 1750, 150, ], [ 1850, 150, ], ],
+                    [ [ 1950, 150, ], [ 2050, 150, ], ],
+                ]
+            );
+----------
+
+        'git146' => <<'----------',
             my %strips = (
                 1 => [
                     [ [ 1750, 150, ], [ 1850, 150, ], ],
@@ -71,6 +118,116 @@ BEGIN {
                 ],
             );
 #2...........
+        },
+
+        'atlc.atlc1' => {
+            source => "atlc",
+            params => "atlc1",
+            expect => <<'#3...........',
+$self->make_grammar(
+    {
+        iterator => $self->_iterator,
+        parser   => $self,
+        version  => $self->version,
+    }
+);
+#3...........
+        },
+
+        'atlc.atlc2' => {
+            source => "atlc",
+            params => "atlc2",
+            expect => <<'#4...........',
+$self->make_grammar(
+    {
+        iterator => $self->_iterator,
+        parser   => $self,
+        version  => $self->version,
+    },
+);
+#4...........
+        },
+
+        'atlc.def' => {
+            source => "atlc",
+            params => "def",
+            expect => <<'#5...........',
+$self->make_grammar(
+    {
+        iterator => $self->_iterator,
+        parser   => $self,
+        version  => $self->version
+    }
+);
+#5...........
+        },
+
+        'dtlc.def' => {
+            source => "dtlc",
+            params => "def",
+            expect => <<'#6...........',
+$self->make_grammar(
+    {
+        iterator => $self->_iterator,
+        parser   => $self,
+        version  => $self->version,
+    },
+);
+#6...........
+        },
+
+        'dtlc.dtlc1' => {
+            source => "dtlc",
+            params => "dtlc1",
+            expect => <<'#7...........',
+$self->make_grammar(
+    {
+        iterator => $self->_iterator,
+        parser   => $self,
+        version  => $self->version
+    }
+);
+#7...........
+        },
+
+        'dtlc.dtlc2' => {
+            source => "dtlc",
+            params => "dtlc2",
+            expect => <<'#8...........',
+$self->make_grammar(
+    {
+        iterator => $self->_iterator,
+        parser   => $self,
+        version  => $self->version
+    },
+);
+#8...........
+        },
+
+        'git146.def' => {
+            source => "git146",
+            params => "def",
+            expect => <<'#9...........',
+            my %strips = (
+                1 => [
+                    [ [ 1750, 150, ], [ 1850, 150, ], ],
+                    [ [ 1950, 150, ], [ 2050, 150, ], ],
+                ]
+            );
+#9...........
+        },
+
+        'git146.git146' => {
+            source => "git146",
+            params => "git146",
+            expect => <<'#10...........',
+            my %strips = (
+                1 => [
+                    [ [ 1750, 150, ], [ 1850, 150, ], ],
+                    [ [ 1950, 150, ], [ 2050, 150, ], ],
+                ],
+            );
+#10...........
         },
     };
 

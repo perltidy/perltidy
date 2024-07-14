@@ -84,8 +84,9 @@ max_mccabe=180
 # This policy can be very helpful for locating complex code, but sometimes
 # deep nests are the best option, especially in error handling and debug
 # coding. So a large value is used here.
+# sub Formatter::count_list_elements currently needs 10, several others need 9
 [ControlStructures::ProhibitDeepNests]
-max_nests=9
+max_nests=10
 
 # Agree that cascading elses are best avoided, but in reality there are a lot
 # of cases where they cannot be avoided.

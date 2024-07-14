@@ -1,0 +1,7 @@
+$self->make_grammar(
+    {
+        iterator => $self->_iterator,
+        parser   => $self,
+        version  => $self->version
+    }
+);
