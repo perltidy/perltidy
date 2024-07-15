@@ -29,14 +29,14 @@ BEGIN {
     ###########################################
     $rparams = {
         'atlc1'  => "-atc -wtc=m",
-        'atlc2'  => "-atlc -atc -wtc=m",
+        'atlc2'  => "-altc -atc -wtc=m",
         'def'    => "",
         'dtlc1'  => "-dtc -wtc=0",
-        'dtlc2'  => "-dtc -wtc=0 -ndtlc",
+        'dtlc2'  => "-dtc -wtc=0 -ndltc",
         'git143' => "-atc -wtc=h",
         'git146' => <<'----------',
 # testing three dash parameters
----add-trailing-commas 
+---add-trailing-commas
 ---unknown-future-option
 ---wtc=h
 ----------

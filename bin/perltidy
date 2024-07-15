@@ -3790,7 +3790,9 @@ This option is on by default.  Use B<-ndrc> to turn it off.
 =item B<--want-trailing-commas=s> or B<-wtc=s>, B<--add-trailing-commas> or B<-atc>, and B<--delete-trailing-commas> or B<-dtc>
 
 A trailing comma is a comma following the last item of a list. Perl allows
-trailing commas but they are not required.  By default, perltidy does not add
+trailing commas but they are not required.  Including them can sometimes
+simplify the maintenance of large or complex lists.
+By default, perltidy does not add
 or delete trailing commas, but it is possible to manipulate them with the
 following set of three related parameters:
 
@@ -3804,6 +3806,12 @@ B<--add-trailing-commas,    -atc>   - gives permission to add trailing commas to
 
 =item *
 B<--delete-trailing-commas, -dtc>   - gives permission to delete trailing commas which do not match the style wanted
+
+=item *
+B<--add-lone-trailing-commas, -altc>  - gives permission to add a comma if it will be the only comma. This is off by default and explained below.
+
+=item *
+B<--delete-lone-trailing-commas, -dltc>  - gives permission to delete the only comma in a list. This is on by default and explained below.
 
 =back
 
@@ -3886,7 +3894,7 @@ For example,
 
 means that trailing commas are wanted for multi-line parenthesized lists following a function call or keyword.
 
-Here are some points to note regarding adding and deleting trailing commas:
+B<Some points to note> regarding adding and deleting trailing commas:
 
 =over 4
 
@@ -3899,19 +3907,6 @@ something that fits this definition of a list.
 
 Note that a paren-less list of parameters is not a list by this definition, so
 these parameters have no effect on a paren-less list.
-
-Another consequence is that if the only comma in a list is deleted, then it
-cannot later be added back with these parameters because the container no
-longer fits this definition of a list.  For example, given
-
-    my ( $self, ) = @_;
-
-and if we remove the comma with
-
-    # perltidy -wtc=m -dtc
-    my ( $self ) = @_;
-
-then we cannot use these trailing comma controls to add this comma back.
 
 =item *
 
@@ -3942,6 +3937,63 @@ can be useful on a temporary basis for reformatting a script.
 
 =back
 
+B<Special Considerations for Lone Trailing Commas>
+
+Adding or deleting the only comma in a list can have some implications which
+need to be explained and possibly controlled.
+
+The main issue with deleting a lone comma is that if the only comma in a list
+is deleted, then it might not be possible to later add it back automatically
+since perltidy uses the existance of commas to help locate lists. For example,
+given
+
+    my ( $self, ) = @_;
+
+and if we remove the comma with
+
+    # perltidy -wtc=m -dtc
+    my ( $self ) = @_;
+
+then we cannot use the trailing comma controls to add this comma back. The
+parameter B<--delete-lone-trailing-commas> allows such a comma to be deleted,
+and is on by default, but can be turned off to prevent this. This might
+be useful is if one is experimenting with formatting options and wants
+to restrict testing to operations which are reversible.  Note that this
+parameter is a fine-tuning control for B<--delete-trailing-commas> which
+must also be set for it to have any effect.
+
+Perltidy can add a lone comma to certain lists which themselves contain
+lists. For example, a comma can be added after the closing hash brace in
+the following snippet:
+
+    $self->make_grammar(
+        {
+            iterator => $self->_iterator,
+            parser   => $self,
+            version  => $self->version,
+        }
+    );
+
+However, the parameter B<--add-lone-trailing-commas> must be set to allow such
+a comma to be added.  This parameter is off by default.  The reason is that
+adding such a comma would prevent the B<--weld-nested-containers> flag from
+operating on this structure.  This can be confusing, or undesirable if the
+welding control is also being used.  Note that this parameter is a fine-tuning
+control for B<--add-trailing-commas> which must also be set for it to have any
+effect. To  illustrate its use:
+
+    # perltidy -atc -altc -wtc=b
+    $self->make_grammar(
+        {
+            iterator => $self->_iterator,
+            parser   => $self,
+            version  => $self->version,
+        },
+    );
+
+If we later decide we would prefer to remove this comma to allow welding,
+it can be removed with the control in the next section.
+
 =item B<-dwic>,  B<--delete-weld-interfering-commas>
 
 If the closing tokens of two nested containers are separated by a comma, then
@@ -3950,39 +4002,42 @@ this situation are optional trailing commas and can be removed with B<-dwic>.
 For example, a comma in this script prevents welding:
 
     # perltidy -wn
-    skip_symbols(
-        [ qw(
-            Perl_dump_fds
-            Perl_ErrorNo
-            Perl_GetVars
-            PL_sys_intern
-        ) ],
+    $self->make_grammar(
+        {
+            iterator => $self->_iterator,
+            parser   => $self,
+            version  => $self->version,
+        },
     );
 
 Using B<-dwic> removes the comma and allows welding:
 
     # perltidy -wn -dwic
-    skip_symbols( [ qw(
-        Perl_dump_fds
-        Perl_ErrorNo
-        Perl_GetVars
-        PL_sys_intern
-    ) ] );
+    $self->make_grammar( {
+        iterator => $self->_iterator,
+        parser   => $self,
+        version  => $self->version,
+    } );
 
-Since the default is not to add or delete commas, this feature is off by default.
+This feature is off by default.
 Here are some points to note about the B<-dwic> parameter
 
 =over 4
 
 =item *
 
-This operation is not reversible, so please check results of using this parameter carefully.
+This operation is not always reversible, so please check results of using this
+parameter carefully.
 
 =item *
 
 Removing this type of isolated trailing comma is necessary for welding to be
 possible, but not sufficient.  So welding will not always occur where these
 commas are removed.
+
+=item *
+
+This operation is independent of B<--add-trailing-commas> and B<--delete-trailing-commas>.  If it conflicts with any of those settings, it has priority.
 
 =back
 

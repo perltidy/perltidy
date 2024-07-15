@@ -1,1 +1,1 @@
--dtc -wtc=0 -ndtlc
+-dtc -wtc=0 -ndltc

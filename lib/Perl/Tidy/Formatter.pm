@@ -202,7 +202,7 @@ my (
     $rOpts_add_newlines,
     $rOpts_add_whitespace,
     $rOpts_add_trailing_commas,
-    $rOpts_add_trailing_lone_commas,
+    $rOpts_add_lone_trailing_commas,
     $rOpts_blank_lines_after_opening_block,
     $rOpts_block_brace_tightness,
     $rOpts_block_brace_vertical_tightness,
@@ -225,7 +225,7 @@ my (
     $rOpts_delete_old_whitespace,
     $rOpts_delete_side_comments,
     $rOpts_delete_trailing_commas,
-    $rOpts_delete_trailing_lone_commas,
+    $rOpts_delete_lone_trailing_commas,
     $rOpts_delete_weld_interfering_commas,
     $rOpts_extended_continuation_indentation,
     $rOpts_format_skipping,
@@ -2537,7 +2537,7 @@ sub initialize_global_option_vars {
 
     $rOpts_add_newlines             = $rOpts->{'add-newlines'};
     $rOpts_add_trailing_commas      = $rOpts->{'add-trailing-commas'};
-    $rOpts_add_trailing_lone_commas = $rOpts->{'add-trailing-lone-commas'};
+    $rOpts_add_lone_trailing_commas = $rOpts->{'add-lone-trailing-commas'};
     $rOpts_add_whitespace           = $rOpts->{'add-whitespace'};
     $rOpts_blank_lines_after_opening_block =
       $rOpts->{'blank-lines-after-opening-block'};
@@ -2575,8 +2575,8 @@ sub initialize_global_option_vars {
       $rOpts->{'extended-continuation-indentation'};
     $rOpts_delete_side_comments   = $rOpts->{'delete-side-comments'};
     $rOpts_delete_trailing_commas = $rOpts->{'delete-trailing-commas'};
-    $rOpts_delete_trailing_lone_commas =
-      $rOpts->{'delete-trailing-lone-commas'};
+    $rOpts_delete_lone_trailing_commas =
+      $rOpts->{'delete-lone-trailing-commas'};
     $rOpts_delete_weld_interfering_commas =
       $rOpts->{'delete-weld-interfering-commas'};
     $rOpts_format_skipping   = $rOpts->{'format-skipping'};
@@ -11059,7 +11059,7 @@ sub respace_tokens_inner_loop {
 
                                     # ... or exception for nested container
                                     || (
-                                        $rOpts_add_trailing_lone_commas
+                                        $rOpts_add_lone_trailing_commas
                                         && $is_closing_type{
                                             $last_nonblank_code_type}
                                     )
@@ -11081,7 +11081,7 @@ sub respace_tokens_inner_loop {
                                 && %trailing_comma_rules
                                 && $rtype_count
                                 && $rtype_count->{','}
-                                && (   $rOpts_delete_trailing_lone_commas
+                                && (   $rOpts_delete_lone_trailing_commas
                                     || $rtype_count->{','} > 1
                                     || $rtype_count->{'=>'} )
                               )
