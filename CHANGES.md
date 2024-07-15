@@ -1,6 +1,11 @@
 # Perltidy Change Log
 
-## 2024 05 11.05
+## 2024 05 11.06
+
+    - Add options --add-lone-trailing-commas, -altc and
+      --delete-lone-trailing-commas, -dltc, to add control over adding
+      and deleting the only comma in a list.  See discussion in git #143
+      and the updated manual.
 
     - Add options --dump-mismatched-returns (or -dmr) and
       --warn-mismatched-returns (or -wmr).  These options report function
