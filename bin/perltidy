@@ -3794,7 +3794,7 @@ trailing commas but they are not required.  Including them can sometimes
 simplify the maintenance of large or complex lists.
 By default, perltidy does not add
 or delete trailing commas, but it is possible to manipulate them with the
-following set of three related parameters:
+following set of related parameters:
 
 =over 4
 
@@ -3942,8 +3942,8 @@ B<Special Considerations for Lone Trailing Commas>
 Adding or deleting the only comma in a list can have some implications which
 need to be explained and possibly controlled.
 
-The main issue with deleting a lone comma is that if the only comma in a list
-is deleted, then it might not be possible to later add it back automatically
+The main issue with deleting a lone comma is that if it
+is deleted, then it might not be possible add it back automatically
 since perltidy uses the existance of commas to help locate lists. For example,
 given
 
@@ -3957,7 +3957,7 @@ and if we remove the comma with
 then we cannot use the trailing comma controls to add this comma back. The
 parameter B<--delete-lone-trailing-commas> allows such a comma to be deleted,
 and is on by default, but can be turned off to prevent this. This might
-be useful is if one is experimenting with formatting options and wants
+be useful if one is experimenting with formatting options and wants
 to restrict testing to operations which are reversible.  Note that this
 parameter is a fine-tuning control for B<--delete-trailing-commas> which
 must also be set for it to have any effect.
@@ -3975,12 +3975,11 @@ the following snippet:
     );
 
 However, the parameter B<--add-lone-trailing-commas> must be set to allow such
-a comma to be added.  This parameter is off by default.  The reason is that
-adding such a comma would prevent the B<--weld-nested-containers> flag from
-operating on this structure.  This can be confusing, or undesirable if the
-welding control is also being used.  Note that this parameter is a fine-tuning
-control for B<--add-trailing-commas> which must also be set for it to have any
-effect. To  illustrate its use:
+a comma to be added.  The reason is that adding such a comma would prevent the
+B<--weld-nested-containers> flag from operating on this structure.  This can be
+confusing, so this parameter is off by default.  Note that this parameter is a
+fine-tuning control for B<--add-trailing-commas> which must also be set for it
+to have any effect. To  illustrate its use on the above example:
 
     # perltidy -atc -altc -wtc=b
     $self->make_grammar(
@@ -3991,8 +3990,8 @@ effect. To  illustrate its use:
         },
     );
 
-If we later decide we would prefer to remove this comma to allow welding,
-it can be removed with the control in the next section.
+This comma can be removed to allow welding with the control described in the
+next section.
 
 =item B<-dwic>,  B<--delete-weld-interfering-commas>
 
@@ -4010,7 +4009,7 @@ For example, a comma in this script prevents welding:
         },
     );
 
-Using B<-dwic> removes the comma and allows welding:
+Adding B<-dwic> removes the comma and allows welding:
 
     # perltidy -wn -dwic
     $self->make_grammar( {

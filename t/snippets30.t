@@ -3,14 +3,14 @@
 # Contents:
 #1 git143.def
 #2 git143.git143
-#3 atlc.atlc1
-#4 atlc.atlc2
-#5 atlc.def
-#6 dtlc.def
-#7 dtlc.dtlc1
-#8 dtlc.dtlc2
-#9 git146.def
-#10 git146.git146
+#3 git146.def
+#4 git146.git146
+#5 altc.altc1
+#6 altc.altc2
+#7 altc.def
+#8 dltc.def
+#9 dltc.dltc1
+#10 dltc.dltc2
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -28,11 +28,11 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
-        'atlc1'  => "-atc -wtc=m",
-        'atlc2'  => "-altc -atc -wtc=m",
+        'altc1'  => "-atc -wtc=m",
+        'altc2'  => "-altc -atc -wtc=m",
         'def'    => "",
-        'dtlc1'  => "-dtc -wtc=0",
-        'dtlc2'  => "-dtc -wtc=0 -ndltc",
+        'dltc1'  => "-dtc -wtc=0",
+        'dltc2'  => "-dtc -wtc=0 -ndltc",
         'git143' => "-atc -wtc=h",
         'git146' => <<'----------',
 # testing three dash parameters
@@ -47,7 +47,7 @@ BEGIN {
     ############################
     $rsources = {
 
-        'atlc' => <<'----------',
+        'altc' => <<'----------',
 $self->make_grammar(
     {
         iterator => $self->_iterator,
@@ -57,7 +57,7 @@ $self->make_grammar(
 );
 ----------
 
-        'dtlc' => <<'----------',
+        'dltc' => <<'----------',
 $self->make_grammar(
     {
         iterator => $self->_iterator,
@@ -120,51 +120,49 @@ $self->make_grammar(
 #2...........
         },
 
-        'atlc.atlc1' => {
-            source => "atlc",
-            params => "atlc1",
+        'git146.def' => {
+            source => "git146",
+            params => "def",
             expect => <<'#3...........',
-$self->make_grammar(
-    {
-        iterator => $self->_iterator,
-        parser   => $self,
-        version  => $self->version,
-    }
-);
+            my %strips = (
+                1 => [
+                    [ [ 1750, 150, ], [ 1850, 150, ], ],
+                    [ [ 1950, 150, ], [ 2050, 150, ], ],
+                ]
+            );
 #3...........
         },
 
-        'atlc.atlc2' => {
-            source => "atlc",
-            params => "atlc2",
+        'git146.git146' => {
+            source => "git146",
+            params => "git146",
             expect => <<'#4...........',
-$self->make_grammar(
-    {
-        iterator => $self->_iterator,
-        parser   => $self,
-        version  => $self->version,
-    },
-);
+            my %strips = (
+                1 => [
+                    [ [ 1750, 150, ], [ 1850, 150, ], ],
+                    [ [ 1950, 150, ], [ 2050, 150, ], ],
+                ],
+            );
 #4...........
         },
 
-        'atlc.def' => {
-            source => "atlc",
-            params => "def",
+        'altc.altc1' => {
+            source => "altc",
+            params => "altc1",
             expect => <<'#5...........',
 $self->make_grammar(
     {
         iterator => $self->_iterator,
         parser   => $self,
-        version  => $self->version
+        version  => $self->version,
     }
 );
 #5...........
         },
 
-        'dtlc.def' => {
-            source => "dtlc",
-            params => "def",
+        'altc.altc2' => {
+            source => "altc",
+            params => "altc2",
             expect => <<'#6...........',
 $self->make_grammar(
     {
@@ -176,9 +174,9 @@ $self->make_grammar(
 #6...........
         },
 
-        'dtlc.dtlc1' => {
-            source => "dtlc",
-            params => "dtlc1",
+        'altc.def' => {
+            source => "altc",
+            params => "def",
             expect => <<'#7...........',
 $self->make_grammar(
     {
@@ -190,10 +188,38 @@ $self->make_grammar(
 #7...........
         },
 
-        'dtlc.dtlc2' => {
-            source => "dtlc",
-            params => "dtlc2",
+        'dltc.def' => {
+            source => "dltc",
+            params => "def",
             expect => <<'#8...........',
+$self->make_grammar(
+    {
+        iterator => $self->_iterator,
+        parser   => $self,
+        version  => $self->version,
+    },
+);
+#8...........
+        },
+
+        'dltc.dltc1' => {
+            source => "dltc",
+            params => "dltc1",
+            expect => <<'#9...........',
+$self->make_grammar(
+    {
+        iterator => $self->_iterator,
+        parser   => $self,
+        version  => $self->version
+    }
+);
+#9...........
+        },
+
+        'dltc.dltc2' => {
+            source => "dltc",
+            params => "dltc2",
+            expect => <<'#10...........',
 $self->make_grammar(
     {
         iterator => $self->_iterator,
@@ -201,32 +227,6 @@ $self->make_grammar(
         version  => $self->version
     },
 );
-#8...........
-        },
-
-        'git146.def' => {
-            source => "git146",
-            params => "def",
-            expect => <<'#9...........',
-            my %strips = (
-                1 => [
-                    [ [ 1750, 150, ], [ 1850, 150, ], ],
-                    [ [ 1950, 150, ], [ 2050, 150, ], ],
-                ]
-            );
-#9...........
-        },
-
-        'git146.git146' => {
-            source => "git146",
-            params => "git146",
-            expect => <<'#10...........',
-            my %strips = (
-                1 => [
-                    [ [ 1750, 150, ], [ 1850, 150, ], ],
-                    [ [ 1950, 150, ], [ 2050, 150, ], ],
-                ],
-            );
 #10...........
         },
     };
