@@ -13836,8 +13836,6 @@ sub count_list_elements {
     #      undef if a specific number was not determined
     #   -shift_count_max  => starting max arg count items to include
     #      undef if a specific number was not determined
-    #   -K_shift_count_min  => K of first shift_count_min for return lists
-    #   -K_shift_count_max  => K of first shift_count_max for return list
     #   -self_name => possibly updated name of first arg
     #   -initialized => a hash entry maintained by this routine
     #     for keeping track of repeated calls for 'return' lists
@@ -13881,20 +13879,6 @@ sub count_list_elements {
           && $rLL->[$K_list_start]->[_TOKEN_] eq 'return';
         $K_list_end = @{$rLL} - 1;
 
-        # number of returns are initialized on the first call
-        if ( !$rarg_list->{initialized} ) {
-            $shift_count_min_input    = undef;
-            $shift_count_max_input    = 0;
-            $rarg_list->{initialized} = 1;
-        }
-        else {
-            if (   !defined($shift_count_min_input)
-                && !defined($shift_count_max_input) )
-            {
-                return;
-            }
-        }
-
         # Optimization for common case of simple return
         my $Kn = $self->K_next_code($K_list_start);
         return unless ($Kn);
@@ -13903,13 +13887,17 @@ sub count_list_elements {
             || $is_closing_type{$type_n}
             || ( $type_n eq 'k' && $is_if_unless{ $rLL->[$Kn]->[_TOKEN_] } ) )
         {
-            $shift_count_min_input = 0 unless defined($shift_count_min_input);
-            $shift_count_max_input = 0 unless defined($shift_count_max_input);
-            $rarg_list->{shift_count_min}   = $shift_count_min_input;
-            $rarg_list->{shift_count_max}   = $shift_count_max_input;
-            $rarg_list->{K_shift_count_min} = $K_list_start;
-            $rarg_list->{K_shift_count_max} = $K_list_start;
+            $rarg_list->{shift_count_max} = 0;
             return;
+        }
+
+        # Check for 'return ()'
+        if ( $rLL->[$Kn]->[_TOKEN_] eq '(' ) {
+            my $Knn = $self->K_next_code($Kn);
+            if ( $Knn && $rLL->[$Knn]->[_TOKEN_] eq ')' ) {
+                $rarg_list->{shift_count_max} = 0;
+                return;
+            }
         }
     }
 
@@ -13951,6 +13939,15 @@ sub count_list_elements {
     #--------------------------------------------------------
     while ( ++$KK < $K_list_end ) {
 
+        # safety check - shouldn't happen
+        if ( !$KK || $KK <= $KK_this_nb ) {
+            if (DEVEL_MODE) {
+                my $lno = $rLL->[$KK_this_nb]->[_LINE_INDEX_] + 1;
+                Fault("near line $lno: index $KK decreased, was $KK_this_nb\n");
+            }
+            return;
+        }
+
         my $type = $rLL->[$KK]->[_TYPE_];
         next   if ( $type eq 'b' );
         next   if ( $type eq '#' );
@@ -13959,6 +13956,7 @@ sub count_list_elements {
 
         # i.e., ($str=~/(\d+)(\w+)/) may be a list of n items
         return if ( $type eq '=~' );
+
         $KK_last_last_nb = $KK_last_nb;
         $KK_last_nb      = $KK_this_nb;
         $KK_this_nb      = $KK;
@@ -13978,8 +13976,7 @@ sub count_list_elements {
                         if (   $type_last eq 'k'
                             && $is_non_interfering_keyword{$token_last} )
                         {
-                            my $Kc = $self->[_K_closing_container_]->{$seqno};
-                            $KK = $Kc;
+                            $KK = $self->[_K_closing_container_]->{$seqno};
                             next;
                         }
                     }
@@ -14092,8 +14089,7 @@ sub count_list_elements {
                 }
 
                 # Otherwise skip past this container
-                my $Kc = $self->[_K_closing_container_]->{$seqno};
-                $KK = $Kc;
+                $KK = $self->[_K_closing_container_]->{$seqno};
                 next;
             }
             elsif ( $is_closing_type{$type} ) {
@@ -14127,8 +14123,7 @@ sub count_list_elements {
                 }
 
                 # otherwise skip past this ternary
-                my $Kc = $self->[_K_closing_ternary_]->{$seqno};
-                $KK = $Kc;
+                $KK = $self->[_K_closing_ternary_]->{$seqno};
                 next;
             }
             elsif ( $type eq ':' ) {
@@ -14210,6 +14205,9 @@ sub count_list_elements {
 
                 next if ( $token eq 'wantarray' );
 
+                # hop over asubs
+                next if ( $token eq 'sub' );
+
                 # something like return 1 if ...
                 if ( $is_if_unless{$token} ) {
                     $backup_on_last->();
@@ -14262,26 +14260,6 @@ sub count_list_elements {
 
     if ( !defined($arg_count_min) ) {
         $arg_count_min = $arg_count;
-    }
-
-    # return list counts include ranges of all returns in a sub
-    if ($is_return_list) {
-        if ( !defined($shift_count_min_input)
-            || $arg_count < $shift_count_min_input )
-        {
-            $rarg_list->{K_shift_count_min} = $K_list_start;
-            $arg_count_min = $arg_count;
-        }
-        else {
-            $arg_count_min = $shift_count_min_input;
-        }
-
-        if ( $arg_count >= $shift_count_max_input ) {
-            $rarg_list->{K_shift_count_max} = $K_list_start;
-        }
-        else {
-            $arg_count = $shift_count_max_input;
-        }
     }
 
     $rarg_list->{shift_count_min} = $arg_count_min;
@@ -14603,12 +14581,23 @@ sub count_sub_input_args {
     my $semicolon_count_after_last_shift = 0;
     my $in_interpolated_quote;
 
-    my $KK = $K_opening;
+    my $KK         = $K_opening;
+    my $KK_this_nb = $KK;
     while ( ++$KK < $K_closing ) {
+
+        # safety check - shouldn't happen
+        if ( !$KK || $KK <= $KK_this_nb ) {
+            if (DEVEL_MODE) {
+                my $lno = $rLL->[$KK_this_nb]->[_LINE_INDEX_] + 1;
+                Fault("near line $lno: index $KK decreased, was $KK_this_nb\n");
+            }
+            return;
+        }
 
         my $type = $rLL->[$KK]->[_TYPE_];
         next if ( $type eq 'b' );
         next if ( $type eq '#' );
+        $KK_this_nb = $KK;
 
         my $token = $rLL->[$KK]->[_TOKEN_];
 
@@ -14998,8 +14987,14 @@ sub count_sub_return_args {
     return if ( !defined($rKlist) );
 
     # loop over all return statements in this sub
-    my $rLL   = $self->[_rLL_];
-    my $rhash = {};
+    my $rLL                  = $self->[_rLL_];
+    my $rhash                = {};
+    my $rK_return_count_hash = {};
+
+    # retain old vars during transition phase
+    my $return_count_min;
+    my $return_count_max;
+
     foreach ( @{$rKlist} ) {
         my $K_return = $rLL->[$_]->[_TYPE_] eq 'b' ? $_ + 1 : $_;
         my $type     = $rLL->[$K_return]->[_TYPE_];
@@ -15010,12 +15005,36 @@ sub count_sub_return_args {
         }
         $rhash->{K_list_start} = $K_return;
         $self->count_list_elements($rhash);
-        last if ( !defined( $rhash->{shift_count_max} ) );
+        my $count = $rhash->{shift_count_max};
+        if ( !defined($count) ) {
+            $item->{return_count_indefinite} = $K_return;
+            $item->{return_count_max}        = undef;
+            last;
+        }
+
+        # new count?
+        if ( !$rK_return_count_hash->{$count} ) {
+            $rK_return_count_hash->{$count} = $K_return;
+        }
+
+        # retain old vars during transition phase
+        # Note: using <= to match old results but could use <
+        if ( !defined($return_count_min) || $count <= $return_count_min ) {
+            $return_count_min           = $count;
+            $item->{return_count_min}   = $count;
+            $item->{K_return_count_min} = $K_return;
+        }
+
+        # Note: using >= to match old results but could use >
+        if ( !defined($return_count_max) || $count >= $return_count_max ) {
+            $return_count_max           = $count;
+            $item->{return_count_max}   = $count;
+            $item->{K_return_count_max} = $K_return;
+        }
     }
-    $item->{return_count_min}   = $rhash->{shift_count_min};
-    $item->{return_count_max}   = $rhash->{shift_count_max};
-    $item->{K_return_count_min} = $rhash->{K_shift_count_min};
-    $item->{K_return_count_max} = $rhash->{K_shift_count_max};
+
+    $item->{rK_return_count_hash} = $rK_return_count_hash;
+
     if ( DEBUG_RETURN_COUNT > 1 ) {
         my $min = $item->{return_count_min};
         my $max = $item->{return_count_max};
@@ -15917,8 +15936,9 @@ sub cross_check_sub_calls {
         my $call_type           = $rcall_item->{call_type};
         my $key                 = $package . '::' . $name;
 
-        my ( $shift_count_min, $shift_count_max, $self_name );
-        my ( $return_count_min, $return_count_max );
+        my ( $shift_count_min,  $shift_count_max,  $self_name );
+        my ( $return_count_min, $return_count_max, $return_count_indefinite );
+        my ($rK_return_count_hash);
 
         # look for the sub ..
         my $seqno_sub = $rsub_seqno_by_key->{$key};
@@ -15939,9 +15959,12 @@ sub cross_check_sub_calls {
                 $self_name        = $rsub_item->{self_name};
                 $return_count_min = $rsub_item->{return_count_min};
                 $return_count_max = $rsub_item->{return_count_max};
+                $return_count_indefinite =
+                  $rsub_item->{return_count_indefinite};
                 $rK_return_list =
                   $self->[_rK_return_by_sub_seqno_]->{$seqno_sub};
                 $common_hash{$key}->{rK_return_list} = $rK_return_list;
+                $rK_return_count_hash = $rsub_item->{rK_return_count_hash};
             }
         }
 
@@ -15975,6 +15998,7 @@ sub cross_check_sub_calls {
                 }
             }
             else {
+                ## $excess = 0
             }
         }
 
@@ -15982,30 +16006,13 @@ sub cross_check_sub_calls {
         # compare caller/sub return counts if posible
         #--------------------------------------------
 
-        # vote to decide if a check should be made:
-        #    -1=>no, 0=>either way, 1=>yes
-        # require >= 1 yes votes and 0 no votes to make a check
-        my $lhs_vote =
-           !$return_count_wanted     ? -1
-          : $return_count_wanted < 2 ? 0
-          :                            1;
+        # rhs check: only check subs returning finite lists (i.e. not '@list');
+        next if ($return_count_indefinite);
 
-        my $rhs_vote =
-            !defined($rK_return_list)   ? 0
-          : !defined($return_count_max) ? -1
-          : $return_count_max < 1       ? 0
-          :                               1;
+        # lhs check: only check when a finite return list is wanted
+        next if ( !$return_count_wanted );
 
-        next if ( $lhs_vote + $rhs_vote <= 0 );
-
-        # ignore min return counts <= 1 if defined
-        my $return_count_min_plus = $return_count_min;
-        if ( defined($rK_return_list)
-            && ( !$return_count_min || $return_count_min <= 1 ) )
-        {
-            $return_count_min_plus = $return_count_max;
-        }
-
+        # update min-max want ranges for the output report
         my $max = $common_hash{$key}->{want_count_max};
         my $min = $common_hash{$key}->{want_count_min};
         if ( !defined($max) || $return_count_wanted > $max ) {
@@ -16015,31 +16022,51 @@ sub cross_check_sub_calls {
             $common_hash{$key}->{want_count_min} = $return_count_wanted;
         }
 
-        # cases of no return are stored as over-counts
+        # check for issue 'x', no return seen, stored as over-count
         if ( !defined($rK_return_list) ) {
             push @{ $common_hash{$key}->{over_count_return} }, $rcall_item;
         }
-        elsif ( defined($return_count_max)
-            && $return_count_wanted > $return_count_max )
-        {
+
+        # safety check
+        elsif ( !defined($return_count_max) ) {
+
+            # shouldn't happen-should be defined if $rK_return_list is defined
+            DEVEL_MODE && Fault("return_count_max should be defined here\n");
+        }
+
+        # check for exact match
+        elsif ( $return_count_wanted == $return_count_max ) {
+
+            # ok
+        }
+
+        # check for 'o': $return_count_wanted > $return_count_max
+        elsif ( $return_count_wanted > $return_count_max ) {
             push @{ $common_hash{$key}->{over_count_return} }, $rcall_item;
         }
-        elsif ($return_count_min_plus
-            && $return_count_wanted < $return_count_min_plus )
-        {
-            push @{ $common_hash{$key}->{under_count_return} }, $rcall_item;
+
+        # if want less than max...
+        else {
+
+            # check for 'u': $return_count_wanted does not match a return value
+            if ( defined($rK_return_count_hash) ) {
+                my $K_return = $rK_return_count_hash->{$return_count_wanted};
+                if ( !defined($K_return) ) {
+                    push @{ $common_hash{$key}->{under_count_return} },
+                      $rcall_item;
+                }
+            }
+            else {
+
+                # safety check, shouldn't happen
+                DEVEL_MODE && Fault("return count hash not defined\n");
+            }
         }
-        elsif ( defined($return_count_min_plus)
-            && $return_count_min_plus != $return_count_max )
-        {
-            push @{ $common_hash{$key}->{under_count_return} }, $rcall_item;
-        }
-        else { }
     }
 
-    #--------------------
-    # Now look for issues
-    #--------------------
+    #---------------------------
+    # Construct warning messages
+    #---------------------------
     my @call_arg_warnings;
     my @return_warnings;
     my $max_shift_count_with_undercount = 0;
@@ -16196,8 +16223,9 @@ sub cross_check_sub_calls {
 
                 my $lines_over_count = stringify_line_range($rover_count);
                 my $total            = $num_direct + $num_self;
+                my $calls            = $total > 1 ? 'calls' : 'call';
                 my $note =
-"excess args at $num_over_count of $total calls($lines_over_count)";
+"excess args at $num_over_count of $total $calls($lines_over_count)";
                 $push_call_arg_warning->( 'o', $note );
             }
 
@@ -16216,8 +16244,9 @@ sub cross_check_sub_calls {
                 {
                     my $lines_under_count = stringify_line_range($runder_count);
                     my $total             = $num_direct + $num_self;
+                    my $calls             = $total > 1 ? 'calls' : 'call';
                     my $note =
-"arg undercount at $num_under_count of $total calls($lines_under_count)";
+"arg undercount at $num_under_count of $total $calls($lines_under_count)";
 
                     $number_of_undercount_warnings++;
                     $push_call_arg_warning->( 'u', $note );
@@ -16230,15 +16259,16 @@ sub cross_check_sub_calls {
         # return issue 'x': no return seen
         #-------------------------------------------------
         if ($num_over_count_return) {
+            my $letter           = 'o';
             my $lines_over_count = stringify_line_range($rover_count_return);
             my $total            = $num_direct + $num_self;
-            my $letter           = 'o';
+            my $calls            = $total > 1 ? 'calls' : 'call';
             my $note =
-"excess values wanted at $num_over_count_return of $total calls($lines_over_count)";
+"excess values wanted at $num_over_count_return of $total $calls($lines_over_count)";
             my $lno_return = $lno;
             if ( !defined( $item->{rK_return_list} ) ) {
                 $letter = 'x';
-                $note   = "no return seen; $total calls($lines_over_count)";
+                $note   = "no return seen; $total $calls($lines_over_count)";
             }
             else {
                 $lno_return = $rLL->[$K_return_count_max]->[_LINE_INDEX_] + 1
@@ -16259,6 +16289,7 @@ sub cross_check_sub_calls {
                 my $lines_under_count =
                   stringify_line_range($runder_count_return);
                 my $total = $num_direct + $num_self;
+                my $calls = $total > 1 ? 'calls' : 'call';
                 my $note;
                 my $lno_return = $lno;
                 if ($K_return_count_max) {
@@ -16266,7 +16297,7 @@ sub cross_check_sub_calls {
                       $rLL->[$K_return_count_max]->[_LINE_INDEX_] + 1;
                 }
                 $note =
-"fewer than max values wanted at $num_under_count_return of $total calls($lines_under_count)";
+"fewer than max values wanted at $num_under_count_return of $total $calls($lines_under_count)";
                 $push_return_warning->( $letter, $note, $lno_return );
             }
         }
