@@ -2,6 +2,13 @@
 
 ## 2024 05 11.06
 
+    - Add logical xor operator ^^ available in perl version 5.40, as
+      noted in git #157.
+
+    - Keyword 'state' now has default space before a paren, like 'my'.
+      Previously there was no space and no control.  So the default
+      is now "state ($x)". This space can be removed with -nsak='state'.
+
     - Add options --add-lone-trailing-commas, -altc and
       --delete-lone-trailing-commas, -dltc, to add control over adding
       and deleting the only comma in a list.  See discussion in git #143

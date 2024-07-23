@@ -11,6 +11,7 @@
 #8 dltc.def
 #9 dltc.dltc1
 #10 dltc.dltc2
+#11 logical_xor.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -84,6 +85,10 @@ $self->make_grammar(
                     [ [ 1950, 150, ], [ 2050, 150, ], ],
                 ]
             );
+----------
+
+        'logical_xor' => <<'----------',
+$x^^$y and say "One of x or y is true, but not both";
 ----------
     };
 
@@ -228,6 +233,14 @@ $self->make_grammar(
     },
 );
 #10...........
+        },
+
+        'logical_xor.def' => {
+            source => "logical_xor",
+            params => "def",
+            expect => <<'#11...........',
+$x ^^ $y and say "One of x or y is true, but not both";
+#11...........
         },
     };
 

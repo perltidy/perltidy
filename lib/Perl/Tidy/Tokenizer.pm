@@ -10727,7 +10727,7 @@ For the following tokens, the "type" of a token is just the token itself.
 .. :: << >> ** && .. || // -> => += -= .= %= &= |= ^= *= <>
 ( ) <= >= == =~ !~ != ++ -- /= x=
 ... **= <<= >>= &&= ||= //= <=>
-, + - / * | % ! x ~ = \ ? : . < > ^ &
+, + - / * | % ! x ~ = \ ? : . < > ^ & ^^
 
 The following additional token types are defined:
 
@@ -10890,7 +10890,7 @@ BEGIN {
 
     my @digraphs = qw(
       .. :: << >> ** && || // -> => += -= .= %= &= |= ^= *= <>
-      <= >= == =~ !~ != ++ -- /= x= ~~ ~. |. &. ^.
+      <= >= == =~ !~ != ++ -- /= x= ~~ ~. |. &. ^. ^^
     );
     @is_digraph{@digraphs} = (1) x scalar(@digraphs);
 
@@ -11270,7 +11270,7 @@ BEGIN {
       **= += -= .= /= *= %= x= &= |= ^= <<= >>= &&= ||= //=
       <= >= == != => \ > < % * / ? & | ** <=> ~~ !~~ <<~
       f F pp mm Y p m U J G j >> << ^ t
-      ~. ^. |. &. ^.= |.= &.=
+      ~. ^. |. &. ^.= |.= &.= ^^
       #;
     push( @value_requestor_type, ',' )
       ;    # (perl doesn't like a ',' in a qw block)
