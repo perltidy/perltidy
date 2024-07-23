@@ -1552,8 +1552,8 @@ binary operator asymmetrically with a space on the left but not on the right.
 When an opening paren follows a Perl keyword, no space is introduced after the
 keyword, unless it is (by default) one of these:
 
-   my local our and or xor eq ne if else elsif until unless
-   while for foreach return switch case given when
+   my local our state and or xor err eq ne if else elsif until unless
+   while for foreach return switch case given when catch
 
 These defaults can be modified with two commands:
 
