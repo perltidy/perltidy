@@ -647,6 +647,7 @@ BEGIN {
         _rK_first_self_by_sub_seqno_      => $i++,
         _rK_bless_by_sub_seqno_           => $i++,
         _rK_return_by_sub_seqno_          => $i++,
+        _rK_wantarray_by_sub_seqno_       => $i++,
         _rK_sub_by_seqno_                 => $i++,
         _ris_my_sub_by_seqno_             => $i++,
         _rsub_call_paren_info_by_seqno_   => $i++,
@@ -1046,6 +1047,7 @@ sub new {
     $self->[_rK_first_self_by_sub_seqno_]      = {};
     $self->[_rK_bless_by_sub_seqno_]           = {};
     $self->[_rK_return_by_sub_seqno_]          = {};
+    $self->[_rK_wantarray_by_sub_seqno_]       = {};
     $self->[_rsub_call_paren_info_by_seqno_]   = {};
     $self->[_rDOLLAR_underscore_by_sub_seqno_] = {};
     $self->[_rK_sub_by_seqno_]                 = {};
@@ -10641,6 +10643,9 @@ my $rK_bless_by_sub_seqno;
 # new index K of 'return' for each sub
 my $rK_return_by_sub_seqno;
 
+# new index K of 'wantarray' for each sub
+my $rK_wantarray_by_sub_seqno;
+
 # info about list of sub call args
 my $rsub_call_paren_info_by_seqno;
 my $rDOLLAR_underscore_by_sub_seqno;
@@ -10688,6 +10693,7 @@ sub initialize_respace_tokens_closure {
     $rK_first_self_by_sub_seqno    = $self->[_rK_first_self_by_sub_seqno_];
     $rK_bless_by_sub_seqno         = $self->[_rK_bless_by_sub_seqno_];
     $rK_return_by_sub_seqno        = $self->[_rK_return_by_sub_seqno_];
+    $rK_wantarray_by_sub_seqno     = $self->[_rK_wantarray_by_sub_seqno_];
     $rsub_call_paren_info_by_seqno = $self->[_rsub_call_paren_info_by_seqno_];
     $rDOLLAR_underscore_by_sub_seqno =
       $self->[_rDOLLAR_underscore_by_sub_seqno_];
@@ -11343,6 +11349,11 @@ sub respace_tokens_inner_loop {
                 # off by 1 if a blank gets inserted before it
                 push
                   @{ $rK_return_by_sub_seqno->{$current_sub_seqno} },
+                  scalar @{$rLL_new};
+            }
+            if ( $token eq 'wantarray' ) {
+                push
+                  @{ $rK_wantarray_by_sub_seqno->{$current_sub_seqno} },
                   scalar @{$rLL_new};
             }
         }
@@ -15147,16 +15158,37 @@ sub count_return_values_wanted {
     my $token_c = $rLL->[$K_c]->[_TOKEN_];
     if ( $token_c ne ')' ) {
 
-        # Handle @array = f(x) or $scalar=f(x)
-        # NOTE: This is deactivated because we only want to do checks
-        # at something like ') ='. Otherwise we risk producing false
-        # warnings.  It could be reactivated in the future to produce
-        # information, but it would need to update some new variable
-        # other than {return_count_wanted}.
-        if ( 0 && $type_c eq 'i' ) {
+        # Handle @array = f(x) or $scalar=f(x), and things like
+        #   $rhash->{vv} = f();
+        #   $hash{vv} = f();
+        #   $array[$index] = f();
+        if ( $is_closing_type{$type_c} ) {
+
+            # backup from the closing brace to any identifier
+            # Note: currently only going back one index, a sub could
+            # be written to handle more complex things
+            my $seqno_c = $rLL->[$K_c]->[_TYPE_SEQUENCE_];
+            return if ( !$seqno_c );
+            my $Ko_c = $self->[_K_opening_container_]->{$seqno_c};
+            return unless ($Ko_c);
+            my $K_c_new = $self->K_previous_code($Ko_c);
+            return unless ($K_c_new);
+            $type_c  = $rLL->[$K_c_new]->[_TYPE_];
+            $token_c = $rLL->[$K_c_new]->[_TOKEN_];
+
+            if ( $type_c eq '->' ) {
+                $K_c_new = $self->K_previous_code($K_c_new);
+                return unless ($K_c_new);
+                $type_c  = $rLL->[$K_c_new]->[_TYPE_];
+                $token_c = $rLL->[$K_c_new]->[_TOKEN_];
+            }
+        }
+
+        if ( $type_c eq 'i' || $type_c eq 't' ) {
             my $sigil = substr( $token_c, 0, 1 );
             if ( $sigil eq '$' ) {
                 $item->{return_count_wanted} = 1;
+                $item->{want_scalar}         = 1;
             }
         }
         return;
@@ -15931,6 +15963,7 @@ sub cross_check_sub_calls {
 
         my $arg_count           = $rcall_item->{arg_count};
         my $return_count_wanted = $rcall_item->{return_count_wanted};
+        my $want_scalar         = $rcall_item->{want_scalar};
         my $package             = $rcall_item->{package};
         my $name                = $rcall_item->{name};
         my $call_type           = $rcall_item->{call_type};
@@ -15943,9 +15976,12 @@ sub cross_check_sub_calls {
         # look for the sub ..
         my $seqno_sub = $rsub_seqno_by_key->{$key};
         my $rK_return_list;
+        my $saw_wantarray;
         if ( defined($seqno_sub) ) {
 
             my $rsub_item = $rsub_info_by_seqno->{$seqno_sub};
+            $saw_wantarray =
+              defined( $self->[_rK_wantarray_by_sub_seqno_]->{$seqno_sub} );
 
             # skip 'my' subs for now, they need special treatment. If
             # anonymous subs are added, 'my' subs could also be added then.
@@ -16012,6 +16048,9 @@ sub cross_check_sub_calls {
         # lhs check: only check when a finite return list is wanted
         next if ( !$return_count_wanted );
 
+        # ignore scalar if wantarray seen
+        next if ( $want_scalar && $saw_wantarray );
+
         # update min-max want ranges for the output report
         my $max = $common_hash{$key}->{want_count_max};
         my $min = $common_hash{$key}->{want_count_min};
@@ -16042,7 +16081,11 @@ sub cross_check_sub_calls {
 
         # check for 'o': $return_count_wanted > $return_count_max
         elsif ( $return_count_wanted > $return_count_max ) {
-            push @{ $common_hash{$key}->{over_count_return} }, $rcall_item;
+
+            # no error for scalar request of 1 when max 0 returned
+            if ( !$want_scalar ) {
+                push @{ $common_hash{$key}->{over_count_return} }, $rcall_item;
+            }
         }
 
         # if want less than max...
@@ -16052,8 +16095,14 @@ sub cross_check_sub_calls {
             if ( defined($rK_return_count_hash) ) {
                 my $K_return = $rK_return_count_hash->{$return_count_wanted};
                 if ( !defined($K_return) ) {
-                    push @{ $common_hash{$key}->{under_count_return} },
-                      $rcall_item;
+                    if ($want_scalar) {
+                        push @{ $common_hash{$key}->{scalar_return_mismatch} },
+                          $rcall_item;
+                    }
+                    else {
+                        push @{ $common_hash{$key}->{under_count_return} },
+                          $rcall_item;
+                    }
                 }
             }
             else {
@@ -16163,12 +16212,15 @@ sub cross_check_sub_calls {
         my $num_over_count  = defined($rover_count)  ? @{$rover_count}  : 0;
         my $num_under_count = defined($runder_count) ? @{$runder_count} : 0;
 
-        my $rover_count_return  = $item->{over_count_return};
-        my $runder_count_return = $item->{under_count_return};
+        my $rover_count_return      = $item->{over_count_return};
+        my $runder_count_return     = $item->{under_count_return};
+        my $rscalar_return_mismatch = $item->{scalar_return_mismatch};
         my $num_over_count_return =
           defined($rover_count_return) ? @{$rover_count_return} : 0;
         my $num_under_count_return =
           defined($runder_count_return) ? @{$runder_count_return} : 0;
+        my $num_scalar_return_mismatch =
+          defined($rscalar_return_mismatch) ? @{$rscalar_return_mismatch} : 0;
 
         #--------------------------------------------------
         # issue 'a': subs with both self-> and direct calls
@@ -16285,19 +16337,38 @@ sub cross_check_sub_calls {
         if ($num_under_count_return) {
             my $letter = 'u';
             if ( $do_mismatched_return_type{$letter} ) {
-
                 my $lines_under_count =
                   stringify_line_range($runder_count_return);
-                my $total = $num_direct + $num_self;
-                my $calls = $total > 1 ? 'calls' : 'call';
-                my $note;
+                my $total      = $num_direct + $num_self;
+                my $calls      = $total > 1 ? 'calls' : 'call';
                 my $lno_return = $lno;
                 if ($K_return_count_max) {
                     $lno_return =
                       $rLL->[$K_return_count_max]->[_LINE_INDEX_] + 1;
                 }
-                $note =
+                my $note =
 "fewer than max values wanted at $num_under_count_return of $total $calls($lines_under_count)";
+                $push_return_warning->( $letter, $note, $lno_return );
+            }
+        }
+
+        #----------------------------------------
+        # return issue 's': scalar/array mismatch
+        #----------------------------------------
+        if ($num_scalar_return_mismatch) {
+            my $letter = 's';
+            if ( $do_mismatched_return_type{$letter} ) {
+                my $lines_under_count =
+                  stringify_line_range($rscalar_return_mismatch);
+                my $total      = $num_direct + $num_self;
+                my $calls      = $total > 1 ? 'calls' : 'call';
+                my $lno_return = $lno;
+                if ($K_return_count_max) {
+                    $lno_return =
+                      $rLL->[$K_return_count_max]->[_LINE_INDEX_] + 1;
+                }
+                my $note =
+"want scalar but only array seems to be returned at $num_scalar_return_mismatch of $total $calls($lines_under_count)";
                 $push_return_warning->( $letter, $note, $lno_return );
             }
         }
@@ -16341,7 +16412,7 @@ EOM
     my $return_warning_output = EMPTY_STRING;
     if ( @{$rreturn_warnings} ) {
         $return_warning_output = <<EOM;
-Issue types 'u'=under-want 'o'=over-want 'x'=no return
+Issue types 'u'=under-want 'o'=over-want 'x'=no return 's'=scalar-array mix
 Line:Issue:Name:#Returned:Min_wanted:Max_wanted: note
 EOM
         foreach ( @{$rreturn_warnings} ) {
@@ -16410,8 +16481,9 @@ sub initialize_warn_mismatched {
     #  x - no return seen
     #  o - overwant
     #  u - underwant
+    #  s - scalar-array mismatch
     $rwarn_mismatched_return_types =
-      initialize_warn_hash( 'warn-mismatched-return-types', 1, [qw(x o u)] );
+      initialize_warn_hash( 'warn-mismatched-return-types', 1, [qw(x o u s)] );
     $ris_warn_mismatched_return_excluded_name =
       make_excluded_name_hash('warn-mismatched-return-exclusion-list');
     return;
