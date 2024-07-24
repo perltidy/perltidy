@@ -12265,6 +12265,33 @@ sub add_phantom_semicolon {
     return;
 } ## end sub add_phantom_semicolon
 
+sub delay_trailing_comma_op {
+    my $self = shift;
+
+    # Returns:
+    #   true if a trailing comma operation should be skipped
+    #   false otherwise
+
+    # This can prevent unwanted path-dependent formatting when both
+    # line breaks are changing and we are only adding or deleting
+    # commas, but not both. See git #156
+
+    # permission must be given
+    return if ( !$rOpts->{'iterate-trailing-commas'} );
+
+    # we must be at the first of multiple iterations
+    my $it             = Perl::Tidy::get_iteration_count();
+    my $max_iterations = $rOpts->{'iterations'};
+    if ( $it == 1 && $max_iterations > 1 ) {
+
+        # if so, force another iteration
+        my $file_writer_object = $self->[_file_writer_object_];
+        $file_writer_object->not_converged();
+        return 1;
+    }
+    return;
+} ## end sub delay_trailing_comma_op
+
 sub add_trailing_comma {
 
     # Implement the --add-trailing-commas flag to the line end before index $KK:
@@ -12317,8 +12344,8 @@ sub add_trailing_comma {
         }
     }
 
-    # if so, add a comma
-    if ($match) {
+    # If so, and not delayed, add a comma
+    if ( $match && !$self->delay_trailing_comma_op() ) {
 
         # any blank after the comma will be added before the closing paren,
         # below
@@ -12407,9 +12434,10 @@ sub delete_trailing_comma {
         }
     }
 
-    # If no match, delete it
-    if ( !$match ) {
+    # If no match and not delayed
+    if ( !$match && !$self->delay_trailing_comma_op() ) {
 
+        # delete it
         return $self->unstore_last_nonblank_token(',');
     }
     return;
@@ -15951,9 +15979,9 @@ sub cross_check_sub_calls {
 
     }
 
-    #-----------------------------------------------------------------------
-    # Loop over all sub calls to compare counts of args passed with expected
-    #-----------------------------------------------------------------------
+    #--------------------------------------------------------------
+    # Loop over all sub calls to compare call and return arg counts
+    #--------------------------------------------------------------
     foreach my $seqno ( keys %{$rsub_call_paren_info_by_seqno} ) {
 
         my $rcall_item = $rsub_call_paren_info_by_seqno->{$seqno};

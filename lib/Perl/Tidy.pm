@@ -504,6 +504,10 @@ my $md5_hex = sub {
     return $digest;
 };
 
+sub get_iteration_count {
+    return $rstatus->{iteration_count};
+}
+
 BEGIN {
 
     # Array index names for $self.
@@ -3521,6 +3525,7 @@ sub generate_options {
     $add_option->( 'delete-weld-interfering-commas',            'dwic',  '!' );
     $add_option->( 'delete-semicolons',                         'dsm',   '!' );
     $add_option->( 'function-paren-vertical-alignment',         'fpva',  '!' );
+    $add_option->( 'iterate-trailing-commas',                   'itc',   '!' );
     $add_option->( 'keyword-paren-inner-tightness',             'kpit',  '=i' );
     $add_option->( 'keyword-paren-inner-tightness-list',        'kpitl', '=s' );
     $add_option->( 'logical-padding',                           'lop',   '!' );
@@ -3865,6 +3870,7 @@ sub generate_options {
       indent-columns=4
       integer-range-check=2
       interbracket-arrow-complexity=1
+      iterate-trailing-commas
       iterations=1
       keep-old-blank-lines=1
       keyword-paren-inner-tightness=1

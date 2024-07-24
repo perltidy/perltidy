@@ -6377,7 +6377,7 @@ cannot be determined for a call then it cannot be checked.
 Since only return
 statements are scanned for return values, this analysis will not be useful for
 programming which relies on the default return mechanism, as in
-C<sub old_school> above.
+the first sub above.
 Note that the B<Perl::Critic> policy B<RequireFinalReturn> can be used to check for code in this situation.
 
 Reported issues are
