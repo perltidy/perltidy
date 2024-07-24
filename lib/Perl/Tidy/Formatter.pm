@@ -15951,9 +15951,9 @@ sub cross_check_sub_calls {
 
     }
 
-    #-------------------------------------------------------------------------
-    # Loop to compare call methods and arg counts of calls and sub definitions
-    #-------------------------------------------------------------------------
+    #-----------------------------------------------------------------------
+    # Loop over all sub calls to compare counts of args passed with expected
+    #-----------------------------------------------------------------------
     foreach my $seqno ( keys %{$rsub_call_paren_info_by_seqno} ) {
 
         my $rcall_item = $rsub_call_paren_info_by_seqno->{$seqno};
@@ -16061,9 +16061,15 @@ sub cross_check_sub_calls {
             $common_hash{$key}->{want_count_min} = $return_count_wanted;
         }
 
-        # check for issue 'x', no return seen, stored as over-count
+        # return issue 'x': want array but no return seen
+        # return issue 'y': want scalar but no return seen
         if ( !defined($rK_return_list) ) {
-            push @{ $common_hash{$key}->{over_count_return} }, $rcall_item;
+            if ($want_scalar) {
+                push @{ $common_hash{$key}->{return_issues}->{y} }, $rcall_item;
+            }
+            else {
+                push @{ $common_hash{$key}->{return_issues}->{x} }, $rcall_item;
+            }
         }
 
         # safety check
@@ -16075,59 +16081,59 @@ sub cross_check_sub_calls {
 
         # check for exact match
         elsif ( $return_count_wanted == $return_count_max ) {
-
-            # ok
+            ## ok
         }
 
-        # check for 'o': $return_count_wanted > $return_count_max
+        # return issue 'o': overwant
         elsif ( $return_count_wanted > $return_count_max ) {
 
-            # no error for scalar request of 1 when max 0 returned
+            # but no error for scalar request of 1 when max 0 returned
             if ( !$want_scalar ) {
-                push @{ $common_hash{$key}->{over_count_return} }, $rcall_item;
+                push @{ $common_hash{$key}->{return_issues}->{o} }, $rcall_item;
             }
         }
 
         # if want less than max...
         else {
 
-            # check for 'u': $return_count_wanted does not match a return value
+            # issue 'u': want array for an unmatched count less than max
+            # issue 's': want scalar but all return counts are >1
             if ( defined($rK_return_count_hash) ) {
                 my $K_return = $rK_return_count_hash->{$return_count_wanted};
                 if ( !defined($K_return) ) {
                     if ($want_scalar) {
-                        push @{ $common_hash{$key}->{scalar_return_mismatch} },
+                        push @{ $common_hash{$key}->{return_issues}->{s} },
                           $rcall_item;
                     }
                     else {
-                        push @{ $common_hash{$key}->{under_count_return} },
+                        push @{ $common_hash{$key}->{return_issues}->{u} },
                           $rcall_item;
                     }
                 }
             }
             else {
-
-                # safety check, shouldn't happen
+                ## safety check, shouldn't happen
                 DEVEL_MODE && Fault("return count hash not defined\n");
             }
         }
     }
 
-    #---------------------------
-    # Construct warning messages
-    #---------------------------
+    #------------------------------------
+    # Construct one-line warning messages
+    #------------------------------------
     my @call_arg_warnings;
     my @return_warnings;
     my $max_shift_count_with_undercount = 0;
     my $number_of_undercount_warnings   = 0;
 
-    my ( $lno, $name );
-
-    my ( $shift_count_min, $shift_count_max, $min_arg_count, $max_arg_count );
-
+    # variables with information about a sub needed for warning output:
     my (
+
+        $lno,              $name,
+        $shift_count_min,  $shift_count_max,
+        $min_arg_count,    $max_arg_count,
         $return_count_min, $return_count_max,
-        $want_count_min,   $want_count_max
+        $want_count_min,   $want_count_max,
     );
 
     my $push_call_arg_warning = sub {
@@ -16168,7 +16174,9 @@ sub cross_check_sub_calls {
         return;
     };
 
-    # Look at each sub call
+    #-------------------
+    # Loop over each sub
+    #-------------------
     foreach my $key ( keys %common_hash ) {
         my $item = $common_hash{$key};
 
@@ -16196,6 +16204,7 @@ sub cross_check_sub_calls {
         $want_count_min   = $item->{want_count_min};
         $want_count_max   = $item->{want_count_max};
 
+        # change undefs to '*' for the output text
         foreach (
 
             $shift_count_min,  $shift_count_max,
@@ -16207,20 +16216,14 @@ sub cross_check_sub_calls {
             $_ = '*' unless defined($_);
         }
 
+        #-----------------------------------------------------------------
+        # Make a one-line message for each mismatch call issue of this sub
+        #-----------------------------------------------------------------
+
         my $rover_count     = $item->{over_count};
         my $runder_count    = $item->{under_count};
         my $num_over_count  = defined($rover_count)  ? @{$rover_count}  : 0;
         my $num_under_count = defined($runder_count) ? @{$runder_count} : 0;
-
-        my $rover_count_return      = $item->{over_count_return};
-        my $runder_count_return     = $item->{under_count_return};
-        my $rscalar_return_mismatch = $item->{scalar_return_mismatch};
-        my $num_over_count_return =
-          defined($rover_count_return) ? @{$rover_count_return} : 0;
-        my $num_under_count_return =
-          defined($runder_count_return) ? @{$runder_count_return} : 0;
-        my $num_scalar_return_mismatch =
-          defined($rscalar_return_mismatch) ? @{$rscalar_return_mismatch} : 0;
 
         #--------------------------------------------------
         # issue 'a': subs with both self-> and direct calls
@@ -16306,77 +16309,42 @@ sub cross_check_sub_calls {
             }
         }
 
-        #-------------------------------------------------
-        # return issue 'o': excess return args wanted, and
-        # return issue 'x': no return seen
-        #-------------------------------------------------
-        if ($num_over_count_return) {
-            my $letter           = 'o';
-            my $lines_over_count = stringify_line_range($rover_count_return);
-            my $total            = $num_direct + $num_self;
-            my $calls            = $total > 1 ? 'calls' : 'call';
-            my $note =
-"excess values wanted at $num_over_count_return of $total $calls($lines_over_count)";
-            my $lno_return = $lno;
-            if ( !defined( $item->{rK_return_list} ) ) {
-                $letter = 'x';
-                $note   = "no return seen; $total $calls($lines_over_count)";
-            }
-            else {
-                $lno_return = $rLL->[$K_return_count_max]->[_LINE_INDEX_] + 1
-                  if ( defined($K_return_count_max) );
-            }
-            if ( $do_mismatched_return_type{$letter} ) {
-                $push_return_warning->( $letter, $note, $lno_return );
-            }
-        }
+        #-------------------------------------------------------------------
+        # Make a one-line message for each mismatch return issue of this sub
+        #-------------------------------------------------------------------
+        my %note_start = (
+            x => "want array but no return seen",
+            y => "want scalar but no return seen",
+            o => "want array with excess count",
+            u => "want array with unmatched count",
+            s => "want scalar but only arrays with count >1 returned",
+        );
+        foreach my $letter (qw(x y o u s)) {
+            next if ( !$do_mismatched_return_type{$letter} );
+            my $rissues = $item->{return_issues}->{$letter};
+            my $number  = defined($rissues) ? @{$rissues} : 0;
+            next unless ($number);
+            my $line_count = stringify_line_range($rissues);
+            my $total      = $num_direct + $num_self;
+            my $calls      = $total > 1 ? 'calls' : 'call';
+            my $note       = $note_start{$letter}
+              . " at $number of $total $calls($line_count)";
 
-        #-------------------------------------------
-        # return issue 'u': fewer return args wanted
-        #-------------------------------------------
-        if ($num_under_count_return) {
-            my $letter = 'u';
-            if ( $do_mismatched_return_type{$letter} ) {
-                my $lines_under_count =
-                  stringify_line_range($runder_count_return);
-                my $total      = $num_direct + $num_self;
-                my $calls      = $total > 1 ? 'calls' : 'call';
-                my $lno_return = $lno;
-                if ($K_return_count_max) {
-                    $lno_return =
-                      $rLL->[$K_return_count_max]->[_LINE_INDEX_] + 1;
-                }
-                my $note =
-"fewer than max values wanted at $num_under_count_return of $total $calls($lines_under_count)";
-                $push_return_warning->( $letter, $note, $lno_return );
-            }
-        }
+            # The one-line message shows the line number of the return
+            # with the maximum count if there are returns. If no returns
+            # (types 'x' and 'y') it shows the first line of the sub ($lno).
+            my $lno_return =
+              defined($K_return_count_max)
+              ? $rLL->[$K_return_count_max]->[_LINE_INDEX_] + 1
+              : $lno;
 
-        #----------------------------------------
-        # return issue 's': scalar/array mismatch
-        #----------------------------------------
-        if ($num_scalar_return_mismatch) {
-            my $letter = 's';
-            if ( $do_mismatched_return_type{$letter} ) {
-                my $lines_under_count =
-                  stringify_line_range($rscalar_return_mismatch);
-                my $total      = $num_direct + $num_self;
-                my $calls      = $total > 1 ? 'calls' : 'call';
-                my $lno_return = $lno;
-                if ($K_return_count_max) {
-                    $lno_return =
-                      $rLL->[$K_return_count_max]->[_LINE_INDEX_] + 1;
-                }
-                my $note =
-"want scalar but only array seems to be returned at $num_scalar_return_mismatch of $total $calls($lines_under_count)";
-                $push_return_warning->( $letter, $note, $lno_return );
-            }
-        }
+            $push_return_warning->( $letter, $note, $lno_return );
+        } ## end loop to save one line for mismatched returns
     }
 
-    #------------------------------------
-    # Make the mismatched call arg report
-    #------------------------------------
+    #-----------------------------------------------
+    # Make the sorted/filtered call arg issue report
+    #-----------------------------------------------
     my $rcall_arg_warnings = sort_warnings( \@call_arg_warnings );
     $rcall_arg_warnings = filter_excluded_names( $rcall_arg_warnings,
         $ris_mismatched_call_excluded_name );
@@ -16402,9 +16370,9 @@ EOM
         }
     }
 
-    #----------------------------------
-    # Make the mismatched return report
-    #----------------------------------
+    #---------------------------------------------
+    # Make the sorted/filtered return issue report
+    #---------------------------------------------
     my $rreturn_warnings = sort_warnings( \@return_warnings );
     $rreturn_warnings = filter_excluded_names( $rreturn_warnings,
         $ris_mismatched_return_excluded_name );
@@ -16478,12 +16446,14 @@ sub initialize_warn_mismatched {
     $ris_warn_mismatched_arg_excluded_name =
       make_excluded_name_hash('warn-mismatched-arg-exclusion-list');
 
-    #  x - no return seen
-    #  o - overwant
-    #  u - underwant
-    #  s - scalar-array mismatch
+    #  x - want array but no return seen
+    #  o - want array with excess count
+    #  u - want array with unmatched count
+    #  y - want scalar but no return seen
+    #  s - want scalar but only arrays with count > 1 returned
     $rwarn_mismatched_return_types =
-      initialize_warn_hash( 'warn-mismatched-return-types', 1, [qw(x o u s)] );
+      initialize_warn_hash( 'warn-mismatched-return-types', 1,
+        [qw(x o u y s)] );
     $ris_warn_mismatched_return_excluded_name =
       make_excluded_name_hash('warn-mismatched-return-exclusion-list');
     return;

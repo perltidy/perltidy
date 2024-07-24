@@ -6334,40 +6334,55 @@ to standard output and exits immediately.  For example
 
     perltidy -dmr somefile.pl >results.txt
 
-Three types of issues are reported:
+The following types of issues are reported:
 
 =over 4
 
-=item B<x:> calls requesting values from a sub without a return statement.
+=item B<x:> calls requesting an array from a sub with no return statements.
 
-=item B<o:> (B<overwant>): the number of values wanted by the caller exceeds the number returned by the sub.
+=item B<y:> calls requesting a scalar from a sub with no return statements.
 
-=item B<u:> (B<underwant>): the number of values wanted by the caller is less than the number returned by the sub.
+=item B<o:> (B<overwant>): calls requesting an array with a count which exceeds the maximum number returned by the sub.
+
+=item B<u:> (B<underwant>): calls requesting an array with a count which is below the maximum and which does not match a number returned by the sub.
+
+=item B<s:> calls requesting a scalar from a sub which only returns two or more items.
 
 =back
 
-The three issue types are illustrated with the following code
+These issue types are illustrated with the following code
 
-    sub old_school {
+    sub macho {
         ...
         ( $name, $flags ); # 2 values but no 'return' statement
     }
 
-    ( $name, $flags ) = old_school();  # type 'x' (no return stmt)
+    ( $name, $flags ) = macho();  # 'x' (want array but no return stmt)
+    $name = macho();              # 'y' (want scalar but no return stmt)
 
-    sub info {
+    sub wimp {
         ...;
         return ( $name, $flags );  # 2 values with 'return' statement
     }
 
-    $name = $self->info();                     # type 'u' (want 1 < 2)
-    ( $name, $flags, $access) = $self->info(); # type 'o' (want 3 > 2)
+    ( $name, $flags, $access) = $self->wimp(); # 'o' (want array 3 > 2)
+    ($name) = $self->wimp();                   # 'u' (want array 1 < 2)
+    $name   = $self->wimp();                   # 's' (want scalar but 2 values returned)
 
-Issues are only reported when the return transaction involves two or more list
-elements, and only when a specific number can be determined.  Only return
-statements are scanned, so this analysis will not work for all programming
-styles. Reported issues are not necessarily errors, but they might be, or
-they might indicate potentially confusing code.
+This analysis works by scanning all call statements and all sub return
+statements, and comparing the the number of items wanted with the possible
+number of items returned.  If a specific value for either of these numbers
+cannot be determined for a call then it cannot be checked.
+
+Since only return
+statements are scanned for return values, this analysis will not be useful for
+programming which relies on the default return mechanism, as in
+C<sub old_school> above.
+Note that the B<Perl::Critic> policy B<RequireFinalReturn> can be used to check for code in this situation.
+
+Reported issues are
+not necessarily errors, but they might be, or they might indicate potentially
+confusing code.
 
 =item B<Use --warn-mismatched-returns> to issue warnings when the number of requested values may disagree with sub return statements
 
@@ -6382,17 +6397,16 @@ The following companion controls are available to avoid unwanted error messages:
 =over 4
 
 =item *
-B<--warn-mismatched-return-types=s>, or B<-wmrt=s>, can be used to limit
-checks.
+B<--warn-mismatched-return-types=string>, or B<-wmrt=string>, can be used to limit checks.
 
 To restrict the checking, set the string equal to the letter(s) of that warning,
-any B<x>, B<o>, or B<u>.  For example
+any B<x>, B<y>, B<o>, B<u>, or B<s>.  For example
 
-   perltidy -wmrt='x o' somefile.pl
+   perltidy -wmrt='x o s' somefile.pl
 
-will format F<somefile.pl> and report issue types B<x> and B<o> but not type
-B<u>.  All checks may be requested with B<-wmrt='*'> or B<-wmrt=1>.  This is
-the default.
+will format F<somefile.pl> and report issue types B<x>, B<o>, and B<s> but not
+types B<u> and B<y>.  All checks may be requested with B<-wmrt='*'> or
+B<-wmrt=1>.  This is the default.
 
 =item *
 B<--warn-mismatched-return-exclusion-list>, or B<-wmrxl=string>, can be given to
