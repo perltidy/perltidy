@@ -131,7 +131,7 @@ BEGIN {
     # then the Release version must be bumped, and it is probably past time for
     # a release anyway.
 
-    $VERSION = '20240511.06';
+    $VERSION = '20240511.07';
 } ## end BEGIN
 
 sub DESTROY {
@@ -3525,7 +3525,7 @@ sub generate_options {
     $add_option->( 'delete-weld-interfering-commas',            'dwic',  '!' );
     $add_option->( 'delete-semicolons',                         'dsm',   '!' );
     $add_option->( 'function-paren-vertical-alignment',         'fpva',  '!' );
-    $add_option->( 'iterate-trailing-commas',                   'itc',   '!' );
+    $add_option->( 'delay-trailing-comma-operations',           'dtco',  '!' );
     $add_option->( 'keyword-paren-inner-tightness',             'kpit',  '=i' );
     $add_option->( 'keyword-paren-inner-tightness-list',        'kpitl', '=s' );
     $add_option->( 'logical-padding',                           'lop',   '!' );
@@ -3870,7 +3870,7 @@ sub generate_options {
       indent-columns=4
       integer-range-check=2
       interbracket-arrow-complexity=1
-      iterate-trailing-commas
+      delay-trailing-comma-operations
       iterations=1
       keep-old-blank-lines=1
       keyword-paren-inner-tightness=1

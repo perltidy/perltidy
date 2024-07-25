@@ -1,6 +1,9 @@
 # Perltidy Change Log
 
-## 2024 05 11.06
+## 2024 05 11.07
+
+    - Include signature variables in --dump-unusual-variables and
+      --warn-variable-types; see git #158.
 
     - Add logical xor operator ^^ available in perl version 5.40, as
       noted in git #157.

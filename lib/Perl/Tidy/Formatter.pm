@@ -76,7 +76,7 @@ use constant BACKSLASH    => q{\\};
 use Carp;
 use English    qw( -no_match_vars );
 use List::Util qw( min max first );    # min, max first are in Perl 5.8
-our $VERSION = '20240511.06';
+our $VERSION = '20240511.07';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -8780,7 +8780,7 @@ sub scan_variable_usage {
     #   $package = what package was in effect when it was defined
     #   $KK = token index (for sorting)
 
-    # Variables for a batch of lexical varis being collected:
+    # Variables for a batch of lexical vars being collected:
     my $my_keyword;                 # 'state' or 'my' keyword for this set
     my $K_end_my           = -1;    # max token index of this set
     my $in_signature_seqno = 0;     # true while scanning a signature
@@ -12344,7 +12344,7 @@ sub delay_trailing_comma_op {
     # commas, but not both. See git #156
 
     # permission must be given
-    return if ( !$rOpts->{'iterate-trailing-commas'} );
+    return if ( !$rOpts->{'delay-trailing-comma-operations'} );
 
     # we must be at the first of multiple iterations
     my $it             = Perl::Tidy::get_iteration_count();

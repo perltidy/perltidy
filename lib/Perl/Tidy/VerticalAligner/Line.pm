@@ -10,7 +10,7 @@ package Perl::Tidy::VerticalAligner::Line;
 use strict;
 use warnings;
 
-our $VERSION = '20240511.06';
+our $VERSION = '20240511.07';
 use English qw( -no_match_vars );
 
 sub AUTOLOAD {
