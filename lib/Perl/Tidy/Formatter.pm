@@ -8737,7 +8737,7 @@ sub scan_variable_usage {
 
     # There are lots of details, but that's the main idea. A difficulty is
     # when 'my' vars are created in the control section of blocks such as
-    # for, foreach, if, unless, .. These follow special rules. The
+    # for, foreach, if, unless, .. these follow special rules. The
     # way it is done here is to propagate such vars in a special control
     # layer stack entry which is pushed on just before these blocks.
 
@@ -8781,18 +8781,19 @@ sub scan_variable_usage {
     #   $KK = token index (for sorting)
 
     # Variables for a batch of lexical varis being collected:
-    my $my_keyword;                # 'state' or 'my' keyword for this set
-    my $K_end_my          = -1;    # max token index of this set
-    my $my_starting_count = 0;     # the initial token count for this set
+    my $my_keyword;                 # 'state' or 'my' keyword for this set
+    my $K_end_my           = -1;    # max token index of this set
+    my $in_signature_seqno = 0;     # true while scanning a signature
+    my $my_starting_count  = 0;     # the initial token count for this set
 
     # Variables for warning messages:
-    my @warnings;                  # array of warning messages
-    my %package_warnings;          # warning messages for package cross-over
-    my %sub_count_by_package;      # how many subs defined in a package
+    my @warnings;                   # array of warning messages
+    my %package_warnings;           # warning messages for package cross-over
+    my %sub_count_by_package;       # how many subs defined in a package
 
     # Variables for scanning interpolated quotes:
-    my $ix_HERE_END = -1;          # the line index of the last here target read
-    my $in_interpolated_quote;     # in multiline quote with interpolation?
+    my $ix_HERE_END = -1;         # the line index of the last here target read
+    my $in_interpolated_quote;    # in multiline quote with interpolation?
 
     #--------------------------------
     # sub to checkin a new identifier
@@ -8801,17 +8802,36 @@ sub scan_variable_usage {
         my ($KK) = @_;
 
         # Store the new identifier at index $KK
+
         my $name       = $rLL->[$KK]->[_TOKEN_];
         my $line_index = $rLL->[$KK]->[_LINE_INDEX_];
 
-        # Perform checks for reused names
+        # Special checks for signature variables
+        if ($in_signature_seqno) {
+
+            # must be in top signature layer
+            my $parent = $self->parent_seqno_by_K($KK);
+            return if ( $parent != $in_signature_seqno );
+
+            # must be preceded by a comma or opening paren
+            my $Kp = $self->K_previous_code($KK);
+            return if ( !$Kp );
+            my $token_p = $rLL->[$Kp]->[_TOKEN_];
+            return if ( $token_p ne ',' && $token_p ne '(' );
+        }
+
         my $sigil = EMPTY_STRING;
         my $word  = EMPTY_STRING;
         if ( $name =~ /^(\W+)(\w+)$/ ) {
             $sigil = $1;
             $word  = $2;
         }
+        else {
+            # could be something like '$' or '@' in a signature
+            return;
+        }
 
+        # Perform checks for reused names
         my @sigils_to_test;
         if ($check_sigil) {
             if ($check_reused) {
@@ -8845,6 +8865,7 @@ sub scan_variable_usage {
                     if ( $sig eq $sigil ) {
                         my $as_iterator =
                           $is_my_state{$my_keyword}
+                          || substr( $my_keyword, 0, 3 ) eq 'sub'
                           ? EMPTY_STRING
                           : ' as iterator';
                         $note   = "reused$as_iterator - see line $first_line";
@@ -9075,6 +9096,34 @@ sub scan_variable_usage {
         return;
     };
 
+    my $check_sub_signature = sub {
+        my ($KK) = @_;
+
+        # check for signature list
+        my ( $seqno_brace, $K_end_iterator ) =
+          $self->block_seqno_of_paren_keyword($KK);
+
+        # found signature?
+        if ($seqno_brace) {
+
+            # Treat signature variables like my variables
+            my $K_opening_brace =
+              $self->[_K_opening_container_]->{$seqno_brace};
+
+            if ( $K_opening_brace && $K_opening_brace > $K_end_my ) {
+                $K_end_my   = $K_opening_brace;
+                $my_keyword = 'sub signature';
+            }
+
+            my $K_opening_paren = $self->K_next_code($KK);
+            $in_signature_seqno = $rLL->[$K_opening_paren]->[_TYPE_SEQUENCE_];
+
+            # Create special block on the stack..see note above for
+            # $is_if_unless
+            $push_block_stack->($seqno_brace);
+        }
+    };
+
     #--------------------
     # Loop over all lines
     #--------------------
@@ -9106,6 +9155,14 @@ sub scan_variable_usage {
 
                     # always push a block
                     if ($block_type) {
+
+                        # exit signature if we will push a duplicate block
+                        if (   $in_signature_seqno
+                            && @{$rblock_stack}
+                            && $seqno == $rblock_stack->[-1]->{seqno} )
+                        {
+                            $in_signature_seqno = 0;
+                        }
 
                         $push_block_stack->($seqno);
 
@@ -9263,6 +9320,9 @@ EOM
                         $push_block_stack->($seqno_brace);
                     }
                 }
+                elsif ( $token eq 'sub' ) {
+                    $check_sub_signature->($KK);
+                }
                 else {
                     # no other keywords to check
                 }
@@ -9312,6 +9372,13 @@ EOM
                 else {
                     # ignore variable if not collecting 'my' or counts
                 }
+            }
+
+            #----------------
+            # a sub statement
+            #----------------
+            elsif ( $type eq 'S' ) {
+                $check_sub_signature->($KK);
             }
 
             #--------------------
