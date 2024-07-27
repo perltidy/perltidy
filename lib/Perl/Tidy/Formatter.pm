@@ -9099,29 +9099,47 @@ sub scan_variable_usage {
     my $check_sub_signature = sub {
         my ($KK) = @_;
 
-        # check for signature list
-        my ( $seqno_brace, $K_end_iterator ) =
-          $self->block_seqno_of_paren_keyword($KK);
+        # looking for a sub signature
+        #    sub xxx (...) {
+        #    -------
+        #          | |   | |
+        #        $KK $Kn | |
+        #                  $K_opening_brace
 
-        # found signature?
-        if ($seqno_brace) {
+        # Note: this version cannot handle signatures within signatures.
+        # Inner signatures are currently ignored. For example, only the
+        # outermost $a below will be checked in this line:
 
-            # Treat signature variables like my variables
-            my $K_opening_brace =
-              $self->[_K_opening_container_]->{$seqno_brace};
+        #  sub xyz ($a = sub ($a) { $a."z" }) { $a->("a")."y" }
 
-            if ( $K_opening_brace && $K_opening_brace > $K_end_my ) {
-                $K_end_my   = $K_opening_brace;
-                $my_keyword = 'sub signature';
-            }
+        # What happens is that variable $K_end_my is set by the first
+        # signature, and the second signature is within it and so does
+        # not get activated. A stack scheme would be necessary to handle
+        # this, but does not seem necessary because this probably only
+        # occurs in test code, and the only downside is that we limit
+        # some checking.
 
-            my $K_opening_paren = $self->K_next_code($KK);
-            $in_signature_seqno = $rLL->[$K_opening_paren]->[_TYPE_SEQUENCE_];
+        my $Kn = $self->K_next_code($KK);
+        return unless ( $rLL->[$Kn]->[_TOKEN_] eq '(' );
+        my $seqno_paren = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
+        return unless ($seqno_paren);
+        my $K_closing_paren = $self->[_K_closing_container_]->{$seqno_paren};
+        my $K_opening_brace = $self->K_next_code($K_closing_paren);
+        return unless ($K_opening_brace);
+        my $seqno_brace = $rLL->[$K_opening_brace]->[_TYPE_SEQUENCE_];
+        my $token_brace = $rLL->[$K_opening_brace]->[_TOKEN_];
+        return unless ( $seqno_brace && $token_brace eq '{' );
 
-            # Create special block on the stack..see note above for
-            # $is_if_unless
+        # Treat signature variables like my variables
+        # Create special block on the stack..see note above for
+        # $is_if_unless
+        if ( $K_opening_brace > $K_end_my ) {
+            $K_end_my           = $K_opening_brace;
+            $my_keyword         = 'sub signature';
+            $in_signature_seqno = $seqno_paren;
             $push_block_stack->($seqno_brace);
         }
+        return;
     };
 
     #--------------------
