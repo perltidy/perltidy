@@ -453,6 +453,7 @@ my (
 
     # INITIALIZER: sub make_closing_side_comment_list_pattern
     $closing_side_comment_list_pattern,
+    $closing_side_comment_want_asub,
 
     # Table to efficiently find indentation and max line length
     # from level.
@@ -5689,11 +5690,14 @@ sub make_closing_side_comment_list_pattern {
 
     # turn any input list into a regex for recognizing selected block types
     $closing_side_comment_list_pattern = '^\w+';
+    $closing_side_comment_want_asub    = 0;
     if ( defined( $rOpts->{'closing-side-comment-list'} )
         && $rOpts->{'closing-side-comment-list'} )
     {
         $closing_side_comment_list_pattern =
           make_block_pattern( '-cscl', $rOpts->{'closing-side-comment-list'} );
+        $closing_side_comment_want_asub =
+          $rOpts->{'closing-side-comment-list'} =~ /\basub\b/;
     }
     return;
 } ## end sub make_closing_side_comment_list_pattern
@@ -10545,6 +10549,17 @@ EOM
             my $type_m = $rLL->[$K_m]->[_TYPE_];
             if ( $type_m eq 'b' && $K_m > $Kfirst ) { $K_m-- }
             my $seqno_m = $rLL->[$K_m]->[_TYPE_SEQUENCE_];
+
+            # patch to delete asub csc's (c380)
+            if ( !$seqno_m && $K_m && $rLL->[$K_m]->[_TYPE_] eq ';' ) {
+                $K_m    = $K_m - 1;
+                $type_m = $rLL->[$K_m]->[_TYPE_];
+                if ( $type_m eq 'b' && $K_m > $Kfirst ) { $K_m-- }
+                if ( $K_m == $Kfirst ) {
+                    $seqno_m = $rLL->[$K_m]->[_TYPE_SEQUENCE_];
+                }
+            }
+
             if ($seqno_m) {
                 my $block_type_m = $rblock_type_of_seqno->{$seqno_m};
                 if (   $block_type_m
@@ -33861,6 +33876,17 @@ EOM
             my $token = $tokens_to_go[$max_i];
             my $KK    = $K_to_go[$max_i];
 
+            my $is_closing_block = $types_to_go[$i_terminal] eq '}'
+              && $tokens_to_go[$i_terminal] eq '}';
+
+            # Patch to check for asub closing side comments (c380)
+            # These follow '};' rather than bare '}'
+            $is_closing_block ||=
+                 $types_to_go[$i_terminal] eq ';'
+              && $i_terminal == $inext_to_go[0]
+              && $types_to_go[0] eq '}'
+              && $tokens_to_go[0] eq '}';
+
             # Do not align various special side comments
             my $do_not_align = (
 
@@ -33872,8 +33898,7 @@ EOM
                     && $token =~ /$static_side_comment_pattern/ )
 
                   # or a closing side comment
-                  || ( $types_to_go[$i_terminal] eq '}'
-                    && $tokens_to_go[$i_terminal] eq '}'
+                  || ( $is_closing_block
                     && $token =~ /$closing_side_comment_prefix_pattern/ )
             );
 
@@ -38206,6 +38231,53 @@ sub set_vertical_tightness_flags {
     } ## end sub balance_csc_text
 } ## end closure balance_csc_text
 
+sub get_asub_block_label {
+    my ( $self, $seqno ) = @_;
+
+    # Given:
+    #   $seqno = the sequence number of an asub block
+    # Return:
+    #   $block_label = the text # that will be displayed before 'sub' in its
+    #   closing side comment.
+    # Note: see similar inline code in sub find_selected_blocks
+
+    # Example:
+    #     my $doit = sub { ...
+    #                    |
+    #                    ^----------walk back from here to get
+    # $block_label = '$doit ='
+
+    my $block_label = EMPTY_STRING;
+    return $block_label unless ($seqno);
+    my $K_opening = $self->[_K_opening_container_]->{$seqno};
+    my $rLL       = $self->[_rLL_];
+    return $block_label unless ($K_opening);
+    my $K_search_min = max( 0, $K_opening - 6 );
+    my ( $saw_equals, $saw_fat_comma, $blank_count, $nonblank_count );
+    my $text = EMPTY_STRING;
+
+    foreach my $KK ( reverse( $K_search_min .. $K_opening - 1 ) ) {
+        my $token_type = $rLL->[$KK]->[_TYPE_];
+        my $token      = $rLL->[$KK]->[_TOKEN_];
+
+        # first nonblank, keyword 'sub', is not part of the label
+        if ($nonblank_count) { $text = $token . $text }
+
+        if ( $token_type eq 'b' ) { $blank_count++; next }
+        else                      { $nonblank_count++ }
+        if ( $token_type eq '=>' ) { $saw_fat_comma++; next }
+        if ( $token_type eq '=' )  { $saw_equals++;    next }
+        if ( $token_type eq 'i' && $saw_equals
+            || ( $token_type eq 'w' || $token_type eq 'Q' ) && $saw_fat_comma )
+        {
+            $block_label = $text;
+            $block_label =~ s/\s*$//;
+            last;
+        }
+    }
+    return $block_label;
+}
+
 sub add_closing_side_comment {
 
     my ( $self, $ri_first, $ri_last ) = @_;
@@ -38229,6 +38301,27 @@ sub add_closing_side_comment {
     #---------------------------------------------------------------
     my $have_side_comment = $types_to_go[$max_index_to_go] eq '#';
 
+    # Special check for asub closing side comments (c380)
+    # These are the only types which follow '};' instead of a bare '}'
+    if ( $terminal_type eq ';' && $closing_side_comment_want_asub ) {
+        if (   $types_to_go[0] eq '}'
+            && $tokens_to_go[0] eq '}'
+            && $i_terminal == $inext_to_go[0] )
+        {
+            my $seqno = $type_sequence_to_go[0];
+            if ( $self->[_ris_asub_block_]->{$seqno} ) {
+
+                # reset the terminal token to be the closing brace so
+                # that the code below ignores the trailing semicolon
+                $terminal_type = '}';
+                $i_terminal    = 0;
+
+                # create a name for this asub block
+                $block_label = $self->get_asub_block_label($seqno);
+            }
+        }
+    }
+
     # if this line might end in a block closure..
     if (
         $terminal_type eq '}'
@@ -38251,12 +38344,9 @@ sub add_closing_side_comment {
         && $block_type_to_go[$i_terminal] =~
         /$closing_side_comment_list_pattern/
 
-        # .. but not an anonymous sub
-        # These are not normally of interest, and their closing braces are
-        # often followed by commas or semicolons anyway.  This also avoids
-        # possible erratic output due to line numbering inconsistencies
-        # in the cases where their closing braces terminate a line.
-        && $block_type_to_go[$i_terminal] ne 'sub'
+        # anonymous sub only if specifically requested (c380)
+        && (   $block_type_to_go[$i_terminal] ne 'sub'
+            || $closing_side_comment_want_asub )
 
         # ..and the corresponding opening brace must is not in this batch
         # (because we do not need to tag one-line blocks, although this
