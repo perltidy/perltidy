@@ -26,9 +26,9 @@
 # user-defined subs must have args in parens
 --want-call-parens='&'
 
-# add closing side comments for named subs
+# add closing side comments for subs
 --closing-side-comments
---closing-side-comment-list='sub'
+--closing-side-comment-list='sub asub'
 
 # remove trailing commas followed by paren
 --want-trailing-commas='b'

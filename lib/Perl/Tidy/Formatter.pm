@@ -2148,7 +2148,7 @@ sub initialize_token_break_preferences {
             }
         }
         return;
-    };
+    }; ## end $break_after = sub
 
     my $break_before = sub {
         my @toks = @_;
@@ -2162,7 +2162,7 @@ sub initialize_token_break_preferences {
             }
         }
         return;
-    };
+    }; ## end $break_before = sub
 
     $break_after->(@all_operators) if ( $rOpts->{'break-after-all-operators'} );
     $break_before->(@all_operators)
@@ -3280,7 +3280,7 @@ sub set_whitespace_flags {
             $ws = $rOpts_space_signature_paren == 0 ? WS_NO : WS_YES;
         }
         return $ws;
-    };
+    }; ## end $ws_signature_paren = sub
 
     my $last_token = SPACE;
     my $last_type  = 'b';
@@ -7568,7 +7568,7 @@ sub set_ci {
             return $is_block_with_ci{$block_type};
         }
         return;
-    };
+    }; ## end $map_block_follows = sub
 
     my $redo_preceding_comment_ci = sub {
 
@@ -7582,7 +7582,7 @@ sub set_ci {
             }
         }
         return;
-    };
+    }; ## end $redo_preceding_comment_ci = sub
 
     # Definitions of the sequence of ci_values being maintained:
     # $ci_last      = the ci value of the previous non-blank, non-comment token
@@ -8763,7 +8763,7 @@ sub scan_variable_usage {
         push @{$rblock_stack},
           { seqno => $seqno, package => $current_package, rvars => $rvars };
         return;
-    };
+    }; ## end $push_block_stack = sub
 
     $push_block_stack->(SEQ_ROOT);
 
@@ -8906,7 +8906,7 @@ sub scan_variable_usage {
             K          => $KK,
         };
         return;
-    };
+    }; ## end $checkin_new_identifier = sub
 
     #--------------------------------------------------
     # sub to update counts for a list of variable names
@@ -8960,7 +8960,7 @@ sub scan_variable_usage {
             }
         }
         return;
-    };
+    }; ## end $update_use_count = sub
 
     #-----------------------------------------------
     # sub to check for zero counts when stack closes
@@ -8984,7 +8984,7 @@ sub scan_variable_usage {
             }
         }
         return;
-    };
+    }; ## end $check_for_unused_names = sub
 
     #---------------------------------------
     # sub to scan interpolated text for vars
@@ -9001,7 +9001,7 @@ sub scan_variable_usage {
             $update_use_count->( $sigil_string, $word, $brace );
         }
         return;
-    };
+    }; ## end $scan_quoted_text = sub
 
     #-------------------------------------------------------------
     # sub to find the next opening brace seqno of an if-elsif- chain
@@ -9058,7 +9058,7 @@ sub scan_variable_usage {
             $push_block_stack->( $seqno_block, $rpopped_vars );
         }
         return;
-    };
+    }; ## end $push_next_if_chain = sub
 
     my $scan_braced_id = sub {
         my ($KK) = @_;
@@ -9098,7 +9098,7 @@ sub scan_variable_usage {
         }
         $update_use_count->( $sigil_string, $word, $bracket );
         return;
-    };
+    }; ## end $scan_braced_id = sub
 
     my $check_sub_signature = sub {
         my ($KK) = @_;
@@ -9144,7 +9144,7 @@ sub scan_variable_usage {
             $push_block_stack->($seqno_brace);
         }
         return;
-    };
+    }; ## end $check_sub_signature = sub
 
     #--------------------
     # Loop over all lines
@@ -10322,7 +10322,7 @@ sub interbracket_arrow_check {
         my $msg  = "$first_word $num_changes '->'$ess1 at line$ess2 $str\n";
         warning($msg);
         return;
-    };
+    }; ## end $warn = sub
 
     # Complexity control flag:
     #  =0 left container must just contain a single token
@@ -14071,7 +14071,7 @@ sub count_list_elements {
         $KK_last_nb      = $KK_last_last_nb;
         $KK_last_last_nb = undef;
         return;
-    };
+    }; ## end $backup_on_last = sub
 
     #--------------------------------------------------------
     # Main loop to scan the container looking for list items.
@@ -14616,7 +14616,7 @@ sub count_sub_input_args {
         my $name = $rLL->[$K_mmm]->[_TOKEN_];
         return unless ( $name =~ /^\$\w/ );
         return $name;
-    };
+    }; ## end $dollar_underscore_zero_name = sub
 
     my $rseqno_DOLLAR_underscore =
       $self->[_rDOLLAR_underscore_by_sub_seqno_]->{$seqno_block};
@@ -15490,7 +15490,7 @@ sub update_sub_call_paren_info {
         my $K_p = $self->K_previous_code($Ko);
         return unless ( $rLL->[$K_p]->[_TOKEN_] eq '$_' );
         return 1;
-    };
+    }; ## end $is_dollar_underscore_zero = sub
 
     #----------------------------------------------
     # Loop over sequence numbers of all call parens
@@ -16280,7 +16280,7 @@ sub cross_check_sub_calls {
             output_line => $output_line,
           };
         return;
-    };
+    }; ## end $push_call_arg_warning = sub
 
     my $push_return_warning = sub {
         my ( $letter, $note, $lno_return ) = @_;
@@ -16300,7 +16300,7 @@ sub cross_check_sub_calls {
             output_line => $output_line,
           };
         return;
-    };
+    }; ## end $push_return_warning = sub
 
     #-------------------
     # Loop over each sub
@@ -18378,7 +18378,7 @@ sub weld_nested_quotes {
             return if ( $test_type ne $quote_type );
         }
         return 1;
-    };
+    }; ## end $is_single_quote = sub
 
     # Length tolerance - same as previously used for sub weld_nested
     my $multiline_tol =
@@ -18650,7 +18650,7 @@ sub mark_short_nested_blocks {
         my $length = $self->cumulative_length_before_K($K) - $starting_lentot;
         my $excess_length = $length + $length_tol - $maximum_text_length;
         return ($excess_length);
-    };
+    }; ## end $excess_length_to_K = sub
 
     # loop over all containers
     my @open_block_stack;
@@ -38276,7 +38276,7 @@ sub get_asub_block_label {
         }
     }
     return $block_label;
-}
+} ## end sub get_asub_block_label
 
 sub add_closing_side_comment {
 

@@ -233,7 +233,7 @@ sub add_toc_item {
             ${$rin_toc_package} = EMPTY_STRING;
         }
         return;
-    };
+    }; ## end $end_package_list = sub
 
     my $start_package_list = sub {
         my ( $unique_name, $package ) = @_;
@@ -244,7 +244,7 @@ sub add_toc_item {
 EOM
         ${$rin_toc_package} = $package;
         return;
-    };
+    }; ## end $start_package_list = sub
 
     # start the table of contents on the first item
     if ( !${$rtoc_item_count} ) {
@@ -788,7 +788,7 @@ sub pod_to_html {
             if ($in_toc) { push @toc, $line }
         }
         return;
-    };
+    }; ## end $html_print = sub
 
     # loop over lines of html output from pod2html and merge in
     # the necessary perltidy html sections

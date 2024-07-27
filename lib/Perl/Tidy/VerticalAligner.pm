@@ -3951,7 +3951,7 @@ sub prune_alignment_tree {
           ];
 
         return;
-    };    ## end sub end_node
+    }; ## end $end_node = sub
 
     #-----------------------------------------------------
     # Prune Tree Step 2. Loop to form the tree of matches.

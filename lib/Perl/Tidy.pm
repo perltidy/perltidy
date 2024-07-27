@@ -502,7 +502,7 @@ my $md5_hex = sub {
     my $octets = Encode::encode( "utf8", $buf );
     my $digest = md5_hex($octets);
     return $digest;
-};
+}; ## end $md5_hex = sub
 
 sub get_iteration_count {
     return $rstatus->{iteration_count};
@@ -668,7 +668,7 @@ EOM
             }
         }
         return $hash_ref;
-    };
+    }; ## end $get_hash_ref = sub
 
     %input_hash = ( %defaults, %input_hash );
     my $argv               = $input_hash{'argv'};
@@ -3184,7 +3184,7 @@ sub compare_string_buffers {
             $str = substr( $str, 0, $lenmax ) . "...";
         }
         return $str;
-    };
+    }; ## end $truncate = sub
     while (1) {
         if ($linei) {
             $last_nonblank_line  = $linei;
@@ -3427,7 +3427,7 @@ sub generate_options {
             }
         }
         return;
-    };
+    }; ## end $add_option = sub
 
     # Install long option names which have a simple abbreviation.
     # Options with code '!' get standard negation ('no' for long names,
@@ -4975,7 +4975,7 @@ EOM
             }
         }
         return;
-    };
+    }; ## end $check_blank_count = sub
 
     # check for reasonable number of blank lines and fix to avoid problems
     $check_blank_count->( 'blank-lines-before-subs',          '-blbs' );
@@ -5431,7 +5431,7 @@ sub find_config_file {
         return 0 unless $config_file;
         ${$rconfig_file_chatter} .= "# Testing: $config_file\n";
         return -f $config_file;
-    };
+    }; ## end $exists_config_file = sub
 
     # Sub to search upward for config file
     my $resolve_config_file = sub {
@@ -5455,7 +5455,7 @@ sub find_config_file {
             }
         }
         return $config_file;
-    };
+    }; ## end $resolve_config_file = sub
 
     my $config_file;
 
