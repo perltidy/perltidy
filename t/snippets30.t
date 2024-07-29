@@ -12,6 +12,7 @@
 #9 dltc.dltc1
 #10 dltc.dltc2
 #11 logical_xor.def
+#12 csc.csc3
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -31,6 +32,7 @@ BEGIN {
     $rparams = {
         'altc1'  => "-atc -wtc=m",
         'altc2'  => "-altc -atc -wtc=m",
+        'csc3'   => "-csc -csci=2 -ncscb",
         'def'    => "",
         'dltc1'  => "-dtc -wtc=0",
         'dltc2'  => "-dtc -wtc=0 -ndltc",
@@ -56,6 +58,26 @@ $self->make_grammar(
         version  => $self->version
     }
 );
+----------
+
+        'csc' => <<'----------',
+        sub message {
+            if ( !defined( $_[0] ) ) {
+                print("Hello, World\n");
+            }
+            else {
+                print( $_[0], "\n" );
+            }
+        } ## end sub message
+
+        my $message =sub {
+            if ( !defined( $_[0] ) ) {
+                print("Hello, World\n");
+            }
+            else {
+                print( $_[0], "\n" );
+            }
+        };
 ----------
 
         'dltc' => <<'----------',
@@ -241,6 +263,30 @@ $self->make_grammar(
             expect => <<'#11...........',
 $x ^^ $y and say "One of x or y is true, but not both";
 #11...........
+        },
+
+        'csc.csc3' => {
+            source => "csc",
+            params => "csc3",
+            expect => <<'#12...........',
+        sub message {
+            if ( !defined( $_[0] ) ) {
+                print("Hello, World\n");
+            } ## end if ( !defined( $_[0] ))
+            else {
+                print( $_[0], "\n" );
+            } ## end else [ if ( !defined( $_[0] ))
+        } ## end sub message
+
+        my $message = sub {
+            if ( !defined( $_[0] ) ) {
+                print("Hello, World\n");
+            } ## end if ( !defined( $_[0] ))
+            else {
+                print( $_[0], "\n" );
+            } ## end else [ if ( !defined( $_[0] ))
+        }; ## end $message = sub
+#12...........
         },
     };
 

@@ -6,3 +6,12 @@
                 print( $_[0], "\n" );
             } ## end else [ if ( !defined( $_[0] ))
         } ## end sub message
+
+        my $message = sub {
+            if ( !defined( $_[0] ) ) {
+                print("Hello, World\n");
+            } ## end if ( !defined( $_[0] ))
+            else {
+                print( $_[0], "\n" );
+            } ## end else [ if ( !defined( $_[0] ))
+        };

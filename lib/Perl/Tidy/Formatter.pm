@@ -454,6 +454,7 @@ my (
     # INITIALIZER: sub make_closing_side_comment_list_pattern
     $closing_side_comment_list_pattern,
     $closing_side_comment_want_asub,
+    $closing_side_comment_exclusion_pattern,
 
     # Table to efficiently find indentation and max line length
     # from level.
@@ -5690,14 +5691,28 @@ sub make_closing_side_comment_list_pattern {
 
     # turn any input list into a regex for recognizing selected block types
     $closing_side_comment_list_pattern = '^\w+';
-    $closing_side_comment_want_asub    = 0;
-    if ( defined( $rOpts->{'closing-side-comment-list'} )
-        && $rOpts->{'closing-side-comment-list'} )
-    {
+
+    # '1' is an impossible block name
+    $closing_side_comment_exclusion_pattern = '^1';
+
+    # Need a separate flag for anonymous subs because they are the only
+    # types where the side comment might follow a ';'
+    $closing_side_comment_want_asub = 1;
+
+    my $cscl = $rOpts->{'closing-side-comment-list'};
+    if ( defined($cscl) && $cscl ) {
         $closing_side_comment_list_pattern =
-          make_block_pattern( '-cscl', $rOpts->{'closing-side-comment-list'} );
-        $closing_side_comment_want_asub =
-          $rOpts->{'closing-side-comment-list'} =~ /\basub\b/;
+          make_block_pattern( '-cscl', $cscl );
+        $closing_side_comment_want_asub = $cscl =~ /\basub\b/;
+    }
+
+    my $cscxl = $rOpts->{'closing-side-comment-exclusion-list'};
+    if ( defined($cscxl) && $cscxl ) {
+        $closing_side_comment_exclusion_pattern =
+          make_block_pattern( '-cscxl', $cscxl );
+        if ( $cscxl =~ /\basub\b/ ) {
+            $closing_side_comment_want_asub = 0;
+        }
     }
     return;
 } ## end sub make_closing_side_comment_list_pattern
@@ -10564,7 +10579,9 @@ EOM
                 my $block_type_m = $rblock_type_of_seqno->{$seqno_m};
                 if (   $block_type_m
                     && $token        =~ /$closing_side_comment_prefix_pattern/
-                    && $block_type_m =~ /$closing_side_comment_list_pattern/ )
+                    && $block_type_m =~ /$closing_side_comment_list_pattern/
+                    && $block_type_m !~
+                    /$closing_side_comment_exclusion_pattern/ )
                 {
                     $delete_side_comment = 1;
                 }
@@ -38053,7 +38070,8 @@ sub set_vertical_tightness_flags {
             if (   $type eq 'k'
                 && $csc_new_statement_ok
                 && $is_if_elsif_else_unless_while_until_for_foreach{$token}
-                && $token =~ /$closing_side_comment_list_pattern/ )
+                && $token =~ /$closing_side_comment_list_pattern/
+                && $token !~ /$closing_side_comment_exclusion_pattern/ )
             {
                 $self->set_block_text_accumulator($i);
             }
@@ -38343,10 +38361,8 @@ sub add_closing_side_comment {
         # .. and if this is one of the types of interest
         && $block_type_to_go[$i_terminal] =~
         /$closing_side_comment_list_pattern/
-
-        # anonymous sub only if specifically requested (c380)
-        && (   $block_type_to_go[$i_terminal] ne 'sub'
-            || $closing_side_comment_want_asub )
+        && $block_type_to_go[$i_terminal] !~
+        /$closing_side_comment_exclusion_pattern/
 
         # ..and the corresponding opening brace must is not in this batch
         # (because we do not need to tag one-line blocks, although this

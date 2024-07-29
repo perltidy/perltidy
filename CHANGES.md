@@ -2,6 +2,12 @@
 
 ## 2024 05 11.07
 
+    - Add parameter --closing-side-comment-exclusion-list=string, or
+      -cscxl=string, where string is a list of block types to exclude
+      for closing side comment operations.  Also, closing side comments
+      now work for anonymous subs.  Use -cscxl=asub if you do not
+      want this.
+
     - Include signature variables in --dump-unusual-variables and
       --warn-variable-types; see git #158.
 

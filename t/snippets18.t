@@ -44,7 +44,7 @@ BEGIN {
 # testing --delete-side-comments and --nostatic-block-comments
 -dsc -nsbc
 ----------
-        'csc1'   => "-csc -csci=2 -ncscb",
+        'csc1'   => "-csc -csci=2 -ncscb -cscxl=asub",
         'csc2'   => "-dcsc",
         'def'    => "",
         'iob'    => "-iob",
@@ -221,6 +221,15 @@ Some pod after __END__ to delete with -dp and trim with -trp
                 print( $_[0], "\n" );
             }
         } ## end sub message
+
+        my $message =sub {
+            if ( !defined( $_[0] ) ) {
+                print("Hello, World\n");
+            }
+            else {
+                print( $_[0], "\n" );
+            }
+        };
 ----------
 
         'iob' => <<'----------',
@@ -702,6 +711,15 @@ catch {
                 print( $_[0], "\n" );
             } ## end else [ if ( !defined( $_[0] ))
         } ## end sub message
+
+        my $message = sub {
+            if ( !defined( $_[0] ) ) {
+                print("Hello, World\n");
+            } ## end if ( !defined( $_[0] ))
+            else {
+                print( $_[0], "\n" );
+            } ## end else [ if ( !defined( $_[0] ))
+        };
 #9...........
         },
 
@@ -717,6 +735,15 @@ catch {
                 print( $_[0], "\n" );
             }
         }
+
+        my $message = sub {
+            if ( !defined( $_[0] ) ) {
+                print("Hello, World\n");
+            }
+            else {
+                print( $_[0], "\n" );
+            }
+        };
 #10...........
         },
 
@@ -732,6 +759,15 @@ catch {
                 print( $_[0], "\n" );
             }
         } ## end sub message
+
+        my $message = sub {
+            if ( !defined( $_[0] ) ) {
+                print("Hello, World\n");
+            }
+            else {
+                print( $_[0], "\n" );
+            }
+        };
 #11...........
         },
 

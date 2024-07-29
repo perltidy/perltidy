@@ -1969,10 +1969,23 @@ label (such as C<if>, C<sub>, and so on) will be tagged.  The B<-cscl>
 command changes the default list to be any selected block types; see
 L<"Specifying Block Types">.
 For example, the following command
-requests that only C<sub>'s, labels, C<BEGIN>, and C<END> blocks be
-affected by any B<-csc> or B<-dcsc> operation:
+requests that only C<sub>'s, labels, C<BEGIN>, and C<END> blocks be affected by
+operations which add (B<-csc>) or delete (B<-dcsc>) closing side comments:
 
-   -cscl="sub : BEGIN END"
+   --closing-side-comment-list='sub : BEGIN END'
+
+=item B<-cscxl=string>, or B<--closing-side-comment-exclusion-list>
+
+where C<string> is a list of block types which should NOT be tagged with
+closing side comments. If a block type appears in both B<-cscl> and
+B<-cscxl>, then B<-cscxl> has priority and the block will not be tagged.
+
+For example, the following command requests that anonymous subs
+should not be affected by any B<-csc> or B<-dcsc> operation:
+
+   --closing-side-comment-exclusion-list='asub'
+
+By default, no block types are excluded.
 
 =item B<-csct=n>, or B<--closing-side-comment-maximum-text=n>
 
