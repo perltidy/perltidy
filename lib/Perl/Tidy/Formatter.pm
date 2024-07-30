@@ -15745,10 +15745,14 @@ sub cross_check_sub_calls {
     my $ris_mismatched_call_excluded_name = {};
 
     # The mismatched-returns checks are indicated by these letters:
-    # x = no return statement
-    # o = 'overwant', caller wants more values than available
-    # u = 'underwant', caller wants fewer values than available
-    my %do_mismatched_return_type           = ( 'x' => 1, 'o' => 1, 'u' => 1 );
+    my %return_issue_note = (
+        x => "want array but no return seen",
+        y => "want scalar but no return seen",
+        o => "want array with excess count",
+        u => "want array with unmatched count",
+        s => "want scalar but only arrays with count >1 returned",
+    );
+    my %do_mismatched_return_type = %return_issue_note;
     my $ris_mismatched_return_excluded_name = {};
 
     # initialize a cache used for efficiency
@@ -16457,34 +16461,30 @@ sub cross_check_sub_calls {
         #-------------------------------------------------------------------
         # Make a one-line message for each mismatch return issue of this sub
         #-------------------------------------------------------------------
-        my %note_start = (
-            x => "want array but no return seen",
-            y => "want scalar but no return seen",
-            o => "want array with excess count",
-            u => "want array with unmatched count",
-            s => "want scalar but only arrays with count >1 returned",
-        );
-        foreach my $letter (qw(x y o u s)) {
-            next if ( !$do_mismatched_return_type{$letter} );
-            my $rissues = $item->{return_issues}->{$letter};
-            my $number  = defined($rissues) ? @{$rissues} : 0;
-            next unless ($number);
-            my $line_count = stringify_line_range($rissues);
-            my $total      = $num_direct + $num_self;
-            my $calls      = $total > 1 ? 'calls' : 'call';
-            my $note       = $note_start{$letter}
-              . " at $number of $total $calls($line_count)";
+        my $return_issues = $item->{return_issues};
+        if ($return_issues) {
+            foreach my $letter ( keys %return_issue_note ) {
+                next if ( !$do_mismatched_return_type{$letter} );
+                my $rissues = $return_issues->{$letter};
+                my $number  = defined($rissues) ? @{$rissues} : 0;
+                next unless ($number);
+                my $line_count = stringify_line_range($rissues);
+                my $total      = $num_direct + $num_self;
+                my $calls      = $total > 1 ? 'calls' : 'call';
+                my $note       = $return_issue_note{$letter}
+                  . " at $number of $total $calls($line_count)";
 
-            # The one-line message shows the line number of the return
-            # with the maximum count if there are returns. If no returns
-            # (types 'x' and 'y') it shows the first line of the sub ($lno).
-            my $lno_return =
-              defined($K_return_count_max)
-              ? $rLL->[$K_return_count_max]->[_LINE_INDEX_] + 1
-              : $lno;
+                # The one-line message shows the line number of the return
+                # with the maximum count if there are returns. If no returns
+                # (types 'x' and 'y') it shows the first line of the sub ($lno).
+                my $lno_return =
+                  defined($K_return_count_max)
+                  ? $rLL->[$K_return_count_max]->[_LINE_INDEX_] + 1
+                  : $lno;
 
-            $push_return_warning->( $letter, $note, $lno_return );
-        } ## end loop to save one line for mismatched returns
+                $push_return_warning->( $letter, $note, $lno_return );
+            } ## end loop to save one line for mismatched returns
+        }
     }
 
     #-----------------------------------------------
