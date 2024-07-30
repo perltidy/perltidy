@@ -3938,6 +3938,14 @@ The decision regarding whether or not a list is multi-line or bare is
 made based on the B<input> stream.  In some cases it may take an iteration
 or two to reach a final state.
 
+It can sometimes be preferable to base decisions on trailing commas
+on the final line breaks rather than the initial line breaks.
+This can be accomplished by telling perltidy to perform multiple internal
+iterations, for example with the B<--converge> parameter. In this case
+any comma addition or deletion operations are postponed until the
+start of the second iteration, after changes in line breaks have been made.
+For a discussion see L<https://github.com/perltidy/perltidy/issues/156>.
+
 =item *
 
 When using these parameters for the first time it is a good idea to practice
