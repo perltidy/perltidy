@@ -4646,6 +4646,11 @@ EOM
         $right_bond_strength{'&&'} = NOMINAL;
         $left_bond_strength{'&&'}  = $left_bond_strength{'||'} + 0.1;
 
+        # set strength of ^^ a little lower than ||. See git157.
+        # Note that 0 ^^ 0 || 1 = 0 ^^ (0 || 1) is true
+        $right_bond_strength{'^^'} = NOMINAL;
+        $left_bond_strength{'^^'}  = $left_bond_strength{'||'} - 0.1;
+
         $left_bond_strength{';'}  = VERY_STRONG;
         $right_bond_strength{';'} = VERY_WEAK;
         $left_bond_strength{'f'}  = VERY_STRONG;
@@ -16518,7 +16523,7 @@ sub cross_check_sub_calls {
         if ($is_dump) { $header .= " 'i'=indeterminate" }
         $call_arg_warning_output = <<EOM;
 $header
-Line:Issue:Name:#args:Min:Max: note
+Line:Issue:Sub:#args:Min:Max: note
 EOM
         foreach ( @{$rcall_arg_warnings} ) {
             $call_arg_warning_output .= $_->{output_line};
@@ -16543,7 +16548,7 @@ EOM
     if ( @{$rreturn_warnings} ) {
         $return_warning_output = <<EOM;
 Issue types 'u'=under-want 'o'=over-want 'x'=no return 's'=scalar-array mix
-Line:Issue:Name:#Returned:Min_wanted:Max_wanted: note
+Line:Issue:Sub:#Returned:Min_wanted:Max_wanted: note
 EOM
         foreach ( @{$rreturn_warnings} ) {
             $return_warning_output .= $_->{output_line};
