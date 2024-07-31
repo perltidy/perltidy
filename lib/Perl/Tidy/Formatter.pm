@@ -15739,7 +15739,13 @@ sub cross_check_sub_calls {
     # u = undercount: call arg counts less than number expected by a sub
     #     - except if expecting N or less (N=4 by default)
     # i = indeterminate: expected number of args was not determined
-    my %do_mismatched_call_type = ( 'a' => 1, 'o' => 1, 'u' => 1, 'i' => 1 );
+    my %call_arg_issue_note = (
+        a => "both method and non-method calls to a sub",
+        o => "excess args passed",
+        u => "fewer args than expected passed",
+        i => "indeterminate sub arg count",
+    );
+    my %do_mismatched_call_type           = %call_arg_issue_note;
     my $mismatched_arg_undercount_cutoff  = 0;
     my $mismatched_arg_overcount_cutoff   = 0;
     my $ris_mismatched_call_excluded_name = {};
@@ -15749,10 +15755,10 @@ sub cross_check_sub_calls {
         x => "want array but no return seen",
         y => "want scalar but no return seen",
         o => "want array with excess count",
-        u => "want array with unmatched count",
-        s => "want scalar but only arrays with count >1 returned",
+        u => "want array with count not matched by sub",
+        s => "want scalar but sub only returns arrays with count >1",
     );
-    my %do_mismatched_return_type = %return_issue_note;
+    my %do_mismatched_return_type           = %return_issue_note;
     my $ris_mismatched_return_excluded_name = {};
 
     # initialize a cache used for efficiency
@@ -16379,6 +16385,7 @@ sub cross_check_sub_calls {
         #--------------------------------------------------
         if ( $num_self && $num_direct && $do_mismatched_call_type{'a'} ) {
 
+            my $letter             = 'a';
             my $lines_self_calls   = stringify_line_range($rself_calls);
             my $lines_direct_calls = stringify_line_range($rdirect_calls);
             my $self_name          = $rsub_item->{self_name};
@@ -16388,7 +16395,7 @@ sub cross_check_sub_calls {
             my $str  = $self_name . '->call' . $ess1;
             my $note =
 "$num_self $str($lines_self_calls) and $num_direct call$ess2($lines_direct_calls)";
-            $push_call_arg_warning->( 'a', $note );
+            $push_call_arg_warning->( $letter, $note );
         }
 
         #---------------------------------------------------------
@@ -16402,15 +16409,16 @@ sub cross_check_sub_calls {
         # issue 'i': indeterminate. Could not determine a specific arg count
         #-------------------------------------------------------------------
         if ( $shift_count_min eq '*' ) {
-            if ( $do_mismatched_call_type{'i'} ) {
+            my $letter = 'i';
+            if ( $do_mismatched_call_type{$letter} ) {
 
                 # skip *:*:* (no disagreement - call counts also indeterminate)
                 next
                   if ( $shift_count_min eq $min_arg_count
                     && $shift_count_min eq $max_arg_count );
 
-                my $note = "indeterminate sub arg count";
-                $push_call_arg_warning->( 'i', $note );
+                my $note = $call_arg_issue_note{$letter};
+                $push_call_arg_warning->( $letter, $note );
             }
         }
 
@@ -16424,13 +16432,15 @@ sub cross_check_sub_calls {
                 && $do_mismatched_call_type{'o'}
                 && $shift_count_max >= $mismatched_arg_overcount_cutoff )
             {
-
-                my $lines_over_count = stringify_line_range($rover_count);
-                my $total            = $num_direct + $num_self;
-                my $calls            = $total > 1 ? 'calls' : 'call';
-                my $note =
-"excess args at $num_over_count of $total $calls($lines_over_count)";
-                $push_call_arg_warning->( 'o', $note );
+                my $letter     = 'o';
+                my $line_range = stringify_line_range($rover_count);
+                my $total      = $num_direct + $num_self;
+                my $note       = $call_arg_issue_note{$letter};
+                $note .=
+                  $total > 1
+                  ? " at $num_over_count of $total calls ($line_range)"
+                  : " at $line_range";
+                $push_call_arg_warning->( $letter, $note );
             }
 
             #----------------------
@@ -16446,14 +16456,18 @@ sub cross_check_sub_calls {
                 if (   $do_mismatched_call_type{'u'}
                     && $shift_count_min >= $mismatched_arg_undercount_cutoff )
                 {
-                    my $lines_under_count = stringify_line_range($runder_count);
-                    my $total             = $num_direct + $num_self;
-                    my $calls             = $total > 1 ? 'calls' : 'call';
-                    my $note =
-"arg undercount at $num_under_count of $total $calls($lines_under_count)";
+                    my $letter     = 'u';
+                    my $line_range = stringify_line_range($runder_count);
+                    my $total      = $num_direct + $num_self;
+
+                    my $note = $call_arg_issue_note{$letter};
+                    $note .=
+                      $total > 1
+                      ? " at $num_under_count of $total calls ($line_range)"
+                      : " at $line_range";
 
                     $number_of_undercount_warnings++;
-                    $push_call_arg_warning->( 'u', $note );
+                    $push_call_arg_warning->( $letter, $note );
                 }
             }
         }
@@ -16468,11 +16482,14 @@ sub cross_check_sub_calls {
                 my $rissues = $return_issues->{$letter};
                 my $number  = defined($rissues) ? @{$rissues} : 0;
                 next unless ($number);
-                my $line_count = stringify_line_range($rissues);
+                my $line_range = stringify_line_range($rissues);
                 my $total      = $num_direct + $num_self;
-                my $calls      = $total > 1 ? 'calls' : 'call';
-                my $note       = $return_issue_note{$letter}
-                  . " at $number of $total $calls($line_count)";
+
+                my $note = $return_issue_note{$letter};
+                $note .=
+                  $total > 1
+                  ? " at $number of $total calls ($line_range)"
+                  : " at $line_range";
 
                 # The one-line message shows the line number of the return
                 # with the maximum count if there are returns. If no returns
