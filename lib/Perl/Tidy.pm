@@ -3134,7 +3134,7 @@ sub line_diff {
     my ( $s1, $s2 ) = @_;
 
     # Given two strings, Return
-    #  $diff_marker = a string with carat (^) symbols indicating differences
+    #  $diff_marker = a string with caret (^) symbols indicating differences
     #  $pos1 = character position of first difference; pos1=-1 if no difference
 
     # Form exclusive or of the strings, which has null characters where strings

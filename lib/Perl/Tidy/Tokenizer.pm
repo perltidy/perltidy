@@ -10527,20 +10527,20 @@ sub follow_quoted_string {
 } ## end sub follow_quoted_string
 
 sub indicate_error {
-    my ( $self, $msg, $line_number, $input_line, $pos, $carrat ) = @_;
+    my ( $self, $msg, $line_number, $input_line, $pos, $caret ) = @_;
     $self->interrupt_logfile();
     $self->warning($msg);
     $self->write_error_indicator_pair( $line_number, $input_line, $pos,
-        $carrat );
+        $caret );
     $self->resume_logfile();
     return;
 } ## end sub indicate_error
 
 sub write_error_indicator_pair {
-    my ( $self, $line_number, $input_line, $pos, $carrat ) = @_;
+    my ( $self, $line_number, $input_line, $pos, $caret ) = @_;
     my ( $offset, $numbered_line, $underline ) =
       make_numbered_line( $line_number, $input_line, $pos );
-    $underline = write_on_underline( $underline, $pos - $offset, $carrat );
+    $underline = write_on_underline( $underline, $pos - $offset, $caret );
     $self->warning( $numbered_line . "\n" );
     $underline =~ s/\s+$//;
     $self->warning( $underline . "\n" );
