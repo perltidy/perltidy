@@ -6386,9 +6386,9 @@ These issue types are illustrated with the following code
         return ( $name, $flags );  # 2 values with 'return' statement
     }
 
-    ( $name, $flags, $access) = $self->wimp(); # 'o' (want array 3 > 2)
-    ($name) = $self->wimp();                   # 'u' (want array 1 < 2)
-    $name   = $self->wimp();                   # 's' (want scalar but 2 values returned)
+    ( $name, $flags, $access) = wimp(); # 'o' (want array 3 > 2)
+    ($name) = wimp();                   # 'u' (want array 1 < 2)
+    $name   = wimp();                   # 's' (want scalar but 2 values returned)
 
 This analysis works by scanning all call statements and all sub return
 statements, and comparing the the number of items wanted with the possible
