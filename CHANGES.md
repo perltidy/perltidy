@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2024 05 11.07
+## 2024 05 11.08
 
     - Add parameter --closing-side-comment-exclusion-list=string, or
       -cscxl=string, where string is a list of block types to exclude
