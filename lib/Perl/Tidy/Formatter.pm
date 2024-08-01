@@ -4646,11 +4646,11 @@ EOM
         $right_bond_strength{'&&'} = NOMINAL;
         $left_bond_strength{'&&'}  = $left_bond_strength{'||'} + 0.1;
 
-        # set strength of ^^ above && and ||. See git157. Note that:
+        # set strength of ^^ between && and ||. See git157.
         # "1 || 0 ^^ 0 || 1" = true, so ^^ is stronger than ||
-        # "1 && 0 ^^ 1 = true,       so ^^ is stronger than &&
+        # "1 ^^ 1 && 0" = true,      so && is stronger than ^^
         $right_bond_strength{'^^'} = NOMINAL;
-        $left_bond_strength{'^^'}  = $left_bond_strength{'||'} + 0.15;
+        $left_bond_strength{'^^'}  = $left_bond_strength{'||'} + 0.05;
 
         $left_bond_strength{';'}  = VERY_STRONG;
         $right_bond_strength{';'} = VERY_WEAK;

@@ -7811,10 +7811,6 @@ sub scan_bare_identifier_do {
                 $self->report_v_string($tok);
             }
 
-            elsif ( $ris_constant->{$package}{$sub_name} ) {
-                $type = 'C';
-            }
-
             # bareword after sort has implied empty prototype; for example:
             # @sorted = sort numerically ( 53, 29, 11, 32, 7 );
             # This has priority over whatever the user has specified.
@@ -7822,6 +7818,12 @@ sub scan_bare_identifier_do {
                 && $last_nonblank_type eq 'k' )
             {
                 $type = 'Z';
+            }
+
+            # issue c382: this elsif statement moved from above because
+            # previous check for type 'Z' after sort has priority.
+            elsif ( $ris_constant->{$package}{$sub_name} ) {
+                $type = 'C';
             }
 
             # Note: strangely, perl does not seem to really let you create
