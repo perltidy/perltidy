@@ -8688,6 +8688,8 @@ EOM
     return ( $seqno_brace, $K_end_iterator );
 } ## end sub block_seqno_of_paren_keyword
 
+use constant DEBUG_USE_CONSTANT => 0;
+
 sub scan_variable_usage {
 
     my ( $self, $roption ) = @_;
@@ -8714,27 +8716,34 @@ sub scan_variable_usage {
     #          };
 
     # issues are indicated by these names:
-    #  u - unused
-    #  r - reused scope
-    #  s - reused sigil
-    #  p - package boundaries crossed
+    my %unusual_variable_issue_note = (
+        u => "unused lexical",
+        c => "unused constant",
+        r => "reused scope",
+        s => "reused sigil",
+        p => "package crossing",
+    );
 
     # Default is to do all checks if no control hash received
     if ( !defined($roption) ) {
-        $roption = { 'r' => 1, 's' => 1, 'p' => 1, 'u' => 1 };
+        foreach my $key ( keys %unusual_variable_issue_note ) {
+            $roption->{$key} = 1;
+        }
     }
 
     my $issue_type_string = "Issue types are";
-    if ( $roption->{'u'} ) { $issue_type_string .= " 'u'=unused" }
+    if ( $roption->{'u'} ) { $issue_type_string .= " 'u'=unused lexical" }
     if ( $roption->{'r'} ) { $issue_type_string .= " 'r'=reused" }
     if ( $roption->{'s'} ) { $issue_type_string .= " 's'=multi-sigil" }
     if ( $roption->{'p'} ) { $issue_type_string .= " 'p'=package crossing" }
+    if ( $roption->{'c'} ) { $issue_type_string .= " 'c'=unused constant" }
 
     # Unpack the control hash
     my $check_sigil         = $roption->{'s'};
     my $check_cross_package = $roption->{'p'};
     my $check_unused        = $roption->{'u'};
     my $check_reused        = $roption->{'r'};
+    my $check_constant      = $roption->{'c'};
 
     my $rLL                  = $self->[_rLL_];
     my $rlines               = $self->[_rlines_];
@@ -8766,7 +8775,8 @@ sub scan_variable_usage {
     # way it is done here is to propagate such vars in a special control
     # layer stack entry which is pushed on just before these blocks.
 
-    my $rblock_stack = [];
+    my $rblock_stack   = [];
+    my $rconstant_hash = {};
 
     #---------------------------------------
     # sub to push a block brace on the stack
@@ -8982,6 +8992,138 @@ sub scan_variable_usage {
         }
         return;
     }; ## end $update_use_count = sub
+
+    my $checkin_new_constant = sub {
+        my ( $KK, $name ) = @_;
+        my $line_index = $rLL->[$KK]->[_LINE_INDEX_];
+        my $rvars      = {
+            count      => 0,
+            line_index => $line_index,
+            package    => $current_package,
+            K          => $KK,
+        };
+        $rconstant_hash->{$current_package}->{$name} = $rvars;
+        return;
+    }; ## end $checkin_new_constant = sub
+
+    my $scan_use_constant = sub {
+        my ($KK) = @_;
+        my $Kn = $self->K_next_code($KK);
+        return unless ($Kn);
+        my $type_n  = $rLL->[$Kn]->[_TYPE_];
+        my $token_n = $rLL->[$Kn]->[_TOKEN_];
+
+        # version?
+        if ( $type_n eq 'n' || $type_n eq 'v' ) {
+            $Kn      = $self->K_next_code($Kn);
+            $type_n  = $rLL->[$Kn]->[_TYPE_];
+            $token_n = $rLL->[$Kn]->[_TOKEN_];
+        }
+
+        if ( $token_n eq '(' ) {
+            $Kn      = $self->K_next_code($Kn);
+            $type_n  = $rLL->[$Kn]->[_TYPE_];
+            $token_n = $rLL->[$Kn]->[_TOKEN_];
+        }
+
+        # use constant _meth1_=>1;
+        if ( $type_n eq 'w' ) {
+            $checkin_new_constant->( $KK, $token_n );
+        }
+
+        # use constant '_meth1_',1;
+        elsif ( $type_n eq 'Q' ) {
+
+            # don't try to handle anything strange
+            if ( length($token_n) < 3 ) { return }
+            my $name = substr( $token_n, 1, -1 );
+            $checkin_new_constant->( $KK, $name );
+        }
+
+        # use constant qw(_meth2_ 2);
+        elsif ( $type_n eq 'q' ) {
+            my $name;
+            if ( $token_n =~ /qw\s*.(\w+)/ ) {
+                $name = $1;
+                $checkin_new_constant->( $KK, $name );
+            }
+        }
+
+        # A hash ref with multiple definitions:
+        # use constant { _meth3_=>3, _meth4_=>4};
+        # use constant { '_meth3_',3, '_meth4_',4};
+        elsif ( $type_n eq '{' && $token_n eq '{' ) {
+            my $seqno_n = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
+            return unless $seqno_n;
+            my $Kc = $self->[_K_closing_container_]->{$seqno_n};
+            return unless $Kc;
+
+            # loop to collect constants in hash ref
+            my $Knn               = $self->K_next_code($Kn);
+            my $total_comma_count = 0;
+            my $last_type         = ',';
+            my $level_start       = $rLL->[$Knn]->[_LEVEL_];
+
+            foreach my $Kx ( $Knn .. $Kc - 1 ) {
+                my $type  = $rLL->[$Kx]->[_TYPE_];
+                my $token = $rLL->[$Kx]->[_TOKEN_];
+                next if ( $type eq 'b' || $type eq '#' );
+                my $level = $rLL->[$Kx]->[_LEVEL_];
+                next if ( $level > $level_start );
+                if ( $level < $level_start ) {
+                    ## shouldn't happen
+                    my $lno = $rLL->[$Kx]->[_LINE_INDEX_] + 1;
+                    DEBUG_USE_CONSTANT
+                      && Fault("$lno: level=$level > start=$level_start\n");
+                    return;
+                }
+                if ( $last_type eq ',' && !( $total_comma_count % 2 ) ) {
+                    if ( $type eq 'w' ) {
+                        $checkin_new_constant->( $Kx, $token );
+                    }
+                    elsif ( $type eq 'Q' ) {
+                        if ( length($token) < 3 ) { return }
+                        my $name = substr( $token, 1, -1 );
+                        $checkin_new_constant->( $Kx, $name );
+                    }
+                    else {
+                        my $lno = $rLL->[$Kx]->[_LINE_INDEX_] + 1;
+                        DEBUG_USE_CONSTANT
+                          && Fault(
+                            "$lno: unexpected type: type=$type token=$token\n");
+                        return;
+                    }
+                }
+                else {
+                    if ( $type eq ',' || $type eq '=>' ) {
+                        $total_comma_count++;
+                    }
+                }
+                $last_type = $type;
+            }
+        }
+
+        elsif ( $type_n eq ';' ) {
+
+        }
+
+        else {
+            my $ln = $rLL->[$KK]->[_LINE_INDEX_] + 1;
+            DEBUG_USE_CONSTANT && Fault("$ln: unknown use constant syntax\n");
+        }
+        return;
+    }; ## end $scan_use_constant = sub
+
+    my $update_constant_count = sub {
+        my ($KK) = @_;
+        my $name = $rLL->[$KK]->[_TOKEN_];
+        return if ( !defined( $rconstant_hash->{$current_package} ) );
+        my $rvars = $rconstant_hash->{$current_package}->{$name};
+        return if ( !defined($rvars) );
+        return if ( $KK <= $rvars->{K} );
+        $rvars->{count}++;
+        return;
+    }; ## end $update_constant_count = sub
 
     #-----------------------------------------------
     # sub to check for zero counts when stack closes
@@ -9549,6 +9691,33 @@ EOM
                     $in_interpolated_quote = 0;
                 }
             }
+            elsif ($check_constant) {
+                if ( $type eq 'w' ) {
+                    if ( $token eq 'constant' ) {
+                        my $Kp = $self->K_previous_code($KK);
+                        if (   defined($Kp)
+                            && $rLL->[$Kp]->[_TOKEN_] eq 'use'
+                            && $rLL->[$Kp]->[_TYPE_] eq 'k' )
+                        {
+                            $scan_use_constant->($KK);
+                        }
+                        else {
+                            $update_constant_count->($KK);
+                        }
+                    }
+                    else {
+                        $update_constant_count->($KK);
+                    }
+                }
+                elsif ( $type eq 'C' ) {
+                    $update_constant_count->($KK);
+                }
+                elsif ( $type eq 'U' ) {
+                    $update_constant_count->($KK);
+                }
+                else {
+                }
+            }
             else {
                 # skip all other token types
             }
@@ -9568,6 +9737,28 @@ EOM
             foreach my $item ( @{$rblock_stack} ) {
                 my $rhash = $item->{rvars};
                 $check_for_unused_names->($rhash);
+            }
+        }
+    }
+
+    if ($check_constant) {
+        foreach my $package ( keys %{$rconstant_hash} ) {
+            my $rhash = $rconstant_hash->{$current_package};
+            next if ( !defined($rhash) );
+            foreach my $name ( keys %{$rhash} ) {
+                my $entry = $rconstant_hash->{$current_package}->{$name};
+                next if ( $entry->{count} );
+                push @warnings,
+                  {
+                    name        => $name,
+                    keyword     => 'use constant',
+                    see_line    => EMPTY_STRING,
+                    note        => 'unused in this package',
+                    line_number => $entry->{line_index} + 1,
+                    letter      => 'c',
+                    package     => $package,
+                    K           => $entry->{K},
+                  };
             }
         }
     }
@@ -9713,19 +9904,20 @@ sub initialize_warn_hash {
             }
 
             # Special check for -wvt
-            elsif ( $opt eq 'u' && $long_name eq 'warn-variable-types' ) {
+            elsif ( ( $opt eq 'u' || $opt eq 'c' )
+                && $long_name eq 'warn-variable-types' )
+            {
                 if ( !$wvt_in_args ) {
                     Warn(<<EOM);
---$long_name=u is not allowed in a .perltidyrc configuration file
+--$long_name=$opt is not allowed in a .perltidyrc configuration file
 EOM
                 }
                 else {
                     Warn(<<EOM);
---$long_name=u is only available when processing specific filenames
+--$long_name=$opt is only available when processing specific filenames
 EOM
                 }
             }
-
             else {
                 $msg .= "--$long_name has unexpected symbol: '$opt'\n";
             }
@@ -9844,7 +10036,7 @@ sub initialize_warn_variable_types {
     #   $num_files = number of files on the command line
 
     my @all_opts = qw(r s p);
-    if ( $wvt_in_args && $num_files ) { push @all_opts, 'u' }
+    if ( $wvt_in_args && $num_files ) { push @all_opts, 'u', 'c' }
     $rwarn_variable_types =
       initialize_warn_hash( 'warn-variable-types', 0, \@all_opts,
         $wvt_in_args );
