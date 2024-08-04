@@ -306,7 +306,7 @@ EOM
 
 sub stream_slurp {
 
-    my ($filename) = @_;
+    my ( $filename, $timeout_in_seconds ) = @_;
 
     # Read the text in $filename and
     # return:
@@ -358,7 +358,22 @@ EOM
     else {
         if ( $filename eq '-' ) {
             local $INPUT_RECORD_SEPARATOR = undef;
-            my $buf = <>;
+            my $buf;
+            if ( $timeout_in_seconds && $timeout_in_seconds > 0 ) {
+                eval {
+                    local $SIG{ALRM} = sub { die "alarm\n" };
+                    alarm($timeout_in_seconds);
+                    $buf = <>;
+                    alarm(0);
+                    1;
+                }
+                  or Die(
+"Timeout reading stdin using -to=$timeout_in_seconds seconds. Use -to=0 to skip timeout check.\n"
+                  );
+            }
+            else {
+                $buf = <>;
+            }
             $rinput_string = \$buf;
         }
         else {
@@ -1628,7 +1643,8 @@ sub get_decoded_string_buffer {
 
     my $rOpts = $self->[_rOpts_];
 
-    my $rinput_string = stream_slurp($input_file);
+    my $rinput_string =
+      stream_slurp( $input_file, $rOpts->{'timeout-in-seconds'} );
     return unless ( defined($rinput_string) );
 
     # Note that we could have a zero size input string here if it
@@ -3456,6 +3472,7 @@ sub generate_options {
     $add_option->( 'warning-output',             'w',     '!' );
     $add_option->( 'add-terminal-newline',       'atnl',  '!' );
     $add_option->( 'line-range-tidy',            'lrt',   '=s' );
+    $add_option->( 'timeout-in-seconds',         'to',    '=i' );
 
     # options which are both toggle switches and values moved here
     # to hide from tidyview (which does not show category 0 flags):
@@ -3934,6 +3951,7 @@ sub generate_options {
       code-skipping
       format-skipping
       default-tabsize=8
+      timeout-in-seconds=10
 
       whitespace-cycle=0
       entab-leading-whitespace=0
