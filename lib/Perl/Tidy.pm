@@ -3779,7 +3779,6 @@ sub generate_options {
     $add_option->( 'dump-unusual-variables',          'duv',   '!' );
     $add_option->( 'dump-want-left-space',            'dwls',  '!' );
     $add_option->( 'dump-want-right-space',           'dwrs',  '!' );
-    $add_option->( 'experimental',                    'exp',   '=s' );
     $add_option->( 'fuzzy-line-length',               'fll',   '!' );
     $add_option->( 'help',                            'h',     EMPTY_STRING );
     $add_option->( 'short-concatenation-item-length', 'scl',   '=i' );
