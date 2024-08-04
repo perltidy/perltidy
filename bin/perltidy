@@ -6032,7 +6032,8 @@ meaning:
 If there are a large number of issues it can be convenient to read the file
 into a spreadsheet. The checks are for lexical variables introduced by the
 keywords B<my> and B<state>.  The types of checks which are made are identified
-in the output with one of the letters, B<r>, B<s>, B<p>, and B<u> as follows:
+in the output with one of the letters, B<r>, B<s>, B<p>, B<u>, and B<c> as
+follows:
 
 =over 4
 
@@ -6099,6 +6100,13 @@ limited to the surrounding braces, so it is not the same variable as the other
 C<$string> and must therefore be reported as unused.  This particular problem
 would have also been caught by perl if the author had used C<strict>.
 
+=item B<c: unused constants>
+
+These are names which are declared with a C<use constant> and not
+referenced again within their package. They might be needed by an
+external package, or for future development. But they might be unused
+remnants from code development, so it can be worthwhile reviewing them.
+
 =back
 
 =item B<Use --warn-variable-types to warn about certain variable types>
@@ -6122,12 +6130,13 @@ types of variables to be checked. For example:
    perltidy -wvt='s r' somefile.pl
 
 will process F<somefile.pl> normally but issue a warning if either of
-the issues 's' or 'r', but not 'p', described above, are encountered.
+the issues B<s> or B<r>, described above, are encountered.
 
-The 'u' option (unused) has a limitation: it is not allowed in a F<.perltidyrc>
-configuration file.  But it can be used on the command line provided that
-perltidy is operating on a named file.  This rule is necessary to avoid
-warnings when perltidy is run on small snippets of code from within an editor.
+The B<u> and B<c> options (unused variables and constants) have a limitation:
+they are not allowed in a F<.perltidyrc> configuration file.  But they can be
+used on the command line provided that perltidy is operating on a named file.
+This rule is necessary to avoid warnings when perltidy is run on small snippets
+of code from within an editor.
 
 A companion flag, B<--warn-variable-exclusion-list=string>, or B<-wvxl=string>,
 can be used to skip warning checks for a list of variable names.  A leading

@@ -4080,6 +4080,7 @@ sub generate_options {
         'square-bracket-vertical-tightness'         => [ 0, 2 ],
         'square-bracket-vertical-tightness-closing' => [ 0, 3 ],
         'starting-indentation-level'                => [ 0, undef ],
+        'timeout-in-seconds'                        => [ 0, undef ],
         'vertical-tightness'                        => [ 0, 2 ],
         'vertical-tightness-closing'                => [ 0, 3 ],
         'valign-signed-numbers-limit'               => [ 0, undef ],

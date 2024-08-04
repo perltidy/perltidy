@@ -2,6 +2,14 @@
 
 ## 2024 05 11.08
 
+    - Add --timeout-in-seconds=n, or -to=n.  When the standard input supplies
+      the input stream, and the input has not been received within n seconds,
+      perltidy will end with a timeout message.  The intention is to catch
+      a situation where perltidy is accidentally invoked without a file to
+      process and therefore waits for input from the system standard input
+      (stdin), which never arrives.  The default is n=10.
+      This check can be turned off with -to=0.
+
     - Add parameter --closing-side-comment-exclusion-list=string, or
       -cscxl=string, where string is a list of block types to exclude
       for closing side comment operations.  Also, closing side comments
