@@ -195,6 +195,10 @@ The following parameters concern the files which are read and written.
 
 Show summary of usage and exit.
 
+=item B<-v>,    B<--version>
+
+Show perltidy VERSION number and exit.
+
 =item	B<-o>=filename,    B<--outfile>=filename
 
 Name of the output file (only if a single input file is being
@@ -432,6 +436,14 @@ This check can be turned off with B<n=0>.
 =head2 Basic Options
 
 =over 4
+
+=item B<-fmt=s>, B<--format=s>
+
+If B<--format=tidy> (the default) then perltidy will reformat the input file,
+and if B<--format=html> then perltidy will produce html output.
+
+For convenience, the abbreviation B<--tidy> is equivalent to B<--format=tidy>,
+and B<--html> is equivalent to B<--format=html>.
 
 =item B<--notidy>
 
@@ -1476,7 +1488,28 @@ a space takes priority.
 It is necessary to have a list of all token types in order to create
 this type of input.  Such a list can be obtained by the command
 B<--dump-token-types>.  Also try the B<-D> flag on a short snippet of code
-and look at the .DEBUG file to see the tokenization.
+and look at the F<.DEBUG> file to see the tokenization.
+
+To illustrate, suppose we do not want a space after a colon which introduces a
+sub attribute. We need to know its type. It is not a colon because that is the
+type of a ternary operator. The ouput of B<--dump-token-types> states that it
+is token type 'A'.  To verify this, we can run C<perltidy -D> on a short piece
+of code containing such a colon, such as
+
+    sub foo : lvalue;
+
+This produces a F<.DEBUG> file which contains
+
+    1: sub foo : lvalue;
+    1: SSSSSSSbAbwwwwww;
+
+The top line is the input, and the bottom line shows the token types.
+The 'A' beneath the colon verifies that it is type B<A>.
+
+So to prevent a space on the right of this colon we can use
+
+    # perltidy -nwrs='A'
+    sub foo :lvalue;
 
 B<WARNING> Be sure to put these tokens in quotes to avoid having them
 misinterpreted by your command shell.
@@ -3943,17 +3976,22 @@ bare trailing comma is a special case of a multi-line list.
 
 =item *
 
-The decision regarding whether or not a list is multi-line or bare is
-made based on the B<input> stream.  In some cases it may take an iteration
-or two to reach a final state.
+The decision regarding whether or not a list is multi-line or bare is made
+based on the B<input> stream if only one iteration is made, which is the
+default.
 
 It can sometimes be preferable to base decisions on trailing commas
 on the final line breaks rather than the initial line breaks.
-This can be accomplished by telling perltidy to perform multiple internal
+This can be accomplished by telling perltidy to perform two or more internal
 iterations, for example with the B<--converge> parameter. In this case
 any comma addition or deletion operations are postponed until the
 start of the second iteration, after changes in line breaks have been made.
 For a discussion see L<https://github.com/perltidy/perltidy/issues/156>.
+
+A parameter B<--delay-trailing-comma-operations>, or B<-dtco>, is available to
+control behavior if desired. Negating this parameter, with B<-ndtco>, tells
+perltidy to always use the starting state to make decisions regarding comma
+addition and deletion, even when iterations are requested.
 
 =item *
 
@@ -6077,14 +6115,14 @@ block braces in order avoid warnings at temporary package changes.
 
 =item B<u: unused variables>
 
-These are variables which are declared with a C<my> and not referenced again
-within their scope.  Calling them B<unused> is convenient but not really
-accurate; this is a "gray area" for a program. There are some good reasons for
-having such variables.  For example, they might occur in a list of values
-provided by another routine or data structure, and therefore must be listed,
-even though they might not be referenced again.  Having such variables can make
-them immediately available for future development and debugging, and can be
-beneficial for program clarity.
+These are variables which are declared with C<my> or C<state> and not
+referenced again within their scope.  Calling them B<unused> is convenient but
+not really accurate; this is a "gray area" for a program. There are some good
+reasons for having such variables.  For example, they might occur in a list of
+values provided by another routine or data structure, and therefore must be
+listed, even though they might not be referenced again.  Having such variables
+can make them immediately available for future development and debugging, and
+can be beneficial for program clarity.
 
 B<But> sometimes they can occur due to being orphaned by a coding
 change, due to a misspelling, or by having an unintentional preceding
@@ -6462,14 +6500,17 @@ trailing B<*> on a name may be used to indicate a partial string match.
 
 The first $VERSION line of a file which might be eval'd by MakeMaker
 is passed through unchanged except for indentation.
+The default B<--pass-version-line>, or B<-pvl>, is to do this.
 Use B<--nopass-version-line>, or B<-npvl>, to deactivate this feature.
 
 If the AutoLoader module is used, perltidy will continue formatting
 code after seeing an __END__ line.
+The default B<--look-for-autoloader>, or B<-lal>, is to do this.
 Use B<--nolook-for-autoloader>, or B<-nlal>, to deactivate this feature.
 
 Likewise, if the SelfLoader module is used, perltidy will continue formatting
 code after seeing a __DATA__ line.
+The default B<--look-for-selfloader>, or B<-lsl>, is to do this.
 Use B<--nolook-for-selfloader>, or B<-nlsl>, to deactivate this feature.
 
 =head1 HTML OPTIONS
@@ -6763,26 +6804,26 @@ dot is added, and the backup file will be F<somefile.pl~>  .
 The following list shows all short parameter names which allow a prefix
 'n' to produce the negated form:
 
- D      aia    ame    anl    asbl   asc    ast    asu    atc    atnl
- aws    b      baa    baao   bar    bbao   bbb    bbc    bbs    bl
- bli    boa    boc    bok    bol    bom    bos    bot    cblx   ce
- conv   cpb    cs     csc    cscb   cscw   dac    dbc    dbs    dcbl
- dcsc   ddf    dia    dior   dln    dma    dmcp   dmr    dnl    dop
- dp     dpro   drc    dsc    dsm    dsn    dtc    dtt    duv    dwic
- dwls   dwrs   dws    eos    f      fpva   frm    fs     fso    gcs
- hbc    hbcm   hbco   hbh    hbhh   hbi    hbj    hbk    hbm    hbn
- hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv    hbw    hent   hic
- hicm   hico   hih    hihh   hii    hij    hik    him    hin    hip
- hipd   hipu   hiq    his    hisc   hiv    hiw    hsc    html   ibc
- icb    icp    iob    ipc    isbc   iscl   kgb    kgbd   kgbi   kis
- lal    log    lop    lp     lsl    mci    mem    nib    ohbr   okw
- ola    olc    oll    olq    opr    opt    osbc   osbr   otr    ple
- pod    pvl    q      sac    sbc    sbl    scbb   schb   scp    scsb
- sct    se     sfp    sfs    skp    sob    sobb   sohb   sop    sosb
- sot    ssc    st     sts    t      tac    tbc    toc    tp     tqw
- trp    ts     tsc    tso    vbc    vc     viu    vmll   vsc    vsn
- vwe    w      wfc    wia    wma    wme    wmr    wn     x      xbt
- xci    xlp    xs
+ D      aia    altc   ame    anl    asbl   asc    ast    asu    atc
+ atnl   aws    b      baa    baao   bar    bbao   bbb    bbc    bbs
+ bl     bli    boa    boc    bok    bol    bom    bos    bot    cblx
+ ce     conv   cpb    cs     csc    cscb   cscw   dac    dbc    dbs
+ dcbl   dcsc   ddf    dia    dior   dln    dltc   dma    dmcp   dmr
+ dnl    dop    dp     dpro   drc    dsc    dsm    dsn    dtc    dtco
+ dtt    duv    dwic   dwls   dwrs   dws    eos    f      fpva   frm
+ fs     fso    gcs    hbc    hbcm   hbco   hbh    hbhh   hbi    hbj
+ hbk    hbm    hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv
+ hbw    hent   hic    hicm   hico   hih    hihh   hii    hij    hik
+ him    hin    hip    hipd   hipu   hiq    his    hisc   hiv    hiw
+ hsc    html   ibc    icb    icp    iob    ipc    isbc   iscl   kgb
+ kgbd   kgbi   kis    lal    log    lop    lp     lsl    mci    mem
+ nib    ohbr   okw    ola    olc    oll    olq    opr    opt    osbc
+ osbr   otr    ple    pod    pvl    q      sac    sbc    sbl    scbb
+ schb   scp    scsb   sct    se     sfp    sfs    skp    sob    sobb
+ sohb   sop    sosb   sot    ssc    st     sts    t      tac    tbc
+ toc    tp     tqw    trp    ts     tsc    tso    vbc    vc     viu
+ vmll   vsc    vsn    vwe    w      wfc    wia    wma    wme    wmr
+ wn     x      xbt    xci    xlp    xs
 
 Equivalently, the prefix 'no' or 'no-' on the corresponding long names may be
 used.
