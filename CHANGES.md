@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2024 05 11.08
+## 2024 05 11.09
 
     - Add --timeout-in-seconds=n, or -to=n.  When the standard input supplies
       the input stream, and the input has not been received within n seconds,
