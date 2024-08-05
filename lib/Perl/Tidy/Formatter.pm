@@ -9904,7 +9904,10 @@ sub initialize_warn_hash {
             }
 
             # Special check for -wvt
-            elsif ( ( $opt eq 'u' || $opt eq 'c' )
+            # Deactivated for now to allow -wvt in perltidyrc files. This can
+            # eventually be removed if allowing this does not cause problems.
+            elsif (0
+                && ( $opt eq 'u' || $opt eq 'c' )
                 && $long_name eq 'warn-variable-types' )
             {
                 if ( !$wvt_in_args ) {
@@ -10035,11 +10038,29 @@ sub initialize_warn_variable_types {
     #   $wvt_in_args = true if the -wvt parameter was on the command line
     #   $num_files = number of files on the command line
 
-    my @all_opts = qw(r s p);
-    if ( $wvt_in_args && $num_files ) { push @all_opts, 'u', 'c' }
+    my @all_opts = qw(r s p u c);
     $rwarn_variable_types =
       initialize_warn_hash( 'warn-variable-types', 0, \@all_opts,
         $wvt_in_args );
+
+    # Turn off types 'u' and 'c' if we are not operating on a named file
+    # or are under editor line range control
+    if ( $rOpts->{'line-range-tidy'} || !$num_files ) {
+        $rwarn_variable_types->{u} = 0;
+        $rwarn_variable_types->{c} = 0;
+    }
+
+    # Set 'u' and 'c' conditional on starting indentation = 0 if just 1 file
+    # and -wvt is not on cmd line. The reason is that if -wvt is in the
+    # perltidyrc file, and we are operating on just one file, it could be
+    # a temporary file created by an editor. Requiring a starting level
+    # of zero is a defensive strategy for minimizing the chance of
+    # incorrect warnings when formatting a short snippet.
+    else {
+        if ( !$wvt_in_args && $num_files <= 1 ) {
+            $rwarn_variable_types->{require_sil_zero} = 1;
+        }
+    }
 
     $ris_warn_variable_excluded_name =
       make_excluded_name_hash('warn-variable-exclusion-list');
@@ -10092,8 +10113,25 @@ sub warn_variable_types {
     my $wv_option = $rOpts->{$wv_key};
     return unless ( %{$rwarn_variable_types} );
 
+    # Make a copy of the control hash
+    my $rwarn_variable_types_copy = {};
+    foreach my $key ( keys %{$rwarn_variable_types} ) {
+        next if ( length($key) > 1 );
+        $rwarn_variable_types_copy->{$key} = $rwarn_variable_types->{$key};
+    }
+
+    # If requested, we must turn off 'u' and 'c' if starting level is not zero
+    if ( $rwarn_variable_types->{require_sil_zero} ) {
+        my $rLL = $self->[_rLL_];
+        my $sil = $rLL->[0]->[_LEVEL_];
+        if ($sil) {
+            $rwarn_variable_types_copy->{u} = 0;
+            $rwarn_variable_types_copy->{c} = 0;
+        }
+    }
+
     my ( $rwarnings, $issue_type_string ) =
-      $self->scan_variable_usage($rwarn_variable_types);
+      $self->scan_variable_usage($rwarn_variable_types_copy);
     return unless ( $rwarnings && @{$rwarnings} );
 
     $rwarnings =

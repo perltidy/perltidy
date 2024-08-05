@@ -17,6 +17,9 @@
       is not specified, and when 'asub' is requested with -cscl=asub.
       Use -cscxl=asub to prevent this.
 
+    - Include check for unused constants in --dump-unusual-variables and
+      --warn-variable-types (new issue type 'c').
+
     - Include signature variables in --dump-unusual-variables and
       --warn-variable-types; see git #158.
 
@@ -54,8 +57,7 @@
       where 's' is a control string. These are explained in the manual.
 
     - Updates for issue git #151:
-      (1) --warn-variable-types=u is now okay if it is on the command line
-      with a named file.
+      (1) --warn-variable-types=u is now okay if a named file is processed.
       (2) --warn-variable-exclusion-list=s now allows leading and/or
       trailing * on variable names to allow a wildcard match. For example
       -wvxl='*_unused' is okay and would match $var1_unused and $var2_unused.
