@@ -8501,7 +8501,7 @@ sub set_CODE_type {
                 $CODE_type = $no_leading_space ? 'SBCX' : 'SBC';
                 next;
             }
-            elsif ($last_line_had_side_comment
+            elsif ( $last_line_had_side_comment
                 && !$rOpts_maximum_consecutive_blank_lines
                 && $rLL->[$Kfirst]->[_LEVEL_] > 0 )
             {
@@ -9906,7 +9906,7 @@ sub initialize_warn_hash {
             # Special check for -wvt
             # Deactivated for now to allow -wvt in perltidyrc files. This can
             # eventually be removed if allowing this does not cause problems.
-            elsif (0
+            elsif ( 0
                 && ( $opt eq 'u' || $opt eq 'c' )
                 && $long_name eq 'warn-variable-types' )
             {
@@ -14557,7 +14557,7 @@ sub count_list_elements {
             }
 
             # remember the name of the first item, maybe something like '$self'
-            elsif ($sigil eq '$'
+            elsif ( $sigil eq '$'
                 && !$self_name
                 && !$arg_count )
             {
@@ -35566,7 +35566,7 @@ sub undo_contained_ci {
                 }
 
                 # we might be able to handle a pad of -1 by removing a blank
-                # token
+                # token.
                 if ( $pad_spaces < 0 ) {
 
                     # Deactivated for -kpit due to conflict. This block deletes
@@ -35574,9 +35574,21 @@ sub undo_contained_ci {
                     # but it may conflict with user spacing requests.  For now
                     # it is just deactivated if the -kpit option is used.
                     if ( $pad_spaces == -1 ) {
-                        if (   $ipad > $ibeg
+                        if (
+                               $ipad > $ibeg
                             && $types_to_go[ $ipad - 1 ] eq 'b'
-                            && !%keyword_paren_inner_tightness )
+                            && !%keyword_paren_inner_tightness
+
+                            # additional tests added for c385:
+                            && (
+                                $types_to_go[$inext_next] eq $types_to_go[$ipad]
+                                || (
+                                    $types_to_go[$ipad] eq '!'
+                                    && ( $types_to_go[ $ipad + 1 ] eq
+                                        $types_to_go[$inext_next] )
+                                )
+                            )
+                          )
                         {
                             $self->pad_token( $ipad - 1, $pad_spaces );
                         }

@@ -420,7 +420,7 @@ other words that the input code is 'untidy' according to the formatting
 parameters.  If this is not the case, an error message noting this is produced.
 This flag has no other effect on the functioning of perltidy.
 
-=item B<-to=n>,   B<--timeout-in-seconds=n>
+=item B<-tos=n>,   B<--timeout-in-seconds=n>
 
 When the standard input supplies the input stream, and the input has not been
 received within B<n> seconds, perltidy will end with a timeout message.  The
