@@ -12,7 +12,6 @@ our $VERSION = '20240511.09';
 use Carp;
 use English qw( -no_match_vars );
 
-use constant DEVEL_MODE   => 0;
 use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };
 

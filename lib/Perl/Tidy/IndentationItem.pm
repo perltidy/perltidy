@@ -28,7 +28,6 @@ BEGIN {
         _recoverable_spaces_ => $i++,
         _align_seqno_        => $i++,
         _marked_             => $i++,
-        _stack_depth_        => $i++,
         _K_begin_line_       => $i++,
         _arrow_count_        => $i++,
         _standard_spaces_    => $i++,

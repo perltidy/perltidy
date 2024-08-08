@@ -514,8 +514,8 @@ sub check_options {
     # X11 color names for default settings that seemed to look ok
     # (these color names are only used for programming clarity; the hex
     # numbers are actually written)
+##  use constant SaddleBrown   => "#8B4513";
     use constant ForestGreen   => "#228B22";
-    use constant SaddleBrown   => "#8B4513";
     use constant magenta4      => "#8B008B";
     use constant IndianRed3    => "#CD5555";
     use constant DeepSkyBlue4  => "#00688B";
