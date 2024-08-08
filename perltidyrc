@@ -12,8 +12,8 @@
 # all if-elsif chains must end in an else block
 --warn-missing-else
 
-# warn if any of the 'unusual' variables are seen
---warn-variable-types='*'
+# warn if certain of the 'unusual' variables are seen
+--warn-variable-types='s r p c'
 
 # warn if call arg counts differ from sub definitions
 # (requires version > 20240202.04)
