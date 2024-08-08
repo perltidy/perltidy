@@ -103,21 +103,23 @@ use File::Copy;
 # perl stat function index names, based on
 #    https://perldoc.perl.org/functions/stat
 use constant {
-    _dev_     => 0,     # device number of filesystem
-    _ino_     => 1,     # inode number
-    _mode_    => 2,     # file mode  (type and permissions)
-    _nlink_   => 3,     # number of (hard) links to the file
-    _uid_     => 4,     # numeric user ID of file's owner
-    _gid_     => 5,     # numeric group ID of file's owner
-    _rdev_    => 6,     # the device identifier (special files only)
-    _size_    => 7,     # total size of file, in bytes
-    _atime_   => 8,     # last access time in seconds since the epoch
-    _mtime_   => 9,     # last modify time in seconds since the epoch
-    _ctime_   => 10,    # inode change time in seconds since the epoch (*)
-    _blksize_ => 11,    # preferred I/O size in bytes for interacting with
-                        # the file (may vary from file to file)
-    _blocks_  => 12,    # actual number of system-specific blocks allocated
-                        # on disk (often, but not always, 512 bytes each)
+
+    _mode_  => 2,    # file mode  (type and permissions)
+    _uid_   => 4,    # numeric user ID of file's owner
+    _gid_   => 5,    # numeric group ID of file's owner
+    _atime_ => 8,    # last access time in seconds since the epoch
+    _mtime_ => 9,    # last modify time in seconds since the epoch
+
+##  _dev_     => 0,     # device number of filesystem
+##  _ino_     => 1,     # inode number
+##  _nlink_   => 3,     # number of (hard) links to the file
+##  _rdev_    => 6,     # the device identifier (special files only)
+##  _size_    => 7,     # total size of file, in bytes
+##  _ctime_   => 10,    # inode change time in seconds since the epoch (*)
+##  _blksize_ => 11,    # preferred I/O size in bytes for interacting with
+##                      # the file (may vary from file to file)
+##  _blocks_  => 12,    # actual number of system-specific blocks allocated
+##                      # on disk (often, but not always, 512 bytes each)
 };
 
 BEGIN {
@@ -368,7 +370,7 @@ EOM
                     1;
                 }
                   or Die(
-"Timeout reading stdin using -to=$timeout_in_seconds seconds. Use -to=0 to skip timeout check.\n"
+"Timeout reading stdin using -to=$timeout_in_seconds seconds. Use -tos=0 to skip timeout check.\n"
                   );
             }
             else {
@@ -997,7 +999,12 @@ EOM
     my ( $in_place_modify, $backup_extension, $delete_backup ) =
       $self->check_in_place_modify( $source_stream, $destination_stream );
 
-    Perl::Tidy::Formatter::check_options( $rOpts, $wvt_in_args, $num_files );
+    my $line_range_clipped = $rOpts->{'line-range-tidy'}
+      && ( $self->[_line_tidy_begin_] > 1
+        || defined( $self->[_line_tidy_end_] ) );
+
+    Perl::Tidy::Formatter::check_options( $rOpts, $wvt_in_args, $num_files,
+        $line_range_clipped );
     Perl::Tidy::Tokenizer::check_options($rOpts);
     Perl::Tidy::VerticalAligner::check_options($rOpts);
     if ( $rOpts->{'format'} eq 'html' ) {
@@ -3472,7 +3479,7 @@ sub generate_options {
     $add_option->( 'warning-output',             'w',     '!' );
     $add_option->( 'add-terminal-newline',       'atnl',  '!' );
     $add_option->( 'line-range-tidy',            'lrt',   '=s' );
-    $add_option->( 'timeout-in-seconds',         'to',    '=i' );
+    $add_option->( 'timeout-in-seconds',         'tos',   '=i' );
 
     # options which are both toggle switches and values moved here
     # to hide from tidyview (which does not show category 0 flags):

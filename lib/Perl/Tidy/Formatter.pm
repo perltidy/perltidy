@@ -1475,7 +1475,7 @@ sub check_options {
 
     # This routine is called to check the user-supplied run parameters
     # and to configure the control hashes to them.
-    ( $rOpts, my $wvt_in_args, my $num_files ) = @_;
+    ( $rOpts, my $wvt_in_args, my $num_files, my $line_range_clipped ) = @_;
 
     initialize_whitespace_hashes();
 
@@ -1512,7 +1512,8 @@ sub check_options {
 
     initialize_call_paren_style();
 
-    initialize_warn_variable_types( $wvt_in_args, $num_files );
+    initialize_warn_variable_types( $wvt_in_args, $num_files,
+        $line_range_clipped );
 
     initialize_warn_mismatched();
 
@@ -8688,6 +8689,105 @@ EOM
     return ( $seqno_brace, $K_end_iterator );
 } ## end sub block_seqno_of_paren_keyword
 
+sub has_complete_package {
+    my ($self) = @_;
+    my $rLL = $self->[_rLL_];
+
+    # return true if this file appears to contain at least one complete package
+
+    my $rK_package_list = $self->[_rK_package_list_];
+    return unless ( defined($rK_package_list) && @{$rK_package_list} );
+
+    # look for a file like this:
+    # package A::B
+    # ...
+    # 1;
+
+    my $KK   = $rK_package_list->[0];
+    my $item = $rLL->[$KK];
+    my $type = $item->[_TYPE_];
+
+    # Stored K values may be off by 1 due to an added blank
+    if ( $type eq 'b' ) {
+        $KK += 1;
+        $item = $rLL->[$KK];
+        $type = $item->[_TYPE_];
+    }
+
+    # safety check - shouldn't happen
+    return unless ( $type eq 'P' );
+    my $level = $item->[_LEVEL_];
+    return unless ( $level == 0 );
+
+    # Look for '1;' at next package, if any, and at end of file
+    my @K_semicolon_test = ( @{$rLL} - 1 );
+    if ( @{$rK_package_list} > 1 ) {
+        my $K_package = $rK_package_list->[1];
+        my $Ktest     = $self->K_previous_code($K_package);
+        push @K_semicolon_test, $Ktest;
+    }
+
+    foreach my $Ktest (@K_semicolon_test) {
+        if ( $rLL->[$Ktest]->[_TYPE_] eq 'b' ) { $Ktest -= 1 }
+        if ( $Ktest > $KK && $Ktest && $rLL->[$Ktest]->[_TYPE_] eq ';' ) {
+            my $K1 = $self->K_previous_code($Ktest);
+            if ( $K1 && $rLL->[$K1]->[_TOKEN_] eq '1' ) {
+                return 1;
+            }
+        }
+    }
+    return;
+} ## end sub has_complete_package
+
+sub is_complete_script {
+    my ($self) = @_;
+
+    # return true if this file appears to be a complete script
+
+    # Require 0 starting indentation to be a complete script
+    my $rLL = $self->[_rLL_];
+    my $sil = $rLL->[0]->[_LEVEL_];
+    return if ($sil);
+
+    my $rlines         = $self->[_rlines_];
+    my $line_count     = @{$rlines};
+    my $line_of_tokens = $rlines->[0];
+    my $input_line     = $line_of_tokens->{_line_text};
+    my $saw_hash_bang  = substr( $input_line, 0, 2 ) eq '#!'
+      && $input_line =~ /^\#\!.*perl\b/;
+    my $saw_END_or_DATA = $self->[_saw_END_or_DATA_];
+    my $sub_count       = +keys %{ $self->[_ris_sub_block_] };
+    my $line_one_is_opening;
+    my $line_type = $line_of_tokens->{_line_type};
+
+    if ( $line_type eq 'CODE' ) {
+        my ( $Kfirst, $Klast ) = @{ $line_of_tokens->{_rK_range} };
+        if ($Klast) {
+            my $type = $rLL->[$Klast]->[_TYPE_];
+            if ( $type eq '#' ) {
+                my $Kp = $self->K_previous_code($Klast);
+                if ($Kp) { $type = $rLL->[$Klast]->[_TYPE_] }
+            }
+            $line_one_is_opening = $is_opening_type{$type};
+        }
+    }
+    my $rK_package_list = $self->[_rK_package_list_];
+    my $saw_package     = defined($rK_package_list) && @{$rK_package_list};
+
+    # Use the available clues to decide
+    my $score = 0;
+    $score += 50 if $saw_hash_bang;
+    $score += 50 if $saw_END_or_DATA;
+    $score += 50 if $saw_package;
+    $score -= 50 if $line_one_is_opening;
+    $score += 25 if $line_count > 50;
+    $score += 25 if $line_count > 100;
+    $score += 25 if $sub_count;
+    $score += 25 if $sub_count > 1;
+    if ( $score >= 100 ) { return 1 }
+    return;
+} ## end sub is_complete_script
+
 use constant DEBUG_USE_CONSTANT => 0;
 
 sub scan_variable_usage {
@@ -8717,11 +8817,11 @@ sub scan_variable_usage {
 
     # issues are indicated by these names:
     my %unusual_variable_issue_note = (
-        u => "unused lexical",
         c => "unused constant",
-        r => "reused scope",
-        s => "reused sigil",
         p => "package crossing",
+        r => "reused",
+        s => "multi-sigil",
+        u => "unused lexical",
     );
 
     # Default is to do all checks if no control hash received
@@ -8732,11 +8832,11 @@ sub scan_variable_usage {
     }
 
     my $issue_type_string = "Issue types are";
-    if ( $roption->{'u'} ) { $issue_type_string .= " 'u'=unused lexical" }
-    if ( $roption->{'r'} ) { $issue_type_string .= " 'r'=reused" }
-    if ( $roption->{'s'} ) { $issue_type_string .= " 's'=multi-sigil" }
-    if ( $roption->{'p'} ) { $issue_type_string .= " 'p'=package crossing" }
-    if ( $roption->{'c'} ) { $issue_type_string .= " 'c'=unused constant" }
+    foreach my $letter ( reverse sort keys %unusual_variable_issue_note ) {
+        next if ( !$roption->{$letter} );
+        my $txt = $unusual_variable_issue_note{$letter};
+        $issue_type_string .= " '$letter'=$txt";
+    }
 
     # Unpack the control hash
     my $check_sigil         = $roption->{'s'};
@@ -9028,7 +9128,7 @@ sub scan_variable_usage {
 
         # use constant _meth1_=>1;
         if ( $type_n eq 'w' ) {
-            $checkin_new_constant->( $KK, $token_n );
+            $checkin_new_constant->( $Kn, $token_n );
         }
 
         # use constant '_meth1_',1;
@@ -9037,7 +9137,7 @@ sub scan_variable_usage {
             # don't try to handle anything strange
             if ( length($token_n) < 3 ) { return }
             my $name = substr( $token_n, 1, -1 );
-            $checkin_new_constant->( $KK, $name );
+            $checkin_new_constant->( $Kn, $name );
         }
 
         # use constant qw(_meth2_ 2);
@@ -9045,7 +9145,7 @@ sub scan_variable_usage {
             my $name;
             if ( $token_n =~ /qw\s*.(\w+)/ ) {
                 $name = $1;
-                $checkin_new_constant->( $KK, $name );
+                $checkin_new_constant->( $Kn, $name );
             }
         }
 
@@ -9727,6 +9827,28 @@ EOM
     #----------
     # Finish up
     #----------
+
+    # skip final 'c' and 'u' output if this appears to be a snippet
+    my $is_possible_snippet = $roption->{is_possible_snippet};
+    if ( $is_possible_snippet && ( $check_unused || $check_constant ) ) {
+
+        # the flag $is_possible_snippet = 0:No  1:Uncertain   2:Yes
+        if (
+            $is_possible_snippet == 1
+            && (   $self->has_complete_package()
+                || $self->is_complete_script() )
+          )
+        {
+            # not a snippet
+        }
+
+        # is possible snippet: deactivate 'c' and 'u
+        else {
+            $check_unused   = 0;
+            $check_constant = 0;
+        }
+    }
+
     if ( @{$rblock_stack} != 1 ) {
 
         # shouldn't happen for a balanced input file
@@ -9743,17 +9865,17 @@ EOM
 
     if ($check_constant) {
         foreach my $package ( keys %{$rconstant_hash} ) {
-            my $rhash = $rconstant_hash->{$current_package};
+            my $rhash = $rconstant_hash->{$package};
             next if ( !defined($rhash) );
             foreach my $name ( keys %{$rhash} ) {
-                my $entry = $rconstant_hash->{$current_package}->{$name};
+                my $entry = $rconstant_hash->{$package}->{$name};
                 next if ( $entry->{count} );
                 push @warnings,
                   {
                     name        => $name,
                     keyword     => 'use constant',
                     see_line    => EMPTY_STRING,
-                    note        => 'unused in this package',
+                    note        => "unused in package $package",
                     line_number => $entry->{line_index} + 1,
                     letter      => 'c',
                     package     => $package,
@@ -10029,7 +10151,7 @@ sub wildcard_match {
 
 sub initialize_warn_variable_types {
 
-    my ( $wvt_in_args, $num_files ) = @_;
+    my ( $wvt_in_args, $num_files, $line_range_clipped ) = @_;
 
     # Initialization for:
     #    --warn-variable-types=s and
@@ -10043,23 +10165,27 @@ sub initialize_warn_variable_types {
       initialize_warn_hash( 'warn-variable-types', 0, \@all_opts,
         $wvt_in_args );
 
-    # Turn off types 'u' and 'c' if we are not operating on a named file
-    # or are under editor line range control
-    if ( $rOpts->{'line-range-tidy'} || !$num_files ) {
-        $rwarn_variable_types->{u} = 0;
-        $rwarn_variable_types->{c} = 0;
-    }
+    # Check for issues 'u' or 'c' cannot be fully made if we are working
+    # on a partial file (snippet), so we save info about that.
+    if ( $rwarn_variable_types->{u} || $rwarn_variable_types->{c} ) {
 
-    # Set 'u' and 'c' conditional on starting indentation = 0 if just 1 file
-    # and -wvt is not on cmd line. The reason is that if -wvt is in the
-    # perltidyrc file, and we are operating on just one file, it could be
-    # a temporary file created by an editor. Requiring a starting level
-    # of zero is a defensive strategy for minimizing the chance of
-    # incorrect warnings when formatting a short snippet.
-    else {
-        if ( !$wvt_in_args && $num_files <= 1 ) {
-            $rwarn_variable_types->{require_sil_zero} = 1;
+        # Three value switch: 0=NO, 1=MAYBE 2=DEFINITELY
+        my $is_possible_snippet = 1;
+
+        # assume snippet if incomplete line range is being formatted
+        if ($line_range_clipped) {
+            $is_possible_snippet = 2;
         }
+
+        # assume complete script if operating on multiple files or if
+        # operating on one file and -wvt came in on the command line
+        if ( $is_possible_snippet == 1 && $num_files ) {
+            if ( $num_files > 1 || $wvt_in_args && $num_files ) {
+                $is_possible_snippet = 0;
+            }
+        }
+
+        $rwarn_variable_types->{is_possible_snippet} = $is_possible_snippet;
     }
 
     $ris_warn_variable_excluded_name =
@@ -10113,25 +10239,8 @@ sub warn_variable_types {
     my $wv_option = $rOpts->{$wv_key};
     return unless ( %{$rwarn_variable_types} );
 
-    # Make a copy of the control hash
-    my $rwarn_variable_types_copy = {};
-    foreach my $key ( keys %{$rwarn_variable_types} ) {
-        next if ( length($key) > 1 );
-        $rwarn_variable_types_copy->{$key} = $rwarn_variable_types->{$key};
-    }
-
-    # If requested, we must turn off 'u' and 'c' if starting level is not zero
-    if ( $rwarn_variable_types->{require_sil_zero} ) {
-        my $rLL = $self->[_rLL_];
-        my $sil = $rLL->[0]->[_LEVEL_];
-        if ($sil) {
-            $rwarn_variable_types_copy->{u} = 0;
-            $rwarn_variable_types_copy->{c} = 0;
-        }
-    }
-
     my ( $rwarnings, $issue_type_string ) =
-      $self->scan_variable_usage($rwarn_variable_types_copy);
+      $self->scan_variable_usage($rwarn_variable_types);
     return unless ( $rwarnings && @{$rwarnings} );
 
     $rwarnings =
@@ -28795,8 +28904,6 @@ sub do_colon_breaks {
 
     # These routines and variables are involved in finding good
     # places to break long lists.
-
-    use constant DEBUG_BREAK_LISTS => 0;
 
     my (
 
