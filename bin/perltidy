@@ -6150,10 +6150,12 @@ would have also been caught by perl if the author had used C<strict>.
 
 =item B<c: unused constants>
 
-These are names which are declared with a C<use constant> and not
-referenced again within their package. They might be needed by an
-external package, or for future development. But they might be unused
-remnants from code development, so it can be worthwhile reviewing them.
+These are names which are declared with a C<use constant> and a reference was
+not seen again within their package. They might be needed by an external
+package, or a set of standard definitions, or available for future development.
+And in some unusual cases a reference may have been missed by perltidy. But
+they might also be unused remnants from code development, or due to a
+misspelling, so it can be worthwhile reviewing them.
 
 =back
 
