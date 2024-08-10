@@ -13,6 +13,8 @@
 #10 dltc.dltc2
 #11 logical_xor.def
 #12 csc.csc3
+#13 git159.def
+#14 git159.git159
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -43,6 +45,7 @@ BEGIN {
 ---unknown-future-option
 ---wtc=h
 ----------
+        'git159' => "-bl -nsbl",
     };
 
     ############################
@@ -107,6 +110,16 @@ $self->make_grammar(
                     [ [ 1950, 150, ], [ 2050, 150, ], ],
                 ]
             );
+----------
+
+        'git159' => <<'----------',
+sub example {
+    my $ex = 0;
+    if ($ex)
+    {
+        print "yay\n";
+    }
+}
 ----------
 
         'logical_xor' => <<'----------',
@@ -287,6 +300,33 @@ $x ^^ $y and say "One of x or y is true, but not both";
             } ## end else [ if ( !defined( $_[0] ))
         }; ## end $message = sub
 #12...........
+        },
+
+        'git159.def' => {
+            source => "git159",
+            params => "def",
+            expect => <<'#13...........',
+sub example {
+    my $ex = 0;
+    if ($ex) {
+        print "yay\n";
+    }
+}
+#13...........
+        },
+
+        'git159.git159' => {
+            source => "git159",
+            params => "git159",
+            expect => <<'#14...........',
+sub example {
+    my $ex = 0;
+    if ($ex)
+    {
+        print "yay\n";
+    }
+}
+#14...........
         },
     };
 

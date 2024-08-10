@@ -5860,10 +5860,14 @@ sub make_bl_pattern {
 
     # for -bl, a list with '*' turns on -sbl and -asbl
     if ( $bl_pattern =~ /\.\*/ ) {
-        $rOpts->{'opening-sub-brace-on-new-line'} ||=
-          $rOpts->{'opening-brace-on-new-line'};
-        $rOpts->{'opening-anonymous-sub-brace-on-new-line'} ||=
-          $rOpts->{'opening-anonymous-brace-on-new-line'};
+        if ( !defined( $rOpts->{'opening-sub-brace-on-new-line'} ) ) {
+            $rOpts->{'opening-sub-brace-on-new-line'} =
+              $rOpts->{'opening-brace-on-new-line'};
+        }
+        if ( !defined( $rOpts->{'opening-anonymous-sub-brace-on-new-line'} ) ) {
+            $rOpts->{'opening-anonymous-sub-brace-on-new-line'} =
+              $rOpts->{'opening-anonymous-brace-on-new-line'};
+        }
     }
 
     if ( defined( $rOpts->{'brace-left-exclusion-list'} )

@@ -1,0 +1,7 @@
+sub example {
+    my $ex = 0;
+    if ($ex)
+    {
+        print "yay\n";
+    }
+}

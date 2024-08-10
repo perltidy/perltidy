@@ -2657,13 +2657,17 @@ the default settings B<-bll='*'> and B<-blxl='sort map grep eval asub'>
 mean all blocks except B<sort map grep eval> and anonymous sub blocks.
 
 Note that the lists B<-bll=s> and B<-blxl=s> control the behavior of the
-B<-bl> flag but have no effect unless the B<-bl> flag is set.
+B<-bl> flag but have no effect unless the B<-bl> flag is set. These
+two lists provide complete control for this flag, but two shortcut
+flags are available and described in the next sections.
 
 =item B<-sbl>,    B<--opening-sub-brace-on-new-line>
 
-The flag B<-sbl> provides a shortcut way to turn on B<-bl> just for named
-subs.  The same effect can be achieved by turning on B<-bl>
-with the block list set as B<-bll='sub'>.
+The flag B<-sbl> provides a shortcut way to turn on B<-bl> just for named subs.
+The same effect can be achieved by turning on B<-bl> with the block list set as
+B<-bll='sub'>.  To avoid conflicts, it is recommended to either use the more
+general list method described above to control B<-bl>, or this shortcut method,
+but not both.
 
 For example,
 
@@ -2681,12 +2685,17 @@ produces this result:
     }
  }
 
-This flag is negated with B<-nsbl>, which is the default.
+This negative version of this flag, B<-nsbl>, turns off B<-bl> for
+named subs.  The same effect can be achieved with the exclusion
+list method, B<-blxl=sub>.
 
 =item B<-asbl>,    B<--opening-anonymous-sub-brace-on-new-line>
 
-The flag B<-asbl> is like the B<-sbl> flag except that it applies
-to anonymous sub's instead of named subs. For example
+The flag B<-asbl> is like the B<-sbl> flag except that it applies to anonymous
+sub's instead of named subs.  The same effect can be achieved by turning on
+B<-bl> with the block list set to include B<-bll='asub'>.
+
+For example
 
  perltidy -asbl
 
@@ -2702,7 +2711,8 @@ produces this result:
      }
  };
 
-This flag is negated with B<-nasbl>, and the default is B<-nasbl>.
+This negative version of this flag, B<-nasbl>, turns off B<-bl> for
+anonymous subs.
 
 =item B<-bli>,    B<--brace-left-and-indent>
 
