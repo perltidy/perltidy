@@ -5842,43 +5842,43 @@ sub make_bl_pattern {
     my $bl_list_string           = '*';
     my $bl_exclusion_list_string = 'sort map grep eval asub';
 
-    if ( defined( $rOpts->{'brace-left-list'} )
-        && $rOpts->{'brace-left-list'} )
-    {
-        $bl_list_string = $rOpts->{'brace-left-list'};
+    my $bl_long_name   = 'opening-brace-on-new-line';
+    my $bll_long_name  = 'brace-left-list';
+    my $blxl_long_name = 'brace-left-exclusion-list';
+    my $sbl_long_name  = 'opening-sub-brace-on-new-line';
+    my $asbl_long_name = 'opening-anonymous-sub-brace-on-new-line';
+
+    if ( defined( $rOpts->{$bll_long_name} ) && $rOpts->{$bll_long_name} ) {
+        $bl_list_string = $rOpts->{$bll_long_name};
     }
     if ( $bl_list_string =~ /\bsub\b/ ) {
-        $rOpts->{'opening-sub-brace-on-new-line'} ||=
-          $rOpts->{'opening-brace-on-new-line'};
+        $rOpts->{$sbl_long_name} ||= $rOpts->{$bl_long_name};
     }
     if ( $bl_list_string =~ /\basub\b/ ) {
-        $rOpts->{'opening-anonymous-sub-brace-on-new-line'} ||=
-          $rOpts->{'opening-brace-on-new-line'};
+        $rOpts->{$asbl_long_name} ||= $rOpts->{$bl_long_name};
     }
 
     $bl_pattern = make_block_pattern( '-bll', $bl_list_string );
 
     # for -bl, a list with '*' turns on -sbl and -asbl
     if ( $bl_pattern =~ /\.\*/ ) {
-        if ( !defined( $rOpts->{'opening-sub-brace-on-new-line'} ) ) {
-            $rOpts->{'opening-sub-brace-on-new-line'} =
-              $rOpts->{'opening-brace-on-new-line'};
+        if ( !defined( $rOpts->{$sbl_long_name} ) ) {
+            $rOpts->{$sbl_long_name} = $rOpts->{$bl_long_name};
         }
-        if ( !defined( $rOpts->{'opening-anonymous-sub-brace-on-new-line'} ) ) {
-            $rOpts->{'opening-anonymous-sub-brace-on-new-line'} =
-              $rOpts->{'opening-anonymous-brace-on-new-line'};
+        if ( !defined( $rOpts->{$asbl_long_name} ) ) {
+            $rOpts->{$asbl_long_name} = $rOpts->{$bl_long_name};
         }
     }
 
-    if ( defined( $rOpts->{'brace-left-exclusion-list'} )
-        && $rOpts->{'brace-left-exclusion-list'} )
+    if ( defined( $rOpts->{$blxl_long_name} )
+        && $rOpts->{$blxl_long_name} )
     {
-        $bl_exclusion_list_string = $rOpts->{'brace-left-exclusion-list'};
+        $bl_exclusion_list_string = $rOpts->{$blxl_long_name};
         if ( $bl_exclusion_list_string =~ /\bsub\b/ ) {
-            $rOpts->{'opening-sub-brace-on-new-line'} = 0;
+            $rOpts->{$sbl_long_name} = 0;
         }
         if ( $bl_exclusion_list_string =~ /\basub\b/ ) {
-            $rOpts->{'opening-anonymous-sub-brace-on-new-line'} = 0;
+            $rOpts->{$asbl_long_name} = 0;
         }
     }
 
