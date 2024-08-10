@@ -8692,6 +8692,7 @@ EOM
 sub has_complete_package {
     my ($self) = @_;
     my $rLL = $self->[_rLL_];
+    return unless ( @{$rLL} );
 
     # return true if this file appears to contain at least one complete package
 
@@ -8746,11 +8747,13 @@ sub is_complete_script {
 
     # Require 0 starting indentation to be a complete script
     my $rLL = $self->[_rLL_];
+    return unless ( @{$rLL} );
     my $sil = $rLL->[0]->[_LEVEL_];
     return if ($sil);
 
-    my $rlines         = $self->[_rlines_];
-    my $line_count     = @{$rlines};
+    my $rlines     = $self->[_rlines_];
+    my $line_count = @{$rlines};
+    return unless ($line_count);
     my $line_of_tokens = $rlines->[0];
     my $input_line     = $line_of_tokens->{_line_text};
     my $saw_hash_bang  = substr( $input_line, 0, 2 ) eq '#!'
@@ -8789,6 +8792,102 @@ sub is_complete_script {
 } ## end sub is_complete_script
 
 use constant DEBUG_USE_CONSTANT => 0;
+
+sub get_Q_list {
+    my ( $self, $Kn ) = @_;
+
+    # Given:
+    #  $Kn = index of start of a comma separated list of quoted words
+    # Return:
+    #  ref to list of words, or
+    #  nothing if error
+    return unless ($Kn);
+    my $rLL = $self->[_rLL_];
+
+    my @list;
+    foreach my $KK ( $Kn .. @{$rLL} - 1 ) {
+        my $type = $rLL->[$KK]->[_TYPE_];
+        next if ( $type eq 'b' );
+        next if ( $type eq ',' );
+        next if ( $type eq '#' );
+        last if ( $type ne 'Q' );
+        my $token = $rLL->[$KK]->[_TOKEN_];
+        next if ( length($token) < 3 );
+        my $name = substr( $token, 1, -1 );
+        push @list, $name;
+    }
+    return \@list;
+} ## end sub get_Q_list
+
+sub get_qw_list {
+    my ( $self, $Kn ) = @_;
+
+    # Given:
+    #  $Kn = index of start of a qw quote
+    # Return:
+    #  ref to list of words, or
+    #  nothing if error
+
+    my $rLL = $self->[_rLL_];
+    return unless ($Kn);
+    my $type_n = $rLL->[$Kn]->[_TYPE_];
+    return unless ( $type_n eq 'q' );
+    my $token_n = $rLL->[$Kn]->[_TOKEN_];
+
+    # collect a multi-line qw
+    my $string = $token_n;
+    foreach my $Knn ( $Kn + 1 .. @{$rLL} - 1 ) {
+        my $type_nn = $rLL->[$Knn]->[_TYPE_];
+        next if ( $type_nn eq 'b' );
+        last if ( $type_nn ne 'q' );
+        $string .= SPACE . $rLL->[$Knn]->[_TOKEN_];
+    }
+
+    $string = substr( $string, 2 );        # remove qw
+    $string =~ s/^\s*//;                   # trim left
+    $string = substr( $string, 1 );        # remove opening mark char
+    $string = substr( $string, 0, -1 );    # remove closing mark char
+    $string =~ s/^\s*//;                   # trim left
+    $string =~ s/\s*$//;                   # trim right
+
+    my @list = split SPACE, $string;
+    return \@list;
+} ## end sub get_qw_list
+
+sub expand_EXPORT_list {
+    my ( $self, $KK, $rhash ) = @_;
+    my $rLL = $self->[_rLL_];
+    my $Kn  = $self->K_next_code($KK);
+    return unless ( $Kn && $rLL->[$Kn]->[_TYPE_] eq '=' );
+    $Kn = $self->K_next_code($Kn);
+    return unless ($Kn);
+    my $type_n  = $rLL->[$Kn]->[_TYPE_];
+    my $token_n = $rLL->[$Kn]->[_TOKEN_];
+
+    if ( $token_n eq '(' ) {
+        $Kn = $self->K_next_code($Kn);
+        return unless ($Kn);
+        $type_n  = $rLL->[$Kn]->[_TYPE_];
+        $token_n = $rLL->[$Kn]->[_TOKEN_];
+    }
+
+    if ( $type_n eq 'q' ) {
+        my $rlist = $self->get_qw_list($Kn);
+        return unless ($rlist);
+        foreach ( @{$rlist} ) { $rhash->{$_} = 1 }
+    }
+    elsif ( $type_n eq 'Q' ) {
+        my $rlist = $self->get_Q_list($Kn);
+        return unless ($rlist);
+        foreach ( @{$rlist} ) { $rhash->{$_} = 1 }
+    }
+    else {
+        # something more complex, for example:
+        #  @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
+    }
+
+    return;
+} ## end sub expand_EXPORT_list
 
 sub scan_variable_usage {
 
@@ -8854,7 +8953,7 @@ sub scan_variable_usage {
     my %is_valid_sigil = ( '$' => 1, '@' => 1, '%' => 1 );
 
     # Variables defining current state:
-    my $current_package = 'package main';
+    my $current_package = 'main';
 
     # The basic idea of this routine is straightforward:
     # - We create a stack of block braces
@@ -8877,6 +8976,7 @@ sub scan_variable_usage {
 
     my $rblock_stack   = [];
     my $rconstant_hash = {};
+    my $rEXPORT_hash   = {};
 
     #---------------------------------------
     # sub to push a block brace on the stack
@@ -9094,7 +9194,7 @@ sub scan_variable_usage {
     }; ## end $update_use_count = sub
 
     my $checkin_new_constant = sub {
-        my ( $KK, $name ) = @_;
+        my ( $KK, $word ) = @_;
         my $line_index = $rLL->[$KK]->[_LINE_INDEX_];
         my $rvars      = {
             count      => 0,
@@ -9102,9 +9202,18 @@ sub scan_variable_usage {
             package    => $current_package,
             K          => $KK,
         };
-        $rconstant_hash->{$current_package}->{$name} = $rvars;
+        $rconstant_hash->{$current_package}->{$word} = $rvars;
         return;
     }; ## end $checkin_new_constant = sub
+
+    my $push_new_EXPORT = sub {
+        my ( $KK, $package ) = @_;
+
+        # Save index of any @EXPORT and @EXPORT_OK lists
+        $package = $current_package unless ($package);
+        push @{ $rEXPORT_hash->{$package} }, $KK;
+        return;
+    }; ## end $push_new_EXPORT = sub
 
     my $scan_use_constant = sub {
         my ($KK) = @_;
@@ -9215,10 +9324,16 @@ sub scan_variable_usage {
     }; ## end $scan_use_constant = sub
 
     my $update_constant_count = sub {
-        my ($KK) = @_;
-        my $name = $rLL->[$KK]->[_TOKEN_];
-        return if ( !defined( $rconstant_hash->{$current_package} ) );
-        my $rvars = $rconstant_hash->{$current_package}->{$name};
+        my ( $KK, $word ) = @_;
+        if ( !defined($word) ) { $word = $rLL->[$KK]->[_TOKEN_] }
+        my $package = $current_package;
+        my $pos     = rindex( $word, '::' );
+        if ( $pos >= 0 ) {
+            $package = $pos > 0 ? substr( $word, 0, $pos ) : 'main';
+            $word    = substr( $word, $pos + 2 );
+        }
+        return if ( !defined( $rconstant_hash->{$package} ) );
+        my $rvars = $rconstant_hash->{$package}->{$word};
         return if ( !defined($rvars) );
         return if ( $KK <= $rvars->{K} );
         $rvars->{count}++;
@@ -9624,7 +9739,7 @@ EOM
                 }
 
                 # Not collecting 'my' vars - update counts
-                elsif ($check_unused) {
+                elsif ( $check_unused || $check_constant ) {
 
                     my $sigil_string = EMPTY_STRING;
                     my $word         = EMPTY_STRING;
@@ -9632,17 +9747,52 @@ EOM
                     # The regex below will match numbers, like '$34x', but that
                     # should not be a problem because it will not match a hash
                     # key.
-                    if ( $token =~ /^(\W+)(\w+)$/ ) {
-                        $sigil_string = $1;
+                    if ( $token =~ /^(\W+)?(\w.*)$/ ) {
+                        $sigil_string = $1 if ($1);
                         $word         = $2;
-                        my $sigil = substr( $sigil_string, -1, 1 );
-                        if ( !$is_valid_sigil{$sigil} ) {
-                            $sigil_string = EMPTY_STRING;
-                            $word         = EMPTY_STRING;
+
+                        if ( $check_constant && $word ) {
+
+                            # look for constant invoked like '&ORD' or '->ORD'
+                            if ( !$sigil_string || $sigil_string eq '&' ) {
+                                $update_constant_count->( $KK, $word );
+                            }
+                            elsif ( $sigil_string eq '@'
+                                && index( $word, 'EXPORT' ) >= 0 )
+                            {
+                                # Looking for stuff like:
+                                #   @EXPORT_OK
+                                #   @ALPHA::BETA::EXPORT
+                                my $package = $current_package;
+                                my $name    = $word;
+                                my $pos     = rindex( $word, '::' );
+                                if ( $pos >= 0 ) {
+                                    $package = substr( $word, 0, $pos );
+                                    $name    = substr( $word, $pos + 2 );
+                                }
+                                if ( $name eq 'EXPORT' || $name eq 'EXPORT_OK' )
+                                {
+                                    $push_new_EXPORT->( $KK, $package );
+                                }
+                            }
+                            else { }
+                        }
+
+                        if ($sigil_string) {
+                            my $sigil = substr( $sigil_string, -1, 1 );
+                            if ( !$is_valid_sigil{$sigil} ) {
+                                $sigil_string = EMPTY_STRING;
+                                $word         = EMPTY_STRING;
+                            }
                         }
                     }
 
-                    if ( $sigil_string && $word ) {
+                    if (   $check_unused
+                        && $sigil_string
+                        && $word
+                        && $word =~ /\w+/ )
+                    {
+
                         my $Kn = $self->K_next_code($KK);
                         my $bracket;
                         if ( defined($Kn) ) {
@@ -9670,7 +9820,11 @@ EOM
             # a package statement
             #--------------------
             elsif ( $type eq 'P' ) {
-                my $package = $token;
+                my ( $keyword, $package ) = split /\s+/, $token, 2;
+
+                # keyword 'package' may be on a previous line
+                if ( !$package ) { $package = $keyword }
+
                 if ( $package ne $current_package ) {
                     $current_package = $package;
 
@@ -9864,23 +10018,51 @@ EOM
     }
 
     if ($check_constant) {
+        my @warnings_c;
+        my %packages_with_warnings;
         foreach my $package ( keys %{$rconstant_hash} ) {
             my $rhash = $rconstant_hash->{$package};
             next if ( !defined($rhash) );
             foreach my $name ( keys %{$rhash} ) {
                 my $entry = $rconstant_hash->{$package}->{$name};
                 next if ( $entry->{count} );
-                push @warnings,
+                push @warnings_c,
                   {
                     name        => $name,
                     keyword     => 'use constant',
                     see_line    => EMPTY_STRING,
-                    note        => "unused in package $package",
+                    note        => "appears unused in package $package",
                     line_number => $entry->{line_index} + 1,
                     letter      => 'c',
                     package     => $package,
                     K           => $entry->{K},
                   };
+                $packages_with_warnings{$package} = 1;
+            }
+        }
+
+        # filter out constants found in @EXPORT and @EXPORT_OK
+        if (@warnings_c) {
+
+            # expand relevant EXPORT lists
+            my $rEXPORT_words_by_package = {};
+            foreach my $package ( keys %packages_with_warnings ) {
+                my $rKlist = $rEXPORT_hash->{$package};
+                next unless ($rKlist);
+                $rEXPORT_words_by_package->{$package} = {};
+                foreach my $KK ( @{$rKlist} ) {
+                    $self->expand_EXPORT_list( $KK,
+                        $rEXPORT_words_by_package->{$package} );
+                }
+            }
+
+            # remove warnings in EXPORT lists
+            foreach my $rwarning (@warnings_c) {
+                my $package = $rwarning->{package};
+                my $name    = $rwarning->{name};
+                my $rhash   = $rEXPORT_words_by_package->{$package};
+                next if ( $rhash && $rhash->{$name} );
+                push @warnings, $rwarning;
             }
         }
     }
