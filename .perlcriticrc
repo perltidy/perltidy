@@ -78,9 +78,9 @@ lines=30
 # there are some critical loops in Formatter.pm whose high mccabe values cannot
 # be reduced without significantly increasing run time. Note that a complete
 # list of mccabe numbers can be obtained with perltidy -dbs file.pl >file.csv
-# sub scan_variable_usage has score 243
+# sub scan_variable_usage has score 250
 [Subroutines::ProhibitExcessComplexity]
-max_mccabe=245
+max_mccabe=260
 
 # This policy can be very helpful for locating complex code, but sometimes
 # deep nests are the best option, especially in error handling and debug

@@ -8751,14 +8751,54 @@ sub has_complete_package {
 sub is_complete_script {
     my ($self) = @_;
 
-    # return true if this file appears to be a complete script
+    # Guess if we are formatting a complete script
+    # return: true if YES false if NO
 
-    # Require 0 starting indentation to be a complete script
+    #----------------------------------------------------------------
+    # PART 1: Assume a file with known extension is a complete script
+    #----------------------------------------------------------------
+    my %is_known_file_extension = (
+        'pm'  => 1,
+        'pl'  => 1,
+        'plx' => 1,
+        't'   => 1,
+        'PM'  => 1,
+        'PL'  => 1,
+    );
+    my $input_stream_name = get_input_stream_name();
+    my $pos_dot           = rindex( $input_stream_name, '.' );
+    my $file_extension    = EMPTY_STRING;
+    if ( $pos_dot > 1 ) {
+        $file_extension = substr( $input_stream_name, $pos_dot + 1 );
+        if (   defined($file_extension)
+            && length($file_extension)
+            && $file_extension =~ /^\d+$/ )
+        {
+            my $str = substr( $input_stream_name, 0, $pos_dot );
+            $pos_dot = rindex( $str, '.' );
+            if ( $pos_dot > 1 ) {
+                $file_extension = substr( $str, $pos_dot + 1 );
+            }
+        }
+        return 1 if $is_known_file_extension{$file_extension};
+    }
+
+    #-------------------------------------------------------------------------
+    # PART 2: otherwise zero starting indentation implies an incomplete script
+    #-------------------------------------------------------------------------
     my $rLL = $self->[_rLL_];
     return unless ( @{$rLL} );
     my $sil = $rLL->[0]->[_LEVEL_];
     return if ($sil);
 
+    #------------------------------------
+    # PART 3: look for a complete package
+    #------------------------------------
+    return 1 if $self->has_complete_package();
+
+    #----------------------------
+    # PART 4: examine other clues
+    #----------------------------
     my $rlines     = $self->[_rlines_];
     my $line_count = @{$rlines};
     return unless ($line_count);
@@ -8785,8 +8825,9 @@ sub is_complete_script {
     my $rK_package_list = $self->[_rK_package_list_];
     my $saw_package     = defined($rK_package_list) && @{$rK_package_list};
 
-    # Use the available clues to decide
+    # Make a guess using the available clues.
     my $score = 0;
+    $score += 50 if $file_extension;
     $score += 50 if $saw_hash_bang;
     $score += 50 if $saw_END_or_DATA;
     $score += 50 if $saw_package;
@@ -9995,11 +10036,8 @@ EOM
     if ( $is_possible_snippet && ( $check_unused || $check_constant ) ) {
 
         # the flag $is_possible_snippet = 0:No  1:Uncertain   2:Yes
-        if (
-            $is_possible_snippet == 1
-            && (   $self->has_complete_package()
-                || $self->is_complete_script() )
-          )
+        if (   $is_possible_snippet == 1
+            && $self->is_complete_script() )
         {
             # not a snippet
         }
