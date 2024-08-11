@@ -5862,10 +5862,14 @@ sub make_bl_pattern {
 
     # for -bl, a list with '*' turns on -sbl and -asbl
     if ( $bl_pattern =~ /\.\*/ ) {
+
         if ( !defined( $rOpts->{$sbl_long_name} ) ) {
             $rOpts->{$sbl_long_name} = $rOpts->{$bl_long_name};
         }
-        if ( !defined( $rOpts->{$asbl_long_name} ) ) {
+
+        if (  !defined( $rOpts->{$asbl_long_name} )
+            && defined( $rOpts->{$bll_long_name} ) )
+        {
             $rOpts->{$asbl_long_name} = $rOpts->{$bl_long_name};
         }
     }
