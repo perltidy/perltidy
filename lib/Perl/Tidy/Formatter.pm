@@ -312,7 +312,7 @@ my (
     %is_other_brace_follower,
     %is_kwU,
     %is_re_match_op,
-    %is_my_state,
+    %is_my_state_our,
 
     # INITIALIZER: sub check_options
     $controlled_comma_style,
@@ -923,8 +923,8 @@ BEGIN {
     @q = qw( =~ !~);
     @is_re_match_op{@q} = (1) x scalar(@q);
 
-    @q = qw ( my state );
-    @is_my_state{@q} = (1) x scalar(@q);
+    @q = qw ( my state our );
+    @is_my_state_our{@q} = (1) x scalar(@q);
 
 } ## end BEGIN
 
@@ -8636,7 +8636,7 @@ sub block_seqno_of_paren_keyword {
 
             # skip past a 'my'
             if ( $type_K_n eq 'k' ) {
-                if ( $is_my_state{$token_K_n} ) {
+                if ( $is_my_state_our{$token_K_n} ) {
                     $K_n    = $self->K_next_code($K_n);
                     $saw_my = 1;
                 }
@@ -8752,24 +8752,26 @@ sub is_complete_script {
     my ($self) = @_;
 
     # Guess if we are formatting a complete script
-    # return: true if YES false if NO
+    # Return: true or false
 
     #----------------------------------------------------------------
-    # PART 1: Assume a file with known extension is a complete script
+    # TEST 1: Assume a file with known extension is a complete script
     #----------------------------------------------------------------
-    my %is_known_file_extension = (
+    my %is_standard_file_extension = (
         'pm'  => 1,
         'pl'  => 1,
         'plx' => 1,
         't'   => 1,
-        'PM'  => 1,
-        'PL'  => 1,
     );
     my $input_stream_name = get_input_stream_name();
-    my $pos_dot           = rindex( $input_stream_name, '.' );
-    my $file_extension    = EMPTY_STRING;
+
+    # look for a file extension
+    my $pos_dot        = rindex( $input_stream_name, '.' );
+    my $file_extension = EMPTY_STRING;
     if ( $pos_dot > 1 ) {
         $file_extension = substr( $input_stream_name, $pos_dot + 1 );
+
+        # allow additional digits, like .pm.0, .pm.1 etc
         if (   defined($file_extension)
             && length($file_extension)
             && $file_extension =~ /^\d+$/ )
@@ -8780,24 +8782,25 @@ sub is_complete_script {
                 $file_extension = substr( $str, $pos_dot + 1 );
             }
         }
-        return 1 if $is_known_file_extension{$file_extension};
+
+        return 1 if $is_standard_file_extension{ lc($file_extension) };
     }
 
-    #-------------------------------------------------------------------------
-    # PART 2: otherwise zero starting indentation implies an incomplete script
-    #-------------------------------------------------------------------------
+    #-------------------------------------------------------------
+    # TEST 2: positive starting level implies an incomplete script
+    #-------------------------------------------------------------
     my $rLL = $self->[_rLL_];
     return unless ( @{$rLL} );
     my $sil = $rLL->[0]->[_LEVEL_];
     return if ($sil);
 
     #------------------------------------
-    # PART 3: look for a complete package
+    # TEST 3: look for a complete package
     #------------------------------------
     return 1 if $self->has_complete_package();
 
     #----------------------------
-    # PART 4: examine other clues
+    # TEST 4: examine other clues
     #----------------------------
     my $rlines     = $self->[_rlines_];
     my $line_count = @{$rlines};
@@ -8825,7 +8828,7 @@ sub is_complete_script {
     my $rK_package_list = $self->[_rK_package_list_];
     my $saw_package     = defined($rK_package_list) && @{$rK_package_list};
 
-    # Make a guess using the available clues.
+    # Make a guess using the available clues. No single clue is conclusive.
     my $score = 0;
     $score += 50 if $file_extension;
     $score += 50 if $saw_hash_bang;
@@ -8972,7 +8975,7 @@ sub scan_variable_usage {
         u => "unused lexical",
     );
 
-    # Default is to do all checks if no control hash received
+    # Default is to do all checks if no control hash received (dump mode)
     if ( !defined($roption) ) {
         foreach my $key ( keys %unusual_variable_issue_note ) {
             $roption->{$key} = 1;
@@ -9148,7 +9151,7 @@ sub scan_variable_usage {
                     my $see_line = 0;
                     if ( $sig eq $sigil ) {
                         my $as_iterator =
-                          $is_my_state{$my_keyword}
+                          $is_my_state_our{$my_keyword}
                           || substr( $my_keyword, 0, 3 ) eq 'sub'
                           ? EMPTY_STRING
                           : ' as iterator';
@@ -9161,6 +9164,7 @@ sub scan_variable_usage {
                           "overlaps $test_name in scope - see line $see_line";
                         $letter = 's';
                     }
+
                     push @warnings,
                       {
                         name        => $name,
@@ -9395,9 +9399,16 @@ sub scan_variable_usage {
     my $check_for_unused_names = sub {
         my ($rhash) = @_;
         foreach my $name ( keys %{$rhash} ) {
-            my $entry = $rhash->{$name};
-            my $count = $entry->{count};
+            my $entry   = $rhash->{$name};
+            my $count   = $entry->{count};
+            my $keyword = $entry->{keyword};
+
             if ( !$count ) {
+
+                # typically global vars are for external access so we
+                # do not report them as type 'u' (unused)
+                next if ( $keyword eq 'our' || $keyword eq 'use vars' );
+
                 push @warnings,
                   {
                     name        => $name,
@@ -9713,7 +9724,7 @@ EOM
                 #---------------------------------
                 # look for keyword 'my' or 'state'
                 #---------------------------------
-                if ( $is_my_state{$token} ) {
+                if ( $is_my_state_our{$token} ) {
                     $my_keyword = $token;
 
                     # Set '$K_end_my' to be the last $K index of the variables
@@ -10138,11 +10149,28 @@ EOM
         }
     }
 
-    # Sort on token index and issue type
-    my @sorted =
-      sort { $a->{K} <=> $b->{K} || $a->{letter} cmp $b->{letter} } @warnings;
+    if (@warnings) {
 
-    return ( \@sorted, $issue_type_string );
+        # filter out certain common 'our' variables from all warnings
+        #  because they are common and difficult to fix, and
+        # sort on token index and issue type
+
+        my %is_exempted_global_name;
+        my @q = qw( $VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS @ISA $AUTOLOAD );
+        @is_exempted_global_name{@q} = (1) x scalar(@q);
+
+        @warnings =
+          sort { $a->{K} <=> $b->{K} || $a->{letter} cmp $b->{letter} }
+
+          # FIXME: this limitation may eventually just be for 'our' vars
+          # after 'use vars' coding is finalized
+          grep {
+            ( $_->{keyword} ne 'our' && $_->{keyword} ne 'use vars' )
+              || !$is_exempted_global_name{ $_->{name} }
+          } @warnings;
+    }
+
+    return ( \@warnings, $issue_type_string );
 } ## end sub scan_variable_usage
 
 sub dump_unusual_variables {
