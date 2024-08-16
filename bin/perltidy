@@ -6056,7 +6056,7 @@ This selects every if-chain which contains 2 or more B<elsif> blocks:
 
 =item B<use --dump-unusual-variables to find unused, reused, and certain other variables of interest>
 
-Lexical variables with certain properties of interest to a programmer can be
+Variables with certain properties of interest to a programmer can be
 listed with B<--dump-unusual-variables> or B<-duv>.  This parameter must be on
 the command line, along with a single file name.  It causes perltidy to scan
 the file for certain variable types, write any found to the standard output,
@@ -6079,9 +6079,9 @@ meaning:
 
 If there are a large number of issues it can be convenient to read the file
 into a spreadsheet. The checks are for lexical variables introduced by the
-keywords B<my> and B<state>.  The types of checks which are made are identified
-in the output with one of the letters, B<r>, B<s>, B<p>, B<u>, and B<c> as
-follows:
+keywords B<my>, B<state>, and B<our>, along with variables defined with
+B<use constant>.  The types of checks which are made are identified in
+the output with one of the letters B<r>, B<s>, B<p>, B<u>, and B<c> as follows:
 
 =over 4
 
@@ -6125,14 +6125,14 @@ block braces in order avoid warnings at temporary package changes.
 
 =item B<u: unused variables>
 
-These are variables which are declared with C<my> or C<state> and not
-referenced again within their scope.  Calling them B<unused> is convenient but
-not really accurate; this is a "gray area" for a program. There are some good
-reasons for having such variables.  For example, they might occur in a list of
-values provided by another routine or data structure, and therefore must be
-listed, even though they might not be referenced again.  Having such variables
-can make them immediately available for future development and debugging, and
-can be beneficial for program clarity.
+These are lexical variables declared with C<my> or C<state> (but not C<our>)
+and not referenced again within their scope.  Calling them B<unused> is
+convenient but not really accurate; this is a "gray area" for a program. There
+are some good reasons for having such variables.  For example, they might occur
+in a list of values provided by another routine or data structure, and
+therefore must be listed, even though they might not be referenced again.
+Having such variables can make them immediately available for future
+development and debugging, and can be beneficial for program clarity.
 
 B<But> sometimes they can occur due to being orphaned by a coding
 change, due to a misspelling, or by having an unintentional preceding
@@ -6158,6 +6158,9 @@ they might also be unused remnants from code development, or due to a
 misspelling, so it can be worthwhile reviewing them.
 
 =back
+
+B<Exception>: The following B<our> variables are exempt from warnings:
+B<$VERSION>, B<@EXPORT>, B<@EXPORT_OK>, B<%EXPORT_TAGS>, B<@ISA, $AUTOLOAD>.
 
 =item B<Use --warn-variable-types to warn about certain variable types>
 
