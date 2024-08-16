@@ -645,6 +645,7 @@ BEGIN {
 
         # these vars are defined after call to respace tokens:
         _rK_package_list_                 => $i++,
+        _rK_use_vars_list_                => $i++,
         _rK_AT_underscore_by_sub_seqno_   => $i++,
         _rK_first_self_by_sub_seqno_      => $i++,
         _rK_bless_by_sub_seqno_           => $i++,
@@ -1045,6 +1046,7 @@ sub new {
     #               --dump-mismatched-returns
     #               --warn-mismatched-returns
     $self->[_rK_package_list_]                 = [];
+    $self->[_rK_use_vars_list_]                = [];
     $self->[_rK_AT_underscore_by_sub_seqno_]   = {};
     $self->[_rK_first_self_by_sub_seqno_]      = {};
     $self->[_rK_bless_by_sub_seqno_]           = {};
@@ -8845,46 +8847,21 @@ sub is_complete_script {
 
 use constant DEBUG_USE_CONSTANT => 0;
 
-sub get_Q_list {
-    my ( $self, $Kn ) = @_;
-
-    # Given:
-    #  $Kn = index of start of a comma separated list of quoted words
-    # Return:
-    #  ref to list of words, or
-    #  nothing if error
-    return unless ($Kn);
-    my $rLL = $self->[_rLL_];
-
-    my @list;
-    foreach my $KK ( $Kn .. @{$rLL} - 1 ) {
-        my $type = $rLL->[$KK]->[_TYPE_];
-        next if ( $type eq 'b' );
-        next if ( $type eq ',' );
-        next if ( $type eq '#' );
-        last if ( $type ne 'Q' );
-        my $token = $rLL->[$KK]->[_TOKEN_];
-        next if ( length($token) < 3 );
-        my $name = substr( $token, 1, -1 );
-        push @list, $name;
-    }
-    return \@list;
-} ## end sub get_Q_list
-
 sub get_qw_list {
     my ( $self, $Kn ) = @_;
 
     # Given:
     #  $Kn = index of start of a qw quote
     # Return:
-    #  ref to list of words, or
+    #  ($K_last_q, \@list) to list of words, or
     #  nothing if error
 
     my $rLL = $self->[_rLL_];
     return unless ($Kn);
     my $type_n = $rLL->[$Kn]->[_TYPE_];
     return unless ( $type_n eq 'q' );
-    my $token_n = $rLL->[$Kn]->[_TOKEN_];
+    my $token_n  = $rLL->[$Kn]->[_TOKEN_];
+    my $K_last_q = $Kn;
 
     # collect a multi-line qw
     my $string = $token_n;
@@ -8893,6 +8870,7 @@ sub get_qw_list {
         next if ( $type_nn eq 'b' );
         last if ( $type_nn ne 'q' );
         $string .= SPACE . $rLL->[$Knn]->[_TOKEN_];
+        $K_last_q = $Knn;
     }
 
     $string = substr( $string, 2 );        # remove qw
@@ -8903,41 +8881,90 @@ sub get_qw_list {
     $string =~ s/\s*$//;                   # trim right
 
     my @list = split SPACE, $string;
-    return \@list;
+    return ( $K_last_q, \@list );
 } ## end sub get_qw_list
+
+sub expand_quoted_word_list {
+    my ( $self, $Kbeg ) = @_;
+
+    # Expand a list quoted words
+    # Given:
+    #   $Kbeg = index of the start of a list of quoted words
+    # Returns:
+    #   ref to list if found words
+    #   undef if not successful, or non-constant list item encountered
+    my $rLL = $self->[_rLL_];
+    return unless ($Kbeg);
+    my $Klimit = @{$rLL} - 1;
+    my @list;
+    my $Kn = $Kbeg - 1;
+    while ( ++$Kn <= $Klimit ) {
+
+        my $type  = $rLL->[$Kn]->[_TYPE_];
+        my $token = $rLL->[$Kn]->[_TOKEN_];
+
+        next if ( $type eq 'b' );
+        next if ( $type eq '#' );
+        next if ( $token eq '(' );
+        next if ( $token eq ')' );
+        last if ( $type eq ';' );
+        last if ( $token eq '}' );
+
+        if ( $type eq 'q' ) {
+
+            # qw list
+            my ( $K_last_q, $rlist ) = $self->get_qw_list($Kn);
+            return if ( !defined($K_last_q) );
+            if ( $K_last_q > $Kn ) { $Kn = $K_last_q }
+            push @list, @{$rlist};
+        }
+        elsif ( $type eq 'Q' ) {
+
+            # single quoted word
+            next if ( length($token) < 3 );
+            my $name = substr( $token, 1, -1 );
+            push @list, $name;
+        }
+
+        else {
+
+            # Give up on anything else..
+            # some examples where we have to quit:
+            #  @EXPORT = Archive::Tar::Constant->_list_consts( __PACKAGE__ );
+            #  @EXPORT = ( @CONSTANTS, qw( %ALL_CODESETS));
+            #  @EXPORT = ( @{$EXPORT_TAGS{standard}}, ..
+            return;
+        }
+    }
+    return \@list;
+
+} ## end sub expand_quoted_word_list
 
 sub expand_EXPORT_list {
     my ( $self, $KK, $rhash ) = @_;
+
+    # Given:
+    #  $KK = index of variable @EXPORT or @EXPORT_OK
+    #  $rhash = a hash to fill
+    # Task:
+    #  Update $rhash with any quoted words which follow any subsequent '='
+
     my $rLL = $self->[_rLL_];
     my $Kn  = $self->K_next_code($KK);
+
+    # Require a following '='
     return unless ( $Kn && $rLL->[$Kn]->[_TYPE_] eq '=' );
+
+    # Move to the next token
     $Kn = $self->K_next_code($Kn);
     return unless ($Kn);
-    my $type_n  = $rLL->[$Kn]->[_TYPE_];
-    my $token_n = $rLL->[$Kn]->[_TOKEN_];
 
-    if ( $token_n eq '(' ) {
-        $Kn = $self->K_next_code($Kn);
-        return unless ($Kn);
-        $type_n  = $rLL->[$Kn]->[_TYPE_];
-        $token_n = $rLL->[$Kn]->[_TOKEN_];
-    }
+    # Get any list
+    my $rlist = $self->expand_quoted_word_list($Kn);
+    return unless ($rlist);
 
-    if ( $type_n eq 'q' ) {
-        my $rlist = $self->get_qw_list($Kn);
-        return unless ($rlist);
-        foreach ( @{$rlist} ) { $rhash->{$_} = 1 }
-    }
-    elsif ( $type_n eq 'Q' ) {
-        my $rlist = $self->get_Q_list($Kn);
-        return unless ($rlist);
-        foreach ( @{$rlist} ) { $rhash->{$_} = 1 }
-    }
-    else {
-        # something more complex, for example:
-        #  @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
-    }
-
+    # Include the listed words in the hash
+    foreach ( @{$rlist} ) { $rhash->{$_} = 1 }
     return;
 } ## end sub expand_EXPORT_list
 
@@ -9721,9 +9748,9 @@ EOM
             #----------
             elsif ( $type eq 'k' ) {
 
-                #---------------------------------
-                # look for keyword 'my' or 'state'
-                #---------------------------------
+                #----------------------------------------------
+                # look for lexical keyword 'my', 'state', 'our'
+                #----------------------------------------------
                 if ( $is_my_state_our{$token} ) {
                     $my_keyword = $token;
 
@@ -11349,6 +11376,9 @@ my $rwhitespace_flags;
 # new index K of package or class statements
 my $rK_package_list;
 
+# new index K of 'use vars' statements
+my $rK_use_vars_list;
+
 # new index K of @_ tokens
 my $rK_AT_underscore_by_sub_seqno;
 
@@ -11407,6 +11437,7 @@ sub initialize_respace_tokens_closure {
     $ris_asub_block            = $self->[_ris_asub_block_];
 
     $rK_package_list               = $self->[_rK_package_list_];
+    $rK_use_vars_list              = $self->[_rK_use_vars_list_];
     $rK_AT_underscore_by_sub_seqno = $self->[_rK_AT_underscore_by_sub_seqno_];
     $rK_first_self_by_sub_seqno    = $self->[_rK_first_self_by_sub_seqno_];
     $rK_bless_by_sub_seqno         = $self->[_rK_bless_by_sub_seqno_];
@@ -12052,6 +12083,14 @@ sub respace_tokens_inner_loop {
                 {
                     push @{ $rK_bless_by_sub_seqno->{$current_sub_seqno} },
                       [ scalar @{$rLL_new}, $token ];
+                }
+            }
+            elsif ( $type eq 'w' ) {
+                if (   $token eq 'vars'
+                    && $last_nonblank_code_token eq 'use'
+                    && $last_nonblank_code_type eq 'k' )
+                {
+                    push @{$rK_use_vars_list}, scalar @{$rLL_new};
                 }
             }
             else {
