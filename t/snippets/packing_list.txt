@@ -454,6 +454,8 @@
 ../snippets30.t	dltc.dltc2
 ../snippets30.t	logical_xor.def
 ../snippets30.t	csc.csc3
+../snippets30.t	git159.def
+../snippets30.t	git159.git159
 ../snippets4.t	gnu1.gnu
 ../snippets4.t	gnu2.def
 ../snippets4.t	gnu2.gnu
@@ -574,5 +576,5 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets30.t	git159.def
-../snippets30.t	git159.git159
+../snippets30.t	git162.def
+../snippets30.t	git162.git162

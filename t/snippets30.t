@@ -15,6 +15,8 @@
 #12 csc.csc3
 #13 git159.def
 #14 git159.git159
+#15 git162.def
+#16 git162.git162
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -46,6 +48,7 @@ BEGIN {
 ---wtc=h
 ----------
         'git159' => "-bl -nsbl",
+        'git162' => "-nwrs=A",
     };
 
     ############################
@@ -119,6 +122,21 @@ sub example {
     {
         print "yay\n";
     }
+}
+----------
+
+        'git162' => <<'----------',
+if ( $x in : eq @some_strings ) {
+    say "x is one of the given strings";
+}
+
+match( $n : == ) {
+    case (1) { say "It's one" }
+    case (2) { say "It's two" }
+    case (3) { say "It's three" }
+    case (4), case (5) { say "It's four or five" }
+    case if ( $n < 10 ) { say "It's less than ten" }
+    default             { say "It's something else" }
 }
 ----------
 
@@ -327,6 +345,44 @@ sub example {
     }
 }
 #14...........
+        },
+
+        'git162.def' => {
+            source => "git162",
+            params => "def",
+            expect => <<'#15...........',
+if ( $x in : eq @some_strings ) {
+    say "x is one of the given strings";
+}
+
+match( $n : == ) {
+    case (1) { say "It's one" }
+    case (2) { say "It's two" }
+    case (3) { say "It's three" }
+    case (4), case (5) { say "It's four or five" }
+    case if ( $n < 10 ) { say "It's less than ten" }
+    default             { say "It's something else" }
+}
+#15...........
+        },
+
+        'git162.git162' => {
+            source => "git162",
+            params => "git162",
+            expect => <<'#16...........',
+if ( $x in :eq @some_strings ) {
+    say "x is one of the given strings";
+}
+
+match( $n :== ) {
+    case (1) { say "It's one" }
+    case (2) { say "It's two" }
+    case (3) { say "It's three" }
+    case (4), case (5) { say "It's four or five" }
+    case if ( $n < 10 ) { say "It's less than ten" }
+    default             { say "It's something else" }
+}
+#16...........
         },
     };
 

@@ -1,10 +1,47 @@
 <h1>Perltidy Change Log</h1>
 
-<h2>2024 05 11.05</h2>
+<h2>2024 05 11.10</h2>
 
-<pre><code>- Add options --dump-mismatched-returns (or -dmr) and
+<pre><code>- Add partial support for Syntax::Operator::In and Syntax::Keyword::Match
+  (see git #162).
+
+- Add --timeout-in-seconds=n, or -tos=n.  When the standard input supplies
+  the input stream, and the input has not been received within n seconds,
+  perltidy will end with a timeout message.  The intention is to catch
+  a situation where perltidy is accidentally invoked without a file to
+  process and therefore waits for input from the system standard input
+  (stdin), which never arrives.  The default is n=10.
+  This check can be turned off with -tos=0.
+
+- Add parameter --closing-side-comment-exclusion-list=string, or
+  -cscxl=string, where string is a list of block types to exclude
+  for closing side comment operations.  Also, closing side comments
+  now work for anonymous subs if a --closing-side-comment-list (-cscl)
+  is not specified, and when 'asub' is requested with -cscl=asub.
+  Use -cscxl=asub to prevent this.
+
+- Include check for unused constants in --dump-unusual-variables and
+  --warn-variable-types (new issue type 'c'). Also expand checks to
+  cover variables introduced with 'use vars'.
+
+- Include signature variables in --dump-unusual-variables and
+  --warn-variable-types; see git #158.
+
+- Add logical xor operator ^^ available in perl version 5.40, as
+  noted in git #157.
+
+- Keyword 'state' now has default space before a paren, like 'my'.
+  Previously there was no space and no control.  So the default
+  is now "state ($x)". This space can be removed with -nsak='state'.
+
+- Add options --add-lone-trailing-commas, -altc and
+  --delete-lone-trailing-commas, -dltc, to provide control over adding
+  and deleting the only comma in a list.  See discussion in git #143
+  and the updated manual.
+
+- Add options --dump-mismatched-returns (or -dmr) and
   --warn-mismatched-returns (or -wmr).  These options report function
-  calls where the number of requested values may disagree with sub
+  calls where the number of values requested may disagree with sub
   return statements.  The -dump version writes the results for a single
   file to standard output and exits:
 
@@ -21,30 +58,30 @@
   --warn-mismatched-return-types=s (or -wmrt=s),
   --warn-mismatched-return-exclusion-list=s (or -wmrxl=s)
 
-  These are explained in the manual.
+  where 's' is a control string. These are explained in the manual.
 
 - Updates for issue git #151:
-  (1) --warn-variable-types=u is now okay if it is on the command line
-  with a named file.
+  (1) --warn-variable-types=u is now okay if a named file is processed.
   (2) --warn-variable-exclusion-list=s now allows leading and/or
   trailing * on variable names to allow a wildcard match. For example
-  -wvxl='*_unused' is okay.
+  -wvxl='*_unused' is okay and would match $var1_unused and $var2_unused.
   (3) --dump-unusual-variables now outputs the filename.
 
 - A option was added to filter unimplemented parameters from perltidy
-  configuration files, suggested in git #146.  If a line in the config
-  file begins with three dashes followed by a parameter name
-  (rather than two), then the line will be removed if the parameter is
-  unknown. Otherwise, a dash will be removed to make the line valid.
+  configuration files, suggested in git #146.  It works like this: if
+  a line in the config file begins with three dashes followed by a
+  parameter name (rather than two), then the line will be removed if
+  the parameter is unknown. Otherwise, a dash will be removed to make
+  the line valid.
 
 - Parameters --dump-mismatched-args (or -dma) and
   --warn-mismatched-args (or -wma) have been updated to catch more
   arg count issues.
 
-- Fix issue git #143, extend -add-trailing-commas to apply to a list
+- Fixed issue git #143, extend -add-trailing-commas to apply to a list
   with just a fat comma.
 
-- Fix issue git #142, test failure installing on perl versions before
+- Fixed issue git #142, test failure installing on perl versions before
   version 5.10.  The error caused the new parameter
   -interbracket-arrow-style=s not to work. Except for this limitation,
   Version 20240511 will work on older perl versions.

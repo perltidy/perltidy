@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2024 05 11.09
+## 2024 05 11.10
 
     - Add partial support for Syntax::Operator::In and Syntax::Keyword::Match
       (see git #162).
