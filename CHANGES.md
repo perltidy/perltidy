@@ -18,7 +18,8 @@
       Use -cscxl=asub to prevent this.
 
     - Include check for unused constants in --dump-unusual-variables and
-      --warn-variable-types (new issue type 'c').
+      --warn-variable-types (new issue type 'c'). Also expand checks to
+      cover variables introduced with 'use vars'.
 
     - Include signature variables in --dump-unusual-variables and
       --warn-variable-types; see git #158.

@@ -6078,10 +6078,16 @@ meaning:
     note          - an optional note referring to another line
 
 If there are a large number of issues it can be convenient to read the file
-into a spreadsheet. The checks are for lexical variables introduced by the
-keywords B<my>, B<state>, and B<our>, along with variables defined with
-B<use constant>.  The types of checks which are made are identified in
-the output with one of the letters B<r>, B<s>, B<p>, B<u>, and B<c> as follows:
+into a spreadsheet.
+
+The checks are made for variables introduced by the keywords B<my>, B<state>,
+and B<our>, along with variables defined with B<use vars> and B<use constant>.
+It is a good idea to also set B<use strict> in a script so that Perl itself
+can find issues with variables which appear in a script without one of these
+methods.
+
+The types of checks which are made are identified in the output with one of the
+letters B<r>, B<s>, B<p>, B<u>, and B<c> as follows:
 
 =over 4
 
