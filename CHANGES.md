@@ -2,6 +2,9 @@
 
 ## 2024 05 11.09
 
+    - Add partial support for Syntax::Operator::In and Syntax::Keyword::Match
+      (see git #162).
+
     - Add --timeout-in-seconds=n, or -tos=n.  When the standard input supplies
       the input stream, and the input has not been received within n seconds,
       perltidy will end with a timeout message.  The intention is to catch

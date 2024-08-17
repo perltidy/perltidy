@@ -3826,6 +3826,12 @@ EOM
             $type = 'J';
         }
 
+        # mark colon as attribute if an error would occur otherwise; git #162
+        elsif ( !$rcurrent_depth->[QUESTION_COLON] ) {
+            $type = 'A';
+            $self->[_in_attribute_list_] = 1;
+        }
+
         # otherwise, it should be part of a ?/: operator
         else {
             ( $type_sequence, $indent_flag ) =
@@ -4597,6 +4603,11 @@ EOM
                 if (   $rsaw_use_module->{$current_package}->{'RPerl'}
                     && $tok =~ /^sse_(mul|div|add|sub)$/ )
                 {
+
+                }
+
+                # patch for Syntax::Operator::In, git #162
+                elsif ( $tok eq 'in' && $next_nonblank_token eq ':' ) {
 
                 }
 
