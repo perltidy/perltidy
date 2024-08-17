@@ -645,7 +645,7 @@ BEGIN {
 
         # these vars are defined after call to respace tokens:
         _rK_package_list_                 => $i++,
-        _rK_use_vars_list_                => $i++,
+        _rK_use_list_                     => $i++,
         _rK_AT_underscore_by_sub_seqno_   => $i++,
         _rK_first_self_by_sub_seqno_      => $i++,
         _rK_bless_by_sub_seqno_           => $i++,
@@ -1046,7 +1046,7 @@ sub new {
     #               --dump-mismatched-returns
     #               --warn-mismatched-returns
     $self->[_rK_package_list_]                 = [];
-    $self->[_rK_use_vars_list_]                = [];
+    $self->[_rK_use_list_]                     = [];
     $self->[_rK_AT_underscore_by_sub_seqno_]   = {};
     $self->[_rK_first_self_by_sub_seqno_]      = {};
     $self->[_rK_bless_by_sub_seqno_]           = {};
@@ -8907,6 +8907,7 @@ sub expand_quoted_word_list {
         next if ( $type eq '#' );
         next if ( $token eq '(' );
         next if ( $token eq ')' );
+        next if ( $token eq ',' );
         last if ( $type eq ';' );
         last if ( $token eq '}' );
 
@@ -9055,6 +9056,7 @@ sub scan_variable_usage {
 
     my $rblock_stack   = [];
     my $rconstant_hash = {};
+    my $ruse_vars_hash = {};
     my $rEXPORT_hash   = {};
 
     #---------------------------------------
@@ -9109,30 +9111,22 @@ sub scan_variable_usage {
     my $ix_HERE_END = -1;         # the line index of the last here target read
     my $in_interpolated_quote;    # in multiline quote with interpolation?
 
-    #--------------------------------
-    # sub to checkin a new identifier
-    #--------------------------------
-    my $checkin_new_identifier = sub {
-        my ($KK) = @_;
+    #-------------------------------------------------------
+    # sub to check for overlapping usage, issues 'r' and 's'
+    #-------------------------------------------------------
+    my $check_for_overlapping_variables = sub {
 
-        # Store the new identifier at index $KK
+        my ( $name, $KK ) = @_;
 
-        my $name       = $rLL->[$KK]->[_TOKEN_];
-        my $line_index = $rLL->[$KK]->[_LINE_INDEX_];
-
-        # Special checks for signature variables
-        if ($in_signature_seqno) {
-
-            # must be in top signature layer
-            my $parent = $self->parent_seqno_by_K($KK);
-            return if ( $parent != $in_signature_seqno );
-
-            # must be preceded by a comma or opening paren
-            my $Kp = $self->K_previous_code($KK);
-            return if ( !$Kp );
-            my $token_p = $rLL->[$Kp]->[_TOKEN_];
-            return if ( $token_p ne ',' && $token_p ne '(' );
-        }
+        # Given:
+        #   $name = a variable with sigil, such as '$var', '%var', '@var';
+        #   $KK   = index associated with this variable
+        #   $line_index = index of line where this name first appears
+        # Task:
+        #   Create a warning if this overlaps a previously defined variable
+        # Returns:
+        #   true if error, variable is not of expected form with sigil
+        #   false if no error
 
         my $sigil = EMPTY_STRING;
         my $word  = EMPTY_STRING;
@@ -9141,8 +9135,11 @@ sub scan_variable_usage {
             $word  = $2;
         }
         else {
-            # could be something like '$' or '@' in a signature
-            return;
+
+            # give up, flag as error
+            # could be something like '$' or '@' in a signature, or
+            # for $Storable::downgrade_restricted (0, 1, ...
+            return 1;
         }
 
         # Perform checks for reused names
@@ -9164,13 +9161,20 @@ sub scan_variable_usage {
             # neither
         }
 
-        # Look up the stack to see if this name has been seen, possibly
-        # with a different sigil
+        # See if this name has been seen, possibly with a different sigil
         if (@sigils_to_test) {
-            foreach my $item ( @{$rblock_stack} ) {
-                my $rhash = $item->{rvars};
+
+            # Look at stack and 'use vars' hash
+            foreach
+              my $item ( @{$rblock_stack}, $ruse_vars_hash->{$current_package} )
+            {
+
+                # distinguish between stack item and use vars item
+                my $rhash = defined( $item->{seqno} ) ? $item->{rvars} : $item;
+
                 foreach my $sig (@sigils_to_test) {
                     my $test_name = $sig . $word;
+
                     next unless ( $rhash->{$test_name} );
                     my $first_line = $rhash->{$test_name}->{line_index} + 1;
                     my $letter;
@@ -9178,10 +9182,11 @@ sub scan_variable_usage {
                     my $see_line = 0;
                     if ( $sig eq $sigil ) {
                         my $as_iterator =
-                          $is_my_state_our{$my_keyword}
-                          || substr( $my_keyword, 0, 3 ) eq 'sub'
-                          ? EMPTY_STRING
-                          : ' as iterator';
+                          defined($my_keyword)
+                          && ( $my_keyword eq 'for'
+                            || $my_keyword eq 'foreach' )
+                          ? ' as iterator'
+                          : EMPTY_STRING;
                         $note   = "reused$as_iterator - see line $first_line";
                         $letter = 'r';
                     }
@@ -9192,6 +9197,7 @@ sub scan_variable_usage {
                         $letter = 's';
                     }
 
+                    my $line_index = $rLL->[$KK]->[_LINE_INDEX_];
                     push @warnings,
                       {
                         name        => $name,
@@ -9206,6 +9212,35 @@ sub scan_variable_usage {
                 }
             }
         }
+    }; ## end $check_for_overlapping_variables = sub
+
+    #--------------------------------
+    # sub to checkin a new identifier
+    #--------------------------------
+    my $checkin_new_lexical = sub {
+        my ($KK) = @_;
+
+        # Store the new identifier at index $KK
+
+        my $name       = $rLL->[$KK]->[_TOKEN_];
+        my $line_index = $rLL->[$KK]->[_LINE_INDEX_];
+
+        # Special checks for signature variables
+        if ($in_signature_seqno) {
+
+            # must be in top signature layer
+            my $parent = $self->parent_seqno_by_K($KK);
+            return if ( $parent != $in_signature_seqno );
+
+            # must be preceded by a comma or opening paren
+            my $Kp = $self->K_previous_code($KK);
+            return if ( !$Kp );
+            my $token_p = $rLL->[$Kp]->[_TOKEN_];
+            return if ( $token_p ne ',' && $token_p ne '(' );
+        }
+
+        my $bad_name = $check_for_overlapping_variables->( $name, $KK );
+        return if ($bad_name);
 
         # Store this lexical variable
         my $rhash = $rblock_stack->[-1]->{rvars};
@@ -9217,7 +9252,7 @@ sub scan_variable_usage {
             K          => $KK,
         };
         return;
-    }; ## end $checkin_new_identifier = sub
+    }; ## end $checkin_new_lexical = sub
 
     #--------------------------------------------------
     # sub to update counts for a list of variable names
@@ -9294,6 +9329,27 @@ sub scan_variable_usage {
         push @{ $rEXPORT_hash->{$package} }, $KK;
         return;
     }; ## end $push_new_EXPORT = sub
+
+    my $scan_use_vars = sub {
+        my ($KK) = @_;
+        my $Kn = $self->K_next_code($KK);
+        return unless ($Kn);
+        my $rlist = $self->expand_quoted_word_list($Kn);
+        return unless ($rlist);
+        my $line_index = $rLL->[$KK]->[_LINE_INDEX_];
+        $my_keyword = 'use vars';
+        foreach my $name ( @{$rlist} ) {
+            my $bad_name = $check_for_overlapping_variables->( $name, $KK );
+            next if ($bad_name);
+            my $rvars = {
+                line_index => $line_index,
+                package    => $current_package,
+                K          => $KK,
+            };
+            $ruse_vars_hash->{$current_package}->{$name} = $rvars;
+        }
+        return;
+    }; ## end $scan_use_vars = sub
 
     my $scan_use_constant = sub {
         my ($KK) = @_;
@@ -9822,7 +9878,7 @@ EOM
 
                 # Still collecting 'my' vars?
                 if ( $KK <= $K_end_my ) {
-                    $checkin_new_identifier->($KK);
+                    $checkin_new_lexical->($KK);
                 }
 
                 # Not collecting 'my' vars - update counts
@@ -10032,8 +10088,17 @@ EOM
                     $in_interpolated_quote = 0;
                 }
             }
-            elsif ($check_constant) {
-                if ( $type eq 'w' ) {
+            elsif ( $type eq 'w' ) {
+                if ( $token eq 'vars' ) {
+                    my $Kp = $self->K_previous_code($KK);
+                    if (   defined($Kp)
+                        && $rLL->[$Kp]->[_TOKEN_] eq 'use'
+                        && $rLL->[$Kp]->[_TYPE_] eq 'k' )
+                    {
+                        $scan_use_vars->($KK);
+                    }
+                }
+                if ($check_constant) {
                     if ( $token eq 'constant' ) {
                         my $Kp = $self->K_previous_code($KK);
                         if (   defined($Kp)
@@ -10050,13 +10115,15 @@ EOM
                         $update_constant_count->($KK);
                     }
                 }
-                elsif ( $type eq 'C' ) {
+            }
+            elsif ( $type eq 'C' ) {
+                if ($check_constant) {
                     $update_constant_count->($KK);
                 }
-                elsif ( $type eq 'U' ) {
+            }
+            elsif ( $type eq 'U' ) {
+                if ($check_constant) {
                     $update_constant_count->($KK);
-                }
-                else {
                 }
             }
             else {
@@ -11377,7 +11444,7 @@ my $rwhitespace_flags;
 my $rK_package_list;
 
 # new index K of 'use vars' statements
-my $rK_use_vars_list;
+my $rK_use_list;
 
 # new index K of @_ tokens
 my $rK_AT_underscore_by_sub_seqno;
@@ -11437,7 +11504,7 @@ sub initialize_respace_tokens_closure {
     $ris_asub_block            = $self->[_ris_asub_block_];
 
     $rK_package_list               = $self->[_rK_package_list_];
-    $rK_use_vars_list              = $self->[_rK_use_vars_list_];
+    $rK_use_list                   = $self->[_rK_use_list_];
     $rK_AT_underscore_by_sub_seqno = $self->[_rK_AT_underscore_by_sub_seqno_];
     $rK_first_self_by_sub_seqno    = $self->[_rK_first_self_by_sub_seqno_];
     $rK_bless_by_sub_seqno         = $self->[_rK_bless_by_sub_seqno_];
@@ -12086,11 +12153,10 @@ sub respace_tokens_inner_loop {
                 }
             }
             elsif ( $type eq 'w' ) {
-                if (   $token eq 'vars'
-                    && $last_nonblank_code_token eq 'use'
+                if (   $last_nonblank_code_token eq 'use'
                     && $last_nonblank_code_type eq 'k' )
                 {
-                    push @{$rK_use_vars_list}, scalar @{$rLL_new};
+                    push @{$rK_use_list}, scalar @{$rLL_new};
                 }
             }
             else {
