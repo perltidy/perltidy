@@ -304,9 +304,9 @@ sub Fault {
     # except if there has been a bug introduced by a recent program change.
     # Please add comments at calls to Fault to explain why the call
     # should not occur, and where to look to fix it.
-    my ( $package0, $filename0, $line0, $subroutine0 ) = caller(0);
-    my ( $package1, $filename1, $line1, $subroutine1 ) = caller(1);
-    my ( $package2, $filename2, $line2, $subroutine2 ) = caller(2);
+    my ( $package0_uu, $filename0_uu, $line0,    $subroutine0_uu ) = caller(0);
+    my ( $package1_uu, $filename1,    $line1,    $subroutine1 )    = caller(1);
+    my ( $package2_uu, $filename2_uu, $line2_uu, $subroutine2 )    = caller(2);
     my $pkg = __PACKAGE__;
 
     # Catch potential error of Fault not called as a method
@@ -2216,7 +2216,7 @@ sub prepare_for_a_new_file {
             my $len_1 = length($tok_1);
             my $len_2 = length($tok_2);
 
-            my $pre_type_0 = 'w';
+            ##my $pre_type_0 = 'w';
             my $pre_type_1 = 'd';
             my $pre_type_2 = 'w';
 
@@ -2437,7 +2437,7 @@ EOM
         }
 
         # now its safe to report errors
-        my $severe_error = $tokenizer->report_tokenization_errors();
+        my $severe_error_uu = $tokenizer->report_tokenization_errors();
 
         # TODO: Could propagate a severe error up
 
@@ -2702,8 +2702,8 @@ EOM
           )
         {
             # For possible future use..
-            my $subname = $2;
-            my $package = $1 ? $1 : EMPTY_STRING;
+            ##my $subname = $2;
+            ##my $package = $1 ? $1 : EMPTY_STRING;
         }
         else {
             return;
@@ -2716,7 +2716,7 @@ EOM
         my $next_char = EMPTY_STRING;
         if ( $input_line =~ m/\s*(\S)/gcx ) { $next_char = $1 }
         if ( !$next_char || $next_char eq '#' ) {
-            ( $next_char, my $i_next ) =
+            ( $next_char, my $i_next_uu ) =
               $self->find_next_nonblank_token( $max_token_index,
                 $rtokens, $max_token_index );
         }
@@ -2781,8 +2781,8 @@ EOM
           )
         {
             # For possible future use..
-            my $subname = $2;
-            my $package = $1 ? $1 : EMPTY_STRING;
+            ##my $subname = $2;
+            ##my $package = $1 ? $1 : EMPTY_STRING;
         }
         else {
             return;
@@ -2792,7 +2792,7 @@ EOM
         my $next_char = EMPTY_STRING;
         if ( $input_line =~ m/\s*(\S)/gcx ) { $next_char = $1 }
         if ( !$next_char || $next_char eq '#' ) {
-            ( $next_char, my $i_next ) =
+            ( $next_char, my $i_next_uu ) =
               $self->find_next_nonblank_token( $max_token_index,
                 $rtokens, $max_token_index );
         }
@@ -3060,7 +3060,7 @@ EOM
             # An identifier followed by '->' is not indirect object;
             # fixes b1175, b1176. Fix c257: Likewise for other tokens like
             # comma, semicolon, closing brace, and single space.
-            my ( $next_nonblank_token, $i_next ) =
+            my ( $next_nonblank_token, $i_next_uu ) =
               $self->find_next_noncomment_token( $i, $rtokens,
                 $max_token_index );
             $type = 'Z' if ( !$Z_test_hash{$next_nonblank_token} );
@@ -3117,7 +3117,7 @@ EOM
                     # if this is an empty list, (), then it is not an
                     # error; for example, we might have a constant pi and
                     # invoke it with pi() or just pi;
-                    my ( $next_nonblank_token, $i_next ) =
+                    my ( $next_nonblank_token, $i_next_uu ) =
                       $self->find_next_nonblank_token( $i, $rtokens,
                         $max_token_index );
 
@@ -3209,7 +3209,7 @@ EOM
             my $rvars = $rparen_vars->[$paren_depth];
             if ( defined($rvars) ) {
                 $container_type = $rparen_type->[$paren_depth];
-                ( my $type_lp, $want_brace ) = @{$rvars};
+                ( my $type_lp_uu, $want_brace ) = @{$rvars};
             }
         }
 
@@ -3231,7 +3231,7 @@ EOM
 
         my $rvars = $rparen_vars->[$paren_depth];
         if ( defined($rvars) ) {
-            my ( $type_lp, $want_brace ) = @{$rvars};
+            my ( $type_lp, $want_brace_uu ) = @{$rvars};
             if ( $type_lp && $type_lp eq '{' ) {
                 $type = '}';
             }
@@ -3456,7 +3456,7 @@ EOM
 
                 my $rvars = $rparen_vars->[ $paren_depth + 1 ];
                 if ( defined($rvars) ) {
-                    my ( $type_lp, $want_brace ) = @{$rvars};
+                    my ( $type_lp_uu, $want_brace ) = @{$rvars};
 
                     # OLD: Now verify that this is not a trailing form
                     # FIX for git #124: we have to skip this check because
@@ -3944,7 +3944,7 @@ EOM
         if ( ( $expecting != OPERATOR )
             && $is_file_test_operator{$next_tok} )
         {
-            my ( $next_nonblank_token, $i_next ) =
+            my ( $next_nonblank_token, $i_next_uu ) =
               $self->find_next_nonblank_token( $i + 1, $rtokens,
                 $max_token_index );
 
@@ -4402,7 +4402,7 @@ EOM
         my $self = shift;
 
         $self->scan_bare_identifier();
-        my ( $next_nonblank_tok2, $i_next2 ) =
+        my ( $next_nonblank_tok2, $i_next2_uu ) =
           $self->find_next_nonblank_token( $i, $rtokens, $max_token_index );
 
         if ($next_nonblank_tok2) {
@@ -4716,7 +4716,7 @@ EOM
             && $expecting != OPERATOR
             && $next_nonblank_token eq ':' )
         {
-            my ( $nn_nonblank_token, $i_nn ) =
+            my ( $nn_nonblank_token, $i_nn_uu ) =
               $self->find_next_nonblank_token( $i_next, $rtokens,
                 $max_token_index );
             $sub_attribute_ok_here =
@@ -5691,7 +5691,7 @@ EOM
                     # done if nothing left to scan on this line
                     last if ( $i > $max_token_index );
 
-                    my ( $next_nonblank_token, $i_next ) =
+                    my ( $next_nonblank_token_uu, $i_next ) =
                       find_next_nonblank_token_on_this_line( $i, $rtokens,
                         $max_token_index );
 
@@ -6852,7 +6852,7 @@ sub decide_if_code_block {
     # USES GLOBAL VARIABLES: $last_nonblank_token
     my ( $self, $i, $rtokens, $rtoken_type, $max_token_index ) = @_;
 
-    my ( $next_nonblank_token, $i_next ) =
+    my ( $next_nonblank_token, $i_next_uu ) =
       $self->find_next_nonblank_token( $i, $rtokens, $max_token_index );
 
     # we are at a '{' where a statement may appear.
@@ -7219,7 +7219,7 @@ sub decrease_nesting_depth {
         # Fix part #2 for git82: use saved type for propagation of type 'Z'
         # through type L-R braces.  Perl seems to allow ${bareword}
         # as an indirect object, but nothing much more complex than that.
-        ( $statement_type, my $saved_type, my $saved_token ) =
+        ( $statement_type, my $saved_type, my $saved_token_uu ) =
           @{ $rnested_statement_type->[$aa][ $rcurrent_depth->[$aa] ] };
         if (   $aa == BRACE
             && $saved_type eq 'Z'
@@ -7370,7 +7370,7 @@ sub peek_ahead_for_nonblank_token {
         next if ( $line =~ /^#/ );         # skip comment
 
         # Updated from 2 to 3 to get trigraphs, added for case b1175
-        my ( $rtok, $rmap, $rtype ) = pre_tokenize( $line, 3 );
+        my ( $rtok, $rmap_uu, $rtype_uu ) = pre_tokenize( $line, 3 );
         my $j = $max_token_index + 1;
 
         foreach my $tok ( @{$rtok} ) {
@@ -7397,8 +7397,8 @@ sub guess_if_pattern_or_conditional {
     #   msg = a warning or diagnostic message
     # USES GLOBAL VARIABLES: $last_nonblank_token
 
-    my ( $self, $i, $rtokens, $rtoken_type, $rtoken_map, $max_token_index ) =
-      @_;
+    my ( $self, $i, $rtokens, $rtoken_type, $rtoken_map_uu, $max_token_index )
+      = @_;
     my $is_pattern = 0;
     my $msg        = "guessing that ? after $last_nonblank_token starts a ";
 
@@ -7408,7 +7408,7 @@ sub guess_if_pattern_or_conditional {
     else {
         my $ibeg = $i;
         $i = $ibeg + 1;
-        my $next_token = $rtokens->[$i];    # first token after ?
+        ##my $next_token = $rtokens->[$i];    # first token after ?
 
         # look for a possible ending ? on this line..
         my $in_quote        = 1;
@@ -7503,8 +7503,8 @@ sub guess_if_pattern_or_division {
     #   $is_pattern = 0 if probably division,  =1 if probably a pattern
     #   msg = a warning or diagnostic message
     # USES GLOBAL VARIABLES: $last_nonblank_token
-    my ( $self, $i, $rtokens, $rtoken_type, $rtoken_map, $max_token_index ) =
-      @_;
+    my ( $self, $i, $rtokens, $rtoken_type, $rtoken_map_uu, $max_token_index )
+      = @_;
     my $is_pattern = 0;
     my $msg        = "guessing that / after $last_nonblank_token starts a ";
     my $ibeg       = $i;
@@ -7746,7 +7746,6 @@ sub scan_bare_identifier_do {
 
     ) = @_;
 
-    my $i_begin = $i;
     my $package = undef;
 
     my $i_beg = $i;
@@ -8191,7 +8190,7 @@ sub do_scan_package {
         # package NAMESPACE VERSION
         # package NAMESPACE BLOCK
         # package NAMESPACE VERSION BLOCK
-        my ( $next_nonblank_token, $i_next ) =
+        my ( $next_nonblank_token, $i_next_uu ) =
           $self->find_next_nonblank_token( $i, $rtokens, $max_token_index );
 
         # check that something recognizable follows, but do not parse.
@@ -9375,14 +9374,14 @@ EOM
                 }
 
                 # check for multiple definitions of a sub
-                ( $next_nonblank_token, my $i_next ) =
+                ( $next_nonblank_token, my $i_next_uu ) =
                   find_next_nonblank_token_on_this_line( $i, $rtokens,
                     $max_token_index );
             }
 
             if ( $next_nonblank_token =~ /^(\s*|#)$/ )
             {    # skip blank or side comment
-                my ( $rpre_tokens, $rpre_types ) =
+                my ( $rpre_tokens, $rpre_types_uu ) =
                   $self->peek_ahead_for_n_nonblank_pre_tokens(1);
                 if ( defined($rpre_tokens) && @{$rpre_tokens} ) {
                     $next_nonblank_token = $rpre_tokens->[0];
@@ -9663,7 +9662,7 @@ sub is_possible_numerator {
             $i++;
         }
 
-        my ( $next_nonblank_token, $i_next ) =
+        my ( $next_nonblank_token, $i_next_uu ) =
           $self->find_next_nonblank_token( $i, $rtokens, $max_token_index );
 
         if ( $pattern_test{$next_nonblank_token} ) {
@@ -9944,9 +9943,9 @@ sub scan_number_do {
       @_;
     my $pos_beg = $rtoken_map->[$i];
     my $pos;
-    my $i_begin = $i;
-    my $number  = undef;
-    my $type    = $input_type;
+    ##my $i_begin = $i;
+    my $number = undef;
+    my $type   = $input_type;
 
     my $first_char = substr( $input_line, $pos_beg, 1 );
 
@@ -10107,7 +10106,7 @@ sub find_here_doc {
         $i,
         $rtokens,
         $rtoken_type,
-        $rtoken_map,
+        $rtoken_map_uu,
         $max_token_index
 
     ) = @_;
@@ -10250,7 +10249,7 @@ sub do_quote {
         $quoted_string_2,
         $rtokens,
         $rtoken_type,
-        $rtoken_map,
+        $rtoken_map_uu,
         $max_token_index,
 
     ) = @_;

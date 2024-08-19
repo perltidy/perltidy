@@ -13,7 +13,8 @@
 --warn-missing-else
 
 # warn if certain of the 'unusual' variables are seen
---warn-variable-types='s r p c'
+--warn-variable-types='*' ##'s r p c'
+--warn-variable-exclusion-list='$self $class *_uu'
 
 # warn if call arg counts differ from sub definitions
 # (requires version > 20240202.04)

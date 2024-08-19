@@ -736,9 +736,9 @@ EOM
         # except if there has been a bug introduced by a recent program change.
         # Please add comments at calls to Fault to explain why the call
         # should not occur, and where to look to fix it.
-        my ( $package0, $filename0, $line0, $subroutine0 ) = caller(0);
-        my ( $package1, $filename1, $line1, $subroutine1 ) = caller(1);
-        my ( $package2, $filename2, $line2, $subroutine2 ) = caller(2);
+        my ( $package0_uu, $filename0_uu, $line0, $subroutine0_uu ) = caller(0);
+        my ( $package1_uu, $filename1,    $line1, $subroutine1 )    = caller(1);
+        my ( $package2_uu, $filename2_uu, $line2_uu, $subroutine2 ) = caller(2);
         my $pkg = __PACKAGE__;
 
         my $input_stream_name = $rstatus->{'input_name'};
@@ -2159,7 +2159,7 @@ sub process_all_files {
             # add option to change path here
             if ( defined( $rOpts->{'output-path'} ) ) {
 
-                my ( $base, $old_path ) = fileparse($fileroot);
+                my ( $base, $old_path_uu ) = fileparse($fileroot);
                 my $new_path = $rOpts->{'output-path'};
                 if ( !-d $new_path ) {
                     mkdir($new_path)    # Default MODE is 0777
@@ -4414,8 +4414,8 @@ sub process_command_line {
 
     my @q = @_;
     my (
-        $perltidyrc_stream,  $is_Windows, $Windows_type,
-        $rpending_complaint, $dump_options_type
+        $perltidyrc_stream,     $is_Windows_uu, $Windows_type_uu,
+        $rpending_complaint_uu, $dump_options_type
     ) = @q;
 
     my $use_cache = !defined($perltidyrc_stream) && !$dump_options_type;
@@ -5534,7 +5534,7 @@ sub find_config_file {
     if ($is_Windows) {
 
         if ($Windows_type) {
-            my ( $os, $system, $allusers ) =
+            my ( $os_uu, $system, $allusers ) =
               Win_Config_Locs( $rpending_complaint, $Windows_type );
 
             # Check All Users directory, if there is one.

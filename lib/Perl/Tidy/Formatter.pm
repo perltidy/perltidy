@@ -127,9 +127,9 @@ sub Fault {
     # except if there has been a bug introduced by a recent program change.
     # Please add comments at calls to Fault to explain why the call
     # should not occur, and where to look to fix it.
-    my ( $package0, $filename0, $line0, $subroutine0 ) = caller(0);
-    my ( $package1, $filename1, $line1, $subroutine1 ) = caller(1);
-    my ( $package2, $filename2, $line2, $subroutine2 ) = caller(2);
+    my ( $package0_uu, $filename0_uu, $line0,    $subroutine0_uu ) = caller(0);
+    my ( $package1_uu, $filename1,    $line1,    $subroutine1 )    = caller(1);
+    my ( $package2_uu, $filename2_uu, $line2_uu, $subroutine2 )    = caller(2);
     my $pkg = __PACKAGE__;
 
     my $input_stream_name = get_input_stream_name();
@@ -156,9 +156,9 @@ sub Fault_Warn {
 
     # This is the same as Fault except that it calls Warn instead of Die
     # and returns.
-    my ( $package0, $filename0, $line0, $subroutine0 ) = caller(0);
-    my ( $package1, $filename1, $line1, $subroutine1 ) = caller(1);
-    my ( $package2, $filename2, $line2, $subroutine2 ) = caller(2);
+    my ( $package0_uu, $filename0_uu, $line0,    $subroutine0_uu ) = caller(0);
+    my ( $package1_uu, $filename1,    $line1,    $subroutine1 )    = caller(1);
+    my ( $package2_uu, $filename2_uu, $line2_uu, $subroutine2 )    = caller(2);
     my $input_stream_name = get_input_stream_name();
 
     Warn(<<EOM);
@@ -5447,7 +5447,7 @@ sub bad_pattern {
 
     # See if a pattern will compile.
     # Note: this sub is also called from Tokenizer
-    my $regex = eval { qr/$pattern/ };
+    my $regex_uu = eval { qr/$pattern/ };
     return $EVAL_ERROR;
 } ## end sub bad_pattern
 
@@ -6856,7 +6856,7 @@ sub find_loop_label {
         last if ( $line_type ne 'CODE' );
 
         my $rK_range = $line_of_tokens->{_rK_range};
-        my ( $Kfirst, $Klast ) = @{$rK_range};
+        my ( $Kfirst, $Klast_uu ) = @{$rK_range};
 
         # skip a blank line
         next if ( !defined($Kfirst) );
@@ -8817,7 +8817,7 @@ sub is_complete_script {
     my $line_type = $line_of_tokens->{_line_type};
 
     if ( $line_type eq 'CODE' ) {
-        my ( $Kfirst, $Klast ) = @{ $line_of_tokens->{_rK_range} };
+        my ( $Kfirst_uu, $Klast ) = @{ $line_of_tokens->{_rK_range} };
         if ($Klast) {
             my $type = $rLL->[$Klast]->[_TYPE_];
             if ( $type eq '#' ) {
@@ -9212,6 +9212,7 @@ sub scan_variable_usage {
                 }
             }
         }
+        return;
     }; ## end $check_for_overlapping_variables = sub
 
     #--------------------------------
@@ -9550,7 +9551,7 @@ sub scan_variable_usage {
         #           --$KK     --$seqno of brace that we want
         #
         if ( $rLL->[$K_n]->[_TOKEN_] eq 'elsif' ) {
-            ( $seqno_block, my $K_last_iterator ) =
+            ( $seqno_block, my $K_last_iterator_uu ) =
               $self->block_seqno_of_paren_keyword($K_n);
         }
 
@@ -13567,7 +13568,7 @@ sub match_trailing_comma_rule {
             my $rtype_count_pp = $self->[_rtype_count_by_seqno_]->{$seqno_pp};
             return unless ($rtype_count_pp);
             $comma_count_inner = $rtype_count_pp->{','};
-            my $fat_comma_count_inner = $rtype_count_pp->{'=>'};
+##          my $fat_comma_count_inner = $rtype_count_pp->{'=>'};
             return if ( !$comma_count_inner );
             return if ( $comma_count_inner < 2 );
 
@@ -14710,7 +14711,7 @@ sub count_list_elements {
     # Set the counts to undef in case we have to do a simple return upon
     # encountering an indeterminate list count
     my $shift_count_min_input = $rarg_list->{shift_count_min};
-    my $shift_count_max_input = $rarg_list->{shift_count_max};
+##  my $shift_count_max_input = $rarg_list->{shift_count_max};
     $rarg_list->{shift_count_min} = undef;
     $rarg_list->{shift_count_max} = undef;
 
@@ -15859,8 +15860,8 @@ sub count_sub_return_args {
 
     foreach ( @{$rKlist} ) {
         my $K_return = $rLL->[$_]->[_TYPE_] eq 'b' ? $_ + 1 : $_;
-        my $type     = $rLL->[$K_return]->[_TYPE_];
-        my $token    = $rLL->[$K_return]->[_TOKEN_];
+##      my $type     = $rLL->[$K_return]->[_TYPE_];
+        my $token = $rLL->[$K_return]->[_TOKEN_];
         if ( $token ne 'return' ) {
             DEVEL_MODE && Fault("expecting 'return' but got $token\n");
             last;
@@ -16756,7 +16757,7 @@ sub cross_check_sub_calls {
         @debug_warnings = sort { $a->{Ko} <=> $b->{Ko} } @debug_warnings;
         my $output_string = EMPTY_STRING;
         foreach my $item (@debug_warnings) {
-            my $caller_name   = $item->{caller_name};
+##          my $caller_name   = $item->{caller_name};
             my $parent_self   = $item->{parent_self};
             my $receiver_self = $item->{receiver_self};
             my $sub_called    = $item->{sub_called};
@@ -17047,13 +17048,13 @@ sub cross_check_sub_calls {
 
         $name = $rsub_item->{name};
         $lno  = $rsub_item->{line_number};
-        my $rK_return_list = $item->{rK_return_list};
-        my $rself_calls    = $item->{self_calls};
-        my $rdirect_calls  = $item->{direct_calls};
-        my $num_self       = defined($rself_calls)   ? @{$rself_calls}   : 0;
-        my $num_direct     = defined($rdirect_calls) ? @{$rdirect_calls} : 0;
+##      my $rK_return_list = $item->{rK_return_list};
+        my $rself_calls   = $item->{self_calls};
+        my $rdirect_calls = $item->{direct_calls};
+        my $num_self      = defined($rself_calls)   ? @{$rself_calls}   : 0;
+        my $num_direct    = defined($rdirect_calls) ? @{$rdirect_calls} : 0;
 
-        my $K_return_count_min = $rsub_item->{K_return_count_min};
+##      my $K_return_count_min = $rsub_item->{K_return_count_min};
         my $K_return_count_max = $rsub_item->{K_return_count_max};
 
         $shift_count_min  = $rsub_item->{shift_count_min};
@@ -18196,7 +18197,7 @@ sub setup_new_weld_measurements {
 
     my $iline_oo = $rLL->[$Kouter_opening]->[_LINE_INDEX_];
     my $rK_range = $rlines->[$iline_oo]->{_rK_range};
-    my ( $Kfirst, $Klast ) = @{$rK_range};
+    my ( $Kfirst, $Klast_uu ) = @{$rK_range};
 
     #-------------------------------------------------------------------------
     # We now define a reference index, '$Kref', from which to start measuring
@@ -18246,7 +18247,7 @@ sub setup_new_weld_measurements {
                 if ( $type_prev eq '=>' ) {
                     my $iline_prev    = $rLL->[$Kprev]->[_LINE_INDEX_];
                     my $rK_range_prev = $rlines->[$iline_prev]->{_rK_range};
-                    my ( $Kfirst_prev, $Klast_prev ) = @{$rK_range_prev};
+                    my ( $Kfirst_prev, $Klast_prev_uu ) = @{$rK_range_prev};
                     foreach my $KK ( reverse( $Kfirst_prev .. $Kref - 1 ) ) {
                         next if ( $rLL->[$KK]->[_TYPE_] eq 'b' );
                         $Kref = $KK;
@@ -18602,7 +18603,7 @@ sub weld_nested_containers {
             foreach my $iline ( $iline_oo + 1 .. $iline_io ) {
                 my $rK_range = $rlines->[$iline]->{_rK_range};
                 next unless defined($rK_range);
-                my ( $Kfirst, $Klast ) = @{$rK_range};
+                my ( $Kfirst, $Klast_uu ) = @{$rK_range};
                 next unless defined($Kfirst);
                 if ( $rLL->[$Kfirst]->[_TYPE_] eq '->' ) {
                     $do_not_weld_rule = 7;
@@ -19250,7 +19251,7 @@ sub weld_nested_quotes {
             # Check the length of the last line (fixes case b1039)
             if ( !$do_not_weld ) {
                 my $rK_range_ic = $rlines->[$iline_ic]->{_rK_range};
-                my ( $Kfirst_ic, $Klast_ic ) = @{$rK_range_ic};
+                my ( $Kfirst_ic, $Klast_ic_uu ) = @{$rK_range_ic};
                 my $excess_ic =
                   $self->excess_line_length_for_Krange( $Kfirst_ic,
                     $Kouter_closing );
@@ -19573,7 +19574,7 @@ sub do_non_indenting_braces {
         my $KK             = $K_opening_container->{$seqno};
         my $line_of_tokens = $rlines->[$ix];
         my $rK_range       = $line_of_tokens->{_rK_range};
-        my ( $Kfirst, $Klast ) = @{$rK_range};
+        my ( $Kfirst_uu, $Klast ) = @{$rK_range};
         $rspecial_side_comment_type->{$Klast} = 'NIB';
         push @K_stack, [ $KK, 1 ];
         my $Kc = $K_closing_container->{$seqno};
@@ -19866,7 +19867,7 @@ sub break_before_list_opening_containers {
 
             my $iline    = $rLL->[$KK]->[_LINE_INDEX_];
             my $rK_range = $rlines->[$iline]->{_rK_range};
-            my ( $Kfirst, $Klast ) = @{$rK_range};
+            my ( $Kfirst, $Klast_uu ) = @{$rK_range};
             next unless ( $KK == $Kfirst );
         }
 
@@ -21548,11 +21549,11 @@ sub process_all_lines {
 
                     # get updated indentation levels
                     my $rK_range = $line_of_tokens->{_rK_range};
-                    my ( $K_first, $K_last ) = @{$rK_range};
-                    if ( defined($K_first) ) {
-                        my $level_0 = $self->[_radjusted_levels_]->[$K_first];
+                    my ( $Kfirst, $Klast_uu ) = @{$rK_range};
+                    if ( defined($Kfirst) ) {
+                        my $level_0 = $self->[_radjusted_levels_]->[$Kfirst];
                         my $ci_level_0 =
-                          $self->[_rLL_]->[$K_first]->[_CI_LEVEL_];
+                          $self->[_rLL_]->[$Kfirst]->[_CI_LEVEL_];
                         $line_of_tokens->{_level_0}    = $level_0;
                         $line_of_tokens->{_ci_level_0} = $ci_level_0;
                     }
@@ -21812,8 +21813,8 @@ EOM
             my $j_e = $subgroup[$k] - 1;
 
             # index i is the actual line number of a keyword
-            my ( $i_b, $tok_b, $count_b ) = @{ $group[$j_b] };
-            my ( $i_e, $tok_e, $count_e ) = @{ $group[$j_e] };
+            my ( $i_b,    $tok_b_uu, $count_b ) = @{ $group[$j_b] };
+            my ( $i_e_uu, $tok_e_uu, $count_e ) = @{ $group[$j_e] };
             my $num = $count_e - $count_b + 1;
 
             # This subgroup runs from line $ib to line $ie-1, but may contain
@@ -21825,18 +21826,18 @@ EOM
                 my $nog_b = my $nog_e = 1;
                 if ( @iblanks && !$rOpts_kgb_delete ) {
                     my $j_bb = $j_b + $num - 1;
-                    my ( $i_bb, $tok_bb, $count_bb ) = @{ $group[$j_bb] };
+                    my ( $i_bb_uu, $tok_bb_uu, $count_bb ) = @{ $group[$j_bb] };
                     $nog_b = $count_bb - $count_b + 1 == $num;
 
                     my $j_ee = $j_e - ( $num - 1 );
-                    my ( $i_ee, $tok_ee, $count_ee ) = @{ $group[$j_ee] };
+                    my ( $i_ee_uu, $tok_ee_uu, $count_ee ) = @{ $group[$j_ee] };
                     $nog_e = $count_e - $count_ee + 1 == $num;
                 }
                 if ( $nog_b && $k > $kbeg ) {
                     kgb_insert_blank_after( $i_b - 1 );
                 }
                 if ( $nog_e && $k < $kend ) {
-                    my ( $i_ep, $tok_ep, $count_ep ) =
+                    my ( $i_ep, $tok_ep_uu, $count_ep_uu ) =
                       @{ $group[ $j_e + 1 ] };
                     kgb_insert_blank_after( $i_ep - 1 );
                 }
@@ -22653,9 +22654,9 @@ EOM
         }
 
         DEBUG_STORE && do {
-            my ( $a, $b, $c ) = caller();
+            my ( $pkg, $file_uu, $lno ) = caller();
             print {*STDOUT}
-"STORE: from $a $c: storing token $token type $type lev=$level at $max_index_to_go\n";
+"STORE: from $pkg $lno: storing token $token type $type lev=$level at $max_index_to_go\n";
         };
         return;
     } ## end sub store_token_to_go
@@ -24493,9 +24494,9 @@ sub compare_indentation_levels {
         }
 
         DEBUG_FORCE && do {
-            my ( $a, $b, $c ) = caller();
+            my ( $pkg, $file_uu, $lno ) = caller();
             my $msg =
-"FORCE $forced_breakpoint_count after call from $a $c with i=$i max=$max_index_to_go";
+"FORCE $forced_breakpoint_count after call from $pkg $lno with i=$i max=$max_index_to_go";
             if ( !defined($i_nonblank) ) {
                 $i = EMPTY_STRING unless defined($i);
                 $msg .= " but could not set break after i='$i'\n";
@@ -24608,11 +24609,11 @@ EOM
 
         if ( $i_start < 0 ) {
             $i_start = 0;
-            my ( $a, $b, $c ) = caller();
+            my ( $pkg, $file_uu, $lno ) = caller();
 
             # Bad call, can only be due to a recent programming change.
             Fault(
-"Program Bug: undo_forced_breakpoint_stack from $a $c has bad i=$i_start "
+"Program Bug: undo_forced_breakpoint_stack from $pkg $lno has bad i=$i_start "
             ) if (DEVEL_MODE);
             return;
         }
@@ -24625,18 +24626,18 @@ EOM
                 $forced_breakpoint_count--;
 
                 DEBUG_UNDOBP && do {
-                    my ( $a, $b, $c ) = caller();
+                    my ( $pkg, $file_uu, $lno ) = caller();
                     print {*STDOUT}
-"UNDOBP: undo forced_breakpoint i=$i $forced_breakpoint_undo_count from $a $c max=$max_index_to_go\n";
+"UNDOBP: undo forced_breakpoint i=$i $forced_breakpoint_undo_count from $pkg $lno max=$max_index_to_go\n";
                 };
             }
 
             # shouldn't happen, but not a critical error
             else {
                 if (DEVEL_MODE) {
-                    my ( $a, $b, $c ) = caller();
+                    my ( $pkg, $file_uu, $lno ) = caller();
                     Fault(<<EOM);
-Program Bug: undo_forced_breakpoint from $a $c has i=$i but max=$max_index_to_go
+Program Bug: undo_forced_breakpoint from $pkg $lno has i=$i but max=$max_index_to_go
 EOM
                 }
             }
@@ -26898,7 +26899,7 @@ EOM
         my $nmax   = @{$ri_end} - 1;
         my $ibeg_1 = $ri_beg->[ $n - 1 ];
         my $iend_1 = $ri_end->[ $n - 1 ];
-        my $ibeg_2 = $ri_beg->[$n];
+##      my $ibeg_2 = $ri_beg->[$n];
         my $iend_2 = $ri_end->[$n];
 
         if ($itok) {
@@ -28174,7 +28175,7 @@ sub correct_lp_indentation {
 
                     $actual_pos = $predicted_pos;
 
-                    my ( $indent, $offset, $is_leading, $exists ) =
+                    my ( $indent, $offset, $is_leading_uu, $exists_uu ) =
                       get_saved_opening_indentation($align_seqno);
                     if ( defined($indent) ) {
 
@@ -28404,7 +28405,7 @@ sub correct_lp_indentation_pass_1 {
 
             if ( $available_spaces > 0 ) {
                 my $delete_want = min( $available_spaces, $excess );
-                my $deleted_spaces =
+                my $deleted_spaces_uu =
                   $self->reduce_lp_indentation( $ibeg, $delete_want );
                 $available_spaces = $self->get_available_spaces_to_go($ibeg);
             }
@@ -31474,9 +31475,9 @@ EOM
         my $identifier_count = $rhash_A->{_identifier_count_A};
 
         # Derived variables:
-        my $ritem_lengths          = $rhash_A->{_ritem_lengths};
-        my $ri_term_begin          = $rhash_A->{_ri_term_begin};
-        my $ri_term_end            = $rhash_A->{_ri_term_end};
+##      my $ritem_lengths          = $rhash_A->{_ritem_lengths};
+##      my $ri_term_begin          = $rhash_A->{_ri_term_begin};
+##      my $ri_term_end            = $rhash_A->{_ri_term_end};
         my $ri_term_comma          = $rhash_A->{_ri_term_comma};
         my $rmax_length            = $rhash_A->{_rmax_length};
         my $comma_count            = $rhash_A->{_comma_count};
@@ -31484,15 +31485,15 @@ EOM
         my $first_term_length      = $rhash_A->{_first_term_length};
         my $i_first_comma          = $rhash_A->{_i_first_comma};
         my $i_last_comma           = $rhash_A->{_i_last_comma};
-        my $i_true_last_comma      = $rhash_A->{_i_true_last_comma};
+##      my $i_true_last_comma      = $rhash_A->{_i_true_last_comma};
 
         # Variables received from caller
-        my $i_opening_paren     = $rhash_IN->{i_opening_paren};
-        my $i_closing_paren     = $rhash_IN->{i_closing_paren};
-        my $rcomma_index        = $rhash_IN->{rcomma_index};
-        my $next_nonblank_type  = $rhash_IN->{next_nonblank_type};
-        my $list_type           = $rhash_IN->{list_type};
-        my $interrupted         = $rhash_IN->{interrupted};
+        my $i_opening_paren = $rhash_IN->{i_opening_paren};
+##      my $i_closing_paren     = $rhash_IN->{i_closing_paren};
+        my $rcomma_index       = $rhash_IN->{rcomma_index};
+        my $next_nonblank_type = $rhash_IN->{next_nonblank_type};
+        my $list_type          = $rhash_IN->{list_type};
+##      my $interrupted         = $rhash_IN->{interrupted};
         my $rdo_not_break_apart = $rhash_IN->{rdo_not_break_apart};
         my $must_break_open     = $rhash_IN->{must_break_open};
 
@@ -31539,13 +31540,13 @@ EOM
         $item_count      = $hash_B->{_item_count_B};
 
         # New variables
-        my $columns                 = $hash_B->{_columns};
-        my $formatted_columns       = $hash_B->{_formatted_columns};
-        my $formatted_lines         = $hash_B->{_formatted_lines};
-        my $max_width               = $hash_B->{_max_width};
-        my $new_identifier_count    = $hash_B->{_new_identifier_count};
-        my $number_of_fields        = $hash_B->{_number_of_fields};
-        my $odd_or_even             = $hash_B->{_odd_or_even};
+        my $columns              = $hash_B->{_columns};
+        my $formatted_columns    = $hash_B->{_formatted_columns};
+        my $formatted_lines      = $hash_B->{_formatted_lines};
+        my $max_width            = $hash_B->{_max_width};
+        my $new_identifier_count = $hash_B->{_new_identifier_count};
+        my $number_of_fields     = $hash_B->{_number_of_fields};
+##      my $odd_or_even             = $hash_B->{_odd_or_even};
         my $packed_columns          = $hash_B->{_packed_columns};
         my $packed_lines            = $hash_B->{_packed_lines};
         my $pair_width              = $hash_B->{_pair_width};
@@ -32563,9 +32564,9 @@ sub set_nobreaks {
     if ( $i >= 0 && $i <= $j && $j <= $max_index_to_go ) {
 
         0 && do {
-            my ( $a, $b, $c ) = caller();
+            my ( $pkg, $file_uu, $lno ) = caller();
             print {*STDOUT}
-"NOBREAK: forced_breakpoint $forced_breakpoint_count from $a $c with i=$i max=$max_index_to_go type=$types_to_go[$i]\n";
+"NOBREAK: forced_breakpoint $forced_breakpoint_count from $pkg $lno with i=$i max=$max_index_to_go type=$types_to_go[$i]\n";
         };
 
         @nobreak_to_go[ $i .. $j ] = (1) x ( $j - $i + 1 );
@@ -32574,9 +32575,9 @@ sub set_nobreaks {
     # shouldn't happen; non-critical error
     else {
         if (DEVEL_MODE) {
-            my ( $a, $b, $c ) = caller();
+            my ( $pkg, $file_uu, $lno ) = caller();
             Fault(<<EOM);
-NOBREAK ERROR: from $a $c with i=$i j=$j max=$max_index_to_go
+NOBREAK ERROR: from $pkg $lno with i=$i j=$j max=$max_index_to_go
 EOM
         }
     }
@@ -33713,7 +33714,7 @@ EOM
                         my $ci_level =
                           $rlp_object_list->[$i_debug]->get_ci_level();
                         my $old_level = $rlp_object_list->[$i]->get_level();
-                        my $old_ci_level =
+                        my $old_ci_level_uu =
                           $rlp_object_list->[$i]->get_ci_level();
                         Fault(<<EOM);
 program bug with -lp: want to delete $deleted_spaces from item $i, but old=$old_spaces deleted: lev=$level ci=$ci_level  deleted: level=$old_level ci=$ci_level
@@ -34119,7 +34120,7 @@ sub convey_batch_to_vertical_aligner {
         # one less than the number of fields. If this is not true then
         # an error has been introduced in sub make_alignment_patterns.
         if (DEVEL_MODE) {
-            my ( $rtokens, $rfields, $rpatterns, $rfield_lengths ) =
+            my ( $rtokens, $rfields, $rpatterns_uu, $rfield_lengths_uu ) =
               @{$rline_alignment};
             if ( @{$rfields} && ( @{$rtokens} != ( @{$rfields} - 1 ) ) ) {
                 my $nt  = @{$rtokens};

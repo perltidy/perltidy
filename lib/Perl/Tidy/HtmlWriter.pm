@@ -179,7 +179,7 @@ PRE_END
 
     my $title = $rOpts->{'title'};
     if ( !$title ) {
-        ( $title, my $path ) = fileparse($input_file);
+        ( $title, my $path_uu ) = fileparse($input_file);
     }
     my $toc_item_count = 0;
     my $in_toc_package = EMPTY_STRING;
@@ -1007,13 +1007,13 @@ sub make_frame {
     # 3. - the frame which contains them
 
     # get basenames for relative links
-    my ( $toc_basename, $toc_path ) = fileparse($toc_filename);
-    my ( $src_basename, $src_path ) = fileparse($src_filename);
+    my ( $toc_basename, $toc_path_uu ) = fileparse($toc_filename);
+    my ( $src_basename, $src_path_uu ) = fileparse($src_filename);
 
     # 1. Make the table of contents panel, with appropriate changes
     # to the anchor names
-    my $src_frame_name = 'SRC';
-    my $first_anchor   = write_toc_html(
+    my $src_frame_name  = 'SRC';
+    my $first_anchor_uu = write_toc_html(
         {
             title          => $title,
             toc_filename   => $toc_filename,
@@ -1064,7 +1064,7 @@ sub write_toc_html {
 <h1><a href=\"$src_basename#-top-" target="$src_frame_name">$title</a></h1>
 EOM
 
-    my $first_anchor =
+    my $first_anchor_uu =
       change_anchor_names( $rtoc, $src_basename, "$src_frame_name" );
     $fh->print( join EMPTY_STRING, @{$rtoc} );
 

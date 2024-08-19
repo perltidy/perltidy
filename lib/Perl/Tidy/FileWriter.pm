@@ -97,9 +97,9 @@ sub Fault {
     # except if there has been a bug introduced by a recent program change.
     # Please add comments at calls to Fault to explain why the call
     # should not occur, and where to look to fix it.
-    my ( $package0, $filename0, $line0, $subroutine0 ) = caller(0);
-    my ( $package1, $filename1, $line1, $subroutine1 ) = caller(1);
-    my ( $package2, $filename2, $line2, $subroutine2 ) = caller(2);
+    my ( $package0_uu, $filename0_uu, $line0,    $subroutine0_uu ) = caller(0);
+    my ( $package1_uu, $filename1,    $line1,    $subroutine1 )    = caller(1);
+    my ( $package2_uu, $filename2_uu, $line2_uu, $subroutine2 )    = caller(2);
     my $pkg = __PACKAGE__;
 
     # Catch potential error of Fault not called as a method
