@@ -603,7 +603,9 @@ BEGIN {
         _in_brace_tabbing_disagreement_    => $i++,
 
         _saw_VERSION_in_this_file_ => $i++,
+        _saw_use_strict_           => $i++,
         _saw_END_or_DATA_          => $i++,
+        _saw_POD_before_END_       => $i++,
 
         _rK_weld_left_         => $i++,
         _rK_weld_right_        => $i++,
@@ -1113,7 +1115,9 @@ sub new {
     $self->[_tabbing_disagreement_count_]      = 0;
     $self->[_in_tabbing_disagreement_]         = 0;
     $self->[_saw_VERSION_in_this_file_]        = !$rOpts->{'pass-version-line'};
+    $self->[_saw_use_strict_]                  = 0;
     $self->[_saw_END_or_DATA_]                 = 0;
+    $self->[_saw_POD_before_END_]              = 0;
     $self->[_first_brace_tabbing_disagreement_] = undef;
     $self->[_in_brace_tabbing_disagreement_]    = undef;
 
@@ -8701,10 +8705,13 @@ EOM
 
 sub has_complete_package {
     my ($self) = @_;
-    my $rLL = $self->[_rLL_];
-    return unless ( @{$rLL} );
 
     # return true if this file appears to contain at least one complete package
+
+    my $Klast = $self->K_last_code();
+    return unless defined($Klast);
+
+    my $rLL = $self->[_rLL_];
 
     my $rK_package_list = $self->[_rK_package_list_];
     return unless ( defined($rK_package_list) && @{$rK_package_list} );
@@ -8731,7 +8738,7 @@ sub has_complete_package {
     return unless ( $level == 0 );
 
     # Look for '1;' at next package, if any, and at end of file
-    my @K_semicolon_test = ( @{$rLL} - 1 );
+    my @K_semicolon_test = ($Klast);
     if ( @{$rK_package_list} > 1 ) {
         my $K_package = $rK_package_list->[1];
         my $Ktest     = $self->K_previous_code($K_package);
@@ -8755,6 +8762,9 @@ sub is_complete_script {
 
     # Guess if we are formatting a complete script
     # Return: true or false
+
+    # Goal: help decide if we should skip certain warning checks when
+    # operating on just part of a script (such as from an editor).
 
     #----------------------------------------------------------------
     # TEST 1: Assume a file with known extension is a complete script
@@ -8789,7 +8799,7 @@ sub is_complete_script {
     }
 
     #-------------------------------------------------------------
-    # TEST 2: positive starting level implies an incomplete script
+    # TEST 2: a positive starting level implies an incomplete script
     #-------------------------------------------------------------
     my $rLL = $self->[_rLL_];
     return unless ( @{$rLL} );
@@ -8807,40 +8817,55 @@ sub is_complete_script {
     my $rlines     = $self->[_rlines_];
     my $line_count = @{$rlines};
     return unless ($line_count);
-    my $line_of_tokens = $rlines->[0];
-    my $input_line     = $line_of_tokens->{_line_text};
-    my $saw_hash_bang  = substr( $input_line, 0, 2 ) eq '#!'
-      && $input_line =~ /^\#\!.*perl\b/;
-    my $saw_END_or_DATA = $self->[_saw_END_or_DATA_];
-    my $sub_count       = +keys %{ $self->[_ris_sub_block_] };
-    my $line_one_is_opening;
-    my $line_type = $line_of_tokens->{_line_type};
 
-    if ( $line_type eq 'CODE' ) {
-        my ( $Kfirst_uu, $Klast ) = @{ $line_of_tokens->{_rK_range} };
-        if ($Klast) {
-            my $type = $rLL->[$Klast]->[_TYPE_];
-            if ( $type eq '#' ) {
-                my $Kp = $self->K_previous_code($Klast);
-                if ($Kp) { $type = $rLL->[$Klast]->[_TYPE_] }
-            }
-            $line_one_is_opening = $is_opening_type{$type};
-        }
+    my $input_line    = $rlines->[0]->{_line_text};
+    my $saw_hash_bang = substr( $input_line, 0, 2 ) eq '#!'
+      && $input_line =~ /^\#\!.*perl\b/;
+
+    # does the script end in an exit statement?
+    my $ending_exit;
+    my $K_last = $self->K_last_code();
+    if ( defined($K_last) ) {
+        my $ix             = $rLL->[$K_last]->[_LINE_INDEX_];
+        my $line_of_tokens = $rlines->[$ix];
+        my ( $Kfirst, $Klast_uu ) = @{ $line_of_tokens->{_rK_range} };
+        $ending_exit =
+             defined($Kfirst)
+          && $rLL->[$Kfirst]->[_TOKEN_] eq 'exit'
+          && $rLL->[$Kfirst]->[_TYPE_] eq 'k';
     }
+
     my $rK_package_list = $self->[_rK_package_list_];
     my $saw_package     = defined($rK_package_list) && @{$rK_package_list};
+    my $rK_use_list     = $self->[_rK_use_list_];
+    my $sub_count       = +keys %{ $self->[_ris_sub_block_] };
+    my $use_count       = defined($rK_use_list) ? @{$rK_use_list} : 0;
 
     # Make a guess using the available clues. No single clue is conclusive.
     my $score = 0;
-    $score += 50 if $file_extension;
-    $score += 50 if $saw_hash_bang;
-    $score += 50 if $saw_END_or_DATA;
-    $score += 50 if $saw_package;
-    $score -= 50 if $line_one_is_opening;
+
+    # starting indicators
+    $score += 50
+      if ( $saw_hash_bang
+        || $self->[_saw_use_strict_]
+        || $saw_package
+        || $use_count > 1 );
+
+    # ending indicators
+    $score += 50
+      if ( $self->[_saw_END_or_DATA_]
+        || $ending_exit
+        || $self->[_saw_POD_before_END_] );
+
+    # interior indicators
+    $score += 25 if $line_count > 25;
     $score += 25 if $line_count > 50;
-    $score += 25 if $line_count > 100;
     $score += 25 if $sub_count;
     $score += 25 if $sub_count > 1;
+
+    # other
+    $score += 25 if $file_extension;
+
     if ( $score >= 100 ) { return 1 }
     return;
 } ## end sub is_complete_script
@@ -8994,6 +9019,15 @@ sub scan_variable_usage {
     #            see_line    => $see_line,    # line referenced in note
     #          };
 
+    my $rLL                  = $self->[_rLL_];
+    my $rlines               = $self->[_rlines_];
+    my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
+    my $ris_sub_block        = $self->[_ris_sub_block_];
+    my $K_closing_container  = $self->[_K_closing_container_];
+
+    # check for file without code (could be all pod or comments)
+    return unless defined( $self->K_first_code() );
+
     # issues are indicated by these names:
     my %unusual_variable_issue_note = (
         c => "unused constant",
@@ -9023,12 +9057,6 @@ sub scan_variable_usage {
     my $check_unused        = $roption->{'u'};
     my $check_reused        = $roption->{'r'};
     my $check_constant      = $roption->{'c'};
-
-    my $rLL                  = $self->[_rLL_];
-    my $rlines               = $self->[_rlines_];
-    my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
-    my $ris_sub_block        = $self->[_ris_sub_block_];
-    my $K_closing_container  = $self->[_K_closing_container_];
 
     my %is_valid_sigil = ( '$' => 1, '@' => 1, '%' => 1 );
 
@@ -12157,6 +12185,7 @@ sub respace_tokens_inner_loop {
                 if (   $last_nonblank_code_token eq 'use'
                     && $last_nonblank_code_type eq 'k' )
                 {
+                    if ( $token eq 'strict' ) { $self->[_saw_use_strict_] = 1 }
                     push @{$rK_use_list}, scalar @{$rLL_new};
                 }
             }
@@ -14121,6 +14150,35 @@ sub K_previous_nonblank {
     }
     return;
 } ## end sub K_previous_nonblank
+
+sub K_first_code {
+    my ( $self, $rLL ) = @_;
+
+    # return index $K of first non-blank, non-comment code token
+    $rLL = $self->[_rLL_] unless ( defined($rLL) );
+
+    return unless @{$rLL};
+    my $type = $rLL->[0]->[_TYPE_];
+    if ( $type ne 'b' && $type ne '#' ) { return 0 }
+    return $self->K_next_code(0);
+} ## end sub K_first_code
+
+sub K_last_code {
+    my ( $self, $rLL ) = @_;
+
+    # Given:
+    #   $rLL = optional token array to override default
+    # Return:
+    #   index of last non-blank, non-comment code token, or undef
+
+    $rLL = $self->[_rLL_] unless ( defined($rLL) );
+
+    return unless @{$rLL};
+    my $KK   = @{$rLL} - 1;
+    my $type = $rLL->[$KK]->[_TYPE_];
+    if ( $type ne 'b' && $type ne '#' ) { return $KK }
+    return $self->K_previous_code($KK);
+} ## end sub K_last_code
 
 sub parent_seqno_by_K {
 
@@ -21495,6 +21553,7 @@ sub process_all_lines {
         # put a blank line after an =cut which comes before __END__ and __DATA__
         # (required by podchecker)
         if ( $last_line_type eq 'POD_END' && !$self->[_saw_END_or_DATA_] ) {
+            $self->[_saw_POD_before_END_] ||= 1;
             $i_last_POD_END = $i;
             $file_writer_object->reset_consecutive_blank_lines();
             if ( !$in_format_skipping_section && $input_line !~ /^\s*$/ ) {
