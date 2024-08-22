@@ -605,7 +605,6 @@ BEGIN {
         _saw_VERSION_in_this_file_ => $i++,
         _saw_use_strict_           => $i++,
         _saw_END_or_DATA_          => $i++,
-        _saw_POD_before_END_       => $i++,
 
         _rK_weld_left_         => $i++,
         _rK_weld_right_        => $i++,
@@ -647,7 +646,6 @@ BEGIN {
 
         # these vars are defined after call to respace tokens:
         _rK_package_list_                 => $i++,
-        _rK_use_list_                     => $i++,
         _rK_AT_underscore_by_sub_seqno_   => $i++,
         _rK_first_self_by_sub_seqno_      => $i++,
         _rK_bless_by_sub_seqno_           => $i++,
@@ -1048,7 +1046,6 @@ sub new {
     #               --dump-mismatched-returns
     #               --warn-mismatched-returns
     $self->[_rK_package_list_]                 = [];
-    $self->[_rK_use_list_]                     = [];
     $self->[_rK_AT_underscore_by_sub_seqno_]   = {};
     $self->[_rK_first_self_by_sub_seqno_]      = {};
     $self->[_rK_bless_by_sub_seqno_]           = {};
@@ -1117,7 +1114,6 @@ sub new {
     $self->[_saw_VERSION_in_this_file_]        = !$rOpts->{'pass-version-line'};
     $self->[_saw_use_strict_]                  = 0;
     $self->[_saw_END_or_DATA_]                 = 0;
-    $self->[_saw_POD_before_END_]              = 0;
     $self->[_first_brace_tabbing_disagreement_] = undef;
     $self->[_in_brace_tabbing_disagreement_]    = undef;
 
@@ -8950,7 +8946,7 @@ sub has_complete_package {
 } ## end sub has_complete_package
 
 sub is_complete_script {
-    my ($self) = @_;
+    my ( $self, $rline_type_count, $rkeyword_count ) = @_;
 
     # Guess if we are formatting a complete script
     # Return: true or false
@@ -9014,24 +9010,9 @@ sub is_complete_script {
     my $saw_hash_bang = substr( $input_line, 0, 2 ) eq '#!'
       && $input_line =~ /^\#\!.*perl\b/;
 
-    # does the script end in an exit statement?
-    my $ending_exit;
-    my $K_last = $self->K_last_code();
-    if ( defined($K_last) ) {
-        my $ix             = $rLL->[$K_last]->[_LINE_INDEX_];
-        my $line_of_tokens = $rlines->[$ix];
-        my ( $Kfirst, $Klast_uu ) = @{ $line_of_tokens->{_rK_range} };
-        $ending_exit =
-             defined($Kfirst)
-          && $rLL->[$Kfirst]->[_TOKEN_] eq 'exit'
-          && $rLL->[$Kfirst]->[_TYPE_] eq 'k';
-    }
-
     my $rK_package_list = $self->[_rK_package_list_];
     my $saw_package     = defined($rK_package_list) && @{$rK_package_list};
-    my $rK_use_list     = $self->[_rK_use_list_];
     my $sub_count       = +keys %{ $self->[_ris_sub_block_] };
-    my $use_count       = defined($rK_use_list) ? @{$rK_use_list} : 0;
 
     # Make a guess using the available clues. No single clue is conclusive.
     my $score = 0;
@@ -9040,20 +9021,29 @@ sub is_complete_script {
     $score += 50
       if ( $saw_hash_bang
         || $self->[_saw_use_strict_]
-        || $saw_package
-        || $use_count > 1 );
-
-    # ending indicators
-    $score += 50
-      if ( $self->[_saw_END_or_DATA_]
-        || $ending_exit
-        || $self->[_saw_POD_before_END_] );
+        || $saw_package );
 
     # interior indicators
+    $score += 50 if $rline_type_count->{POD};
     $score += 25 if $line_count > 25;
     $score += 25 if $line_count > 50;
     $score += 25 if $sub_count;
     $score += 25 if $sub_count > 1;
+    my $use_count = $rkeyword_count->{use};
+    if ($use_count) {
+        $score += $use_count > 1 ? 50 : 25;
+    }
+
+    # common filter keywords
+    $score += 50
+      if ( $rkeyword_count->{exit}
+        || $rkeyword_count->{print}
+        || $rkeyword_count->{open}
+        || $rkeyword_count->{system}
+        || $rkeyword_count->{die} );
+
+    # ending indicator
+    $score += 50 if $self->[_saw_END_or_DATA_];
 
     # other
     $score += 25 if $file_extension;
@@ -9888,6 +9878,9 @@ sub scan_variable_usage {
         return;
     }; ## end $check_sub_signature = sub
 
+    my $rkeyword_count   = {};
+    my $rline_type_count = {};
+
     #--------------------
     # Loop over all lines
     #--------------------
@@ -9895,7 +9888,10 @@ sub scan_variable_usage {
     foreach my $line_of_tokens ( @{$rlines} ) {
         $ix_line++;
         my $line_type = $line_of_tokens->{_line_type};
-        next if ( $line_type ne 'CODE' );
+        if ( $line_type ne 'CODE' ) {
+            $rline_type_count->{$line_type}++;
+            next;
+        }
 
         my ( $Kfirst, $Klast ) = @{ $line_of_tokens->{_rK_range} };
         next unless defined($Kfirst);
@@ -10088,7 +10084,7 @@ EOM
                     $check_sub_signature->($KK);
                 }
                 else {
-                    # no other keywords to check
+                    $rkeyword_count->{$token}++;
                 }
             }
 
@@ -10359,11 +10355,19 @@ EOM
 
     # skip final 'c' and 'u' output if this appears to be a snippet
     my $is_possible_snippet = $roption->{is_possible_snippet};
-    if ( $is_possible_snippet && ( $check_unused || $check_constant ) ) {
+    my $more_u_checks =
+         $check_unused
+      && @{$rblock_stack} == 1
+      && keys %{ $rblock_stack->[0]->{rvars} };
+    my $more_c_checks = $check_constant && keys %{$rconstant_hash};
+
+    if ( $is_possible_snippet
+        && ( $more_u_checks || $more_c_checks ) )
+    {
 
         # the flag $is_possible_snippet = 0:No  1:Uncertain   2:Yes
         if (   $is_possible_snippet == 1
-            && $self->is_complete_script() )
+            && $self->is_complete_script( $rline_type_count, $rkeyword_count ) )
         {
             # not a snippet
         }
@@ -11664,9 +11668,6 @@ my $rwhitespace_flags;
 # new index K of package or class statements
 my $rK_package_list;
 
-# new index K of 'use vars' statements
-my $rK_use_list;
-
 # new index K of @_ tokens
 my $rK_AT_underscore_by_sub_seqno;
 
@@ -11725,7 +11726,6 @@ sub initialize_respace_tokens_closure {
     $ris_asub_block            = $self->[_ris_asub_block_];
 
     $rK_package_list               = $self->[_rK_package_list_];
-    $rK_use_list                   = $self->[_rK_use_list_];
     $rK_AT_underscore_by_sub_seqno = $self->[_rK_AT_underscore_by_sub_seqno_];
     $rK_first_self_by_sub_seqno    = $self->[_rK_first_self_by_sub_seqno_];
     $rK_bless_by_sub_seqno         = $self->[_rK_bless_by_sub_seqno_];
@@ -12378,7 +12378,6 @@ sub respace_tokens_inner_loop {
                     && $last_nonblank_code_type eq 'k' )
                 {
                     if ( $token eq 'strict' ) { $self->[_saw_use_strict_] = 1 }
-                    push @{$rK_use_list}, scalar @{$rLL_new};
                 }
             }
             else {
@@ -21557,7 +21556,6 @@ sub process_all_lines {
         # put a blank line after an =cut which comes before __END__ and __DATA__
         # (required by podchecker)
         if ( $last_line_type eq 'POD_END' && !$self->[_saw_END_or_DATA_] ) {
-            $self->[_saw_POD_before_END_] ||= 1;
             $i_last_POD_END = $i;
             $file_writer_object->reset_consecutive_blank_lines();
             if ( !$in_format_skipping_section && $input_line !~ /^\s*$/ ) {
