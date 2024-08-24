@@ -6053,7 +6053,7 @@ This selects every if-chain which contains 2 or more B<elsif> blocks:
 
 =back
 
-=item B<use --dump-unusual-variables to find unused, reused, and certain other variables of interest>
+=item B<Use --dump-unusual-variables to find unused, reused, and certain other variables of interest>
 
 Variables with certain properties of interest to a programmer can be
 listed with B<--dump-unusual-variables> or B<-duv>.  This parameter must be on
@@ -6104,8 +6104,9 @@ similar to the B<Perl::Critic> policy B<Variables::ProhibitReusedNames>.
 
 These are variables which have the same bareword name but a different sigil
 (B<$>, B<@>, or B<%>) as another variable in the same scope.  For example, this
-occurs if variables B<$data> and B<%data> share the same scope. This can be
-confusing and can be avoided by renaming one of the variables.
+occurs if variables B<$data> and B<%data> share the same scope. This can also
+be confusing for the reasons mentioned above and can be avoided by renaming
+one of the variables.
 
 =item B<p: package-crossing variables>
 
@@ -6169,7 +6170,8 @@ B<$VERSION>, B<@EXPORT>, B<@EXPORT_OK>, B<%EXPORT_TAGS>, B<@ISA, $AUTOLOAD>.
 
 =item B<Use --warn-variable-types to warn about certain variable types>
 
-The flag B<--warn-variable-types=string>, or B<-wvt=string>, can be used to
+The flag B<--warn-variable-types=string>, or B<-wvt=string>, is the B<--warn>
+counterpart to B<--dump-unusual-variables>, and can be used to
 produce a warning message if certain of the above variable types are
 encountered during formatting.   All possible variable warnings may be
 requested with B<-wvt='*'> or B<-wvt=1>.
@@ -6190,13 +6192,6 @@ types of variables to be checked. For example:
 will process F<somefile.pl> normally but issue a warning if either of
 the issues B<s> or B<r>, described above, are encountered.
 
-The B<u> and B<c> options (unused variables and constants) have a limitation:
-they may be silently turned off if perltidy detects that it is operating on
-just part of a script.  This logic is necessary to avoid warnings when perltidy
-is run on small snippets of code from within an editor.  These options are
-never turned off if perltidy receives a B<-wvt> parameter on the command line
-and is operating on a named file.
-
 A companion flag, B<--warn-variable-exclusion-list=string>, or B<-wvxl=string>,
 can be used to skip warning checks for a list of variable names.  A leading
 and/or trailing '*' may be placed on any of these variable names to allow a
@@ -6204,10 +6199,27 @@ partial match.
 
 For example,
 
-   perltidy -wvt='*' -wvxl='$self $class *_unused'  somefile.pl
+   perltidy -wvt=1 -wvxl='$self $class *_unused'  somefile.pl
 
 will do all possible checks but not report any warnings for variables C<$self>,
 C<$class>, and for example C<$value_unused>.
+
+This partial match option provides a way to trigger a warning message when a
+new unused variable is detected in a script. This can be accomplished by
+adding a unique suffix to the names of existing unused variables, such as
+C<_unused>. This suffix is then added to the exclusion list.
+
+As a specific example, consider the following line which is part of some debug
+code which only references the latter three variables (but might someday need
+to reference the package variable too).
+
+    my ( $package_uu, $filename, $line, $subroutine ) = caller();
+
+The unused variable, C<$package_uu>, has been specially marked with suffix
+C<_uu>.  No type B<u> (unused variable) warning will be produced provided that
+this wildcard suffix is in the exclusion list:
+
+    -wvxl='*_uu'
 
 =item B<Use --dump-mixed-call-parens to find functions called both with and without parens>
 
