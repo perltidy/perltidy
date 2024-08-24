@@ -8968,7 +8968,7 @@ sub is_complete_script {
     # look for a file extension
     my $pos_dot        = rindex( $input_stream_name, '.' );
     my $file_extension = EMPTY_STRING;
-    if ( $pos_dot > 1 ) {
+    if ( $pos_dot > 0 ) {
         $file_extension = substr( $input_stream_name, $pos_dot + 1 );
 
         # allow additional digits, like .pm.0, .pm.1 etc
@@ -8978,7 +8978,7 @@ sub is_complete_script {
         {
             my $str = substr( $input_stream_name, 0, $pos_dot );
             $pos_dot = rindex( $str, '.' );
-            if ( $pos_dot > 1 ) {
+            if ( $pos_dot > 0 ) {
                 $file_extension = substr( $str, $pos_dot + 1 );
             }
         }
@@ -9013,6 +9013,9 @@ sub is_complete_script {
     my $rK_package_list = $self->[_rK_package_list_];
     my $saw_package     = defined($rK_package_list) && @{$rK_package_list};
     my $sub_count       = +keys %{ $self->[_ris_sub_block_] };
+    my $use_count       = 0;
+    $use_count += $rkeyword_count->{use}     if $rkeyword_count->{use};
+    $use_count += $rkeyword_count->{require} if $rkeyword_count->{require};
 
     # Make a guess using the available clues. No single clue is conclusive.
     my $score = 0;
@@ -9023,30 +9026,35 @@ sub is_complete_script {
         || $self->[_saw_use_strict_]
         || $saw_package );
 
+    $score +=
+        $use_count > 1 ? 50
+      : $use_count > 0 ? 25
+      :                  0;
+
     # interior indicators
-    $score += 50 if $rline_type_count->{POD};
-    $score += 25 if $line_count > 25;
-    $score += 25 if $line_count > 50;
-    $score += 25 if $sub_count;
-    $score += 25 if $sub_count > 1;
-    my $use_count = $rkeyword_count->{use};
-    if ($use_count) {
-        $score += $use_count > 1 ? 50 : 25;
-    }
+    $score +=
+        $line_count > 50 ? 50
+      : $line_count > 25 ? 25
+      :                    0;
+    $score +=
+        $sub_count > 1 ? 50
+      : $sub_count > 0 ? 25
+      :                  0;
 
     # common filter keywords
     $score += 50
       if ( $rkeyword_count->{exit}
         || $rkeyword_count->{print}
+        || $rkeyword_count->{printf}
         || $rkeyword_count->{open}
         || $rkeyword_count->{system}
+        || $rkeyword_count->{exec}
         || $rkeyword_count->{die} );
+
+    $score += 50 if $rline_type_count->{POD};
 
     # ending indicator
     $score += 50 if $self->[_saw_END_or_DATA_];
-
-    # other
-    $score += 25 if $file_extension;
 
     if ( $score >= 100 ) { return 1 }
     return;
