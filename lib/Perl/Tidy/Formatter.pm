@@ -30022,7 +30022,7 @@ EOM
             # Loop Section B: Handle a sequenced token
             #-----------------------------------------
             if ($type_sequence) {
-                $self->break_lists_type_sequence;
+                $self->break_lists_type_sequence();
             }
 
             #------------------------------------------
