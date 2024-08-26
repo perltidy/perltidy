@@ -7752,7 +7752,6 @@ sub scan_bare_identifier_do {
 
     # we have to back up one pretoken at a :: since each : is one pretoken
     if ( $tok eq '::' ) { $i_beg-- }
-    if ( $tok eq '->' ) { $i_beg-- }
     my $pos_beg = $rtoken_map->[$i_beg];
     pos($input_line) = $pos_beg;
 
@@ -7764,9 +7763,8 @@ sub scan_bare_identifier_do {
     if (
         $input_line =~ m{
          \G\s*                # start at pos
-         ( (?:\w*(?:'|::)) )* # $1 = maybe package name like A:: A::B:: or A'
-         (?:(?:->)?           #      maybe followed by '->'
-         (\w+))?              # $2 = maybe followed by sub name
+         ( (?:\w*(?:'|::))* ) # $1 = maybe package name like A:: A::B:: or A'
+         (\w+)?               # $2 = maybe followed by sub name
         }gcx
       )
     {
@@ -7780,8 +7778,18 @@ sub scan_bare_identifier_do {
 
         my $sub_name = EMPTY_STRING;
         if ( defined($2) ) { $sub_name = $2; }
-        if ( defined($1) ) {
+        if ( defined($1) && length($1) ) {
             $package = $1;
+
+            # patch: check for package call A::B::C->
+            # in this case, C is part of the package name
+            if ($sub_name) {
+                if ( $input_line =~ m{ \G\s*(?:->) }gcx ) {
+                    $package .= $sub_name;
+                    $sub_name = EMPTY_STRING;
+                }
+                pos($input_line) = $pos;
+            }
 
             # patch: don't allow isolated package name which just ends
             # in the old style package separator (single quote).  Example:
