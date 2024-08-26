@@ -16319,6 +16319,7 @@ sub update_sub_call_paren_info {
         my $call_type = $is_ampersand_call ? '&' : EMPTY_STRING;
 
         my $caller_name = EMPTY_STRING;
+        my $class_name  = EMPTY_STRING;
         if ( $type_mm eq '->' ) {
             $call_type = '->';
             my $K_m   = $self->K_previous_code($Ko);
@@ -16329,6 +16330,15 @@ sub update_sub_call_paren_info {
                 my $token_mmm = $rLL->[$K_mmm]->[_TOKEN_];
                 if ( $type_mmm eq 'i' ) {
                     $caller_name = $token_mmm;
+                }
+                elsif ( $type_mmm eq 'w' ) {
+
+                    ##  A::B->do_something( $var1, $var2 );
+                    ##  wwww->iiiiiiiiiiii{ iiiii, iiiii };
+                    if ( index( $token_mmm, '::' ) >= 0 ) {
+                        $class_name = $token_mmm;
+                        $class_name =~ s/::$//;
+                    }
                 }
                 elsif ( $token_mmm eq ']' ) {
                     if ( $is_dollar_underscore_zero->($K_mmm) ) {
@@ -16348,6 +16358,11 @@ sub update_sub_call_paren_info {
             $name    = $2;
             $package =~ s/\'/::/g;
             $package =~ s/::$//;
+        }
+        else {
+            if ($class_name) {
+                $package = $class_name;
+            }
         }
         if ( !$package ) { $package = 'main' }
 
@@ -16404,6 +16419,7 @@ sub update_sub_call_paren_info {
         $item->{line_number} = $line_number;
         $item->{call_type}   = $call_type;
         $item->{caller_name} = $caller_name;
+        $item->{class_name}  = $class_name;
     }
     return;
 } ## end sub update_sub_call_paren_info
@@ -16651,6 +16667,7 @@ sub cross_check_sub_calls {
         my $package          = $rcall_item->{package};
         my $name             = $rcall_item->{name};
         my $caller_name      = $rcall_item->{caller_name};
+        my $class_name       = $rcall_item->{class_name};
         my $key_receiver_sub = $package . '::' . $name;
         my $is_self_call;
 
@@ -16818,7 +16835,12 @@ sub cross_check_sub_calls {
               $rcall_item;
         }
         else {
-            $rcall_item->{is_external_call} = 1;
+
+            # mark calls made by unknown (non-self) objects, we can't track
+            # them, but we can track calls at the class level.
+            if ( !$class_name ) {
+                $rcall_item->{is_unknown_object_call} = 1;
+            }
         }
     }
 
@@ -16889,8 +16911,8 @@ sub cross_check_sub_calls {
 
         my $rcall_item = $rsub_call_paren_info_by_seqno->{$seqno};
 
-        # Skip external method calls
-        next if ( $rcall_item->{is_external_call} );
+        # Skip method calls by unknown objects
+        next if ( $rcall_item->{is_unknown_object_call} );
 
         my $arg_count           = $rcall_item->{arg_count};
         my $return_count_wanted = $rcall_item->{return_count_wanted};
