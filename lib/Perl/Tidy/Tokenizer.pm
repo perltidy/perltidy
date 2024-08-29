@@ -252,6 +252,7 @@ BEGIN {
         _rclosing_brace_indentation_hash_    => $i++,
         _show_indentation_table_             => $i++,
         _rnon_indenting_brace_stack_         => $i++,
+        _rbareword_info_                     => $i++,
     };
 } ## end BEGIN
 
@@ -616,6 +617,7 @@ EOM
     $self->[_true_brace_error_count_]             = 0;
     $self->[_rnon_indenting_brace_stack_]         = [];
     $self->[_show_indentation_table_]             = 0;
+    $self->[_rbareword_info_]                     = {};
 
     $self->[_rclosing_brace_indentation_hash_] = {
         valid                 => undef,
@@ -4727,6 +4729,29 @@ EOM
         return $sub_attribute_ok_here;
     } ## end sub sub_attribute_ok_here
 
+    # hashes used to guess bareword type
+    my %is_wiUC;
+    my %is_function_follower;
+    my %is_constant_follower;
+    my %is_use_require_no;
+
+    BEGIN {
+        my @qz = qw( w i U C );
+        @is_wiUC{@qz} = (1) x scalar(@qz);
+
+        @qz = qw( use require no );
+        @is_use_require_no{@qz} = (1) x scalar(@qz);
+
+        @qz = qw# ( [ { $ @ " ' m #;
+        @is_function_follower{@qz} = (1) x scalar(@qz);
+
+        @qz = qw# ; ) ] } if unless #;
+        push @qz, ',';
+        @is_constant_follower{@qz} = (1) x scalar(@qz);
+    }
+
+    use constant DEBUG_BAREWORD => 0;
+
     sub do_BAREWORD {
 
         my ($self) = @_;
@@ -5050,6 +5075,101 @@ EOM
             $self->do_UNKNOWN_BAREWORD($next_nonblank_token);
         }
 
+        #----------------------------------------------------------------
+        # Save info for use in later guessing. Even for types 'i' and 'U'
+        # because those may be marked as type 'w' (barewords) elsewhere.
+        #----------------------------------------------------------------
+        if (   $is_wiUC{$type}
+            && $statement_type ne 'use'
+            && $statement_type ne '_use' )
+        {
+            my $result = "unknown";
+
+            # Words are marked 'function' if they appear in a role which
+            # is not consistent with a constant value. Typically they are
+            # function calls.
+            if (   $type eq 'U'
+                || $is_function_follower{$next_nonblank_token} )
+            {
+
+                my $empty_parens = 0;
+                if ( $next_nonblank_token eq '(' && $i_next < $max_token_index )
+                {
+                    my $tok_next_p1 = $rtokens->[ $i_next + 1 ];
+                    if ( substr( $tok_next_p1, 0, 1 ) eq SPACE
+                        && $i_next + 2 <= $max_token_index )
+                    {
+                        $tok_next_p1 = $rtokens->[ $i_next + 2 ];
+                    }
+                    $empty_parens = $tok_next_p1 eq ')';
+                }
+
+                if ( !$empty_parens ) {
+
+                    # not a constant term - probably a function
+                    $result = "function";
+                    $self->[_rbareword_info_]->{$tok}->{function_count}++;
+                    if ( DEBUG_BAREWORD
+                        && $self->[_rbareword_info_]->{$tok}->{constant_count} )
+                    {
+                        $self->warning(<<EOM);
+"$input_line_number:$tok last=$last_nonblank_token next=$next_nonblank_token is function but previously constant\n"
+EOM
+                    }
+                }
+            }
+
+            # Words are marked 'constant' if they appear in a role
+            # consistent with a constant value.  However, they may simply
+            # be functions which optionally take zero args. So if a word
+            # appears as both constant and function, it is not a constant.
+            elsif ($type eq 'C'
+                || $is_constant_follower{$next_nonblank_token} )
+            {
+
+                my $is_hash_key = $next_nonblank_token eq '}'
+                  && (
+                    $last_nonblank_type eq 'L'
+                    || (   $last_nonblank_type eq 'm'
+                        && $last_last_nonblank_type eq 'L' )
+                  );
+
+                if (
+
+                    # not a hash key like {bareword} or {-bareword}
+                    !$is_hash_key
+
+                    # not a package name, etc
+                    && ( $last_nonblank_type ne 'k'
+                        || !$is_use_require_no{$last_nonblank_token} )
+
+                    # skip arrow calls, which can go either way
+                    && $last_nonblank_token ne '->'
+                  )
+                {
+                    # possibly a constant or constant function
+                    $result = "constant";
+                    $self->[_rbareword_info_]->{$tok}->{constant_count}++;
+                    if ( DEBUG_BAREWORD
+                        && $self->[_rbareword_info_]->{$tok}->{function_count} )
+                    {
+                        $self->warning(<<EOM);
+"$input_line_number:$tok last=$last_nonblank_token next=$next_nonblank_token is constant but previously function\n"
+EOM
+                    }
+                }
+                else {
+                    $result = "other bareword";
+                }
+            }
+            else {
+            }
+
+            if ( DEBUG_BAREWORD > 1 && $result ne 'other bareword' ) {
+                print
+"$input_line_number: $result: $tok: type=$type : last_tok=$last_nonblank_token : next_tok='$next_nonblank_token'\n";
+            }
+        }
         return $is_last;
 
     } ## end sub do_BAREWORD
