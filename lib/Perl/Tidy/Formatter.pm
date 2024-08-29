@@ -9042,14 +9042,9 @@ sub is_complete_script {
       :                  0;
 
     # common filter keywords
-    $score += 50
-      if ( $rkeyword_count->{exit}
-        || $rkeyword_count->{print}
-        || $rkeyword_count->{printf}
-        || $rkeyword_count->{open}
-        || $rkeyword_count->{system}
-        || $rkeyword_count->{exec}
-        || $rkeyword_count->{die} );
+    foreach (qw(exit print printf open system exec die)) {
+        if ( $rkeyword_count->{$_} ) { $score += 50; last; }
+    }
 
     $score += 50 if $rline_type_count->{POD};
 
@@ -21650,7 +21645,7 @@ sub process_all_lines {
                     }
 
                     $logger_object->black_box( $line_of_tokens,
-                        $vertical_aligner_object->get_output_line_number );
+                        $vertical_aligner_object->get_output_line_number() );
                 }
             }
 
