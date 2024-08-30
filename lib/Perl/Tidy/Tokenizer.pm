@@ -7625,12 +7625,32 @@ sub guess_if_pattern_or_division {
     # USES GLOBAL VARIABLES: $last_nonblank_token
     my ( $self, $i, $rtokens, $rtoken_type, $rtoken_map_uu, $max_token_index )
       = @_;
-    my $is_pattern = 0;
-    my $msg        = "guessing that / after $last_nonblank_token starts a ";
-    my $ibeg       = $i;
+    my $msg =
+"guessing that / after $last_nonblank_token type '$last_nonblank_type' starts a ";
+    my $ibeg = $i;
 
+    # use info collected for barewords to help decide
+    my $function_count;
+    my $constant_count;
+    my $rbareword_info_tok = $self->[_rbareword_info_]->{$last_nonblank_token};
+    if ($rbareword_info_tok) {
+        $function_count = $rbareword_info_tok->{function_count};
+        $constant_count = $rbareword_info_tok->{constant_count};
+    }
+    my $is_pattern = 0;
+
+    # anything more on this line?
     if ( $i >= $max_token_index ) {
-        $msg .= "division (no end to pattern found on the line)\n";
+        if ($function_count) {
+            $is_pattern = 1;
+            $msg .=
+"pattern (no end to pattern found on the line, but function count=$function_count)\n";
+        }
+        else {
+            $is_pattern = 0;
+            $msg .=
+"division (no end to pattern found on the line, function count=0)\n";
+        }
     }
     else {
         my $divide_possible =
@@ -7639,6 +7659,7 @@ sub guess_if_pattern_or_division {
         if ( $divide_possible < 0 ) {
             $msg        = "pattern (division not possible here)\n";
             $is_pattern = 1;
+            $rbareword_info_tok->{function_count}++;
             return ( $is_pattern, $msg );
         }
 
@@ -7689,14 +7710,20 @@ sub guess_if_pattern_or_division {
 
         if ($in_quote) {
 
-            # we didn't find an ending / on this line, so we bias towards
-            # division
-            if ( $divide_possible >= 0 ) {
-                $is_pattern = 0;
-                $msg .= "division (no ending / on this line)\n";
+            # we didn't find an ending / on this line
+            # first use any bareword info
+            if ($function_count) {
+                $msg .=
+"pattern - no ending / on this line but have function count=$function_count\n";
+                $is_pattern = 1;
+            }
+            elsif ( $divide_possible >= 0 ) {
+                $is_pattern     = 0;
+                $constant_count = 0 unless defined($constant_count);
+                $msg .=
+"division (no ending / on this line, function count=0, constant count=$constant_count)\n";
             }
             else {
-
                 # assuming a multi-line pattern ... this is risky, but division
                 # does not seem possible.  If this fails, it would either be due
                 # to a syntax error in the code, or the division_expected logic
@@ -7706,7 +7733,7 @@ sub guess_if_pattern_or_division {
             }
         }
 
-        # we found an ending /, so we bias slightly towards a pattern
+        # we found an ending /, it might terminate a pattern
         else {
 
             my $pattern_expected =
@@ -7722,8 +7749,20 @@ sub guess_if_pattern_or_division {
                     # Increase weight of divide if a pure number follows
                     $divide_possible += $next_token =~ /^\d+$/;
 
+                    # start with any bareword info
+                    if ($function_count) {
+                        $msg .=
+"pattern - division works too but have function count=$function_count\n";
+                        $is_pattern = 1;
+                    }
+                    elsif ($constant_count) {
+                        $msg .=
+"constant - division works too but have constant count=$constant_count\n";
+                        $is_pattern = 0;
+                    }
+
                     # Check for known constants in the numerator, like 'pi'
-                    if ( $is_known_constant{$last_nonblank_token} ) {
+                    elsif ( $is_known_constant{$last_nonblank_token} ) {
                         $msg .=
 "division (pattern works too but saw known constant '$last_nonblank_token')\n";
                         $is_pattern = 0;
