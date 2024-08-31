@@ -4729,6 +4729,53 @@ EOM
         return $sub_attribute_ok_here;
     } ## end sub sub_attribute_ok_here
 
+    use constant DEBUG_BAREWORD => 0;
+
+    sub saw_bareword_function {
+        my ( $self, $bareword ) = @_;
+        $self->[_rbareword_info_]->{$current_package}->{$bareword}
+          ->{function_count}++;
+        return;
+    } ## end sub saw_bareword_function
+
+    sub saw_bareword_constant {
+        my ( $self, $bareword ) = @_;
+        $self->[_rbareword_info_]->{$current_package}->{$bareword}
+          ->{constant_count}++;
+        return;
+    } ## end sub saw_bareword_constant
+
+    sub get_bareword_counts {
+        my ( $self, $bareword ) = @_;
+
+        # Given:
+        #   $bareword = a bareword
+        # Return:
+        #   $function_count = number of times seen as function taking >0 args
+        #   $constant_count = number of times seen as function taking  0 args
+        # Note:
+        #   $function_count > 0 implies that a TERM should come next
+        #   $constant_count > 0 implies that an OPERATOR **may** come next,
+        #      but this can be incorrect if $bareword can take 0 or more args.
+        # This is used to help guess tokenization around unknown barewords.
+        my $function_count;
+        my $constant_count;
+        my $rbareword_info_tok = $self->[_rbareword_info_]->{$current_package};
+        if ($rbareword_info_tok) {
+            $rbareword_info_tok = $rbareword_info_tok->{$bareword};
+            if ($rbareword_info_tok) {
+                $function_count = $rbareword_info_tok->{function_count};
+                $constant_count = $rbareword_info_tok->{constant_count};
+
+                # a positive function count overrides a constant count
+                if ($function_count) { $constant_count = 0 }
+            }
+        }
+        if ( !defined($function_count) ) { $function_count = 0 }
+        if ( !defined($constant_count) ) { $constant_count = 0 }
+        return ( $function_count, $constant_count );
+    } ## end sub get_bareword_counts
+
     # hashes used to guess bareword type
     my %is_wiUC;
     my %is_function_follower;
@@ -4749,8 +4796,6 @@ EOM
         push @qz, ',';
         @is_constant_follower{@qz} = (1) x scalar(@qz);
     }
-
-    use constant DEBUG_BAREWORD => 0;
 
     sub do_BAREWORD {
 
@@ -5108,14 +5153,7 @@ EOM
 
                     # not a constant term - probably a function
                     $result = "function";
-                    $self->[_rbareword_info_]->{$tok}->{function_count}++;
-                    if ( DEBUG_BAREWORD
-                        && $self->[_rbareword_info_]->{$tok}->{constant_count} )
-                    {
-                        $self->warning(<<EOM);
-"$input_line_number:$tok last=$last_nonblank_token next=$next_nonblank_token is function but previously constant\n"
-EOM
-                    }
+                    $self->saw_bareword_function($tok);
                 }
             }
 
@@ -5149,14 +5187,7 @@ EOM
                 {
                     # possibly a constant or constant function
                     $result = "constant";
-                    $self->[_rbareword_info_]->{$tok}->{constant_count}++;
-                    if ( DEBUG_BAREWORD
-                        && $self->[_rbareword_info_]->{$tok}->{function_count} )
-                    {
-                        $self->warning(<<EOM);
-"$input_line_number:$tok last=$last_nonblank_token next=$next_nonblank_token is constant but previously function\n"
-EOM
-                    }
+                    $self->saw_bareword_constant($tok);
                 }
                 else {
                     $result = "other bareword";
@@ -5165,7 +5196,7 @@ EOM
             else {
             }
 
-            if ( DEBUG_BAREWORD > 1 && $result ne 'other bareword' ) {
+            if ( DEBUG_BAREWORD && $result ne 'other bareword' ) {
                 print
 "$input_line_number: $result: $tok: type=$type : last_tok=$last_nonblank_token : next_tok='$next_nonblank_token'\n";
             }
@@ -7630,13 +7661,8 @@ sub guess_if_pattern_or_division {
     my $ibeg = $i;
 
     # use info collected for barewords to help decide
-    my $function_count;
-    my $constant_count;
-    my $rbareword_info_tok = $self->[_rbareword_info_]->{$last_nonblank_token};
-    if ($rbareword_info_tok) {
-        $function_count = $rbareword_info_tok->{function_count};
-        $constant_count = $rbareword_info_tok->{constant_count};
-    }
+    my ( $function_count, $constant_count ) =
+      $self->get_bareword_counts($last_nonblank_token);
     my $is_pattern = 0;
 
     # anything more on this line?
@@ -7659,7 +7685,7 @@ sub guess_if_pattern_or_division {
         if ( $divide_possible < 0 ) {
             $msg        = "pattern (division not possible here)\n";
             $is_pattern = 1;
-            $rbareword_info_tok->{function_count}++;
+            $self->saw_bareword_function($last_nonblank_token);
             return ( $is_pattern, $msg );
         }
 
@@ -9885,8 +9911,15 @@ sub find_angle_operator_termination {
 
     my $filter;
 
+    my $expecting_TERM = $expecting == TERM;
+    if ( $last_nonblank_type eq 'w' ) {
+        my ( $function_count, $constant_count_uu ) =
+          $self->get_bareword_counts($last_nonblank_token);
+        $expecting_TERM ||= $function_count;
+    }
+
     # we just have to find the next '>' if a term is expected
-    if ( $expecting == TERM ) { $filter = '[\>]' }
+    if ($expecting_TERM) { $filter = '[\>]' }
 
     # we have to guess if we don't know what is expected
     elsif ( $expecting == UNKNOWN ) { $filter = '[\>\;\=\#\|\<]' }
@@ -10028,7 +10061,7 @@ EOM
 
             # Now let's see where we stand....
             # OK if math op not possible
-            if ( $expecting == TERM ) {
+            if ($expecting_TERM) {
             }
 
             elsif ($is_html_tag) {
@@ -10085,7 +10118,7 @@ EOM
 
         # didn't find ending >
         else {
-            if ( $expecting == TERM ) {
+            if ($expecting_TERM) {
                 $self->warning("No ending > for angle operator\n");
             }
         }
