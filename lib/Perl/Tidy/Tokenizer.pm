@@ -3721,14 +3721,16 @@ EOM
         my $self = shift;
 
         # '*' = typeglob, or multiply?
-        if ( $expecting == UNKNOWN && $last_nonblank_type eq 'Z' ) {
-            if (   $next_type ne 'b'
+        if ( $expecting == UNKNOWN ) {
+            if (   $last_nonblank_type eq 'Z'
+                && $next_type ne 'b'
                 && $next_type ne '('
                 && $next_type ne '#' )    # Fix c036
             {
                 $expecting = TERM;
             }
         }
+
         if ( $expecting == TERM ) {
             $self->scan_simple_identifier();
         }
@@ -3971,7 +3973,6 @@ EOM
         elsif ( $expecting == OPERATOR ) {
         }
         else {
-
             if ( $next_type eq 'w' ) {
                 $type = 'm';
             }
@@ -4776,7 +4777,7 @@ EOM
         return ( $function_count, $constant_count );
     } ## end sub get_bareword_counts
 
-    # hashes used to guess bareword type
+    # hashes used to help determine a bareword type
     my %is_wiUC;
     my %is_function_follower;
     my %is_constant_follower;
@@ -4789,9 +4790,14 @@ EOM
         @qz = qw( use require no );
         @is_use_require_no{@qz} = (1) x scalar(@qz);
 
+        # These pre-token types after a bareword imply that it
+        # is not a constant, except when '(' is followed by ')'.
         @qz = qw# ( [ { $ @ " ' m #;
         @is_function_follower{@qz} = (1) x scalar(@qz);
 
+        # These pre-token types after a bareword imply that it
+        # MIGHT be a constant, but it also might be a function taking
+        # 0 or more call args.
         @qz = qw# ; ) ] } if unless #;
         push @qz, ',';
         @is_constant_follower{@qz} = (1) x scalar(@qz);
@@ -6451,10 +6457,9 @@ BEGIN {
     push @q, '->';    # was previously in UNKNOWN
     @op_expected_table{@q} = (TERM) x scalar(@q);
 
-    # Always UNKNOWN following these types;
-    # previously had '->' in this list for c030
-    @q = qw( w );
-    @op_expected_table{@q} = (UNKNOWN) x scalar(@q);
+    # No UNKNOWN table types:
+    #  removed '->' for c030, now always TERM
+    #  removed 'w' for c392 to allow use of 'function_count' info in the sub
 
     # Always expecting OPERATOR ...
     # 'n' and 'v' are currently excluded because they might be VERSION numbers
@@ -6713,8 +6718,23 @@ sub operator_expected {
         return OPERATOR;
     }
 
+    # Section 2E: bareword
+    if ( $last_nonblank_type eq 'w' ) {
+
+        # see if this has been seen in the role of a function taking args
+        my $rinfo = $self->[_rbareword_info_]->{$current_package};
+        if ($rinfo) {
+            $rinfo = $rinfo->{$last_nonblank_token};
+            if ($rinfo) {
+                my $function_count = $rinfo->{function_count};
+                if ( $function_count && $function_count > 0 ) { return TERM }
+            }
+        }
+        return UNKNOWN;
+    }
+
     #-----------------------------------
-    # Section 2E: file handle or similar
+    # Section 2F: file handle or similar
     #-----------------------------------
     if ( $last_nonblank_type eq 'Z' ) {
 
@@ -9912,11 +9932,6 @@ sub find_angle_operator_termination {
     my $filter;
 
     my $expecting_TERM = $expecting == TERM;
-    if ( $last_nonblank_type eq 'w' ) {
-        my ( $function_count, $constant_count_uu ) =
-          $self->get_bareword_counts($last_nonblank_token);
-        $expecting_TERM ||= $function_count;
-    }
 
     # we just have to find the next '>' if a term is expected
     if ($expecting_TERM) { $filter = '[\>]' }

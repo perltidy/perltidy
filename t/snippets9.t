@@ -382,7 +382,7 @@ my $json = encode_json {
     when    => time(),
     message => 'abc'
 };
-my $json2 = encode_json + {
+my $json2 = encode_json +{
     when    => time(),
     message => 'abc'
 };
