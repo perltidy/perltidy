@@ -29,7 +29,7 @@
   - install the latest RPerl [currently RPerl-7.000000]
   - perl Makefile.PL, make, make test - should complete ok
 - Review code, especially any ## commented out sections and "FIXME's"
-- run perlver on all modules to check minimum version; should be 5.8.0
+- run perlver on all modules to check minimum version; should be 5.8.1
   - The first line in Tidy.pm has the required version of Perl
   - use perlbrew to do local checks and debugging on earlier versions of perl
    - perlbrew list               [show installed versions]

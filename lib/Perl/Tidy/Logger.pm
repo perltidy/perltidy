@@ -516,7 +516,7 @@ sub finish {
             my $routput_array = $self->{_output_array};
             foreach my $line ( @{$routput_array} ) { $fh->print($line) }
             if (   $fh->can('close')
-                && !ref($log_file) ne '-'
+                && !ref($log_file)
                 && $log_file ne '-' )
             {
                 $fh->close()
