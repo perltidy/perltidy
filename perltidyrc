@@ -13,6 +13,7 @@
 --warn-missing-else
 
 # warn if certain of the 'unusual' variables are seen
+# variable names ending in '_uu' are excluded from warnings
 --warn-variable-types='*'
 --warn-variable-exclusion-list='$self $class *_uu'
 

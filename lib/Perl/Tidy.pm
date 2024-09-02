@@ -54,10 +54,12 @@
 
 package Perl::Tidy;
 
-# perlver reports minimum version needed is 5.8.0
+# perlver reports minimum version needed is 5.8.1
 # 5.004 needed for IO::File
 # 5.008 needed for wide characters
-use 5.008;
+# 5.008001 needed for utf8::is_utf8
+# 5.008001 needed for Scalar::Util::refaddr
+use 5.008001;
 use warnings;
 use strict;
 use Exporter;
@@ -133,7 +135,7 @@ BEGIN {
     # then the Release version must be bumped, and it is probably past time for
     # a release anyway.
 
-    $VERSION = '20240511.10';
+    $VERSION = '20240903';
 } ## end BEGIN
 
 sub DESTROY {
@@ -370,7 +372,7 @@ EOM
                     1;
                 }
                   or Die(
-"Timeout reading stdin using -to=$timeout_in_seconds seconds. Use -tos=0 to skip timeout check.\n"
+"Timeout reading stdin using -tos=$timeout_in_seconds seconds. Use -tos=0 to skip timeout check.\n"
                   );
             }
             else {
@@ -494,7 +496,7 @@ sub is_char_mode {
 
     # This function isolates the call to Perl's internal function
     # utf8::is_utf8() which is true for strings represented in an 'upgraded
-    # form'. It is available after Perl version 5.8.
+    # form'. It is available AFTER Perl version 5.8.
     # See https://perldoc.perl.org/Encode.
     # See also comments in Carp.pm and other modules using this function
 

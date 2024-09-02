@@ -37,7 +37,6 @@ lib/Perl/Tidy.pm
 lib/Perl/Tidy.pod
 lib/Perl/Tidy/Debugger.pm
 lib/Perl/Tidy/Diagnostics.pm
-lib/Perl/Tidy/diff.txt
 lib/Perl/Tidy/FileWriter.pm
 lib/Perl/Tidy/Formatter.pm
 lib/Perl/Tidy/HtmlWriter.pm

@@ -76,7 +76,7 @@ use constant BACKSLASH    => q{\\};
 use Carp;
 use English    qw( -no_match_vars );
 use List::Util qw( min max first );    # min, max first are in Perl 5.8
-our $VERSION = '20240511.10';
+our $VERSION = '20240903';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -9090,7 +9090,7 @@ sub get_qw_list {
     $string =~ s/^\s*//;                   # trim left
     $string =~ s/\s*$//;                   # trim right
 
-    my @list = split SPACE, $string;
+    my @list = split /\s+/, $string;
     return ( $K_last_q, \@list );
 } ## end sub get_qw_list
 

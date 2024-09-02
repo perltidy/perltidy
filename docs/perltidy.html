@@ -4745,7 +4745,7 @@
 </ul>
 
 </dd>
-<dt id="use---dump-unusual-variables-to-find-unused-reused-and-certain-other-variables-of-interest"><b>use --dump-unusual-variables to find unused, reused, and certain other variables of interest</b></dt>
+<dt id="Use---dump-unusual-variables-to-find-unused-reused-and-certain-other-variables-of-interest"><b>Use --dump-unusual-variables to find unused, reused, and certain other variables of interest</b></dt>
 <dd>
 
 <p>Variables with certain properties of interest to a programmer can be listed with <b>--dump-unusual-variables</b> or <b>-duv</b>. This parameter must be on the command line, along with a single file name. It causes perltidy to scan the file for certain variable types, write any found to the standard output, and then immediately exit without doing any formatting. For example</p>
@@ -4781,7 +4781,7 @@
 <dt id="s:-sigil-change-but-reused-bareword"><b>s: sigil change but reused bareword</b></dt>
 <dd>
 
-<p>These are variables which have the same bareword name but a different sigil (<b>$</b>, <b>@</b>, or <b>%</b>) as another variable in the same scope. For example, this occurs if variables <b>$data</b> and <b>%data</b> share the same scope. This can be confusing and can be avoided by renaming one of the variables.</p>
+<p>These are variables which have the same bareword name but a different sigil (<b>$</b>, <b>@</b>, or <b>%</b>) as another variable in the same scope. For example, this occurs if variables <b>$data</b> and <b>%data</b> share the same scope. This can also be confusing for the reasons mentioned above and can be avoided by renaming one of the variables.</p>
 
 </dd>
 <dt id="p:-package-crossing-variables"><b>p: package-crossing variables</b></dt>
@@ -4828,7 +4828,7 @@
 <dt id="Use---warn-variable-types-to-warn-about-certain-variable-types"><b>Use --warn-variable-types to warn about certain variable types</b></dt>
 <dd>
 
-<p>The flag <b>--warn-variable-types=string</b>, or <b>-wvt=string</b>, can be used to produce a warning message if certain of the above variable types are encountered during formatting. All possible variable warnings may be requested with <b>-wvt=&#39;*&#39;</b> or <b>-wvt=1</b>.</p>
+<p>The flag <b>--warn-variable-types=string</b>, or <b>-wvt=string</b>, is the <b>--warn</b> counterpart to <b>--dump-unusual-variables</b>, and can be used to produce a warning message if certain of the above variable types are encountered during formatting. All possible variable warnings may be requested with <b>-wvt=&#39;*&#39;</b> or <b>-wvt=1</b>.</p>
 
 <p>For example,</p>
 
@@ -4842,15 +4842,23 @@
 
 <p>will process <i>somefile.pl</i> normally but issue a warning if either of the issues <b>s</b> or <b>r</b>, described above, are encountered.</p>
 
-<p>The <b>u</b> and <b>c</b> options (unused variables and constants) have a limitation: they may be silently turned off if perltidy detects that it is operating on just part of a script. This logic is necessary to avoid warnings when perltidy is run on small snippets of code from within an editor. These options are never turned off if perltidy receives a <b>-wvt</b> parameter on the command line and is operating on a named file.</p>
-
 <p>A companion flag, <b>--warn-variable-exclusion-list=string</b>, or <b>-wvxl=string</b>, can be used to skip warning checks for a list of variable names. A leading and/or trailing &#39;*&#39; may be placed on any of these variable names to allow a partial match.</p>
 
 <p>For example,</p>
 
-<pre><code>   perltidy -wvt=&#39;*&#39; -wvxl=&#39;$self $class *_unused&#39;  somefile.pl</code></pre>
+<pre><code>   perltidy -wvt=1 -wvxl=&#39;$self $class *_unused&#39;  somefile.pl</code></pre>
 
 <p>will do all possible checks but not report any warnings for variables <code>$self</code>, <code>$class</code>, and for example <code>$value_unused</code>.</p>
+
+<p>This partial match option provides a way to trigger a warning message when a new unused variable is detected in a script. This can be accomplished by adding a unique suffix to the names of existing unused variables, such as <code>_unused</code>. This suffix is then added to the exclusion list.</p>
+
+<p>As a specific example, consider the following line which is part of some debug code which only references the latter three variables (but might someday need to reference the package variable too).</p>
+
+<pre><code>    my ( $package_uu, $filename, $line, $subroutine ) = caller();</code></pre>
+
+<p>The unused variable, <code>$package_uu</code>, has been specially marked with suffix <code>_uu</code>. No type <b>u</b> (unused variable) warning will be produced provided that this wildcard suffix is in the exclusion list:</p>
+
+<pre><code>    -wvxl=&#39;*_uu&#39;</code></pre>
 
 </dd>
 <dt id="Use---dump-mixed-call-parens-to-find-functions-called-both-with-and-without-parens"><b>Use --dump-mixed-call-parens to find functions called both with and without parens</b></dt>
@@ -5415,7 +5423,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20240511.10</p>
+<p>This man page documents perltidy version 20240903</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

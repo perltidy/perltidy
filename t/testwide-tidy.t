@@ -28,7 +28,7 @@ sub my_note {
 
     # work around problem where sub Test::More::note does not exist
     # in older versions of perl
-    if ($] >= 5.010) {
+    if ($] > 5.010) {
        note($msg);
     }
     return;
