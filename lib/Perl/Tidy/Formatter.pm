@@ -10526,20 +10526,22 @@ EOM
 } ## end sub dump_unusual_variables
 
 sub initialize_warn_hash {
-    my ( $long_name, $default, $rall_opts, $wvt_in_args ) = @_;
+    my ( $long_name, $default, $rall_opts ) = @_;
 
     # Given:
     #   $long_name   = full option name
     #   $default     = default value
     #   $rall_opts   = all possible options
-    #   $wvt_in_args = special flag for --warn-variable-types only
     # Return the corresponding option hash
 
     # Example of all possible options for --warn-variable-types=s
     #  r - reused scope
     #  s - reused sigil
     #  p - package boundaries crossed by lexical variables
-    #  u - only if -wvt and filename(s) are on command line; see git #151
+    #  u - unused lexical variable defined by my, state, our
+    #  c - unused constant defined by use constant
+
+    # Other warn options use different letters
 
     # Other controls:
     #  0 - none of the above
@@ -10548,8 +10550,6 @@ sub initialize_warn_hash {
 
     # Example:
     #  -wvt='s r'  : do check types 's' and 'r'
-
-    # Other warn options use different letters
 
     my $rwarn_hash = {};
 
@@ -10588,7 +10588,7 @@ sub initialize_warn_hash {
             return $rwarn_hash;
         }
         else {
-            # should be one of r,s,p, maybe u - catch any error below
+            # should be one of the allowed letters - catch any error below
         }
     }
 
@@ -10596,34 +10596,16 @@ sub initialize_warn_hash {
     foreach my $opt (@opts) {
         if ( $is_valid_option{$opt} ) {
             $rwarn_hash->{$opt} = 1;
+            next;
+        }
+
+        # invalid option..
+        if ( $opt =~ /^[01\*]$/ ) {
+            $msg .=
+              "--$long_name cannot contain $opt mixed with other options\n";
         }
         else {
-            if ( $opt =~ /^[01\*]$/ ) {
-                $msg .=
-                  "--$long_name cannot contain $opt mixed with other options\n";
-            }
-
-            # Special check for -wvt
-            # Deactivated for now to allow -wvt in perltidyrc files. This can
-            # eventually be removed if allowing this does not cause problems.
-            elsif ( 0
-                && ( $opt eq 'u' || $opt eq 'c' )
-                && $long_name eq 'warn-variable-types' )
-            {
-                if ( !$wvt_in_args ) {
-                    Warn(<<EOM);
---$long_name=$opt is not allowed in a .perltidyrc configuration file
-EOM
-                }
-                else {
-                    Warn(<<EOM);
---$long_name=$opt is only available when processing specific filenames
-EOM
-                }
-            }
-            else {
-                $msg .= "--$long_name has unexpected symbol: '$opt'\n";
-            }
+            $msg .= "--$long_name has unexpected symbol: '$opt'\n";
         }
     }
     if ($msg) { Die($msg) }
@@ -10740,8 +10722,7 @@ sub initialize_warn_variable_types {
 
     my @all_opts = qw(r s p u c);
     $rwarn_variable_types =
-      initialize_warn_hash( 'warn-variable-types', 0, \@all_opts,
-        $wvt_in_args );
+      initialize_warn_hash( 'warn-variable-types', 0, \@all_opts );
 
     # Check for issues 'u' or 'c' cannot be fully made if we are working
     # on a partial file (snippet), so we save info about that.
