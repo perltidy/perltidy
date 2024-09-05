@@ -7571,81 +7571,79 @@ sub guess_if_pattern_or_conditional {
     my ( $self, $i, $rtokens, $rtoken_type, $rtoken_map_uu, $max_token_index )
       = @_;
     my $is_pattern = 0;
-    my $msg        = "guessing that ? after $last_nonblank_token starts a ";
+    my $msg        = "guessing that ? after '$last_nonblank_token' starts a ";
 
     if ( $i >= $max_token_index ) {
         $msg .= "conditional (no end to pattern found on the line)\n";
+        $is_pattern = 0;
+        return ( $is_pattern, $msg );
     }
-    else {
-        my $ibeg = $i;
-        $i = $ibeg + 1;
-        ##my $next_token = $rtokens->[$i];    # first token after ?
 
-        # look for a possible ending ? on this line..
-        my $in_quote        = 1;
-        my $quote_depth     = 0;
-        my $quote_character = EMPTY_STRING;
-        my $quote_pos       = 0;
-        my $quoted_string;
-        (
+    my $ibeg = $i;
+    $i = $ibeg + 1;
+    ##my $next_token = $rtokens->[$i];    # first token after ?
 
-            $i,
-            $in_quote,
-            $quote_character,
-            $quote_pos,
-            $quote_depth,
-            $quoted_string,
+    # look for a possible ending ? on this line..
+    my $in_quote        = 1;
+    my $quote_depth     = 0;
+    my $quote_character = EMPTY_STRING;
+    my $quote_pos       = 0;
+    my $quoted_string;
+    (
 
-        ) = $self->follow_quoted_string(
+        $i,
+        $in_quote,
+        $quote_character,
+        $quote_pos,
+        $quote_depth,
+        $quoted_string,
 
-            $ibeg,
-            $in_quote,
-            $rtokens,
-            $rtoken_type,
-            $quote_character,
-            $quote_pos,
-            $quote_depth,
-            $max_token_index,
+    ) = $self->follow_quoted_string(
 
-        );
+        $ibeg,
+        $in_quote,
+        $rtokens,
+        $rtoken_type,
+        $quote_character,
+        $quote_pos,
+        $quote_depth,
+        $max_token_index,
 
-        if ($in_quote) {
+    );
 
-            # we didn't find an ending ? on this line,
-            # so we bias towards conditional
-            $is_pattern = 0;
-            $msg .= "conditional (no ending ? on this line)\n";
+    if ($in_quote) {
 
-            # we found an ending ?, so we bias towards a pattern
-        }
-        else {
-
-            # Watch out for an ending ? in quotes, like this
-            #    my $case_flag = File::Spec->case_tolerant ? '(?i)' : '';
-            my $s_quote = 0;
-            my $d_quote = 0;
-            my $colons  = 0;
-            foreach my $ii ( $ibeg + 1 .. $i - 1 ) {
-                my $tok = $rtokens->[$ii];
-                if ( $tok eq ":" ) { $colons++ }
-                if ( $tok eq "'" ) { $s_quote++ }
-                if ( $tok eq '"' ) { $d_quote++ }
-            }
-            if ( $s_quote % 2 || $d_quote % 2 || $colons ) {
-                $is_pattern = 0;
-                $msg .= "found ending ? but unbalanced quote chars\n";
-            }
-            elsif (
-                $self->pattern_expected( $i, $rtokens, $max_token_index ) >= 0 )
-            {
-                $is_pattern = 1;
-                $msg .= "pattern (found ending ? and pattern expected)\n";
-            }
-            else {
-                $msg .= "pattern (uncertain, but found ending ?)\n";
-            }
-        }
+        # we didn't find an ending ? on this line,
+        # so we bias towards conditional
+        $is_pattern = 0;
+        $msg .= "conditional (no ending ? on this line)\n";
+        return ( $is_pattern, $msg );
     }
+
+    # we found an ending ?, so we bias towards a pattern
+
+    # Watch out for an ending ? in quotes, like this
+    #    my $case_flag = File::Spec->case_tolerant ? '(?i)' : '';
+    my $s_quote = 0;
+    my $d_quote = 0;
+    my $colons  = 0;
+    foreach my $ii ( $ibeg + 1 .. $i - 1 ) {
+        my $tok = $rtokens->[$ii];
+        if ( $tok eq ":" ) { $colons++ }
+        if ( $tok eq "'" ) { $s_quote++ }
+        if ( $tok eq '"' ) { $d_quote++ }
+    }
+    if ( $s_quote % 2 || $d_quote % 2 || $colons ) {
+        $is_pattern = 0;
+        $msg .= "found ending ? but unbalanced quote chars\n";
+        return ( $is_pattern, $msg );
+    }
+    if ( $self->pattern_expected( $i, $rtokens, $max_token_index ) >= 0 ) {
+        $is_pattern = 1;
+        $msg .= "pattern (found ending ? and pattern expected)\n";
+        return ( $is_pattern, $msg );
+    }
+    $msg .= "pattern (uncertain, but found ending ?)\n";
     return ( $is_pattern, $msg );
 } ## end sub guess_if_pattern_or_conditional
 
@@ -7665,211 +7663,147 @@ BEGIN {
 
 sub guess_if_pattern_or_division {
 
-    # this routine is called when we have encountered a / following an
+    # This routine is called when we have encountered a / following an
     # unknown bareword, and we must decide if it starts a pattern or is a
-    # division
+    # division.
     # input parameters:
     #   $i - token index of the / starting possible pattern
     # output parameters:
     #   $is_pattern = 0 if probably division,  =1 if probably a pattern
     #   msg = a warning or diagnostic message
     # USES GLOBAL VARIABLES: $last_nonblank_token
-    my ( $self, $i, $rtokens, $rtoken_type, $rtoken_map_uu, $max_token_index )
-      = @_;
-    my $msg =
-"guessing that / after $last_nonblank_token type '$last_nonblank_type' starts a ";
-    my $ibeg = $i;
-
-    # use info collected for barewords to help decide
-    my ( $function_count, $constant_count ) =
-      $self->get_bareword_counts($last_nonblank_token);
+    my ( $self, $i, $rtokens, $rtoken_type, $rtoken_map, $max_token_index ) =
+      @_;
+    my $msg        = "guessing that / after '$last_nonblank_token' starts a ";
+    my $ibeg       = $i;
     my $is_pattern = 0;
 
-    # anything more on this line?
+    my $divide_possible =
+      $self->is_possible_numerator( $i, $rtokens, $max_token_index );
+
+    if ( $divide_possible < 0 ) {
+        $msg .= "pattern (division not possible here)\n";
+        $is_pattern = 1;
+        $self->saw_bareword_function($last_nonblank_token);
+        return ( $is_pattern, $msg );
+    }
+    if ( $divide_possible == 4 ) {
+        $msg .= "division (pattern not possible here)\n";
+        $is_pattern = 0;
+        return ( $is_pattern, $msg );
+    }
+
+    # anything left on line?
     if ( $i >= $max_token_index ) {
-        if ($function_count) {
-            $is_pattern = 1;
-            $msg .=
-"pattern (no end to pattern found on the line, but function count=$function_count)\n";
-        }
-        else {
-            $is_pattern = 0;
-            $msg .=
-"division (no end to pattern found on the line, function count=0)\n";
-        }
+        $msg .= "division (line ends with this /)\n";
+        $is_pattern = 0;
+        return ( $is_pattern, $msg );
+    }
+
+    # quick check for no pattern-ending slash on this line
+    my $pos_beg    = $rtoken_map->[$ibeg];
+    my $input_line = $self->[_line_of_text_];
+    if ( index( $input_line, '/', $pos_beg + 1 ) < 0 ) {
+        $msg .= "division (no ending / on this line)\n";
+        $is_pattern = 0;
+        return ( $is_pattern, $msg );
+    }
+
+    # Setup spacing rule before we change $i below..
+    $i = $ibeg + 1;
+    my $next_token = $rtokens->[$i];    # first token after slash
+
+    # There are four possible spacings around the first slash:
+    #
+    #     return pi/two;#/;     -/-
+    #     return pi/ two;#/;    -/+
+    #     return pi / two;#/;   +/+
+    #     return pi /two;#/;    +/-   <-- possible pattern
+    #
+    # Spacing rule: a space before the slash but not after the slash
+    # usually indicates a pattern.  We can use this to break ties.
+    # Note: perl seems to take a newline as a space in this rule (c243)
+    my $space_before          = $i < 2 || $rtokens->[ $i - 2 ] =~ m/^\s/;
+    my $space_after           = $next_token                    =~ m/^\s/;
+    my $is_pattern_by_spacing = $space_before && !$space_after;
+
+    # Make an accurate search for a possible terminating / on this line..
+    my $in_quote        = 1;
+    my $quote_depth     = 0;
+    my $quote_character = EMPTY_STRING;
+    my $quote_pos       = 0;
+    my $quoted_string;
+    (
+
+        $i,
+        $in_quote,
+        $quote_character,
+        $quote_pos,
+        $quote_depth,
+        $quoted_string
+      )
+      = $self->follow_quoted_string(
+
+        $ibeg,
+        $in_quote,
+        $rtokens,
+        $rtoken_type,
+        $quote_character,
+        $quote_pos,
+        $quote_depth,
+        $max_token_index
+      );
+
+    # if we didn't find an ending / on this line ..
+    if ($in_quote) {
+        $is_pattern = 0;
+        $msg .= "division (no ending / on this line)\n";
+        return ( $is_pattern, $msg );
+    }
+
+    # we found an ending /, see if it might terminate a pattern
+    my $pattern_expected =
+      $self->pattern_expected( $i, $rtokens, $max_token_index );
+
+    if ( $pattern_expected < 0 ) {
+        $is_pattern = 0;
+        $msg .= "division (pattern not possible)\n";
+        return ( $is_pattern, $msg );
+    }
+
+    # Both pattern and divide can work here...
+    # Check for known constants in the numerator, like 'pi'
+    if ( $is_known_constant{$last_nonblank_token} ) {
+        $msg .=
+"division (pattern works too but saw known constant '$last_nonblank_token')\n";
+        $is_pattern = 0;
+        return ( $is_pattern, $msg );
+    }
+
+    # Check for known functions like 'ok'
+    if ( $is_known_function{$last_nonblank_token} ) {
+        $msg .= "pattern (division works too but saw '$last_nonblank_token')\n";
+        $is_pattern = 1;
+        return ( $is_pattern, $msg );
+    }
+
+    # If one rule is more probable, use it
+    if ( $divide_possible > $pattern_expected ) {
+        $msg .= "division (more likely based on following tokens)\n";
+        $is_pattern = 0;
+        return ( $is_pattern, $msg );
+    }
+
+    # finally, we have to use the spacing rule
+    if ($is_pattern_by_spacing) {
+        $msg .= "pattern (guess on spacing, but division possible too)\n";
+        $is_pattern = 1;
     }
     else {
-        my $divide_possible =
-          $self->is_possible_numerator( $i, $rtokens, $max_token_index );
-
-        if ( $divide_possible < 0 ) {
-            $msg        = "pattern (division not possible here)\n";
-            $is_pattern = 1;
-            $self->saw_bareword_function($last_nonblank_token);
-            return ( $is_pattern, $msg );
-        }
-
-        $i = $ibeg + 1;
-        my $next_token = $rtokens->[$i];    # first token after slash
-
-        # One of the things we can look at is the spacing around the slash.
-        # There # are four possible spacings around the first slash:
-        #
-        #     return pi/two;#/;     -/-
-        #     return pi/ two;#/;    -/+
-        #     return pi / two;#/;   +/+
-        #     return pi /two;#/;    +/-   <-- possible pattern
-        #
-        # Spacing rule: a space before the slash but not after the slash
-        # usually indicates a pattern.  We can use this to break ties.
-        # Note: perl seems to take a newline as a space in this rule (c243)
-        my $space_before          = $i < 2 || $rtokens->[ $i - 2 ] =~ m/^\s/;
-        my $space_after           = $next_token                    =~ m/^\s/;
-        my $is_pattern_by_spacing = $space_before && !$space_after;
-
-        # look for a possible ending / on this line..
-        my $in_quote        = 1;
-        my $quote_depth     = 0;
-        my $quote_character = EMPTY_STRING;
-        my $quote_pos       = 0;
-        my $quoted_string;
-        (
-
-            $i,
-            $in_quote,
-            $quote_character,
-            $quote_pos,
-            $quote_depth,
-            $quoted_string
-          )
-          = $self->follow_quoted_string(
-
-            $ibeg,
-            $in_quote,
-            $rtokens,
-            $rtoken_type,
-            $quote_character,
-            $quote_pos,
-            $quote_depth,
-            $max_token_index
-          );
-
-        if ($in_quote) {
-
-            # we didn't find an ending / on this line
-            # first use any bareword info
-            if ($function_count) {
-                $msg .=
-"pattern - no ending / on this line but have function count=$function_count\n";
-                $is_pattern = 1;
-            }
-            elsif ( $divide_possible >= 0 ) {
-                $is_pattern     = 0;
-                $constant_count = 0 unless defined($constant_count);
-                $msg .=
-"division (no ending / on this line, function count=0, constant count=$constant_count)\n";
-            }
-            else {
-                # assuming a multi-line pattern ... this is risky, but division
-                # does not seem possible.  If this fails, it would either be due
-                # to a syntax error in the code, or the division_expected logic
-                # needs to be fixed.
-                $msg        = "multi-line pattern (division not possible)\n";
-                $is_pattern = 1;
-            }
-        }
-
-        # we found an ending /, it might terminate a pattern
-        else {
-
-            my $pattern_expected =
-              $self->pattern_expected( $i, $rtokens, $max_token_index );
-
-            if ( $pattern_expected >= 0 ) {
-
-                # pattern looks possible...
-                if ( $divide_possible >= 0 ) {
-
-                    # Both pattern and divide can work here...
-
-                    # Increase weight of divide if a pure number follows
-                    $divide_possible += $next_token =~ /^\d+$/;
-
-                    # start with any bareword info
-                    if ($function_count) {
-                        $msg .=
-"pattern - division works too but have function count=$function_count\n";
-                        $is_pattern = 1;
-                    }
-                    elsif ($constant_count) {
-                        $msg .=
-"constant - division works too but have constant count=$constant_count\n";
-                        $is_pattern = 0;
-                    }
-
-                    # Check for known constants in the numerator, like 'pi'
-                    elsif ( $is_known_constant{$last_nonblank_token} ) {
-                        $msg .=
-"division (pattern works too but saw known constant '$last_nonblank_token')\n";
-                        $is_pattern = 0;
-                    }
-
-                    # A very common bare word in pattern expressions is 'ok'
-                    elsif ( $is_known_function{$last_nonblank_token} ) {
-                        $msg .=
-"pattern (division works too but saw '$last_nonblank_token')\n";
-                        $is_pattern = 1;
-                    }
-
-                    # If one rule is more definite, use it
-                    elsif ( $divide_possible > $pattern_expected ) {
-                        $msg .=
-                          "division (more likely based on following tokens)\n";
-                        $is_pattern = 0;
-                    }
-
-                    # otherwise, use the spacing rule
-                    elsif ($is_pattern_by_spacing) {
-                        $msg .=
-"pattern (guess on spacing, but division possible too)\n";
-                        $is_pattern = 1;
-                    }
-                    else {
-                        $msg .=
-"division (guess on spacing, but pattern is possible too)\n";
-                        $is_pattern = 0;
-                    }
-                }
-
-                # divide_possible < 0 means divide can not work here
-                else {
-                    $is_pattern = 1;
-                    $msg .= "pattern (division not possible)\n";
-                }
-            }
-
-            # pattern does not look possible...
-            else {
-
-                if ( $divide_possible >= 0 ) {
-                    $is_pattern = 0;
-                    $msg .= "division (pattern not possible)\n";
-                }
-
-                # Neither pattern nor divide look possible...go by spacing
-                else {
-                    if ($is_pattern_by_spacing) {
-                        $msg .= "pattern (guess on spacing)\n";
-                        $is_pattern = 1;
-                    }
-                    else {
-                        $msg .= "division (guess on spacing)\n";
-                        $is_pattern = 0;
-                    }
-                }
-            }
-        }
+        $msg .= "division (guess on spacing, but pattern is possible too)\n";
+        $is_pattern = 0;
     }
+
     return ( $is_pattern, $msg );
 } ## end sub guess_if_pattern_or_division
 
@@ -9808,13 +9742,16 @@ sub find_next_noncomment_token {
 sub is_possible_numerator {
 
     # Look at the next non-comment character and decide if it could be a
-    # numerator.  Return
-    #   1 - yes
-    #   0 - can't tell
-    #  -1 - no
+    # numerator. Returns the following code:
+    #   -1 - division not possible
+    #    0 - can't tell if division possible
+    #    1 - division possible
+    #    2 - division probable: number follows
+    #    3 - division very probable: number and one of ; ] } follow
+    #    4 - is division, not partern: number and ) follow
 
     my ( $self, $i, $rtokens, $max_token_index ) = @_;
-    my $is_possible_numerator = 0;
+    my $divide_possible_code = 0;
 
     my $next_token = $rtokens->[ $i + 1 ];
     if ( $next_token eq '=' ) { $i++; }    # handle /=
@@ -9828,16 +9765,36 @@ sub is_possible_numerator {
     }
 
     if ( $next_nonblank_token =~ / [ \( \$ \w \. \@ ] /x ) {
-        $is_possible_numerator = 1;
+        $divide_possible_code = 1;
+
+        # look ahead one more token for some common patterns, such as
+        #   pi/2)   pi/2;   pi/2}
+        if ( $next_nonblank_token =~ /^\d/ ) {
+            my ( $next_next_nonblank_token, $i_next_next_uu ) =
+              $self->find_next_nonblank_token( $i_next, $rtokens,
+                $max_token_index );
+            if ( $next_next_nonblank_token eq ')' ) {
+                $divide_possible_code = 4;
+            }
+            elsif ($next_next_nonblank_token eq ';'
+                || $next_next_nonblank_token eq ']'
+                || $next_next_nonblank_token eq '}' )
+            {
+                $divide_possible_code = 3;
+            }
+            else {
+                $divide_possible_code = 2;
+            }
+        }
     }
     elsif ( $next_nonblank_token =~ /^\s*$/ ) {
-        $is_possible_numerator = 0;
+        $divide_possible_code = 0;
     }
     else {
-        $is_possible_numerator = -1;
+        $divide_possible_code = -1;
     }
 
-    return $is_possible_numerator;
+    return $divide_possible_code;
 } ## end sub is_possible_numerator
 
 {    ## closure for sub pattern_expected
