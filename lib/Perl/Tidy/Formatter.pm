@@ -18640,6 +18640,9 @@ sub weld_nested_containers {
         my $inner_level = $inner_opening->[_LEVEL_];
         if ( $inner_level >= $high_stress_level ) { next }
 
+        # extra tolerance added under high stress to fix b1481
+        my $stress_tol = ( $high_stress_level - $inner_level <= 1 ) ? 1 : 0;
+
         # Set flag saying if this pair starts a new weld
         my $starting_new_weld = !( @welds && $outer_seqno == $welds[-1]->[0] );
 
@@ -18978,6 +18981,7 @@ EOM
                 $is_one_line_weld || $is_multiline_weld
               ? $single_line_tol
               : $multiline_tol;
+            $tol += $stress_tol;
 
             # By how many characters does this exceed the text window?
             my $excess =

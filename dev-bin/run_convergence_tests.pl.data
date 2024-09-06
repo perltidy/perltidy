@@ -12190,6 +12190,29 @@ run_sub ( ->$blah{ say "ok 5" ; }
 --want-trailing-commas='h'
 --delete-trailing-commas
 
+==> b1481.in <==
+$hr
+          ->set_uri_schemes
+          ([
+ 'http','https',
+ undef,'ftp'
+          ]);
+$hr->set_uri_schemes([
+ 'http','https',
+ undef,'ftp'
+] );
+
+
+==> b1481.par <==
+--maximum-line-length=22
+--indent-columns=1
+--continuation-indentation=10
+--weld-nested-containers
+--noadd-whitespace
+--paren-vertical-tightness-closing=1
+--delete-old-whitespace
+--stack-opening-square-bracket
+
 ==> b148.in <==
 # state 1
 @yydgoto=(

@@ -8282,6 +8282,17 @@ run_sub (
 );
 
 
+==> b1481 <==
+$hr->set_uri_schemes([
+ 'http','https',
+ undef,'ftp'
+] );
+$hr->set_uri_schemes([
+ 'http','https',
+ undef,'ftp'
+] );
+
+
 ==> b156 <==
 # State 1
 {
@@ -9976,12 +9987,15 @@ my$cmb=CPAN::Mirrored::By->new({
 });
 
 # S2
-my$cmb=CPAN::Mirrored::By->new({
-          continent=>"continent",
-          country=>"country",
-          http=>"http",
-          ftp=>"ftp",
-});
+my$cmb=
+  CPAN::Mirrored::By->new(
+      {
+        continent=>"continent",
+        country=>"country",
+        http=>"http",
+        ftp=>"ftp",
+      }
+  );
 
 ==> b753 <==
 # S1
