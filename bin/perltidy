@@ -3804,6 +3804,56 @@ Here is an example.
 
 =back
 
+=item B<-qwaf>,  B<--qw-as-function>
+
+This option tells perltidy to format a B<qw> list which is delimited with
+parentheses as if it were a function call whose call args are a list of quoted
+items.  Normally, a B<qw> list is output verbatim except for an adjustment of
+leading whitespace to indicate the indentation level. For example, here is an
+example of the default formatting of a poorly formatted B<qw> list:
+
+    # perltidy
+    @fields = qw( $st_dev	   $st_ino    $st_mode $st_nlink   $st_uid
+      $st_gid $st_rdev    $st_size $st_atime   $st_mtime  $st_ctime
+      $st_blksize $st_blocks);
+
+If we format with B<-qwaf> then the result will be:
+
+    # perltidy -qwaf
+    @fields = qw(
+        $st_dev   $st_ino   $st_mode  $st_nlink
+        $st_uid   $st_gid   $st_rdev  $st_size
+        $st_atime $st_mtime $st_ctime $st_blksize
+        $st_blocks
+    );
+
+The way this works is that just before formatting begins, the tokens of the
+B<qw> text are replaced with the tokens of an equivalent function call with a
+comma-separated list of quoted items as call args. Then it is formatted like
+any other list. Special comma tokens are employed which have no display text, so
+when the code is eventually displayed it remains a valid B<qw> quote.
+
+Some things to note are:
+
+=over 4
+
+=item *
+This only works for B<qw> quotes which begin with B<qw(>, with no space
+before the paren.
+
+=item *
+If the option B<--space-function-paren> is employed, it is ignored for
+these special function calls because it would deactivate them.
+
+=item *
+Before using this option for the first time, it is a good idea to scan the code
+and decide if any lists have a special order which should be retained.  This
+can be accomplished for example by changing the quote delimiter characters to
+something other than parens, or by inserting a blank line as discussed
+at the start of this section.
+
+=back
+
 =head2 Adding and Deleting Commas
 
 =over 4

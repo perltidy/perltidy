@@ -1,0 +1,21 @@
+use Digest::MD5 qw(md5_hex);
+
+@fields = qw(
+    $st_dev  $st_ino  $st_mode  $st_nlink $st_uid   $st_gid
+    $st_rdev $st_size $st_atime $st_mtime $st_ctime $st_blksize
+    $st_blocks
+);
+
+@hdr_colors =
+  qw( CadetBlue1 MediumPurple1 turquoise1 PaleTurquoise1 SlateBlue1 );
+
+# has blank line, so keep line breaks
+@hdr_colors = qw(
+
+    CadetBlue1
+    MediumPurple1
+    turquoise1
+    PaleTurquoise1
+    SlateBlue1
+);
+

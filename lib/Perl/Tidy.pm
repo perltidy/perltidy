@@ -2991,6 +2991,12 @@ EOM
                         }
                     }
                     elsif ( !$stopping_on_error ) {
+
+                        # The md5 sum implies convergence but the convergence
+                        # was not detected by the Formatter.  This is not
+                        # critical but should be investigated.  It happened
+                        # once when a line break was placed before a phantom
+                        # comma under -qwaf, and has been fixed.
                         print {*STDERR}
 "STRANGE no conv in $display_name: stopping on it=$iter, but not converged in formatter\n";
                     }
@@ -3586,6 +3592,7 @@ sub generate_options {
     $add_option->( 'valign-wide-equals',                        'vwe',   '!' );
     $add_option->( 'extended-block-tightness',                  'xbt',   '!' );
     $add_option->( 'extended-block-tightness-list',             'xbtl',  '=s' );
+    $add_option->( 'qw-as-function',                            'qwaf',  '!' );
 
     ########################################
     $category = 4;    # Comment controls

@@ -1,5 +1,24 @@
 # Perltidy Change Log
 
+## 2024 09 03 xx
+
+    - Added parameter --qw-as-function, or -qwaf, discussed in git #164.
+    When this parameter is set, a qw list which begins with 'qw(' is
+    formatted as if it were a function call with call args being a list
+    of comma-separated quoted items. For example, given this input:
+
+    @fields = qw( $st_dev	   $st_ino    $st_mode $st_nlink   $st_uid
+      $st_gid $st_rdev    $st_size $st_atime   $st_mtime  $st_ctime
+      $st_blksize $st_blocks);
+
+    # perltidy -qwaf
+    @fields = qw(
+        $st_dev   $st_ino   $st_mode  $st_nlink
+        $st_uid   $st_gid   $st_rdev  $st_size
+        $st_atime $st_mtime $st_ctime $st_blksize
+        $st_blocks
+    );
+
 ## 2024 09 03
 
     - Add partial support for Syntax::Operator::In and Syntax::Keyword::Match

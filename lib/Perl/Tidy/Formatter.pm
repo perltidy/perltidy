@@ -253,6 +253,7 @@ my (
     $rOpts_outdent_long_quotes,
     $rOpts_outdent_static_block_comments,
     $rOpts_recombine,
+    $rOpts_qw_as_function,
     $rOpts_short_concatenation_item_length,
     $rOpts_space_prototype_paren,
     $rOpts_space_signature_paren,
@@ -2811,7 +2812,8 @@ sub initialize_global_option_vars {
     $rOpts_outdent_long_quotes   = $rOpts->{'outdent-long-quotes'};
     $rOpts_outdent_static_block_comments =
       $rOpts->{'outdent-static-block-comments'};
-    $rOpts_recombine = $rOpts->{'recombine'};
+    $rOpts_recombine      = $rOpts->{'recombine'};
+    $rOpts_qw_as_function = $rOpts->{'qw-as-function'};
     $rOpts_short_concatenation_item_length =
       $rOpts->{'short-concatenation-item-length'};
     $rOpts_space_prototype_paren     = $rOpts->{'space-prototype-paren'};
@@ -3840,8 +3842,9 @@ sub set_whitespace_flags {
                   )
                 {
                     $ws =
-                        $rOpts_space_function_paren
-                      ? $self->ws_space_function_paren($rtokh_last_last)
+                      $rOpts_space_function_paren
+                      ? $self->ws_space_function_paren( $rtokh_last,
+                        $rtokh_last_last )
                       : WS_NO;
 
                     set_container_ws_by_keyword( $last_token, $seqno );
@@ -4002,6 +4005,16 @@ sub set_whitespace_flags {
             $ws = WS_YES;
         }
 
+        # -qwaf phantom commas require space before type 'Q'
+        # See similar patch in sub is_essential_whitespace
+        if (   $rOpts_qw_as_function
+            && $last_type eq ','
+            && !length($last_token)
+            && $type eq 'Q' )
+        {
+            $ws = 1;
+        }
+
         $rwhitespace_flags->[$j] = $ws;
 
         # remember non-blank, non-comment tokens
@@ -4118,7 +4131,7 @@ sub ws_in_container {
 
 sub ws_space_function_paren {
 
-    my ( $self, $rtokh_last_last ) = @_;
+    my ( $self, $rtokh_last, $rtokh_last_last ) = @_;
 
     # Called if --space-function-paren is set to see if it might cause
     # a problem.  The manual warns the user about potential problems with
@@ -4149,6 +4162,14 @@ sub ws_space_function_paren {
     # for something like this:
     #   print ( header ( ..
     if ( $type_ll eq 'k' && $is_indirect_object_taker{$tok_ll} ) {
+        $ws = WS_NO;
+    }
+
+    # do not let -sfp add space for qw's converted to functions by -qwaf
+    if (   $rOpts_qw_as_function
+        && $rtokh_last->[_TYPE_] eq 'U'
+        && $rtokh_last->[_TOKEN_] eq 'qw' )
+    {
         $ws = WS_NO;
     }
 
@@ -4295,6 +4316,16 @@ EOM
 
         # This is potentially a very slow routine but the following quick
         # filters typically catch and handle over 90% of the calls.
+
+        # -qwaf phantom commas require space before type 'Q'
+        # See similar patch in sub set_whitespace_flags
+        if (   $rOpts_qw_as_function
+            && $typel eq ','
+            && !length($tokenl)
+            && $typer eq 'Q' )
+        {
+            return 1;
+        }
 
         # Filter 1: usually no space required after common types ; , [ ] { } ( )
         return
@@ -5394,6 +5425,14 @@ EOM
                     $bond_str = NO_BREAK;
                 }
             }
+
+            # Fix for c039
+            elsif ( $type eq 'w' ) {
+                $bond_str = NO_BREAK
+                  if ( !$old_breakpoint_to_go[$i]
+                    && substr( $next_nonblank_token, 0, 1 ) eq '/'
+                    && $next_nonblank_type ne '//' );
+            }
             else {
                 # no hardwired rule applies
             }
@@ -5418,12 +5457,12 @@ EOM
                   if ( $types_to_go[ $i_next_nonblank + 1 ] eq 'n' );
             }
 
-            # Fix for c039
-            elsif ( $type eq 'w' ) {
-                $bond_str = NO_BREAK
-                  if ( !$old_breakpoint_to_go[$i]
-                    && substr( $next_nonblank_token, 0, 1 ) eq '/'
-                    && $next_nonblank_type ne '//' );
+            # Do not break before a phantom comma because it will confuse
+            # the convergence test (STRANGE message is emitted)
+            elsif ( $next_nonblank_type eq ',' ) {
+                if ( !length($next_nonblank_token) ) {
+                    $bond_str = NO_BREAK;
+                }
             }
             else {
                 # no special NO_BREAK rule applies
@@ -6322,18 +6361,32 @@ EOM
     my $nesting_depth;
 
     # Variables used by sub check_sequence_numbers:
+    my $initial_seqno;
     my $last_seqno;
     my %saw_opening_seqno;
     my %saw_closing_seqno;
-    my $initial_seqno;
+
+    # variables for the -qwaf option
+    my $in_qw_seqno;
+    my $last_new_seqno;
+    my %new_seqno_from_old_seqno;
+    my $last_ending_in_quote;
+    my $added_seqno_count;
 
     sub initialize_write_line {
 
         $nesting_depth = undef;
 
+        $initial_seqno     = undef;
         $last_seqno        = SEQ_ROOT;
+        $last_new_seqno    = SEQ_ROOT;
         %saw_opening_seqno = ();
         %saw_closing_seqno = ();
+
+        $in_qw_seqno              = 0;
+        %new_seqno_from_old_seqno = ();
+        $last_ending_in_quote     = 0;
+        $added_seqno_count        = 0;
 
         return;
     } ## end sub initialize_write_line
@@ -6460,14 +6513,10 @@ EOM
 
     BEGIN {
         @common_keys = qw(
-          _curly_brace_depth
-          _ending_in_quote
-          _guessed_indentation_level
-          _line_number
-          _line_text
-          _line_type
-          _paren_depth
-          _square_bracket_depth
+          _curly_brace_depth         _ending_in_quote
+          _guessed_indentation_level _line_number
+          _line_text                 _line_type
+          _paren_depth               _square_bracket_depth
           _starting_in_quote
         );
     }
@@ -6503,7 +6552,6 @@ EOM
             $line_of_tokens->{_nesting_blocks_0}     = EMPTY_STRING;
             $line_of_tokens->{_nesting_tokens_0}     = EMPTY_STRING;
             $line_of_tokens->{_ended_in_blank_token} = undef;
-
         }
 
         # Handle line of code
@@ -6563,8 +6611,244 @@ EOM
             $fh_tee->print($line_text) if ($fh_tee);
         }
 
+        # We must use the old line because the qw logic may change this flag
+        $last_ending_in_quote = $line_of_tokens_old->{_ending_in_quote};
+
         return;
     } ## end sub write_line
+
+    sub qw_to_function {
+        my ( $self, $line_of_tokens, $is_ending_token ) = @_;
+
+        # This sub implements the -qwaf option:
+        # It is called for every type 'q' token which is part of a 'qw(' list.
+        # Essentially all of the coding for the '-qwaf' option is in this sub.
+
+        # Input parameters:
+        #  $line_of_tokens = information hash for this line from the tokenizer,
+        #  $is_ending_token = true if this qw does not extend to the next line
+
+        # Method:
+        # This qw token has already been pushed onto the output token stack, so
+        # we will pop it off and push on a sequence of tokens created by
+        # breaking it into an opening, a sequence of comma-separated quote
+        # items, and a closing paren. For multi-line qw quotes, there will be
+        # one call per input line until the end of the qw text is reached
+        # and processed.
+
+        # Note 1: A critical issue is to correctly generate and insert a new
+        # sequence number for the new parens into the sequence number stream.
+        # The new sequence number is the closure variable '$in_qw_seqno'.  It
+        # is defined when the leading 'qw(' is seen, and is undefined when the
+        # closing ')' is output.
+
+        # Note 2: So far, no reason has been found to coordinate this logic
+        # with the logic which adds and deletes commas. We are adding trailing
+        # phantom commas here, except for a single list item, so no additional
+        # trailing comma should be added. And if a phantom trailing comma gets
+        # deleted, it should not matter because it does not get displayed.
+
+        my $rLL                     = $self->[_rLL_];
+        my $rSS                     = $self->[_rSS_];
+        my $rdepth_of_opening_seqno = $self->[_rdepth_of_opening_seqno_];
+
+        # Does this qw text spill over onto another line?
+        my $is_continued =
+          ( $is_ending_token && $line_of_tokens->{_ending_in_quote} );
+
+        my $qw_text       = $rLL->[-1]->[_TOKEN_];
+        my $qw_type       = $rLL->[-1]->[_TYPE_];
+        my $qw_text_start = $qw_text;
+        my $opening       = EMPTY_STRING;
+        my $closing       = EMPTY_STRING;
+
+        if ( $qw_type ne 'q' ) {
+
+            # This should never happen because the calling sub should have just
+            # pushed a token of type 'q' onto the token list.
+            my $lno = $line_of_tokens->{_line_number};
+            Fault("$lno: expecting type 'q' but got $qw_type");
+            return;
+        }
+
+        if ( !length($qw_text) ) {
+
+            # This seems to be an empty type 'q' token. A blank line within a
+            # qw quote is marked as a blank line rather than a blank 'q' token.
+            # So this should never happen.
+            my $lno = $line_of_tokens->{_line_number};
+            DEVEL_MODE && Fault("$lno: received empty type 'q' text\n");
+            return;
+        }
+
+        # remove leading 'qw(' if we are starting a new qw
+        if ( !$in_qw_seqno ) {
+            $opening = substr( $qw_text, 0, 3 );
+            if ( $opening ne 'qw(' ) {
+
+                # Caller should have checked this before calling
+                my $lno = $line_of_tokens->{_line_number};
+                DEVEL_MODE && Fault("$lno: unexpected qw opening: $opening\n");
+                return;
+            }
+            $qw_text = substr( $qw_text, 3 );
+            $qw_text =~ s/^\s+//;
+        }
+
+        # Look for and remove any closing ')'
+        if ( !$is_continued ) {
+            if ( length($qw_text) > 0 && substr( $qw_text, -1, 1 ) eq ')' ) {
+                $closing = substr( $qw_text, -1,  1 );
+                $qw_text = substr( $qw_text,  0, -1 );
+                $qw_text =~ s/\s+$//;
+            }
+            else {
+
+                # We are at the end of a 'qw(' quote according to the
+                # tokenizer flag '_ending_in_quote', but there is no
+                # ending ')'. The '$is_continued' flag seems to be wrong.
+                my $lno = $line_of_tokens->{_line_number};
+                Fault(<<EOM);
+qwaf inconsistency at input line $lno:
+closing token is '$closing'
+is_continued = $is_continued
+EOM
+                return;
+            }
+        }
+
+        # Get any quoted words
+        my @words;
+        if ( length($qw_text) ) {
+            @words = split /\s+/, $qw_text;
+        }
+
+        # Be sure we have something left to output
+        if ( !$opening && !$closing && !@words ) {
+            my $lno = $line_of_tokens->{_line_number};
+            DEVEL_MODE && Fault(<<EOM);
+Error parsing the following qw string at line $lno:
+$qw_text_start
+EOM
+            return;
+        }
+
+        #---------------------------------------------------------------------
+        # This is the point of no return if the transformation has not started
+        #---------------------------------------------------------------------
+
+        # pop old type q token
+        my $rtoken_q = pop @{$rLL};
+
+        # now push on the replacement tokens
+        my $nonblank_push_count = 0;
+
+        # the new word tokens are 1 level deeper than the original 'q' token
+        my $level_words = $rtoken_q->[_LEVEL_] + 1;
+
+        if ($opening) {
+
+            # generate a new sequence number, one greater than the previous,
+            # and update a count for synchronization with the calling sub.
+            $in_qw_seqno = ++$last_new_seqno;
+            $added_seqno_count++;
+            my $seqno = $in_qw_seqno;
+
+            # update relevant seqno hashes
+            $self->[_K_opening_container_]->{$seqno} = @{$rLL};
+            $rdepth_of_opening_seqno->[$seqno] = $nesting_depth;
+            $nesting_depth++;
+            $self->[_rI_opening_]->[$seqno] = @{$rSS};
+
+            if ( $level_words > $self->[_maximum_level_] ) {
+                my $input_line_no = $line_of_tokens->{_line_number};
+                $self->[_maximum_level_]         = $level_words;
+                $self->[_maximum_level_at_line_] = $input_line_no;
+            }
+            push @{$rSS}, $seqno;
+
+            # make and push the 'qw' token
+            my $rtoken_qw = copy_token_as_type( $rtoken_q, 'U', 'qw' );
+            push @{$rLL}, $rtoken_qw;
+            $nonblank_push_count++;
+
+            # make and push the '(' with the new sequence number
+            my $rtoken_opening = copy_token_as_type( $rtoken_q, '{', '(' );
+            $rtoken_opening->[_TYPE_SEQUENCE_] = $seqno;
+            push @{$rLL}, $rtoken_opening;
+            $nonblank_push_count++;
+
+        }
+
+        # flag something like 'qw(hello)' which does not require commas & spaces
+        my $single_item = $opening && $closing && @words == 1;
+
+        # Make and push each word as a type 'Q' quote followed by a phantom
+        # comma. The phantom comma is type ',' and is processed
+        # exactly like any other comma, but it has an empty string as the token
+        # text, so the line will display as a regular qw quote.
+        if (@words) {
+
+            foreach my $word (@words) {
+
+                # space after any previous token
+                if ( !$single_item && $nonblank_push_count ) {
+                    my $rtoken_space =
+                      copy_token_as_type( $rtoken_q, 'b', SPACE );
+                    $rtoken_space->[_LEVEL_] = $level_words;
+                    push @{$rLL}, $rtoken_space;
+                }
+
+                # this quoted text
+                my $rtoken_word = copy_token_as_type( $rtoken_q, 'Q', $word );
+                $rtoken_word->[_LEVEL_] = $level_words;
+                push @{$rLL}, $rtoken_word;
+                $nonblank_push_count++;
+
+                # Add a trailing comma unless this is a single
+                # item. For a single item we want just one token in the
+                # container so that the single-item spacing rule will apply as
+                # expected.  There is no danger that a real trailing comma will
+                # be added since no other commas will be in the container.
+                if ( !$single_item ) {
+                    my $rtoken_comma =
+                      copy_token_as_type( $rtoken_q, ',', EMPTY_STRING );
+                    $rtoken_comma->[_LEVEL_] = $level_words;
+                    push @{$rLL}, $rtoken_comma;
+                }
+            }
+        }
+
+        # make and push closing sequenced item ')'
+        if ($closing) {
+
+            # space after any previous token
+            if ( !$single_item && $nonblank_push_count ) {
+                my $rtoken_space = copy_token_as_type( $rtoken_q, 'b', SPACE );
+                $rtoken_space->[_LEVEL_] = $level_words;
+                push @{$rLL}, $rtoken_space;
+            }
+
+            my $seqno = $in_qw_seqno;
+            $self->[_K_closing_container_]->{$seqno} = @{$rLL};
+            $nesting_depth = $rdepth_of_opening_seqno->[$seqno];
+            $self->[_rI_closing_]->[$seqno] = @{$rSS};
+            push @{$rSS}, -1 * $seqno;
+
+            # make the ')'
+            my $rtoken_closing = copy_token_as_type( $rtoken_q, '}', ')' );
+            $rtoken_closing->[_TYPE_SEQUENCE_] = $in_qw_seqno;
+            push @{$rLL}, $rtoken_closing;
+            $nonblank_push_count++;
+
+            # all done with this qw list
+            $in_qw_seqno = 0;
+        }
+
+        if ($is_continued) { $line_of_tokens->{_ending_in_quote} = 0 }
+
+        return;
+    } ## end sub qw_to_function
 
     sub write_line_inner_loop {
         my ( $self, $line_of_tokens_old, $line_of_tokens ) = @_;
@@ -6583,7 +6867,8 @@ EOM
         if ( $jmax < 0 ) {
 
             # safety check; shouldn't happen
-            DEVEL_MODE && Fault("unexpected jmax=$jmax\n");
+            my $lno = $line_of_tokens->{_line_number};
+            DEVEL_MODE && Fault("$lno: unexpected jmax=$jmax\n");
             return;
         }
 
@@ -6613,6 +6898,20 @@ EOM
             $rdepth_of_opening_seqno->[SEQ_ROOT] = $nesting_depth - 1;
         }
 
+        # error check for -qwaf:
+        if ($in_qw_seqno) {
+            if ( $rtoken_type->[0] ne 'q' ) {
+
+                # -qwaf is expecting another 'q' token for multiline -qw
+                # based on the {_ending_in_quote} flag from the tokenizer
+                # of the previous line, but a 'q' didn't arrive.
+                my $lno = $line_index + 1;
+                Fault(
+"$lno: -qwaf expecting qw continuation line but saw type '$rtoken_type->[0]'\n"
+                );
+            }
+        }
+
         my $j = -1;
 
         # NOTE: coding efficiency is critical in this loop over all tokens
@@ -6630,12 +6929,22 @@ EOM
             # Handle tokens with sequence numbers ...
             # note the ++ increment hidden here for efficiency
             if ( $rtype_sequence->[ ++$j ] ) {
-                my $seqno = $rtype_sequence->[$j];
-                $tokary[_TYPE_SEQUENCE_] = $seqno;
+                my $seqno_old = $rtype_sequence->[$j];
+                my $seqno     = $seqno_old;
+
                 my $sign = 1;
                 if ( $is_opening_token{$token} ) {
+                    if ($added_seqno_count) {
+                        $seqno += $added_seqno_count;
+                        $new_seqno_from_old_seqno{$seqno_old} = $seqno;
+                    }
+                    if ( DEVEL_MODE && $seqno != $last_new_seqno + 1 ) {
+                        my $lno = $line_index + 1;
+                        Fault("$lno: seqno=$seqno last=$last_new_seqno\n");
+                    }
+                    $last_new_seqno                          = $seqno;
                     $self->[_K_opening_container_]->{$seqno} = @{$rLL};
-                    $rdepth_of_opening_seqno->[$seqno] = $nesting_depth;
+                    $rdepth_of_opening_seqno->[$seqno]       = $nesting_depth;
                     $nesting_depth++;
 
                     # Save a sequenced block type at its opening token.
@@ -6666,6 +6975,11 @@ EOM
                 }
                 elsif ( $is_closing_token{$token} ) {
 
+                    if ($added_seqno_count) {
+                        $seqno =
+                          $new_seqno_from_old_seqno{$seqno_old} || $seqno_old;
+                    }
+
                     # The opening depth should always be defined, and
                     # it should equal $nesting_depth-1.  To protect
                     # against unforseen error conditions, however, we
@@ -6682,8 +6996,9 @@ EOM
                         # incrementally upon encountering each new
                         # opening token, so every positive sequence
                         # number should correspond to an opening token.
+                        my $lno = $line_index + 1;
                         DEVEL_MODE && Fault(<<EOM);
-No opening token seen for closing token = '$token' at seq=$seqno at depth=$opening_depth
+$lno: No opening token seen for closing token = '$token' at seq=$seqno at depth=$opening_depth
 EOM
                     }
                     $self->[_K_closing_container_]->{$seqno} = @{$rLL};
@@ -6691,9 +7006,22 @@ EOM
                     $sign                                    = -1;
                 }
                 elsif ( $token eq '?' ) {
+                    if ($added_seqno_count) {
+                        $seqno += $added_seqno_count;
+                        $new_seqno_from_old_seqno{$seqno_old} = $seqno;
+                    }
+                    if ( DEVEL_MODE && $seqno != $last_new_seqno + 1 ) {
+                        my $lno = $line_index + 1;
+                        Fault("$lno: seqno=$seqno last=$last_new_seqno\n");
+                    }
+                    $last_new_seqno = $seqno;
                     $self->[_K_opening_ternary_]->{$seqno} = @{$rLL};
                 }
                 elsif ( $token eq ':' ) {
+                    if ($added_seqno_count) {
+                        $seqno =
+                          $new_seqno_from_old_seqno{$seqno_old} || $seqno_old;
+                    }
                     $sign = -1;
                     $self->[_K_closing_ternary_]->{$seqno} = @{$rLL};
                 }
@@ -6705,8 +7033,9 @@ EOM
                 # numbers, or if an error has been introduced in a
                 # hash such as %is_opening_container
                 else {
+                    my $lno = $line_index + 1;
                     DEVEL_MODE && Fault(<<EOM);
-Unexpected sequenced token '$token' of type '$rtoken_type->[$j]', sequence=$seqno arrived from tokenizer.
+$lno: Unexpected sequenced token '$token' of type '$rtoken_type->[$j]', sequence=$seqno arrived from tokenizer.
 Expecting only opening or closing container tokens or ternary tokens with sequence numbers.
 EOM
                 }
@@ -6727,7 +7056,7 @@ EOM
                 }
                 else { $self->[_rI_closing_]->[$seqno] = @{$rSS} }
                 push @{$rSS}, $sign * $seqno;
-
+                $tokary[_TYPE_SEQUENCE_] = $seqno;
             }
             else {
                 $tokary[_TYPE_SEQUENCE_] = EMPTY_STRING;
@@ -6740,12 +7069,33 @@ EOM
             #  _CI_LEVEL_          is added by sub set_ci
             # So all token variables are available for use after sub set_ci.
 
+            my $type = $rtoken_type->[$j];
+
             $tokary[_TOKEN_]      = $token;
-            $tokary[_TYPE_]       = $rtoken_type->[$j];
+            $tokary[_TYPE_]       = $type;
             $tokary[_LEVEL_]      = $rlevels->[$j];
             $tokary[_LINE_INDEX_] = $line_index;
 
             push @{$rLL}, \@tokary;
+
+            # handle -qwaf option for converting a qw quote (type = 'q') to
+            # function call
+            if (
+                   $type eq 'q'
+                && $rOpts_qw_as_function
+                && (
+
+                    # continuing in a qw?
+                    $in_qw_seqno
+
+                    # starting a new qw?
+                    || ( ( $j > 0 || !$last_ending_in_quote )
+                        && substr( $token, 0, 3 ) eq 'qw(' )
+                )
+              )
+            {
+                $self->qw_to_function( $line_of_tokens, $j == $jmax );
+            }
 
         } ## end token loop
 
@@ -35030,6 +35380,16 @@ EOM
                 # be sure the alignment tokens are unique
                 # This experiment didn't work well: reason not determined
                 # if ($token ne $type) {$alignment_type .= $type}
+            }
+
+            # make qw() functions using -qwaf align 'use' statement
+            elsif ( $type eq 'U' ) {
+                if (   $types_to_go[0] eq 'k'
+                    && $tokens_to_go[0] eq 'use'
+                    && substr( $token, 0, 2 ) eq 'qw' )
+                {
+                    $alignment_type = 'q';
+                }
             }
             else {
                 ## not a special type
