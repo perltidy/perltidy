@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2024 09 03 xx
+## 2024 09 03.01
 
     - Added parameter --qw-as-function, or -qwaf, discussed in git #164.
     When this parameter is set, a qw list which begins with 'qw(' is

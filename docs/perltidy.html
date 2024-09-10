@@ -1177,7 +1177,7 @@
 
 <p>If formatted in this way, the program will not run (at least with recent versions of perl) because the $x is taken to be a filehandle and / is assumed to start a quote. In a complex program, there might happen to be a / which terminates the multiline quote without a syntax error, allowing the program to run, but not as intended.</p>
 
-<p>Related issues arise with other binary operator symbols, such as + and -, and in older versions of perl there could be problems with ternary operators. So to avoid changing program behavior, perltidy has the simple rule that whitespace around possible filehandles is left unchanged. Likewise, whitespace around barewords is left unchanged. The reason is that if the barewords are defined in other modules, or in code that has not even been written yet, perltidy will not have seen their prototypes and must treat them cautiously.</p>
+<p>Related issues arise with other binary operator symbols, such as + and -, and in older versions of perl there could be problems with ternary operators. So to avoid changing program behavior, perltidy has the simple rule that whitespace around possible filehandles is left unchanged. Likewise, whitespace around unknown barewords is left unchanged. The reason is that if the barewords are defined in other modules, or in code that has not even been written yet, perltidy will not have seen their prototypes and must treat them cautiously.</p>
 
 <p>In perltidy this is implemented in the tokenizer by marking token following a <b>print</b> keyword as a special type <b>Z</b>. When formatting is being done, whitespace following this token type is generally left unchanged as a precaution against changing program behavior. This is excessively conservative but simple and easy to implement. Keywords which are treated similarly to <b>print</b> include <b>printf</b>, <b>sort</b>, <b>exec</b>, <b>system</b>. Changes in spacing around parameters following these keywords may have to be made manually. For example, the space, or lack of space, after the parameter $foo in the following line will be unchanged in formatting.</p>
 
@@ -3012,6 +3012,47 @@
         &quot;05&quot; =&gt; 31, &quot;06&quot; =&gt; 30, &quot;07&quot; =&gt; 31, &quot;08&quot; =&gt; 31,
         &quot;09&quot; =&gt; 30, &quot;10&quot; =&gt; 31, &quot;11&quot; =&gt; 30, &quot;12&quot; =&gt; 31
     );</code></pre>
+
+</dd>
+<dt id="qwaf---qw-as-function"><b>-qwaf</b>, <b>--qw-as-function</b></dt>
+<dd>
+
+<p>This option tells perltidy to format a <b>qw</b> list which is delimited with parentheses as if it were a function call whose call args are a list of quoted items. Normally, a <b>qw</b> list is output verbatim except for an adjustment of leading whitespace to indicate the indentation level. For example, here is an example of the default formatting of a poorly formatted <b>qw</b> list:</p>
+
+<pre><code>    # perltidy
+    @fields = qw( $st_dev          $st_ino    $st_mode $st_nlink   $st_uid
+      $st_gid $st_rdev    $st_size $st_atime   $st_mtime  $st_ctime
+      $st_blksize $st_blocks);</code></pre>
+
+<p>If we format with <b>-qwaf</b> then the result will be:</p>
+
+<pre><code>    # perltidy -qwaf
+    @fields = qw(
+        $st_dev   $st_ino   $st_mode  $st_nlink
+        $st_uid   $st_gid   $st_rdev  $st_size
+        $st_atime $st_mtime $st_ctime $st_blksize
+        $st_blocks
+    );</code></pre>
+
+<p>The way this works is that just before formatting begins, the tokens of the <b>qw</b> text are replaced with the tokens of an equivalent function call with a comma-separated list of quoted items as call args. Then it is formatted like any other list. Special comma tokens are employed which have no display text, so when the code is eventually displayed it remains a valid <b>qw</b> quote.</p>
+
+<p>Some things to note are:</p>
+
+<ul>
+
+<li><p>This only works for <b>qw</b> quotes which begin with <b>qw(</b>, with no space before the paren.</p>
+
+</li>
+<li><p>If the option <b>--space-function-paren</b> is employed, it is ignored for these special function calls because it would deactivate them.</p>
+
+</li>
+<li><p>Otherwise the various formatting control flags operate on these lists the same as for other comma-separated lists. In particular, note that if <b>--break-at-old-comma-breakpoints</b>, or <b>-boc</b>, is set, then the old line break locations will be retained.</p>
+
+</li>
+<li><p>Before using this option for the first time, it is a good idea to scan the code and decide if any lists have a special order which should be retained. This can be accomplished for example by changing the quote delimiters to something other than parens, or by inserting a blank line as discussed at the start of this section.</p>
+
+</li>
+</ul>
 
 </dd>
 </dl>
@@ -5423,7 +5464,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20240903</p>
+<p>This man page documents perltidy version 20240903.01</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

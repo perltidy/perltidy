@@ -3802,8 +3802,6 @@ Here is an example.
         "09" => 30, "10" => 31, "11" => 30, "12" => 31
     );
 
-=back
-
 =item B<-qwaf>,  B<--qw-as-function>
 
 This option tells perltidy to format a B<qw> list which is delimited with
@@ -3846,11 +3844,19 @@ If the option B<--space-function-paren> is employed, it is ignored for
 these special function calls because it would deactivate them.
 
 =item *
+Otherwise the various formatting control flags operate on these lists the same
+as for other comma-separated lists. In particular, note that if
+B<--break-at-old-comma-breakpoints>, or B<-boc>, is set, then the old line
+break locations will be retained.
+
+=item *
 Before using this option for the first time, it is a good idea to scan the code
 and decide if any lists have a special order which should be retained.  This
-can be accomplished for example by changing the quote delimiter characters to
-something other than parens, or by inserting a blank line as discussed
-at the start of this section.
+can be accomplished for example by changing the quote delimiters to something
+other than parens, or by inserting a blank line as discussed at the start of
+this section.
+
+=back
 
 =back
 
@@ -7005,7 +7011,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20240903
+This man page documents perltidy version 20240903.01
 
 =head1 BUG REPORTS
 
