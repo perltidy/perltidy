@@ -14144,7 +14144,7 @@ sub match_trailing_comma_rule {
             my $token = $rLL_new->[$K_opening]->[_TOKEN_];
             if ( $token eq '(' ) {
                 my $Km     = $self->K_previous_nonblank( $K_opening, $rLL_new );
-                my $type_p = $Km ? $rLL_new->[$Km]->[_TYPE_] : 'b';
+                my $type_p = defined($Km) ? $rLL_new->[$Km]->[_TYPE_] : 'b';
                 ## see also sub count_return_values_wanted
                 my $is_function_call =
                      $type_p eq 'U'
