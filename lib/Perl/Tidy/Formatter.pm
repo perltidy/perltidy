@@ -625,6 +625,7 @@ BEGIN {
         _rbreak_before_Kfirst_          => $i++,
         _rbreak_after_Klast_            => $i++,
         _converged_                     => $i++,
+        _want_second_iteration_         => $i++,
 
         _rstarting_multiline_qw_seqno_by_K_ => $i++,
         _rending_multiline_qw_seqno_by_K_   => $i++,
@@ -1140,6 +1141,7 @@ sub new {
     $self->[_rbreak_before_Kfirst_]          = {};
     $self->[_rbreak_after_Klast_]            = {};
     $self->[_converged_]                     = 0;
+    $self->[_want_second_iteration_]         = 0;
 
     # qw stuff
     $self->[_rstarting_multiline_qw_seqno_by_K_] = {};
@@ -1427,6 +1429,11 @@ sub check_token_array {
 sub get_convergence_check {
     my ($self) = @_;
     return $self->[_converged_];
+}
+
+sub want_second_iteration {
+    my ($self) = @_;
+    return $self->[_want_second_iteration_];
 }
 
 sub get_output_line_number {
@@ -13660,9 +13667,8 @@ sub delay_trailing_comma_op {
     my $max_iterations = $rOpts->{'iterations'};
     if ( $it == 1 && $max_iterations > 1 ) {
 
-        # if so, force another iteration
-        my $file_writer_object = $self->[_file_writer_object_];
-        $file_writer_object->not_converged();
+        # if so, set flag to request another iteration
+        $self->[_want_second_iteration_] = 1;
         return 1;
     }
     return;
@@ -39856,9 +39862,9 @@ sub wrapup {
     $file_writer_object->report_line_length_errors();
 
     # Define the formatter self-check for convergence.
-    $self->[_converged_] =
-         $severe_error
-      || $file_writer_object->get_convergence_check()
+    $self->[_converged_] = $severe_error
+      || (!$self->[_want_second_iteration_]
+        && $file_writer_object->get_convergence_check() )
       || $rOpts->{'indent-only'};
 
     return;

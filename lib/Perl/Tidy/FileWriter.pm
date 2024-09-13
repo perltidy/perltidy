@@ -224,15 +224,6 @@ sub setup_convergence_test {
     return;
 } ## end sub setup_convergence_test
 
-sub not_converged {
-    my $self = shift;
-
-    # Block convergence of this iteration. This is currently needed
-    # when adding/deleting commas is delayed by 1 iteration (see git #156)
-    $self->[_K_arrival_order_matches_] = 0;
-    return;
-} ## end sub not_converged
-
 sub get_convergence_check {
     my ($self) = @_;
     my $rlist = $self->[_rK_checklist_];

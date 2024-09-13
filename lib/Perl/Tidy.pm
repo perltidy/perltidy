@@ -2936,9 +2936,20 @@ EOM
                 if ( !defined( $saw_md5{$digest} ) ) {
                     $saw_md5{$digest} = $iter;
                 }
+
+                # do a second iteration if all ok and requested by formatter
+                # to allow delayed adding/deleting of commas (git156, git143)
+                elsif ( $iter == 1
+                    && !$stop_now
+                    && $formatter->can('want_second_iteration')
+                    && $formatter->want_second_iteration() )
+                {
+                    ## deja vu, but do not set $stop_now
+                }
                 else {
 
                     # Deja vu, stop iterating
+
                     $stop_now = 1;
                     my $iterm = $iter - 1;
                     if ( $saw_md5{$digest} != $iterm ) {
