@@ -4007,10 +4007,10 @@ sub set_whitespace_flags {
 
         # -qwaf phantom commas require space before type 'Q'
         # See similar patch in sub is_essential_whitespace
-        if (   $rOpts_qw_as_function
+        if (  !$last_token
             && $last_type eq ','
-            && !length($last_token)
-            && $type eq 'Q' )
+            && $type eq 'Q'
+            && $rOpts_qw_as_function )
         {
             $ws = 1;
         }
@@ -4319,10 +4319,10 @@ EOM
 
         # -qwaf phantom commas require space before type 'Q'
         # See similar patch in sub set_whitespace_flags
-        if (   $rOpts_qw_as_function
+        if (  !$tokenl
             && $typel eq ','
-            && !length($tokenl)
-            && $typer eq 'Q' )
+            && $typer eq 'Q'
+            && $rOpts_qw_as_function )
         {
             return 1;
         }
@@ -7069,10 +7069,8 @@ EOM
             #  _CI_LEVEL_          is added by sub set_ci
             # So all token variables are available for use after sub set_ci.
 
-            my $type = $rtoken_type->[$j];
-
             $tokary[_TOKEN_]      = $token;
-            $tokary[_TYPE_]       = $type;
+            $tokary[_TYPE_]       = $rtoken_type->[$j];
             $tokary[_LEVEL_]      = $rlevels->[$j];
             $tokary[_LINE_INDEX_] = $line_index;
 
@@ -7081,8 +7079,8 @@ EOM
             # handle -qwaf option for converting a qw quote (type = 'q') to
             # function call
             if (
-                   $type eq 'q'
-                && $rOpts_qw_as_function
+                   $rOpts_qw_as_function
+                && $rtoken_type->[$j] eq 'q'
                 && (
 
                     # continuing in a qw?
