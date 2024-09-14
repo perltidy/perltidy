@@ -6665,9 +6665,13 @@ EOM
 
         my $qw_text       = $rLL->[-1]->[_TOKEN_];
         my $qw_type       = $rLL->[-1]->[_TYPE_];
+        my $qw_level      = $rLL->[-1]->[_LEVEL_];
         my $qw_text_start = $qw_text;
         my $opening       = EMPTY_STRING;
         my $closing       = EMPTY_STRING;
+
+        # the new word tokens are 1 level deeper than the original 'q' token
+        my $level_words = $qw_level + 1;
 
         if ( $qw_type ne 'q' ) {
 
@@ -6700,6 +6704,15 @@ EOM
             }
             $qw_text = substr( $qw_text, 3 );
             $qw_text =~ s/^\s+//;
+
+            # Do not use -qwaf under high stress (b1482,b1483,b1484,b1485,1486)
+            # Note: so far all known cases of stress instability have had -naws
+            # set, so this is included for now. It may eventually need to be
+            # removed.
+            if ( !$rOpts_add_whitespace && $level_words >= $high_stress_level )
+            {
+                return;
+            }
         }
 
         # Look for and remove any closing ')'
@@ -6749,9 +6762,6 @@ EOM
 
         # now push on the replacement tokens
         my $nonblank_push_count = 0;
-
-        # the new word tokens are 1 level deeper than the original 'q' token
-        my $level_words = $rtoken_q->[_LEVEL_] + 1;
 
         if ($opening) {
 

@@ -12190,6 +12190,26 @@ run_sub ( ->$blah{ say "ok 5" ; }
 --want-trailing-commas='h'
 --delete-trailing-commas
 
+==> b148.in <==
+# state 1
+@yydgoto=(
+    1,25,140,86,36,129,141,155,90,159,28,82,38,48,
+    132,40,91,147,134,151,160,29,130,77,78,158,30, );
+
+# state 2
+@yydgoto=(
+    1,25,140,86,36,129,141,155,90,159,28,82,38,48,132,40,91,147,134,151,160,29,130,77,78,158,30, );
+
+
+==> b148.par <==
+--noadd-whitespace
+--break-before-paren-and-indent=1
+--break-before-paren=2
+--extended-continuation-indentation
+--maximum-line-length=95
+--paren-vertical-tightness-closing=1
+--variable-maximum-line-length
+
 ==> b1481.in <==
 $hr
           ->set_uri_schemes
@@ -12213,25 +12233,36 @@ $hr->set_uri_schemes([
 --delete-old-whitespace
 --stack-opening-square-bracket
 
-==> b148.in <==
-# state 1
-@yydgoto=(
-    1,25,140,86,36,129,141,155,90,159,28,82,38,48,
-    132,40,91,147,134,151,160,29,130,77,78,158,30, );
+==> b1482.in <==
+@ISA =
+      qw(
+    Net::FTP::I) ;
 
-# state 2
-@yydgoto=(
-    1,25,140,86,36,129,141,155,90,159,28,82,38,48,132,40,91,147,134,151,160,29,130,77,78,158,30, );
+@ISA =
+      qw(Net::FTP::I
+      ) ;
 
-
-==> b148.par <==
+==> b1482.par <==
+--maximum-line-length=21
+--continuation-indentation=6
 --noadd-whitespace
---break-before-paren-and-indent=1
---break-before-paren=2
---extended-continuation-indentation
---maximum-line-length=95
---paren-vertical-tightness-closing=1
---variable-maximum-line-length
+--qw-as-function
+--want-break-after='='
+
+==> b1485.in <==
+use
+  UnixODBC qw(
+         :all);
+use
+  UnixODBC qw(
+         :all
+  );
+
+==> b1485.par <==
+--maximum-line-length=15
+--indent-columns=9
+--noadd-whitespace
+--qw-as-function
 
 ==> b156.in <==
 # State 1

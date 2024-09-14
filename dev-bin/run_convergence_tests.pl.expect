@@ -8293,6 +8293,22 @@ $hr->set_uri_schemes([
 ] );
 
 
+==> b1482 <==
+@ISA =qw(
+      Net::FTP::I) ;
+
+@ISA =qw(Net::FTP::I
+) ;
+
+==> b1485 <==
+use UnixODBC
+  qw(
+  :all);
+use UnixODBC
+  qw(
+  :all
+  );
+
 ==> b156 <==
 # State 1
 {
