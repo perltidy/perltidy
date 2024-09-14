@@ -1,6 +1,13 @@
 # Perltidy Change Log
 
-## 2024 09 03.01
+## 2024 09 03.02
+
+    - More edge cases for adding and deleting trailing commas are now handled
+    (git #156).
+
+    - A problem has been fixed in which the addition or deletion of trailing
+    commas with the -atc or -dtc flags did not occur due to early convergence
+    when the -conv flag was set (git #143).
 
     - Added parameter --qw-as-function, or -qwaf, discussed in git #164.
     When this parameter is set, a qw list which begins with 'qw(' is
