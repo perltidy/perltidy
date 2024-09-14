@@ -14083,7 +14083,7 @@ sub match_trailing_comma_rule {
     my $rtype_count     = $self->[_rtype_count_by_seqno_]->{$type_sequence};
     my $comma_count     = 0;
     my $fat_comma_count = 0;
-    my $comma_count_inner = 0;
+    my $has_inner_list;
 
     if ($rtype_count) {
         $comma_count     = $rtype_count->{','};
@@ -14122,28 +14122,6 @@ sub match_trailing_comma_rule {
             # containers must be nesting on the right
             return unless ($is_nesting_right);
 
-            # inner container must have commas
-            my $rtype_count_pp = $self->[_rtype_count_by_seqno_]->{$seqno_pp};
-            return unless ($rtype_count_pp);
-            $comma_count_inner = $rtype_count_pp->{','};
-##          my $fat_comma_count_inner = $rtype_count_pp->{'=>'};
-            return if ( !$comma_count_inner );
-            return if ( $comma_count_inner < 2 );
-
-            # and inner container must be multiline
-            $iline_first = $self->[_rfirst_comma_line_index_]->{$seqno_pp};
-            my $iline_c = $rLL_new->[$Kpp]->[_LINE_INDEX_];
-            return if ( !defined($iline_first) );
-            return if ( $iline_c <= $iline_first );
-
-            # the containers must be nesting on the left
-            my $Ktest = $self->K_next_nonblank( $K_opening, $rLL_new );
-            return unless ($Ktest);
-            my $seqno_test = $rLL_new->[$Ktest]->[_TYPE_SEQUENCE_];
-            if ( !$seqno_test || $seqno_test != $seqno_pp ) {
-                return;
-            }
-
             # if outer container type is paren, must be sub call
             my $token = $rLL_new->[$K_opening]->[_TOKEN_];
             if ( $token eq '(' ) {
@@ -14156,6 +14134,36 @@ sub match_trailing_comma_rule {
                   || $type_p eq 'w'
                   || $type_p eq '->';
                 return unless ($is_function_call);
+            }
+
+            # inner container must have commas
+            my $rtype_count_pp = $self->[_rtype_count_by_seqno_]->{$seqno_pp};
+            return unless ($rtype_count_pp);
+            $has_inner_list =
+              ( $rtype_count_pp->{','} || $rtype_count_pp->{'=>'} )
+              && !$rtype_count_pp->{';'};
+            return unless ($has_inner_list);
+
+            # and inner container must be multiline
+            $iline_first = $self->[_rfirst_comma_line_index_]->{$seqno_pp};
+            my $iline_c = $rLL_new->[$Kpp]->[_LINE_INDEX_];
+            return if ( !defined($iline_first) );
+            return if ( $iline_c <= $iline_first );
+
+            # the containers must be nesting on the left
+            my $Ktest = $self->K_next_nonblank( $K_opening, $rLL_new );
+            return unless ($Ktest);
+            my $seqno_test = $rLL_new->[$Ktest]->[_TYPE_SEQUENCE_];
+
+            # allow 1 nonblank token between opening tokens
+            if ( !$seqno_test ) {
+                $Ktest = $self->K_next_nonblank( $Ktest, $rLL_new );
+                return unless ($Ktest);
+                $seqno_test = $rLL_new->[$Ktest]->[_TYPE_SEQUENCE_];
+            }
+
+            if ( !$seqno_test || $seqno_test != $seqno_pp ) {
+                return;
             }
         }
     }
@@ -14187,8 +14195,11 @@ sub match_trailing_comma_rule {
     # To avoid instability in edge cases, when adding commas we uses the
     # multiline_commas definition, but when deleting we use multiline
     # containers.  This fixes b1384, b1396, b1397, b1398, b1400.
+    # Added fat_comma_count to handle one-line with key=>value, git143
     my $is_multiline =
-      $if_add ? $has_multiline_commas : $has_multiline_containers;
+        $if_add
+      ? $has_multiline_commas || $has_multiline_containers && $fat_comma_count
+      : $has_multiline_containers;
 
     my $is_bare_multiline_comma = $is_multiline && $KK == $Kfirst;
 
@@ -14212,7 +14223,7 @@ sub match_trailing_comma_rule {
     # 'm' matches a Multiline list
     #-----------------------------
     elsif ( $trailing_comma_style eq 'm' ) {
-        $match = $is_multiline && ( $comma_count || $comma_count_inner );
+        $match = $is_multiline && ( $comma_count || $has_inner_list );
     }
 
     #----------------------------------
