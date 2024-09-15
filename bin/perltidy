@@ -3939,7 +3939,7 @@ The parameter B<--want-trailing-commas=s>, or B<-wtc=s>, defines a preferred sty
 
   s=0 : no list should have a trailing comma
   s=1 or * : every list should have a trailing comma
-  s=m a multi-line list should have a trailing commas
+  s=m a multi-line list should have a trailing comma
   s=b trailing commas should be 'bare' (comma followed by newline)
   s=h lists of key=>value pairs, with about one one '=>' and one ',' per line,
       with a bare trailing comma

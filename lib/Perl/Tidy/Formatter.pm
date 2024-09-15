@@ -6753,6 +6753,15 @@ EOM
             return;
         }
 
+        # The combination -naws -lp can currently be unstable for multi-line qw
+        # (b1487, b1488).
+        if (  !$rOpts_add_whitespace
+            && $rOpts_line_up_parentheses
+            && ( !$opening || !$closing ) )
+        {
+            return;
+        }
+
         #---------------------------------------------------------------------
         # This is the point of no return if the transformation has not started
         #---------------------------------------------------------------------
@@ -14202,16 +14211,23 @@ sub match_trailing_comma_rule {
         $has_multiline_commas = $line_diff_commas > 0;
     }
 
-    # To avoid instability in edge cases, when adding commas we uses the
-    # multiline_commas definition, but when deleting we use multiline
-    # containers.  This fixes b1384, b1396, b1397, b1398, b1400.
-    # Added fat_comma_count to handle one-line with key=>value, git143
+    # To avoid instability in edge cases, we must make it somewhat easier
+    # to delete commas than to add commas. The following prescription
+    # fixes b1384, b1396, b1397, b1398, b1400.
     my $is_multiline =
         $if_add
-      ? $has_multiline_commas || $has_multiline_containers && $fat_comma_count
+      ? $has_multiline_commas
       : $has_multiline_containers;
 
-    my $is_bare_multiline_comma = $is_multiline && $KK == $Kfirst;
+    # Old coding for bare comma, very stable:
+    #   my $is_bare_multiline_comma = $KK == $Kfirst && $is_multiline;
+
+    # Testing new coding for bare comma adds fat_comma_count to handle adding
+    # comma to one-line with key=>value, git143
+    my $is_bare_multiline_comma = $KK == $Kfirst;
+    if ($if_add) {
+        $is_bare_multiline_comma &&= $has_multiline_commas || $fat_comma_count;
+    }
 
     my $match;
 

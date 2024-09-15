@@ -12264,6 +12264,37 @@ use
 --noadd-whitespace
 --qw-as-function
 
+==> b1487.in <==
+use Net::Domain qw(hostname domainname
+                   hostdomain);
+use Net::Domain qw(
+                    hostname
+                    domainname
+                    hostdomain
+);
+
+==> b1487.par <==
+--maximum-line-length=41
+--continuation-indentation=7
+--line-up-parentheses
+--noadd-whitespace
+--qw-as-function
+
+==> b1488.in <==
+use vars qw(
+             $VERSION @ISA
+             @EXPORT_OK %EXPORT_TAGS
+);
+use vars qw($VERSION @ISA
+            @EXPORT_OK %EXPORT_TAGS);
+
+==> b1488.par <==
+--maximum-line-length=48
+--continuation-indentation=6
+--noadd-whitespace
+--extended-line-up-parentheses
+--qw-as-function
+
 ==> b156.in <==
 # State 1
 {
