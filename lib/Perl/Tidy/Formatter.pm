@@ -6669,6 +6669,8 @@ EOM
         my $qw_text_start = $qw_text;
         my $opening       = EMPTY_STRING;
         my $closing       = EMPTY_STRING;
+        my $has_opening_space;
+        my $has_closing_space;
 
         # the new word tokens are 1 level deeper than the original 'q' token
         my $level_words = $qw_level + 1;
@@ -6702,8 +6704,8 @@ EOM
                 DEVEL_MODE && Fault("$lno: unexpected qw opening: $opening\n");
                 return;
             }
-            $qw_text = substr( $qw_text, 3 );
-            $qw_text =~ s/^\s+//;
+            $qw_text           = substr( $qw_text, 3 );
+            $has_opening_space = $qw_text =~ s/^\s+//;
 
             # Do not use -qwaf under high stress (b1482,b1483,b1484,b1485,1486)
             # Note: so far all known cases of stress instability have had -naws
@@ -6721,6 +6723,7 @@ EOM
                 $closing = substr( $qw_text, -1,  1 );
                 $qw_text = substr( $qw_text,  0, -1 );
                 $qw_text =~ s/\s+$//;
+                $has_closing_space = $qw_text =~ s/^\s+//;
             }
             else {
 
@@ -6755,7 +6758,11 @@ EOM
 
         # The combination -naws -lp can currently be unstable for multi-line qw
         # (b1487, b1488).
-        if (  !$rOpts_add_whitespace
+        # NOTE: this instability has been fixed by following the input
+        # whitespace within parens, but keep this code for a while in case the
+        # issue arises in the future (b1487).
+        if (   0
+            && !$rOpts_add_whitespace
             && $rOpts_line_up_parentheses
             && ( !$opening || !$closing ) )
         {
@@ -6770,7 +6777,7 @@ EOM
         my $rtoken_q = pop @{$rLL};
 
         # now push on the replacement tokens
-        my $nonblank_push_count = 0;
+        my $comma_count = 0;
 
         if ($opening) {
 
@@ -6796,18 +6803,16 @@ EOM
             # make and push the 'qw' token
             my $rtoken_qw = copy_token_as_type( $rtoken_q, 'U', 'qw' );
             push @{$rLL}, $rtoken_qw;
-            $nonblank_push_count++;
 
             # make and push the '(' with the new sequence number
             my $rtoken_opening = copy_token_as_type( $rtoken_q, '{', '(' );
             $rtoken_opening->[_TYPE_SEQUENCE_] = $seqno;
             push @{$rLL}, $rtoken_opening;
-            $nonblank_push_count++;
-
         }
 
-        # flag something like 'qw(hello)' which does not require commas & spaces
-        my $single_item = $opening && $closing && @words == 1;
+        # All words must be followed by a comma except for an intact
+        # structure with a single word, like 'qw(hello)'
+        my $commas_needed = !( $opening && $closing && @words == 1 );
 
         # Make and push each word as a type 'Q' quote followed by a phantom
         # comma. The phantom comma is type ',' and is processed
@@ -6817,8 +6822,8 @@ EOM
 
             foreach my $word (@words) {
 
-                # space after any previous token
-                if ( !$single_item && $nonblank_push_count ) {
+                # always space after a comma; follow input spacing after '('
+                if ( $comma_count || $has_opening_space ) {
                     my $rtoken_space =
                       copy_token_as_type( $rtoken_q, 'b', SPACE );
                     $rtoken_space->[_LEVEL_] = $level_words;
@@ -6829,18 +6834,18 @@ EOM
                 my $rtoken_word = copy_token_as_type( $rtoken_q, 'Q', $word );
                 $rtoken_word->[_LEVEL_] = $level_words;
                 push @{$rLL}, $rtoken_word;
-                $nonblank_push_count++;
 
                 # Add a trailing comma unless this is a single
                 # item. For a single item we want just one token in the
                 # container so that the single-item spacing rule will apply as
                 # expected.  There is no danger that a real trailing comma will
                 # be added since no other commas will be in the container.
-                if ( !$single_item ) {
+                if ($commas_needed) {
                     my $rtoken_comma =
                       copy_token_as_type( $rtoken_q, ',', EMPTY_STRING );
                     $rtoken_comma->[_LEVEL_] = $level_words;
                     push @{$rLL}, $rtoken_comma;
+                    $comma_count++;
                 }
             }
         }
@@ -6848,8 +6853,8 @@ EOM
         # make and push closing sequenced item ')'
         if ($closing) {
 
-            # space after any previous token
-            if ( !$single_item && $nonblank_push_count ) {
+            # follow input spacing before ')'
+            if ($has_closing_space) {
                 my $rtoken_space = copy_token_as_type( $rtoken_q, 'b', SPACE );
                 $rtoken_space->[_LEVEL_] = $level_words;
                 push @{$rLL}, $rtoken_space;
@@ -6865,7 +6870,6 @@ EOM
             my $rtoken_closing = copy_token_as_type( $rtoken_q, '}', ')' );
             $rtoken_closing->[_TYPE_SEQUENCE_] = $in_qw_seqno;
             push @{$rLL}, $rtoken_closing;
-            $nonblank_push_count++;
 
             # all done with this qw list
             $in_qw_seqno = 0;
