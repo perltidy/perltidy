@@ -36,7 +36,7 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
-        'altc1'  => "-atc -wtc=m",
+        'altc1'  => "-naltc -atc -wtc=m",
         'altc2'  => "-altc -atc -wtc=m",
         'csc3'   => "-csc -csci=2 -ncscb",
         'def'    => "",

@@ -8311,20 +8311,15 @@ use UnixODBC
 
 ==> b1487 <==
 use Net::Domain qw(hostname domainname
-       hostdomain);
-use Net::Domain qw(
-       hostname
-       domainname
-       hostdomain
-);
+                   hostdomain);
+use Net::Domain qw(hostname domainname
+                   hostdomain);
 
 ==> b1488 <==
-use vars qw(
-      $VERSION @ISA
-      @EXPORT_OK %EXPORT_TAGS
-);
 use vars qw($VERSION @ISA
-      @EXPORT_OK %EXPORT_TAGS);
+            @EXPORT_OK %EXPORT_TAGS);
+use vars qw($VERSION @ISA
+            @EXPORT_OK %EXPORT_TAGS);
 
 ==> b156 <==
 # State 1

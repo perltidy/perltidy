@@ -314,6 +314,7 @@ my (
     %is_kwU,
     %is_re_match_op,
     %is_my_state_our,
+    %is_keyword_with_special_leading_term,
 
     # INITIALIZER: sub check_options
     $controlled_comma_style,
@@ -928,6 +929,12 @@ BEGIN {
 
     @q = qw ( my state our );
     @is_my_state_our{@q} = (1) x scalar(@q);
+
+    # These keywords have prototypes which allow a special leading item
+    # followed by a list
+    @q =
+      qw( chmod formline grep join kill map pack printf push sprintf unshift );
+    @is_keyword_with_special_leading_term{@q} = (1) x scalar(@q);
 
 } ## end BEGIN
 
@@ -3854,6 +3861,8 @@ sub set_whitespace_flags {
                         $rtokh_last_last )
                       : WS_NO;
 
+                    # Note that this does not include functions called
+                    # with '->(', so that case has to be handled separately
                     set_container_ws_by_keyword( $last_token, $seqno );
                     $ris_function_call_paren->{$seqno} = 1;
                 }
@@ -14039,6 +14048,59 @@ sub unstore_last_nonblank_token {
     return 1;
 } ## end sub unstore_last_nonblank_token
 
+sub is_list_assignment {
+    my ( $self, $K_opening ) = @_;
+
+    # Given:
+    #   $K_opening = index in $rLL_new of an opening paren
+    # Return:
+    #   true if this is a list assignment of the form '@xxx = ('
+    #   false otherwise
+
+    return unless defined($K_opening);
+    my $Km = $self->K_previous_nonblank( $K_opening, $rLL_new );
+    return unless defined($Km);
+    my $type_m = $rLL_new->[$Km]->[_TYPE_];
+
+    # Look for list assignment like '@list = (' or '@{$ref} = ('
+    #   or '%hash = ('
+    if ( $type_m eq '=' ) {
+        my $token_m = $rLL_new->[$Km]->[_TOKEN_];
+        $Km = $self->K_previous_nonblank( $Km, $rLL_new );
+        return unless defined($Km);
+        $type_m  = $rLL_new->[$Km]->[_TYPE_];
+        $token_m = $rLL_new->[$Km]->[_TOKEN_];
+
+        # backup past a braced item
+        if ( $token_m eq '}' ) {
+            my $seqno_m = $rLL_new->[$Km]->[_TYPE_SEQUENCE_];
+            return unless ($seqno_m);
+            my $K_opening_m = $self->[_K_opening_container_]->{$seqno_m};
+            return unless defined($K_opening_m);
+            $Km = $self->K_previous_nonblank( $K_opening_m, $rLL_new );
+            return unless defined($Km);
+            $type_m  = $rLL_new->[$Km]->[_TYPE_];
+            $token_m = $rLL_new->[$Km]->[_TOKEN_];
+        }
+
+        if ( $type_m eq 'i' || $type_m eq 't' ) {
+            my $sigil = substr( $token_m, 0, 1 );
+            if ( $sigil eq '@' ) {
+                return 1;
+            }
+        }
+    }
+    return;
+} ## end sub is_list_assignment
+
+my %is_not_list_paren;
+
+BEGIN {
+    ## trailing comma logic ignores opening parens preceded by these tokens
+    my @q = qw# if elsif unless while and or err not && | || ? : ! . #;
+    @is_not_list_paren{@q} = (1) x scalar(@q);
+}
+
 sub match_trailing_comma_rule {
 
     my ( $self, $KK, $Kfirst, $Kp, $trailing_comma_rule, $if_add ) = @_;
@@ -14054,8 +14116,9 @@ sub match_trailing_comma_rule {
     #  $if_add = true if adding comma, false if deleting comma
 
     # Returns:
-    #   false if no match
-    #   true  if match
+    #   false    if no match
+    #   true     if match
+    #  !$if_add  to keep the current state unchanged
 
     # For example, we might be checking for addition of a comma here:
 
@@ -14071,52 +14134,77 @@ sub match_trailing_comma_rule {
 
     # List of $trailing_comma_style values:
     #   undef  stable: do not change
-    #   '0' : no list should have a trailing comma
     #   '1' or '*' : every list should have a trailing comma
     #   'm' a multi-line list should have a trailing commas
     #   'b' trailing commas should be 'bare' (comma followed by newline)
-    #   'h' lists of key=>value pairs with a bare trailing comma
     #   'i' same as s=h but also include any list with no more than about one
     #       comma per line
+    #   'h' lists of key=>value pairs with a bare trailing comma
+    #   '0' : no list should have a trailing comma
     #   ' ' or -wtc not defined : leave trailing commas unchanged [DEFAULT].
+
+    # Note the hierarchy:
+    # '1' includes all 'm' includes all 'b' includes all 'i' includes all 'h'
 
     # Note: an interesting generalization would be to let an upper case
     # letter denote the negation of styles 'm', 'b', 'h', 'i'. This might
     # be useful for undoing operations. It would be implemented as a wrapper
     # around this routine.
 
-    #-----------------------------------------
-    #  No style defined : do not add or delete
-    #-----------------------------------------
-    if ( !defined($trailing_comma_style) ) { return !$if_add }
+    # Return !$if_add to keep the current state unchanged
+    my $no_change = !$if_add;
+
+    # If no style defined : do not add or delete
+    if ( !defined($trailing_comma_style) ) { return $no_change }
 
     #----------------------------------------
     # Set some flags describing this location
     #----------------------------------------
     my $type_sequence = $rLL->[$KK]->[_TYPE_SEQUENCE_];
-    return unless ($type_sequence);
+    return $no_change unless ($type_sequence);
     my $closing_token = $rLL->[$KK]->[_TOKEN_];
     my $is_permanently_broken =
       $self->[_ris_permanently_broken_]->{$type_sequence};
 
     my $K_opening = $self->[_K_opening_container_]->{$type_sequence};
-    return if ( !defined($K_opening) );
+    return $no_change if ( !defined($K_opening) );
     my $iline_first     = $self->[_rfirst_comma_line_index_]->{$type_sequence};
     my $iline_last      = $rLL_new->[$Kp]->[_LINE_INDEX_];
     my $rtype_count     = $self->[_rtype_count_by_seqno_]->{$type_sequence};
     my $comma_count     = 0;
     my $fat_comma_count = 0;
     my $has_inner_list;
+    my $has_inner_multiline_commas;
+
+    # if outer container is paren, return if this is not a possible list
+    # For example, return for an if paren 'if ('
+    my $token = $rLL_new->[$K_opening]->[_TOKEN_];
+    my $is_arrow_call;
+    if ( $token eq '(' ) {
+        my $Km = $self->K_previous_nonblank( $K_opening, $rLL_new );
+        if ( defined($Km) ) {
+            my $type_m  = $rLL_new->[$Km]->[_TYPE_];
+            my $token_m = $rLL_new->[$Km]->[_TOKEN_];
+            if ( $type_m eq 'k' ) {
+                if ( $is_not_list_paren{$token_m} ) { return $no_change }
+            }
+            $is_arrow_call = $type_m eq '->';
+        }
+    }
 
     if ($rtype_count) {
         $comma_count     = $rtype_count->{','};
         $fat_comma_count = $rtype_count->{'=>'};
     }
 
-    # Check for cases where adding a lone comma may interfere with welding.
-    if (   $if_add
-        && !$comma_count
-        && $is_closing_type{$last_nonblank_code_type} )
+    #----------------------------------------------------------------
+    # If no existing commas, see if we have an inner nested container
+    #----------------------------------------------------------------
+    if (
+          !$comma_count
+        && $if_add    # should be true if no commas
+        && $is_closing_type{$last_nonblank_code_type}
+      )
     {
 
         # check for nesting closing containers
@@ -14139,24 +14227,22 @@ sub match_trailing_comma_rule {
             return;
         }
 
-        # Must return if no fat comma and not fully nesting
+        # If no comma and no fat comma, require nesting and use the nested
+        # container comma count parameters...
         if ( !$fat_comma_count ) {
 
             # containers must be nesting on the right
             return unless ($is_nesting_right);
 
-            # if outer container type is paren, must be sub call
-            my $token = $rLL_new->[$K_opening]->[_TOKEN_];
-            if ( $token eq '(' ) {
-                my $Km     = $self->K_previous_nonblank( $K_opening, $rLL_new );
-                my $type_p = defined($Km) ? $rLL_new->[$Km]->[_TYPE_] : 'b';
-                ## see also sub count_return_values_wanted
-                my $is_function_call =
-                     $type_p eq 'U'
-                  || $type_p eq 'i'
-                  || $type_p eq 'w'
-                  || $type_p eq '->';
-                return unless ($is_function_call);
+            # if outer container is paren, must be sub call or list assignment
+            # Note that _ris_function_call_paren_ does not currently include
+            # calls of the form '->(', so that has to be checked separetely.
+            if (   $token eq '('
+                && !$self->[_ris_function_call_paren_]->{$type_sequence}
+                && !$is_arrow_call
+                && !$self->is_list_assignment($K_opening) )
+            {
+                return;
             }
 
             # inner container must have commas
@@ -14172,36 +14258,42 @@ sub match_trailing_comma_rule {
             my $iline_c = $rLL_new->[$Kpp]->[_LINE_INDEX_];
             return if ( !defined($iline_first) );
             return if ( $iline_c <= $iline_first );
+            $has_inner_multiline_commas = 1;
 
-            # the containers must be nesting on the left
-            my $Ktest = $self->K_next_nonblank( $K_opening, $rLL_new );
-            return unless ($Ktest);
-            my $seqno_test = $rLL_new->[$Ktest]->[_TYPE_SEQUENCE_];
+            # check the inner opening containers for nesting
+            my $K_opening_pp = $self->[_K_opening_container_]->{$seqno_pp};
+            return unless defined($K_opening_pp);
 
-            # allow 1 nonblank token between opening tokens
-            if ( !$seqno_test ) {
-                $Ktest = $self->K_next_nonblank( $Ktest, $rLL_new );
-                return unless ($Ktest);
-                $seqno_test = $rLL_new->[$Ktest]->[_TYPE_SEQUENCE_];
+            # Check betwen the two opening tokens, $K_opening and $K_opening_pp
+            # - not too far apart
+            my $Kdiff = $K_opening_pp - $K_opening;
+            return if ( $Kdiff < 1 || $Kdiff > 6 );
+
+            # - no intervening sequenced items, so that they are nesting
+            foreach my $Kx ( $K_opening + 1 .. $K_opening_pp - 1 ) {
+                return if ( $rLL_new->[$Kx]->[_TYPE_SEQUENCE_] );
             }
 
-            if ( !$seqno_test || $seqno_test != $seqno_pp ) {
-                return;
-            }
+            # OK, lone comma is possible here
         }
     }
 
-    # multiline definition 1: opening and closing tokens on different lines
-    my $iline_o                  = $rLL_new->[$K_opening]->[_LINE_INDEX_];
-    my $iline_c                  = $rLL->[$KK]->[_LINE_INDEX_];
-    my $line_diff_containers     = $iline_c - $iline_o;
-    my $has_multiline_containers = $line_diff_containers > 0;
+    #---------------------------------
+    # Define the trailing comma type..
+    #---------------------------------
 
-    # multiline definition 2: first and last commas on different lines
+    # Multiline ('m'): the opening and closing tokens on different lines
+    my $iline_o              = $rLL_new->[$K_opening]->[_LINE_INDEX_];
+    my $iline_c              = $rLL->[$KK]->[_LINE_INDEX_];
+    my $line_diff_containers = $iline_c - $iline_o;
+    my $is_multiline         = $line_diff_containers > 0;
+    if ($if_add) { $is_multiline &&= ( $comma_count || $has_inner_list ) }
+
+    # multiline commas: first and last commas on different lines
     # Note that _ris_broken_container_ also stores the line diff
     # but it is not available at this early stage.
-    my $has_multiline_commas;
-    my $line_diff_commas = 0;
+    my $has_multiline_commas = $has_inner_multiline_commas;
+    my $line_diff_commas     = 0;
     if ( !defined($iline_first) ) {
 
         # shouldn't happen if caller checked comma count
@@ -14211,27 +14303,27 @@ sub match_trailing_comma_rule {
         ) if (DEVEL_MODE);
     }
     else {
-        $line_diff_commas     = $iline_last - $iline_first;
-        $has_multiline_commas = $line_diff_commas > 0;
+        $line_diff_commas = $iline_last - $iline_first;
+        $has_multiline_commas ||= $line_diff_commas > 0;
     }
 
-    # To avoid instability in edge cases, we must make it somewhat easier
-    # to delete commas than to add commas. The following prescription
-    # fixes b1384, b1396, b1397, b1398, b1400.
-    my $is_multiline =
-        $if_add
-      ? $has_multiline_commas
-      : $has_multiline_containers;
+    # Bare 'b': the closing container token starts a new line:
+    my $is_bare_trailing_comma = $KK == $Kfirst;
 
-    # Old coding for bare comma, very stable:
-    #   my $is_bare_multiline_comma = $KK == $Kfirst && $is_multiline;
-
-    # Testing new coding for bare comma adds fat_comma_count to handle adding
-    # comma to one-line with key=>value, git143
-    my $is_bare_multiline_comma = $KK == $Kfirst;
+    # For stability when adding commas with option 'b', add these requirements:
     if ($if_add) {
-        $is_bare_multiline_comma &&= $has_multiline_commas || $fat_comma_count;
+        $is_bare_trailing_comma &&= (
+                 $has_multiline_commas
+              || $fat_comma_count
+              || $is_permanently_broken
+              || ( $rOpts_break_at_old_comma_breakpoints
+                && !$rOpts_ignore_old_breakpoints )
+        );
     }
+
+    #---------------------
+    # Check for a match...
+    #---------------------
 
     my $match;
 
@@ -14253,14 +14345,14 @@ sub match_trailing_comma_rule {
     # 'm' matches a Multiline list
     #-----------------------------
     elsif ( $trailing_comma_style eq 'm' ) {
-        $match = $is_multiline && ( $comma_count || $has_inner_list );
+        $match = $is_multiline;
     }
 
     #----------------------------------
     # 'b' matches a Bare trailing comma
     #----------------------------------
     elsif ( $trailing_comma_style eq 'b' ) {
-        $match = $is_bare_multiline_comma;
+        $match = $is_bare_trailing_comma;
     }
 
     #--------------------------------------------------------------------------
@@ -14273,7 +14365,7 @@ sub match_trailing_comma_rule {
         # The set of 'i' matches includes the set of 'h' matches.
 
         # the trailing comma must be bare for both 'h' and 'i'
-        return if ( !$is_bare_multiline_comma );
+        return if ( !$is_bare_trailing_comma );
 
         # There must be no more than one comma per line for both 'h' and 'i'
         # The new_comma_count here will include the trailing comma.
@@ -14312,9 +14404,8 @@ sub match_trailing_comma_rule {
             {
                 # ignore this test
             }
-
             else {
-                return;
+                return 0;
             }
         }
 
@@ -14329,11 +14420,14 @@ sub match_trailing_comma_rule {
                 $fat_comma_count >= 2
 
                 # - an isolated fat comma is a match for type 'h'
+                #   and also 'i' (see note below)
                 || (
                        $fat_comma_count == 1
                     && $new_comma_count == 1
                     ## && $if_add ## removed to fix b1476
-                    && $trailing_comma_style eq 'h'
+
+                    ## removed so that 'i' and 'h' work the same here
+                    ## && $trailing_comma_style eq 'h'
                 )
             )
           )
@@ -31640,28 +31734,6 @@ EOM
 } ## end sub find_token_starting_list
 
 {    ## begin closure table_maker
-
-    my %is_keyword_with_special_leading_term;
-
-    BEGIN {
-
-        # These keywords have prototypes which allow a special leading item
-        # followed by a list
-        my @q = qw(
-          chmod
-          formline
-          grep
-          join
-          kill
-          map
-          pack
-          printf
-          push
-          sprintf
-          unshift
-        );
-        @is_keyword_with_special_leading_term{@q} = (1) x scalar(@q);
-    } ## end BEGIN
 
     use constant DEBUG_SPARSE => 0;
 

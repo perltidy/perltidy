@@ -3852,6 +3852,7 @@ sub generate_options {
     # These settings should approximate the perlstyle(1) suggestions.
     #------------------------------------------------------------------
     my @defaults = qw(
+      add-lone-trailing-commas
       add-newlines
       add-terminal-newline
       add-semicolons
