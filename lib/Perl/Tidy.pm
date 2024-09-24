@@ -2945,6 +2945,7 @@ EOM
                     && $formatter->want_second_iteration() )
                 {
                     ## deja vu, but do not set $stop_now
+                    $saw_md5{$digest} = $iter;
                 }
                 else {
 
@@ -4768,7 +4769,7 @@ EOM
         if ( $Opts{$long_name} ) {
             my $short_name = $early_exit_commands{$long_name};
             Die(<<EOM);
-Ambigiguos entry; please enter '--$long_name' or '-$short_name'
+Ambigiguous entry; please enter '--$long_name' or '-$short_name'
 EOM
         }
     }
