@@ -12295,6 +12295,34 @@ use vars qw($VERSION @ISA
 --extended-line-up-parentheses
 --qw-as-function
 
+==> b1489.in <==
+    $menuitem_dict->signal_connect (
+        'activate' => sub { create_dict_window () }, );
+    $menuitem_dict->signal_connect ( 'activate' => sub { create_dict_window () }
+    );
+
+==> b1489.par <==
+--space-function-paren
+--add-trailing-commas
+--want-trailing-commas='h'
+--delete-trailing-commas
+
+==> b1490.in <==
+$e_str->bind (
+'<return>' => sub {$e_hnr->tabfocus if $e_hnr->can ( 'tabfocus' );}, );
+$e_str->bind ( '<return>' => sub {$e_hnr->tabfocus if $e_hnr->can ( 'tabfocus' );}
+);
+
+==> b1490.par <==
+--maximum-line-length=82
+--indent-columns=0
+--space-function-paren
+--paren-tightness=0
+--add-trailing-commas
+--want-trailing-commas='h'
+--delete-trailing-commas
+--block-brace-tightness=2
+
 ==> b156.in <==
 # State 1
 {

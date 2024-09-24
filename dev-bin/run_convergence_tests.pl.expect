@@ -8321,6 +8321,18 @@ use vars qw($VERSION @ISA
 use vars qw($VERSION @ISA
             @EXPORT_OK %EXPORT_TAGS);
 
+==> b1489 <==
+    $menuitem_dict->signal_connect ( 'activate' => sub { create_dict_window () }
+    );
+    $menuitem_dict->signal_connect ( 'activate' => sub { create_dict_window () }
+    );
+
+==> b1490 <==
+$e_str->bind ( '<return>' => sub {$e_hnr->tabfocus if $e_hnr->can ( 'tabfocus' );}
+);
+$e_str->bind ( '<return>' => sub {$e_hnr->tabfocus if $e_hnr->can ( 'tabfocus' );}
+);
+
 ==> b156 <==
 # State 1
 {
