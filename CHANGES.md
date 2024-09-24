@@ -2,6 +2,10 @@
 
 ## 2024 09 03.02
 
+    - The parameter --add-lone-trailing-commas, -altc, is now on by default.
+    This will simplify input for trailing comma operations. Use
+    --noadd-lone-trailing-commas, or -naltc to turn it off.
+
     - More edge cases for adding and deleting trailing commas are now handled
     (git #156).
 
