@@ -12335,6 +12335,12 @@ sub respace_tokens {
         # The inner loop is in a separate sub for clarity
         $self->respace_tokens_inner_loop( $Kfirst, $Klast, $input_line_number );
 
+        if ( $line_of_tokens->{_ending_in_quote} ) {
+            my $seqno = $seqno_stack{ $depth_next - 1 };
+            if ( defined($seqno) ) {
+                $self->set_permanently_broken($seqno);
+            }
+        }
     }    # End line loop
 
     # finalize data structures
@@ -12498,6 +12504,9 @@ sub respace_tokens_inner_loop {
                                 && (   $rOpts_delete_lone_trailing_commas
                                     || $rtype_count->{','} > 1
                                     || $rtype_count->{'=>'} )
+
+                                # ignore zero-size qw commas
+                                && $last_nonblank_code_token
                               )
                             {
                                 $deleted =
@@ -14163,24 +14172,33 @@ sub match_trailing_comma_rule {
     my $type_sequence = $rLL->[$KK]->[_TYPE_SEQUENCE_];
     return $no_change unless ($type_sequence);
     my $closing_token = $rLL->[$KK]->[_TOKEN_];
+
+    # factors which force stability
     my $is_permanently_broken =
       $self->[_ris_permanently_broken_]->{$type_sequence};
+    $is_permanently_broken ||=
+      ( $rOpts_break_at_old_comma_breakpoints
+          && !$rOpts_ignore_old_breakpoints );
 
     my $K_opening = $self->[_K_opening_container_]->{$type_sequence};
     return $no_change if ( !defined($K_opening) );
-    my $iline_first     = $self->[_rfirst_comma_line_index_]->{$type_sequence};
-    my $iline_last      = $rLL_new->[$Kp]->[_LINE_INDEX_];
-    my $rtype_count     = $self->[_rtype_count_by_seqno_]->{$type_sequence};
-    my $comma_count     = 0;
-    my $fat_comma_count = 0;
-    my $has_inner_list;
+    my $iline_first_comma =
+      $self->[_rfirst_comma_line_index_]->{$type_sequence};
+    my $iline_last_comma = $rLL_new->[$Kp]->[_LINE_INDEX_];
+    my $rtype_count      = $self->[_rtype_count_by_seqno_]->{$type_sequence};
+    my $comma_count      = 0;
+    my $fat_comma_count  = 0;
+    my $has_inner_multiline_structure;
     my $has_inner_multiline_commas;
 
     # if outer container is paren, return if this is not a possible list
     # For example, return for an if paren 'if ('
     my $token = $rLL_new->[$K_opening]->[_TOKEN_];
     my $is_arrow_call;
+    my $is_hash_value;
+    my $is_paren_list;
     if ( $token eq '(' ) {
+        $is_paren_list = 1;
         my $Km = $self->K_previous_nonblank( $K_opening, $rLL_new );
         if ( defined($Km) ) {
             my $type_m  = $rLL_new->[$Km]->[_TYPE_];
@@ -14189,6 +14207,7 @@ sub match_trailing_comma_rule {
                 if ( $is_not_list_paren{$token_m} ) { return $no_change }
             }
             $is_arrow_call = $type_m eq '->';
+            $is_hash_value = $type_m eq '=>';
         }
     }
 
@@ -14202,7 +14221,7 @@ sub match_trailing_comma_rule {
     #----------------------------------------------------------------
     if (
           !$comma_count
-        && $if_add    # should be true if no commas
+        && $if_add    # for safety, should be true if no commas
         && $is_closing_type{$last_nonblank_code_type}
       )
     {
@@ -14227,12 +14246,18 @@ sub match_trailing_comma_rule {
             return;
         }
 
-        # If no comma and no fat comma, require nesting and use the nested
-        # container comma count parameters...
+        #--------------------------------
+        # If no comma and no fat comma...
+        #--------------------------------
         if ( !$fat_comma_count ) {
 
             # containers must be nesting on the right
             return unless ($is_nesting_right);
+
+            # give up if it is a code block
+            if ( $self->[_rblock_type_of_seqno_]->{$seqno_pp} ) {
+                return;
+            }
 
             # if outer container is paren, must be sub call or list assignment
             # Note that _ris_function_call_paren_ does not currently include
@@ -14240,86 +14265,91 @@ sub match_trailing_comma_rule {
             if (   $token eq '('
                 && !$self->[_ris_function_call_paren_]->{$type_sequence}
                 && !$is_arrow_call
+                && !$is_hash_value
                 && !$self->is_list_assignment($K_opening) )
             {
                 return;
             }
 
-            # inner container must have commas
-            my $rtype_count_pp = $self->[_rtype_count_by_seqno_]->{$seqno_pp};
-            return unless ($rtype_count_pp);
-            $has_inner_list =
-              ( $rtype_count_pp->{','} || $rtype_count_pp->{'=>'} )
-              && !$rtype_count_pp->{';'};
-            return unless ($has_inner_list);
-
-            # and inner container must be multiline
-            $iline_first = $self->[_rfirst_comma_line_index_]->{$seqno_pp};
-            my $iline_c = $rLL_new->[$Kpp]->[_LINE_INDEX_];
-            return if ( !defined($iline_first) );
-            return if ( $iline_c <= $iline_first );
-            $has_inner_multiline_commas = 1;
-
-            # check the inner opening containers for nesting
             my $K_opening_pp = $self->[_K_opening_container_]->{$seqno_pp};
             return unless defined($K_opening_pp);
+            my $iline_o = $rLL_new->[$K_opening_pp]->[_LINE_INDEX_];
+            my $iline_c = $rLL_new->[$Kpp]->[_LINE_INDEX_];
 
-            # Check betwen the two opening tokens, $K_opening and $K_opening_pp
-            # - not too far apart
-            my $Kdiff = $K_opening_pp - $K_opening;
-            return if ( $Kdiff < 1 || $Kdiff > 6 );
+            my $rtype_count_pp = $self->[_rtype_count_by_seqno_]->{$seqno_pp};
+            return unless ($rtype_count_pp);
 
-            # - no intervening sequenced items, so that they are nesting
-            foreach my $Kx ( $K_opening + 1 .. $K_opening_pp - 1 ) {
-                return if ( $rLL_new->[$Kx]->[_TYPE_SEQUENCE_] );
-            }
+            $has_inner_multiline_structure =
+                 $iline_c > $iline_o
+              && ( $rtype_count_pp->{','} || $rtype_count_pp->{'=>'} )
+              && !$rtype_count_pp->{';'};
+            return unless ($has_inner_multiline_structure);
 
-            # OK, lone comma is possible here
+            # look for inner multiline commas
+            $iline_first_comma =
+              $self->[_rfirst_comma_line_index_]->{$seqno_pp};
+            return if ( !defined($iline_first_comma) );
+            my $iline_ppc = $rLL_new->[$Kpp]->[_LINE_INDEX_];
+            return if ( $iline_ppc <= $iline_first_comma );
+            $has_inner_multiline_commas = 1;
+
+            # OK, we have an inner container with commas
         }
     }
 
-    #---------------------------------
-    # Define the trailing comma type..
-    #---------------------------------
+    #--------------------------------
+    # Characterize the trailing comma
+    #--------------------------------
+    if ( !defined($iline_first_comma) ) {
 
-    # Multiline ('m'): the opening and closing tokens on different lines
-    my $iline_o              = $rLL_new->[$K_opening]->[_LINE_INDEX_];
-    my $iline_c              = $rLL->[$KK]->[_LINE_INDEX_];
-    my $line_diff_containers = $iline_c - $iline_o;
-    my $is_multiline         = $line_diff_containers > 0;
-    if ($if_add) { $is_multiline &&= ( $comma_count || $has_inner_list ) }
+        # Shouldn't happen: if this sub was called without any commas in this
+        # container, then either we should have found one in a nested container
+        # or already returned.
+        if (DEVEL_MODE) {
+            my $type_kp = $rLL_new->[$Kp]->[_TYPE_];
+            Fault(
+"at line $iline_last_comma but line of first comma not defined, at Kp=$Kp, type=$type_kp\n"
+            );
+        }
+        return;
+    }
 
     # multiline commas: first and last commas on different lines
     # Note that _ris_broken_container_ also stores the line diff
     # but it is not available at this early stage.
-    my $has_multiline_commas = $has_inner_multiline_commas;
-    my $line_diff_commas     = 0;
-    if ( !defined($iline_first) ) {
+    my $line_diff_commas = $iline_last_comma - $iline_first_comma;
+    my $has_multiline_commas =
+      $line_diff_commas > 0 || $has_inner_multiline_commas;
 
-        # shouldn't happen if caller checked comma count
-        my $type_kp = $rLL_new->[$Kp]->[_TYPE_];
-        Fault(
-"at line $iline_last but line of first comma not defined, at Kp=$Kp, type=$type_kp\n"
-        ) if (DEVEL_MODE);
-    }
-    else {
-        $line_diff_commas = $iline_last - $iline_first;
-        $has_multiline_commas ||= $line_diff_commas > 0;
-    }
+    # Multiline ('m'): the opening and closing tokens on different lines
+    my $iline_o      = $rLL_new->[$K_opening]->[_LINE_INDEX_];
+    my $iline_c      = $rLL->[$KK]->[_LINE_INDEX_];
+    my $is_multiline = $iline_c > $iline_o;
 
-    # Bare 'b': the closing container token starts a new line:
-    my $is_bare_trailing_comma = $KK == $Kfirst;
-
-    # For stability when adding commas with option 'b', add these requirements:
+    # Require additional stability factors when adding commas
     if ($if_add) {
-        $is_bare_trailing_comma &&= (
-                 $has_multiline_commas
-              || $fat_comma_count
+        my $is_stable = (
+
+            # has commas not in parens, or multiple lines ending in commas
+            $comma_count
+              && ( !$is_paren_list || $has_multiline_commas )
+
+              # or has a fat comma not in parens or in parens over several lines
+              # (b1489, b1490)
+              || ( $fat_comma_count
+                && ( !$is_paren_list || $iline_c - $iline_o > 1 ) )
+
+              # or contains an inner multiline structure
+              || $has_inner_multiline_structure
+
+              # or has other stabilizing factors, like comments and blank lines
               || $is_permanently_broken
-              || ( $rOpts_break_at_old_comma_breakpoints
-                && !$rOpts_ignore_old_breakpoints )
         );
+        $is_multiline &&= $is_stable;
     }
+
+    # Bare 'b': a multiline where the closing container token starts a new line:
+    my $is_bare_trailing_comma = $is_multiline && $KK == $Kfirst;
 
     #---------------------
     # Check for a match...
