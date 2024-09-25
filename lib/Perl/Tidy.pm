@@ -4769,7 +4769,7 @@ EOM
         if ( $Opts{$long_name} ) {
             my $short_name = $early_exit_commands{$long_name};
             Die(<<EOM);
-Ambigiguous entry; please enter '--$long_name' or '-$short_name'
+Ambiguous entry; please enter '--$long_name' or '-$short_name'
 EOM
         }
     }

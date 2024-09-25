@@ -3909,7 +3909,7 @@ This option is on by default.  Use B<-ndrc> to turn it off.
 
 =item B<--want-trailing-commas=s> or B<-wtc=s>, B<--add-trailing-commas> or B<-atc>, and B<--delete-trailing-commas> or B<-dtc>
 
-A trailing comma is a comma following the last item of a list. Perl allows
+A B<trailing comma> is a comma following the last item of a list. Perl allows
 trailing commas but they are not required.  Including them can sometimes
 simplify the maintenance of large or complex lists, and help display structure.
 By default, perltidy does not add
@@ -3931,17 +3931,41 @@ B<--delete-trailing-commas, -dtc>   - gives permission to delete trailing commas
 
 The parameter B<--want-trailing-commas=s>, or B<-wtc=s>, defines a preferred style.  The string B<s> indicates which lists should get trailing commas, as follows:
 
-  s=0 : no list should have a trailing comma
   s=1 or '*' : every list should have a trailing comma
   s=m multiline list
   s=b multiline list with bare trailing comma
   s=i multiline list with bare trailing comma and about one comma per line
   s=h multiline list with bare trailing comma and about one key=>value pair per line
+  s=0 : no list should have a trailing comma
+
   s=' ' or -wtc not defined : leave trailing commas unchanged [DEFAULT].
 
-A multiline list here is a list for which the opening and closing container
-tokens are on different lines. A bare trailing comma is a comma followed
-by a newline.
+where:
+
+=over 4
+
+=item *
+
+A B<list> here is basically taken to be a container of items (parens, square
+brackets, or braces), which is not a code block, which contains one or more
+commas or fat commas.  These parameters only apply to something that fits this
+definition of a list.
+
+A paren-less list of parameters is not a list by this definition, so
+these parameters do not apply to a paren-less list.
+
+=item *
+
+A B<multiline list> is a list for which the opening and closing brackets
+on different lines.
+
+=item *
+
+A B<bare trailing comma> is a comma which is at the end of a line. That is,
+the closing container token follows on a different line.  So a list with a
+bare trailing comma is a special case of a multiline list.
+
+=back
 
 This parameter by itself only indicates where trailing commas are wanted.
 Perltidy only adds these trailing commas if the flag B<--add-trailing-commas>,
@@ -4000,7 +4024,6 @@ are currently 'k', 'K', 'f', 'F', 'w', and 'W', with these meanings for
 matching whatever precedes an opening paren:
 
  'k' matches if the previous nonblank token is a perl built-in keyword
-     (such as 'if', 'while'),
  'K' matches if 'k' does not, meaning that the previous token is not a keyword.
  'f' matches if the previous token is a function other than a keyword.
  'F' matches if 'f' does not.
@@ -4010,9 +4033,24 @@ matching whatever precedes an opening paren:
 These are the same codes used for B<--line-up-parentheses-inclusion-list>.
 For example,
 
-  -wtc = 'w(m'
+  -wtc='w(m'
 
 means that trailing commas are wanted for multiline parenthesized lists following a function call or keyword.
+
+Finally, a leading B<+> can be placed on any term to indicate that it only
+applies when adding commas. A leading B<-> indicates that it only applies when
+deleting commas. For example,
+
+  -wtc='+h -b' -atc -dtc
+
+means that missing trailing commas should be added to lists of key => values
+pairs, and trailing commas which are not bare should be removed. No other
+changes are made. When both plus and minus terms are used like this, they must
+not conflict at any trailing comma locations.  This turns out to be equivalent
+to requiring that the letter of the plus term does not occur before the letter
+of the minus term in the hierarchical order B<m>, B<b>, B<i>, B<h>.  In this
+example, the plus term B<h> follows the minus term B<b>, so there is no
+conflict.
 
 B<Some points to note> regarding adding and deleting trailing commas:
 
@@ -4020,24 +4058,22 @@ B<Some points to note> regarding adding and deleting trailing commas:
 
 =item *
 
-For the implementation of these parameters, a B<list> is basically taken to be
-a container of items (parens, square brackets, or braces), which is not a code
-block, with one or more commas or fat commas.  These parameters only apply to
-something that fits this definition of a list.
+It is recommended to also use the B<--converge> parameter when adding and/or
+deleting trailing commas, especially if the formatter may be making other
+line break changes at the same time.  The reason is that the decision
+regarding whether or not a list is multiline or bare is made based on the
+B<input> stream if only one iteration is made, which is the default.
 
-Note that a paren-less list of parameters is not a list by this definition, so
-these parameters have no effect on a paren-less list.
+When iterations are requested with the B<--converge> parameter, any comma
+addition or deletion operations are postponed until the start of the second
+iteration, after changes in line breaks have been made.  For a discussion see
+L<https://github.com/perltidy/perltidy/issues/156>.
 
-=item *
-
-A B<multiline> list is a list for which the opening and closing brackets
-on different lines.
-
-=item *
-
-A B<bare> trailing comma is a comma which is at the end of a line. That is,
-the closing container token follows on a different line.  So a list with a
-bare trailing comma is a special case of a multiline list.
+A parameter B<--delay-trailing-comma-operations>, or B<-dtco>, is available to
+control behavior if desired. Negating this parameter, with B<-ndtco>, tells
+perltidy to always use the starting state to make decisions regarding comma
+addition and deletion, even when iterations are requested. This should not
+normally be necessary.
 
 =item *
 
@@ -4056,33 +4092,19 @@ line length to be exceeded. This in turn will cause a different break point to
 occur for which the comma is no longer bare. So if a comma were added, it would
 get deleted on the next pass or iteration, an unstable situation.
 
-=item *
+This example illustrates a common situation of potentially instability, in
+which a list in parens is split over two lines, with all of the commas (or fat
+comma) on one line.  This indicates that the formatting is under stress from
+the line length limit.
 
-It is a good idea to turn on the B<--converge> parameter when adding and
-deleting trailing commas.  The reason is that the decision regarding whether or
-not a list is multiline or bare is made based on the B<input> stream if only
-one iteration is made, which is the default.
-
-When iterations are requested with the B<--converge> parameter, any comma
-addition or deletion operations are postponed until the start of the second
-iteration, after changes in line breaks have been made.  For a discussion see
-L<https://github.com/perltidy/perltidy/issues/156>.
-
-A parameter B<--delay-trailing-comma-operations>, or B<-dtco>, is available to
-control behavior if desired. Negating this parameter, with B<-ndtco>, tells
-perltidy to always use the starting state to make decisions regarding comma
-addition and deletion, even when iterations are requested. This should not
-normally be necessary.
+The rules used to detecting instability are not precise, so in some cases where
+perltidy will not add a comma, it may be possible to add a trailing comma with
+editing.
 
 =item *
 
 When using these parameters for the first time it is a good idea to practice
 on some test scripts and verify that the results are as expected.
-
-=item *
-
-Since the default behavior is not to add or delete commas, these parameters
-can be useful on a temporary basis for reformatting a script.
 
 =back
 

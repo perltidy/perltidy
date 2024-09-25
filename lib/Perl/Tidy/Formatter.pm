@@ -3033,6 +3033,23 @@ sub initialize_trailing_comma_rules {
 
     my $rvalid_flags = [qw(0 1 * m b h i)];
 
+    # This hash shows i.e. that 'm' includes all 'b' includes all 'i' ...etc
+    # It is used to check for overlap when both + and - signs are used to
+    # cause adding and deleting of different types of trailing commas.
+    my %match_order = (
+        '1' => 0,
+        '*' => 0,
+        'm' => 1,
+        'b' => 2,
+        'i' => 3,
+        'h' => 4,
+        '0' => 5,
+    );
+
+    # Note that the hash keys are the CLOSING tokens but the input
+    # uses OPENING tokens.
+    my @all_keys = qw< ) ] } >;
+
     my $option = $rOpts->{'want-trailing-commas'};
 
     if ($option) {
@@ -3048,10 +3065,11 @@ sub initialize_trailing_comma_rules {
         my %is_valid_flag;
         @is_valid_flag{@q} = (1) x scalar(@q);
 
-        # handle single character control, such as -wtc='b'
+        # handle the common case of a single control character, like -wtc='b'
         if ( length($option) == 1 ) {
-            foreach (qw< ) ] } >) {
-                $rule_hash{$_} = [ $option, EMPTY_STRING ];
+            foreach (@all_keys) {
+                $rule_hash{add}->{$_}    = [ $option, EMPTY_STRING ];
+                $rule_hash{delete}->{$_} = [ $option, EMPTY_STRING ];
             }
         }
 
@@ -3059,48 +3077,116 @@ sub initialize_trailing_comma_rules {
         else {
             my @parts = split /\s+/, $option;
             foreach my $part (@parts) {
-                if ( length($part) >= 2 && length($part) <= 3 ) {
-                    my $val   = substr( $part, -1, 1 );
-                    my $key_o = substr( $part, -2, 1 );
-                    if ( $is_opening_token{$key_o} ) {
-                        my $paren_flag = EMPTY_STRING;
-                        if ( length($part) == 3 ) {
-                            $paren_flag = substr( $part, 0, 1 );
-                        }
-                        my $key = $matching_token{$key_o};
-                        $rule_hash{$key} = [ $val, $paren_flag ];
-                    }
-                    else {
-                        $error_message .= "Unrecognized term: '$part'\n";
+                my $part_input = $part;
+
+                # examples: b -b [b 0 * +f(b
+
+                # the letter value is the rightmost character
+                my $val = substr( $part, -1, 1 );
+                $part = substr( $part, 0, -1 );
+                if ( $val && !$is_valid_flag{$val} ) {
+                    my $valid_str = join( SPACE, @{$rvalid_flags} );
+                    $error_message .=
+"In '$part_input': unexpected value '$val'; must be one of: $valid_str\n";
+                    next;
+                }
+
+                # set defaults for this item
+                my @signs      = qw( add delete );
+                my @keys       = @all_keys;
+                my $paren_flag = EMPTY_STRING;
+
+                # look for opening container bracket
+                my $is_paren;
+                if ( length($part) ) {
+                    my $token = substr( $part, -1, 1 );
+                    if ( $is_opening_token{$token} ) {
+
+                        # note that the hash key is the closing token
+                        my $key = $matching_token{$token};
+                        @keys     = ($key);
+                        $part     = substr( $part, 0, -1 );
+                        $is_paren = $token eq '(';
                     }
                 }
-                else {
-                    $error_message .= "Unrecognized term: '$part'\n";
+
+                # look for a leading sign, + or -
+                if ( length($part) ) {
+                    my $sign = substr( $part, 0, 1 );
+                    if ( $sign eq '+' ) {
+                        @signs = qw(add);
+                        $part  = substr( $part, 1 );
+                    }
+                    elsif ( $sign eq '-' ) {
+                        @signs = qw(delete);
+                        $part  = substr( $part, 1 );
+                    }
+                    else {
+                        ## keep defaults
+                    }
+                }
+
+                # anything left must be a paren modifier
+                if ( length($part) ) {
+                    $paren_flag = substr( $part, -1,  1 );
+                    $part       = substr( $part,  0, -1 );
+                    if ( $paren_flag !~ /^[kKfFwW]$/ ) {
+                        $error_message .=
+"In '$part_input': Unexpected paren flag '$paren_flag'; must be one of: k K f F w W\n";
+                        next;
+                    }
+                    if ( !$is_paren ) {
+                        $error_message .=
+"In '$part_input': paren flag '$paren_flag' is only allowed before a '('\n";
+                        next;
+                    }
+                }
+
+                if ( length($part) ) {
+                    $error_message .= "Unrecognized term: '$part_input'\n";
+                    next;
+                }
+
+                foreach my $sign (@signs) {
+                    foreach my $key (@keys) {
+                        $rule_hash{$sign}->{$key} = [ $val, $paren_flag ];
+                    }
                 }
             }
         }
 
-        # check for valid control characters
+        # check for conflicting signed options
         if ( !$error_message ) {
-            foreach my $key ( keys %rule_hash ) {
-                my $item = $rule_hash{$key};
-                my ( $val, $paren_flag ) = @{$item};
-                if ( $val && !$is_valid_flag{$val} ) {
-                    my $valid_str = join( SPACE, @{$rvalid_flags} );
-                    $error_message .=
-                      "Unexpected value '$val'; must be one of: $valid_str\n";
-                    last;
-                }
-                if ($paren_flag) {
-                    if ( $paren_flag !~ /^[kKfFwW]$/ ) {
-                        $error_message .=
-"Unexpected paren flag '$paren_flag'; must be one of: k K f F w W\n";
-                        last;
-                    }
-                    if ( $key ne ')' ) {
-                        $error_message .=
-"paren flag '$paren_flag' is only allowed before a '('\n";
-                        last;
+
+            my $radd    = $rule_hash{add};
+            my $rdelete = $rule_hash{delete};
+            if ( defined($radd) && defined($rdelete) ) {
+                foreach my $key (@all_keys) {
+                    my $radd_info    = $radd->{$key};
+                    my $rdelete_info = $rdelete->{$key};
+                    if ( defined($radd_info) && defined($rdelete_info) ) {
+                        my $add_val    = $radd_info->[0];
+                        my $delete_val = $rdelete_info->[0];
+                        next if ( $add_val eq $delete_val );
+                        my $add_order    = $match_order{$add_val};
+                        my $delete_order = $match_order{$delete_val};
+                        if ( !defined($add_order) ) {
+                            ## should have been caught earlier
+                            DEVEL_MODE
+                              && Fault("unexpected + value $add_val\n");
+                            next;
+                        }
+                        if ( !defined($delete_order) ) {
+                            ## should have been caught earlier
+                            DEVEL_MODE
+                              && Fault("unexpected - value $delete_val\n");
+                            next;
+                        }
+                        if ( $add_order <= $delete_order ) {
+                            my $token = $matching_token{$key};
+                            $error_message .=
+"At token '$token': the range for '+$add_val' overlaps the range for '-$delete_val'\n";
+                        }
                     }
                 }
             }
@@ -12486,8 +12572,11 @@ sub respace_tokens_inner_loop {
                                 )
                               )
                             {
-                                $self->add_trailing_comma( $KK, $Kfirst,
-                                    $trailing_comma_rules{$token} );
+                                my $rule = $trailing_comma_rules{add};
+                                if ( $rule && $rule->{$token} ) {
+                                    $self->add_trailing_comma( $KK, $Kfirst,
+                                        $rule->{$token} );
+                                }
                             }
                         }
 
@@ -12509,9 +12598,12 @@ sub respace_tokens_inner_loop {
                                 && $last_nonblank_code_token
                               )
                             {
-                                $deleted =
-                                  $self->delete_trailing_comma( $KK, $Kfirst,
-                                    $trailing_comma_rules{$token} );
+                                my $rule = $trailing_comma_rules{delete};
+                                if ( $rule && $rule->{$token} ) {
+                                    $deleted =
+                                      $self->delete_trailing_comma( $KK,
+                                        $Kfirst, $rule->{$token} );
+                                }
                             }
 
                             # delete a weld-interfering comma if requested
@@ -15176,7 +15268,7 @@ sub package_info_maker {
 
     return {
         'rpackage_info_list'   => \@package_info_list,
-        'rpackage_lookup_list' => \@package_lookup_list
+        'rpackage_lookup_list' => \@package_lookup_list,
     };
 } ## end sub package_info_maker
 
@@ -17907,8 +17999,8 @@ sub initialize_warn_mismatched {
     #  y - want scalar but no return seen
     #  s - want scalar but only arrays with count > 1 returned
     $rwarn_mismatched_return_types =
-      initialize_warn_hash( 'warn-mismatched-return-types', 1,
-        [qw(x o u y s)] );
+      initialize_warn_hash( 'warn-mismatched-return-types',
+        1, [qw(x o u y s)] );
     $ris_warn_mismatched_return_excluded_name =
       make_excluded_name_hash('warn-mismatched-return-exclusion-list');
     return;
@@ -19260,7 +19352,10 @@ EOM
             $weld_count_this_start = 0;
             $weld_starts_in_block  = 0;
 
-            ( my $new_weld_ok, $maximum_text_length, $starting_lentot, my $msg )
+            (
+                my $new_weld_ok,
+                $maximum_text_length, $starting_lentot, my $msg
+              )
               = $self->setup_new_weld_measurements( $Kouter_opening,
                 $Kinner_opening );
 
