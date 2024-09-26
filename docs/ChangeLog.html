@@ -1,8 +1,19 @@
 <h1>Perltidy Change Log</h1>
 
-<h2>2024 09 03.01</h2>
+<h2>2024 09 03.03</h2>
 
-<pre><code>- Added parameter --qw-as-function, or -qwaf, discussed in git #164.
+<pre><code>- The parameter --add-lone-trailing-commas, -altc, is now on by default.
+This will simplify input for trailing comma operations. Use
+--noadd-lone-trailing-commas, or -naltc to turn it off.
+
+- More edge cases for adding and deleting trailing commas are now handled
+(git #156).
+
+- A problem has been fixed in which the addition or deletion of trailing
+commas with the -atc or -dtc flags did not occur due to early convergence
+when the -conv flag was set (git #143).
+
+- Added parameter --qw-as-function, or -qwaf, discussed in git #164.
 When this parameter is set, a qw list which begins with 'qw(' is
 formatted as if it were a function call with call args being a list
 of comma-separated quoted items. For example, given this input:

@@ -5,7 +5,7 @@ use Carp;
 
 { #<<< A non-indenting brace to contain all lexical variables
 
-our $VERSION = '20240903.02';
+our $VERSION = '20240903.03';
 use English qw( -no_match_vars );
 use Scalar::Util 'refaddr';    # perl 5.8.1 and later
 use Perl::Tidy::VerticalAligner::Alignment;
@@ -2904,7 +2904,10 @@ EOM
         #----------------------------------------------------
         # Create a hash of alignment token info for each line
         #----------------------------------------------------
-        ( my $rline_hashes, my $requals_info, $saw_side_comment, $max_lev_diff )
+        (
+            my $rline_hashes,  my $requals_info,
+            $saw_side_comment, $max_lev_diff
+          )
           = make_alignment_info( $group_level, $rnew_lines, $saw_side_comment );
 
         #------------------------------------------------------------

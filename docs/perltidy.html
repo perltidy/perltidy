@@ -615,7 +615,7 @@
 
 <p>This flag allows perltidy to use some improvements which have been made to its indentation model. One of the things it does is &quot;extend&quot; continuation indentation deeper into structures, hence the name. The improved indentation is particularly noticeable when the flags <b>-ci=n</b> and <b>-i=n</b> use the same value of <b>n</b>. There are no significant disadvantages to using this flag, but to avoid disturbing existing formatting the default is not to use it, <b>-nxci</b>.</p>
 
-<p>Please see the section <a href="#pbp---perl-best-practices">&quot;<b>-pbp</b>, <b>--perl-best-practices</b>&quot;</a> for an example of how this flag can improve the formatting of ternary statements. It can also improve indentation of some multi-line qw lists as shown below.</p>
+<p>Please see the section <a href="#pbp---perl-best-practices">&quot;<b>-pbp</b>, <b>--perl-best-practices</b>&quot;</a> for an example of how this flag can improve the formatting of ternary statements. It can also improve indentation of some multiline qw lists as shown below.</p>
 
 <pre><code>            # perltidy
             foreach $color (
@@ -701,7 +701,7 @@
 
 <ul>
 
-<li><p>A limitation on <b>-lp</b>, but not <b>-xlp</b>, occurs in situations where perltidy does not have complete freedom to choose line breaks. Then it may temporarily revert to its default indentation method. This can occur for example if there are blank lines, block comments, multi-line quotes, or side comments between the opening and closing parens, braces, or brackets. It will also occur if a multi-line anonymous sub occurs within a container since that will impose specific line breaks (such as line breaks after statements).</p>
+<li><p>A limitation on <b>-lp</b>, but not <b>-xlp</b>, occurs in situations where perltidy does not have complete freedom to choose line breaks. Then it may temporarily revert to its default indentation method. This can occur for example if there are blank lines, block comments, multiline quotes, or side comments between the opening and closing parens, braces, or brackets. It will also occur if a multiline anonymous sub occurs within a container since that will impose specific line breaks (such as line breaks after statements).</p>
 
 </li>
 <li><p>For both the <b>-lp</b> and <b>-xlp</b> flags, any parameter which significantly restricts the ability of perltidy to choose newlines will conflict with these flags and will cause them to be deactivated. These include <b>--indent-only</b>, <b>--freeze-newlines</b>, <b>-noadd-newlines</b>, and <b>-nodelete-old-newlines</b>.</p>
@@ -1415,9 +1415,9 @@
 <dt id="Trimming-whitespace-around-qw-quotes"><b>Trimming whitespace around <code>qw</code> quotes</b></dt>
 <dd>
 
-<p><b>-tqw</b> or <b>--trim-qw</b> provide the default behavior of trimming spaces around multi-line <code>qw</code> quotes and indenting them appropriately.</p>
+<p><b>-tqw</b> or <b>--trim-qw</b> provide the default behavior of trimming spaces around multiline <code>qw</code> quotes and indenting them appropriately.</p>
 
-<p><b>-ntqw</b> or <b>--notrim-qw</b> cause leading and trailing whitespace around multi-line <code>qw</code> quotes to be left unchanged. This option will not normally be necessary, but was added for testing purposes, because in some versions of perl, trimming <code>qw</code> quotes changes the syntax tree.</p>
+<p><b>-ntqw</b> or <b>--notrim-qw</b> cause leading and trailing whitespace around multiline <code>qw</code> quotes to be left unchanged. This option will not normally be necessary, but was added for testing purposes, because in some versions of perl, trimming <code>qw</code> quotes changes the syntax tree.</p>
 
 </dd>
 <dt id="sbq-n-or---space-backslash-quote-n"><b>-sbq=n</b> or <b>--space-backslash-quote=n</b></dt>
@@ -3100,11 +3100,11 @@
 <dt id="want-trailing-commas-s-or--wtc-s---add-trailing-commas-or--atc-and---delete-trailing-commas-or--dtc"><b>--want-trailing-commas=s</b> or <b>-wtc=s</b>, <b>--add-trailing-commas</b> or <b>-atc</b>, and <b>--delete-trailing-commas</b> or <b>-dtc</b></dt>
 <dd>
 
-<p>A trailing comma is a comma following the last item of a list. Perl allows trailing commas but they are not required. Including them can sometimes simplify the maintenance of large or complex lists. By default, perltidy does not add or delete trailing commas, but it is possible to manipulate them with the following set of related parameters:</p>
+<p>A <b>trailing comma</b> is a comma following the last item of a list. Perl allows trailing commas but they are not required. Including them can sometimes simplify the maintenance of large or complex lists, and help display structure. But they may not be appropriate in all lists, for example in a list which always has just one term. By default, perltidy does not add or delete trailing commas, but it is possible to manipulate them with the following set of related parameters:</p>
 
 <ul>
 
-<li><p><b>--want-trailing-commas=s, -wtc=s</b> - defines where trailing commas are wanted</p>
+<li><p><b>--want-trailing-commas=s, -wtc=s</b> - defines where trailing commas are wanted (the style)</p>
 
 </li>
 <li><p><b>--add-trailing-commas, -atc</b> - gives permission to add trailing commas to match the style wanted</p>
@@ -3113,65 +3113,77 @@
 <li><p><b>--delete-trailing-commas, -dtc</b> - gives permission to delete trailing commas which do not match the style wanted</p>
 
 </li>
-<li><p><b>--add-lone-trailing-commas, -altc</b> - gives permission to add a comma if it will be the only comma. This is off by default and explained below.</p>
-
-</li>
-<li><p><b>--delete-lone-trailing-commas, -dltc</b> - gives permission to delete the only comma in a list. This is on by default and explained below.</p>
-
-</li>
 </ul>
 
 <p>The parameter <b>--want-trailing-commas=s</b>, or <b>-wtc=s</b>, defines a preferred style. The string <b>s</b> indicates which lists should get trailing commas, as follows:</p>
 
-<pre><code>  s=0 : no list should have a trailing comma
-  s=1 or * : every list should have a trailing comma
-  s=m a multi-line list should have a trailing commas
-  s=b trailing commas should be &#39;bare&#39; (comma followed by newline)
-  s=h lists of key=&gt;value pairs, with about one one &#39;=&gt;&#39; and one &#39;,&#39; per line,
-      with a bare trailing comma
-  s=i lists with about one comma per line, with a bare trailing comma
+<pre><code>  s=1 or &#39;*&#39; : every list
+  s=m a multiline list
+  s=b a multiline list with bare trailing comma
+  s=i a multiline list with bare trailing comma and about one comma per line
+  s=h a multiline list with bare trailing comma and about one key=&gt;value pair per line
+  s=0 : no list
+
   s=&#39; &#39; or -wtc not defined : leave trailing commas unchanged [DEFAULT].</code></pre>
 
-<p>This parameter by itself only indicates the where trailing commas are wanted. Perltidy only adds these trailing commas if the flag <b>--add-trailing-commas</b>, or <b>-atc</b> is set. And perltidy only removes unwanted trailing commas if the flag <b>--delete-trailing-commas</b>, or <b>-dtc</b> is set.</p>
+<p>where:</p>
+
+<ul>
+
+<li><p>A <b>list</b> here is basically taken to be a container of items (parens, square brackets, or braces), which is not a code block, which contains one or more commas or fat commas. These parameters only apply to something that fits this definition of a list.</p>
+
+<p>A paren-less list of parameters is not a list by this definition, so these parameters do not apply to a paren-less list.</p>
+
+</li>
+<li><p>A <b>multiline list</b> is a list for which the opening and closing brackets on different lines.</p>
+
+</li>
+<li><p>A <b>bare trailing comma</b> is a comma which is at the end of a line. That is, the closing container token follows on a different line. So a list with a bare trailing comma is a special case of a multiline list.</p>
+
+</li>
+</ul>
+
+<p>This parameter by itself only indicates where trailing commas are wanted. Perltidy only adds these trailing commas if permission is granted by setting the flag <b>--add-trailing-commas</b>, or <b>-atc</b>. And perltidy only removes unwanted trailing commas if the flag <b>--delete-trailing-commas</b>, or <b>-dtc</b> is set.</p>
 
 <p>Here are some example parameter combinations and their meanings</p>
 
 <pre><code>  -wtc=0 -dtc   : delete all trailing commas
-  -wtc=1 -atc   : all lists get trailing commas
-  -wtc=m -atc   : all multi-line lists get trailing commas, but
-                  single line lists remain unchanged.
-  -wtc=m -dtc   : multi-line lists remain unchanged, but
-                  any trailing commas on single line lists are removed.
-  -wtc=m -atc -dtc  : all multi-line lists get trailing commas, and
-                      any trailing commas on single line lists are removed.</code></pre>
+  -wtc=1 -atc   : add trailing commas to all lists
+  -wtc=m -atc   : add trailing commas to all multiline lists
+                  (single line lists remain unchanged)
+  -wtc=b -atc   : add commas as necessary so that all lists whose
+                  closing bracket starts a new line have trailing commas
+  -wtc=b -dtc   : all trailing commas which are not bare
+                  (not followed by a newline) get deleted.
+  -wtc=b -atc -dtc  : do both of the above operations so that
+                      all trailing commas are bare</code></pre>
 
-<p>For example, given the following input without a trailing comma</p>
+<p>For example, given the following input</p>
 
-<pre><code>    bless {
-        B    =&gt; $B,
-        Root =&gt; $Root
-    } =&gt; $package;</code></pre>
+<pre><code>    $wine_list = $top-&gt;Box(
+        &quot;-length&quot; =&gt; 5,
+        &quot;-width&quot;  =&gt; 3
+    )-&gt;select( &quot;red&quot;, &quot;white&quot;, &quot;gold&quot;, );</code></pre>
 
-<p>we can add a trailing comma after the variable <code>$Root</code> using</p>
+<p>we have</p>
 
-<pre><code>    # perltidy -wtc=m -atc
-    bless {
-        B    =&gt; $B,
-        Root =&gt; $Root,
-    } =&gt; $package;</code></pre>
+<pre><code>    # perltidy -wtc=b -atc -dtc
+    $wine_list = $top-&gt;Box(
+        &quot;-length&quot; =&gt; 5,
+        &quot;-width&quot;  =&gt; 3,
+    )-&gt;select( &quot;red&quot;, &quot;white&quot;, &quot;gold&quot; );</code></pre>
 
-<p>This could also be achieved in this case with <b>-wtc=b</b> instead of <b>-wtc=m</b> because the trailing comma here is bare (separated from its closing brace by a newline). And it could also be achieved with <b>-wtc=h</b> because this particular list is a list of key=&gt;value pairs.</p>
+<p>A comma was added after the <code>3</code>, since it is bare, and a comma was removed after <code>&quot;gold&quot;</code>, since it not bare.</p>
 
-<p>The above styles should cover the main of situations of interest, but it is possible to apply a different style to each type of container token by including an opening token ahead of the style character in the above table. For example</p>
+<p>It is possible to apply a different style to each type of container token by including an opening token ahead of the style character in the above table. For example</p>
 
 <pre><code>    -wtc=&#39;(m [b&#39;</code></pre>
 
-<p>means that lists within parens should have multi-line trailing commas, and that lists within square brackets have bare trailing commas. Since there is no specification for curly braces in this example, their trailing commas would remain unchanged.</p>
+<p>means that lists within parens should have multiline trailing commas, and that lists within square brackets have bare trailing commas. Since there is no specification for curly braces in this example, their trailing commas would remain unchanged.</p>
 
 <p>For parentheses, an additional item of information which can be given is an alphanumeric letter which is used to limit the selection further depending on the type of token immediately before the opening paren. The possible letters are currently &#39;k&#39;, &#39;K&#39;, &#39;f&#39;, &#39;F&#39;, &#39;w&#39;, and &#39;W&#39;, with these meanings for matching whatever precedes an opening paren:</p>
 
 <pre><code> &#39;k&#39; matches if the previous nonblank token is a perl built-in keyword
-     (such as &#39;if&#39;, &#39;while&#39;),
  &#39;K&#39; matches if &#39;k&#39; does not, meaning that the previous token is not a keyword.
  &#39;f&#39; matches if the previous token is a function other than a keyword.
  &#39;F&#39; matches if &#39;f&#39; does not.
@@ -3180,45 +3192,84 @@
 
 <p>These are the same codes used for <b>--line-up-parentheses-inclusion-list</b>. For example,</p>
 
-<pre><code>  -wtc = &#39;w(m&#39;</code></pre>
+<pre><code>  -wtc=&#39;w(m&#39;</code></pre>
 
-<p>means that trailing commas are wanted for multi-line parenthesized lists following a function call or keyword.</p>
+<p>means that trailing commas are wanted for multiline parenthesized lists following a function call or keyword.</p>
+
+<p>Finally, a leading <b>+</b> can be placed on any term to indicate that it only applies when adding commas. A leading <b>-</b> indicates that it only applies when deleting commas. For example,</p>
+
+<pre><code>  -wtc=&#39;+h -b&#39; -atc -dtc</code></pre>
+
+<p>means that missing trailing commas should be added to lists of key =&gt; values pairs, and trailing commas which are not bare should be removed. No other changes are made. When both plus and minus terms are used like this, they must not be in conflict. This can be shown to be equivalent to requiring that the letter of the plus term does not occur before the letter of the minus term in their hierarchical order <b>m</b>, <b>b</b>, <b>i</b>, <b>h</b>. In this example, the plus term <b>h</b> follows the minus term <b>b</b> in the list, so there is no conflict.</p>
 
 <p><b>Some points to note</b> regarding adding and deleting trailing commas:</p>
 
 <ul>
 
-<li><p>For the implementation of these parameters, a <b>list</b> is basically taken to be a container of items (parens, square brackets, or braces), which is not a code block, with one or more commas or fat commas. These parameters only apply to something that fits this definition of a list.</p>
+<li><p>It is recommended to also use the <b>--converge</b> parameter when adding and/or deleting trailing commas, especially if the formatter may be making other line break changes at the same time. The reason is that the decision regarding whether or not a list is multiline or bare is made based on the <b>input</b> stream if only one iteration is made, which is the default.</p>
 
-<p>Note that a paren-less list of parameters is not a list by this definition, so these parameters have no effect on a paren-less list.</p>
+<p>When iterations are requested with the <b>--converge</b> parameter, any comma addition or deletion operations are postponed until the start of the <b>second iteration</b>, after most changes in line breaks have been made.</p>
+
+<p>To illustrate, if we start with</p>
+
+<pre><code>        f(
+            a =&gt; 1,
+            b =&gt; 2, );</code></pre>
+
+<p>and attempt to delete non-bare commas,</p>
+
+<pre><code>        # perltidy -wtc=b -dtc
+        f(
+            a =&gt; 1,
+            b =&gt; 2
+        );</code></pre>
+
+<p>we delete a comma which has become bare, which is not what is wanted. This happened because the change was based on the starting rather than the final line breaks. Rerunning with <b>--converge</b> added fixes things</p>
+
+<pre><code>        # perltidy -wtc=b -dtc --converge
+        f(
+            a =&gt; 1,
+            b =&gt; 2,
+        );</code></pre>
+
+<p>because changes are based on the line breaks after the first iteration.</p>
+
+<p>A parameter <b>--delay-trailing-comma-operations</b>, or <b>-dtco</b>, is available to control this behavior if desired. Negating this parameter, with <b>-ndtco</b>, tells perltidy to always use the starting state to make decisions regarding comma addition and deletion, even when iterations are requested. This should not normally be necessary.</p>
 
 </li>
-<li><p>By <b>multiline</b> list is meant a list for which the first comma and trailing comma are on different lines.</p>
+<li><p>Perltidy does not add a trailing comma to a list which appears to be near a <b>stability limit</b>. So if a comma is unexpectedly not added, this is probably the reason.</p>
 
-</li>
-<li><p>A <b>bare</b> trailing comma is a comma which is at the end of a line. That is, the closing container token follows on a different line. So a list with a bare trailing comma is a special case of a multi-line list.</p>
+<p>This issue can be illustrated with the following example. The closing brace is at column 80, the default line length:</p>
 
-</li>
-<li><p>The decision regarding whether or not a list is multi-line or bare is made based on the <b>input</b> stream if only one iteration is made, which is the default.</p>
+<pre><code>    # perltidy -atc -dtc -wtc=b
+    $menuitem_paste-&gt;signal_connect( &#39;activate&#39; =&gt; sub { create_paste_window() }
+    );</code></pre>
 
-<p>It can sometimes be preferable to base decisions on trailing commas on the final line breaks rather than the initial line breaks. This can be accomplished by telling perltidy to perform two or more internal iterations, for example with the <b>--converge</b> parameter. In this case any comma addition or deletion operations are postponed until the start of the second iteration, after changes in line breaks have been made. For a discussion see <a href="https://github.com/perltidy/perltidy/issues/156">https://github.com/perltidy/perltidy/issues/156</a>.</p>
+<p>Adding a trailing comma would cause the maximum line length to be exceeded. This in turn would cause a different break point to occur for which the comma is no longer bare. So it would get deleted on the next formatting pass, returning things to the starting state. This is is an unstable situation.</p>
 
-<p>A parameter <b>--delay-trailing-comma-operations</b>, or <b>-dtco</b>, is available to control behavior if desired. Negating this parameter, with <b>-ndtco</b>, tells perltidy to always use the starting state to make decisions regarding comma addition and deletion, even when iterations are requested.</p>
+<p>The rules used to detect and avoid instability work well but are not precise, so in some cases where perltidy will not add a comma, it may be possible to add a stable trailing comma with editing. For example, if the above example were run with <b>-l=81 -atc -wtc=b</b>, perltidy would still not add a trailing comma, even though it would be stable.</p>
 
 </li>
 <li><p>When using these parameters for the first time it is a good idea to practice on some test scripts and verify that the results are as expected.</p>
-
-</li>
-<li><p>Since the default behavior is not to add or delete commas, these parameters can be useful on a temporary basis for reformatting a script.</p>
 
 </li>
 </ul>
 
 <p><b>Special Considerations for Lone Trailing Commas</b></p>
 
-<p>Adding or deleting the only comma in a list can have some implications which need to be explained and possibly controlled.</p>
+<p>Adding or deleting the only comma in a list can have some implications which need to be explained and possibly controlled. Two additional controls are available for these lone commas:</p>
 
-<p>The main issue with deleting a lone comma is that if it is deleted, then it might not be possible add it back automatically since perltidy uses the existance of commas to help locate lists. For example, given</p>
+<ul>
+
+<li><p><b>--add-lone-trailing-commas, -altc</b> - gives permission to add a comma if it will be the only comma. This is on by default and explained below.</p>
+
+</li>
+<li><p><b>--delete-lone-trailing-commas, -dltc</b> - gives permission to delete the only comma in a list. This is on by default and explained below.</p>
+
+</li>
+</ul>
+
+<p>One issue with deleting a lone comma is that if it is deleted, then it might not be possible add it back automatically since perltidy uses the existance of commas to help locate containers where commas are appropriate. For example, given</p>
 
 <pre><code>    my ( $self, ) = @_;</code></pre>
 
@@ -3229,28 +3280,30 @@
 
 <p>then we cannot use the trailing comma controls to add this comma back. The parameter <b>--delete-lone-trailing-commas</b> allows such a comma to be deleted, and is on by default, but can be turned off to prevent this. This might be useful if one is experimenting with formatting options and wants to restrict testing to operations which are reversible. Note that this parameter is a fine-tuning control for <b>--delete-trailing-commas</b> which must also be set for it to have any effect.</p>
 
-<p>Perltidy can add a lone comma to certain lists which themselves contain lists. For example, a comma can be added after the closing hash brace in the following snippet:</p>
+<p>However, if a single item in a list is itself is a list with multiple lines, such as the item in braces here</p>
 
 <pre><code>    $self-&gt;make_grammar(
         {
             iterator =&gt; $self-&gt;_iterator,
             parser   =&gt; $self,
-            version  =&gt; $self-&gt;version,
         }
     );</code></pre>
 
-<p>However, the parameter <b>--add-lone-trailing-commas</b> must be set to allow such a comma to be added. The reason is that adding such a comma would prevent the <b>--weld-nested-containers</b> flag from operating on this structure. This can be confusing, so this parameter is off by default. Note that this parameter is a fine-tuning control for <b>--add-trailing-commas</b> which must also be set for it to have any effect. To illustrate its use on the above example:</p>
+<p>then perltidy can add and/or delete a lone comma:</p>
 
-<pre><code>    # perltidy -atc -altc -wtc=b
+<pre><code>    # perltidy -atc -wtc=b
     $self-&gt;make_grammar(
         {
             iterator =&gt; $self-&gt;_iterator,
             parser   =&gt; $self,
-            version  =&gt; $self-&gt;version,
         },
     );</code></pre>
 
-<p>This comma can be removed to allow welding with the control described in the next section.</p>
+<p>But it turns out that these cases usually coincide with situations where the <b>--weld-nested-containers</b>, or <b>-wn</b>, would apply, and adding such commas can block welding. For example, the <b>-wn</b> parameter would succeed on the first of the above snippets, but it would fail on the second because of the added trailing comma.</p>
+
+<p>The parameter <b>--add-lone-trailing-commas</b>, or <b>-altc</b> allows these commas to be added, provide that <b>--add-trailing-commas</b> is also set. It is on by default. Users of <b>-wn</b> may want to turn it off with <b>--noadd-lone-trailing-commas</b>, <b>-naltc</b> to prevent such commas from being added.</p>
+
+<p>If such commas do get added, then can be removed to allow welding with the control described in the next section.</p>
 
 </dd>
 <dt id="dwic---delete-weld-interfering-commas"><b>-dwic</b>, <b>--delete-weld-interfering-commas</b></dt>
@@ -3263,7 +3316,6 @@
         {
             iterator =&gt; $self-&gt;_iterator,
             parser   =&gt; $self,
-            version  =&gt; $self-&gt;version,
         },
     );</code></pre>
 
@@ -3273,7 +3325,6 @@
     $self-&gt;make_grammar( {
         iterator =&gt; $self-&gt;_iterator,
         parser   =&gt; $self,
-        version  =&gt; $self-&gt;version,
     } );</code></pre>
 
 <p>This feature is off by default. Here are some points to note about the <b>-dwic</b> parameter</p>
@@ -4087,7 +4138,7 @@
 
 <p>As noted above, perltidy will, by default, attempt to create new one-line blocks for certain block types. This flag allows the user to prevent this behavior for the block types listed in the string <b>s</b>. The list <b>s</b> may include any of the words <code>sort</code>, <code>map</code>, <code>grep</code>, <code>eval</code>, or it may be <code>*</code> to indicate all of these.</p>
 
-<p>So for example to prevent multi-line <b>eval</b> blocks from becoming one-line blocks, the command would be <b>-olbxl=&#39;eval&#39;</b>. In this case, existing one-line <b>eval</b> blocks will remain on one-line if possible, and existing multi-line <b>eval</b> blocks will remain multi-line blocks.</p>
+<p>So for example to prevent multiline <b>eval</b> blocks from becoming one-line blocks, the command would be <b>-olbxl=&#39;eval&#39;</b>. In this case, existing one-line <b>eval</b> blocks will remain on one-line if possible, and existing multiline <b>eval</b> blocks will remain multiline blocks.</p>
 
 </dd>
 <dt id="olbn-n---one-line-block-nesting-n"><b>-olbn=n</b>, <b>--one-line-block-nesting=n</b></dt>
@@ -5464,7 +5515,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20240903.01</p>
+<p>This man page documents perltidy version 20240903.03</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 
