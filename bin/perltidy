@@ -3912,9 +3912,10 @@ This option is on by default.  Use B<-ndrc> to turn it off.
 A B<trailing comma> is a comma following the last item of a list. Perl allows
 trailing commas but they are not required.  Including them can sometimes
 simplify the maintenance of large or complex lists, and help display structure.
-By default, perltidy does not add
-or delete trailing commas, but it is possible to manipulate them with the
-following set of related parameters:
+But they may not be appropriate in all lists, for example in a list which
+always has just one term.  By default, perltidy does not add or delete trailing
+commas, but it is possible to manipulate them with the following set of related
+parameters:
 
 =over 4
 
@@ -3931,12 +3932,12 @@ B<--delete-trailing-commas, -dtc>   - gives permission to delete trailing commas
 
 The parameter B<--want-trailing-commas=s>, or B<-wtc=s>, defines a preferred style.  The string B<s> indicates which lists should get trailing commas, as follows:
 
-  s=1 or '*' : every list should have a trailing comma
-  s=m multiline list
-  s=b multiline list with bare trailing comma
-  s=i multiline list with bare trailing comma and about one comma per line
-  s=h multiline list with bare trailing comma and about one key=>value pair per line
-  s=0 : no list should have a trailing comma
+  s=1 or '*' : every list
+  s=m a multiline list
+  s=b a multiline list with bare trailing comma
+  s=i a multiline list with bare trailing comma and about one comma per line
+  s=h a multiline list with bare trailing comma and about one key=>value pair per line
+  s=0 : no list
 
   s=' ' or -wtc not defined : leave trailing commas unchanged [DEFAULT].
 
@@ -3968,43 +3969,41 @@ bare trailing comma is a special case of a multiline list.
 =back
 
 This parameter by itself only indicates where trailing commas are wanted.
-Perltidy only adds these trailing commas if the flag B<--add-trailing-commas>,
-or B<-atc> is set.  And perltidy only removes unwanted trailing commas if the
-flag B<--delete-trailing-commas>, or B<-dtc> is set.
+Perltidy only adds these trailing commas if permission is granted by setting
+the flag B<--add-trailing-commas>, or B<-atc>.  And perltidy only removes
+unwanted trailing commas if the flag B<--delete-trailing-commas>, or B<-dtc> is
+set.
 
 Here are some example parameter combinations and their meanings
 
   -wtc=0 -dtc   : delete all trailing commas
   -wtc=1 -atc   : add trailing commas to all lists
-  -wtc=m -atc   : all multiline lists get trailing commas, but
-                  single line lists remain unchanged.
-  -wtc=b -atc   : all multiline lists whose closing bracket starts a
-                  new line get trailing commas, all other
-                  lists remain unchanged.
-  -wtc=m -dtc   : multiline lists remain unchanged, but
-                  any trailing commas on single line lists are removed.
-  -wtc=m -atc -dtc  : all multiline lists get trailing commas, and
-                      any trailing commas on single line lists are removed.
+  -wtc=m -atc   : add trailing commas to all multiline lists
+                  (single line lists remain unchanged)
+  -wtc=b -atc   : add commas as necessary so that all lists whose
+                  closing bracket starts a new line have trailing commas
+  -wtc=b -dtc   : all trailing commas which are not bare
+                  (not followed by a newline) get deleted.
+  -wtc=b -atc -dtc  : do both of the above operations so that
+                      all trailing commas are bare
 
-For example, given the following input without a trailing comma
+For example, given the following input
 
-    bless {
-        B    => $B,
-        Root => $Root
-    } => $package;
+    $wine_list = $top->Box(
+        "-length" => 5,
+        "-width"  => 3
+    )->select( "red", "white", "gold", );
 
-we can add a trailing comma after the variable C<$Root> using
+we have
 
-    # perltidy -wtc=m -atc
-    bless {
-        B    => $B,
-        Root => $Root,
-    } => $package;
+    # perltidy -wtc=b -atc -dtc
+    $wine_list = $top->Box(
+        "-length" => 5,
+        "-width"  => 3,
+    )->select( "red", "white", "gold" );
 
-This could also be achieved in this case with B<-wtc=b> instead of B<-wtc=m>
-because the trailing comma here is bare (separated from its closing brace by a
-newline).  And it could also be achieved with B<-wtc=h> because this particular
-list is a list of key=>value pairs.
+A comma was added after the C<3>, since it is bare, and a comma was removed
+after C<"gold">, since it not bare.
 
 It is possible to apply a different style to each type of container token by
 including an opening token ahead of the style character in the above table.
@@ -4046,11 +4045,10 @@ deleting commas. For example,
 means that missing trailing commas should be added to lists of key => values
 pairs, and trailing commas which are not bare should be removed. No other
 changes are made. When both plus and minus terms are used like this, they must
-not conflict at any trailing comma locations.  This turns out to be equivalent
-to requiring that the letter of the plus term does not occur before the letter
-of the minus term in the hierarchical order B<m>, B<b>, B<i>, B<h>.  In this
-example, the plus term B<h> follows the minus term B<b>, so there is no
-conflict.
+not be in conflict.  This can be shown to be equivalent to requiring that the
+letter of the plus term does not occur before the letter of the minus term in
+their hierarchical order B<m>, B<b>, B<i>, B<h>.  In this example, the plus
+term B<h> follows the minus term B<b> in the list, so there is no conflict.
 
 B<Some points to note> regarding adding and deleting trailing commas:
 
@@ -4065,12 +4063,37 @@ regarding whether or not a list is multiline or bare is made based on the
 B<input> stream if only one iteration is made, which is the default.
 
 When iterations are requested with the B<--converge> parameter, any comma
-addition or deletion operations are postponed until the start of the second
-iteration, after changes in line breaks have been made.  For a discussion see
-L<https://github.com/perltidy/perltidy/issues/156>.
+addition or deletion operations are postponed until the start of the
+B<second iteration>, after most changes in line breaks have been made.
+
+To illustrate, if we start with
+
+        f(
+            a => 1,
+            b => 2, );
+
+and attempt to delete non-bare commas,
+
+        # perltidy -wtc=b -dtc
+        f(
+            a => 1,
+            b => 2
+        );
+
+we delete a comma which has become bare, which is not what is wanted. This
+happened because the change was based on the starting rather than the final
+line breaks.  Rerunning with B<--converge> added fixes things
+
+        # perltidy -wtc=b -dtc --converge
+        f(
+            a => 1,
+            b => 2,
+        );
+
+because changes are based on the line breaks after the first iteration.
 
 A parameter B<--delay-trailing-comma-operations>, or B<-dtco>, is available to
-control behavior if desired. Negating this parameter, with B<-ndtco>, tells
+control this behavior if desired. Negating this parameter, with B<-ndtco>, tells
 perltidy to always use the starting state to make decisions regarding comma
 addition and deletion, even when iterations are requested. This should not
 normally be necessary.
@@ -4081,25 +4104,23 @@ Perltidy does not add a trailing comma to a list which appears to be near a
 B<stability limit>.  So if a comma is unexpectedly not added, this is probably
 the reason.
 
-The rules for avoiding instability are complex, but here is a simple example:
+This issue can be illustrated with the following example. The closing brace is
+at column 80, the default line length:
 
     # perltidy -atc -dtc -wtc=b
     $menuitem_paste->signal_connect( 'activate' => sub { create_paste_window() }
     );
 
-A trailing comma is not added in this example because it will cause the default
-line length to be exceeded. This in turn will cause a different break point to
-occur for which the comma is no longer bare. So if a comma were added, it would
-get deleted on the next pass or iteration, an unstable situation.
+Adding a trailing comma would cause the maximum line length to be exceeded.
+This in turn would cause a different break point to occur for which the comma
+is no longer bare. So it would get deleted on the next formatting pass,
+returning things to the starting state. This is is an unstable situation.
 
-This example illustrates a common situation of potentially instability, in
-which a list in parens is split over two lines, with all of the commas (or fat
-comma) on one line.  This indicates that the formatting is under stress from
-the line length limit.
-
-The rules used to detecting instability are not precise, so in some cases where
-perltidy will not add a comma, it may be possible to add a trailing comma with
-editing.
+The rules used to detect and avoid instability work well but are not precise,
+so in some cases where perltidy will not add a comma, it may be possible to add
+a stable trailing comma with editing. For example, if the above example were
+run with B<-l=81 -atc -wtc=b>, perltidy would still not add a trailing comma,
+even though it would be stable.
 
 =item *
 
@@ -4124,7 +4145,7 @@ B<--delete-lone-trailing-commas, -dltc>  - gives permission to delete the only c
 
 =back
 
-The main issue with deleting a lone comma is that if it is deleted, then it
+One issue with deleting a lone comma is that if it is deleted, then it
 might not be possible add it back automatically since perltidy uses the
 existance of commas to help locate containers where commas are appropriate. For
 example, given
@@ -4151,38 +4172,30 @@ such as the item in braces here
         {
             iterator => $self->_iterator,
             parser   => $self,
-            version  => $self->version,
         }
     );
 
-then perltidy can add a lone comma:
+then perltidy can add and/or delete a lone comma:
 
     # perltidy -atc -wtc=b
     $self->make_grammar(
         {
             iterator => $self->_iterator,
             parser   => $self,
-            version  => $self->version,
         },
     );
 
-It turns out that these cases usually coincide with situations where the
-B<--weld-nested-containers>, or B<-wn>, would apply.  For example, applying
-B<-wn> to the example without the comma gives
+But it turns out that these cases usually coincide with situations where the
+B<--weld-nested-containers>, or B<-wn>, would apply, and adding such commas can
+block welding.  For example, the B<-wn> parameter would succeed on the first of
+the above snippets, but it would fail on the second because of the added
+trailing comma.
 
-    # perltidy -wn
-    $self->make_grammar( {
-        iterator => $self->_iterator,
-        parser   => $self,
-        version  => $self->version,
-    } );
-
-But if there is a trailing comma after the closing brace, then the weld
-operation is blocked and fails.  A parameter B<--add-lone-trailing-commas>, or
-B<-altc> is available to provide some control. It allows these commas to be
-added, provide that B<--add-trailing-commas> is also set. It is on by default.
-Users of B<-wn> may want to turn it off with B<--noadd-lone-trailing-commas>,
-B<-naltc> to prevent such commas from being added.
+The parameter B<--add-lone-trailing-commas>, or B<-altc> allows these commas to
+be added, provide that B<--add-trailing-commas> is also set. It is on by
+default.  Users of B<-wn> may want to turn it off with
+B<--noadd-lone-trailing-commas>, B<-naltc> to prevent such commas from being
+added.
 
 If such commas do get added, then can be removed to allow welding with the
 control described in the next section.
@@ -4199,7 +4212,6 @@ For example, a comma in this script prevents welding:
         {
             iterator => $self->_iterator,
             parser   => $self,
-            version  => $self->version,
         },
     );
 
@@ -4209,7 +4221,6 @@ Adding B<-dwic> removes the comma and allows welding:
     $self->make_grammar( {
         iterator => $self->_iterator,
         parser   => $self,
-        version  => $self->version,
     } );
 
 This feature is off by default.
