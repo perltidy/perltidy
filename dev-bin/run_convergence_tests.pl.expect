@@ -7043,8 +7043,8 @@ if (  ioctl (  STDERR, $TIOCGWINSZ,
           ...;
 }
 
-if (  ioctl (  STDERR, $TIOCGWINSZ,
-               $winsize )
+if (  ioctl (  STDERR, $TIOCGWINSZ, $winsize
+      )
   )
 {
           ...;
@@ -7103,24 +7103,28 @@ SOAP::Transport::HTTP::Daemon->new (LocalAddr => $host,
 
 ==> b1396 <==
      print 'not '
-       unless ( near ( great_circle_distance ( 0, 0, 0, pi / 2 ),
-            pi / 2 ) );
+       unless ( near (
+            great_circle_distance ( 0, 0, 0, pi / 2 ), pi / 2
+       ) );
 
      print 'not '
-       unless ( near ( great_circle_distance ( 0, 0, 0, pi / 2 ),
-            pi / 2 ) );
+       unless ( near (
+            great_circle_distance ( 0, 0, 0, pi / 2 ), pi / 2
+       ) );
 
 
 ==> b1397 <==
          (
-                  my $msg = sprintf ( gettext("%s: fatal error at line %d:\n"),
-                           $progname, $line )
+                  my $msg = sprintf (
+                           gettext("%s: fatal error at line %d:\n"), $progname, $line
+                      )
                       . "@_\n"
          ) =~ tr/\0//d;
 
          (
-                  my $msg = sprintf ( gettext("%s: fatal error at line %d:\n"),
-                           $progname, $line )
+                  my $msg = sprintf (
+                           gettext("%s: fatal error at line %d:\n"), $progname, $line
+                      )
                       . "@_\n"
          ) =~ tr/\0//d;
 

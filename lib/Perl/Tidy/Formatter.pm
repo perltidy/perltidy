@@ -18003,8 +18003,8 @@ sub initialize_warn_mismatched {
     #  y - want scalar but no return seen
     #  s - want scalar but only arrays with count > 1 returned
     $rwarn_mismatched_return_types =
-      initialize_warn_hash( 'warn-mismatched-return-types',
-        1, [qw(x o u y s)] );
+      initialize_warn_hash( 'warn-mismatched-return-types', 1,
+        [qw(x o u y s)] );
     $ris_warn_mismatched_return_excluded_name =
       make_excluded_name_hash('warn-mismatched-return-exclusion-list');
     return;
@@ -19356,10 +19356,7 @@ EOM
             $weld_count_this_start = 0;
             $weld_starts_in_block  = 0;
 
-            (
-                my $new_weld_ok,
-                $maximum_text_length, $starting_lentot, my $msg
-              )
+            ( my $new_weld_ok, $maximum_text_length, $starting_lentot, my $msg )
               = $self->setup_new_weld_measurements( $Kouter_opening,
                 $Kinner_opening );
 
@@ -31947,7 +31944,15 @@ EOM
 
         # Increase tol when -atc and -dtc are both used to allow for
         # possible loss in length on next pass due to a comma. Fixes b1455.
-        if ( $rOpts_delete_trailing_commas && $rOpts_add_trailing_commas ) {
+        if (
+               $rOpts_delete_trailing_commas
+            && $rOpts_add_trailing_commas
+
+            # optional additional restriction which works for b1455:
+            && $rOpts_extended_continuation_indentation
+            && $rOpts_continuation_indentation > $rOpts_indent_columns
+          )
+        {
             $tol += 1;
         }
 

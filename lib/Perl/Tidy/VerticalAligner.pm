@@ -2904,10 +2904,7 @@ EOM
         #----------------------------------------------------
         # Create a hash of alignment token info for each line
         #----------------------------------------------------
-        (
-            my $rline_hashes,  my $requals_info,
-            $saw_side_comment, $max_lev_diff
-          )
+        ( my $rline_hashes, my $requals_info, $saw_side_comment, $max_lev_diff )
           = make_alignment_info( $group_level, $rnew_lines, $saw_side_comment );
 
         #------------------------------------------------------------
