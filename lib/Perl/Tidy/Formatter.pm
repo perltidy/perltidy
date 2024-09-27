@@ -3147,10 +3147,18 @@ sub initialize_trailing_comma_rules {
                     next;
                 }
 
+                my $duplicate;
                 foreach my $sign (@signs) {
                     foreach my $key (@keys) {
+                        if ( defined( $rule_hash{$sign}->{$key} ) ) {
+                            $duplicate = 1;
+                        }
                         $rule_hash{$sign}->{$key} = [ $val, $paren_flag ];
                     }
+                }
+                if ($duplicate) {
+                    $error_message .=
+                      "This term overlaps a previous term: '$part_input'\n";
                 }
             }
         }
@@ -3185,7 +3193,7 @@ sub initialize_trailing_comma_rules {
                         if ( $add_order <= $delete_order ) {
                             my $token = $matching_token{$key};
                             $error_message .=
-"At token '$token': the range for '+$add_val' overlaps the range for '-$delete_val'\n";
+"For token '$token': the range for '+$add_val' overlaps the range for '-$delete_val'\n";
                         }
                     }
                 }
