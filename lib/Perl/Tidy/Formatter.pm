@@ -12570,6 +12570,10 @@ sub respace_tokens_inner_loop {
                                             $last_nonblank_code_type}
                                     )
                                 )
+
+                                # and not preceded by '=>'
+                                # (unusual but can occur in test files)
+                                && $last_nonblank_code_type ne '=>'
                               )
                             {
                                 my $rule = $trailing_comma_rules{add};
