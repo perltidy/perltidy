@@ -3966,6 +3966,16 @@ A B<bare trailing comma> is a comma which is at the end of a line. That is,
 the closing container token follows on a different line.  So a list with a
 bare trailing comma is a special case of a multiline list.
 
+=item *
+
+In fact the above options for trailing commas can be seen as a sequence
+of nesting sets which might be described as
+
+   1 < m < b < i < h < 0
+
+This indicates that multiline commas B<m> are a subset of all trailing commas,
+and bare commas B<b> are a subset of all multiline trailing commas, and so on.
+
 =back
 
 This parameter by itself only indicates where trailing commas are wanted.
