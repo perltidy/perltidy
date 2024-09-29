@@ -18882,3 +18882,31 @@ my ( $v1, $v2, $v3, $v4 );
 --keyword-group-blanks-after=2
 --keyword-group-blanks-before=0
 --keyword-group-blanks-size='1.8'
+
+==> c314.in <==
+  my $map =
+          {
+    dtend =>
+            {                                                                 # 4.8.2.2
+            },
+            } ;
+
+==> c314.par <==
+--noadd-whitespace
+--indent-columns=0
+--line-up-parentheses
+--maximum-line-length=39
+--continuation-indentation=4
+
+==> c400.in <==
+Readonly::Array my @PATTERNS => (  # requires this side comment
+   ['A-Z','a-z','0-9','_']       => ['\\w', '\\W'],
+   ['A-Z','a-z']                 => ['[[:alpha:]]','[[:^alpha:]]'],
+);
+
+==> c400.par <==
+--indent-columns=0
+--continuation-indentation=3
+--extended-line-up-parentheses
+--maximum-line-length=12
+--variable-maximum-line-length

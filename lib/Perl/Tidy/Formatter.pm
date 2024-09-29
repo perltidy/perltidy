@@ -34232,9 +34232,19 @@ EOM
                 # comment we don't know what the space to the actual
                 # next code token will be.  We will allow a space for
                 # sub correct_lp to move it in if necessary.
-                if (   $type eq '#'
+                # NOTE for c314, c400: this fix is not really necessary,
+                # and it caused a DEVEL_MODE fault when -i=0.
+                # It could be completely removed, but this would change
+                # existing formatting in a few cases. So for now, the fix
+                # is to only skip this if -i=0.
+                if (
+                       $type eq '#'
                     && $max_index_to_go > 0
-                    && $align_seqno )
+                    && $align_seqno
+
+                    # fix for c314, c400 (see above note)
+                    && $rOpts_indent_columns > 0
+                  )
                 {
                     $available_spaces += 1;
                 }

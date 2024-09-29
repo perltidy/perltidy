@@ -11729,3 +11729,32 @@ my $Quux = bless \$v4, 'Quux';
 my $v1;
 my ( $v1, $v2, $v3, $v4 );
 
+
+==> c314 <==
+my $map ={
+dtend =>
+    {                                                                 # 4.8.2.2
+    },
+} ;
+
+==> c400 <==
+Readonly::Array
+   my @PATTERNS
+   => ( # requires this side comment
+[
+  'A-Z',
+  'a-z',
+  '0-9',
+  '_'
+] => [
+      '\\w',
+      '\\W'
+],
+[
+  'A-Z',
+  'a-z'
+] => [
+'[[:alpha:]]',
+'[[:^alpha:]]'
+],
+   );
