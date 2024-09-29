@@ -3968,13 +3968,14 @@ bare trailing comma is a special case of a multiline list.
 
 =item *
 
-In fact the above options for trailing commas can be seen as a sequence
-of nesting sets which might be described as
+In fact the above options for trailing commas can be seen as a hierarchy
+of nesting sets which can be expressed as
 
-   1 < m < b < i < h < 0
+   1 > m > b > i > h > 0
 
-This indicates that multiline commas B<m> are a subset of all trailing commas,
-and bare commas B<b> are a subset of all multiline trailing commas, and so on.
+This indicates that multiline commas B<m> are a
+subset of all trailing commas, and bare commas B<b> are a subset of all
+multiline trailing commas, and so on.
 
 =back
 
@@ -4052,13 +4053,15 @@ deleting commas. For example,
 
   -wtc='+h -b' -atc -dtc
 
-means that missing trailing commas should be added to lists of key => values
+means that missing trailing commas should be added to lists of key => value
 pairs, and trailing commas which are not bare should be removed. No other
-changes are made. When both plus and minus terms are used like this, they must
-not be in conflict.  This can be shown to be equivalent to requiring that the
-letter of the plus term does not occur before the letter of the minus term in
-their hierarchical order B<m>, B<b>, B<i>, B<h>.  In this example, the plus
-term B<h> follows the minus term B<b> in the list, so there is no conflict.
+changes are made.  When both plus and minus terms are used like this, they must
+not be in conflict.  There is no conflict in this example because the trailing
+comma locations of the key=>value pairs selected by the B<+h> term are a subset
+of all bare trailing commas, and thus will not be deleted by the B<-b> term.
+The general rule is that the letter of the plus term should occur after the
+letter of the minus term in the hierarchical nesting order,
+B<< 1 > m > b > i > h > 0 >>.
 
 B<Some points to note> regarding adding and deleting trailing commas:
 
