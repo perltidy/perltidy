@@ -9931,7 +9931,8 @@ sub scan_variable_usage {
             my $Kp = $self->K_previous_code($KK);
             return if ( !$Kp );
             my $token_p = $rLL->[$Kp]->[_TOKEN_];
-            return if ( $token_p ne ',' && $token_p ne '(' );
+            my $type_p  = $rLL->[$Kp]->[_TYPE_];
+            return if ( $type_p ne ',' && $token_p ne '(' );
         }
 
         my $bad_name = $check_for_overlapping_variables->( $name, $KK );
@@ -15750,11 +15751,12 @@ sub count_list_elements {
             my $Kn = $self->K_next_code($KK);
             next unless defined($Kn);
             my $token_Kn = $rLL->[$Kn]->[_TOKEN_];
+            my $type_Kn  = $rLL->[$Kn]->[_TYPE_];
             next
               if ( $token_Kn eq ')'
-                || $token_Kn eq '=>'
-                || $token_Kn eq '->'
-                || $token_Kn eq ',' );
+                || $type_Kn eq '=>'
+                || $type_Kn eq '->'
+                || $type_Kn eq ',' );
 
             # Certain keywords returning scalars are okay if not made
             # as paren-less calls
@@ -20521,13 +20523,17 @@ sub break_before_list_opening_containers {
                     my $token_p = defined($Kp) ? $rLL->[$Kp]->[_TOKEN_] : 'b';
                     if ( $is_opening_token{$token_p} && $token_p ne '(' ) {
 
-                        my $Kc = $K_closing_container->{$seqno};
-                        my $Km = $self->K_previous_nonblank($Kc);
-                        my $token_m =
-                          defined($Km) ? $rLL->[$Km]->[_TOKEN_] : 'b';
+                        my $Kc      = $K_closing_container->{$seqno};
+                        my $Km      = $self->K_previous_nonblank($Kc);
+                        my $token_m = 'b';
+                        my $type_m  = SPACE;
+                        if ( defined($Km) ) {
+                            $token_m = $rLL->[$Km]->[_TOKEN_];
+                            $type_m  = $rLL->[$Km]->[_TYPE_];
+                        }
 
                         # ignore any optional ending comma
-                        if ( $token_m eq ',' ) {
+                        if ( $type_m eq ',' ) {
                             $Km = $self->K_previous_nonblank($Km);
                             $token_m =
                               defined($Km) ? $rLL->[$Km]->[_TOKEN_] : 'b';
@@ -24373,7 +24379,7 @@ EOM
                         # 'do' block. This could also be used for other block
                         # types, but that would cause a significant change in
                         # existing formatting without much benefit.
-                        if (   $next_nonblank_token eq ','
+                        if (   $next_nonblank_token_type eq ','
                             && $Knnb eq $K_last
                             && $block_type eq 'do'
                             && $rOpts_add_newlines
@@ -25244,6 +25250,9 @@ EOM
 
         my $token = $tokens_to_go[$i];
         my $type  = $types_to_go[$i];
+
+        # patch for phantom commas, used for -qwaf
+        if ( !$token && $type eq ',' ) { $token = ',' }
 
         # For certain tokens, use user settings to decide if we break before or
         # after it
@@ -26653,8 +26662,9 @@ EOM
             my $depth_i = $nesting_depth_to_go[$ii];
             next   if ( $depth_i > $depth_1 );
             return if ( $depth_i < $depth_1 );
-            my $tok_i = $tokens_to_go[$ii];
-            return if ( $rbreak->{$tok_i} );
+            my $typ_i = $types_to_go[$ii];
+            if ( $typ_i eq 'k' ) { $typ_i = $tokens_to_go[$ii] }
+            return if ( $rbreak->{$typ_i} );
         }
         return 1;
     } ## end sub in_same_container_i
@@ -30854,8 +30864,8 @@ EOM
                     #    LIKE_THIS,=> 4,
                     # );
                     # This example is for -tso but should be general rule
-                    if (   $tokens_to_go[ $ibreak + 1 ] ne '->'
-                        && $tokens_to_go[ $ibreak + 1 ] ne ',' )
+                    if (   $types_to_go[ $ibreak + 1 ] ne '->'
+                        && $types_to_go[ $ibreak + 1 ] ne ',' )
                     {
                         $self->set_forced_breakpoint($ibreak);
                     }
@@ -31358,7 +31368,7 @@ EOM
         {
             $is_long_term =
                  $cab_flag == 4
-              || $cab_flag == 0 && $last_nonblank_token eq ','
+              || $cab_flag == 0 && $last_nonblank_type eq ','
               || $cab_flag == 5 && $old_breakpoint_to_go[$i_opening];
         }
 
@@ -34328,7 +34338,7 @@ EOM
         my $tol = 2;
 
         # But reduce tol to 0 at a terminal comma; fixes b1432
-        if (   $tokens_to_go[$ii_to_go] eq ','
+        if (   $types_to_go[$ii_to_go] eq ','
             && $ii_to_go < $max_index_to_go )
         {
             my $in = $ii_to_go + 1;
