@@ -1232,7 +1232,7 @@ sub get_line {
     # Find and remove what characters terminate this line, including any
     # control r
     my $input_line_separator = EMPTY_STRING;
-    if ( chomp($input_line) ) {
+    if ( chomp $input_line ) {
         $input_line_separator = $INPUT_RECORD_SEPARATOR;
     }
 
@@ -1891,7 +1891,7 @@ sub prepare_for_a_new_file {
     $paren_depth              = 0;
     $brace_depth              = 0;
     $square_bracket_depth     = 0;
-    $rcurrent_depth           = [ (0) x scalar @closing_brace_names ];
+    $rcurrent_depth           = [ (0) x scalar(@closing_brace_names) ];
     $total_depth              = 0;
     $rtotal_depth             = [];
     $rcurrent_sequence_number = [];

@@ -678,9 +678,9 @@ sub set_default_properties {
     set_default_color( "html-color-$short_to_long_names{$short_name}", $color );
     my $key;
     $key           = "html-bold-$short_to_long_names{$short_name}";
-    $rOpts->{$key} = ( defined $rOpts->{$key} ) ? $rOpts->{$key} : $bold;
+    $rOpts->{$key} = defined( $rOpts->{$key} ) ? $rOpts->{$key} : $bold;
     $key           = "html-italic-$short_to_long_names{$short_name}";
-    $rOpts->{$key} = ( defined $rOpts->{$key} ) ? $rOpts->{$key} : $italic;
+    $rOpts->{$key} = defined( $rOpts->{$key} ) ? $rOpts->{$key} : $italic;
     return;
 } ## end sub set_default_properties
 
@@ -760,7 +760,7 @@ sub pod_to_html {
         # Must clean up if pod2html dies (it can);
         # Be careful not to overwrite callers __DIE__ routine
         local $SIG{__DIE__} = sub {
-            unlink $tmpfile if -e $tmpfile;
+            unlink($tmpfile) if -e $tmpfile;
             Perl::Tidy::Die( $_[0] );
         };
 
@@ -903,7 +903,7 @@ sub pod_to_html {
 
             # Intermingle code and pod sections if we saw multiple =cut's.
             if ( $self->{_pod_cut_count} > 1 ) {
-                my $rpre_string = shift( @{$rpre_string_stack} );
+                my $rpre_string = shift @{$rpre_string_stack};
                 if ( ${$rpre_string} ) {
                     $html_print->('<pre>');
                     $html_print->( ${$rpre_string} );
@@ -937,7 +937,7 @@ sub pod_to_html {
                 if ( $self->{_pod_cut_count} <= 1 ) {
                     $html_print->('<hr />');
                 }
-                while ( my $rpre_string = shift( @{$rpre_string_stack} ) ) {
+                while ( my $rpre_string = shift @{$rpre_string_stack} ) {
                     $html_print->('<pre>');
                     $html_print->( ${$rpre_string} );
                     $html_print->('</pre>');

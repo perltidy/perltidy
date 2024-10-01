@@ -32,8 +32,9 @@
 --closing-side-comments
 --closing-side-comment-list='sub asub'
 
-# remove non-bare trailing commas (followed by paren)
+# remove non-bare trailing commas
 # add trailing commas to key=>value hash lists
+# The + - notation requires version >= 20240903.03
 --want-trailing-commas='-b +h'
 --delete-trailing-commas
 --add-trailing-commas
@@ -41,3 +42,7 @@
 # For now, require arrows at asymmetric bracket combinations
 --add-interbracket-arrows
 --interbracket-arrow-style=']->{ }->['
+
+# use 'perltidy -dmcp filename' to find mixed call paren usage
+# prefer call parens for these keywords:
+--want-call-parens='open unlink substr defined ref scalar int'

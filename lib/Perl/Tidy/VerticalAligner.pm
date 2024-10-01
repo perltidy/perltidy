@@ -4920,7 +4920,7 @@ sub min_max_median {
 
     my $min  = $sorted[0];
     my $max  = $sorted[-1];
-    my $imid = int $num / 2;
+    my $imid = int( $num / 2 );
     my $median =
         @sorted % 2
       ? $sorted[$imid]

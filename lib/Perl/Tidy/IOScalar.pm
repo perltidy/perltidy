@@ -47,7 +47,7 @@ sub DESTROY {
 
 sub new {
     my ( $package, $rscalar, $mode ) = @_;
-    my $ref = ref $rscalar;
+    my $ref = ref($rscalar);
     if ( $ref ne 'SCALAR' ) {
         confess <<EOM;
 ------------------------------------------------------------------------

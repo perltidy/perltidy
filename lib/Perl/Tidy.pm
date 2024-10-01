@@ -801,7 +801,7 @@ EOM
     # see if ARGV is overridden
     if ( defined($argv) ) {
 
-        my $rargv = ref $argv;
+        my $rargv = ref($argv);
         if ( $rargv eq 'SCALAR' ) { $argv = ${$argv}; $rargv = undef }
 
         # ref to ARRAY
@@ -1239,7 +1239,7 @@ sub check_in_place_modify {
     if ($in_place_modify) {
         if (   $rOpts->{'standard-output'}
             || $destination_stream
-            || ref $source_stream
+            || ref($source_stream)
             || $rOpts->{'outfile'}
             || defined( $rOpts->{'output-path'} ) )
         {
@@ -4984,21 +4984,21 @@ EOM
     # seen as 2 parameters, vtc and 1, so the abbreviations
     # won't be seen.  Therefore, we will catch them here if
     # they get through.
-    if ( defined $rOpts->{'vertical-tightness'} ) {
+    if ( defined( $rOpts->{'vertical-tightness'} ) ) {
         my $vt = $rOpts->{'vertical-tightness'};
         $rOpts->{'paren-vertical-tightness'}          = $vt;
         $rOpts->{'square-bracket-vertical-tightness'} = $vt;
         $rOpts->{'brace-vertical-tightness'}          = $vt;
     }
 
-    if ( defined $rOpts->{'vertical-tightness-closing'} ) {
+    if ( defined( $rOpts->{'vertical-tightness-closing'} ) ) {
         my $vtc = $rOpts->{'vertical-tightness-closing'};
         $rOpts->{'paren-vertical-tightness-closing'}          = $vtc;
         $rOpts->{'square-bracket-vertical-tightness-closing'} = $vtc;
         $rOpts->{'brace-vertical-tightness-closing'}          = $vtc;
     }
 
-    if ( defined $rOpts->{'closing-token-indentation'} ) {
+    if ( defined( $rOpts->{'closing-token-indentation'} ) ) {
         my $cti = $rOpts->{'closing-token-indentation'};
         $rOpts->{'closing-square-bracket-indentation'} = $cti;
         $rOpts->{'closing-brace-indentation'}          = $cti;

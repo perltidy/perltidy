@@ -1987,7 +1987,7 @@ sub initialize_weld_nested_exclusion_rules {
     my $msg2;
     foreach my $item (@items) {
         my $item_save = $item;
-        my $tok       = chop($item);
+        my $tok       = chop $item;
         my $key       = $token_keys{$tok};
         if ( !defined($key) ) {
             $msg1 .= " '$item_save'";
@@ -12819,7 +12819,7 @@ sub respace_tokens_inner_loop {
 
                 # remember the new K of this package; this may be
                 # off by 1 if a blank gets inserted before it
-                push @{$rK_package_list}, scalar @{$rLL_new};
+                push @{$rK_package_list}, scalar( @{$rLL_new} );
             }
             elsif ( $type eq 'i' ) {
                 if ( $token eq '@_' && $current_sub_seqno ) {
@@ -12828,13 +12828,13 @@ sub respace_tokens_inner_loop {
                     # off by 1 if a blank gets inserted before it
                     push
                       @{ $rK_AT_underscore_by_sub_seqno->{$current_sub_seqno} },
-                      scalar @{$rLL_new};
+                      scalar( @{$rLL_new} );
                 }
 
                 # Remember new K of the first '$self' in a sub for -dma option
                 if ( $token eq '$self' && $current_sub_seqno ) {
                     $rK_first_self_by_sub_seqno->{$current_sub_seqno} ||=
-                      scalar @{$rLL_new};
+                      scalar( @{$rLL_new} );
                 }
 
                 # Remember new K and name of blessed objects for -dma option
@@ -12855,7 +12855,7 @@ sub respace_tokens_inner_loop {
                   )
                 {
                     push @{ $rK_bless_by_sub_seqno->{$current_sub_seqno} },
-                      [ scalar @{$rLL_new}, $token ];
+                      [ scalar( @{$rLL_new} ), $token ];
                 }
             }
             elsif ( $type eq 'w' ) {
@@ -12878,12 +12878,12 @@ sub respace_tokens_inner_loop {
                 # off by 1 if a blank gets inserted before it
                 push
                   @{ $rK_return_by_sub_seqno->{$current_sub_seqno} },
-                  scalar @{$rLL_new};
+                  scalar( @{$rLL_new} );
             }
             if ( $token eq 'wantarray' ) {
                 push
                   @{ $rK_wantarray_by_sub_seqno->{$current_sub_seqno} },
-                  scalar @{$rLL_new};
+                  scalar( @{$rLL_new} );
             }
         }
 
@@ -22503,7 +22503,7 @@ EOM
         return unless ($rOpts_kgb_inside);
 
         # loop over sub-groups, index k
-        push @subgroup, scalar @group;
+        push @subgroup, scalar(@group);
         my $kbeg = 1;
         my $kend = @subgroup - 1;
         foreach my $k ( $kbeg .. $kend ) {
@@ -32350,7 +32350,7 @@ EOM
 
             # How many spaces across the page will we fill?
             my $columns_per_line =
-              ( int $number_of_fields / 2 ) * $pair_width +
+              int( $number_of_fields / 2 ) * $pair_width +
               ( $number_of_fields % 2 ) * $max_width;
 
             print {*STDOUT}
@@ -32845,9 +32845,9 @@ EOM
         #------------------------------------------------------------------
 
         # How many lines will this require?
-        my $formatted_lines = $item_count / ($number_of_fields);
-        if ( $formatted_lines != int $formatted_lines ) {
-            $formatted_lines = 1 + int $formatted_lines;
+        my $formatted_lines = $item_count / $number_of_fields;
+        if ( $formatted_lines != int($formatted_lines) ) {
+            $formatted_lines = 1 + int($formatted_lines);
         }
 
         # So far we've been trying to fill out to the right margin.  But
@@ -39681,7 +39681,7 @@ sub set_vertical_tightness_flags {
             next unless ( $matching_char{$char} );
 
             # pop most recently appended character
-            my $top = chop($csc);
+            my $top = chop $csc;
 
             # push it back plus the mate to the newest character
             # unless they balance each other.
