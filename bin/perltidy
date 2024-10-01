@@ -8,7 +8,7 @@ my $arg_string = undef;
 if ( $^O =~ /Mac/ ) {
     $arg_string = MacPerl::Ask(
         'Please enter @ARGV (-h for help)',
-        defined $ARGV[0] ? "\"$ARGV[0]\"" : ""
+        defined( $ARGV[0] ) ? "\"$ARGV[0]\"" : ""
     );
 }
 
@@ -3847,7 +3847,8 @@ these special function calls because it would deactivate them.
 Otherwise the various formatting control flags operate on these lists the same
 as for other comma-separated lists. In particular, note that if
 B<--break-at-old-comma-breakpoints>, or B<-boc>, is set, then the old line
-break locations will be retained.
+break locations will be retained. And old line breaks will be retained if
+there are any blank lines between the opening and closing parens.
 
 =item *
 Before using this option for the first time, it is a good idea to scan the code
@@ -4070,10 +4071,10 @@ B<Some points to note> regarding adding and deleting trailing commas:
 =item *
 
 It is recommended to also use the B<--converge> parameter when adding and/or
-deleting trailing commas, especially if the formatter may be making other
-line break changes at the same time.  The reason is that the decision
-regarding whether or not a list is multiline or bare is made based on the
-B<input> stream if only one iteration is made, which is the default.
+deleting trailing commas, especially if the formatter may be making other line
+break changes at the same time.  The reason is that the decision regarding
+whether or not a list is multiline or bare is made based on the B<input> stream
+if only one iteration is made, which is the default.
 
 When iterations are requested with the B<--converge> parameter, any comma
 addition or deletion operations are postponed until the start of the
@@ -4104,6 +4105,10 @@ line breaks.  Rerunning with B<--converge> added fixes things
         );
 
 because changes are based on the line breaks after the first iteration.
+
+The additional computer time needed by the B<--converge> option to do another
+iteration or two will not be noticable except for files with many thousands of
+lines.
 
 A parameter B<--delay-trailing-comma-operations>, or B<-dtco>, is available to
 control this behavior if desired. Negating this parameter, with B<-ndtco>, tells
@@ -5824,7 +5829,7 @@ The parameters in the F<.perltidyrc> file are installed first, so any
 parameters given on the command line will have priority over them.
 
 To avoid confusion, perltidy ignores any command in the .perltidyrc
-file which would cause some kind of dump and an exit.  These are:
+file which would cause some kind of dump and an exit.  These include:
 
  -h -v -ddf -dln -dop -dsn -dtt -dwls -dwrs -ss
 
@@ -5852,7 +5857,7 @@ line.  Then rename the desired file to F<.perltidyrc> when finished.
 =item *
 
 The parameters in the F<.perltidyrc> file can be switched off with
-the B<-npro> option.
+the B<-npro> option on the command line.
 
 =item *
 
