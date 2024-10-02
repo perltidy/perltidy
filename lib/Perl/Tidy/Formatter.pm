@@ -33224,28 +33224,70 @@ sub copy_old_breakpoints {
 
     # We are formatting a list and have decided to make comma breaks
     # the same as in the input file.
+
+    # If the comma style is under certain controls, and if this is a
+    # comma breakpoint with the comma is at the beginning of the next
+    # line, then we must pass that index instead. This will allow sub
+    # set_forced_breakpoints to check and follow the user settings. This
+    # produces a uniform style and can prevent instability (b1422).
+    #
+    # The flag '$controlled_comma_style' will be set if the user
+    # entered any of -wbb=',' -wba=',' -kbb=',' -kba=','.  It is not
+    # set for the -boc flag, but we will need to treat -boc in the
+    # same way for lists with breaks both before and after commas to
+    # avoid excess iterations.
+
+    my @i_old_breaks;
     for my $i ( $i_first_comma .. $i_last_comma ) {
         if ( $old_breakpoint_to_go[$i] ) {
-
-            # If the comma style is under certain controls, and if this is a
-            # comma breakpoint with the comma is at the beginning of the next
-            # line, then we must pass that index instead. This will allow sub
-            # set_forced_breakpoints to check and follow the user settings. This
-            # produces a uniform style and can prevent instability (b1422).
-            #
-            # The flag '$controlled_comma_style' will be set if the user
-            # entered any of -wbb=',' -wba=',' -kbb=',' -kba=','.  It is not
-            # needed or set for the -boc flag.
-            my $ibreak = $i;
-            if ( $types_to_go[$ibreak] ne ',' && $controlled_comma_style ) {
-                my $index = $inext_to_go[$ibreak];
-                if ( $index > $ibreak && $types_to_go[$index] eq ',' ) {
-                    $ibreak = $index;
-                }
-            }
-            $self->set_forced_breakpoint($ibreak);
+            push @i_old_breaks, $i;
         }
     }
+
+    # just copy old breakpoints unless $controlled_comma_style or -boc
+    if (   !$controlled_comma_style
+        && !$rOpts_break_at_old_comma_breakpoints )
+    {
+        foreach my $ii (@i_old_breaks) {
+            $self->set_forced_breakpoint($ii);
+        }
+        return;
+    }
+
+    # Scan for commas before and after the old breakpoints...
+    my @i_breaks;
+    my $num_after;
+    my $num_before;
+    foreach my $i (@i_old_breaks) {
+        my $i_break = $i;
+        if ( $types_to_go[$i_break] ne ',' ) {
+            my $index = $inext_to_go[$i_break];
+            if ( $index > $i_break && $types_to_go[$index] eq ',' ) {
+                $i_break = $index;
+                $num_before++;
+            }
+        }
+        else { $num_after++; }
+        push @i_breaks, $i_break;
+    }
+
+    # -boc by itself can use old breaks except when there are mixed
+    # leading and trailing commas. In that case excess iterations
+    # can occur (see b878)
+    if (  !$controlled_comma_style
+        && $rOpts_break_at_old_comma_breakpoints )
+    {
+
+        my $mixed = $num_before && $num_after;
+        if ( !$mixed ) {
+            @i_breaks = @i_old_breaks;
+        }
+    }
+
+    foreach my $ii (@i_breaks) {
+        $self->set_forced_breakpoint($ii);
+    }
+
     return;
 } ## end sub copy_old_breakpoints
 
