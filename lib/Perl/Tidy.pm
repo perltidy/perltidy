@@ -5730,23 +5730,22 @@ sub read_config_file {
     #   \@config_list = ref to final parameters and values which will be
     #     placed in @ARGV for processing by GetOptions
     #   $death_message = error message returned if a fatal error occurs
-
     my @config_list = ();
 
+    # remove side comments and join multiline quotes
+    my ( $rline_hash, $death_message ) =
+      strip_comments_and_join_quotes( $rconfig_string, $config_file );
+
     # file is bad if non-empty $death_message is returned
-    my $death_message = EMPTY_STRING;
+    if ($death_message) {
+        return ( \@config_list, $death_message );
+    }
 
     my $name = undef;
-    my $line_no;
     my $opening_brace_line;
-    my @lines = split /^/, ${$rconfig_string};
-    while ( defined( my $line = shift @lines ) ) {
-        $line_no++;
-        chomp $line;
-        ( $line, $death_message ) =
-          strip_comment( $line, $config_file, $line_no );
-        last if ($death_message);
-        next unless $line;
+    foreach my $item ( @{$rline_hash} ) {
+        my $line    = $item->{line};
+        my $line_no = $item->{line_no};
         $line =~ s/^ \s+ | \s+ $//gx;    # trim both ends
         next unless $line;
 
@@ -5832,92 +5831,146 @@ EOM
     return ( \@config_list, $death_message );
 } ## end sub read_config_file
 
-sub strip_comment {
+sub strip_comments_and_join_quotes {
 
-    # Strip any comment from a command line
-    my ( $instr, $config_file, $line_no ) = @_;
+    my ( $rconfig_string, $config_file ) = @_;
+
+    # Tasks:
+    # 1. Strip comments from .perltidyrc lines
+    # 2. Join lines which are spanned by a quote
 
     # Given:
-    #   $instr = string with the text of an input line
+    #   $rconfig_string = the configuration file
     #   $config_file = filename, for error messages
-    #   $line_no = line number, for error messages
     # Return:
-    #   string with any comment removed
-    #   $msg = any error message
+    #   $rline_hash = hash with modified lines and their input numbers
+    #   $msg = any error message; code will die on any message.
 
-    my $msg = EMPTY_STRING;
+    # return variables
+    my $msg        = EMPTY_STRING;
+    my $rline_hash = [];
 
-    # check for full-line comment
-    if ( $instr =~ /^\s*#/ ) {
-        return ( EMPTY_STRING, $msg );
-    }
+    # quote variables
+    my $quote_char          = EMPTY_STRING;
+    my $quote_start_line    = EMPTY_STRING;
+    my $quote_start_line_no = -1;
+    my $in_string           = EMPTY_STRING;
+    my $out_string          = EMPTY_STRING;
 
-    # nothing to do if no comments
-    if ( $instr !~ /#/ ) {
-        return ( $instr, $msg );
-    }
+    my @lines = split /^/, ${$rconfig_string};
+    my $line_no;
 
-    # handle case of no quotes
-    if ( $instr !~ /['"]/ ) {
+    # loop over lines
+    while (@lines) {
 
-        # We now require a space before the # of a side comment
-        # this allows something like:
-        #    -sbcp=#
-        # Otherwise, it would have to be quoted:
-        #    -sbcp='#'
-        $instr =~ s/\s+\#.*$//;
-        return ( $instr, $msg );
-    }
+        my $line = shift @lines;
+        $line_no++;
+        $line =~ s/^\s+//;
+        $line =~ s/\s+$//;
 
-    # handle comments and quotes
-    my $outstr     = EMPTY_STRING;
-    my $quote_char = EMPTY_STRING;
-    while (1) {
+        if ( !$quote_char ) {
 
-        # looking for ending quote character
-        if ($quote_char) {
-            if ( $instr =~ /\G($quote_char)/gc ) {
-                $quote_char = EMPTY_STRING;
-                $outstr .= $1;
+            # skip a full-line comment
+            if ( substr( $line, 0, 1 ) eq '#' ) {
+                next;
             }
-            elsif ( $instr =~ /\G(.)/gc ) {
-                $outstr .= $1;
-            }
-
-            # error..we reached the end without seeing the ending quote char
-            else {
-                $msg = <<EOM;
-Error reading file $config_file at line number $line_no.
-Did not see ending quote character <$quote_char> in this text:
-$instr
-Please fix this line or use -npro to avoid reading this file
-EOM
-                last;
-            }
+            $in_string  = $line;
+            $out_string = EMPTY_STRING;
         }
-
-        # accumulating characters and looking for start of a quoted string
         else {
-            if ( $instr =~ /\G([\"\'])/gc ) {
-                $outstr .= $1;
-                $quote_char = $1;
+
+            # treat previous newline as a space
+            $in_string = SPACE . $line;
+        }
+
+        # loop over string characters
+        #  $in_string  = the input string
+        #  $out_string = the output string
+        #  $quote_char = quote character being sought
+        while (1) {
+
+            # accumulating characters not in quote
+            if ( !$quote_char ) {
+
+                if ( $in_string =~ /\G([\"\'])/gc ) {
+
+                    # starting new quote..
+                    $out_string .= $1;
+                    $quote_char          = $1;
+                    $quote_start_line_no = $line_no;
+                    $quote_start_line    = $line;
+                }
+                elsif ( $in_string =~ /\G(#)/gc ) {
+
+                    # A space is required before the # of a side comment
+                    # This allows something like:
+                    #    -sbcp=#
+                    # Otherwise, it would have to be quoted:
+                    #    -sbcp='#'
+                    if ( !length($out_string) || $out_string =~ /\s$/ ) {
+                        last;
+                    }
+                    $out_string .= $1;
+                }
+                elsif ( $in_string =~ /\G([^\#\'\"]+)/gc ) {
+
+                    # neither quote nor side comment
+                    $out_string .= $1;
+                }
+                else {
+
+                    # end of line
+                    last;
+                }
             }
 
-            # Note: not yet enforcing the space-before-hash rule for side
-            # comments if the parameter is quoted.
-            elsif ( $instr =~ /\G#/gc ) {
-                last;
-            }
-            elsif ( $instr =~ /\G(.)/gc ) {
-                $outstr .= $1;
-            }
+            # looking for ending quote character
             else {
-                last;
+                if ( $in_string =~ /\G($quote_char)/gc ) {
+
+                    # end of quote
+                    $out_string .= $1;
+                    $quote_char = EMPTY_STRING;
+                }
+                elsif ( $in_string =~ /\G([^$quote_char]+)/gc ) {
+
+                    # accumulate quoted text
+                    $out_string .= $1;
+                }
+                else {
+
+                    # end of line
+                    last;
+                }
             }
+
+        } ## end loop over line characters
+
+        if ( !$quote_char ) {
+            push @{$rline_hash},
+              {
+                line    => $out_string,
+                line_no => $line_no,
+              };
         }
+
+    } ## end loop over lines
+
+    if ($quote_char) {
+        my $max_len = 80;
+        if ( length($quote_start_line) > $max_len ) {
+            $quote_start_line =
+              substr( $quote_start_line, 0, $max_len - 3 ) . '...';
+        }
+        $msg = <<EOM;
+Error: hit EOF reading file '$config_file' looking for end of quoted text
+which started at line $quote_start_line_no with quote character <$quote_char>:
+$quote_start_line
+Please fix or use -npro to avoid reading this file
+EOM
     }
-    return ( $outstr, $msg );
-} ## end sub strip_comment
+    return ( $rline_hash, $msg );
+} ## end sub strip_comments_and_join_quotes
 
 sub parse_args {
 

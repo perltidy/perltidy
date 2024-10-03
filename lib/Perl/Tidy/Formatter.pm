@@ -33226,7 +33226,7 @@ sub copy_old_breakpoints {
     # the same as in the input file.
 
     # If the comma style is under certain controls, and if this is a
-    # comma breakpoint with the comma is at the beginning of the next
+    # comma breakpoint with the comma at the beginning of the next
     # line, then we must pass that index instead. This will allow sub
     # set_forced_breakpoints to check and follow the user settings. This
     # produces a uniform style and can prevent instability (b1422).
