@@ -2041,7 +2041,8 @@ sub process_all_files {
     my $debugfile_stream   = $rinput_hash->{'debugfile'};
 
     my $number_of_files = @{$rfiles};
-    while ( my $input_file = shift @{$rfiles} ) {
+    while ( @{$rfiles} ) {
+        my $input_file = shift @{$rfiles};
 
         my $fileroot;
         my @input_file_stat;
@@ -3336,7 +3337,7 @@ sub make_logfile_header {
     }
     my $options_string = join( SPACE, @{$rraw_options} );
 
-    if ($config_file) {
+    if ( defined($config_file) ) {
         $msg .= "Found Configuration File >>> $config_file \n";
     }
     $msg .= "Configuration and command line parameters for this run:\n";
@@ -4507,9 +4508,9 @@ sub _process_command_line {
     }
 
     my @raw_options        = ();
-    my $config_file        = EMPTY_STRING;
     my $saw_ignore_profile = 0;
     my $saw_dump_profile   = 0;
+    my $config_file;
 
     #--------------------------------------------------------------
     # Take a first look at the command-line parameters.  Do as many
@@ -4528,7 +4529,7 @@ sub _process_command_line {
             $saw_dump_profile = 1;
         }
         elsif ( $i =~ /^-(pro|profile)=(.+)/ ) {
-            if ($config_file) {
+            if ( defined($config_file) ) {
                 Warn(
 "Only one -pro=filename allowed, using '$2' instead of '$config_file'\n"
                 );
@@ -4542,9 +4543,9 @@ sub _process_command_line {
                 {
                     $start_dir = '.' if !$start_dir;
                     $start_dir = Cwd::realpath($start_dir);
-                    if ( my $found_file =
-                        find_file_upwards( $start_dir, $search_file ) )
-                    {
+                    my $found_file =
+                      find_file_upwards( $start_dir, $search_file );
+                    if ( defined($found_file) ) {
                         $config_file = $found_file;
                     }
                 }
@@ -4553,7 +4554,6 @@ sub _process_command_line {
                 Die(
                     "cannot find file given with -pro=$config_file: $OS_ERROR\n"
                 );
-                $config_file = EMPTY_STRING;
             }
         }
         elsif ( $i =~ /^-(pro|profile)=?$/ ) {
@@ -4619,7 +4619,7 @@ sub _process_command_line {
         # as call parameter to perltidy and -pro=filename on command
         # line.
         if ($perltidyrc_stream) {
-            if ($config_file) {
+            if ( defined($config_file) ) {
                 Warn(<<EOM);
  Conflict: a perltidyrc configuration file was specified both as this
  perltidy call parameter: $perltidyrc_stream
@@ -4635,14 +4635,15 @@ EOM
         # look for a config file if we don't have one yet
         my $rconfig_file_chatter;
         ${$rconfig_file_chatter} = EMPTY_STRING;
-        $config_file =
-          find_config_file( $is_Windows, $Windows_type, $rconfig_file_chatter,
-            $rpending_complaint )
-          unless $config_file;
+        if ( !defined($config_file) ) {
+            $config_file =
+              find_config_file( $is_Windows, $Windows_type,
+                $rconfig_file_chatter, $rpending_complaint );
+        }
 
         # open any config file
         my $rconfig_string;
-        if ($config_file) {
+        if ( defined($config_file) ) {
             $rconfig_string = stream_slurp($config_file);
             if ( !defined($rconfig_string) ) {
                 Die(
@@ -5307,7 +5308,7 @@ After $max_passes passes ARGV has $num entries
 EOM
             }
 
-            if ($config_file) {
+            if ( defined($config_file) ) {
                 Die(<<"DIE");
 Please check your configuration file $config_file for circular-references.
 To deactivate it, use -npro.
@@ -5476,7 +5477,7 @@ sub find_config_file {
     # sub to check file existence and record all tests
     my $exists_config_file = sub {
         my $config_file = shift;
-        return 0 unless $config_file;
+        return 0 unless defined($config_file);
         ${$rconfig_file_chatter} .= "# Testing: $config_file\n";
         return -f $config_file;
     }; ## end $exists_config_file = sub
@@ -5486,7 +5487,7 @@ sub find_config_file {
 
         # resolve <dir>/.../<file>, meaning look upwards from directory
         my $config_file = shift;
-        if ($config_file) {
+        if ( defined($config_file) ) {
             if ( my ( $start_dir, $search_file ) =
                 ( $config_file =~ m{^(.*)\.\.\./(.*)$} ) )
             {
@@ -5494,9 +5495,8 @@ sub find_config_file {
                   "# Searching Upward: $config_file\n";
                 $start_dir = '.' if !$start_dir;
                 $start_dir = Cwd::realpath($start_dir);
-                if ( my $found_file =
-                    find_file_upwards( $start_dir, $search_file ) )
-                {
+                my $found_file = find_file_upwards( $start_dir, $search_file );
+                if ( defined($found_file) ) {
                     $config_file = $found_file;
                     ${$rconfig_file_chatter} .= "# Found: $config_file\n";
                 }
@@ -5746,8 +5746,9 @@ sub read_config_file {
     foreach my $item ( @{$rline_hash} ) {
         my $line    = $item->{line};
         my $line_no = $item->{line_no};
-        $line =~ s/^ \s+ | \s+ $//gx;    # trim both ends
-        next unless $line;
+        $line =~ s/^\s+//;
+        $line =~ s/\s+$//;
+        next unless ( length($line) );
 
         my $body = $line;
 
@@ -5850,7 +5851,7 @@ sub strip_comments_and_join_quotes {
     my $msg        = EMPTY_STRING;
     my $rline_hash = [];
 
-    # quote variables
+    # quote state variables
     my $quote_char          = EMPTY_STRING;
     my $quote_start_line    = EMPTY_STRING;
     my $quote_start_line_no = -1;
@@ -5867,6 +5868,7 @@ sub strip_comments_and_join_quotes {
         $line_no++;
         $line =~ s/^\s+//;
         $line =~ s/\s+$//;
+        next unless ( length($line) );
 
         if ( !$quote_char ) {
 
@@ -5907,7 +5909,7 @@ sub strip_comments_and_join_quotes {
                     #    -sbcp=#
                     # Otherwise, it would have to be quoted:
                     #    -sbcp='#'
-                    if ( !length($out_string) || $out_string =~ /\s$/ ) {
+                    if ( !length($out_string) || $out_string =~ s/\s+$// ) {
                         last;
                     }
                     $out_string .= $1;

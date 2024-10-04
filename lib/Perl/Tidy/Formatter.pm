@@ -1478,9 +1478,10 @@ sub split_words {
     # given a string containing words separated by whitespace,
     # return the list of words
     my ($str) = @_;
-    return unless $str;
+    return unless defined($str);
     $str =~ s/\s+$//;
     $str =~ s/^\s+//;
+    return unless length($str);
     return split /\s+/, $str;
 } ## end sub split_words
 
@@ -1935,6 +1936,8 @@ sub initialize_weld_nested_exclusion_rules {
 
     my $opt_name = 'weld-nested-exclusion-list';
     my $str      = $rOpts->{$opt_name};
+
+    # let a '0' be the same as not defined
     return unless ($str);
     $str =~ s/^\s+//;
     $str =~ s/\s+$//;
@@ -2099,6 +2102,8 @@ EOM
 
 sub initialize_line_up_parentheses_control_hash {
     my ( $str, $opt_name ) = @_;
+
+    # let a 0 be the same as not defined
     return unless ($str);
     $str =~ s/^\s+//;
     $str =~ s/\s+$//;
@@ -2123,7 +2128,7 @@ sub initialize_line_up_parentheses_control_hash {
         if ( $item =~ /^([^\(\]\{]*)?([\(\{\[])(\d)?$/ ) {
             $flag1 = $1 if $1;
             $key   = $2 if $2;
-            $flag2 = $3 if $3;
+            $flag2 = $3 if defined($3);
         }
         else {
             $msg1 .= " '$item_save'";
@@ -2648,6 +2653,8 @@ use constant DEBUG_KB => 0;
 
 sub initialize_keep_old_breakpoints {
     my ( $str, $short_name, $rkeep_break_hash ) = @_;
+
+    # 0 will be treated same as not defined
     return unless $str;
 
     my %flags = ();
@@ -9548,7 +9555,7 @@ sub get_qw_list {
     #  nothing if error
 
     my $rLL = $self->[_rLL_];
-    return unless ($Kn);
+    return unless defined($Kn);
     my $type_n = $rLL->[$Kn]->[_TYPE_];
     return unless ( $type_n eq 'q' );
     my $token_n  = $rLL->[$Kn]->[_TOKEN_];
@@ -9585,7 +9592,7 @@ sub expand_quoted_word_list {
     #   ref to list if found words
     #   undef if not successful, or non-constant list item encountered
     my $rLL = $self->[_rLL_];
-    return unless ($Kbeg);
+    return unless defined($Kbeg);
     my $Klimit = @{$rLL} - 1;
     my @list;
     my $Kn = $Kbeg - 1;
@@ -16388,7 +16395,7 @@ sub count_sub_input_args {
         elsif ( $type eq 'Q' ) {
 
             my $K_last_code = $self->K_previous_code($KK);
-            next unless $K_last_code;
+            next unless defined($K_last_code);
             my $K_last_type = $rLL->[$K_last_code]->[_TYPE_];
             if ( $K_last_type eq 'Q' ) {
 
@@ -16692,15 +16699,15 @@ sub count_return_values_wanted {
             my $seqno_c = $rLL->[$K_c]->[_TYPE_SEQUENCE_];
             return if ( !$seqno_c );
             my $Ko_c = $self->[_K_opening_container_]->{$seqno_c};
-            return unless ($Ko_c);
+            return unless defined($Ko_c);
             my $K_c_new = $self->K_previous_code($Ko_c);
-            return unless ($K_c_new);
+            return unless defined($K_c_new);
             $type_c  = $rLL->[$K_c_new]->[_TYPE_];
             $token_c = $rLL->[$K_c_new]->[_TOKEN_];
 
             if ( $type_c eq '->' ) {
                 $K_c_new = $self->K_previous_code($K_c_new);
-                return unless ($K_c_new);
+                return unless defined($K_c_new);
                 $type_c  = $rLL->[$K_c_new]->[_TYPE_];
                 $token_c = $rLL->[$K_c_new]->[_TOKEN_];
             }
@@ -16876,7 +16883,7 @@ sub update_sub_call_paren_info {
         my $seqno = $rLL->[$K_closing_bracket]->[_TYPE_SEQUENCE_];
         return unless ($seqno);
         my $Ko = $K_opening_container->{$seqno};
-        return unless ($Ko);
+        return unless defined($Ko);
         my $Knum = $self->K_next_code($Ko);
         return unless ( $Knum && $rLL->[$Knum]->[_TOKEN_] eq '0' );
         my $Kc = $self->K_next_code($Knum);

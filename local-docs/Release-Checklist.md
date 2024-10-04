@@ -35,8 +35,8 @@
    - perlbrew list               [show installed versions]
    - perlbrew available --all    [show all available versions]
      - or see https://www.cpan.org/src/README.html
-   - perlbrew install perl-5.8.0 [install perl-5.8.0, may need to force]
-   - perlbrew use perl-5.8.0     [switch to 5.8.0 in current shell]
+   - perlbrew install perl-5.8.1 [install perl-5.8.1, may need to force]
+   - perlbrew use perl-5.8.1     [switch to 5.8.1 in current shell]
 - Run tidyall -a to be sure code is tidied
   - note that I have tidyall set to also run perlcritic right now
 - run podchecker on all .pod files
