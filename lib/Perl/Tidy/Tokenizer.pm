@@ -698,7 +698,8 @@ EOM
     else {
 
         # This will die if user's object does have a 'get_line' method
-        while ( my $line = $line_source_object->get_line() ) {
+        my $line;
+        while ( defined( $line = $line_source_object->get_line() ) ) {
             push( @{$rinput_lines}, $line );
         }
         $source_string = join( EMPTY_STRING, @{$rinput_lines} );
@@ -1739,7 +1740,7 @@ sub find_starting_indentation_level {
         # ( or, for now, an =pod line)
         my $msg = EMPTY_STRING;
         my $in_code_skipping;
-        while ( $line = $self->peek_ahead( $i++ ) ) {
+        while ( defined( $line = $self->peek_ahead( $i++ ) ) ) {
 
             # if first line is #! then assume starting level is zero
             if ( $i == 1 && $line =~ /^\#\!/ ) {
@@ -7516,7 +7517,7 @@ sub peek_ahead_for_n_nonblank_pre_tokens {
     my $i = 0;
     my ( $rpre_tokens, $rmap, $rpre_types );
 
-    while ( $line = $self->peek_ahead( $i++ ) ) {
+    while ( defined( $line = $self->peek_ahead( $i++ ) ) ) {
         $line =~ s/^\s+//;                 # trim leading blanks
         next if ( length($line) <= 0 );    # skip blank
         next if ( $line =~ /^#/ );         # skip comment
@@ -7535,7 +7536,7 @@ sub peek_ahead_for_nonblank_token {
     my $line;
     my $i = 0;
 
-    while ( $line = $self->peek_ahead( $i++ ) ) {
+    while ( defined( $line = $self->peek_ahead( $i++ ) ) ) {
         $line =~ s/^\s+//;                 # trim leading blanks
         next if ( length($line) <= 0 );    # skip blank
         next if ( $line =~ /^#/ );         # skip comment
@@ -7825,7 +7826,7 @@ sub guess_if_here_doc {
     my $k   = 0;
     my $msg = "checking <<";
 
-    while ( $line = $self->peek_ahead( $k++ ) ) {
+    while ( defined( $line = $self->peek_ahead( $k++ ) ) ) {
         chomp $line;
 
         if ( $line =~ /^$next_token$/ ) {

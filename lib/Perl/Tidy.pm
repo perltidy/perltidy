@@ -4688,10 +4688,11 @@ EOM
                 # a look at @ARGV.
                 if (@ARGV) {
                     my $count = @ARGV;
-                    my $str   = "\'" . pop(@ARGV) . "\'";
-                    while ( my $param = pop(@ARGV) ) {
+                    my $str   = EMPTY_STRING;
+                    foreach my $param (@ARGV) {
                         if ( length($str) < 70 ) {
-                            $str .= ", '$param'";
+                            if ($str) { $str .= ', ' }
+                            $str .= "'$param'";
                         }
                         else {
                             $str .= ", ...";
@@ -5645,7 +5646,7 @@ sub dump_config_file {
     if ($rconfig_string) {
         my @lines = split /^/, ${$rconfig_string};
         print {*STDOUT} "# Dump of file: '$config_file'\n";
-        while ( defined( my $line = shift @lines ) ) { print {*STDOUT} $line }
+        foreach my $line (@lines) { print {*STDOUT} $line }
     }
     else {
         print {*STDOUT} "# ...no config file found\n";
@@ -5858,13 +5859,11 @@ sub strip_comments_and_join_quotes {
     my $in_string           = EMPTY_STRING;
     my $out_string          = EMPTY_STRING;
 
-    my @lines = split /^/, ${$rconfig_string};
-    my $line_no;
+    my @lines   = split /^/, ${$rconfig_string};
+    my $line_no = 0;
 
     # loop over lines
-    while (@lines) {
-
-        my $line = shift @lines;
+    foreach my $line (@lines) {
         $line_no++;
         $line =~ s/^\s+//;
         $line =~ s/\s+$//;
@@ -5902,7 +5901,7 @@ sub strip_comments_and_join_quotes {
                     $quote_start_line_no = $line_no;
                     $quote_start_line    = $line;
                 }
-                elsif ( $in_string =~ /\G(#)/gc ) {
+                elsif ( $in_string =~ /\G#/gc ) {
 
                     # A space is required before the # of a side comment
                     # This allows something like:
@@ -5912,7 +5911,7 @@ sub strip_comments_and_join_quotes {
                     if ( !length($out_string) || $out_string =~ s/\s+$// ) {
                         last;
                     }
-                    $out_string .= $1;
+                    $out_string .= '#';
                 }
                 elsif ( $in_string =~ /\G([^\#\'\"]+)/gc ) {
 
@@ -5945,7 +5944,6 @@ sub strip_comments_and_join_quotes {
                     last;
                 }
             }
-
         } ## end loop over line characters
 
         if ( !$quote_char ) {

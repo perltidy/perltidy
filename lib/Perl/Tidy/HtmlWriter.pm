@@ -937,7 +937,8 @@ sub pod_to_html {
                 if ( $self->{_pod_cut_count} <= 1 ) {
                     $html_print->('<hr />');
                 }
-                while ( my $rpre_string = shift @{$rpre_string_stack} ) {
+                while ( @{$rpre_string_stack} ) {
+                    my $rpre_string = shift @{$rpre_string_stack};
                     $html_print->('<pre>');
                     $html_print->( ${$rpre_string} );
                     $html_print->('</pre>');

@@ -10219,6 +10219,7 @@ sub scan_variable_usage {
 
         # Looking for something like $word, @word, $word[, $$word, ${word}, ..
         while ( $text =~ / ([\$\@]  [\$]*) \{?(\w+)\}? ([\[\{]?) /gcx ) {
+            ##              ------1------      -2-      ---3---
             my $sigil_string = $1;
             my $word         = $2;
             my $brace        = $3;
@@ -15848,7 +15849,8 @@ sub count_prototype_args {
         $count_min = undef if ( !$saw_semicolon );
         return;
     };
-    while ( my $ch = shift @chars ) {
+    while (@chars) {
+        my $ch = shift @chars;
         if    ( !defined($ch) )                 { $saw_array->(); last }
         elsif ( $ch eq '(' )                    { last if ($count_min) }
         elsif ( $ch eq ')' )                    { last }
@@ -19217,7 +19219,8 @@ sub weld_nested_containers {
     # Main loop over nested pairs...
     # We are working from outermost to innermost pairs so that
     # level changes will be complete when we arrive at the inner pairs.
-    while ( my $item = pop( @{$rnested_pairs} ) ) {
+    while ( @{$rnested_pairs} ) {
+        my $item = pop @{$rnested_pairs};
         my ( $inner_seqno, $outer_seqno ) = @{$item};
 
         my $Kouter_opening = $K_opening_container->{$outer_seqno};
@@ -22569,7 +22572,8 @@ EOM
 
         # always remove unwanted trailing blank lines from our list
         return unless (@iblanks);
-        while ( my $ibl = pop(@iblanks) ) {
+        while (@iblanks) {
+            my $ibl = pop @iblanks;
             if ( $ibl < $iend ) { push @iblanks, $ibl; last }
             $iend = $ibl;
         }
@@ -22577,7 +22581,10 @@ EOM
         # now mark mark interior blank lines for deletion if requested
         return unless ($rOpts_kgb_delete);
 
-        while ( my $ibl = pop(@iblanks) ) { $rhash_of_desires->{$ibl} = 2 }
+        while (@iblanks) {
+            my $ibl = pop @iblanks;
+            $rhash_of_desires->{$ibl} = 2;
+        }
 
         return;
     } ## end sub kgb_delete_inner_blank_lines
