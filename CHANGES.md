@@ -1,6 +1,8 @@
 # Perltidy Change Log
 
-## 2024 09 03.03
+## 2024 09 03.04
+
+    - Fix git #165, strings beginning with v before => gave incorrect error message
 
     - The parameter --add-lone-trailing-commas, -altc, is now on by default.
     This will simplify input for trailing comma operations. Use
