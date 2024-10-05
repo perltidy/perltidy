@@ -4880,9 +4880,11 @@ EOM
             # Bareword followed by a fat comma - see 'git18.in'
             # This code was previously sub do_QUOTED_BAREWORD: see c316, c317
 
+            # Older perl:
             #   'v25=>1'   is a v-string key!
             #   '-v25=>1'  is also a v-string key!
-            if ( $tok =~ /^v\d+$/ ) {
+            # Deactivated: this is no longer true; see git #165
+            if ( 0 && $tok =~ /^v\d+$/ ) {
                 $type = 'v';
                 $self->complain("v-string used as hash key\n");
                 $self->report_v_string($tok);
