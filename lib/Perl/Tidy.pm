@@ -1096,8 +1096,46 @@ EOM
     }
 
     # use stdin by default if no source array and no args
+    elsif ( !@Arg_files ) {
+        unshift( @Arg_files, '-' );
+    }
+
+    # check file existance and expand any globs
     else {
-        unshift( @Arg_files, '-' ) unless @Arg_files;
+        my @updated_files;
+        foreach my $input_file (@Arg_files) {
+            if ( -e $input_file ) {
+                push @updated_files, $input_file;
+            }
+            else {
+
+                # file doesn't exist - check for a file glob
+                if ( $input_file =~ /([\?\*\[\{])/ ) {
+
+                    # Windows shell may not remove quotes, so do it
+                    my $ifile = $input_file;
+                    if ( $ifile =~ /^\'(.+)\'$/ ) { $ifile = $1 }
+                    if ( $ifile =~ /^\"(.+)\"$/ ) { $ifile = $1 }
+                    my $pattern = fileglob_to_re($ifile);
+                    my $dh;
+                    if ( opendir( $dh, './' ) ) {
+                        my @files =
+                          grep { /$pattern/ && !-d } readdir($dh);
+                        closedir($dh);
+                        next unless (@files);
+                        push @updated_files, @files;
+                        next;
+                    }
+                }
+                Warn("skipping file: '$input_file': no matches found\n");
+                next;
+            }
+        } ## end loop over input filenames
+
+        @Arg_files = @updated_files;
+        if ( !@Arg_files ) {
+            Die("no matching input files found\n");
+        }
     }
 
     # Flag for loading module Unicode::GCString for evaluating text width:
@@ -2041,9 +2079,7 @@ sub process_all_files {
     my $debugfile_stream   = $rinput_hash->{'debugfile'};
 
     my $number_of_files = @{$rfiles};
-    while ( @{$rfiles} ) {
-        my $input_file = shift @{$rfiles};
-
+    foreach my $input_file ( @{$rfiles} ) {
         my $fileroot;
         my @input_file_stat;
         my $display_name;
@@ -2081,25 +2117,6 @@ sub process_all_files {
             $fileroot     = $input_file;
             $display_name = $input_file;
             if ( !-e $input_file ) {
-
-                # file doesn't exist - check for a file glob
-                if ( $input_file =~ /([\?\*\[\{])/ ) {
-
-                    # Windows shell may not remove quotes, so do it
-                    my $ifile = $input_file;
-                    if ( $ifile =~ /^\'(.+)\'$/ ) { $ifile = $1 }
-                    if ( $ifile =~ /^\"(.+)\"$/ ) { $ifile = $1 }
-                    my $pattern = fileglob_to_re($ifile);
-                    my $dh;
-                    if ( opendir( $dh, './' ) ) {
-                        my @files =
-                          grep { /$pattern/ && !-d } readdir($dh);
-                        closedir($dh);
-                        next unless (@files);
-                        unshift @{$rfiles}, @files;
-                        next;
-                    }
-                }
                 Warn("skipping file: '$input_file': no matches found\n");
                 next;
             }
@@ -2379,7 +2396,7 @@ EOM
 
         $logger_object->finish()
           if $logger_object;
-    } ## end while ( @{$rfiles} )
+    } ## end loop over files
 
     return;
 } ## end sub process_all_files
