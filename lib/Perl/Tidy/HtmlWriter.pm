@@ -942,14 +942,14 @@ sub pod_to_html {
                     $html_print->('<pre>');
                     $html_print->( ${$rpre_string} );
                     $html_print->('</pre>');
-                }
+                } ## end while ( @{$rpre_string_stack...})
             }
             $html_print->($line);
         }
         else {
             $html_print->($line);
         }
-    }
+    } ## end while ( defined( my $line...))
 
     $success_flag = 1;
     if ( !$saw_body ) {

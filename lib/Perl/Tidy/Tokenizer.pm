@@ -1777,7 +1777,7 @@ sub find_starting_indentation_level {
 
             $starting_level = $self->guess_old_indentation_level($line);
             last;
-        }
+        } ## end while ( defined( $line = ...))
         $msg = "Line $i implies starting-indentation-level = $starting_level\n";
         $self->write_logfile_entry("$msg");
     }
@@ -7526,7 +7526,7 @@ sub peek_ahead_for_n_nonblank_pre_tokens {
         ( $rpre_tokens, $rmap, $rpre_types ) =
           pre_tokenize( $line, $max_pretokens );
         last;
-    }
+    } ## end while ( defined( $line = ...))
     return ( $rpre_tokens, $rpre_types );
 } ## end sub peek_ahead_for_n_nonblank_pre_tokens
 
@@ -7552,7 +7552,7 @@ sub peek_ahead_for_nonblank_token {
             $rtokens->[ ++$j ] = $tok;
         }
         last;
-    }
+    } ## end while ( defined( $line = ...))
     return;
 } ## end sub peek_ahead_for_nonblank_token
 
@@ -7837,7 +7837,7 @@ sub guess_if_here_doc {
             last;
         }
         last if ( $k >= $HERE_DOC_WINDOW );
-    }
+    } ## end while ( defined( $line = ...))
 
     if ( !$here_doc_expected ) {
 
@@ -9152,7 +9152,7 @@ EOM
             # implies that scanning has finished
             last if ( $i <= $i_start_loop );
 
-        } ## end of main loop
+        } ## end while ( $i < $max_token_index...)
 
         #-------------
         # Check result
@@ -10257,7 +10257,7 @@ sub inverse_pretoken_map {
             $i--;
             last;
         }
-    }
+    } ## end while ( ++$i <= $max_token_index)
     return ( $i, $error );
 } ## end sub inverse_pretoken_map
 
@@ -10600,7 +10600,7 @@ sub follow_quoted_string {
             else {
                 $allow_quote_comments = 1;
             }
-        }
+        } ## end while ( $i < $max_token_index)
     }
 
     # There are two different loops which search for the ending quote
@@ -10665,7 +10665,7 @@ sub follow_quoted_string {
                     $quoted_string .= substr( $tok, $old_pos );
                 }
             }
-        }
+        } ## end while ( $i <= $max_token_index)
     }
 
     #-----------------------------------------------------------------------
@@ -10698,7 +10698,7 @@ sub follow_quoted_string {
                 ## nothing special
             }
             $quoted_string .= $tok;
-        }
+        } ## end while ( $i < $max_token_index)
     }
     if ( $i > $max_token_index ) { $i = $max_token_index }
     return (
@@ -10882,7 +10882,7 @@ sub pre_tokenize {
         else {
             return ( \@tokens, \@token_map, \@type );
         }
-    }
+    } ## end while ( $max_tokens_wanted...)
 
     return ( \@tokens, \@token_map, \@type );
 } ## end sub pre_tokenize

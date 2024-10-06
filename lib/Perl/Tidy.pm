@@ -2379,7 +2379,7 @@ EOM
 
         $logger_object->finish()
           if $logger_object;
-    } ## end of main loop to process all files
+    } ## end while ( @{$rfiles} )
 
     return;
 } ## end sub process_all_files
@@ -3200,7 +3200,7 @@ sub line_diff {
 
             # we could continue to mark all differences, but there is no point
             last;
-        }
+        } ## end while ( $mask =~ /[^\0]/g)
     }
     return ( $diff_marker, $pos1 );
 } ## end sub line_diff
@@ -3293,7 +3293,7 @@ EOM
 $line_diff
 EOM
         return $msg;
-    } ## end while
+    } ## end while (1)
 
     # no line differences found, but one file may have fewer lines
     if ( $counti > $counto ) {
@@ -5212,7 +5212,7 @@ sub find_file_upwards {
         else {
             $search_dir = dirname($search_dir);
         }
-    }
+    } ## end while (1)
 
     # This return is for Perl-Critic.
     # We shouldn't get out of the while loop without a return
@@ -5944,7 +5944,7 @@ sub strip_comments_and_join_quotes {
                     last;
                 }
             }
-        } ## end loop over line characters
+        } ## end while (1)
 
         if ( !$quote_char ) {
             push @{$rline_hash},
@@ -6031,7 +6031,7 @@ EOM
                 last;
             }
         }
-    }
+    } ## end while (1)
     return ( \@body_parts, $msg );
 } ## end sub parse_args
 

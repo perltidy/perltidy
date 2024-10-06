@@ -3704,7 +3704,7 @@ sub get_line_token_info {
             {
                 $imax = $ii;
                 $ii--;
-            }
+            } ## end while ( $ii >= 0 && fat_comma_to_comma...)
         }
 
         # make a first pass to find level range

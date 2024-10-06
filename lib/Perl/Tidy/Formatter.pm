@@ -1513,7 +1513,7 @@ sub K_next_code {
             return $Knnb;
         }
         $Knnb++;
-    }
+    } ## end while ( $Knnb < $Num )
     return;
 } ## end sub K_next_code
 
@@ -1560,7 +1560,7 @@ sub K_next_nonblank {
         }
         if ( $rLL->[$Knnb]->[_TYPE_] ne 'b' ) { return $Knnb }
         $Knnb++;
-    }
+    } ## end while ( $Knnb < $Num )
     return;
 } ## end sub K_next_nonblank
 
@@ -1598,7 +1598,7 @@ sub K_previous_code {
             return $Kpnb;
         }
         $Kpnb--;
-    }
+    } ## end while ( $Kpnb >= 0 )
     return;
 } ## end sub K_previous_code
 
@@ -3335,7 +3335,7 @@ EOM
         else {
             last;
         }
-    }
+    } ## end while (1)
 
     if ($err_msg) {
         my $msg;
@@ -8016,7 +8016,7 @@ sub follow_if_chain {
 
         # Shouldn't happen unless file has an error
         last;
-    }
+    } ## end while ($seqno)
 
     # check count
     return if ( $elsif_count < $elsif_count_min );
@@ -9634,7 +9634,7 @@ sub expand_quoted_word_list {
             #  @EXPORT = ( @{$EXPORT_TAGS{standard}}, ..
             return;
         }
-    }
+    } ## end while ( ++$Kn <= $Klimit )
     return \@list;
 
 } ## end sub expand_quoted_word_list
@@ -10224,7 +10224,7 @@ sub scan_variable_usage {
             my $word         = $2;
             my $brace        = $3;
             $update_use_count->( $sigil_string, $word, $brace );
-        }
+        } ## end while ( $text =~ ...)
         return;
     }; ## end $scan_quoted_text = sub
 
@@ -10749,7 +10749,7 @@ EOM
                               && Fault("line_type=$ltype should be HERE..\n");
                             return;
                         }
-                    }
+                    } ## end while ( ++$ix_HERE <= $ix_max)
 
                     # scan the here-doc text
                     $scan_quoted_text->($here_text);
@@ -13275,7 +13275,7 @@ EOM
                     }
                 }
                 $seqno_parent = $rparent_of_seqno->{$seqno_parent};
-            }
+            } ## end while ( defined($seqno_parent...))
         }
 
         # Handle code blocks ...
@@ -14869,7 +14869,7 @@ sub parent_sub_seqno {
         if ( $self->[_ris_sub_block_]->{$parent_seqno} ) {
             return $parent_seqno;
         }
-    }
+    } ## end while ( $parent_seqno = $self...)
     return;
 } ## end sub parent_sub_seqno
 
@@ -15255,7 +15255,7 @@ sub package_info_maker {
                 }
             }
             last;
-        }
+        } ## end while (@package_stack)
 
         push @package_lookup_list, [ $name, $K_opening ];
         push @package_stack,       $ii_next;
@@ -15789,7 +15789,7 @@ sub count_list_elements {
         else {
             # continue search
         }
-    }
+    } ## end while ( ++$KK < $K_list_end)
 
     # Increase the count by 1 if the list does not have a trailing comma
     if (   defined($KK_this_nb)
@@ -15867,7 +15867,7 @@ sub count_prototype_args {
             $bump_count->();
         }
         else { next }
-    }
+    } ## end while (@chars)
     return ( $count_min, $count_max );
 } ## end sub count_prototype_args
 
@@ -16457,7 +16457,7 @@ sub count_sub_input_args {
                       && Fault("line_type=$ltype should be HERE..\n");
                     return;
                 }
-            }
+            } ## end while ( ++$ix_HERE <= $ix_max)
             if ($here_text) {
                 my $pos;
                 $pos = index( $here_text, '@_' );
@@ -16480,7 +16480,7 @@ sub count_sub_input_args {
         else {
             # continue search
         }
-    }
+    } ## end while ( ++$KK < $K_closing)
 
     #--------------------------------
     # the whole file has been scanned
@@ -18979,7 +18979,7 @@ sub setup_new_weld_measurements {
                 }
             }
             $Knext = $rK_next_seqno_by_K->[$Knext];
-        }
+        } ## end while ( $Knext < $Kouter_opening)
     }
 
     # fix c1468 - do not measure from a leading opening block brace -
@@ -19787,7 +19787,7 @@ EOM
                   $rLL->[$Kouter_closing]->[_CI_LEVEL_];
             }
         }
-    }
+    } ## end while ( @{$rnested_pairs})
 
     return;
 } ## end sub weld_nested_containers
@@ -21232,7 +21232,7 @@ EOM
                 last if ( !defined($parent_seqno) );
                 last if ( $parent_seqno eq SEQ_ROOT );
                 $ris_excluded_lp_container->{$parent_seqno} = 1;
-            }
+            } ## end while (1)
         }
     }
 
@@ -25358,7 +25358,7 @@ Program Bug: undo_forced_breakpoint from $pkg $lno has i=$i but max=$max_index_t
 EOM
                 }
             }
-        }
+        } ## end while ( $forced_breakpoint_undo_count...)
         return;
     } ## end sub undo_forced_breakpoint_stack
 } ## end closure set_forced_breakpoint
@@ -26583,7 +26583,7 @@ EOM
             }
             $i_f = $ri_first->[$line_number];
             $i_l = $ri_last->[$line_number];
-        }
+        } ## end while ( $i_break_left >= ...)
 
         # Do not leave a blank at the end of a line; back up if necessary
         if ( $types_to_go[$i_break_left] eq 'b' ) { $i_break_left-- }
@@ -26660,7 +26660,7 @@ EOM
                 my $tok_i = $tokens_to_go[$ii];
                 return if ( $tok_i eq '?' || $tok_i eq ':' );
             }
-        }
+        } ## end while (1)
 
         # Slow loop checking for certain characters
 
@@ -27055,7 +27055,7 @@ EOM
                     _has_terminal_semicolon => $has_terminal_semicolon,
                 }
             );
-        }
+        } ## end while ( my $section = pop...)
 
         return;
     } ## end sub recombine_breakpoints
@@ -27221,7 +27221,7 @@ EOM
                 last;
             }
 
-        } ## end iteration loop
+        } ## end while (1)
 
         if (DEBUG_RECOMBINE) {
             my $ratio = sprintf "%0.3f", $rhash->{_num_compares} / $num_pairs;
@@ -29179,7 +29179,7 @@ sub undo_lp_ci {
         return if ( $lev_start != $levels_to_go[$ibeg] );
         return if ( $ci_start_plus != $ci_levels_to_go[$ibeg] );
         last   if ( $closing_index <= $iend );
-    }
+    } ## end while ( ++$n <= $max_line)
 
     # we can reduce the indentation of all continuation lines
     my $continuation_line_count = $n - $line_open;
@@ -29414,7 +29414,7 @@ sub break_long_lines {
         if ( ( $i_begin <= $imax ) && ( $types_to_go[$i_begin] eq 'b' ) ) {
             $i_begin++;
         }
-    }
+    } ## end while ( $i_begin <= $imax)
 
     #-------------------------------------------------
     # END of main loop to set continuation breakpoints
@@ -29938,7 +29938,7 @@ sub break_lines_inner_loop {
             };
             last;
         }
-    }
+    } ## end while ( ++$i_test <= $imax)
 
     #-----------------------------------------------------
     # End INNER_LOOP over the indexes in the _to_go arrays
@@ -33211,7 +33211,7 @@ sub compactify_table {
         {
             $number_of_fields = $min_fields;
             $min_fields -= $odd_or_even;
-        }
+        } ## end while ( $min_fields >= $odd_or_even...)
     }
     return $number_of_fields;
 } ## end sub compactify_table
@@ -34072,7 +34072,7 @@ EOM
                 $current_ci_level = $ci_lev;
                 last;
             }
-        }
+        } ## end while (1)
         return;
     } ## end sub lp_decreasing_depth
 
@@ -34477,7 +34477,7 @@ program bug with -lp: want to delete $deleted_spaces from item $i, but old=$old_
 EOM
                     }
                 }
-            }
+            } ## end while ( ++$i <= $max_lp_object_list)
             $lp_position_predictor -= $deleted_spaces;
             $spaces_needed         -= $deleted_spaces;
             last if ( $spaces_needed <= 0 );
@@ -35079,7 +35079,7 @@ EOM
                         last;
                     }
                     $KP = $rK_next_seqno_by_K->[$KP];
-                }
+                } ## end while ( defined($KP) && $KP...)
             }
             $rvao_args->{is_terminal_ternary} = $is_terminal_ternary;
         }
@@ -37885,7 +37885,7 @@ sub make_paren_name {
                     $indentation = $reduced_spaces_to_go[$i_ind];
                     $lev         = $levels_to_go[$i_ind];
                 }
-            }
+            } ## end while ( $i_ind < $i_terminal)
         }
 
         #--------------------------------------------------------------

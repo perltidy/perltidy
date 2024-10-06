@@ -28,9 +28,12 @@
 # user-defined subs must have args in parens
 --want-call-parens='&'
 
-# add closing side comments for subs
+# Add closing side comments for subs, asubs, and while blocks
+# while blocks are marked because they can be tricky to get right.
+# The default interval (-csci=6) is used but a value of 10 might 
+# be a little better. But changing -csci would change a lot of lines.
 --closing-side-comments
---closing-side-comment-list='sub asub'
+--closing-side-comment-list='sub asub while'
 
 # remove non-bare trailing commas
 # add trailing commas to key=>value hash lists
@@ -43,6 +46,6 @@
 --add-interbracket-arrows
 --interbracket-arrow-style=']->{ }->['
 
-# use 'perltidy -dmcp filename' to find mixed call paren usage
-# prefer call parens for these keywords:
+# Use 'perltidy -dmcp filename' to find mixed call paren usage.
+# Prefer call parens for these keywords:
 --want-call-parens='open unlink substr defined ref scalar int'
