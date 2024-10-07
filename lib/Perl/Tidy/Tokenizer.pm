@@ -9751,7 +9751,7 @@ sub is_possible_numerator {
     #    1 - division possible
     #    2 - division probable: number follows
     #    3 - division very probable: number and one of ; ] } follow
-    #    4 - is division, not partern: number and ) follow
+    #    4 - is division, not pattern: number and ) follow
 
     my ( $self, $i, $rtokens, $max_token_index ) = @_;
     my $divide_possible_code = 0;
