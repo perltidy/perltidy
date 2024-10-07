@@ -3203,16 +3203,14 @@ sub line_diff {
     # differences.
     my $diff_marker = EMPTY_STRING;
     my $pos         = -1;
-    my $pos1        = $pos;
+    my $pos1        = -1;
     if ( defined($s1) && defined($s2) ) {
-        my $count = 0;
-        my $mask  = $s1 ^ $s2;
+        my $mask = $s1 ^ $s2;
 
         while ( $mask =~ /[^\0]/g ) {
-            $count++;
             my $pos_last = $pos;
             $pos = $LAST_MATCH_START[0];
-            if ( $count == 1 ) { $pos1 = $pos; }
+            if ( $pos1 < 0 ) { $pos1 = $pos; }
             $diff_marker .= SPACE x ( $pos - $pos_last - 1 ) . '^';
 
             # we could continue to mark all differences, but there is no point
@@ -3265,7 +3263,8 @@ sub compare_string_buffers {
 
         # lines differ ...
         my ( $line_diff, $pos1 ) = line_diff( $linei, $lineo );
-        my $reason = "Files first differ at character $pos1 of line $counti";
+        my $ch1    = $pos1 + 1;
+        my $reason = "Files first differ at character $ch1 of line $counti";
 
         my ( $leading_ws_i, $leading_ws_o ) = ( EMPTY_STRING, EMPTY_STRING );
         if ( $linei =~ /^(\s+)/ ) { $leading_ws_i = $1; }

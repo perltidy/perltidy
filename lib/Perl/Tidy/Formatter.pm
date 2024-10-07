@@ -1492,37 +1492,29 @@ sub K_next_code {
     # Given:
     #   $KK  = index of the token in $rLL
     #   $rLL = optional array to use (default is $self->[_rLL_])
+
     return if ( !defined($KK) );
     return if ( $KK < 0 );
 
-    # use the standard array unless given otherwise
+    # The optional third arg is useful when we are copying tokens from an old
+    # $rLL to a new $rLL array.
     $rLL = $self->[_rLL_] if ( !defined($rLL) );
-    my $Num  = @{$rLL};
-    my $Knnb = $KK + 1;
-    while ( $Knnb < $Num ) {
-        if ( !defined( $rLL->[$Knnb] ) ) {
 
-            # We seem to have encountered a gap in our array.
-            # This shouldn't happen because sub write_line() pushed
-            # items into the $rLL array.
-            Fault("Undefined entry for k=$Knnb") if (DEVEL_MODE);
-            return;
-        }
-        my $type = $rLL->[$Knnb]->[_TYPE_];
+    my $Num = @{$rLL};
+    while ( ++$KK < $Num ) {
+        my $type = $rLL->[$KK]->[_TYPE_];
         if ( $type ne 'b' && $type ne '#' ) {
-            return $Knnb;
+            return $KK;
         }
-        $Knnb++;
-    } ## end while ( $Knnb < $Num )
+    } ## end while ( ++$KK < $Num )
+
     return;
 } ## end sub K_next_code
 
 sub K_next_nonblank {
-
     my ( $self, $KK, $rLL ) = @_;
 
-    # Return the index of the next nonblank token after $KK, or
-    # return undef if none
+    # return the index of the next nonblank token after $KK
     # Given:
     #   $KK  = index of the token in $rLL
     #   $rLL = optional array to use (default is $self->[_rLL_])
@@ -1532,35 +1524,16 @@ sub K_next_nonblank {
     return if ( !defined($KK) );
     return if ( $KK < 0 );
 
-    # The third arg allows this routine to be used on any array.  This is
-    # useful in sub respace_tokens when we are copying tokens from an old $rLL
-    # to a new $rLL array.  But usually the third arg will not be given and we
-    # will just use the $rLL array in $self.
+    # use the standard array unless given otherwise
     $rLL = $self->[_rLL_] if ( !defined($rLL) );
-    my $Num  = @{$rLL};
-    my $Knnb = $KK + 1;
-    return       if ( $Knnb >= $Num );
-    return $Knnb if ( $rLL->[$Knnb]->[_TYPE_] ne 'b' );
-    return       if ( ++$Knnb >= $Num );
-    return $Knnb if ( $rLL->[$Knnb]->[_TYPE_] ne 'b' );
 
-    # Backup loop. Very unlikely to get here; it means we have neighboring
-    # blanks in the token stream.
-    $Knnb++;
-    while ( $Knnb < $Num ) {
+    # Normally, consecutive blanks do not occur. We could test for that
+    # here, but there are checks in the 'store_token' subs.
+    my $Num = @{$rLL};
+    while ( ++$KK < $Num ) {
+        if ( $rLL->[$KK]->[_TYPE_] ne 'b' ) { return $KK }
+    }
 
-        # Safety check, this fault shouldn't happen:  The $rLL array is the
-        # main array of tokens, so all entries should be used.  It is
-        # initialized in sub write_line, and then re-initialized by sub
-        # store_token() within sub respace_tokens.  Tokens are pushed on
-        # so there shouldn't be any gaps.
-        if ( !defined( $rLL->[$Knnb] ) ) {
-            Fault("Undefined entry for k=$Knnb") if (DEVEL_MODE);
-            return;
-        }
-        if ( $rLL->[$Knnb]->[_TYPE_] ne 'b' ) { return $Knnb }
-        $Knnb++;
-    } ## end while ( $Knnb < $Num )
     return;
 } ## end sub K_next_nonblank
 
@@ -1574,8 +1547,10 @@ sub K_previous_code {
     #   $rLL = optional array to use (default is $self->[_rLL_])
     # Call with $KK=undef to start search at the top of the array
 
-    # use the standard array unless given otherwise
+    # The optional third arg is useful when we are copying tokens from an old
+    # $rLL to a new $rLL array.
     $rLL = $self->[_rLL_] unless ( defined($rLL) );
+
     my $Num = @{$rLL};
     if ( !defined($KK) ) { $KK = $Num }
 
@@ -1584,21 +1559,18 @@ sub K_previous_code {
         # This fault can be caused by a programming error in which a bad $KK is
         # given.  The caller should make the first call with KK_new=undef to
         # avoid this error.
-        Fault(
-"Program Bug: K_previous_nonblank_new called with K=$KK which exceeds $Num"
-        ) if (DEVEL_MODE);
+        if (DEVEL_MODE) {
+            Fault(<<EOM);
+Program Bug: K_previous_nonblank_new called with K=$KK which exceeds $Num
+EOM
+        }
         return;
     }
-    my $Kpnb = $KK - 1;
-    while ( $Kpnb >= 0 ) {
-        my $type = $rLL->[$Kpnb]->[_TYPE_];
-        if (   $type ne 'b'
-            && $type ne '#' )
-        {
-            return $Kpnb;
-        }
-        $Kpnb--;
-    } ## end while ( $Kpnb >= 0 )
+
+    while ( --$KK >= 0 ) {
+        my $type = $rLL->[$KK]->[_TYPE_];
+        if ( $type ne 'b' && $type ne '#' ) { return $KK }
+    }
     return;
 } ## end sub K_previous_code
 
@@ -1606,11 +1578,12 @@ sub K_previous_nonblank {
 
     my ( $self, $KK, $rLL ) = @_;
 
-    # Return index of previous nonblank token before item $KK;
+    # Return the index of the previous nonblank token before $KK
     # Given:
     #   $KK  = index of the token in $rLL
     #   $rLL = optional array to use (default is $self->[_rLL_])
     # Call with $KK=undef to start search at the top of the array
+
     # NOTE: does not skip over the leading type 'q' of a hanging side comment
     # (use K_previous_code)
 
@@ -1618,29 +1591,26 @@ sub K_previous_nonblank {
     $rLL = $self->[_rLL_] unless ( defined($rLL) );
     my $Num = @{$rLL};
     if ( !defined($KK) ) { $KK = $Num }
+
     if ( $KK > $Num ) {
 
         # This fault can be caused by a programming error in which a bad $KK is
         # given.  The caller should make the first call with KK_new=undef to
         # avoid this error.
-        Fault(
-"Program Bug: K_previous_nonblank_new called with K=$KK which exceeds $Num"
-        ) if (DEVEL_MODE);
+        if (DEVEL_MODE) {
+            Fault(<<EOM);
+Program Bug: K_previous_nonblank_new called with K=$KK which exceeds $Num
+EOM
+        }
         return;
     }
-    my $Kpnb = $KK - 1;
-    return       if ( $Kpnb < 0 );
-    return $Kpnb if ( $rLL->[$Kpnb]->[_TYPE_] ne 'b' );
-    return       if ( --$Kpnb < 0 );
-    return $Kpnb if ( $rLL->[$Kpnb]->[_TYPE_] ne 'b' );
 
-    # Backup loop. We should not get here unless some routine
-    # slipped repeated blanks into the token stream.
-    return if ( --$Kpnb < 0 );
-    while ( $Kpnb >= 0 ) {
-        if ( $rLL->[$Kpnb]->[_TYPE_] ne 'b' ) { return $Kpnb }
-        $Kpnb--;
+    # Normally, consecutive blanks do not occur. We could test for that
+    # here, but there are checks in the 'store_token' subs.
+    while ( --$KK >= 0 ) {
+        if ( $rLL->[$KK]->[_TYPE_] ne 'b' ) { return $KK }
     }
+
     return;
 } ## end sub K_previous_nonblank
 
@@ -27042,7 +27012,7 @@ EOM
         # Loop over all sub-sections.  Note that we have to work backwards
         # from the end of the batch since the sections use original line
         # numbers, and the line numbers change as we go.
-        while ( my $section = pop @{$rsections} ) {
+        foreach my $section ( reverse @{$rsections} ) {
             my ( $nbeg, $nend ) = @{$section};
             $self->recombine_section_loop(
                 {
