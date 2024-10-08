@@ -7911,6 +7911,7 @@ sub follow_if_chain {
     my $block_count = 0;
     my $elsif_count = 0;
 
+    # we are tracing the sequence numbers of each if/elsif/else block
     my $seqno = $seqno_if;
     while ($seqno) {
         push @seqno_list, $seqno;
@@ -13212,9 +13213,10 @@ EOM
         # Handle a list container
         if ( $is_list && !$block_type ) {
             $ris_list_by_seqno->{$seqno} = $seqno;
-            my $seqno_parent = $rparent_of_seqno->{$seqno};
             my $depth        = 0;
-            while ( defined($seqno_parent) && $seqno_parent ne SEQ_ROOT ) {
+            my $seqno_parent = $seqno;
+            while ( $seqno_parent = $rparent_of_seqno->{$seqno_parent} ) {
+                last if ( $seqno_parent == SEQ_ROOT );
                 $depth++;
 
                 # for $rhas_list we need to save the minimum depth
@@ -13244,18 +13246,17 @@ EOM
                         $rhas_broken_list_with_lec->{$seqno_parent} = 1;
                     }
                 }
-                $seqno_parent = $rparent_of_seqno->{$seqno_parent};
-            } ## end while ( defined($seqno_parent...))
+            } ## end while ( $seqno_parent = $rparent_of_seqno...)
         }
 
         # Handle code blocks ...
         # The -lp option needs to know if a container holds a code block
         elsif ( $block_type && $rOpts_line_up_parentheses ) {
-            my $seqno_parent = $rparent_of_seqno->{$seqno};
-            while ( defined($seqno_parent) && $seqno_parent ne SEQ_ROOT ) {
+            my $seqno_parent = $seqno;
+            while ( $seqno_parent = $rparent_of_seqno->{$seqno_parent} ) {
+                last if ( $seqno_parent == SEQ_ROOT );
                 $rhas_code_block->{$seqno_parent}        = 1;
                 $rhas_broken_code_block->{$seqno_parent} = $line_diff;
-                $seqno_parent = $rparent_of_seqno->{$seqno_parent};
             }
         }
         else {
@@ -13265,10 +13266,10 @@ EOM
 
     # Find containers with ternaries, needed for -lp formatting.
     foreach my $seqno ( keys %{$K_opening_ternary} ) {
-        my $seqno_parent = $rparent_of_seqno->{$seqno};
-        while ( defined($seqno_parent) && $seqno_parent ne SEQ_ROOT ) {
+        my $seqno_parent = $seqno;
+        while ( $seqno_parent = $rparent_of_seqno->{$seqno_parent} ) {
+            last if ( $seqno_parent == SEQ_ROOT );
             $rhas_ternary->{$seqno_parent} = 1;
-            $seqno_parent = $rparent_of_seqno->{$seqno_parent};
         }
     }
 
@@ -14883,7 +14884,7 @@ sub is_in_block_by_i {
     }
 
     my $seqno = $parent_seqno_to_go[$i];
-    return 1 if ( !$seqno || $seqno eq SEQ_ROOT );
+    return 1 if ( !$seqno || $seqno == SEQ_ROOT );
     return 1 if ( $self->[_rblock_type_of_seqno_]->{$seqno} );
     return;
 } ## end sub is_in_block_by_i
@@ -14898,7 +14899,7 @@ sub is_in_block_by_K {
     # returns false otherwise
 
     my $parent_seqno = $self->parent_seqno_by_K($KK);
-    return SEQ_ROOT if ( !$parent_seqno || $parent_seqno eq SEQ_ROOT );
+    return SEQ_ROOT if ( !$parent_seqno || $parent_seqno == SEQ_ROOT );
     return $self->[_rblock_type_of_seqno_]->{$parent_seqno};
 } ## end sub is_in_block_by_K
 
@@ -14909,7 +14910,7 @@ sub is_in_list_by_i {
     # returns false otherwise
     my $seqno = $parent_seqno_to_go[$i];
     return if ( !$seqno );
-    return if ( $seqno eq SEQ_ROOT );
+    return if ( $seqno == SEQ_ROOT );
     if ( $self->[_ris_list_by_seqno_]->{$seqno} ) {
         return 1;
     }
@@ -21200,7 +21201,7 @@ EOM
             while (1) {
                 $parent_seqno = $self->[_rparent_of_seqno_]->{$parent_seqno};
                 last if ( !defined($parent_seqno) );
-                last if ( $parent_seqno eq SEQ_ROOT );
+                last if ( $parent_seqno == SEQ_ROOT );
                 $ris_excluded_lp_container->{$parent_seqno} = 1;
             } ## end while (1)
         }
@@ -25306,8 +25307,9 @@ EOM
         }
 
         while ( $forced_breakpoint_undo_count > $i_start ) {
+            $forced_breakpoint_undo_count--;
             my $i =
-              $forced_breakpoint_undo_stack[ --$forced_breakpoint_undo_count ];
+              $forced_breakpoint_undo_stack[$forced_breakpoint_undo_count];
             if ( $i >= 0 && $i <= $max_index_to_go ) {
                 $forced_breakpoint_to_go[$i] = 0;
                 $forced_breakpoint_count--;
@@ -26539,7 +26541,7 @@ sub insert_additional_breaks {
 
         $i_f = $ri_first->[$line_number];
         $i_l = $ri_last->[$line_number];
-        while ( $i_break_left >= $i_l ) {
+        while ( $i_l <= $i_break_left ) {
             $line_number++;
 
             # shouldn't happen unless caller passes bad indexes
@@ -26553,7 +26555,7 @@ EOM
             }
             $i_f = $ri_first->[$line_number];
             $i_l = $ri_last->[$line_number];
-        } ## end while ( $i_break_left >= ...)
+        } ## end while ( $i_l <= $i_break_left)
 
         # Do not leave a blank at the end of a line; back up if necessary
         if ( $types_to_go[$i_break_left] eq 'b' ) { $i_break_left-- }
@@ -26618,9 +26620,7 @@ EOM
 
         # Fast preliminary loop to verify that tokens are in the same container
         my $KK = $K1;
-        while (1) {
-            $KK = $rK_next_seqno_by_K->[$KK];
-            last if !defined($KK);
+        while ( defined( $KK = $rK_next_seqno_by_K->[$KK] ) ) {
             last if ( $KK >= $K2 );
             my $ii      = $i1 + $KK - $K1;
             my $depth_i = $nesting_depth_to_go[$ii];
@@ -26630,7 +26630,7 @@ EOM
                 my $tok_i = $tokens_to_go[$ii];
                 return if ( $tok_i eq '?' || $tok_i eq ':' );
             }
-        } ## end while (1)
+        } ## end while ( defined( $KK = $rK_next_seqno_by_K...))
 
         # Slow loop checking for certain characters
 
@@ -33943,13 +33943,14 @@ sub get_available_spaces_to_go {
         my $level    = $levels_to_go[$ii];
         my $ci_level = $ci_levels_to_go[$ii];
 
-        # loop to find the first entry at or completely below this level
+        # loop to decrease $max_lp_stack until we find the first entry at or
+        # completely below this level
         while (1) {
 
             # Be sure we have not hit the stack bottom - should never
             # happen because only negative levels can get here, and
             # $level was forced to be positive above.
-            if ( !$max_lp_stack ) {
+            if ( $max_lp_stack <= 0 ) {
 
                 # non-fatal, just keep going except in DEVEL_MODE
                 if (DEVEL_MODE) {
@@ -34021,7 +34022,9 @@ EOM
                 }
             }
 
+            #------------------
             # go down one level
+            #------------------
             --$max_lp_stack;
 
             my $rLP_top = $rLP->[$max_lp_stack];
@@ -35041,15 +35044,15 @@ EOM
                 $is_terminal_ternary = 1;
 
                 my $rK_next_seqno_by_K = $self->[_rK_next_seqno_by_K_];
-                my $KP                 = $rK_next_seqno_by_K->[$Kbeg];
-                while ( defined($KP) && $KP <= $Kend ) {
+                my $KP                 = $Kbeg;
+                while ( defined( $KP = $rK_next_seqno_by_K->[$KP] ) ) {
+                    last if ( $KP > $Kend );
                     my $type_KP = $rLL->[$KP]->[_TYPE_];
                     if ( $type_KP eq '?' || $type_KP eq ':' ) {
                         $is_terminal_ternary = 0;
                         last;
                     }
-                    $KP = $rK_next_seqno_by_K->[$KP];
-                } ## end while ( defined($KP) && $KP...)
+                } ## end while ( defined( $KP = $rK_next_seqno_by_K...))
             }
             $rvao_args->{is_terminal_ternary} = $is_terminal_ternary;
         }
@@ -37849,13 +37852,12 @@ sub make_paren_name {
             my $i_ind = $ibeg;
             $indentation = $reduced_spaces_to_go[$i_ind];
             $lev         = $levels_to_go[$i_ind];
-            while ( $i_ind < $i_terminal ) {
-                $i_ind++;
+            while ( ++$i_ind <= $i_terminal ) {
                 if ( $levels_to_go[$i_ind] < $lev ) {
                     $indentation = $reduced_spaces_to_go[$i_ind];
                     $lev         = $levels_to_go[$i_ind];
                 }
-            } ## end while ( $i_ind < $i_terminal)
+            } ## end while ( ++$i_ind <= $i_terminal)
         }
 
         #--------------------------------------------------------------

@@ -3244,7 +3244,9 @@ sub compare_string_buffers {
         }
         return $str;
     }; ## end $truncate = sub
-    while (1) {
+
+    # loop over lines until we find a difference
+    while ( @aryi || @aryo ) {
         if ($linei) {
             $last_nonblank_line  = $linei;
             $last_nonblank_count = $counti;
@@ -3256,7 +3258,7 @@ sub compare_string_buffers {
         if ( defined($linei) ) { $counti++; chomp $linei }
         if ( defined($lineo) ) { $counto++; chomp $lineo }
 
-        # see if one or both ended before a difference
+        # all done if one or both are out of lines
         last unless ( defined($linei) && defined($lineo) );
 
         next if ( $linei eq $lineo );
@@ -3309,7 +3311,7 @@ EOM
 $line_diff
 EOM
         return $msg;
-    } ## end while (1)
+    } ## end while ( @aryi || @aryo )
 
     # no line differences found, but one file may have fewer lines
     if ( $counti > $counto ) {

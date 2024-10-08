@@ -6193,9 +6193,14 @@ This selects every block and package.
     perltidy -dbs -dbl=1 -dbt='* closure' somefile.pl >blocks.csv
 
 =item *
-This selects every if-chain which contains 2 or more B<elsif> blocks:
+This selects every if-chain which contains 2 or more C<elsif> blocks:
 
     perltidy -dbs -dbl=1 -dbt='elsif2' somefile.pl >blocks.csv
+
+=item *
+This selects every C<while> block with 6 or more code lines
+
+    perltidy -dbs -dbt=while -dbl=6 somfile.pl >while.csv
 
 =back
 
