@@ -4096,7 +4096,7 @@ and attempt to delete non-bare commas,
 
 we delete a comma which has become bare, which is not what is wanted. This
 happened because the change was based on the starting rather than the final
-line breaks.  Rerunning with B<--converge> added fixes things
+line breaks.  Running with B<--converge> gives the desired result:
 
         # perltidy -wtc=b -dtc --converge
         f(
@@ -4104,7 +4104,7 @@ line breaks.  Rerunning with B<--converge> added fixes things
             b => 2,
         );
 
-because changes are based on the line breaks after the first iteration.
+because comma changes are based on the line breaks after the first iteration.
 
 The additional computer time needed by the B<--converge> option to do another
 iteration or two will not be noticable except for files with many thousands of
@@ -4118,27 +4118,9 @@ normally be necessary.
 
 =item *
 
-Perltidy does not add a trailing comma to a list which appears to be near a
-B<stability limit>.  So if a comma is unexpectedly not added, this is probably
-the reason.
-
-This issue can be illustrated with the following example. The closing brace is
-at column 80, the default line length:
-
-    # perltidy -atc -dtc -wtc=b
-    $menuitem_paste->signal_connect( 'activate' => sub { create_paste_window() }
-    );
-
-Adding a trailing comma would cause the maximum line length to be exceeded.
-This in turn would cause a different break point to occur for which the comma
-is no longer bare. So it would get deleted on the next formatting pass,
-returning things to the starting state. This is is an unstable situation.
-
-The rules used to detect and avoid instability work well but are not precise,
-so in some cases where perltidy will not add a comma, it may be possible to add
-a stable trailing comma with editing. For example, if the above example were
-run with B<-l=81 -atc -wtc=b>, perltidy would still not add a trailing comma,
-even though it would be stable.
+Perltidy does not add a trailing comma in some B<edge cases> which appear to
+be near a stability limit.  So if a comma is unexpectedly not added, this is
+probably the reason.
 
 =item *
 

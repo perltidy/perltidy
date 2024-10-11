@@ -2791,7 +2791,8 @@ $term =
    {    # Don't allow interruptions
       $SIG{$_} = 'IGNORE';
    }
-   ( open( CHECKPOINT, "> $aub_tmp"
+   ( open(
+      CHECKPOINT, "> $aub_tmp"
    ) )
      ||    # This is just temporary...
      &abort(
@@ -2802,7 +2803,8 @@ $term =
    {       # Don't allow interruptions
       $SIG{$_} = 'IGNORE';
    }
-   ( open( CHECKPOINT, "> $aub_tmp"
+   ( open(
+      CHECKPOINT, "> $aub_tmp"
    ) )
      ||    # This is just temporary...
      &abort(
@@ -3099,8 +3101,9 @@ foreach $port (
 ==> b1105 <==
 foreach $port (
     sort
-         ( @ARGV[ 1 .. $#ARGV ]
-         ) )
+         (
+        @ARGV[ 1 .. $#ARGV ] )
+     )
 __END__
 foreach $port (
     sort
@@ -8326,16 +8329,16 @@ use vars qw($VERSION @ISA
             @EXPORT_OK %EXPORT_TAGS);
 
 ==> b1489 <==
-    $menuitem_dict->signal_connect ( 'activate' => sub { create_dict_window () }
-    );
-    $menuitem_dict->signal_connect ( 'activate' => sub { create_dict_window () }
-    );
+    $menuitem_dict->signal_connect (
+        'activate' => sub { create_dict_window () } );
+    $menuitem_dict->signal_connect (
+        'activate' => sub { create_dict_window () } );
 
 ==> b1490 <==
-$e_str->bind ( '<return>' => sub {$e_hnr->tabfocus if $e_hnr->can ( 'tabfocus' );}
-);
-$e_str->bind ( '<return>' => sub {$e_hnr->tabfocus if $e_hnr->can ( 'tabfocus' );}
-);
+$e_str->bind (
+'<return>' => sub {$e_hnr->tabfocus if $e_hnr->can ( 'tabfocus' );} );
+$e_str->bind (
+'<return>' => sub {$e_hnr->tabfocus if $e_hnr->can ( 'tabfocus' );} );
 
 ==> b156 <==
 # State 1
@@ -11392,14 +11395,12 @@ foreach my $x (
      )->join() ;
 
      threads->create(
-          sub { lock($COUNT) ; $COUNT++ ; }
-     )->join() ;
+          sub { lock($COUNT) ; $COUNT++ ; } )->join() ;
 
 ==> b978 <==
      $ans = threads->create( sub {
           threads->create(
-               sub { $p->greeting  }
-          )->join ;
+               sub { $p->greeting  } )->join ;
      } )->join ;
 
      $ans = threads->create( sub {

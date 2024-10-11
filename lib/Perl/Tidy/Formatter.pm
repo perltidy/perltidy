@@ -29343,6 +29343,36 @@ sub break_long_lines {
             # separated by this line
         }
 
+        # Fix two-line shear (c406)
+        my $i_next_nonblank = $inext_to_go[$i_lowest];
+        if ( $tokens_to_go[$i_next_nonblank] eq ')' ) {
+
+            # Example of a '2 line shear':
+
+            #   $wrapped->add_around_modifier(
+            #       sub { push @tracelog => 'around 1'; $_[0]->(); } );
+
+            # If we try formatting this with increasing line lengths, the
+            # break based on bond strengths is after the '(' until the closing
+            # paren is just beyond the line length limit. In that case, it can
+            # switch to being just before the ')'.  This is rare, and may be
+            # undesirable because it can cause unexpected formatting
+            # variations between similar code, and worse, instability with
+            # trailing commas.  So we check for that here and put the break
+            # back after the opening '(' if the ')' is not preceded by a ','.
+            # Issue c406.
+            my $i_prev    = iprev_to_go($i_next_nonblank);
+            my $i_opening = $mate_index_to_go[$i_next_nonblank];
+            if (   $types_to_go[$i_prev] ne ','
+                && defined($i_opening)
+                && $i_opening > $i_last_break )
+            {
+                # set a forced breakpoint to block recombination
+                $i_lowest = $i_opening;
+                $forced_breakpoint_to_go[$i_lowest] = 1;
+            }
+        }
+
         # guard against infinite loop (should never happen)
         if ( $i_lowest <= $i_last_break ) {
             DEVEL_MODE
