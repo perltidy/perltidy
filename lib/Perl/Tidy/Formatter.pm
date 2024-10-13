@@ -29990,7 +29990,6 @@ sub do_colon_breaks {
         $block_type,
         $current_depth,
         $depth,
-        $i,
         $i_last_colon,
         $i_line_end,
         $i_line_start,
@@ -30163,14 +30162,21 @@ sub do_colon_breaks {
         return;
     } ## end sub check_for_new_minimum_depth
 
-    # routine to decide which commas to break at within a container;
-    # returns:
-    #   $bp_count = number of comma breakpoints set
-    #   $do_not_break_apart = a flag indicating if container need not
-    #     be broken open
     sub set_comma_breakpoints {
 
-        my ( $self, $dd, $rbond_strength_bias ) = @_;
+        my ( $self, $i, $dd, $rbond_strength_bias ) = @_;
+
+        # Decide which commas to break at within a container
+        # Given:
+        #   $i  = index of current token in main loop over tokens, or
+        #       = $max_index_to_go + 1 for post-loop operations (c410)
+        #   $dd = stack depth
+        #   $rbond-strength_bias = ref to array of bond strength biases which
+        #            may be updated for commas not in lists
+        # Return:
+        #   $bp_count = number of comma breakpoints set
+        #   $do_not_break_apart = a flag indicating if container need not
+        #     be broken open
         my $bp_count           = 0;
         my $do_not_break_apart = 0;
 
@@ -30477,7 +30483,6 @@ EOM
 
         $block_type                = SPACE;
         $current_depth             = $starting_depth;
-        $i                         = -1;
         $i_last_colon              = -1;
         $i_line_end                = -1;
         $i_line_start              = -1;
@@ -30508,7 +30513,7 @@ EOM
         #----------------------------------------
         # Main loop over all tokens in this batch
         #----------------------------------------
-        while ( ++$i <= $max_index_to_go ) {
+        foreach my $i ( 0 .. $max_index_to_go ) {
             if ( $type ne 'b' ) {
                 $i_last_nonblank_token    = $i - 1;
                 $last_nonblank_type       = $type;
@@ -30540,7 +30545,7 @@ EOM
             # Check for a good old breakpoint ..
             if ( $old_breakpoint_to_go[$i] ) {
                 ( $i_want_previous_break, $i_old_assignment_break ) =
-                  $self->examine_old_breakpoint( $i_next_nonblank,
+                  $self->examine_old_breakpoint( $i, $i_next_nonblank,
                     $i_want_previous_break, $i_old_assignment_break );
             }
 
@@ -30671,7 +30676,7 @@ EOM
             # Loop Section B: Handle a sequenced token
             #-----------------------------------------
             if ($type_sequence) {
-                $self->break_lists_type_sequence();
+                $self->break_lists_type_sequence($i);
             }
 
             #------------------------------------------
@@ -30681,7 +30686,7 @@ EOM
             # hardened against bad input syntax: depth jump must be 1 and type
             # must be opening..fixes c102
             if ( $depth == $current_depth + 1 && $is_opening_type{$type} ) {
-                $self->break_lists_increasing_depth();
+                $self->break_lists_increasing_depth($i);
             }
 
             #------------------------------------------
@@ -30695,7 +30700,7 @@ EOM
                 # Note that $rbond_strength_bias will not get changed by this
                 # call. It gets changed in the call to set_comma_breakpoints
                 # at the end of this routine for commas not in lists.
-                $self->break_lists_decreasing_depth($rbond_strength_bias);
+                $self->break_lists_decreasing_depth( $i, $rbond_strength_bias );
 
                 $comma_follows_last_closing_token =
                   $next_nonblank_type eq ',' || $next_nonblank_type eq '=>';
@@ -30732,7 +30737,7 @@ EOM
 
             # handle any commas
             elsif ( $type eq ',' ) {
-                $self->study_comma($comma_follows_last_closing_token);
+                $self->study_comma( $i, $comma_follows_last_closing_token );
             }
 
             # handle comma-arrow
@@ -30759,11 +30764,7 @@ Missing code to handle token type '$type' which is in the quick_filter
 EOM
             }
 
-        } ## end while ( ++$i <= $max_index_to_go)
-
-        #-------------------------------------------
-        # END of loop over all tokens in this batch
-        #-------------------------------------------
+        } ## end main loop over tokens
 
         #----------------------------------------
         # Now set breaks for any unfinished lists
@@ -30772,8 +30773,11 @@ EOM
 
             $interrupted_list[$dd]   = 1;
             $has_broken_sublist[$dd] = 1 if ( $dd < $current_depth );
-            $self->set_comma_breakpoints( $dd, $rbond_strength_bias )
-              if ( $item_count_stack[$dd] );
+            if ( $item_count_stack[$dd] ) {
+                $self->set_comma_breakpoints( $max_index_to_go + 1,
+                    $dd, $rbond_strength_bias );
+
+            }
             $self->set_logical_breakpoints($dd)
               if ( $has_old_logical_breakpoints[$dd] );
             $self->set_for_semicolon_breakpoints($dd);
@@ -30835,7 +30839,7 @@ EOM
 
         # study and store info for a list comma
 
-        my ( $self, $comma_follows_last_closing_token ) = @_;
+        my ( $self, $i, $comma_follows_last_closing_token ) = @_;
 
         $last_dot_index[$depth]   = undef;
         $last_comma_index[$depth] = $i;
@@ -30955,7 +30959,7 @@ EOM
 
     sub examine_old_breakpoint {
 
-        my ( $self, $i_next_nonblank, $i_want_previous_break,
+        my ( $self, $i, $i_next_nonblank, $i_want_previous_break,
             $i_old_assignment_break )
           = @_;
 
@@ -31057,7 +31061,7 @@ EOM
 
     sub break_lists_type_sequence {
 
-        my ($self) = @_;
+        my ( $self, $i ) = @_;
 
         # We have encountered a sequenced token while setting list breakpoints
 
@@ -31157,7 +31161,7 @@ EOM
 
     sub break_lists_increasing_depth {
 
-        my ($self) = @_;
+        my ( $self, $i ) = @_;
 
         #--------------------------------------------
         # prepare for a new list when depth increases
@@ -31258,7 +31262,7 @@ EOM
 
     sub break_lists_decreasing_depth {
 
-        my ( $self, $rbond_strength_bias ) = @_;
+        my ( $self, $i, $rbond_strength_bias ) = @_;
 
         # We have arrived at a closing container token in sub break_lists:
         # the token at index $i is one of these: ')','}', ']'
@@ -31300,9 +31304,11 @@ EOM
         # Set breaks at commas to display a table of values if appropriate
         #-----------------------------------------------------------------
         my ( $bp_count, $do_not_break_apart ) = ( 0, 0 );
-        ( $bp_count, $do_not_break_apart ) =
-          $self->set_comma_breakpoints( $current_depth, $rbond_strength_bias )
-          if ( $item_count_stack[$current_depth] );
+        if ( $item_count_stack[$current_depth] ) {
+            ( $bp_count, $do_not_break_apart ) =
+              $self->set_comma_breakpoints( $i, $current_depth,
+                $rbond_strength_bias );
+        }
 
         #-----------------------------------------------------------
         # Now set flags needed to decide if we should break open the
@@ -31932,9 +31938,7 @@ EOM
         # Rule.
         #-------------------------------------------------------------
         if ($has_broken_sublist) {
-
             $self->apply_broken_sublist_rule( $rhash_A, $interrupted );
-
             return;
         }
 
@@ -31988,9 +31992,10 @@ EOM
             $tol += 1;
         }
 
+        # c410: check for $i_closing_paren > $max_index_to_go
         my $i_opening_minus = $self->find_token_starting_list($i_opening_paren);
-        my $excess =
-          $self->excess_line_length( $i_opening_minus, $i_closing_paren );
+        my $iend            = min( $i_closing_paren, $max_index_to_go );
+        my $excess = $self->excess_line_length( $i_opening_minus, $iend );
         return if ( $excess + $tol <= 0 );
 
         #---------------------------------------
@@ -32545,6 +32550,9 @@ EOM
           ( $types_to_go[ $i_last_comma + 1 ] eq 'b' )
           ? $i_last_comma + 1
           : $i_last_comma;
+
+        # NOTE: $i_closing_paren = $max_index_to_go+1 for a list which does
+        # not end in a closing paren. So the following test works (c410)
         my $i_e =
           ( $types_to_go[ $i_closing_paren - 1 ] eq 'b' )
           ? $i_closing_paren - 2
