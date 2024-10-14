@@ -10061,15 +10061,9 @@ EOM
             else {
 
                 # Let's try a Brace Test: any braces inside must balance
-                my $br = 0;
-                while ( $str =~ /\{/g ) { $br++ }
-                while ( $str =~ /\}/g ) { $br-- }
-                my $sb = 0;
-                while ( $str =~ /\[/g ) { $sb++ }
-                while ( $str =~ /\]/g ) { $sb-- }
-                my $pr = 0;
-                while ( $str =~ /\(/g ) { $pr++ }
-                while ( $str =~ /\)/g ) { $pr-- }
+                my $br = $str =~ tr/\{/{/ - $str =~ tr/\}/}/;
+                my $sb = $str =~ tr/\[/[/ - $str =~ tr/\]/]/;
+                my $pr = $str =~ tr/\(/(/ - $str =~ tr/\)/)/;
 
                 # if braces do not balance - not angle operator
                 if ( $br || $sb || $pr ) {
