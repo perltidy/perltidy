@@ -7911,7 +7911,7 @@ sub follow_if_chain {
     my $block_count = 0;
     my $elsif_count = 0;
 
-    # we are tracing the sequence numbers of each if/elsif/else block
+    # we are tracing the sequence numbers of consecutive if/elsif/else blocks
     my $seqno = $seqno_if;
     while ($seqno) {
         push @seqno_list, $seqno;
@@ -7943,7 +7943,7 @@ sub follow_if_chain {
           unless ( $type_k eq 'k'
             && ( $token_k eq 'elsif' || $token_k eq 'else' ) );
 
-        # Handle 'else' : next token be the opening block brace
+        # Handle keyword 'else' : next token be the opening block brace
         if ( $token_k eq 'else' ) {
 
             #     } else  {
@@ -7962,7 +7962,7 @@ sub follow_if_chain {
             last;
         }
 
-        # Handle 'elsif':
+        # Handle keyword 'elsif':
 
         #     } elsif ( $something ) {
         #     ^  ^    ^            ^ ^
@@ -13213,6 +13213,8 @@ EOM
         # Handle a list container
         if ( $is_list && !$block_type ) {
             $ris_list_by_seqno->{$seqno} = $seqno;
+
+            # Update parent container properties
             my $depth        = 0;
             my $seqno_parent = $seqno;
             while ( $seqno_parent = $rparent_of_seqno->{$seqno_parent} ) {
@@ -13252,6 +13254,8 @@ EOM
         # Handle code blocks ...
         # The -lp option needs to know if a container holds a code block
         elsif ( $block_type && $rOpts_line_up_parentheses ) {
+
+            # Update parent container properties
             my $seqno_parent = $seqno;
             while ( $seqno_parent = $rparent_of_seqno->{$seqno_parent} ) {
                 last if ( $seqno_parent == SEQ_ROOT );
@@ -13266,6 +13270,8 @@ EOM
 
     # Find containers with ternaries, needed for -lp formatting.
     foreach my $seqno ( keys %{$K_opening_ternary} ) {
+
+        # Update parent container properties
         my $seqno_parent = $seqno;
         while ( $seqno_parent = $rparent_of_seqno->{$seqno_parent} ) {
             last if ( $seqno_parent == SEQ_ROOT );
@@ -14834,6 +14840,8 @@ sub parent_sub_seqno {
     #  $seqno of the sub, or
     #  nothing if no sub found
     return unless defined($seqno_paren);
+
+    # Search upward
     my $parent_seqno = $seqno_paren;
     while ( $parent_seqno = $self->[_rparent_of_seqno_]->{$parent_seqno} ) {
         last if ( $parent_seqno == SEQ_ROOT );
@@ -15007,6 +15015,7 @@ EOM
             $Knext = $Knext_guess + 1;
         }
 
+        # search for the change in input line number
         while ($Knext <= $Kmax
             && $rLL->[$Knext]->[_LINE_INDEX_] <= $iline )
         {
@@ -15208,7 +15217,7 @@ sub package_info_maker {
             my $ii = $package_stack[-1];
             my $Kc = $package_info_list[$ii]->{K_closing};
 
-            # pop any inactive stack items
+            # pop an inactive stack item and keep going
             if ( $Kc < $K_opening ) {
                 pop @package_stack;
                 my $i_top    = $package_stack[-1];
