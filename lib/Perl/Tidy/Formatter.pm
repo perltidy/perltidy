@@ -1647,6 +1647,47 @@ sub K_last_code {
     return $self->K_previous_code($KK);
 } ## end sub K_last_code
 
+sub get_parent_containers {
+    my ( $self, $seqno ) = @_;
+
+    # Given:
+    #   $seqno = sequence number of a container
+    # Return:
+    #   ref to a list of parent container sequence numbers
+    my @list;
+    if ($seqno) {
+        my $rparent_of_seqno = $self->[_rparent_of_seqno_];
+        while ( $seqno = $rparent_of_seqno->{$seqno} ) {
+            last if ( $seqno == SEQ_ROOT );
+            push @list, $seqno;
+        }
+    }
+    return \@list;
+} ## end sub get_parent_containers
+
+sub mark_parent_containers {
+    my ( $self, $seqno, $rhash, $value ) = @_;
+
+    # Task:
+    #   set $rhash->{$seqno}=$value for all parent containers
+    #       but not for $seqno itself
+
+    # Given:
+    #   $seqno = sequence number of a container
+    #   $rhash = ref to a hash with seqno as key
+    #   $value = value for setting $rhash->{$seqno}=$value
+    #            default = 1
+
+    return unless ($seqno);
+    if ( !defined($value) ) { $value = 1 }
+    my $rparent_of_seqno = $self->[_rparent_of_seqno_];
+    while ( $seqno = $rparent_of_seqno->{$seqno} ) {
+        last if ( $seqno == SEQ_ROOT );
+        $rhash->{$seqno} = $value;
+    }
+    return;
+} ## end sub mark_parent_containers
+
 ###########################################
 # CODE SECTION 3: Check and process options
 ###########################################
@@ -12300,9 +12341,13 @@ sub respace_tokens {
             my $seqno = $seqno_stack{ $depth_next - 1 };
             if ( defined($seqno) ) {
                 $self->[_rblank_and_comment_count_]->{$seqno} += 1;
-                $self->set_permanently_broken($seqno)
-                  if (!$ris_permanently_broken->{$seqno}
-                    && $rOpts_maximum_consecutive_blank_lines );
+                if (  !$ris_permanently_broken->{$seqno}
+                    && $rOpts_maximum_consecutive_blank_lines )
+                {
+                    $ris_permanently_broken->{$seqno} = 1;
+                    $self->mark_parent_containers( $seqno,
+                        $ris_permanently_broken );
+                }
             }
         }
 
@@ -12412,7 +12457,9 @@ sub respace_tokens {
         if ( $line_of_tokens->{_ending_in_quote} ) {
             my $seqno = $seqno_stack{ $depth_next - 1 };
             if ( defined($seqno) ) {
-                $self->set_permanently_broken($seqno);
+                $ris_permanently_broken->{$seqno} = 1;
+                $self->mark_parent_containers( $seqno,
+                    $ris_permanently_broken );
             }
         }
     }    # End line loop
@@ -13215,10 +13262,9 @@ EOM
             $ris_list_by_seqno->{$seqno} = $seqno;
 
             # Update parent container properties
-            my $depth        = 0;
-            my $seqno_parent = $seqno;
-            while ( $seqno_parent = $rparent_of_seqno->{$seqno_parent} ) {
-                last if ( $seqno_parent == SEQ_ROOT );
+            my $depth              = 0;
+            my $rparent_seqno_list = $self->get_parent_containers($seqno);
+            foreach my $seqno_parent ( @{$rparent_seqno_list} ) {
                 $depth++;
 
                 # for $rhas_list we need to save the minimum depth
@@ -13248,7 +13294,7 @@ EOM
                         $rhas_broken_list_with_lec->{$seqno_parent} = 1;
                     }
                 }
-            } ## end while ( $seqno_parent = $rparent_of_seqno...)
+            }
         }
 
         # Handle code blocks ...
@@ -13256,12 +13302,9 @@ EOM
         elsif ( $block_type && $rOpts_line_up_parentheses ) {
 
             # Update parent container properties
-            my $seqno_parent = $seqno;
-            while ( $seqno_parent = $rparent_of_seqno->{$seqno_parent} ) {
-                last if ( $seqno_parent == SEQ_ROOT );
-                $rhas_code_block->{$seqno_parent}        = 1;
-                $rhas_broken_code_block->{$seqno_parent} = $line_diff;
-            }
+            $self->mark_parent_containers( $seqno, $rhas_code_block );
+            $self->mark_parent_containers( $seqno, $rhas_broken_code_block,
+                $line_diff );
         }
         else {
             # nothing special to do for this container token
@@ -13272,11 +13315,7 @@ EOM
     foreach my $seqno ( keys %{$K_opening_ternary} ) {
 
         # Update parent container properties
-        my $seqno_parent = $seqno;
-        while ( $seqno_parent = $rparent_of_seqno->{$seqno_parent} ) {
-            last if ( $seqno_parent == SEQ_ROOT );
-            $rhas_ternary->{$seqno_parent} = 1;
-        }
+        $self->mark_parent_containers( $seqno, $rhas_ternary );
     }
 
     # Turn off -lp for containers with here-docs with text within a container,
@@ -13322,19 +13361,6 @@ EOM
 
     return;
 } ## end sub respace_post_loop_ops
-
-sub set_permanently_broken {
-    my ( $self, $seqno ) = @_;
-
-    # Mark this container, and all of its parent containers, as being
-    # permanently broken (for example, by containing a blank line).  This
-    # is needed for certain list formatting operations.
-    while ( defined($seqno) ) {
-        $ris_permanently_broken->{$seqno} = 1;
-        $seqno = $rparent_of_seqno->{$seqno};
-    }
-    return;
-} ## end sub set_permanently_broken
 
 sub store_token {
 
@@ -13470,8 +13496,11 @@ sub store_token {
         if ( defined($seqno) ) {
             $self->[_rblank_and_comment_count_]->{$seqno} += 1
               if ( $CODE_type eq 'BC' );
-            $self->set_permanently_broken($seqno)
-              if !$ris_permanently_broken->{$seqno};
+            if ( !$ris_permanently_broken->{$seqno} ) {
+                $ris_permanently_broken->{$seqno} = 1;
+                $self->mark_parent_containers( $seqno,
+                    $ris_permanently_broken );
+            }
         }
     }
 
@@ -21207,12 +21236,8 @@ EOM
               unless ($is_tightly_contained);
 
             # continue up the tree marking parent containers
-            while (1) {
-                $parent_seqno = $self->[_rparent_of_seqno_]->{$parent_seqno};
-                last if ( !defined($parent_seqno) );
-                last if ( $parent_seqno == SEQ_ROOT );
-                $ris_excluded_lp_container->{$parent_seqno} = 1;
-            } ## end while (1)
+            $self->mark_parent_containers( $parent_seqno,
+                $ris_excluded_lp_container );
         }
     }
 
