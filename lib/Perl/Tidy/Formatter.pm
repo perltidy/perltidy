@@ -1688,6 +1688,177 @@ sub mark_parent_containers {
     return;
 } ## end sub mark_parent_containers
 
+sub copy_token_as_type {
+
+    # This provides a quick way to create a new token by
+    # slightly modifying an existing token.
+    my ( $rold_token, $type, $token ) = @_;
+
+    my @rnew_token = @{$rold_token};
+    $rnew_token[_TYPE_]          = $type;
+    $rnew_token[_TOKEN_]         = $token;
+    $rnew_token[_TYPE_SEQUENCE_] = EMPTY_STRING;
+    return \@rnew_token;
+} ## end sub copy_token_as_type
+
+sub parent_seqno_by_K {
+
+    # Return the sequence number of the parent container of token K, if any.
+
+    my ( $self, $KK ) = @_;
+    my $rLL = $self->[_rLL_];
+
+    # The task is to jump forward to the next container token
+    # and use the sequence number of either it or its parent.
+
+    # For example, consider the following with seqno=5 of the '[' and ']'
+    # being called with index K of the first token of each line:
+
+    #                                              # result
+    #    push @tests,                              # -
+    #      [                                       # -
+    #        sub { 99 },   'do {&{%s} for 1,2}',   # 5
+    #        '(&{})(&{})', undef,                  # 5
+    #        [ 2, 2, 0 ],  0                       # 5
+    #      ];                                      # -
+
+    # NOTE: The ending parent will be SEQ_ROOT for a balanced file.  For
+    # unbalanced files, last sequence number will either be undefined or it may
+    # be at a deeper level.  In either case we will just return SEQ_ROOT to
+    # have a defined value and allow formatting to proceed.
+    my $parent_seqno = SEQ_ROOT;
+    return $parent_seqno if ( !defined($KK) );
+    my $type_sequence = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+    if ($type_sequence) {
+        $parent_seqno = $self->[_rparent_of_seqno_]->{$type_sequence};
+    }
+    else {
+        my $Kt = $self->[_rK_next_seqno_by_K_]->[$KK];
+        if ( defined($Kt) ) {
+            $type_sequence = $rLL->[$Kt]->[_TYPE_SEQUENCE_];
+            my $type = $rLL->[$Kt]->[_TYPE_];
+
+            # if next container token is closing, it is the parent seqno
+            if ( $is_closing_type{$type} ) {
+                $parent_seqno = $type_sequence;
+            }
+
+            # otherwise we want its parent container
+            else {
+                $parent_seqno = $self->[_rparent_of_seqno_]->{$type_sequence};
+            }
+        }
+    }
+    $parent_seqno = SEQ_ROOT if ( !defined($parent_seqno) );
+    return $parent_seqno;
+} ## end sub parent_seqno_by_K
+
+sub parent_sub_seqno {
+    my ( $self, $seqno_paren ) = @_;
+
+    # Find sequence number of the named sub (not asub) which contains a given
+    # sequenced item
+
+    # Given:
+    #  $seqno_paren = sequence number of a token within the sub
+    # Returns:
+    #  $seqno of the sub, or
+    #  nothing if no sub found
+    return unless defined($seqno_paren);
+
+    # Search upward
+    my $parent_seqno = $seqno_paren;
+    while ( $parent_seqno = $self->[_rparent_of_seqno_]->{$parent_seqno} ) {
+        last if ( $parent_seqno == SEQ_ROOT );
+        if ( $self->[_ris_sub_block_]->{$parent_seqno} ) {
+            return $parent_seqno;
+        }
+    } ## end while ( $parent_seqno = $self...)
+    return;
+} ## end sub parent_sub_seqno
+
+sub parent_sub_seqno_by_K {
+    my ( $self, $KK ) = @_;
+
+    # NOTE: not currently called but keep for possible future development
+
+    # Find sequence number of the named sub which contains a given token
+    # Given:
+    #  $K = index K of a token
+    # Returns:
+    #  $seqno of the sub, or
+    #  nothing if no sub found
+
+    return unless defined($KK);
+
+    my $seqno_sub;
+    my $parent_seqno = $self->parent_seqno_by_K($KK);
+    if ( $self->[_ris_sub_block_]->{$parent_seqno} ) {
+        $seqno_sub = $parent_seqno;
+    }
+    else {
+        $seqno_sub = $self->parent_sub_seqno($parent_seqno);
+    }
+    return $seqno_sub;
+} ## end sub parent_sub_seqno_by_K
+
+sub is_in_block_by_i {
+    my ( $self, $i ) = @_;
+
+    # returns true if
+    #     token at i is contained in a BLOCK
+    #     or is at root level
+    #     or there is some kind of error (i.e. unbalanced file)
+    # returns false otherwise
+
+    if ( $i < 0 ) {
+        DEVEL_MODE && Fault("Bad call, i='$i'\n");
+        return 1;
+    }
+
+    my $seqno = $parent_seqno_to_go[$i];
+    return 1 if ( !$seqno || $seqno == SEQ_ROOT );
+    return 1 if ( $self->[_rblock_type_of_seqno_]->{$seqno} );
+    return;
+} ## end sub is_in_block_by_i
+
+sub is_in_block_by_K {
+    my ( $self, $KK ) = @_;
+
+    # returns true if
+    #     token at $KK is contained in a BLOCK
+    #     or is at root level
+    #     or there is some kind of error (i.e. unbalanced file)
+    # returns false otherwise
+
+    my $parent_seqno = $self->parent_seqno_by_K($KK);
+    return SEQ_ROOT if ( !$parent_seqno || $parent_seqno == SEQ_ROOT );
+    return $self->[_rblock_type_of_seqno_]->{$parent_seqno};
+} ## end sub is_in_block_by_K
+
+sub is_in_list_by_i {
+    my ( $self, $i ) = @_;
+
+    # returns true if token at i is contained in a LIST
+    # returns false otherwise
+    my $seqno = $parent_seqno_to_go[$i];
+    return if ( !$seqno );
+    return if ( $seqno == SEQ_ROOT );
+    if ( $self->[_ris_list_by_seqno_]->{$seqno} ) {
+        return 1;
+    }
+    return;
+} ## end sub is_in_list_by_i
+
+sub is_list_by_seqno {
+
+    # Return true if the immediate contents of a container appears to be a
+    # list.
+    my ( $self, $seqno ) = @_;
+    return unless defined($seqno);
+    return $self->[_ris_list_by_seqno_]->{$seqno};
+} ## end sub is_list_by_seqno
+
 ###########################################
 # CODE SECTION 3: Check and process options
 ###########################################
@@ -14792,177 +14963,6 @@ sub check_Q {
 
 } ## end closure respace_tokens
 
-sub copy_token_as_type {
-
-    # This provides a quick way to create a new token by
-    # slightly modifying an existing token.
-    my ( $rold_token, $type, $token ) = @_;
-
-    my @rnew_token = @{$rold_token};
-    $rnew_token[_TYPE_]          = $type;
-    $rnew_token[_TOKEN_]         = $token;
-    $rnew_token[_TYPE_SEQUENCE_] = EMPTY_STRING;
-    return \@rnew_token;
-} ## end sub copy_token_as_type
-
-sub parent_seqno_by_K {
-
-    # Return the sequence number of the parent container of token K, if any.
-
-    my ( $self, $KK ) = @_;
-    my $rLL = $self->[_rLL_];
-
-    # The task is to jump forward to the next container token
-    # and use the sequence number of either it or its parent.
-
-    # For example, consider the following with seqno=5 of the '[' and ']'
-    # being called with index K of the first token of each line:
-
-    #                                              # result
-    #    push @tests,                              # -
-    #      [                                       # -
-    #        sub { 99 },   'do {&{%s} for 1,2}',   # 5
-    #        '(&{})(&{})', undef,                  # 5
-    #        [ 2, 2, 0 ],  0                       # 5
-    #      ];                                      # -
-
-    # NOTE: The ending parent will be SEQ_ROOT for a balanced file.  For
-    # unbalanced files, last sequence number will either be undefined or it may
-    # be at a deeper level.  In either case we will just return SEQ_ROOT to
-    # have a defined value and allow formatting to proceed.
-    my $parent_seqno = SEQ_ROOT;
-    return $parent_seqno if ( !defined($KK) );
-    my $type_sequence = $rLL->[$KK]->[_TYPE_SEQUENCE_];
-    if ($type_sequence) {
-        $parent_seqno = $self->[_rparent_of_seqno_]->{$type_sequence};
-    }
-    else {
-        my $Kt = $self->[_rK_next_seqno_by_K_]->[$KK];
-        if ( defined($Kt) ) {
-            $type_sequence = $rLL->[$Kt]->[_TYPE_SEQUENCE_];
-            my $type = $rLL->[$Kt]->[_TYPE_];
-
-            # if next container token is closing, it is the parent seqno
-            if ( $is_closing_type{$type} ) {
-                $parent_seqno = $type_sequence;
-            }
-
-            # otherwise we want its parent container
-            else {
-                $parent_seqno = $self->[_rparent_of_seqno_]->{$type_sequence};
-            }
-        }
-    }
-    $parent_seqno = SEQ_ROOT if ( !defined($parent_seqno) );
-    return $parent_seqno;
-} ## end sub parent_seqno_by_K
-
-sub parent_sub_seqno {
-    my ( $self, $seqno_paren ) = @_;
-
-    # Find sequence number of the named sub (not asub) which contains a given
-    # sequenced item
-
-    # Given:
-    #  $seqno_paren = sequence number of a token within the sub
-    # Returns:
-    #  $seqno of the sub, or
-    #  nothing if no sub found
-    return unless defined($seqno_paren);
-
-    # Search upward
-    my $parent_seqno = $seqno_paren;
-    while ( $parent_seqno = $self->[_rparent_of_seqno_]->{$parent_seqno} ) {
-        last if ( $parent_seqno == SEQ_ROOT );
-        if ( $self->[_ris_sub_block_]->{$parent_seqno} ) {
-            return $parent_seqno;
-        }
-    } ## end while ( $parent_seqno = $self...)
-    return;
-} ## end sub parent_sub_seqno
-
-sub parent_sub_seqno_by_K {
-    my ( $self, $KK ) = @_;
-
-    # NOTE: not currently called but keep for possible future development
-
-    # Find sequence number of the named sub which contains a given token
-    # Given:
-    #  $K = index K of a token
-    # Returns:
-    #  $seqno of the sub, or
-    #  nothing if no sub found
-
-    return unless defined($KK);
-
-    my $seqno_sub;
-    my $parent_seqno = $self->parent_seqno_by_K($KK);
-    if ( $self->[_ris_sub_block_]->{$parent_seqno} ) {
-        $seqno_sub = $parent_seqno;
-    }
-    else {
-        $seqno_sub = $self->parent_sub_seqno($parent_seqno);
-    }
-    return $seqno_sub;
-} ## end sub parent_sub_seqno_by_K
-
-sub is_in_block_by_i {
-    my ( $self, $i ) = @_;
-
-    # returns true if
-    #     token at i is contained in a BLOCK
-    #     or is at root level
-    #     or there is some kind of error (i.e. unbalanced file)
-    # returns false otherwise
-
-    if ( $i < 0 ) {
-        DEVEL_MODE && Fault("Bad call, i='$i'\n");
-        return 1;
-    }
-
-    my $seqno = $parent_seqno_to_go[$i];
-    return 1 if ( !$seqno || $seqno == SEQ_ROOT );
-    return 1 if ( $self->[_rblock_type_of_seqno_]->{$seqno} );
-    return;
-} ## end sub is_in_block_by_i
-
-sub is_in_block_by_K {
-    my ( $self, $KK ) = @_;
-
-    # returns true if
-    #     token at $KK is contained in a BLOCK
-    #     or is at root level
-    #     or there is some kind of error (i.e. unbalanced file)
-    # returns false otherwise
-
-    my $parent_seqno = $self->parent_seqno_by_K($KK);
-    return SEQ_ROOT if ( !$parent_seqno || $parent_seqno == SEQ_ROOT );
-    return $self->[_rblock_type_of_seqno_]->{$parent_seqno};
-} ## end sub is_in_block_by_K
-
-sub is_in_list_by_i {
-    my ( $self, $i ) = @_;
-
-    # returns true if token at i is contained in a LIST
-    # returns false otherwise
-    my $seqno = $parent_seqno_to_go[$i];
-    return if ( !$seqno );
-    return if ( $seqno == SEQ_ROOT );
-    if ( $self->[_ris_list_by_seqno_]->{$seqno} ) {
-        return 1;
-    }
-    return;
-} ## end sub is_in_list_by_i
-
-sub is_list_by_seqno {
-
-    # Return true if the immediate contents of a container appears to be a
-    # list.
-    my ( $self, $seqno ) = @_;
-    return unless defined($seqno);
-    return $self->[_ris_list_by_seqno_]->{$seqno};
-} ## end sub is_list_by_seqno
-
 sub resync_lines_and_tokens {
 
     my $self = shift;
@@ -18455,10 +18455,7 @@ sub weld_cuddled_blocks {
             if ( !$block_type ) {
 
                 # patch for unrecognized block types which may not be labeled
-                my $Kp = $self->K_previous_nonblank($KK);
-                while ( $Kp && $rLL->[$Kp]->[_TYPE_] eq '#' ) {
-                    $Kp = $self->K_previous_nonblank($Kp);
-                }
+                my $Kp = $self->K_previous_code($KK);
                 next unless $Kp;
                 $block_type = $rLL->[$Kp]->[_TOKEN_];
             }
