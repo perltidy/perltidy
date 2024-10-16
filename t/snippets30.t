@@ -179,6 +179,7 @@ use Digest::MD5 qw( md5_hex );
         SlateBlue1
     );
 
+@list = qw( \ );
 ----------
     };
 
@@ -453,6 +454,7 @@ use Digest::MD5 qw( md5_hex );
   SlateBlue1
 );
 
+@list = qw( \ );
 #17...........
         },
 
@@ -481,6 +483,7 @@ use Digest::MD5 qw(md5_hex);
     SlateBlue1
 );
 
+@list = qw( \ );
 #18...........
         },
     };

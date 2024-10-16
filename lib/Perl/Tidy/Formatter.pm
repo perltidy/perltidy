@@ -7061,6 +7061,23 @@ EOM
             return;
         }
 
+        # c414: do not join a '\' and a closing ')' for example like here:
+        #   my @clock_chars = qw( | / - \ | / - \ );
+        if (
+               @words
+            && $closing
+            && substr( $words[-1], -1, 1 ) eq '\\'
+            && (   $tightness{')'} == 2
+                || $tightness{')'} == 1 && @words == 1 )
+          )
+        {
+            # fix by including a space after the \
+            $words[-1] .= SPACE;
+
+            # and for symmetry, before the first word if the '(' is on this line
+            if ($opening) { $words[0] = SPACE . $words[0] }
+        }
+
         #---------------------------------------------------------------------
         # This is the point of no return if the transformation has not started
         #---------------------------------------------------------------------

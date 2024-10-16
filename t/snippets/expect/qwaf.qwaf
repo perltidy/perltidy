@@ -19,3 +19,4 @@ use Digest::MD5 qw(md5_hex);
     SlateBlue1
 );
 
+@list = qw( \ );
