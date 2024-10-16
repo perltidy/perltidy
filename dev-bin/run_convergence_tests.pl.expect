@@ -8340,6 +8340,16 @@ $e_str->bind (
 $e_str->bind (
 '<return>' => sub {$e_hnr->tabfocus if $e_hnr->can ( 'tabfocus' );} );
 
+==> b1491 <==
+@ISA =
+       qw(
+    Stack )
+       ; # inherit from Stack
+@ISA =
+       qw(
+    Stack )
+       ; # inherit from Stack
+
 ==> b156 <==
 # State 1
 {

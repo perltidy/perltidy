@@ -6667,6 +6667,7 @@ EOM
 
     # variables for the -qwaf option
     my $in_qw_seqno;
+    my $in_qw_comma_count;
     my $last_new_seqno;
     my %new_seqno_from_old_seqno;
     my $last_ending_in_quote;
@@ -6683,6 +6684,7 @@ EOM
         %saw_closing_seqno = ();
 
         $in_qw_seqno              = 0;
+        $in_qw_comma_count        = 0;    # b1491
         %new_seqno_from_old_seqno = ();
         $last_ending_in_quote     = 0;
         $added_seqno_count        = 0;
@@ -7002,7 +7004,8 @@ EOM
             # Do not use -qwaf under high stress (b1482,b1483,b1484,b1485,1486)
             # Note: so far all known cases of stress instability have had -naws
             # set, so this is included for now. It may eventually need to be
-            # removed.
+            # removed. NOTE: The update for b1491 also fixes cases b1482-6 in a
+            # more general way, so this test can probably be removed.
             if ( !$rOpts_add_whitespace && $level_words >= $high_stress_level )
             {
                 return;
@@ -7066,7 +7069,7 @@ EOM
         if (
                @words
             && $closing
-            && substr( $words[-1], -1, 1 ) eq '\\'
+            && substr( $words[-1], -1, 1 ) eq BACKSLASH
             && (   $tightness{')'} == 2
                 || $tightness{')'} == 1 && @words == 1 )
           )
@@ -7121,7 +7124,8 @@ EOM
 
         # All words must be followed by a comma except for an intact
         # structure with a single word, like 'qw(hello)'
-        my $commas_needed = !( $opening && $closing && @words == 1 );
+        my $commas_needed =
+          !( ( $opening || !$in_qw_comma_count ) && $closing && @words == 1 );
 
         # Make and push each word as a type 'Q' quote followed by a phantom
         # comma. The phantom comma is type ',' and is processed
@@ -7144,11 +7148,15 @@ EOM
                 $rtoken_word->[_LEVEL_] = $level_words;
                 push @{$rLL}, $rtoken_word;
 
-                # Add a trailing comma unless this is a single
-                # item. For a single item we want just one token in the
-                # container so that the single-item spacing rule will apply as
-                # expected.  There is no danger that a real trailing comma will
-                # be added since no other commas will be in the container.
+                # Add a comma if needed.  NOTE on trailing commas:
+                # - For multiple words: Trailing commas must be added.
+                #   Otherwise, -atc might put a comma in a qw list.
+                # - For single words: Trailing commas are not required, and
+                #   are best avoided. This is because:
+                #   - atc will not add commas to a list which has no commas
+                #   - This will make the single-item spacing rule work as
+                #   expected.
+                #   - This will reduce the chance of instability (b1491)
                 if ($commas_needed) {
                     my $rtoken_comma =
                       copy_token_as_type( $rtoken_q, ',', EMPTY_STRING );
@@ -7161,6 +7169,24 @@ EOM
 
         # make and push closing sequenced item ')'
         if ($closing) {
+
+            # OPTIONAL: remove a previous comma if it is the only one. This can
+            # happen if this closing paren starts a new line and there was just
+            # one word in the qw list. The reason for doing this would be
+            # to avoid possible instability, but none is currently known. b1491.
+            # This has been tested but is currently inactive because it has not
+            # been found to be necessary.
+            if (   0
+                && !@words
+                && $in_qw_comma_count == 1
+                && $rLL->[-1]->[_TYPE_] eq ',' )
+            {
+
+                # It is simpler to convert it to a blank; otherwise it would
+                # be necessary to change the range [Kfirst,Klast] of the
+                # previous line and the current line.
+                $rLL->[-1]->[_TYPE_] = 'b';
+            }
 
             # follow input spacing before ')'
             if ($has_closing_space) {
@@ -7181,9 +7207,14 @@ EOM
             push @{$rLL}, $rtoken_closing;
 
             # all done with this qw list
-            $in_qw_seqno = 0;
+            $in_qw_seqno       = 0;
+            $in_qw_comma_count = 0;
+        }
+        else {
+            $in_qw_comma_count += $comma_count;
         }
 
+        # The '_ending_in_quote' flag for this line is no longer needed
         if ($is_continued) { $line_of_tokens->{_ending_in_quote} = 0 }
 
         return;

@@ -12323,6 +12323,24 @@ $e_str->bind ( '<return>' => sub {$e_hnr->tabfocus if $e_hnr->can ( 'tabfocus' )
 --delete-trailing-commas
 --block-brace-tightness=2
 
+==> b1491.in <==
+@ISA =
+       qw( Stack )
+       ; # inherit from Stack
+@ISA =
+       qw(
+    Stack )
+       ; # inherit from Stack
+
+==> b1491.par <==
+--maximum-line-length=18
+--continuation-indentation=7
+--paren-vertical-tightness-closing=3
+--paren-tightness=0
+--qw-as-function
+--add-trailing-commas
+--want-trailing-commas=1
+
 ==> b156.in <==
 # State 1
 {
