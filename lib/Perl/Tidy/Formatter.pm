@@ -1859,6 +1859,70 @@ sub is_list_by_seqno {
     return $self->[_ris_list_by_seqno_]->{$seqno};
 } ## end sub is_list_by_seqno
 
+sub is_interpolated_here_doc {
+    my ($token) = @_;
+
+    # Given:
+    #  $token = the token text of a type 'h' token
+    # Return:
+    #  true if the here doc is interpolated
+    #  false if not
+
+    # Examples:
+    #  <<EOM          <-- interpolated
+    #  <<"EOM"        <-- interpolated
+    #  <<'EOM'        <-- not interpolated
+    return $token !~ /^ [^<]* << [~]? \' /x;
+} ## end sub is_interpolated_here_doc
+
+sub get_here_text {
+    my ( $self, $ix_HERE_BEG ) = @_;
+
+    # Collect the text of a here-doc
+    # Given:
+    #   $ix_HERE_BEG = index of the line BEFORE the start of this here-doc
+    # Returns:
+    #   $ix_HERE_END = line index of the last line of this here-doc
+    #   $here_text = the here-doc text
+
+    # Example of $here_text with 2 lines:
+
+    # my $str=<<EOM;     <--this line has index $ix_HERE_BEG
+    # here text line 1
+    # here text line 2
+    # EOM                <--this line has index $ix_HERE_END
+
+    # If here-docs are stacked, then caller will use $ix_HERE_END as
+    # the beginning of the next here-doc.
+
+    my $rlines = $self->[_rlines_];
+
+    # Loop to collect the here doc text
+    my $ix_max = @{$rlines} - 1;
+    my $ix     = $ix_HERE_BEG;
+    my $ix_HERE_END;
+    my $here_text = EMPTY_STRING;
+    while ( ++$ix <= $ix_max ) {
+        my $lhash = $rlines->[$ix];
+        my $ltype = $lhash->{_line_type};
+        if ( $ltype eq 'HERE' ) {
+            $here_text .= $lhash->{_line_text};
+            next;
+        }
+        elsif ( $ltype eq 'HERE_END' ) {
+            $ix_HERE_END = $ix;
+            last;
+        }
+        else {
+            DEVEL_MODE
+              && Fault("line_type=$ltype should be HERE..\n");
+            $ix_HERE_END = $ix;
+            last;
+        }
+    } ## end while ( ++$ix <= $ix_max )
+    return ( $ix_HERE_END, $here_text );
+} ## end sub get_here_text
+
 ###########################################
 # CODE SECTION 3: Check and process options
 ###########################################
@@ -10954,33 +11018,13 @@ EOM
             #-----------
             elsif ( $type eq 'h' ) {
 
-                # is it interpolated?
-                my $interpolated =
-                  $check_unused && $token !~ /^ [^<]* << [~]? \' /x;
-                if ($interpolated) {
-                    my $ix_HERE = $ix_HERE_END;
-                    if ( $ix_HERE < $ix_line ) { $ix_HERE = $ix_line }
+                # scan here-doc if it is interpolated
+                if ( $check_unused && is_interpolated_here_doc($token) ) {
+                    my $ix_HERE = max( $ix_HERE_END, $ix_line );
 
                     # collect the here doc text
-                    my $ix_max    = @{$rlines} - 1;
-                    my $here_text = EMPTY_STRING;
-                    while ( ++$ix_HERE <= $ix_max ) {
-                        my $lhash = $rlines->[$ix_HERE];
-                        my $ltype = $lhash->{_line_type};
-                        if ( $ltype eq 'HERE' ) {
-                            $here_text .= $lhash->{_line_text};
-                            next;
-                        }
-                        elsif ( $ltype eq 'HERE_END' ) {
-                            $ix_HERE_END = $ix_HERE;
-                            last;
-                        }
-                        else {
-                            DEVEL_MODE
-                              && Fault("line_type=$ltype should be HERE..\n");
-                            return;
-                        }
-                    } ## end while ( ++$ix_HERE <= $ix_max)
+                    ( $ix_HERE_END, my $here_text ) =
+                      $self->get_here_text($ix_HERE);
 
                     # scan the here-doc text
                     $scan_quoted_text->($here_text);
@@ -16032,7 +16076,6 @@ sub count_sub_input_args {
     my $max_arg_count = $item->{max_arg_count};
 
     my $rLL                 = $self->[_rLL_];
-    my $rlines              = $self->[_rlines_];
     my $K_opening_container = $self->[_K_opening_container_];
     my $K_closing_container = $self->[_K_closing_container_];
     my $K_opening_block     = $self->[_K_opening_container_]->{$seqno_block};
@@ -16490,31 +16533,11 @@ sub count_sub_input_args {
 
         # scan here text for @_ and $_[
         elsif ( $type eq 'h' ) {
+            next if ( !is_interpolated_here_doc($token) );
+            my $ix_line = $rLL->[$KK]->[_LINE_INDEX_];
+            my $ix_HERE = max( $ix_HERE_END, $ix_line );
+            ( $ix_HERE_END, my $here_text ) = $self->get_here_text($ix_HERE);
 
-            # see get_here_text.in
-            next if $token !~ /^ [^<]* << [~]? \' /x;
-            my $here_text = EMPTY_STRING;
-            my $ix_line   = $rLL->[$KK]->[_LINE_INDEX_];
-            my $ix_HERE   = $ix_HERE_END;
-            if ( $ix_HERE < $ix_line ) { $ix_HERE = $ix_line }
-            my $ix_max = @{$rlines} - 1;
-            while ( ++$ix_HERE <= $ix_max ) {
-                my $lhash = $rlines->[$ix_HERE];
-                my $ltype = $lhash->{_line_type};
-                if ( $ltype eq 'HERE' ) {
-                    $here_text .= $lhash->{_line_text};
-                    next;
-                }
-                elsif ( $ltype eq 'HERE_END' ) {
-                    $ix_HERE_END = $ix_HERE;
-                    last;
-                }
-                else {
-                    DEVEL_MODE
-                      && Fault("line_type=$ltype should be HERE..\n");
-                    return;
-                }
-            } ## end while ( ++$ix_HERE <= $ix_max)
             if ($here_text) {
                 my $pos;
                 $pos = index( $here_text, '@_' );
