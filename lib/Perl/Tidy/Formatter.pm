@@ -1293,6 +1293,40 @@ sub check_token_array {
             }
         }
     }
+
+    # Check the array $rK_next_seqno_by_K->[$KK]
+    my $Klimit = @{$rLL} - 1;
+    my $K_last_seqno;
+    my $rK_next_seqno_by_K = $self->[_rK_next_seqno_by_K_];
+    foreach my $KK ( 0 .. $Klimit ) {
+        my $K_next_seqno = $rK_next_seqno_by_K->[$KK];
+        if ( !defined($K_next_seqno) ) { $K_last_seqno = $KK; last }
+        if ( $K_next_seqno <= $KK || $K_next_seqno > $Klimit ) {
+            Fault(<<EOM);
+Error detected in array rK_next_seqno_by_K with limit K=$Klimit:
+at K=$KK the next seqno is $K_next_seqno
+K_next_seqno = $K_next_seqno is Out of bounds
+EOM
+        }
+        if ( !$rLL->[$K_next_seqno]->[_TYPE_SEQUENCE_] ) {
+            Fault(<<EOM);
+Error detected in array rK_next_seqno_by_K with limit K=$Klimit:
+at K=$KK the next seqno is $K_next_seqno:
+K_next_seqno = $K_next_seqno does not have a sequence number
+EOM
+        }
+    }
+
+    # upon hitting an undef, the remaining values should also be undef
+    foreach my $KK ( $K_last_seqno + 1 .. $Klimit ) {
+        my $Ktest = $rK_next_seqno_by_K->[$KK];
+        next if ( !defined($Ktest) );
+        Fault(<<EOM);
+Error detected in array rK_next_seqno_by_K with limit K=$Klimit
+with first undef at $K_last_seqno
+at K=$KK the next seqno is defined and is $Ktest
+EOM
+    }
     return;
 } ## end sub check_token_array
 
@@ -33084,6 +33118,12 @@ EOM
         write_logfile_entry(
             "List: auto formatting with $number_of_fields fields/row\n");
 
+        if ( $number_of_fields < 1 ) {
+            ## shouldn't happen
+            DEVEL_MODE && Fault("bad number of fields=$number_of_fields\n");
+            return;
+        }
+
         my $j_first_break =
             $use_separate_first_term
           ? $number_of_fields
@@ -33312,9 +33352,25 @@ sub compactify_table {
     # of lines, see if reducing the number of fields will make it look
     # better.
     my ( $item_count, $number_of_fields, $formatted_lines, $odd_or_even ) = @_;
+
+    # Given:
+    #  $item_count = count of list items
+    #  $number_of_fields = current number of items per line
+    #  $formatted_lines = number of lines this will require
+    #  $odd_or_even =  1=>odd field count is ok, 2=>want even count
+
+    # Return:
+    #  $number_of_fields = updated number of items per line
+
     if ( $number_of_fields >= $odd_or_even * 2 && $formatted_lines > 0 ) {
 
         my $min_fields = $number_of_fields;
+
+        if ( $odd_or_even < 1 ) {
+            ## shouldn't happen
+            DEVEL_MODE && Fault("bad value for odd_or_even=$odd_or_even\n");
+            return $number_of_fields;
+        }
 
         while ($min_fields >= $odd_or_even
             && $min_fields * $formatted_lines >= $item_count )
