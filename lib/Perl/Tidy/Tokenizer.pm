@@ -40,6 +40,7 @@ use Carp;
 use constant DEVEL_MODE   => 0;
 use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };
+use constant BACKSLASH    => q{\\};
 
 { #<<< A non-indenting brace to contain all lexical variables
 
@@ -10289,7 +10290,7 @@ sub find_here_doc {
 
     # perl allows a backslash before the target string (heredoc.t)
     my $backslash = 0;
-    if ( $next_token eq '\\' ) {
+    if ( $next_token eq BACKSLASH ) {
         $backslash  = 1;
         $next_token = $rtokens->[ $i + 2 ];
     }
@@ -10622,7 +10623,7 @@ sub follow_quoted_string {
             if ( $quote_pos == 0 || ( $i < 0 ) ) {
                 $tok = $rtokens->[ ++$i ];
 
-                if ( $tok eq '\\' ) {
+                if ( $tok eq BACKSLASH ) {
 
                     # retain backslash unless it hides the end token
                     $quoted_string .= $tok
@@ -10680,11 +10681,11 @@ sub follow_quoted_string {
             elsif ( $tok eq $beginning_tok ) {
                 $quote_depth++;
             }
-            elsif ( $tok eq '\\' ) {
+            elsif ( $tok eq BACKSLASH ) {
 
                 # retain backslash unless it hides the beginning or end token
                 $tok = $rtokens->[ ++$i ];
-                $quoted_string .= '\\'
+                $quoted_string .= BACKSLASH
                   if ( $tok ne $end_tok && $tok ne $beginning_tok );
             }
             else {
