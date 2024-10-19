@@ -1261,6 +1261,9 @@ EOM
 sub check_token_array {
     my $self = shift;
 
+    #--------------
+    # Check @{$rLL}
+    #--------------
     # Check for errors in the array of tokens. This is only called
     # when the DEVEL_MODE flag is set, so this Fault will only occur
     # during code development.
@@ -1294,7 +1297,9 @@ sub check_token_array {
         }
     }
 
-    # Check the array $rK_next_seqno_by_K->[$KK]
+    #---------------------------------
+    # Check $rK_next_seqno_by_K->[$KK]
+    #---------------------------------
     my $Klimit = @{$rLL} - 1;
     my $K_last_seqno;
     my $rK_next_seqno_by_K = $self->[_rK_next_seqno_by_K_];
@@ -1318,14 +1323,32 @@ EOM
     }
 
     # upon hitting an undef, the remaining values should also be undef
-    foreach my $KK ( $K_last_seqno + 1 .. $Klimit ) {
-        my $Ktest = $rK_next_seqno_by_K->[$KK];
-        next if ( !defined($Ktest) );
-        Fault(<<EOM);
+    if ( defined($K_last_seqno) ) {
+        foreach my $KK ( $K_last_seqno + 1 .. $Klimit ) {
+            my $Ktest = $rK_next_seqno_by_K->[$KK];
+            next if ( !defined($Ktest) );
+            Fault(<<EOM);
 Error detected in array rK_next_seqno_by_K with limit K=$Klimit
 with first undef at $K_last_seqno
 at K=$KK the next seqno is defined and is $Ktest
 EOM
+        }
+    }
+
+    #-----------------------------
+    # Check hash $rparent_of_seqno
+    #-----------------------------
+    my $rparent_of_seqno = $self->[_rparent_of_seqno_];
+    foreach my $seqno ( keys %{$rparent_of_seqno} ) {
+
+        # parent sequence numbers must always be less
+        my $seqno_parent = $rparent_of_seqno->{$seqno};
+        if ( $seqno_parent >= $seqno ) {
+            Fault(<<EOM);
+Error detected in hash rparent_of_seqno:
+The parent of seqno=$seqno is $seqno_parent but it should be less
+EOM
+        }
     }
     return;
 } ## end sub check_token_array
@@ -7102,9 +7125,12 @@ EOM
             # Do not use -qwaf under high stress (b1482,b1483,b1484,b1485,1486)
             # Note: so far all known cases of stress instability have had -naws
             # set, so this is included for now. It may eventually need to be
-            # removed. NOTE: The update for b1491 also fixes cases b1482-6 in a
-            # more general way, so this test can probably be removed.
-            if ( !$rOpts_add_whitespace && $level_words >= $high_stress_level )
+            # removed.
+            # NOTE: The update for b1491 also fixes cases b1482-6 in a
+            # more general way, so this test can be deactivated.
+            if (   0
+                && !$rOpts_add_whitespace
+                && $level_words >= $high_stress_level )
             {
                 return;
             }
