@@ -7830,8 +7830,7 @@ sub guess_if_here_doc {
 
     while ( defined( $line = $self->peek_ahead( $k++ ) ) ) {
         chomp $line;
-
-        if ( $line =~ /^$next_token$/ ) {
+        if ( $line eq $next_token ) {
             $msg .= " -- found target $next_token ahead $k lines\n";
             $here_doc_expected = 1;    # got it
             last;
