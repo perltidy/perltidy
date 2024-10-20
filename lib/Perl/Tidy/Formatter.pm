@@ -1714,10 +1714,19 @@ sub get_parent_containers {
     my @list;
     if ($seqno) {
         my $rparent_of_seqno = $self->[_rparent_of_seqno_];
+        my $seqno_last       = $seqno;
         while ( $seqno = $rparent_of_seqno->{$seqno} ) {
             last if ( $seqno == SEQ_ROOT );
+            if ( $seqno >= $seqno_last ) {
+                ## shouldn't happen - parent containers have lower seq numbers
+                DEVEL_MODE && Fault(<<EOM);
+Error in 'rparent_of_seqno': expecting seqno=$seqno < last seqno=$seqno_last
+EOM
+                last;
+            }
+            $seqno_last = $seqno;
             push @list, $seqno;
-        }
+        } ## end while ( $seqno = $rparent_of_seqno...)
     }
     return \@list;
 } ## end sub get_parent_containers
@@ -1738,10 +1747,19 @@ sub mark_parent_containers {
     return unless ($seqno);
     if ( !defined($value) ) { $value = 1 }
     my $rparent_of_seqno = $self->[_rparent_of_seqno_];
+    my $seqno_last       = $seqno;
     while ( $seqno = $rparent_of_seqno->{$seqno} ) {
         last if ( $seqno == SEQ_ROOT );
+        if ( $seqno >= $seqno_last ) {
+            ## shouldn't happen - parent containers have lower sequence numbers
+            DEVEL_MODE && Fault(<<EOM);
+Error in 'rparent_of_seqno': expecting seqno=$seqno < last seqno=$seqno_last
+EOM
+            last;
+        }
+        $seqno_last = $seqno;
         $rhash->{$seqno} = $value;
-    }
+    } ## end while ( $seqno = $rparent_of_seqno...)
     return;
 } ## end sub mark_parent_containers
 
@@ -1824,20 +1842,31 @@ sub parent_sub_seqno {
     return unless defined($seqno_paren);
 
     # Search upward
-    my $parent_seqno = $seqno_paren;
-    while ( $parent_seqno = $self->[_rparent_of_seqno_]->{$parent_seqno} ) {
-        last if ( $parent_seqno == SEQ_ROOT );
-        if ( $self->[_ris_sub_block_]->{$parent_seqno} ) {
-            return $parent_seqno;
+    my $seqno      = $seqno_paren;
+    my $seqno_last = $seqno_paren;
+    while ( $seqno = $self->[_rparent_of_seqno_]->{$seqno} ) {
+        last if ( $seqno == SEQ_ROOT );
+        if ( $self->[_ris_sub_block_]->{$seqno} ) {
+            return $seqno;
         }
-    } ## end while ( $parent_seqno = $self...)
+        if ( $seqno >= $seqno_last ) {
+            ## shouldn't happen - parent containers have lower sequence numbers
+            DEVEL_MODE && Fault(<<EOM);
+Error in 'rparent_of_seqno': expecting seqno=$seqno < last seqno=$seqno_last
+EOM
+            last;
+        }
+        $seqno_last = $seqno;
+    } ## end while ( $seqno = $self->[...])
     return;
 } ## end sub parent_sub_seqno
 
 sub parent_sub_seqno_by_K {
     my ( $self, $KK ) = @_;
 
+    #--------------------------------------------------------------------
     # NOTE: not currently called but keep for possible future development
+    #--------------------------------------------------------------------
 
     # Find sequence number of the named sub which contains a given token
     # Given:
@@ -13625,9 +13654,11 @@ EOM
         elsif ( $block_type && $rOpts_line_up_parentheses ) {
 
             # Update parent container properties
-            $self->mark_parent_containers( $seqno, $rhas_code_block );
-            $self->mark_parent_containers( $seqno, $rhas_broken_code_block,
-                $line_diff );
+            my $rparent_seqno_list = $self->get_parent_containers($seqno);
+            foreach my $seqno_parent ( @{$rparent_seqno_list} ) {
+                $rhas_code_block->{$seqno_parent}        = 1;
+                $rhas_broken_code_block->{$seqno_parent} = $line_diff;
+            }
         }
         else {
             # nothing special to do for this container token
@@ -18489,9 +18520,16 @@ sub weld_containers {
             $Kend = $rK_weld_right->{$Kstart};
             my $Knext = $rK_weld_right->{$Kend};
             while ( defined($Knext) ) {
+                if ( $Knext <= $Kend ) {
+                    ## shouldn't happen: K should increase for right weld
+                    DEVEL_MODE && Fault(<<EOM);
+Error: Knext=$Knext = rK_weld_right->{$Kend} is not increasing
+EOM
+                    last;
+                }
                 $Kend  = $Knext;
                 $Knext = $rK_weld_right->{$Kend};
-            }
+            } ## end while ( defined($Knext) )
 
             # Set weld values this chain
             foreach ( $Kstart + 1 .. $Kend ) {
@@ -19104,9 +19142,10 @@ sub setup_new_weld_measurements {
     # Also look for a ')' at the same level and, if found, use it.
     # This fixes case b1224.
     if ( $Kref < $Kouter_opening ) {
-        my $Knext    = $rK_next_seqno_by_K->[$Kref];
-        my $level_oo = $rLL->[$Kouter_opening]->[_LEVEL_];
-        while ( $Knext < $Kouter_opening ) {
+        my $Knext      = $rK_next_seqno_by_K->[$Kref];
+        my $level_oo   = $rLL->[$Kouter_opening]->[_LEVEL_];
+        my $Knext_last = $Knext;
+        while ( $Knext && $Knext < $Kouter_opening ) {
             if ( $rLL->[$Knext]->[_LEVEL_] == $level_oo ) {
                 if (   $is_ternary{ $rLL->[$Knext]->[_TYPE_] }
                     || $rLL->[$Knext]->[_TOKEN_] eq ')' )
@@ -19116,7 +19155,15 @@ sub setup_new_weld_measurements {
                 }
             }
             $Knext = $rK_next_seqno_by_K->[$Knext];
-        } ## end while ( $Knext < $Kouter_opening)
+            if ( $Knext <= $Knext_last ) {
+                ## shouldn't happen: $rK_next_seqno_by_K is corrupted
+                DEVEL_MODE && Fault(<<EOM);
+Knext should not increase: Knext_last=$Knext_last >= Knext=$Knext
+EOM
+                last;
+            }
+            $Knext_last = $Knext;
+        } ## end while ( $Knext && $Knext ...)
     }
 
     # fix c1468 - do not measure from a leading opening block brace -
@@ -26781,8 +26828,19 @@ EOM
         my $rK_next_seqno_by_K = $self->[_rK_next_seqno_by_K_];
 
         # Fast preliminary loop to verify that tokens are in the same container
-        my $KK = $K1;
+        my $KK         = $K1;
+        my $Knext_last = $KK;
         while ( defined( $KK = $rK_next_seqno_by_K->[$KK] ) ) {
+
+            if ( $KK <= $Knext_last ) {
+                ## shouldn't happen: $rK_next_seqno_by_K is corrupted
+                DEVEL_MODE && Fault(<<EOM);
+Knext should not increase: Knext_last=$Knext_last >= Knext=$KK
+EOM
+                last;
+            }
+            $Knext_last = $KK;
+
             last if ( $KK >= $K2 );
             my $ii      = $i1 + $KK - $K1;
             my $depth_i = $nesting_depth_to_go[$ii];
@@ -29535,7 +29593,9 @@ sub break_long_lines {
             }
         }
 
+        #--------------------------------------------------
         # guard against infinite loop (should never happen)
+        #--------------------------------------------------
         if ( $i_lowest <= $i_last_break ) {
             DEVEL_MODE
               && Fault("i_lowest=$i_lowest <= i_last_break=$i_last_break\n");
@@ -33145,7 +33205,7 @@ EOM
             "List: auto formatting with $number_of_fields fields/row\n");
 
         if ( $number_of_fields < 1 ) {
-            ## shouldn't happen
+            ## shouldn't happen - caller passed bad parameter
             DEVEL_MODE && Fault("bad number of fields=$number_of_fields\n");
             return;
         }
@@ -33393,7 +33453,7 @@ sub compactify_table {
         my $min_fields = $number_of_fields;
 
         if ( $odd_or_even < 1 ) {
-            ## shouldn't happen
+            ## shouldn't happen - caller passed bad parameter
             DEVEL_MODE && Fault("bad value for odd_or_even=$odd_or_even\n");
             return $number_of_fields;
         }
@@ -35267,7 +35327,18 @@ EOM
 
                 my $rK_next_seqno_by_K = $self->[_rK_next_seqno_by_K_];
                 my $KP                 = $Kbeg;
+                my $Knext_last         = $KP;
                 while ( defined( $KP = $rK_next_seqno_by_K->[$KP] ) ) {
+
+                    if ( $KP <= $Knext_last ) {
+                        ## shouldn't happen: $rK_next_seqno_by_K is corrupted
+                        DEVEL_MODE && Fault(<<EOM);
+Knext should not increase: Knext_last=$Knext_last >= Knext=$KP
+EOM
+                        last;
+                    }
+                    $Knext_last = $KP;
+
                     last if ( $KP > $Kend );
                     my $type_KP = $rLL->[$KP]->[_TYPE_];
                     if ( $type_KP eq '?' || $type_KP eq ':' ) {
