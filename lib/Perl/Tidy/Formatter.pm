@@ -18121,7 +18121,7 @@ EOM
     my $return_warning_output = EMPTY_STRING;
     if ( @{$rreturn_warnings} ) {
         $return_warning_output = <<EOM;
-Issue types 'u'=under-want 'o'=over-want 'x'=no return 's'=scalar-array mix
+Issue types 'u'=under-want 'o'=over-want 'x','y'=no return 's'=scalar-array mix
 Line:Issue:Sub:#Returned:Min_wanted:Max_wanted: note
 EOM
         foreach ( @{$rreturn_warnings} ) {
@@ -19991,12 +19991,11 @@ sub weld_nested_quotes {
     return unless ( defined($rLL) && @{$rLL} );
     my $Num = @{$rLL};
 
-    my $rK_weld_left            = $self->[_rK_weld_left_];
-    my $rK_weld_right           = $self->[_rK_weld_right_];
-    my $K_opening_container     = $self->[_K_opening_container_];
-    my $K_closing_container     = $self->[_K_closing_container_];
-    my $rK_sequenced_token_list = $self->[_rK_sequenced_token_list_];
-    my $rlines                  = $self->[_rlines_];
+    my $rK_weld_left        = $self->[_rK_weld_left_];
+    my $rK_weld_right       = $self->[_rK_weld_right_];
+    my $K_opening_container = $self->[_K_opening_container_];
+    my $K_closing_container = $self->[_K_closing_container_];
+    my $rlines              = $self->[_rlines_];
 
     my $starting_lentot;
     my $maximum_text_length;
@@ -20016,202 +20015,183 @@ sub weld_nested_quotes {
       1 + max( $rOpts_indent_columns, $rOpts_continuation_indentation );
 
     # look for single qw quotes nested in containers
-    foreach my $KK ( @{$rK_sequenced_token_list} ) {
-        my $rtoken_vars = $rLL->[$KK];
-        my $outer_seqno = $rtoken_vars->[_TYPE_SEQUENCE_];
-        if ( !$outer_seqno ) {
-            next if ( $KK == 0 );    # first token in file may not be container
+    foreach my $outer_seqno ( keys %{$K_opening_container} ) {
+        my $Kouter_opening = $K_opening_container->{$outer_seqno};
 
-            # A fault here implies that an error was made in the little loop at
-            # the bottom of sub 'respace_tokens' which set the values of
-            # rK_sequenced_token_list.  Or an error has been introduced in the
-            # loop control lines above.
-            Fault("sequence = $outer_seqno not defined at K=$KK")
-              if (DEVEL_MODE);
+        # see if the next token is a quote of some type
+        my $Kn = $Kouter_opening + 1;
+        next if ( $Kn >= $Num - 1 );
+        my $next_type = $rLL->[$Kn]->[_TYPE_];
+        if ( $next_type eq 'b' ) {
+            $next_type = $rLL->[ ++$Kn ]->[_TYPE_];
+        }
+
+        next if ( $next_type ne 'q' && $next_type ne 'Q' );
+        my $next_token = $rLL->[$Kn]->[_TOKEN_];
+        next if ( substr( $next_token, 0, 1 ) ne 'q' );
+
+        # The token before the closing container must also be a quote
+        my $Kouter_closing = $K_closing_container->{$outer_seqno};
+        my $Kinner_closing = $self->K_previous_nonblank($Kouter_closing);
+        next unless ( $rLL->[$Kinner_closing]->[_TYPE_] eq $next_type );
+
+        # This is an inner opening container
+        my $Kinner_opening = $Kn;
+
+        # Do not weld to single-line quotes. Nothing is gained, and it may
+        # look bad.
+        next if ( $Kinner_closing == $Kinner_opening );
+
+        # Only weld to quotes delimited with container tokens. This is
+        # because welding to arbitrary quote delimiters can produce code
+        # which is less readable than without welding.
+        my $closing_delimiter =
+          substr( $rLL->[$Kinner_closing]->[_TOKEN_], -1, 1 );
+        next
+          unless ( $is_closing_token{$closing_delimiter}
+            || $closing_delimiter eq '>' );
+
+        # Now make sure that there is just a single quote in the container
+        next
+          unless (
+            $is_single_quote->(
+                $Kinner_opening + 1,
+                $Kinner_closing - 1,
+                $next_type
+            )
+          );
+
+        # OK: This is a candidate for welding
+        my $Msg = EMPTY_STRING;
+        my $do_not_weld;
+
+        my $iline_oo    = $rLL->[$Kouter_opening]->[_LINE_INDEX_];
+        my $iline_io    = $rLL->[$Kinner_opening]->[_LINE_INDEX_];
+        my $iline_oc    = $rLL->[$Kouter_closing]->[_LINE_INDEX_];
+        my $iline_ic    = $rLL->[$Kinner_closing]->[_LINE_INDEX_];
+        my $is_old_weld = ( $iline_oo == $iline_io && $iline_ic == $iline_oc );
+
+        # Fix for case b1189. If quote is marked as type 'Q' then only weld
+        # if the two closing tokens are on the same input line.  Otherwise,
+        # the closing line will be output earlier in the pipeline than
+        # other CODE lines and welding will not actually occur. This will
+        # leave a half-welded structure with potential formatting
+        # instability.  This might be fixed by adding a check for a weld on
+        # a closing Q token and sending it down the normal channel, but it
+        # would complicate the code and is potentially risky.
+        next
+          if (!$is_old_weld
+            && $next_type eq 'Q'
+            && $iline_ic != $iline_oc );
+
+        # If welded, the line must not exceed allowed line length
+        ( my $ok_to_weld, $maximum_text_length, $starting_lentot, my $msg ) =
+          $self->setup_new_weld_measurements( $Kouter_opening,
+            $Kinner_opening );
+        if ( !$ok_to_weld ) {
+            if (DEBUG_WELD) { print {*STDOUT} $msg }
             next;
         }
 
-        my $token = $rtoken_vars->[_TOKEN_];
-        if ( $is_opening_token{$token} ) {
+        my $length =
+          $rLL->[$Kinner_opening]->[_CUMULATIVE_LENGTH_] - $starting_lentot;
+        my $excess = $length + $multiline_tol - $maximum_text_length;
 
-            # see if the next token is a quote of some type
-            my $Kn = $KK + 1;
-            $Kn += 1
-              if ( $Kn < $Num && $rLL->[$Kn]->[_TYPE_] eq 'b' );
-            next if ( $Kn >= $Num );
+        my $excess_max = ( $is_old_weld ? $multiline_tol : 0 );
+        if ( $excess >= $excess_max ) {
+            $do_not_weld = 1;
+        }
 
-            my $next_token = $rLL->[$Kn]->[_TOKEN_];
-            my $next_type  = $rLL->[$Kn]->[_TYPE_];
-            my $is_quote   = ( ( $next_type eq 'q' || $next_type eq 'Q' )
-                  && substr( $next_token, 0, 1 ) eq 'q' );
-            next unless ($is_quote);
+        if (DEBUG_WELD) {
+            if ( !$is_old_weld ) { $is_old_weld = EMPTY_STRING }
+            $Msg .=
+"excess=$excess>=$excess_max, multiline_tol=$multiline_tol, is_old_weld='$is_old_weld'\n";
+        }
 
-            # The token before the closing container must also be a quote
-            my $Kouter_closing = $K_closing_container->{$outer_seqno};
-            my $Kinner_closing = $self->K_previous_nonblank($Kouter_closing);
-            next unless ( $rLL->[$Kinner_closing]->[_TYPE_] eq $next_type );
-
-            # This is an inner opening container
-            my $Kinner_opening = $Kn;
-
-            # Do not weld to single-line quotes. Nothing is gained, and it may
-            # look bad.
-            next if ( $Kinner_closing == $Kinner_opening );
-
-            # Only weld to quotes delimited with container tokens. This is
-            # because welding to arbitrary quote delimiters can produce code
-            # which is less readable than without welding.
-            my $closing_delimiter =
-              substr( $rLL->[$Kinner_closing]->[_TOKEN_], -1, 1 );
-            next
-              unless ( $is_closing_token{$closing_delimiter}
-                || $closing_delimiter eq '>' );
-
-            # Now make sure that there is just a single quote in the container
-            next
-              unless (
-                $is_single_quote->(
-                    $Kinner_opening + 1,
-                    $Kinner_closing - 1,
-                    $next_type
-                )
-              );
-
-            # OK: This is a candidate for welding
-            my $Msg = EMPTY_STRING;
-            my $do_not_weld;
-
-            my $Kouter_opening = $K_opening_container->{$outer_seqno};
-            my $iline_oo       = $rLL->[$Kouter_opening]->[_LINE_INDEX_];
-            my $iline_io       = $rLL->[$Kinner_opening]->[_LINE_INDEX_];
-            my $iline_oc       = $rLL->[$Kouter_closing]->[_LINE_INDEX_];
-            my $iline_ic       = $rLL->[$Kinner_closing]->[_LINE_INDEX_];
-            my $is_old_weld =
-              ( $iline_oo == $iline_io && $iline_ic == $iline_oc );
-
-            # Fix for case b1189. If quote is marked as type 'Q' then only weld
-            # if the two closing tokens are on the same input line.  Otherwise,
-            # the closing line will be output earlier in the pipeline than
-            # other CODE lines and welding will not actually occur. This will
-            # leave a half-welded structure with potential formatting
-            # instability.  This might be fixed by adding a check for a weld on
-            # a closing Q token and sending it down the normal channel, but it
-            # would complicate the code and is potentially risky.
-            next
-              if (!$is_old_weld
-                && $next_type eq 'Q'
-                && $iline_ic != $iline_oc );
-
-            # If welded, the line must not exceed allowed line length
-            ( my $ok_to_weld, $maximum_text_length, $starting_lentot, my $msg )
-              = $self->setup_new_weld_measurements( $Kouter_opening,
-                $Kinner_opening );
-            if ( !$ok_to_weld ) {
-                if (DEBUG_WELD) { print {*STDOUT} $msg }
-                next;
-            }
-
-            my $length =
-              $rLL->[$Kinner_opening]->[_CUMULATIVE_LENGTH_] - $starting_lentot;
-            my $excess = $length + $multiline_tol - $maximum_text_length;
-
-            my $excess_max = ( $is_old_weld ? $multiline_tol : 0 );
-            if ( $excess >= $excess_max ) {
+        # Check weld exclusion rules for outer container
+        if ( !$do_not_weld ) {
+            my $is_leading = !defined( $rK_weld_left->{$Kouter_opening} );
+            if ( $self->is_excluded_weld( $Kouter_opening, $is_leading ) ) {
+                if (DEBUG_WELD) {
+                    $Msg .=
+"No qw weld due to weld exclusion rules for outer container\n";
+                }
                 $do_not_weld = 1;
             }
+        }
 
-            if (DEBUG_WELD) {
-                if ( !$is_old_weld ) { $is_old_weld = EMPTY_STRING }
-                $Msg .=
-"excess=$excess>=$excess_max, multiline_tol=$multiline_tol, is_old_weld='$is_old_weld'\n";
-            }
+        # Check the length of the last line (fixes case b1039)
+        if ( !$do_not_weld ) {
+            my $rK_range_ic = $rlines->[$iline_ic]->{_rK_range};
+            my ( $Kfirst_ic, $Klast_ic_uu ) = @{$rK_range_ic};
+            my $excess_ic =
+              $self->excess_line_length_for_Krange( $Kfirst_ic,
+                $Kouter_closing );
 
-            # Check weld exclusion rules for outer container
-            if ( !$do_not_weld ) {
-                my $is_leading = !defined( $rK_weld_left->{$Kouter_opening} );
-                if ( $self->is_excluded_weld( $KK, $is_leading ) ) {
-                    if (DEBUG_WELD) {
-                        $Msg .=
-"No qw weld due to weld exclusion rules for outer container\n";
-                    }
-                    $do_not_weld = 1;
-                }
-            }
-
-            # Check the length of the last line (fixes case b1039)
-            if ( !$do_not_weld ) {
-                my $rK_range_ic = $rlines->[$iline_ic]->{_rK_range};
-                my ( $Kfirst_ic, $Klast_ic_uu ) = @{$rK_range_ic};
-                my $excess_ic =
-                  $self->excess_line_length_for_Krange( $Kfirst_ic,
-                    $Kouter_closing );
-
-                # Allow extra space for additional welded closing container(s)
-                # and a space and comma or semicolon.
-                # NOTE: weld len has not been computed yet. Use 2 spaces
-                # for now, correct for a single weld. This estimate could
-                # be made more accurate if necessary.
-                my $weld_len =
-                  defined( $rK_weld_right->{$Kouter_closing} ) ? 2 : 0;
-                if ( $excess_ic + $weld_len + 2 > 0 ) {
-                    if (DEBUG_WELD) {
-                        $Msg .=
-"No qw weld due to excess ending line length=$excess_ic + $weld_len + 2 > 0\n";
-                    }
-                    $do_not_weld = 1;
-                }
-            }
-
-            if ($do_not_weld) {
+            # Allow extra space for additional welded closing container(s)
+            # and a space and comma or semicolon.
+            # NOTE: weld len has not been computed yet. Use 2 spaces
+            # for now, correct for a single weld. This estimate could
+            # be made more accurate if necessary.
+            my $weld_len = defined( $rK_weld_right->{$Kouter_closing} ) ? 2 : 0;
+            if ( $excess_ic + $weld_len + 2 > 0 ) {
                 if (DEBUG_WELD) {
-                    $Msg .= "Not Welding QW\n";
-                    print {*STDOUT} $Msg;
+                    $Msg .=
+"No qw weld due to excess ending line length=$excess_ic + $weld_len + 2 > 0\n";
                 }
-                next;
+                $do_not_weld = 1;
             }
+        }
 
-            # OK to weld
+        if ($do_not_weld) {
             if (DEBUG_WELD) {
-                $Msg .= "Welding QW\n";
+                $Msg .= "Not Welding QW\n";
                 print {*STDOUT} $Msg;
             }
+            next;
+        }
 
-            $rK_weld_right->{$Kouter_opening} = $Kinner_opening;
-            $rK_weld_left->{$Kinner_opening}  = $Kouter_opening;
+        # OK to weld
+        if (DEBUG_WELD) {
+            $Msg .= "Welding QW\n";
+            print {*STDOUT} $Msg;
+        }
 
-            $rK_weld_right->{$Kinner_closing} = $Kouter_closing;
-            $rK_weld_left->{$Kouter_closing}  = $Kinner_closing;
+        $rK_weld_right->{$Kouter_opening} = $Kinner_opening;
+        $rK_weld_left->{$Kinner_opening}  = $Kouter_opening;
 
-            # Undo one indentation level if an extra level was added to this
-            # multiline quote
-            my $qw_seqno =
-              $self->[_rstarting_multiline_qw_seqno_by_K_]->{$Kinner_opening};
-            if (   $qw_seqno
-                && $self->[_rmultiline_qw_has_extra_level_]->{$qw_seqno} )
-            {
-                foreach my $K ( $Kinner_opening + 1 .. $Kinner_closing - 1 ) {
-                    $rLL->[$K]->[_LEVEL_] -= 1;
-                }
-                $rLL->[$Kinner_opening]->[_CI_LEVEL_] = 0;
-                $rLL->[$Kinner_closing]->[_CI_LEVEL_] = 0;
+        $rK_weld_right->{$Kinner_closing} = $Kouter_closing;
+        $rK_weld_left->{$Kouter_closing}  = $Kinner_closing;
+
+        # Undo one indentation level if an extra level was added to this
+        # multiline quote
+        my $qw_seqno =
+          $self->[_rstarting_multiline_qw_seqno_by_K_]->{$Kinner_opening};
+        if (   $qw_seqno
+            && $self->[_rmultiline_qw_has_extra_level_]->{$qw_seqno} )
+        {
+            foreach my $K ( $Kinner_opening + 1 .. $Kinner_closing - 1 ) {
+                $rLL->[$K]->[_LEVEL_] -= 1;
             }
+            $rLL->[$Kinner_opening]->[_CI_LEVEL_] = 0;
+            $rLL->[$Kinner_closing]->[_CI_LEVEL_] = 0;
+        }
 
-            # undo CI for other welded quotes
-            else {
+        # undo CI for other welded quotes
+        else {
 
-                foreach my $K ( $Kinner_opening .. $Kinner_closing ) {
-                    $rLL->[$K]->[_CI_LEVEL_] = 0;
-                }
+            foreach my $K ( $Kinner_opening .. $Kinner_closing ) {
+                $rLL->[$K]->[_CI_LEVEL_] = 0;
             }
+        }
 
-            # Change the level of a closing qw token to be that of the outer
-            # containing token. This will allow -lp indentation to function
-            # correctly in the vertical aligner.
-            # Patch to fix c002: but not if it contains text
-            if ( length( $rLL->[$Kinner_closing]->[_TOKEN_] ) == 1 ) {
-                $rLL->[$Kinner_closing]->[_LEVEL_] =
-                  $rLL->[$Kouter_closing]->[_LEVEL_];
-            }
+        # Change the level of a closing qw token to be that of the outer
+        # containing token. This will allow -lp indentation to function
+        # correctly in the vertical aligner.
+        # Patch to fix c002: but not if it contains text
+        if ( length( $rLL->[$Kinner_closing]->[_TOKEN_] ) == 1 ) {
+            $rLL->[$Kinner_closing]->[_LEVEL_] =
+              $rLL->[$Kouter_closing]->[_LEVEL_];
         }
     }
     return;
