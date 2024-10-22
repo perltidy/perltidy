@@ -340,7 +340,7 @@ formatting would be
 ```
 
 The first line now has a different indentation from the rest, and this is
-undesirable because ideally indentation should be independent of the existance
+undesirable because ideally indentation should be independent of the existence
 of side comments.  The new version handles this correctly:
 
 ```
