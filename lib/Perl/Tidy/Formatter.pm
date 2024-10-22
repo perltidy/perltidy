@@ -5,7 +5,7 @@
 
 # Usage Outline:
 #
-#   STEP 1: initialize or re-initialze Formatter with user options
+#   STEP 1: initialize or re-initialize Formatter with user options
 #     Perl::Tidy::Formatter::check_options($rOpts);
 #
 #   STEP 2: crate a tokenizer for the source stream
@@ -7505,7 +7505,7 @@ EOM
 
                     # The opening depth should always be defined, and
                     # it should equal $nesting_depth-1.  To protect
-                    # against unforseen error conditions, however, we
+                    # against unforeseen error conditions, however, we
                     # will check this and fix things if necessary.  For
                     # a test case see issue c055.
                     my $opening_depth = $rdepth_of_opening_seqno->[$seqno];
@@ -7924,7 +7924,7 @@ sub find_loop_label {
         # skip a blank line
         next if ( !defined($Kfirst) );
 
-        # check for a lable
+        # check for a label
         if ( $rLL->[$Kfirst]->[_TYPE_] eq 'J' ) {
             $label = $rLL->[$Kfirst]->[_TOKEN_];
             last;
@@ -8135,7 +8135,7 @@ EOM
         }
 
         # Both 'sub' and 'asub' select an anonymous sub.
-        # This allows anonymous subs to be explicitely selected
+        # This allows anonymous subs to be explicitly selected
         elsif (
             $ris_asub_block->{$seqno}
             && (   $dump_all_types
@@ -11535,7 +11535,7 @@ sub wildcard_match {
     # For example, key='$pack' with code=3 is short for '$pack*'
     # which will match '$package', '$packer', etc
 
-    # Loop over all possible matchs
+    # Loop over all possible matches
     foreach ( @{$rwildcard_match_list} ) {
         my ( $key, $code ) = @{$_};
         my $len_key  = length($key);
@@ -11839,7 +11839,7 @@ sub initialize_call_paren_style {
 sub scan_call_parens {
     my ($self) = @_;
 
-    # Perform a scan requesed by --want-call-parens
+    # Perform a scan requested by --want-call-parens
     # We search for selected functions or keywords and for a following paren.
     # A warning is issued if the paren existence is not what is wanted
     # according to the setting --want-call-parens.
@@ -14470,7 +14470,7 @@ sub unstore_last_nonblank_token {
 
     my ( $rcomma, $rblank );
 
-    # Note: orignally just for ',' but now also for '->'
+    # Note: originally just for ',' but now also for '->'
 
     # case 1: pop comma from top of stack
     if ( $rLL_new->[-1]->[_TYPE_] eq $type ) {
@@ -14734,7 +14734,7 @@ sub match_trailing_comma_rule {
 
             # if outer container is paren, must be sub call or list assignment
             # Note that _ris_function_call_paren_ does not currently include
-            # calls of the form '->(', so that has to be checked separetely.
+            # calls of the form '->(', so that has to be checked separately.
             if (   $token eq '('
                 && !$self->[_ris_function_call_paren_]->{$type_sequence}
                 && !$is_arrow_call
@@ -17772,9 +17772,9 @@ sub cross_check_sub_calls {
             }
         }
 
-        #--------------------------------------------
-        # compare caller/sub return counts if posible
-        #--------------------------------------------
+        #---------------------------------------------
+        # compare caller/sub return counts if possible
+        #---------------------------------------------
 
         # rhs check: only check subs returning finite lists (i.e. not '@list');
         next if ($return_count_indefinite);
@@ -32401,7 +32401,7 @@ EOM
         # We have a list spanning multiple lines and are trying
         # to decide the best way to set comma breakpoints.
 
-        # Overriden variables
+        # Overridden variables
         my $item_count       = $rhash_A->{_item_count_A};
         my $identifier_count = $rhash_A->{_identifier_count_A};
 
@@ -32843,7 +32843,7 @@ EOM
 
         # Returns:
         #    - nothing if nothing more to do
-        #    - a ref to a hash containg some derived parameters
+        #    - a ref to a hash containing some derived parameters
 
         # Variables from caller
         my $i_opening_paren     = $rhash_IN->{i_opening_paren};

@@ -1491,7 +1491,7 @@ and look at the F<.DEBUG> file to see the tokenization.
 
 To illustrate, suppose we do not want a space after a colon which introduces a
 sub attribute. We need to know its type. It is not a colon because that is the
-type of a ternary operator. The ouput of B<--dump-token-types> states that it
+type of a ternary operator. The output of B<--dump-token-types> states that it
 is token type 'A'.  To verify this, we can run C<perltidy -D> on a short piece
 of code containing such a colon, such as
 
@@ -4107,7 +4107,7 @@ line breaks.  Running with B<--converge> gives the desired result:
 because comma changes are based on the line breaks after the first iteration.
 
 The additional computer time needed by the B<--converge> option to do another
-iteration or two will not be noticable except for files with many thousands of
+iteration or two will not be noticeable except for files with many thousands of
 lines.
 
 A parameter B<--delay-trailing-comma-operations>, or B<-dtco>, is available to
@@ -4147,7 +4147,7 @@ B<--delete-lone-trailing-commas, -dltc>  - gives permission to delete the only c
 
 One issue with deleting a lone comma is that if it is deleted, then it
 might not be possible add it back automatically since perltidy uses the
-existance of commas to help locate containers where commas are appropriate. For
+existence of commas to help locate containers where commas are appropriate. For
 example, given
 
     my ( $self, ) = @_;

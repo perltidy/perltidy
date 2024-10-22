@@ -1100,7 +1100,7 @@ EOM
         unshift( @Arg_files, '-' );
     }
 
-    # check file existance and expand any globs
+    # check file existence and expand any globs
     else {
         my @updated_files;
         foreach my $input_file (@Arg_files) {

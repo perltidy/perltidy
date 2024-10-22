@@ -1139,7 +1139,7 @@
 
 <p>It is necessary to have a list of all token types in order to create this type of input. Such a list can be obtained by the command <b>--dump-token-types</b>. Also try the <b>-D</b> flag on a short snippet of code and look at the <i>.DEBUG</i> file to see the tokenization.</p>
 
-<p>To illustrate, suppose we do not want a space after a colon which introduces a sub attribute. We need to know its type. It is not a colon because that is the type of a ternary operator. The ouput of <b>--dump-token-types</b> states that it is token type &#39;A&#39;. To verify this, we can run <code>perltidy -D</code> on a short piece of code containing such a colon, such as</p>
+<p>To illustrate, suppose we do not want a space after a colon which introduces a sub attribute. We need to know its type. It is not a colon because that is the type of a ternary operator. The output of <b>--dump-token-types</b> states that it is token type &#39;A&#39;. To verify this, we can run <code>perltidy -D</code> on a short piece of code containing such a colon, such as</p>
 
 <pre><code>    sub foo : lvalue;</code></pre>
 
@@ -3269,7 +3269,7 @@
 </li>
 </ul>
 
-<p>One issue with deleting a lone comma is that if it is deleted, then it might not be possible add it back automatically since perltidy uses the existance of commas to help locate containers where commas are appropriate. For example, given</p>
+<p>One issue with deleting a lone comma is that if it is deleted, then it might not be possible add it back automatically since perltidy uses the existence of commas to help locate containers where commas are appropriate. For example, given</p>
 
 <pre><code>    my ( $self, ) = @_;</code></pre>
 

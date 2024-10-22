@@ -4,7 +4,7 @@
 #
 # Usage Outline:
 #
-#   STEP 1: initialize or re-initialze Tokenizer with user options
+#   STEP 1: initialize or re-initialize Tokenizer with user options
 #     Perl::Tidy::Tokenizer::check_options($rOpts);
 #
 #   STEP 2: create a tokenizer for a specific input source object
@@ -2769,7 +2769,7 @@ EOM
 
         my $self = shift;
 
-        # TEST 1: class stmt can only go where a new statment can start
+        # TEST 1: class stmt can only go where a new statement can start
         if ( !new_statement_ok() ) { return }
 
         my $i_beg   = $i + 1;
@@ -10935,7 +10935,7 @@ The following additional token types are defined:
     G    user-defined function taking block parameter (like grep/map/eval)
     S    sub definition     (reported as type 'i' in older versions)
     P    package definition (reported as type 'i' in older versions)
-    t    type indicater such as %,$,@,*,&,sub
+    t    type indicator such as %,$,@,*,&,sub
     w    bare word (perhaps a subroutine call)
     i    identifier of some type (with leading %, $, @, *, &, sub, -> )
     n    a number

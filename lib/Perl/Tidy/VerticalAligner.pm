@@ -2535,7 +2535,7 @@ sub sweep_left_to_right {
                 my $is_blocked = defined( $blocking_level[$ng] )
                   && $lev > $blocking_level[$ng];
 
-                # TAIL-WAG-DOG RULE: prevent a 'tail-wag-dog' syndrom, meaning:
+                # TAIL-WAG-DOG RULE: prevent a 'tail-wag-dog' syndrome, meaning:
                 # Do not let one or two lines with a **different number of
                 # alignments** open up a big gap in a large block.  For
                 # example, we will prevent something like this, where the first
@@ -3373,7 +3373,7 @@ sub match_line_pairs {
             $list_type      = $line->{'list_type'};
             $ci_level       = $line->{'ci_level'};
 
-            # Quick approxmiate check for signed numbers in this line.
+            # Quick approximate check for signed numbers in this line.
             # This speeds up large runs by about 0.5%
             if ( !$saw_signed_number ) {
 
@@ -4934,7 +4934,7 @@ sub end_signed_number_column {
 
     # Finish formatting a column of unsigned numbers
     # Given:
-    #   $rgroup_lines - the current vertical aligment group of lines
+    #   $rgroup_lines - the current vertical alignment group of lines
     #   $rcol_hash    - a hash of information about this vertical column
     #   $ix_last      - index of the last line of this vertical column
     # Task:
@@ -5773,7 +5773,7 @@ sub end_wide_equals_column {
 
     # Finish formatting a column of wide equals
     # Given:
-    #   $rgroup_lines - the current vertical aligment group of lines
+    #   $rgroup_lines - the current vertical alignment group of lines
     #   $rcol_hash    - a hash of information about this vertical column
     #   $ix_last      - index of the last line of this vertical column
 
