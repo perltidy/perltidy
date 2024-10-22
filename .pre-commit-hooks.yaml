@@ -1,8 +1,9 @@
 - id: perltidy
   name: perltidy
   description: Run the perltidy source code formatter on Perl source files
-  minimum_pre_commit_version: 2.1.0
   entry: perltidy --nostandard-output --backup-and-modify-in-place
   args: [--standard-error-output, --backup-file-extension=/]
   language: perl
   types: [perl]
+  stages: [pre-commit, pre-merge-commit, pre-push, manual]
+  minimum_pre_commit_version: 3.2.0 # for "new" names in stages

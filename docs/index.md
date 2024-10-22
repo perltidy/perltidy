@@ -58,7 +58,7 @@ test and install using the Makefile.PL:
     make install
 
 The [INSTALL file](./INSTALL.html) has additional installation notes. They
-are mainly for older sytems but also tell how to use perltidy without doing an installation.
+are mainly for older systems but also tell how to use perltidy without doing an installation.
 
 ## Links
 

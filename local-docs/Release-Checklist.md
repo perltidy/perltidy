@@ -1,7 +1,7 @@
 # Checklist for preparing a new version and/or release
 
 - basic quality control:
-  - 'make test' successful for all commit canditates
+  - 'make test' successful for all commit candidates
   - run 'devbin/run__convergence_tests.pl' for all commit candidates
   - Run perlcritic
   - run NYTProf and check the activity and performance of all changed code

@@ -556,11 +556,11 @@
     - Some minor issues with continuation indentation have been fixed.
       Most scripts will remain unchanged.  The main change is that block
       comments which occur just before a closing brace, bracket or paren
-      now have an indentation which is independent of the existance of
+      now have an indentation which is independent of the existence of
       an optional comma or semicolon.  Previously, adding or deleting
       an optional trailing comma could cause their indentation to jump.
       Also, indentation of comments within ternary statements has been
-      improved. For additonal details see:
+      improved. For additional details see:
 
       https://github.com/perltidy/perltidy/blob/master/docs/ci_update.md
 
@@ -1120,7 +1120,7 @@
 
     - Added a new option '--code-skipping', requested in git #65, in which code
       between comment lines '#<<V' and '#>>V' is passed verbatim to the output
-      stream without error checking.  It is simmilar to --format-skipping
+      stream without error checking.  It is similar to --format-skipping
       but there is no error checking of the skipped code. This can be useful for
       skipping past code which employs an extended syntax.
 
@@ -1614,7 +1614,7 @@
       will exit with a non-zero exit flag if the assertion fails.
 
     - fixed issue RT#130297; the perltidy script now exits with a nonzero exit
-      status if it wrote to the standard error output. Prevously only fatal
+      status if it wrote to the standard error output. Previously only fatal
       run errors produced a non-zero exit flag. Now, even non-fatal messages
       requested with the -w flag will cause a non-zero exit flag.  The exit
       flag now has these values:
@@ -1943,7 +1943,7 @@
     - RT #123749, partial fix.  "Continuation indentation" is removed from lines 
       with leading closing parens which are part of a call chain. 
       For example, the call to pack() is is now outdented to the starting 
-      indentation in the following experession:  
+      indentation in the following expression:
 
           # OLD
           $mw->Button(
@@ -2668,7 +2668,7 @@
       -it>1.
 
     - Fixed bug where a line occasionally ended with an extra space. This reduces
-      rhe number of instances where a second iteration gives a result different
+      the number of instances where a second iteration gives a result different
       from the first. 
 
     - Updated documentation to note that the Tidy.pm module <stderr> parameter may
@@ -2742,7 +2742,7 @@
 
     - Allow configuration file to be 'perltidy.ini' for Windows systems.
       i.e. C:\Documents and Settings\User\perltidy.ini
-      and added documentation for setting configuation file under Windows in man
+      and added documentation for setting configuration file under Windows in man
       page.  Thanks to Stuart Clark.
 
     - Corrected problem of unwanted semicolons in hash ref within given/when code.
@@ -3385,7 +3385,7 @@
 
      Thanks to Mark Olesen for suggesting this.
 
-    -Improved alignement of '='s in certain cases.
+    -Improved alignment of '='s in certain cases.
      Thanks to Norbert Gruener for sending an example.
 
     -Outdent-long-comments (-olc) has been re-instated as a default, since
@@ -3653,7 +3653,7 @@
        );
 
     -Lists which do not format well in uniform columns are now better
-     identified and formated.
+     identified and formatted.
 
        OLD:
        return $c->create( 'polygon', $x, $y, $x + $ruler_info{'size'},
@@ -3705,7 +3705,7 @@
      to control what text is appended to 'else' and 'elsif' blocks.
      Default is to just add leading 'if' text to an 'else'.  See manual.
 
-    -The -csc option now labels 'else' blocks with additinal information
+    -The -csc option now labels 'else' blocks with additional information
      from the opening if statement and elsif statements, if space.
      Thanks to Wolfgang Weisselberg for suggesting this.
 
@@ -3814,7 +3814,7 @@
                      '92', '94', '96', '98', '100', '102', '104'
                      );
 
-    -Lists of complex items, such as matricies, are now detected
+    -Lists of complex items, such as matrices, are now detected
      and displayed with just one item per row:
 
        OLD:
@@ -3923,7 +3923,7 @@
        if ( ( $tmp >= 0x80_00_00 ) || ( $tmp < -0x80_00_00 ) ) { }
 
     -'**=' was incorrectly tokenized as '**' and '='.  This only
-        caused a problem with the -extrude opton.
+        caused a problem with the -extrude option.
 
     -Corrected a divide by zero when -extrude option is used
 
