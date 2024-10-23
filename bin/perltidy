@@ -3974,9 +3974,9 @@ of nesting sets which can be expressed as
 
    1 > m > b > i > h > 0
 
-This indicates that multiline commas B<m> are a
-subset of all trailing commas, and bare commas B<b> are a subset of all
-multiline trailing commas, and so on.
+This indicates that multiline trailing commas B<m> are a
+subset of all trailing commas, and bare trailing commas B<b> are a subset
+of all multiline trailing commas, and so on.
 
 =back
 
