@@ -13987,6 +13987,13 @@ sub store_token {
                 if ( $type eq 'h' && !$K_first_here_doc_by_seqno{$seqno} ) {
                     my $KK_new = @{$rLL_new};
                     $K_first_here_doc_by_seqno{$seqno} = $KK_new;
+
+                    # the here doc which follows makes the container broken
+                    if ( !$ris_permanently_broken->{$seqno} ) {
+                        $ris_permanently_broken->{$seqno} = 1;
+                        $self->mark_parent_containers( $seqno,
+                            $ris_permanently_broken );
+                    }
                 }
             }
         }
