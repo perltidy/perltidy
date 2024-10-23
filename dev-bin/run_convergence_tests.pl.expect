@@ -8351,6 +8351,33 @@ $e_str->bind (
     Stack )
        ; # inherit from Stack
 
+==> b1492 <==
+        $col->configure (
+            -command => sub { $t->configure (-background => $color); }
+        );
+
+        $col->configure (
+            -command => sub { $t->configure (-background => $color); }
+        );
+
+==> b1493 <==
+        $w->bind(
+            '<Page_Down>' => sub { $t1->yview(scroll => 1, 'pages'); }
+        );
+
+        $w->bind(
+            '<Page_Down>' => sub { $t1->yview(scroll => 1, 'pages'); }
+        );
+
+==> b1494 <==
+        $b4->bind(
+            '<1>' => sub { cset('D', 'HilightColorFore', "\$color"); }
+        );
+
+        $b4->bind(
+            '<1>' => sub { cset('D', 'HilightColorFore', "\$color"); }
+        );
+
 ==> b156 <==
 # State 1
 {

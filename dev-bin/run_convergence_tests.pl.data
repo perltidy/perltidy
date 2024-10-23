@@ -12341,6 +12341,55 @@ $e_str->bind ( '<return>' => sub {$e_hnr->tabfocus if $e_hnr->can ( 'tabfocus' )
 --add-trailing-commas
 --want-trailing-commas=1
 
+==> b1492.in <==
+        $col->configure ( -command =>
+              sub { $t->configure ( -background => $color ); } );
+
+        $col->configure(
+            -command => sub { $t->configure(-background => $color); },
+        );
+
+==> b1492.par <==
+--maximum-line-length=58
+--variable-maximum-line-length
+--space-function-paren
+--paren-tightness=2
+--add-trailing-commas
+--want-trailing-commas='h'
+--delete-trailing-commas
+
+==> b1493.in <==
+        $w->bind('<Page_Down>' =>
+              sub { $t1->yview(scroll => 1, 'pages'); },);
+
+        $w->bind(
+            '<Page_Down>' => sub { $t1->yview(scroll => 1, 'pages'); }
+        );
+
+==> b1493.par <==
+--maximum-line-length=58
+--variable-maximum-line-length
+--paren-tightness=2
+--add-trailing-commas
+--want-trailing-commas='h'
+--delete-trailing-commas
+
+==> b1494.in <==
+        $b4->bind('<1>' =>
+              sub { cset('D', 'HilightColorFore', "\$color"); },);
+
+        $b4->bind(
+            '<1>' => sub { cset('D', 'HilightColorFore', "\$color"); }
+        );
+
+==> b1494.par <==
+--maximum-line-length=58
+--variable-maximum-line-length
+--paren-tightness=2
+--add-trailing-commas
+--want-trailing-commas='h'
+--delete-trailing-commas
+
 ==> b156.in <==
 # State 1
 {

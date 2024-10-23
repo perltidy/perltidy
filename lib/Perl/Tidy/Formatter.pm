@@ -14689,6 +14689,8 @@ sub match_trailing_comma_rule {
         $fat_comma_count = $rtype_count->{'=>'};
     }
 
+    my $follows_isolated_closing_token;
+
     #----------------------------------------------------------------
     # If no existing commas, see if we have an inner nested container
     #----------------------------------------------------------------
@@ -14717,6 +14719,16 @@ sub match_trailing_comma_rule {
             && $rOpts_delete_weld_interfering_commas )
         {
             return;
+        }
+
+        # Does this trailing comma follow an isolated closing token?
+        if ($is_nesting_right) {
+            my $ix_pp = $rLL_new->[$Kpp]->[_LINE_INDEX_];
+            my $Kpp_m = $self->K_previous_nonblank( $Kpp, $rLL_new );
+            if ($Kpp_m) {
+                my $ix_pp_m = $rLL_new->[$Kpp_m]->[_LINE_INDEX_];
+                $follows_isolated_closing_token = $ix_pp > $ix_pp_m;
+            }
         }
 
         #--------------------------------
@@ -14809,8 +14821,20 @@ sub match_trailing_comma_rule {
 
               # or has a fat comma not in parens or in parens over several lines
               # (b1489, b1490)
-              || ( $fat_comma_count
-                && ( !$is_paren_list || $iline_c - $iline_o > 1 ) )
+              || (
+                $fat_comma_count
+                ## stability fix for b1492 b1493 b1494: a single fat comma in
+                ## parens must follow an isolated closing token
+                ##&& ( !$is_paren_list || $iline_c - $iline_o > 1 ) )
+                && (
+                    !$is_paren_list
+                    || (
+                        ( $iline_c - $iline_o > 1 )
+                        && (   $follows_isolated_closing_token
+                            || $fat_comma_count > 1 )
+                    )
+                )
+              )
 
               # or contains an inner multiline structure
               || $has_inner_multiline_structure
