@@ -1522,6 +1522,19 @@ sub write_unindented_line {
     return;
 } ## end sub write_unindented_line
 
+sub dump_verbatim {
+    my $self = shift;
+
+    # Dump the input file to the output verbatim. This is called when
+    # there is a severe error and formatted output cannot be made.
+    my $rlines = $self->[_rlines_];
+    foreach my $line ( @{$rlines} ) {
+        my $input_line = $line->{_line_text};
+        $self->write_unindented_line($input_line);
+    }
+    return;
+} ## end sub dump_verbatim
+
 sub consecutive_nonblank_lines {
     my ($self)             = @_;
     my $file_writer_object = $self->[_file_writer_object_];
@@ -2008,6 +2021,42 @@ sub get_here_text {
     } ## end while ( ++$ix <= $ix_max )
     return ( $ix_HERE_END, $here_text );
 } ## end sub get_here_text
+
+sub is_trailing_comma {
+    my ( $self, $KK ) = @_;
+
+    # Given:
+    #   $KK - index of a comma in token list
+    # Return:
+    #   true if the comma at index $KK is a trailing comma
+    #   false if not
+
+    my $rLL     = $self->[_rLL_];
+    my $type_KK = $rLL->[$KK]->[_TYPE_];
+    if ( $type_KK ne ',' ) {
+        DEVEL_MODE
+          && Fault("Bad call: expected type ',' but received '$type_KK'\n");
+        return;
+    }
+    my $Knnb = $self->K_next_nonblank($KK);
+    if ( defined($Knnb) ) {
+        my $type_sequence = $rLL->[$Knnb]->[_TYPE_SEQUENCE_];
+        my $type_Knnb     = $rLL->[$Knnb]->[_TYPE_];
+        if ( $type_sequence && $is_closing_type{$type_Knnb} ) {
+            return 1;
+        }
+    }
+    return;
+} ## end sub is_trailing_comma
+
+sub cumulative_length_before_K {
+    my ( $self, $KK ) = @_;
+
+    # Returns the cumulative character length from the first token to
+    # token before the token at index $KK.
+    my $rLL = $self->[_rLL_];
+    return ( $KK <= 0 ) ? 0 : $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
+} ## end sub cumulative_length_before_K
 
 ###########################################
 # CODE SECTION 3: Check and process options
@@ -12372,19 +12421,6 @@ EOM
     return;
 } ## end sub delete_side_comments
 
-sub dump_verbatim {
-    my $self = shift;
-
-    # Dump the input file to the output verbatim. This is called when
-    # there is a severe error and formatted output cannot be made.
-    my $rlines = $self->[_rlines_];
-    foreach my $line ( @{$rlines} ) {
-        my $input_line = $line->{_line_text};
-        $self->write_unindented_line($input_line);
-    }
-    return;
-} ## end sub dump_verbatim
-
 my %wU;
 my %wiq;
 my %is_witPS;
@@ -14820,28 +14856,13 @@ sub match_trailing_comma_rule {
 
     # Require additional stability factors when adding commas
     if ($if_add) {
+
+        # basic stability rules
         my $is_stable = (
 
             # has commas not in parens, or multiple lines ending in commas
             $comma_count
               && ( !$is_paren_list || $has_multiline_commas )
-
-              # or has a fat comma not in parens or in parens over several lines
-              # (b1489, b1490)
-              || (
-                $fat_comma_count
-                ## stability fix for b1492 b1493 b1494: a single fat comma in
-                ## parens must follow an isolated closing token
-                ##&& ( !$is_paren_list || $iline_c - $iline_o > 1 ) )
-                && (
-                    !$is_paren_list
-                    || (
-                        ( $iline_c - $iline_o > 1 )
-                        && (   $follows_isolated_closing_token
-                            || $fat_comma_count > 1 )
-                    )
-                )
-              )
 
               # or contains an inner multiline structure
               || $has_inner_multiline_structure
@@ -14849,6 +14870,21 @@ sub match_trailing_comma_rule {
               # or has other stabilizing factors, like comments and blank lines
               || $is_permanently_broken
         );
+
+        # special stability rules for fat-commas ...
+        if ( !$is_stable && $fat_comma_count ) {
+
+            # stable if not in paren list
+            $is_stable ||= !$is_paren_list;
+
+            # a paren container must span several lines (b1489, b1490)
+            # and the trailing comma must follow an isolated closing token if
+            # just 1 '=>' (b1492 b1493 b1494)
+            $is_stable ||= ( $iline_c - $iline_o > 1 )
+              && ( $follows_isolated_closing_token
+                || $fat_comma_count > 1 );
+        }
+
         $is_multiline &&= $is_stable;
     }
 
@@ -18577,15 +18613,6 @@ EOM
 
     return;
 } ## end sub weld_containers
-
-sub cumulative_length_before_K {
-    my ( $self, $KK ) = @_;
-
-    # Returns the cumulative character length from the first token to
-    # token before the token at index $KK.
-    my $rLL = $self->[_rLL_];
-    return ( $KK <= 0 ) ? 0 : $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
-} ## end sub cumulative_length_before_K
 
 sub weld_cuddled_blocks {
     my ($self) = @_;
@@ -24644,33 +24671,6 @@ EOM
     } ## end sub process_line_inner_loop
 
 } ## end closure process_line_of_CODE
-
-sub is_trailing_comma {
-    my ( $self, $KK ) = @_;
-
-    # Given:
-    #   $KK - index of a comma in token list
-    # Return:
-    #   true if the comma at index $KK is a trailing comma
-    #   false if not
-
-    my $rLL     = $self->[_rLL_];
-    my $type_KK = $rLL->[$KK]->[_TYPE_];
-    if ( $type_KK ne ',' ) {
-        DEVEL_MODE
-          && Fault("Bad call: expected type ',' but received '$type_KK'\n");
-        return;
-    }
-    my $Knnb = $self->K_next_nonblank($KK);
-    if ( defined($Knnb) ) {
-        my $type_sequence = $rLL->[$Knnb]->[_TYPE_SEQUENCE_];
-        my $type_Knnb     = $rLL->[$Knnb]->[_TYPE_];
-        if ( $type_sequence && $is_closing_type{$type_Knnb} ) {
-            return 1;
-        }
-    }
-    return;
-} ## end sub is_trailing_comma
 
 sub tight_paren_follows {
 
