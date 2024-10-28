@@ -3739,9 +3739,10 @@ sub generate_options {
     ########################################
     $category = 6;    # Controlling list formatting
     ########################################
-    $add_option->( 'break-at-old-comma-breakpoints', 'boc', '!' );
-    $add_option->( 'comma-arrow-breakpoints',        'cab', '=i' );
-    $add_option->( 'maximum-fields-per-table',       'mft', '=i' );
+    $add_option->( 'break-at-old-comma-breakpoints', 'boc',  '!' );
+    $add_option->( 'break-at-trailing-comma-types',  'btct', '=s' );
+    $add_option->( 'comma-arrow-breakpoints',        'cab',  '=i' );
+    $add_option->( 'maximum-fields-per-table',       'mft',  '=i' );
 
     ########################################
     $category = 7;    # Retaining or ignoring existing line breaks
@@ -3947,7 +3948,6 @@ sub generate_options {
       indent-columns=4
       integer-range-check=2
       interbracket-arrow-complexity=1
-      delay-trailing-comma-operations
       iterations=1
       keep-old-blank-lines=1
       keyword-paren-inner-tightness=1

@@ -387,6 +387,9 @@ my (
     # INITIALIZER: sub initialize_trailing_comma_rules
     %trailing_comma_rules,
 
+    # INITIALIZER: sub initialize_trailing_comma_break_rules
+    %trailing_comma_break_rules,
+
     # INITIALIZER: sub initialize_interbracket_arrow_style
     %interbracket_arrow_style,
 
@@ -2206,6 +2209,8 @@ EOM
 
     initialize_trailing_comma_rules();    # after 'initialize_line_length_vars'
 
+    initialize_trailing_comma_break_rules();
+
     initialize_interbracket_arrow_style();
 
     initialize_weld_nested_exclusion_rules();
@@ -3619,6 +3624,19 @@ EOM
 
     return;
 } ## end sub initialize_trailing_comma_rules
+
+sub initialize_trailing_comma_break_rules {
+
+    # Setup control hash for breaking at trailing commas
+    %trailing_comma_break_rules = ();
+
+    # FIXME: to be generalized; c416 b1493
+    foreach my $tok (qw< ) ] } >) {
+        my $opt = $rOpts->{'break-at-trailing-comma-types'};
+        $trailing_comma_break_rules{$tok} = $opt;
+    }
+    return;
+} ## end sub initialize_trailing_comma_break_rules
 
 sub initialize_interbracket_arrow_style {
 
@@ -13960,6 +13978,14 @@ sub store_token {
                     {
                         $rlec_count_by_seqno->{$type_sequence}--;
                     }
+
+                    # set flag to retain trailing comma breaks (b1493, c416)
+                    if (   $last_nonblank_code_type eq ','
+                        && $trailing_comma_break_rules{$token}
+                        && $Ktoken_vars == $Kfirst_old )
+                    {
+                        $self->[_rbreak_container_]->{$type_sequence} = 1;
+                    }
                 }
 
                 # Update the stack...
@@ -14206,7 +14232,10 @@ sub add_phantom_semicolon {
 } ## end sub add_phantom_semicolon
 
 sub delay_trailing_comma_op {
-    my $self = shift;
+    my ( $self, $KK ) = @_;
+
+    # Given:
+    #  $KK = index of closing token in old ($rLL) token list
 
     # Returns:
     #   true if a trailing comma operation should be skipped
@@ -14216,8 +14245,17 @@ sub delay_trailing_comma_op {
     # line breaks are changing and we are only adding or deleting
     # commas, but not both. See git #156
 
-    # permission must be given
-    return if ( !$rOpts->{'delay-trailing-comma-operations'} );
+    my $delay = $rOpts->{'delay-trailing-comma-operations'};
+
+    # set -dtco default: delay if -botc is NOT set; otherwise do not delay
+    if ( !defined($delay) ) {
+        my $closing_token = $self->[_rLL_]->[$KK]->[_TOKEN_];
+        my $btct_opt =
+          $closing_token && $trailing_comma_break_rules{$closing_token};
+        $delay = !$btct_opt;
+    }
+
+    return if ( !$delay );
 
     # we must be at the first of multiple iterations
     my $it             = Perl::Tidy::get_iteration_count();
@@ -14284,7 +14322,7 @@ sub add_trailing_comma {
     }
 
     # If so, and not delayed, add a comma
-    if ( $match && !$self->delay_trailing_comma_op() ) {
+    if ( $match && !$self->delay_trailing_comma_op($KK) ) {
 
         # any blank after the comma will be added before the closing paren,
         # below
@@ -14374,7 +14412,7 @@ sub delete_trailing_comma {
     }
 
     # If no match and not delayed
-    if ( !$match && !$self->delay_trailing_comma_op() ) {
+    if ( !$match && !$self->delay_trailing_comma_op($KK) ) {
 
         # delete it
         return $self->unstore_last_nonblank_token(',');
@@ -14692,9 +14730,9 @@ sub match_trailing_comma_rule {
     # factors which force stability
     my $is_permanently_broken =
       $self->[_ris_permanently_broken_]->{$type_sequence};
-    $is_permanently_broken ||=
-      ( $rOpts_break_at_old_comma_breakpoints
-          && !$rOpts_ignore_old_breakpoints );
+    $is_permanently_broken ||= $rOpts_break_at_old_comma_breakpoints
+      && !$rOpts_ignore_old_breakpoints;
+    $is_permanently_broken ||= $trailing_comma_break_rules{$closing_token};
 
     my $K_opening = $self->[_K_opening_container_]->{$type_sequence};
     return $no_change if ( !defined($K_opening) );
