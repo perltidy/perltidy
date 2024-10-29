@@ -329,7 +329,7 @@ my (
 
     # INITIALIZER: sub initialize_lpxl_lpil
     %line_up_parentheses_control_hash,
-    $line_up_parentheses_control_is_lxpl,
+    $line_up_parentheses_control_is_lpxl,
 
     # INITIALIZER: sub outdent_keyword
     %outdent_keyword,
@@ -2462,7 +2462,7 @@ sub initialize_weld_fat_comma_rules {
 sub initialize_lpxl_lpil {
 
     %line_up_parentheses_control_hash    = ();
-    $line_up_parentheses_control_is_lxpl = 1;
+    $line_up_parentheses_control_is_lpxl = 1;
     my $lpxl = $rOpts->{'line-up-parentheses-exclusion-list'};
     my $lpil = $rOpts->{'line-up-parentheses-inclusion-list'};
     if ( $lpxl && $lpil ) {
@@ -2471,12 +2471,12 @@ You entered values for both -lpxl=s and -lpil=s; the -lpil list will be ignored
 EOM
     }
     if ($lpxl) {
-        $line_up_parentheses_control_is_lxpl = 1;
+        $line_up_parentheses_control_is_lpxl = 1;
         initialize_line_up_parentheses_control_hash(
             $rOpts->{'line-up-parentheses-exclusion-list'}, 'lpxl' );
     }
     elsif ($lpil) {
-        $line_up_parentheses_control_is_lxpl = 0;
+        $line_up_parentheses_control_is_lpxl = 0;
         initialize_line_up_parentheses_control_hash(
             $rOpts->{'line-up-parentheses-inclusion-list'}, 'lpil' );
     }
@@ -2511,7 +2511,8 @@ sub initialize_line_up_parentheses_control_hash {
     foreach my $item (@items) {
         my $item_save = $item;
         my ( $flag1, $key, $flag2 );
-        if ( $item =~ /^([^\(\]\{]*)?([\(\{\[])(\d)?$/ ) {
+        if ( $item =~ /^ ([^\(\[\{]*)?  ([\(\{\[])  (\d)? $/x ) {
+            ##             $flag1          $key     $flag2
             $flag1 = $1 if $1;
             $key   = $2 if $2;
             $flag2 = $3 if defined($3);
@@ -2580,7 +2581,7 @@ EOM
     }
 
     # Speedup: we can turn off -lp if it is not actually used
-    if ($line_up_parentheses_control_is_lxpl) {
+    if ($line_up_parentheses_control_is_lpxl) {
         my $all_off = 1;
         foreach my $key (qw# ( { [ #) {
             my $rflags = $line_up_parentheses_control_hash{$key};
@@ -22275,8 +22276,8 @@ sub is_excluded_lp {
     #  returns false otherwise
 
     # The control hash can either describe:
-    #   what to exclude:  $line_up_parentheses_control_is_lxpl = 1, or
-    #   what to include:  $line_up_parentheses_control_is_lxpl = 0
+    #   what to exclude:  $line_up_parentheses_control_is_lpxl = 1, or
+    #   what to include:  $line_up_parentheses_control_is_lpxl = 0
 
     # Input parameter:
     #   $KK = index of the container opening token
@@ -22293,7 +22294,7 @@ sub is_excluded_lp {
     if ( !defined($rflags) ) {
 
         # There is no entry for this container, so we are done
-        return !$line_up_parentheses_control_is_lxpl;
+        return !$line_up_parentheses_control_is_lpxl;
     }
 
     my ( $flag1, $flag2 ) = @{$rflags};
@@ -22334,7 +22335,7 @@ sub is_excluded_lp {
     }
 
     # See if we can exclude this based on the flag1 test...
-    if ($line_up_parentheses_control_is_lxpl) {
+    if ($line_up_parentheses_control_is_lpxl) {
         return 1 if ($match_flag1);
     }
     else {
