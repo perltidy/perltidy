@@ -14272,17 +14272,24 @@ sub delay_trailing_comma_op {
     return;
 } ## end sub delay_trailing_comma_op
 
+my %is_b_i_h;
+
+BEGIN {
+    my @q = qw( b i h );
+    @is_b_i_h{@q} = (1) x scalar(@q);
+}
+
 sub add_trailing_comma {
 
     # Implement the --add-trailing-commas flag to the line end before index $KK:
 
-    my ( $self, $KK, $Kfirst, $trailing_comma_rule ) = @_;
+    my ( $self, $KK, $Kfirst, $trailing_comma_add_rule ) = @_;
 
     # Input parameter:
     #  $KK = index of closing token in old ($rLL) token list
     #        which starts a new line and is not preceded by a comma
     #  $Kfirst = index of first token on the current line of input tokens
-    #  $add_flags = user control flags
+    #  $trailing_comma_add_rule = user control flags for adding trailng commas
 
     # For example, we might want to add a comma here:
 
@@ -14302,25 +14309,37 @@ sub add_trailing_comma {
     # see if the user wants a trailing comma here
     my $match =
       $self->match_trailing_comma_rule( $KK, $Kfirst, $Kp,
-        $trailing_comma_rule, 1 );
+        $trailing_comma_add_rule, 1 );
 
-    # b1458 fix method 1: do not add if this would excess line length.
-    # This is more general than fix method 2, below, but the logic is not
-    # as clean. So this fix is currently deactivated.
-    if ( 0 && $match && $rOpts_delete_trailing_commas && $KK > 0 ) {
-        my $line_index     = $rLL->[ $KK - 1 ]->[_LINE_INDEX_];
-        my $rlines         = $self->[_rlines_];
-        my $line_of_tokens = $rlines->[$line_index];
-        my $input_line     = $line_of_tokens->{_line_text};
-        my $len =
-            $length_function
-          ? $length_function->($input_line) - 1
-          : length($input_line) - 1;
-        my $level   = $rLL->[$Kfirst]->[_LEVEL_];
-        my $max_len = $maximum_line_length_at_level[$level];
+    # Do not add if this would cause excess line length and possible
+    # instability.  This is b1458 fix method 1.  This is more general than fix
+    # method 2, below, which also worked.  So this is not needed for b1458 but
+    # re-activated and updated for b1495.
+    if (   $match
+        && $rOpts_delete_trailing_commas
+        && $KK > 0 )
+    {
+        my ( $trailing_comma_style, $paren_flag_uu ) =
+          @{$trailing_comma_add_rule};
+        my $closing_token = $rLL->[$KK]->[_TOKEN_];
+        if (  !$trailing_comma_break_rules{$closing_token}
+            && $is_b_i_h{$trailing_comma_style} )
+        {
+            my $line_index     = $rLL->[ $KK - 1 ]->[_LINE_INDEX_];
+            my $rlines         = $self->[_rlines_];
+            my $line_of_tokens = $rlines->[$line_index];
+            my $input_line     = $line_of_tokens->{_line_text};
+            my $len =
+                $length_function
+              ? $length_function->($input_line) - 1
+              : length($input_line) - 1;
+            my $new_len = $want_left_space{','} ? $len + 2 : $len + 1;
+            my $level   = $rLL->[$Kfirst]->[_LEVEL_];
+            my $max_len = $maximum_line_length_at_level[$level];
 
-        if ( $len >= $max_len ) {
-            $match = 0;
+            if ( $new_len > $max_len ) {
+                $match = 0;
+            }
         }
     }
 
@@ -14339,7 +14358,7 @@ sub add_trailing_comma {
 
 sub delete_trailing_comma {
 
-    my ( $self, $KK, $Kfirst, $trailing_comma_rule ) = @_;
+    my ( $self, $KK, $Kfirst, $trailing_comma_delete_rule ) = @_;
 
     # Apply the --delete-trailing-commas flag to the comma before index $KK
 
@@ -14377,7 +14396,7 @@ sub delete_trailing_comma {
     # See if the user wants this trailing comma
     my $match =
       $self->match_trailing_comma_rule( $KK, $Kfirst, $Kp,
-        $trailing_comma_rule, 0 );
+        $trailing_comma_delete_rule, 0 );
 
     # Patch: the --noadd-whitespace flag can cause instability in complex
     # structures. In this case do not delete the comma. Fixes b1409.

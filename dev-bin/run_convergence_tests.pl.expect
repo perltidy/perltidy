@@ -7220,8 +7220,7 @@ ok (  3,
  $template->param(
   index        => $index,
   index2       => $index2,
-  "f1_$result" => "f1_"
-    . $result,
+  "f1_$result" => "f1_" . $result
  );
 
 ==> b1404 <==
@@ -7916,8 +7915,8 @@ BEGIN {
 ==> b1458 <==
      join( '',
           grep { defined }
-           @{ $me->{'mail_hdr_list'}
-           }, );
+           @{ $me->{'mail_hdr_list'} }
+     );
 
      join( '',
           grep { defined }
@@ -8377,6 +8376,26 @@ $e_str->bind (
         $b4->bind(
             '<1>' => sub { cset('D', 'HilightColorFore', "\$color"); }
         );
+
+==> b1495 <==
+                        $line{amountoutstanding}=
+                           sprintf( "%.2f",
+                                    $accts->[ $i ]->{'amountoutstanding'}
+                           );
+
+                        $line{amountoutstanding}=
+                           sprintf( "%.2f",
+                                    $accts->[ $i ]->{'amountoutstanding'}
+                           );
+
+==> b1495a <==
+$line{amountoutstanding} = sprintf( "%.2f",
+         $accts->[$ixx]->{'amountoutstanding'}
+);
+
+$line{amountoutstanding} = sprintf( "%.2f",
+         $accts->[$ixx]->{'amountoutstanding'}
+);
 
 ==> b1496 <==
 my @abc

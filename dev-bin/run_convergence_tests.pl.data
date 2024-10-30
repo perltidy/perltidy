@@ -12390,6 +12390,39 @@ $e_str->bind ( '<return>' => sub {$e_hnr->tabfocus if $e_hnr->can ( 'tabfocus' )
 --want-trailing-commas='h'
 --delete-trailing-commas
 
+==> b1495.in <==
+                        $line{amountoutstanding}=
+                           sprintf( "%.2f",
+                                    $accts->[ $i ]
+                                       ->{'amountoutstanding'},);
+
+                        $line{amountoutstanding}=
+                           sprintf( "%.2f",
+                                    $accts->[ $i ]->{'amountoutstanding'}
+                           );
+
+==> b1495.par <==
+--maximum-line-length=73
+--indent-columns=8
+--continuation-indentation=3
+--noadd-whitespace
+--extended-line-up-parentheses
+--add-trailing-commas
+--want-trailing-commas='b'
+--delete-trailing-commas
+
+==> b1495a.in <==
+$line{amountoutstanding} = sprintf( "%.2f",
+         $accts->[$ixx]
+            ->{'amountoutstanding'}, );
+
+$line{amountoutstanding} = sprintf( "%.2f",
+         $accts->[$ixx]->{'amountoutstanding'}
+);
+
+==> b1495a.par <==
+-l=46 -ci=3 -i=9 -wtc=b -atc -dtc
+
 ==> b1496.in <==
 my @abc
      = qw( a b c d e
