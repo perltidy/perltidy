@@ -8378,6 +8378,15 @@ $e_str->bind (
             '<1>' => sub { cset('D', 'HilightColorFore', "\$color"); }
         );
 
+==> b1496 <==
+my @abc
+     = qw( a b c d e
+     );
+
+my @abc
+     = qw( a b c d e
+     );
+
 ==> b156 <==
 # State 1
 {

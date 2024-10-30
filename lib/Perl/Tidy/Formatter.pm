@@ -13981,9 +13981,11 @@ sub store_token {
                     }
 
                     # set flag to retain trailing comma breaks (b1493, c416)
+                    # length check needed to ignore phantom commas (b1496)
                     if (   $last_nonblank_code_type eq ','
                         && $trailing_comma_break_rules{$token}
-                        && $Ktoken_vars == $Kfirst_old )
+                        && $Ktoken_vars == $Kfirst_old
+                        && length($last_nonblank_code_token) )
                     {
                         $self->[_rbreak_container_]->{$type_sequence} = 1;
                     }

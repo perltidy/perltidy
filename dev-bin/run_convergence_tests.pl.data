@@ -12390,6 +12390,24 @@ $e_str->bind ( '<return>' => sub {$e_hnr->tabfocus if $e_hnr->can ( 'tabfocus' )
 --want-trailing-commas='h'
 --delete-trailing-commas
 
+==> b1496.in <==
+my @abc
+     = qw( a b c d e
+     );
+
+my @abc = qw(
+a b c d e );
+
+==> b1496.par <==
+--maximum-line-length=21
+--indent-columns=0
+--continuation-indentation=5
+--line-up-parentheses
+--break-before-all-operators
+--novalign-code
+--break-at-trailing-comma-types='i'
+--qw-as-function
+
 ==> b156.in <==
 # State 1
 {
