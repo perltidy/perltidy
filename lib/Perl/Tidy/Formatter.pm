@@ -12921,7 +12921,7 @@ sub respace_tokens_inner_loop {
             }
 
             my $ws = $rwhitespace_flags->[$Knext];
-            if (   $ws == -1
+            if (   $ws == WS_NO
                 || $rOpts_delete_old_whitespace )
             {
 

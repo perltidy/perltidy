@@ -1438,10 +1438,11 @@ B<-naws>.  (Use B<--freeze-whitespace> (B<-fws>) to leave whitespace completely 
 
 =item B<-dws>,  B<--delete-old-whitespace>
 
-Setting this option allows perltidy to remove some old whitespace
-between characters, if necessary.  This is the default.  If you
-do not want any old whitespace removed, use B<-ndws> or
-B<--nodelete-old-whitespace>.
+Setting this option allows perltidy to remove optional whitespace between
+characters in the input file.  The default is to not to do this
+(B<-nodelete-old-whitespace>).  This parameter has little effect by itself.
+But in combination with B<--noadd-whitespace> it will cause most of the
+whitespace in a file to be removed.
 
 =item B<Detailed whitespace controls around tokens>
 
