@@ -39272,17 +39272,23 @@ sub set_vertical_tightness_flags {
         # token .. and be sure this line does not have a side comment
         #--------------------------------------------------------------
         my $token_next = $tokens_to_go[$ibeg_next];
-        if (   $type_sequence_to_go[$ibeg_next]
+        if (
+               $type_sequence_to_go[$ibeg_next]
             && !$block_type_to_go[$ibeg_next]
             && $is_closing_token{$token_next}
-            && $types_to_go[$iend] ne '#' )    # for safety, shouldn't happen!
+            && !$self->[_rbreak_container_]
+            ->{ $type_sequence_to_go[$ibeg_next] }    # b1498
+            && $types_to_go[$iend] ne '#'
+          )    # for safety, shouldn't happen!
         {
-            my $cvt = $closing_vertical_tightness{$token_next};
+            my $cvt   = $closing_vertical_tightness{$token_next};
+            my $seqno = $type_sequence_to_go[$ibeg_next];
 
             # Avoid conflict of -bom and -pvt=1 or -pvt=2, fixes b977, b1303
             # See similar patch above for $ovt.
-            my $seqno = $type_sequence_to_go[$ibeg_next];
-            if ( $cvt && $self->[_rbreak_container_]->{$seqno} ) {
+            # NOTE: this is overriden by fix for b1498 above and can
+            # eventually be removed.
+            if ( 0 && $cvt && $self->[_rbreak_container_]->{$seqno} ) {
                 $cvt = 0;
             }
 

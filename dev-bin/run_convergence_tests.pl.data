@@ -12441,6 +12441,18 @@ a b c d e );
 --break-at-trailing-comma-types='i'
 --qw-as-function
 
+==> b1498.in <==
+    $c->addtag( 'active', 'withtag',
+                ruler_make_tab( $c, $x, $y, $rinfo ), );
+    $c->addtag( 'active', 'withtag',
+                ruler_make_tab( $c, $x, $y, $rinfo ),
+    );
+
+==> b1498.par <==
+--maximum-line-length=61
+--line-up-parentheses
+--break-at-trailing-comma-types='b'
+
 ==> b156.in <==
 # State 1
 {

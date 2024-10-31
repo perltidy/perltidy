@@ -8406,6 +8406,16 @@ my @abc
      = qw( a b c d e
      );
 
+==> b1498 <==
+    $c->addtag(
+                'active', 'withtag',
+                ruler_make_tab( $c, $x, $y, $rinfo ),
+    );
+    $c->addtag(
+                'active', 'withtag',
+                ruler_make_tab( $c, $x, $y, $rinfo ),
+    );
+
 ==> b156 <==
 # State 1
 {
