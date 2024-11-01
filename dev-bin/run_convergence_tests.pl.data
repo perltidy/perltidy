@@ -12453,6 +12453,21 @@ a b c d e );
 --line-up-parentheses
 --break-at-trailing-comma-types='b'
 
+==> b1499.in <==
+    ( $_[ 0 ] < 0 ) ?
+          -1 : (
+        ( $_[ 0 ] >0 ) ? 1 : 0 );
+
+    ( $_[0] < 0 ) ? -1 :
+      (
+        ( $_[0] > 0 ) ? 1 : 0 );
+
+==> b1499.par <==
+--maximum-line-length=25
+--variable-maximum-line-length
+--opening-paren-right
+--break-after-all-operators
+
 ==> b156.in <==
 # State 1
 {

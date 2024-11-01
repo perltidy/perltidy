@@ -915,7 +915,7 @@ EOM
             'one-line-block-exclusion-list' =>
               [ 'sort', 'map', 'grep', 'eval', '*', 'zzyzx' ],
 
-            'break-at-trailing-comma-types' => [ '0', '*', 'm', 'b', 'h', 'i', ' ' ],
+            'break-at-trailing-comma-types' => [ '0', '1', 'm', 'b' ],
 
             'use-feature' => [ 'class', ' ', 'xyzzy' ],
 

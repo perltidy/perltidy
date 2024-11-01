@@ -5657,7 +5657,8 @@ printf
             @theme_args =
               get_themes(
                 \%opt, (
-                    $2 ? $2 : (
+                    $2 ? $2 :
+                      (
                         shift(
                             @theme_args)
                           ||
@@ -5668,7 +5669,8 @@ printf
             @theme_args =
               get_themes(
                 \%opt, (
-                    $2 ? $2 : (
+                    $2 ? $2 :
+                      (
                         shift(
                             @theme_args)
                           ||
@@ -7606,13 +7608,15 @@ $last = after (
 
 ==> b1440 <==
         $comp = (
-            $form->[3] ? (
+            $form->[3] ?
+                  (
                 $im3->dummy( 0, 3 ) > 0 ) *
                   255 :
                   ( $im3 > 0 ) );
 
         $comp = (
-            $form->[3] ? (
+            $form->[3] ?
+                  (
                 $im3->dummy( 0, 3 ) > 0 ) *
                   255 :
                   ( $im3 > 0 ) );
@@ -8415,6 +8419,17 @@ my @abc
                 'active', 'withtag',
                 ruler_make_tab( $c, $x, $y, $rinfo ),
     );
+
+==> b1499 <==
+    ( $_[0] < 0 ) ?
+      -1 :
+      (
+        ( $_[0] > 0 ) ? 1 : 0 );
+
+    ( $_[0] < 0 ) ?
+      -1 :
+      (
+        ( $_[0] > 0 ) ? 1 : 0 );
 
 ==> b156 <==
 # State 1

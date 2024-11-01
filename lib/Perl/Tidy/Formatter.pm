@@ -39072,6 +39072,14 @@ sub examine_vertical_tightness_flags {
     return;
 } ## end sub examine_vertical_tightness_flags
 
+my %is_uncovered_operator;
+
+# b1060, b1499
+BEGIN {
+    my @q = qw( ? : && || );
+    @is_uncovered_operator{@q} = (1) x scalar(@q);
+}
+
 sub set_vertical_tightness_flags {
 
     my (
@@ -39430,7 +39438,9 @@ sub set_vertical_tightness_flags {
 
             # Fix for case b1060 when both -baoo and -otr are set:
             # to avoid blinking, honor the -baoo flag over the -otr flag.
-            && $token_end ne '||' && $token_end ne '&&'
+            # b1499 added ? and : for same reason
+            ##&& $token_end ne '||' && $token_end ne '&&'
+            && !$is_uncovered_operator{$token_end}
 
             # Keep break after '=' if -lp. Fixes b964 b1040 b1062 b1083 b1089.
             # Generalized from '=' to $is_assignment to fix b1375.
