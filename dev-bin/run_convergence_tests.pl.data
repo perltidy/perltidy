@@ -12441,6 +12441,22 @@ a b c d e );
 --break-at-trailing-comma-types='i'
 --qw-as-function
 
+==> b1497.in <==
+    $c->CanvasBind ( '<2>' => [sub { area_down (@_) }, \%pinfo],
+    );
+    $c->CanvasBind (
+        '<2>' => [sub { area_down (@_) }, \%pinfo], );
+
+==> b1497.par <==
+--maximum-line-length=61
+--line-up-parentheses
+--variable-maximum-line-length
+--paren-vertical-tightness=1
+--space-function-paren
+--square-bracket-tightness=2
+--break-at-trailing-comma-types='h'
+--interbracket-arrow-style='}->['
+
 ==> b1498.in <==
     $c->addtag( 'active', 'withtag',
                 ruler_make_tab( $c, $x, $y, $rinfo ), );

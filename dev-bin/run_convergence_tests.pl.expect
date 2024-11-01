@@ -8410,6 +8410,14 @@ my @abc
      = qw( a b c d e
      );
 
+==> b1497 <==
+    $c->CanvasBind (
+        '<2>' => [sub { area_down (@_) }, \%pinfo],
+    );
+    $c->CanvasBind (
+        '<2>' => [sub { area_down (@_) }, \%pinfo],
+    );
+
 ==> b1498 <==
     $c->addtag(
                 'active', 'withtag',
