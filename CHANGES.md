@@ -2,6 +2,11 @@
 
 ## 2024 09 03.04
 
+    - Added parameter --break-at-trailing-comma-types=s, or -btct=s, where
+      s is a string which selectes trailing commas.  For example, -btct='f(b'
+      places a line break after all bare trailing commas in function calls.
+      The manual has details.
+
     - Fix git #165, strings beginning with v before => gave incorrect error message
 
     - The parameter --add-lone-trailing-commas, -altc, is now on by default.

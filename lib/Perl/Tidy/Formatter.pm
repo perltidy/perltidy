@@ -3436,8 +3436,8 @@ sub initialize_trailing_comma_break_rules {
 
         # handle the common case of a single control character, like -btct='b'
         if ( length($option) == 1 ) {
-            foreach (@all_keys) {
-                $rule_hash{$_} = [ $option, EMPTY_STRING ];
+            foreach my $key (@all_keys) {
+                $rule_hash{$key} = [ $option, EMPTY_STRING ];
             }
         }
 
@@ -3603,12 +3603,12 @@ sub initialize_trailing_comma_rules {
 
         # handle the common case of a single control character, like -wtc='b'
         if ( length($option) == 1 ) {
-            foreach (@all_keys) {
+            foreach my $key (@all_keys) {
                 my $paren_flag = EMPTY_STRING;
-                my $stable     = defined( $trailing_comma_break_rules{$_} );
-                if ( $_ eq ')' ) { $stable &&= $paren_flag eq $tc_paren_flag }
-                $rule_hash{add}->{$_}    = [ $option, $paren_flag, $stable ];
-                $rule_hash{delete}->{$_} = [ $option, $paren_flag, $stable ];
+                my $stable     = defined( $trailing_comma_break_rules{$key} );
+                if ( $key eq ')' ) { $stable &&= $paren_flag eq $tc_paren_flag }
+                $rule_hash{add}->{$key}    = [ $option, $paren_flag, $stable ];
+                $rule_hash{delete}->{$key} = [ $option, $paren_flag, $stable ];
             }
         }
 
@@ -3692,8 +3692,9 @@ sub initialize_trailing_comma_rules {
 
                         # New bare commas are stable if -bctc is set, and
                         # also paren flags do not disagree
-                        my $stable = defined( $trailing_comma_break_rules{$_} );
-                        if ( $_ eq ')' ) {
+                        my $stable =
+                          defined( $trailing_comma_break_rules{$key} );
+                        if ( $key eq ')' ) {
                             $stable &&= $paren_flag eq $tc_paren_flag;
                         }
 
@@ -15372,6 +15373,15 @@ sub store_new_token {
         $self->store_token($rcopy);
 
     }
+
+    $last_last_nonblank_code_type  = $last_nonblank_code_type;
+    $last_last_nonblank_code_token = $last_nonblank_code_token;
+
+    $last_nonblank_code_type  = $type;
+    $last_nonblank_code_token = $token;
+
+    # This sub is currently called to store non-block types ',' and '->', so:
+    $last_nonblank_block_type = EMPTY_STRING;
 
     return;
 } ## end sub store_new_token

@@ -911,11 +911,13 @@ EOM
             'want-call-parens'   => [ '&',   'open', 'close' ],
             'nowant-call-parens' => [ 'pop', 'open' ],
 
-            'want-trailing-commas' => [ '0', '*', 'm', 'b', 'h', 'i', ' ' ],
+            'want-trailing-commas' =>
+              [ '0', '*', 'm', 'b', 'h', 'i', ' ', 'f(b', 'f(m', 'f(h' ],
             'one-line-block-exclusion-list' =>
               [ 'sort', 'map', 'grep', 'eval', '*', 'zzyzx' ],
 
-            'break-at-trailing-comma-types' => [ '0', '1', 'm', 'b' ],
+            'break-at-trailing-comma-types' =>
+              [ '0', '1', 'm', 'b', 'f(b', 'f(m', 'f(1' ],
 
             'use-feature' => [ 'class', ' ', 'xyzzy' ],
 

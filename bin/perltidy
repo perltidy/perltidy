@@ -3730,6 +3730,84 @@ the original style, yields
 A disadvantage of this flag compared to the methods discussed above is that all
 tables in the file must already be nicely formatted.
 
+=item B<-btct=s>,  B<--break-at-trailing-comma-types=s>
+
+A trailing comma is an optional comma following the last item of a list.
+The B<-btct=s> tells perltidy to end a line at selected B<trailing commas>.
+The string B<s> selects the trailing commas, as follows:
+
+  s=1 or '*' : every trailing comma
+  s=m a trailing comma in a multiline list
+  s=b a bare trailing comma
+  s=0 none
+
+For example, given the following input
+
+        $w->bind(
+            '<Page_Down>' => xx,
+        );
+
+The default formatting would flatten this into a single line.  But the
+container can be kept open with
+
+        # perltidy -btct='b'
+        $w->bind(
+            '<Page_Down>' => xx,
+        );
+
+This can be particularly useful for short function calls like this,
+where the default perltidy formatting does not keep the container open.
+
+The options B<s=m> and B<s=1> can be used to open up containers with
+non-bare trailing commas. For example, given this input
+
+        $w->bind( '<Page_Down>' => xx, );
+
+we can break it open with
+
+        # perltidy -btct=1
+        $w->bind(
+            '<Page_Down>' => xx,
+        );
+
+Afterwards, we could switch to B<btct=b> since the trailing comma is
+now bare.  But the B<-btct> parameter must be retained in this case because
+otherwise perltidy will by default flatten this small list.
+
+It is possible restrict the application of this logic to specific container
+types by including an opening token ahead of the letter in the above table.
+For example
+
+    -btct='(b'
+
+means that this operation should only apply to lists within parens with
+trailing commas.
+
+For parentheses, an additional item of information which can be given is an
+alphanumeric letter which is used to limit the selection further depending on
+the type of token immediately before the opening paren.  The possible letters
+are currently 'k', 'K', 'f', 'F', 'w', and 'W', with these meanings for
+matching whatever precedes an opening paren:
+
+ 'k' matches if the previous nonblank token is a perl built-in keyword
+ 'K' matches if 'k' does not, meaning that the previous token is not a keyword.
+ 'f' matches if the previous token is a function other than a keyword.
+ 'F' matches if 'f' does not.
+ 'w' matches if either 'k' or 'f' match.
+ 'W' matches if 'w' does not.
+
+These are the same codes used for B<--line-up-parentheses-inclusion-list>.
+For example,
+
+    -btct='f(b'
+
+means that bare trailing commas in function call lists in the input stream
+should be followed by line breaks in the formatted output stream.
+
+The section L<"Adding and Deleting Commas"> describes additional controls for
+working with trailing commas, and which can be combined with the
+B<-break-trailing-comma-types> parameter to control list formatting.
+
 =item B<-mft=n>,  B<--maximum-fields-per-table=n>
 
 If B<n> is a positive number, and the computed number of fields for any table
@@ -4122,6 +4200,37 @@ normally be necessary.
 Perltidy does not add a trailing comma in some B<edge cases> which appear to
 be near a stability limit.  So if a comma is unexpectedly not added, this is
 probably the reason.
+
+=item *
+
+If the parameter B<--break-at-trailing-comma-types> is also employed, it
+operates on the state after any adding or deleting of commas. And it
+will allow trailing commas to be added in most edge cases.  For example,
+given the following input text
+
+    plot(
+        'g', Canvas => $overview_canvas
+    );
+
+we can add a trailing comma, and keep the container open, with
+
+    # perltidy -wtc='f(b' -atc -btct='f(b'
+    plot(
+        'g', Canvas => $overview_canvas,
+    );
+
+As another example, given the same text on a single line without a trailing comma
+
+    plot( 'g', Canvas => $overview_canvas );
+
+we can add a trailing comma and break the container open with
+
+    # perltidy -wtc=1 -atc -btct=1
+    plot(
+        'g', Canvas => $overview_canvas,
+    );
+
+After that, we could use -btct='f(b' to keep the container open
 
 =item *
 
