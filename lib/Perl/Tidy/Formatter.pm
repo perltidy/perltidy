@@ -2207,9 +2207,10 @@ EOM
 
     initialize_line_length_vars();    # after 'initialize_global_option_vars'
 
-    initialize_trailing_comma_rules();    # after 'initialize_line_length_vars'
-
     initialize_trailing_comma_break_rules();
+
+    initialize_trailing_comma_rules();    # after 'initialize_line_length_vars'
+                                          # and '_trailing_comma_break_rules'
 
     initialize_interbracket_arrow_style();
 
@@ -3396,6 +3397,138 @@ sub initialize_line_length_vars {
     return;
 } ## end sub initialize_line_length_vars
 
+sub initialize_trailing_comma_break_rules {
+
+    # Setup control hash for making trailing comma breaks. Update c416.
+    # This sub is similar to 'sub initialize_trailing_comma_rules' but
+    # simpler.
+
+    # -btct=s, where s
+    #
+    #  =" " none
+    #  =0 : none
+    #  =1 or * : all
+    #  =m : break at trailing commas in multiline lists
+    #  =b : break at bare trailing commas
+
+    %trailing_comma_break_rules = ();
+
+    my $rvalid_flags = [qw( 0 1 * m b )];
+
+    # Note that the hash keys are the CLOSING tokens but the input
+    # uses OPENING tokens.
+    my @all_keys = qw< ) ] } >;
+
+    my $option = $rOpts->{'break-at-trailing-comma-types'};
+
+    if ($option) {
+        $option =~ s/^\s+//;
+        $option =~ s/\s+$//;
+    }
+
+    # We need to use length() here because '0' is a possible option
+    if ( defined($option) && length($option) ) {
+        my $error_message;
+        my %rule_hash;
+        my @q = @{$rvalid_flags};
+        my %is_valid_flag;
+        @is_valid_flag{@q} = (1) x scalar(@q);
+
+        # handle the common case of a single control character, like -btct='b'
+        if ( length($option) == 1 ) {
+            foreach (@all_keys) {
+                $rule_hash{$_} = [ $option, EMPTY_STRING ];
+            }
+        }
+
+        # handle multi-character control(s), such as -btct='[m' or -btct='k(m'
+        else {
+            my @parts = split /\s+/, $option;
+            foreach my $part (@parts) {
+                my $part_input = $part;
+
+                # examples: b -b [b 0 * +f(b
+
+                # the letter value is the rightmost character
+                my $val = substr( $part, -1, 1 );
+                $part = substr( $part, 0, -1 );
+                if ( $val && !$is_valid_flag{$val} ) {
+                    my $valid_str = join( SPACE, @{$rvalid_flags} );
+                    $error_message .=
+"In '$part_input': unexpected value '$val'; must be one of: $valid_str\n";
+                    next;
+                }
+
+                # set defaults for this item
+                my @keys       = @all_keys;
+                my $paren_flag = EMPTY_STRING;
+
+                # look for opening container bracket
+                my $is_paren;
+                if ( length($part) ) {
+                    my $token = substr( $part, -1, 1 );
+                    if ( $is_opening_token{$token} ) {
+
+                        # note that the hash key is the closing token
+                        my $key = $matching_token{$token};
+                        @keys     = ($key);
+                        $part     = substr( $part, 0, -1 );
+                        $is_paren = $token eq '(';
+                    }
+                }
+
+                # anything left must be a paren modifier
+                if ( length($part) ) {
+                    $paren_flag = substr( $part, -1,  1 );
+                    $part       = substr( $part,  0, -1 );
+                    if ( $paren_flag !~ /^[kKfFwW]$/ ) {
+                        $error_message .=
+"In '$part_input': Unexpected paren flag '$paren_flag'; must be one of: k K f F w W\n";
+                        next;
+                    }
+                    if ( !$is_paren ) {
+                        $error_message .=
+"In '$part_input': paren flag '$paren_flag' is only allowed before a '('\n";
+                        next;
+                    }
+                }
+
+                if ( length($part) ) {
+                    $error_message .= "Unrecognized term: '$part_input'\n";
+                    next;
+                }
+
+                my $duplicate;
+                foreach my $key (@keys) {
+                    if ( defined( $rule_hash{$key} ) ) {
+                        $duplicate = 1;
+                    }
+                    $rule_hash{$key} = [ $val, $paren_flag ];
+                }
+                if ($duplicate) {
+                    $error_message .=
+                      "This term overlaps a previous term: '$part_input'\n";
+                }
+            }
+        }
+
+        # check for conflicting signed options
+        if ($error_message) {
+            Warn(<<EOM);
+Error parsing --want-trailing-commas='$option':
+$error_message
+EOM
+        }
+
+        # Set the control hash if no errors
+        else {
+            %trailing_comma_break_rules = %rule_hash;
+        }
+    }
+
+    return;
+} ## end sub initialize_trailing_comma_break_rules
+
 sub initialize_trailing_comma_rules {
 
     # Setup control hash for trailing commas
@@ -3419,8 +3552,10 @@ sub initialize_trailing_comma_rules {
     #        if -dtc set will delete other trailing commas
 
     #-------------------------------------------------------------------
-    # This routine must be called after the alpha and beta stress levels
-    # have been defined in sub 'initialize_line_length_vars'.
+    # Important:
+    # - This routine must be called after the alpha and beta stress levels
+    #   have been defined in sub 'initialize_line_length_vars'.
+    # - and it must be called after sub 'initialize_trailing_comma_break_rules'
     #-------------------------------------------------------------------
 
     %trailing_comma_rules = ();
@@ -3451,6 +3586,13 @@ sub initialize_trailing_comma_rules {
         $option =~ s/\s+$//;
     }
 
+    # Pull out -btct paren flag for use in checking stability in marginal cases
+    my ( $tc_letter, $tc_paren_flag );
+    my $tc_paren_rule = $trailing_comma_break_rules{')'};
+    if ( defined($tc_paren_rule) ) {
+        ( $tc_letter, $tc_paren_flag ) = @{$tc_paren_rule};
+    }
+
     # We need to use length() here because '0' is a possible option
     if ( defined($option) && length($option) ) {
         my $error_message;
@@ -3462,8 +3604,11 @@ sub initialize_trailing_comma_rules {
         # handle the common case of a single control character, like -wtc='b'
         if ( length($option) == 1 ) {
             foreach (@all_keys) {
-                $rule_hash{add}->{$_}    = [ $option, EMPTY_STRING ];
-                $rule_hash{delete}->{$_} = [ $option, EMPTY_STRING ];
+                my $paren_flag = EMPTY_STRING;
+                my $stable     = defined( $trailing_comma_break_rules{$_} );
+                if ( $_ eq ')' ) { $stable &&= $paren_flag eq $tc_paren_flag }
+                $rule_hash{add}->{$_}    = [ $option, $paren_flag, $stable ];
+                $rule_hash{delete}->{$_} = [ $option, $paren_flag, $stable ];
             }
         }
 
@@ -3544,12 +3689,22 @@ sub initialize_trailing_comma_rules {
                 my $duplicate;
                 foreach my $sign (@signs) {
                     foreach my $key (@keys) {
-                        if ( defined( $rule_hash{$sign}->{$key} ) ) {
-                            $duplicate = 1;
+
+                        # New bare commas are stable if -bctc is set, and
+                        # also paren flags do not disagree
+                        my $stable = defined( $trailing_comma_break_rules{$_} );
+                        if ( $_ eq ')' ) {
+                            $stable &&= $paren_flag eq $tc_paren_flag;
                         }
-                        $rule_hash{$sign}->{$key} = [ $val, $paren_flag ];
+
+                        if ( defined( $rule_hash{$sign}->{$key} ) ) {
+                            $duplicate &&= 1;
+                        }
+                        $rule_hash{$sign}->{$key} =
+                          [ $val, $paren_flag, $stable ];
                     }
                 }
+
                 if ($duplicate) {
                     $error_message .=
                       "This term overlaps a previous term: '$part_input'\n";
@@ -3559,7 +3714,6 @@ sub initialize_trailing_comma_rules {
 
         # check for conflicting signed options
         if ( !$error_message ) {
-
             my $radd    = $rule_hash{add};
             my $rdelete = $rule_hash{delete};
             if ( defined($radd) && defined($rdelete) ) {
@@ -3625,19 +3779,6 @@ EOM
 
     return;
 } ## end sub initialize_trailing_comma_rules
-
-sub initialize_trailing_comma_break_rules {
-
-    # Setup control hash for breaking at trailing commas
-    %trailing_comma_break_rules = ();
-
-    # FIXME: to be generalized; c416 b1493
-    foreach my $tok (qw< ) ] } >) {
-        my $opt = $rOpts->{'break-at-trailing-comma-types'};
-        $trailing_comma_break_rules{$tok} = $opt;
-    }
-    return;
-} ## end sub initialize_trailing_comma_break_rules
 
 sub initialize_interbracket_arrow_style {
 
@@ -13984,10 +14125,36 @@ sub store_token {
                     # length check needed to ignore phantom commas (b1496)
                     if (   $last_nonblank_code_type eq ','
                         && $trailing_comma_break_rules{$token}
-                        && $Ktoken_vars == $Kfirst_old
                         && length($last_nonblank_code_token) )
                     {
-                        $self->[_rbreak_container_]->{$type_sequence} = 1;
+
+                        my $rule = $trailing_comma_break_rules{$token};
+                        my ( $letter, $paren_flag ) = @{$rule};
+                        my $match;
+                        if ( $letter eq 'b' ) {
+                            $match = $Ktoken_vars == $Kfirst_old;
+                        }
+                        elsif ( $letter eq 'm' ) {
+                            $match = $K_old_opening_by_seqno{$type_sequence} <
+                              $Kfirst_old;
+                        }
+                        elsif ( $letter eq '1' || $letter eq '*' ) {
+                            $match = 1;
+                        }
+                        else {
+                            # shouldn't happen - treat as 'b' for now
+                            $match = $Ktoken_vars == $Kfirst_old;
+                        }
+
+                        if ( $match && $paren_flag && $token eq ')' ) {
+                            $match &&=
+                              $self->match_paren_control_flag( $type_sequence,
+                                $paren_flag );
+                        }
+
+                        if ($match) {
+                            $self->[_rbreak_container_]->{$type_sequence} = 1;
+                        }
                     }
                 }
 
@@ -14235,10 +14402,11 @@ sub add_phantom_semicolon {
 } ## end sub add_phantom_semicolon
 
 sub delay_trailing_comma_op {
-    my ( $self, $KK ) = @_;
+    my ( $self, $if_add, $stable_flag ) = @_;
 
     # Given:
-    #  $KK = index of closing token in old ($rLL) token list
+    #  $if_add = true for add comma operation, false for delete
+    #  $stable_flag = true if -btct setting makes this stable
 
     # Returns:
     #   true if a trailing comma operation should be skipped
@@ -14248,19 +14416,23 @@ sub delay_trailing_comma_op {
     # line breaks are changing and we are only adding or deleting
     # commas, but not both. See git #156
 
+    # Get user setting, if any
     my $delay = $rOpts->{'delay-trailing-comma-operations'};
 
-    # set -dtco default: delay if -botc is NOT set; otherwise do not delay
+    # Set default if not defined:
+    #  - if deleting: delay always ok
+    #  - if adding:   delay ok unless breaks will be stabilized by -btct setting
+    # Explanation:
+    #  - deleting can be irreversible, so it is safest to delay
+    #  - adding, along with -btct, can save original line breaks which would
+    #    be lost otherwise, so it may be best not to delay.
     if ( !defined($delay) ) {
-        my $closing_token = $self->[_rLL_]->[$KK]->[_TOKEN_];
-        my $btct_opt =
-          $closing_token && $trailing_comma_break_rules{$closing_token};
-        $delay = !$btct_opt;
+        $delay = $if_add ? !$stable_flag : 1;
     }
 
     return if ( !$delay );
 
-    # we must be at the first of multiple iterations
+    # We must be at the first of multiple iterations for a delay
     my $it             = Perl::Tidy::get_iteration_count();
     my $max_iterations = $rOpts->{'iterations'};
     if ( $it == 1 && $max_iterations > 1 ) {
@@ -14306,10 +14478,14 @@ sub add_trailing_comma {
     my $type_p = $rLL_new->[$Kp]->[_TYPE_];
     return if ( $type_p eq '#' );
 
+    return unless ($trailing_comma_add_rule);
+    my ( $trailing_comma_style, $paren_flag, $stable_flag ) =
+      @{$trailing_comma_add_rule};
+
     # see if the user wants a trailing comma here
     my $match =
       $self->match_trailing_comma_rule( $KK, $Kfirst, $Kp,
-        $trailing_comma_add_rule, 1 );
+        $trailing_comma_style, $paren_flag, $stable_flag, 1 );
 
     # Do not add if this would cause excess line length and possible
     # instability.  This is b1458 fix method 1.  This is more general than fix
@@ -14319,12 +14495,7 @@ sub add_trailing_comma {
         && $rOpts_delete_trailing_commas
         && $KK > 0 )
     {
-        my ( $trailing_comma_style, $paren_flag_uu ) =
-          @{$trailing_comma_add_rule};
-        my $closing_token = $rLL->[$KK]->[_TOKEN_];
-        if (  !$trailing_comma_break_rules{$closing_token}
-            && $is_b_i_h{$trailing_comma_style} )
-        {
+        if ( !$stable_flag && $is_b_i_h{$trailing_comma_style} ) {
             my $line_index     = $rLL->[ $KK - 1 ]->[_LINE_INDEX_];
             my $rlines         = $self->[_rlines_];
             my $line_of_tokens = $rlines->[$line_index];
@@ -14344,7 +14515,7 @@ sub add_trailing_comma {
     }
 
     # If so, and not delayed, add a comma
-    if ( $match && !$self->delay_trailing_comma_op($KK) ) {
+    if ( $match && !$self->delay_trailing_comma_op($stable_flag) ) {
 
         # any blank after the comma will be added before the closing paren,
         # below
@@ -14393,10 +14564,14 @@ sub delete_trailing_comma {
         return;
     }
 
+    return unless ($trailing_comma_delete_rule);
+    my ( $trailing_comma_style, $paren_flag, $stable_flag ) =
+      @{$trailing_comma_delete_rule};
+
     # See if the user wants this trailing comma
     my $match =
       $self->match_trailing_comma_rule( $KK, $Kfirst, $Kp,
-        $trailing_comma_delete_rule, 0 );
+        $trailing_comma_style, $paren_flag, $stable_flag, 0 );
 
     # Patch: the --noadd-whitespace flag can cause instability in complex
     # structures. In this case do not delete the comma. Fixes b1409.
@@ -14434,7 +14609,7 @@ sub delete_trailing_comma {
     }
 
     # If no match and not delayed
-    if ( !$match && !$self->delay_trailing_comma_op($KK) ) {
+    if ( !$match && !$self->delay_trailing_comma_op( 0, $stable_flag ) ) {
 
         # delete it
         return $self->unstore_last_nonblank_token(',');
@@ -14688,7 +14863,9 @@ BEGIN {
 
 sub match_trailing_comma_rule {
 
-    my ( $self, $KK, $Kfirst, $Kp, $trailing_comma_rule, $if_add ) = @_;
+    my ( $self, $KK, $Kfirst, $Kp, $trailing_comma_style, $paren_flag,
+        $stable_flag, $if_add )
+      = @_;
 
     # Decide if a trailing comma rule is matched.
 
@@ -14713,9 +14890,6 @@ sub match_trailing_comma_rule {
     #           _rebate => $rebate  <------ location of possible trailing comma
     #          }, $pkg;
     #          ^-------------------closing token at index $KK
-
-    return unless ($trailing_comma_rule);
-    my ( $trailing_comma_style, $paren_flag ) = @{$trailing_comma_rule};
 
     # List of $trailing_comma_style values:
     #   undef  stable: do not change
@@ -14754,7 +14928,7 @@ sub match_trailing_comma_rule {
       $self->[_ris_permanently_broken_]->{$type_sequence};
     $is_permanently_broken ||= $rOpts_break_at_old_comma_breakpoints
       && !$rOpts_ignore_old_breakpoints;
-    $is_permanently_broken ||= $trailing_comma_break_rules{$closing_token};
+    $is_permanently_broken ||= $stable_flag;
 
     my $K_opening = $self->[_K_opening_container_]->{$type_sequence};
     return $no_change if ( !defined($K_opening) );
