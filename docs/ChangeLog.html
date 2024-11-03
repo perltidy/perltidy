@@ -1,8 +1,16 @@
 <h1>Perltidy Change Log</h1>
 
-<h2>2024 09 03.03</h2>
+<h2>2024 09 03.05</h2>
 
-<pre><code>- The parameter --add-lone-trailing-commas, -altc, is now on by default.
+<pre><code>- Added parameter --break-at-trailing-comma-types=s, or -btct=s, where
+s is a string which selects trailing commas.  For example, -btct='f(b'
+places a line break after all bare trailing commas in function calls.
+The manual has details.
+
+- Fix git #165, strings beginning with v before =&gt; gave an incorrect error
+message.
+
+- The parameter --add-lone-trailing-commas, -altc, is now on by default.
 This will simplify input for trailing comma operations. Use
 --noadd-lone-trailing-commas, or -naltc to turn it off.
 

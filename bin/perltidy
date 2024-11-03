@@ -3732,8 +3732,8 @@ tables in the file must already be nicely formatted.
 
 =item B<-btct=s>,  B<--break-at-trailing-comma-types=s>
 
-A trailing comma is an optional comma following the last item of a list.
-The B<-btct=s> tells perltidy to end a line at selected B<trailing commas>.
+A B<trailing comma> is an optional comma following the last item of a list.
+The B<-btct=s> tells perltidy to end a line at selected trailing commas.
 The string B<s> selects the trailing commas, as follows:
 
   s=1 or '*' : every trailing comma
@@ -3770,18 +3770,17 @@ we can break it open with
             '<Page_Down>' => xx,
         );
 
-Afterwards, we could switch to B<btct=b> since the trailing comma is
-now bare.  But the B<-btct> parameter must be retained in this case because
-otherwise perltidy will by default flatten this small list.
+Afterwards, we could switch to B<btct=b> since the trailing comma is now bare.
+But the B<-btct> parameter must be retained in this case because otherwise this
+small list will be flattened the next time it is formatted.
 
-It is possible restrict the application of this logic to specific container
-types by including an opening token ahead of the letter in the above table.
-For example
+This logic can be restricted to specific container types by including an
+opening token ahead of the letter in the above table.  For example
 
     -btct='(b'
 
-means that this operation should only apply to lists within parens with
-trailing commas.
+means that this operation should only apply to bare trailing commas within
+parentheses.
 
 For parentheses, an additional item of information which can be given is an
 alphanumeric letter which is used to limit the selection further depending on
@@ -3805,8 +3804,9 @@ means that bare trailing commas in function call lists in the input stream
 should be followed by line breaks in the formatted output stream.
 
 The section L<"Adding and Deleting Commas"> describes additional controls for
-working with trailing commas, and which can be combined with the
-B<-break-trailing-comma-types> parameter to control list formatting.
+working with trailing commas. These can be combined with the
+B<-break-trailing-comma-types> parameter for additional control of list
+formatting.
 
 =item B<-mft=n>,  B<--maximum-fields-per-table=n>
 
@@ -4156,8 +4156,8 @@ whether or not a list is multiline or bare is made based on the B<input> stream
 if only one iteration is made, which is the default.
 
 When iterations are requested with the B<--converge> parameter, any comma
-addition or deletion operations are postponed until the start of the
-B<second iteration>, after most changes in line breaks have been made.
+deletion operations are postponed until the start of the B<second iteration>,
+after most changes in line breaks have been made.
 
 To illustrate, if we start with
 
@@ -4212,7 +4212,9 @@ given the following input text
         'g', Canvas => $overview_canvas
     );
 
-we can add a trailing comma, and keep the container open, with
+formatting  with C<-wtc=f(b) -atc> will not add a trailing comma because the
+list will be flattend and the comma will not remain bare.  But we can add a
+trailing comma, and keep the container open, with
 
     # perltidy -wtc='f(b' -atc -btct='f(b'
     plot(
@@ -4230,7 +4232,7 @@ we can add a trailing comma and break the container open with
         'g', Canvas => $overview_canvas,
     );
 
-After that, we could use C<-btct='f(b'> to keep the container open
+After that, we could use C<-btct='f(b'> to keep the container open.
 
 =item *
 
@@ -7198,7 +7200,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20240903.04
+This man page documents perltidy version 20240903.05
 
 =head1 BUG REPORTS
 

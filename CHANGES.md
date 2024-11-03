@@ -1,13 +1,14 @@
 # Perltidy Change Log
 
-## 2024 09 03.04
+## 2024 09 03.05
 
     - Added parameter --break-at-trailing-comma-types=s, or -btct=s, where
-      s is a string which selectes trailing commas.  For example, -btct='f(b'
-      places a line break after all bare trailing commas in function calls.
-      The manual has details.
+    s is a string which selects trailing commas.  For example, -btct='f(b'
+    places a line break after all bare trailing commas in function calls.
+    The manual has details.
 
-    - Fix git #165, strings beginning with v before => gave incorrect error message
+    - Fix git #165, strings beginning with v before => gave an incorrect error
+    message.
 
     - The parameter --add-lone-trailing-commas, -altc, is now on by default.
     This will simplify input for trailing comma operations. Use

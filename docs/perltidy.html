@@ -1105,7 +1105,7 @@
 <dt id="dws---delete-old-whitespace"><b>-dws</b>, <b>--delete-old-whitespace</b></dt>
 <dd>
 
-<p>Setting this option allows perltidy to remove some old whitespace between characters, if necessary. This is the default. If you do not want any old whitespace removed, use <b>-ndws</b> or <b>--nodelete-old-whitespace</b>.</p>
+<p>Setting this option allows perltidy to remove optional whitespace between characters in the input file. The default is to not to do this (<b>-nodelete-old-whitespace</b>). This parameter has little effect by itself. But in combination with <b>--noadd-whitespace</b> it will cause most of the whitespace in a file to be removed.</p>
 
 </dd>
 <dt id="Detailed-whitespace-controls-around-tokens"><b>Detailed whitespace controls around tokens</b></dt>
@@ -2956,6 +2956,68 @@
 <p>A disadvantage of this flag compared to the methods discussed above is that all tables in the file must already be nicely formatted.</p>
 
 </dd>
+<dt id="btct-s---break-at-trailing-comma-types-s"><b>-btct=s</b>, <b>--break-at-trailing-comma-types=s</b></dt>
+<dd>
+
+<p>A <b>trailing comma</b> is an optional comma following the last item of a list. The <b>-btct=s</b> tells perltidy to end a line at selected trailing commas. The string <b>s</b> selects the trailing commas, as follows:</p>
+
+<pre><code>  s=1 or &#39;*&#39; : every trailing comma
+  s=m a trailing comma in a multiline list
+  s=b a bare trailing comma
+  s=0 none</code></pre>
+
+<p>For example, given the following input</p>
+
+<pre><code>        $w-&gt;bind(
+            &#39;&lt;Page_Down&gt;&#39; =&gt; xx,
+        );</code></pre>
+
+<p>The default formatting would flatten this into a single line. But the container can be kept open with</p>
+
+<pre><code>        # perltidy -btct=&#39;b&#39;
+        $w-&gt;bind(
+            &#39;&lt;Page_Down&gt;&#39; =&gt; xx,
+        );</code></pre>
+
+<p>This can be particularly useful for short function calls like this, where the default perltidy formatting does not keep the container open.</p>
+
+<p>The options <b>s=m</b> and <b>s=1</b> can be used to open up containers with non-bare trailing commas. For example, given this input</p>
+
+<pre><code>        $w-&gt;bind( &#39;&lt;Page_Down&gt;&#39; =&gt; xx, );</code></pre>
+
+<p>we can break it open with</p>
+
+<pre><code>        # perltidy -btct=1
+        $w-&gt;bind(
+            &#39;&lt;Page_Down&gt;&#39; =&gt; xx,
+        );</code></pre>
+
+<p>Afterwards, we could switch to <b>btct=b</b> since the trailing comma is now bare. But the <b>-btct</b> parameter must be retained in this case because otherwise this small list will be flattened the next time it is formatted.</p>
+
+<p>This logic can be restricted to specific container types by including an opening token ahead of the letter in the above table. For example</p>
+
+<pre><code>    -btct=&#39;(b&#39;</code></pre>
+
+<p>means that this operation should only apply to bare trailing commas within parentheses.</p>
+
+<p>For parentheses, an additional item of information which can be given is an alphanumeric letter which is used to limit the selection further depending on the type of token immediately before the opening paren. The possible letters are currently &#39;k&#39;, &#39;K&#39;, &#39;f&#39;, &#39;F&#39;, &#39;w&#39;, and &#39;W&#39;, with these meanings for matching whatever precedes an opening paren:</p>
+
+<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl built-in keyword
+ &#39;K&#39; matches if &#39;k&#39; does not, meaning that the previous token is not a keyword.
+ &#39;f&#39; matches if the previous token is a function other than a keyword.
+ &#39;F&#39; matches if &#39;f&#39; does not.
+ &#39;w&#39; matches if either &#39;k&#39; or &#39;f&#39; match.
+ &#39;W&#39; matches if &#39;w&#39; does not.</code></pre>
+
+<p>These are the same codes used for <b>--line-up-parentheses-inclusion-list</b>. For example,</p>
+
+<pre><code>    -btct=&#39;f(b&#39;</code></pre>
+
+<p>means that bare trailing commas in function call lists in the input stream should be followed by line breaks in the formatted output stream.</p>
+
+<p>The section <a href="#Adding-and-Deleting-Commas">&quot;Adding and Deleting Commas&quot;</a> describes additional controls for working with trailing commas. These can be combined with the <b>-break-trailing-comma-types</b> parameter for additional control of list formatting.</p>
+
+</dd>
 <dt id="mft-n---maximum-fields-per-table-n"><b>-mft=n</b>, <b>--maximum-fields-per-table=n</b></dt>
 <dd>
 
@@ -3046,7 +3108,7 @@
 <li><p>If the option <b>--space-function-paren</b> is employed, it is ignored for these special function calls because it would deactivate them.</p>
 
 </li>
-<li><p>Otherwise the various formatting control flags operate on these lists the same as for other comma-separated lists. In particular, note that if <b>--break-at-old-comma-breakpoints</b>, or <b>-boc</b>, is set, then the old line break locations will be retained.</p>
+<li><p>Otherwise the various formatting control flags operate on these lists the same as for other comma-separated lists. In particular, note that if <b>--break-at-old-comma-breakpoints</b>, or <b>-boc</b>, is set, then the old line break locations will be retained. And old line breaks will be retained if there are any blank lines between the opening and closing parens.</p>
 
 </li>
 <li><p>Before using this option for the first time, it is a good idea to scan the code and decide if any lists have a special order which should be retained. This can be accomplished for example by changing the quote delimiters to something other than parens, or by inserting a blank line as discussed at the start of this section.</p>
@@ -3141,6 +3203,13 @@
 <li><p>A <b>bare trailing comma</b> is a comma which is at the end of a line. That is, the closing container token follows on a different line. So a list with a bare trailing comma is a special case of a multiline list.</p>
 
 </li>
+<li><p>In fact the above options for trailing commas can be seen as a hierarchy of nesting sets which can be expressed as</p>
+
+<pre><code>   1 &gt; m &gt; b &gt; i &gt; h &gt; 0</code></pre>
+
+<p>This indicates that multiline trailing commas <b>m</b> are a subset of all trailing commas, and bare trailing commas <b>b</b> are a subset of all multiline trailing commas, and so on.</p>
+
+</li>
 </ul>
 
 <p>This parameter by itself only indicates where trailing commas are wanted. Perltidy only adds these trailing commas if permission is granted by setting the flag <b>--add-trailing-commas</b>, or <b>-atc</b>. And perltidy only removes unwanted trailing commas if the flag <b>--delete-trailing-commas</b>, or <b>-dtc</b> is set.</p>
@@ -3200,7 +3269,7 @@
 
 <pre><code>  -wtc=&#39;+h -b&#39; -atc -dtc</code></pre>
 
-<p>means that missing trailing commas should be added to lists of key =&gt; values pairs, and trailing commas which are not bare should be removed. No other changes are made. When both plus and minus terms are used like this, they must not be in conflict. This can be shown to be equivalent to requiring that the letter of the plus term does not occur before the letter of the minus term in their hierarchical order <b>m</b>, <b>b</b>, <b>i</b>, <b>h</b>. In this example, the plus term <b>h</b> follows the minus term <b>b</b> in the list, so there is no conflict.</p>
+<p>means that missing trailing commas should be added to lists of key =&gt; value pairs, and trailing commas which are not bare should be removed. No other changes are made. When both plus and minus terms are used like this, they must not be in conflict. There is no conflict in this example because the trailing comma locations of the key=&gt;value pairs selected by the <b>+h</b> term are a subset of all bare trailing commas, and thus will not be deleted by the <b>-b</b> term. The general rule is that the letter of the plus term should occur after the letter of the minus term in the hierarchical nesting order, <b>1 &gt; m &gt; b &gt; i &gt; h &gt; 0</b>.</p>
 
 <p><b>Some points to note</b> regarding adding and deleting trailing commas:</p>
 
@@ -3208,7 +3277,7 @@
 
 <li><p>It is recommended to also use the <b>--converge</b> parameter when adding and/or deleting trailing commas, especially if the formatter may be making other line break changes at the same time. The reason is that the decision regarding whether or not a list is multiline or bare is made based on the <b>input</b> stream if only one iteration is made, which is the default.</p>
 
-<p>When iterations are requested with the <b>--converge</b> parameter, any comma addition or deletion operations are postponed until the start of the <b>second iteration</b>, after most changes in line breaks have been made.</p>
+<p>When iterations are requested with the <b>--converge</b> parameter, any comma deletion operations are postponed until the start of the <b>second iteration</b>, after most changes in line breaks have been made.</p>
 
 <p>To illustrate, if we start with</p>
 
@@ -3224,7 +3293,7 @@
             b =&gt; 2
         );</code></pre>
 
-<p>we delete a comma which has become bare, which is not what is wanted. This happened because the change was based on the starting rather than the final line breaks. Rerunning with <b>--converge</b> added fixes things</p>
+<p>we delete a comma which has become bare, which is not what is wanted. This happened because the change was based on the starting rather than the final line breaks. Running with <b>--converge</b> gives the desired result:</p>
 
 <pre><code>        # perltidy -wtc=b -dtc --converge
         f(
@@ -3232,22 +3301,41 @@
             b =&gt; 2,
         );</code></pre>
 
-<p>because changes are based on the line breaks after the first iteration.</p>
+<p>because comma changes are based on the line breaks after the first iteration.</p>
+
+<p>The additional computer time needed by the <b>--converge</b> option to do another iteration or two will not be noticeable except for files with many thousands of lines.</p>
 
 <p>A parameter <b>--delay-trailing-comma-operations</b>, or <b>-dtco</b>, is available to control this behavior if desired. Negating this parameter, with <b>-ndtco</b>, tells perltidy to always use the starting state to make decisions regarding comma addition and deletion, even when iterations are requested. This should not normally be necessary.</p>
 
 </li>
-<li><p>Perltidy does not add a trailing comma to a list which appears to be near a <b>stability limit</b>. So if a comma is unexpectedly not added, this is probably the reason.</p>
+<li><p>Perltidy does not add a trailing comma in some <b>edge cases</b> which appear to be near a stability limit. So if a comma is unexpectedly not added, this is probably the reason.</p>
 
-<p>This issue can be illustrated with the following example. The closing brace is at column 80, the default line length:</p>
+</li>
+<li><p>If the parameter <b>--break-at-trailing-comma-types</b> is also employed, it operates on the state after any adding or deleting of commas. And it will allow trailing commas to be added in most edge cases. For example, given the following input text</p>
 
-<pre><code>    # perltidy -atc -dtc -wtc=b
-    $menuitem_paste-&gt;signal_connect( &#39;activate&#39; =&gt; sub { create_paste_window() }
+<pre><code>    plot(
+        &#39;g&#39;, Canvas =&gt; $overview_canvas
     );</code></pre>
 
-<p>Adding a trailing comma would cause the maximum line length to be exceeded. This in turn would cause a different break point to occur for which the comma is no longer bare. So it would get deleted on the next formatting pass, returning things to the starting state. This is is an unstable situation.</p>
+<p>formatting with <code>-wtc=f(b) -atc</code> will not add a trailing comma because the list will be flattend and the comma will not remain bare. But we can add a trailing comma, and keep the container open, with</p>
 
-<p>The rules used to detect and avoid instability work well but are not precise, so in some cases where perltidy will not add a comma, it may be possible to add a stable trailing comma with editing. For example, if the above example were run with <b>-l=81 -atc -wtc=b</b>, perltidy would still not add a trailing comma, even though it would be stable.</p>
+<pre><code>    # perltidy -wtc=&#39;f(b&#39; -atc -btct=&#39;f(b&#39;
+    plot(
+        &#39;g&#39;, Canvas =&gt; $overview_canvas,
+    );</code></pre>
+
+<p>As another example, given the same text on a single line without a trailing comma</p>
+
+<pre><code>    plot( &#39;g&#39;, Canvas =&gt; $overview_canvas );</code></pre>
+
+<p>we can add a trailing comma and break the container open with</p>
+
+<pre><code>    # perltidy -wtc=1 -atc -btct=1
+    plot(
+        &#39;g&#39;, Canvas =&gt; $overview_canvas,
+    );</code></pre>
+
+<p>After that, we could use <code>-btct=&#39;f(b&#39;</code> to keep the container open.</p>
 
 </li>
 <li><p>When using these parameters for the first time it is a good idea to practice on some test scripts and verify that the results are as expected.</p>
@@ -4583,7 +4671,7 @@
 
 <p>The parameters in the <i>.perltidyrc</i> file are installed first, so any parameters given on the command line will have priority over them.</p>
 
-<p>To avoid confusion, perltidy ignores any command in the .perltidyrc file which would cause some kind of dump and an exit. These are:</p>
+<p>To avoid confusion, perltidy ignores any command in the .perltidyrc file which would cause some kind of dump and an exit. These include:</p>
 
 <pre><code> -h -v -ddf -dln -dop -dsn -dtt -dwls -dwrs -ss</code></pre>
 
@@ -4599,7 +4687,7 @@
 <li><p>It may be simplest to develop and test configuration files with alternative names, and invoke them with <b>-pro=filename</b> on the command line. Then rename the desired file to <i>.perltidyrc</i> when finished.</p>
 
 </li>
-<li><p>The parameters in the <i>.perltidyrc</i> file can be switched off with the <b>-npro</b> option.</p>
+<li><p>The parameters in the <i>.perltidyrc</i> file can be switched off with the <b>-npro</b> option on the command line.</p>
 
 </li>
 <li><p>Any parameter in the <i>.perltidyrc</i> file can be overridden with a replacement value on the command line. This is because the command line is processed after the <i>.perltidyrc</i> file.</p>
@@ -4829,9 +4917,14 @@
 <pre><code>    perltidy -dbs -dbl=1 -dbt=&#39;* closure&#39; somefile.pl &gt;blocks.csv</code></pre>
 
 </li>
-<li><p>This selects every if-chain which contains 2 or more <b>elsif</b> blocks:</p>
+<li><p>This selects every if-chain which contains 2 or more <code>elsif</code> blocks:</p>
 
 <pre><code>    perltidy -dbs -dbl=1 -dbt=&#39;elsif2&#39; somefile.pl &gt;blocks.csv</code></pre>
+
+</li>
+<li><p>This selects every <code>while</code> block with 6 or more code lines</p>
+
+<pre><code>    perltidy -dbs -dbt=while -dbl=6 somfile.pl &gt;while.csv</code></pre>
 
 </li>
 </ul>
@@ -5515,7 +5608,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20240903.03</p>
+<p>This man page documents perltidy version 20240903.05</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 
