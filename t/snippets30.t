@@ -19,6 +19,7 @@
 #16 git162.git162
 #17 qwaf.def
 #18 qwaf.qwaf
+#19 btct.btct1
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -38,6 +39,7 @@ BEGIN {
     $rparams = {
         'altc1'  => "-naltc -atc -wtc=m",
         'altc2'  => "-altc -atc -wtc=m",
+        'btct1'  => "-btct=1",
         'csc3'   => "-csc -csci=2 -ncscb",
         'def'    => "",
         'dltc1'  => "-dtc -wtc=0",
@@ -71,6 +73,22 @@ $self->make_grammar(
         version  => $self->version
     }
 );
+----------
+
+        'btct' => <<'----------',
+$w->bind(
+    '<Page_Down>' => xx,
+);
+
+$w->bind( '<Page_Down>' => xx,);
+
+$w->bind(
+    '<Page_Down>' => xx
+);
+
+$w->bind( '<Page_Down>' => xx);
+
+$lut = byte [ [ 0, 0, 0 ], [ 10, 1, 10 ], [ 2, 20, 20 ], [ 30, 30, 3 ], ];
 ----------
 
         'csc' => <<'----------',
@@ -485,6 +503,28 @@ use Digest::MD5 qw(md5_hex);
 
 @list = qw( \ );
 #18...........
+        },
+
+        'btct.btct1' => {
+            source => "btct",
+            params => "btct1",
+            expect => <<'#19...........',
+$w->bind(
+    '<Page_Down>' => xx,
+);
+
+$w->bind(
+    '<Page_Down>' => xx,
+);
+
+$w->bind( '<Page_Down>' => xx );
+
+$w->bind( '<Page_Down>' => xx );
+
+$lut = byte [
+    [ 0, 0, 0 ], [ 10, 1, 10 ], [ 2, 20, 20 ], [ 30, 30, 3 ],
+];
+#19...........
         },
     };
 

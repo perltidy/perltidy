@@ -4230,7 +4230,7 @@ we can add a trailing comma and break the container open with
         'g', Canvas => $overview_canvas,
     );
 
-After that, we could use -btct='f(b' to keep the container open
+After that, we could use C<-btct='f(b'> to keep the container open
 
 =item *
 

@@ -1,0 +1,9 @@
+$w->bind( '<Page_Down>' => xx, );
+
+$w->bind( '<Page_Down>' => xx, );
+
+$w->bind( '<Page_Down>' => xx );
+
+$w->bind( '<Page_Down>' => xx );
+
+$lut = byte [ [ 0, 0, 0 ], [ 10, 1, 10 ], [ 2, 20, 20 ], [ 30, 30, 3 ], ];
