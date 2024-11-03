@@ -26646,12 +26646,12 @@ EOM
 
         # we need to save indentations of any unmatched opening tokens
         # in this batch because we may need them in a subsequent batch.
-        foreach ( @{$runmatched_opening_indexes}, @i_qw ) {
+        foreach my $i_opening ( @{$runmatched_opening_indexes}, @i_qw ) {
 
-            my $seqno = $type_sequence_to_go[$_];
+            my $seqno = $type_sequence_to_go[$i_opening];
 
             if ( !$seqno ) {
-                if ( $seqno_qw_opening && $_ == $max_index_to_go ) {
+                if ( $seqno_qw_opening && $i_opening == $max_index_to_go ) {
                     $seqno = $seqno_qw_opening;
                 }
                 else {
@@ -26664,7 +26664,7 @@ EOM
 
             $saved_opening_indentation{$seqno} = [
                 lookup_opening_indentation(
-                    $_, $ri_first, $ri_last, $rindentation_list
+                    $i_opening, $ri_first, $ri_last, $rindentation_list
                 )
             ];
         }
@@ -38109,14 +38109,14 @@ sub xlp_tweak {
         my $count_max;
         my $iname_end;
         my $ilast_blank;
-        for ( $ibeg .. $iterm ) {
-            my $type = $types_to_go[$_];
+        for my $ii ( $ibeg .. $iterm ) {
+            my $type = $types_to_go[$ii];
             if ( $type eq 'b' ) {
-                $ilast_blank = $_;
+                $ilast_blank = $ii;
                 next;
             }
 
-            my $token = $tokens_to_go[$_];
+            my $token = $tokens_to_go[$ii];
 
             # Give up if we find an opening paren, binary operator or
             # comma within or after the proposed container name.
@@ -38135,7 +38135,7 @@ sub xlp_tweak {
             # Normally it is made of one word, but two words for 'use'
             if ( $count == 0 ) {
                 if (   $type eq 'k'
-                    && $is_use_like{ $tokens_to_go[$_] } )
+                    && $is_use_like{ $tokens_to_go[$ii] } )
                 {
                     $count_max = 2;
                 }
@@ -38155,7 +38155,7 @@ sub xlp_tweak {
             }
 
             $name .= SPACE . $token;
-            $iname_end = $_;
+            $iname_end = $ii;
             $count++;
         }
 

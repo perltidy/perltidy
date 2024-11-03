@@ -4768,7 +4768,7 @@ EOM
                 #  dump-block-minimum-lines',        'dbl',   '=i' );
                 #  dump-block-types',                'dbt',   '=s' );
 
-                foreach (
+                foreach my $cmd (
                     @dump_commands,
                     qw{
                     help
@@ -4777,9 +4777,9 @@ EOM
                     }
                   )
                 {
-                    if ( defined( $Opts{$_} ) ) {
-                        delete $Opts{$_};
-                        Warn("ignoring --$_ in config file: $config_file\n");
+                    if ( defined( $Opts{$cmd} ) ) {
+                        delete $Opts{$cmd};
+                        Warn("ignoring --$cmd in config file: $config_file\n");
                     }
                 }
             }
