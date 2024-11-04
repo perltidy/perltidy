@@ -14150,7 +14150,7 @@ sub store_token {
                         if ( $match && $paren_flag && $token eq ')' ) {
                             $match &&=
                               $self->match_paren_control_flag( $type_sequence,
-                                $paren_flag );
+                                $paren_flag, $rLL_new );
                         }
 
                         if ($match) {
