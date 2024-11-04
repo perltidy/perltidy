@@ -253,7 +253,7 @@ appear in whatever directory contains F<somefile.pl>.
 If the path contains spaces, it should be placed in quotes.
 
 This parameter will be ignored if output is being directed to standard output,
-or if it is being specified explicitly with the B<-outfile=s> parameter.
+or if it is being specified explicitly with the B<--outfile=s> parameter.
 
 =item	B<-b>,    B<--backup-and-modify-in-place>
 
@@ -272,7 +272,7 @@ standard output, or if the B<-html> flag is set.
 
 In particular, if you want to use both the B<-b> flag and the
 B<--perl-best-practices> (B<-pbp>) flag, then you must put a
-B<-nostandard-output> (B<-nst>) flag after the B<-pbp> flag because it contains a
+B<--nostandard-output> (B<-nst>) flag after the B<-pbp> flag because it contains a
 B<--standard-output> flag as one of its components, which means that output
 will go to the standard output stream.
 
@@ -442,7 +442,7 @@ If B<--format=tidy> (the default) then perltidy will reformat the input file,
 and if B<--format=html> then perltidy will produce html output.
 
 For convenience, the abbreviation B<--tidy> is equivalent to B<--format=tidy>,
-and B<--html> is equivalent to B<--format=html>.
+and B<-html> is equivalent to B<--format=html>.
 
 =item B<--notidy>
 
@@ -924,7 +924,7 @@ specific line breaks (such as line breaks after statements).
 For both the B<-lp> and B<-xlp> flags, any parameter which significantly
 restricts the ability of perltidy to choose newlines will conflict with these
 flags and will cause them to be deactivated.  These include B<--indent-only>, B<--freeze-newlines>,
-B<-noadd-newlines>, and B<-nodelete-old-newlines>.
+B<--noadd-newlines>, and B<--nodelete-old-newlines>.
 
 =item *
 
@@ -1305,8 +1305,8 @@ abbreviation for the combination <-pt=n -sbt=n -bt=n -bbt=n>.
 =item B<-xbt>,   B<--extended-block-tightness>
 
 The previous section described two controls for spacing within curly braces,
-namely B<-block-brace-tightness=n> for code block braces and
-B<-brace-tightness=n> for all other braces.
+namely B<--block-brace-tightness=n> for code block braces and
+B<--brace-tightness=n> for all other braces.
 
 There is a little fuzziness in this division of brace types though because the
 curly braces considered by perltidy to contain code blocks for formatting
@@ -2485,7 +2485,7 @@ B<-fnl>, and they will remain fixed, and the rest of the commands in
 this section and sections
 L<"Controlling List Formatting">,
 L<"Retaining or Ignoring Existing Line Breaks">.
-You may want to use B<-nooutdent-long-lines> with this.
+You may want to use B<--nooutdent-long-lines> with this.
 
 Note: If you also want to keep your blank lines exactly
 as they are, you can use the B<--freeze-blank-lines> flag which is described
@@ -2514,10 +2514,10 @@ alternatives:
 
   # -nce (default)
   if ($task) {
-	yyy();
+      yyy();
   }
   else {
-	zzz();
+      zzz();
   }
 
 In this example the keyword B<else> is placed on the same line which begins with
@@ -2562,7 +2562,7 @@ This flag is equivalent to B<--cuddled-else> (B<-ce>).
 
 The built-in default cuddled block types are B<else, elsif, continue, catch, finally>.
 
-Additional block types to which the B<-cuddled-blocks> style applies can be defined by
+Additional block types to which the B<--cuddled-blocks> style applies can be defined by
 this parameter.  This parameter is a character string, giving a list of
 block types separated by commas or spaces.  For example, to cuddle code blocks
 of type sort, map and grep, in addition to the default types, the string could
@@ -2588,7 +2588,7 @@ unless this formatting style is activated with B<--cuddled-else>.
 
 =item B<-cblx>,    B<--cuddled-block-list-exclusive>
 
-When cuddled else formatting is selected with B<-cuddled-else>, setting this
+When cuddled else formatting is selected with B<--cuddled-else>, setting this
 flag causes perltidy to ignore its built-in defaults and rely exclusively on
 the block types specified on the B<--cuddled-block-list> flag described in the
 previous section.  For example, to avoid using cuddled B<catch> and B<finally>,
@@ -2640,7 +2640,7 @@ the keyword introducing it if possible.  For example,
   }
 
 When B<-bl> is set, the blocks to which this applies can be controlled with the
-parameters B<--brace-left-list> and B<-brace-left-exclusion-list> described in the next sections.
+parameters B<--brace-left-list> and B<--brace-left-exclusion-list> described in the next sections.
 
 =item B<-bll=s>, B<--brace-left-list=s>
 
@@ -3565,7 +3565,7 @@ non-block containers are stacked, the flag B<-sac> or B<--stack-all-containers>
 is an abbreviation for B<--stack-opening-tokens --stack-closing-tokens>.
 
 Please note that if both opening and closing tokens are to be stacked, then the
-newer flag B<-weld-nested-containers> may be preferable because it insures that
+newer flag B<--weld-nested-containers> may be preferable because it insures that
 stacking is always done symmetrically.  It also removes an extra level of
 unnecessary indentation within welded containers.  It is able to do this
 because it works on formatting globally rather than locally, as the B<--stack-opening-tokens> and B<--stack-closing-tokens> flags do.
@@ -3631,7 +3631,7 @@ The -baao sets the default to be to break after all of the following operators:
 and the B<-bbao> flag sets the default to break before all of these operators.
 These can be used to define an initial break preference which can be fine-tuned
 with the B<--want-break-after> and B<--want-break-before> flags.  For example,
-to break before all operators except an B<=> one could use C<--bbao -wba='='>
+to break before all operators except an B<=> one could use C<-bbao -wba='='>
 rather than listing every single perl operator except B<=> on a B<-wbb> flag.
 
 =over 4
@@ -4213,7 +4213,7 @@ given the following input text
     );
 
 formatting  with C<-wtc=f(b) -atc> will not add a trailing comma because the
-list will be flattend and the comma will not remain bare.  But we can add a
+list will be flattened and the comma will not remain bare.  But we can add a
 trailing comma, and keep the container open, with
 
     # perltidy -wtc='f(b' -atc -btct='f(b'
@@ -4665,7 +4665,7 @@ as in this example:
       'track.id' => { -ident => 'none_search.id' },
   } )->as_query;
 
-You may want to include the B<-weld-nested-containers> flag in this case to keep
+You may want to include the B<--weld-nested-containers> flag in this case to keep
 nested braces and parens together, as in the last line.
 
 =item B<-bos>,  B<--break-at-old-semicolon-breakpoints>
@@ -5420,7 +5420,7 @@ semicolon.  So these two options are not exact inverses.
 
 Sometimes it might be desirable to convert a script to have one-line blocks
 whenever possible.  Although there is currently no flag for this, a simple
-workaround is to execute perltidy twice, once with the flag B<-noadd-newlines>
+workaround is to execute perltidy twice, once with the flag B<--noadd-newlines>
 and then once again with normal parameters, like this:
 
      cat infile | perltidy -nanl | perltidy >outfile
@@ -5454,7 +5454,7 @@ when the script is reformatted again with the normal parameters, the blocks
 which were broken will remain broken (with the exceptions noted above).
 
 Another trick for doing this for certain block types is to format one time with
-the B<-cuddled-else> flag and B<--cuddled-break-option=2>. Then format again
+the B<--cuddled-else> flag and B<--cuddled-break-option=2>. Then format again
 with the normal parameters.  This will break any one-line blocks which are
 involved in a cuddled-else style.
 
@@ -6042,7 +6042,7 @@ named B<--dump-...> will simply write some requested information to standard
 output and then immediately exit.
 
 B<--dump-cuddled-block-list> or B<-dcbl> will dump to standard output the
-internal hash of cuddled block types created by a B<-cuddled-block-list> input
+internal hash of cuddled block types created by a B<--cuddled-block-list> input
 string.
 
 B<--dump-defaults> or B<-ddf> will write the default option set to standard output and quit
