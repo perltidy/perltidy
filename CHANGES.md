@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2024 09 03.05
+## 2024 09 03.06
 
     - Added parameter --break-at-trailing-comma-types=s, or -btct=s, where
     s is a string which selects trailing commas.  For example, -btct='f(b'
