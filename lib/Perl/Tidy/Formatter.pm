@@ -4581,16 +4581,11 @@ sub set_whitespace_flags {
         }
 
         # always preserve whatever space was used after a possible
-        # filehandle (except _) or here doc operator
-        if (
-            (
-                ( $last_type eq 'Z' && $last_token ne '_' )
-                || $last_type eq 'h'
-            )
-            && $type ne '#' # no longer required due to early exit for '#' above
-          )
-        {
+        # filehandle (except _)
+        if ( $last_type eq 'Z' && $last_token ne '_' ) {
+
             # no space for '$ {' even if '$' is marked as type 'Z', issue c221
+            # note: redundant check on type 'h' here removed for c419 part 2b
             if ( $last_type eq 'Z' && $last_token eq '$' && $token eq '{' ) {
                 $ws = WS_NO;
             }
@@ -5123,8 +5118,8 @@ EOM
           # It can cause a syntax error if oops is a sub
           || $typel eq 'w' && ( $tokenr eq '-' || $typer eq 'Q' )
 
-          # perl is very fussy about spaces before <<
-          || $tokenr_leading_ch2 eq '<<'
+          # perl is very fussy about spaces before <<; c419 part 1
+          || $tokenr_leading_ch2 eq '<<' && $typel ne '{' && $typel ne ','
 
           # avoid combining tokens to create new meanings. Example:
           #     $a+ +$b must not become $a++$b
@@ -5169,8 +5164,9 @@ EOM
             )
           )    ## end $tokenr_is_open_paren
 
-          # retain any space after here doc operator ( hereerr.t)
-          || $typel eq 'h'
+          # retain any space after here doc operator ( see hereerr.t)
+          # c419, part 2a: unless followed by '}' or ','. See also part 2b.
+          || $typel eq 'h' && $typer ne '}' && $typer ne ','
 
           # Be careful with a space around ++ and --, to avoid ambiguity as to
           # which token it applies
@@ -32309,7 +32305,6 @@ EOM
         return;
     } ## end sub break_lists_decreasing_depth
 } ## end closure break_lists
-
 
 my %is_kwiZ;
 my %is_key_type;

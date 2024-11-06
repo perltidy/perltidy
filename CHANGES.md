@@ -2,6 +2,15 @@
 
 ## 2024 09 03.06
 
+    - Space around here doc delimiters follow spacing controls better. For
+    example, a space is now added before the closing paren here:
+
+       OLD: (without the here doc):
+       push( @script, <<'EOT');
+
+       NEW:
+       push( @script, <<'EOT' );
+
     - Added parameter --break-at-trailing-comma-types=s, or -btct=s, where
     s is a string which selects trailing commas.  For example, -btct='f(b'
     places a line break after all bare trailing commas in function calls.

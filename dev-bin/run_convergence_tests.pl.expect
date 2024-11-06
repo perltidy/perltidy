@@ -9617,13 +9617,13 @@ my (
 
 ==> b523 <==
                 foreach my $name (@$names)
-                  { unless ($callcopy) { $ret .= << "EOC"}
+                  { unless ($callcopy) { $ret .= << "EOC" }
 XX
 EOC
                   }
 
                 foreach my $name (@$names)
-                  { unless ($callcopy) { $ret .= << "EOC"}
+                  { unless ($callcopy) { $ret .= << "EOC" }
 XX
 EOC
                   }
