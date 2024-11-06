@@ -30877,18 +30877,24 @@ EOM
     } ## end sub do_uncontained_comma_breaks
 
     my %is_logical_container;
-    my %quick_filter;
+    my %quick_filter_A;
+    my %quick_filter_B;
 
     BEGIN {
         my @q = qw# if elsif unless while and or err not && | || ? : ! #;
         @is_logical_container{@q} = (1) x scalar(@q);
 
-        # This filter will allow most tokens to skip past a section of code
-        %quick_filter = %is_assignment;
-        @q            = qw# => . ; < > ~ #;
+        # Filters to allow most tokens to skip past tedious if-elsif blocks
+        %quick_filter_A     = %is_assignment;
+        @q                  = qw( || && f k );
+        @quick_filter_A{@q} = (1) x scalar(@q);
+
+        %quick_filter_B = %is_assignment;
+        @q              = qw# => . ; < > ~ #;
         push @q, ',';
         push @q, 'f';    # added for ';' for issue c154
-        @quick_filter{@q} = (1) x scalar(@q);
+        @quick_filter_B{@q} = (1) x scalar(@q);
+
     } ## end BEGIN
 
     sub set_for_semicolon_breakpoints {
@@ -30997,7 +31003,18 @@ EOM
                 $last_nonblank_token      = $token;
                 $last_nonblank_block_type = $block_type;
             }
-            $type          = $types_to_go[$i];
+
+            # set break if flag was set
+            if ( $i_want_previous_break >= 0 ) {
+                $self->set_forced_breakpoint($i_want_previous_break);
+                $i_want_previous_break = -1;
+            }
+
+            $type = $types_to_go[$i];
+            next if ( $type eq 'b' );
+
+            $last_old_breakpoint_count = $old_breakpoint_count;
+
             $block_type    = $block_type_to_go[$i];
             $token         = $tokens_to_go[$i];
             $type_sequence = $type_sequence_to_go[$i];
@@ -31011,22 +31028,12 @@ EOM
             # Loop Section A: Look for special breakpoints...
             #-------------------------------------------
 
-            # set break if flag was set
-            if ( $i_want_previous_break >= 0 ) {
-                $self->set_forced_breakpoint($i_want_previous_break);
-                $i_want_previous_break = -1;
-            }
-
-            $last_old_breakpoint_count = $old_breakpoint_count;
-
             # Check for a good old breakpoint ..
             if ( $old_breakpoint_to_go[$i] ) {
                 ( $i_want_previous_break, $i_old_assignment_break ) =
                   $self->examine_old_breakpoint( $i, $i_next_nonblank,
                     $i_want_previous_break, $i_old_assignment_break );
             }
-
-            next if ( $type eq 'b' );
 
             $depth = $nesting_depth_to_go[ $i + 1 ];
 
@@ -31085,106 +31092,120 @@ EOM
 
             # remember locations of '||'  and '&&' for possible breaks if we
             # decide this is a long logical expression.
-            if ( $type eq '||' ) {
-                push @{ $rand_or_list[$depth][2] }, $i;
-                ++$has_old_logical_breakpoints[$depth]
-                  if ( ( $i == $i_line_start || $i == $i_line_end )
-                    && $rOpts_break_at_old_logical_breakpoints );
-            }
-            elsif ( $type eq '&&' ) {
-                push @{ $rand_or_list[$depth][3] }, $i;
-                ++$has_old_logical_breakpoints[$depth]
-                  if ( ( $i == $i_line_start || $i == $i_line_end )
-                    && $rOpts_break_at_old_logical_breakpoints );
-            }
-            elsif ( $type eq 'f' ) {
-                push @{ $rfor_semicolon_list[$depth] }, $i;
-            }
-            elsif ( $type eq 'k' ) {
-                if ( $token eq 'and' ) {
-                    push @{ $rand_or_list[$depth][1] }, $i;
+            if ( $quick_filter_A{$type} ) {
+                if ( $type eq '||' ) {
+                    push @{ $rand_or_list[$depth][2] }, $i;
                     ++$has_old_logical_breakpoints[$depth]
                       if ( ( $i == $i_line_start || $i == $i_line_end )
                         && $rOpts_break_at_old_logical_breakpoints );
                 }
-
-                # break immediately at 'or's which are probably not in a logical
-                # block -- but we will break in logical breaks below so that
-                # they do not add to the forced_breakpoint_count
-                elsif ( $token eq 'or' ) {
-                    push @{ $rand_or_list[$depth][0] }, $i;
+                elsif ( $type eq '&&' ) {
+                    push @{ $rand_or_list[$depth][3] }, $i;
                     ++$has_old_logical_breakpoints[$depth]
                       if ( ( $i == $i_line_start || $i == $i_line_end )
                         && $rOpts_break_at_old_logical_breakpoints );
-                    if ( $is_logical_container{ $container_type[$depth] } ) {
+                }
+                elsif ( $type eq 'f' ) {
+                    push @{ $rfor_semicolon_list[$depth] }, $i;
+                }
+                elsif ( $type eq 'k' ) {
+                    if ( $token eq 'and' ) {
+                        push @{ $rand_or_list[$depth][1] }, $i;
+                        ++$has_old_logical_breakpoints[$depth]
+                          if ( ( $i == $i_line_start || $i == $i_line_end )
+                            && $rOpts_break_at_old_logical_breakpoints );
                     }
-                    else {
-                        if ($is_long_line) { $self->set_forced_breakpoint($i) }
-                        elsif ( ( $i == $i_line_start || $i == $i_line_end )
-                            && $rOpts_break_at_old_logical_breakpoints )
+
+                    # break immediately at 'or's which are probably not in a
+                    # logical block -- but we will break in logical breaks
+                    # below so that they do not add to the
+                    # forced_breakpoint_count
+                    elsif ( $token eq 'or' ) {
+                        push @{ $rand_or_list[$depth][0] }, $i;
+                        ++$has_old_logical_breakpoints[$depth]
+                          if ( ( $i == $i_line_start || $i == $i_line_end )
+                            && $rOpts_break_at_old_logical_breakpoints );
+                        if ( $is_logical_container{ $container_type[$depth] } )
                         {
-                            $saw_good_breakpoint = 1;
                         }
                         else {
-                            ## not a good break
+                            if ($is_long_line) {
+                                $self->set_forced_breakpoint($i);
+                            }
+                            elsif ( ( $i == $i_line_start || $i == $i_line_end )
+                                && $rOpts_break_at_old_logical_breakpoints )
+                            {
+                                $saw_good_breakpoint = 1;
+                            }
+                            else {
+                                ## not a good break
+                            }
                         }
                     }
-                }
-                elsif ( $token eq 'if' || $token eq 'unless' ) {
-                    push @{ $rand_or_list[$depth][4] }, $i;
-                    if ( ( $i == $i_line_start || $i == $i_line_end )
-                        && $rOpts_break_at_old_logical_breakpoints )
-                    {
-                        $self->set_forced_breakpoint($i);
+                    elsif ( $token eq 'if' || $token eq 'unless' ) {
+                        push @{ $rand_or_list[$depth][4] }, $i;
+                        if ( ( $i == $i_line_start || $i == $i_line_end )
+                            && $rOpts_break_at_old_logical_breakpoints )
+                        {
+                            $self->set_forced_breakpoint($i);
+                        }
+                    }
+                    else {
+                        ## not one of: 'and' 'or' 'if' 'unless'
                     }
                 }
+                elsif ( $is_assignment{$type} ) {
+                    $i_equals[$depth] = $i;
+                }
                 else {
-                    ## not one of: 'and' 'or' 'if' 'unless'
+                    # error : no code to handle a type in %quick_filter_A
+                    DEVEL_MODE && Fault(<<EOM);
+Missing code to handle token type '$type' which is in the quick_filter_A
+EOM
                 }
             }
-            elsif ( $is_assignment{$type} ) {
-                $i_equals[$depth] = $i;
-            }
-            else {
-                ## not a good breakpoint type
-            }
 
-            #-----------------------------------------
-            # Loop Section B: Handle a sequenced token
-            #-----------------------------------------
             if ($type_sequence) {
+
+                #-----------------------------------------
+                # Loop Section B: Handle a sequenced token
+                #-----------------------------------------
                 $self->break_lists_type_sequence($i);
-            }
 
-            #------------------------------------------
-            # Loop Section C: Handle Increasing Depth..
-            #------------------------------------------
+                #------------------------------------------
+                # Loop Section C: Handle Increasing Depth..
+                #------------------------------------------
 
-            # hardened against bad input syntax: depth jump must be 1 and type
-            # must be opening..fixes c102
-            if ( $depth == $current_depth + 1 && $is_opening_type{$type} ) {
-                $self->break_lists_increasing_depth($i);
-            }
+                # hardened against bad input syntax: depth jump must be 1 and
+                # type must be opening..fixes c102
+                if ( $depth == $current_depth + 1 && $is_opening_type{$type} ) {
+                    $self->break_lists_increasing_depth($i);
+                }
 
-            #------------------------------------------
-            # Loop Section D: Handle Decreasing Depth..
-            #------------------------------------------
+                #------------------------------------------
+                # Loop Section D: Handle Decreasing Depth..
+                #------------------------------------------
 
-            # hardened against bad input syntax: depth jump must be 1 and type
-            # must be closing .. fixes c102
-            elsif ( $depth == $current_depth - 1 && $is_closing_type{$type} ) {
+                # hardened against bad input syntax: depth jump must be 1 and
+                # type must be closing .. fixes c102
+                elsif ($depth == $current_depth - 1
+                    && $is_closing_type{$type} )
+                {
 
-                # Note that $rbond_strength_bias will not get changed by this
-                # call. It gets changed in the call to set_comma_breakpoints
-                # at the end of this routine for commas not in lists.
-                $self->break_lists_decreasing_depth( $i, $rbond_strength_bias );
+                    # Note that $rbond_strength_bias will not get changed by
+                    # this call. It gets changed in the call to
+                    # set_comma_breakpoints at the end of this routine for
+                    # commas not in lists.
+                    $self->break_lists_decreasing_depth( $i,
+                        $rbond_strength_bias );
 
-                $comma_follows_last_closing_token =
-                  $next_nonblank_type eq ',' || $next_nonblank_type eq '=>';
+                    $comma_follows_last_closing_token =
+                      $next_nonblank_type eq ',' || $next_nonblank_type eq '=>';
 
-            }
-            else {
-                ## not a depth change
+                }
+                else {
+                    ## not a depth change
+                }
             }
 
             #----------------------------------
@@ -31194,7 +31215,7 @@ EOM
             $current_depth = $depth;
 
             # most token types can skip the rest of this loop
-            next if ( !$quick_filter{$type} );
+            next if ( !$quick_filter_B{$type} );
 
             # Turn off comma alignment if we are sure that this is not a list
             # environment.  To be safe, we will do this if we see certain
@@ -31227,17 +31248,17 @@ EOM
                 $want_comma_break[$depth]   = 1;
                 $index_before_arrow[$depth] = $i_last_nonblank_token;
                 next;
-            }
 
+            }
             elsif ( $type eq '.' ) {
                 $last_dot_index[$depth] = $i;
-            }
 
+            }
             else {
 
-                # error : no code to handle a type in %quick_filter
+                # error : no code to handle a type in %quick_filter_B
                 DEVEL_MODE && Fault(<<EOM);
-Missing code to handle token type '$type' which is in the quick_filter
+Missing code to handle token type '$type' which is in the quick_filter_B
 EOM
             }
 
@@ -31257,24 +31278,26 @@ EOM
             }
             $self->set_logical_breakpoints($dd)
               if ( $has_old_logical_breakpoints[$dd] );
-            $self->set_for_semicolon_breakpoints($dd);
+            $self->set_for_semicolon_breakpoints($dd)
+              if ( @{ $rfor_semicolon_list[$dd] } );
 
             # break open container...
             my $i_opening = $opening_structure_index_stack[$dd];
-            if ( defined($i_opening) && $i_opening >= 0 ) {
+            if (
+                   defined($i_opening)
+                && $i_opening >= 0
+                && !is_unbreakable_container($dd)
 
-                my $no_break = (
-                    is_unbreakable_container($dd)
-
-                      # Avoid a break which would place an isolated ' or "
-                      # on a line
-                      || ( $type eq 'Q'
-                        && $i_opening >= $max_index_to_go - 2
-                        && ( $token eq "'" || $token eq '"' ) )
-                );
-
-                $self->set_forced_breakpoint($i_opening)
-                  if ( !$no_break );
+                # Avoid a break which would place an isolated ' or "
+                # on a line
+                && !(
+                       $type eq 'Q'
+                    && $i_opening >= $max_index_to_go - 2
+                    && ( $token eq "'" || $token eq '"' )
+                )
+              )
+            {
+                $self->set_forced_breakpoint($i_opening);
             }
         } ## end for ( my $dd = $current_depth...)
 
@@ -31325,7 +31348,7 @@ EOM
         # but not if there is a side comment after the comma
         if ( $want_comma_break[$depth] ) {
 
-            if ( $next_nonblank_type =~ /^[\)\}\]R]$/ ) {
+            if ( $is_closing_type{$next_nonblank_type} ) {
                 if ($rOpts_comma_arrow_breakpoints) {
                     $want_comma_break[$depth] = 0;
                     return;
@@ -31345,8 +31368,8 @@ EOM
             #    $y - $R, -fill   => 'black',
             # );
             my $ibreak = $index_before_arrow[$depth] - 1;
-            if (   $ibreak > 0
-                && $tokens_to_go[ $ibreak + 1 ] !~ /^[\)\}\]]$/ )
+            if ( $ibreak > 0
+                && !$is_closing_token{ $tokens_to_go[ $ibreak + 1 ] } )
             {
                 if ( $tokens_to_go[$ibreak] eq '-' ) { $ibreak-- }
                 if ( $types_to_go[$ibreak] eq 'b' )  { $ibreak-- }
@@ -31464,7 +31487,9 @@ EOM
         if ( $next_nonblank_type eq 'k' ) {
             $poor_break ||= $poor_next_keywords{$next_nonblank_token};
         }
-        else { $poor_break ||= $poor_next_types{$next_nonblank_type} }
+        else {
+            $poor_break ||= $poor_next_types{$next_nonblank_type};
+        }
 
         # Also ignore any high stress level breaks; fixes b1395
         $poor_break ||= $levels_to_go[$i] >= $high_stress_level;
@@ -32284,6 +32309,7 @@ EOM
         return;
     } ## end sub break_lists_decreasing_depth
 } ## end closure break_lists
+
 
 my %is_kwiZ;
 my %is_key_type;
