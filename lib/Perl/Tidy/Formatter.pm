@@ -2467,7 +2467,7 @@ sub initialize_lpxl_lpil {
     my $lpxl = $rOpts->{'line-up-parentheses-exclusion-list'};
     my $lpil = $rOpts->{'line-up-parentheses-inclusion-list'};
     if ( $lpxl && $lpil ) {
-        Warn( <<EOM );
+        Warn(<<EOM);
 You entered values for both -lpxl=s and -lpil=s; the -lpil list will be ignored
 EOM
     }
@@ -3436,8 +3436,12 @@ sub initialize_trailing_comma_break_rules {
 
         # handle the common case of a single control character, like -btct='b'
         if ( length($option) == 1 ) {
-            foreach my $key (@all_keys) {
-                $rule_hash{$key} = [ $option, EMPTY_STRING ];
+
+            # skip 0
+            if ($option) {
+                foreach my $key (@all_keys) {
+                    $rule_hash{$key} = [ $option, EMPTY_STRING ];
+                }
             }
         }
 
@@ -3451,6 +3455,9 @@ sub initialize_trailing_comma_break_rules {
 
                 # the letter value is the rightmost character
                 my $val = substr( $part, -1, 1 );
+
+                # skip 0
+                next unless ($val);
                 $part = substr( $part, 0, -1 );
                 if ( $val && !$is_valid_flag{$val} ) {
                     my $valid_str = join( SPACE, @{$rvalid_flags} );
@@ -13366,8 +13373,11 @@ sub respace_tokens_inner_loop {
                     $token =~ s/\(/ (/;
                 }
                 else {
-                    # bad n value for -spp=n
-                    # just use the default
+                    ## should have been caught with the integer range check
+                    ## continue with the default
+                    DEVEL_MODE && Fault(<<EOM);
+unexpected integer value space-prototype-paren=$rOpts_space_prototype_paren
+EOM
                 }
 
                 # one space max, and no tabs
@@ -14139,7 +14149,10 @@ sub store_token {
                             $match = 1;
                         }
                         else {
-                            # shouldn't happen - treat as 'b' for now
+                            ## shouldn't happen - treat as 'b' for now
+                            DEVEL_MODE && Fault(<<EOM);
+unexpected option '$letter' for --trailing-comma-break-flag at token '$token'
+EOM
                             $match = $Ktoken_vars == $Kfirst_old;
                         }
 
@@ -18624,7 +18637,10 @@ sub check_for_old_break {
                     if    ( $flag eq 'b' ) { $match = $block_type }
                     elsif ( $flag eq 'B' ) { $match = !$block_type }
                     else {
-                        # unknown code - no match
+                        ## unknown code - no match
+                        DEVEL_MODE && Fault(<<EOM);
+unexpected code '$flag' for --keep-old-breakpoints: expecting 'b' or 'B'
+EOM
                     }
                 }
                 else {
@@ -19306,6 +19322,9 @@ sub match_paren_control_flag {
     elsif ( $flag eq 'W' ) { $match = !$is_w }
     else {
         ## no match
+        DEVEL_MODE && Fault(<<EOM);
+unexpected code '$flag' in sub match_paren_control_flag: expecting one of kKfFwW
+EOM
     }
     return $match;
 } ## end sub match_paren_control_flag
@@ -21219,7 +21238,6 @@ EOM
         # n=0  default indentation (usually one ci)
         # n=1  outdent one ci
         # n=2  indent one level (minus one ci)
-        # n=3  indent one extra ci [This may be dropped]
 
         # NOTE: We are adjusting indentation of the opening container. The
         # closing container will normally follow the indentation of the opening
@@ -21240,6 +21258,9 @@ EOM
         # unknown option
         else {
             # Shouldn't happen - leave ci unchanged
+            DEVEL_MODE && Fault(<<EOM);
+unexpected ci flag '$ci_flag' for -bbpi -bbsbi -bbhbi: expecting one of 0 1 2
+EOM
         }
 
         $rLL->[$KK]->[_CI_LEVEL_] = $ci if ( $ci >= 0 );
@@ -22532,6 +22553,9 @@ sub is_excluded_lp {
         elsif ( $flag1 eq 'W' ) { $match_flag1 = !$is_w }
         else {
             ## no match
+            DEVEL_MODE && Fault(<<EOM);
+unexpected --lp-exclusion code '$flag1': expecting one of kKfFwW
+EOM
         }
     }
 
