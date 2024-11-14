@@ -735,14 +735,14 @@ EOM
         my $flag = shift;
         if   ($flag) { goto ERROR_EXIT }
         else         { goto NORMAL_EXIT }
-        croak "unexpected return to Exit";
+        croak "unexpected return to sub Exit";
     } ## end sub Exit
 
     sub Die {
         my $msg = shift;
         Warn($msg);
         Exit(1);
-        croak "unexpected return to Die";
+        croak "unexpected return from sub Exit";
     } ## end sub Die
 
     sub Fault {
@@ -771,8 +771,7 @@ $pkg reports VERSION='$VERSION'.
 ==============================================================================
 EOM
 
-        # This return is to keep Perl-Critic from complaining.
-        return;
+        croak "unexpected return from sub Die";
     } ## end sub Fault
 
     # extract various dump parameters

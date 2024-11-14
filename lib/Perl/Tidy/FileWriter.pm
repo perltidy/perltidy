@@ -17,6 +17,7 @@ package Perl::Tidy::FileWriter;
 use strict;
 use warnings;
 our $VERSION = '20240903.06';
+use Carp;
 
 use constant DEVEL_MODE   => 0;
 use constant EMPTY_STRING => q{};
@@ -87,7 +88,7 @@ BEGIN {
 sub Die {
     my ($msg) = @_;
     Perl::Tidy::Die($msg);
-    return;
+    croak "unexpected return from Perl::Tidy::Die";
 }
 
 sub Fault {
@@ -126,8 +127,7 @@ $pkg reports VERSION='$VERSION'.
 ==============================================================================
 EOM
 
-    # This return is to keep Perl-Critic from complaining.
-    return;
+    croak "unexpected return from sub Die";
 } ## end sub Fault
 
 sub warning {
