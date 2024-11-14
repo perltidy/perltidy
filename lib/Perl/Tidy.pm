@@ -166,7 +166,14 @@ EOM
 
 sub streamhandle {
 
-    # given filename and mode (r or w), create an object which:
+    my ( $filename, $mode, $is_encoded_data ) = @_;
+
+    # Given:
+    #   $filename
+    #   $mode = 'r' or 'w' (only 'w' is used now, see note below)
+    #   $is_encoded_data (optional flag)
+
+    # Create an object which:
     #   has a 'getline' method if mode='r', and
     #   has a 'print' method if mode='w'.
     # The objects also need a 'close' method.
@@ -189,10 +196,8 @@ sub streamhandle {
     # - false: unencoded binary data is being transferred,
     #    set binary mode for files and for stdin.
 
-    my ( $filename, $mode, $is_encoded_data ) = @_;
-
-    # Note: mode 'r' works but is no longer used.
-    # Use sub stream_slurp instead for mode 'r' (for efficiency).
+    # NOTE: mode 'r' works but is no longer used.
+    # Use sub stream_slurp instead for mode 'r', for efficiency.
     if ( $mode ne 'w' && $mode ne 'W' ) {
         if ( DEVEL_MODE || ( $mode ne 'r' && $mode ne 'R' ) ) {
             Fault("streamhandle called in unexpected mode '$mode'\n");
@@ -311,6 +316,10 @@ EOM
 sub stream_slurp {
 
     my ( $filename, $timeout_in_seconds ) = @_;
+
+    # Given:
+    #   $filename
+    #   $timeout_in_seconds (optional timeout, in seconds)
 
     # Read the text in $filename and
     # return:
@@ -507,7 +516,12 @@ sub is_char_mode {
 my $md5_hex = sub {
     my ($buf) = @_;
 
-    # Evaluate the MD5 sum for a string
+    # Evaluate the MD5 sum for a string:
+    # Given:
+    #   $buf = a string
+    # Return:
+    #   $digest = its MD5 sum
+
     # Patch for [rt.cpan.org #88020]
     # Use utf8::encode since md5_hex() only operates on bytes.
     # my $digest = md5_hex( utf8::encode($sink_buffer) );
@@ -1034,7 +1048,7 @@ EOM
 
             # These options can take filenames, so we will ignore them here
             my %is_option_with_file_parameter;
-            my @qf = qw(outfile profile);
+            my @qf = qw( outfile profile );
             @is_option_with_file_parameter{@qf} = (1) x scalar(@qf);
 
             # Expand an abbreviation into a long name
@@ -1230,15 +1244,17 @@ sub make_file_extension {
     # (the '.' may actually be an '_' under VMS).
     my ( $self, $extension, $default ) = @_;
 
-    # '$extension' is the first choice (usually a user entry)
-    # '$default'   is an optional backup extension
+    # Given:
+    #  $extension = the first choice (usually a user entry)
+    #  $default   = an optional backup extension
+    # Return:
+    #  $extension = the actual file extension
 
     $extension = EMPTY_STRING unless defined($extension);
     $extension =~ s/^\s+//;
     $extension =~ s/\s+$//;
 
     # Use default extension if nothing remains of the first choice
-    #
     if ( length($extension) == 0 ) {
         $extension = $default;
         $extension = EMPTY_STRING unless defined($extension);
@@ -1259,7 +1275,8 @@ sub check_in_place_modify {
 
     my ( $self, $source_stream, $destination_stream ) = @_;
 
-    # get parameters associated with the -b option
+    # See if --backup-and-modify-in-place (-b) is set, and if so,
+    # return its associated parameters
     my $rOpts = $self->[_rOpts_];
 
     # check for -b option;
@@ -1605,6 +1622,8 @@ sub set_output_file_permissions {
 
     my ( $self, $output_file, $rinput_file_stat, $in_place_modify ) = @_;
 
+    # Set the permissions for the output file
+
     # Given:
     #  $output_file      = the file whose permissions we will set
     #  $rinput_file_stat = the result of stat($input_file)
@@ -1671,7 +1690,7 @@ sub set_output_file_permissions {
 sub get_decoded_string_buffer {
     my ( $self, $input_file, $display_name ) = @_;
 
-    # Decode the input buffer if necessary or requested
+    # Decode the input buffer from utf8 if necessary or requested
 
     # Given:
     #   $input_file   = the input file or stream
@@ -2048,6 +2067,14 @@ sub process_all_files {
 
     my ( $self, $rcall_hash ) = @_;
 
+    # This routine is the main loop to process all files.
+    # Total formatting is done with these layers of subroutines:
+    #   perltidy                - main routine; checks run parameters
+    #  *process_all_files       - main loop to process all files; *THIS LAYER
+    #   process_filter_layer    - do any pre and post processing;
+    #   process_iteration_layer - handle any iterations on formatting
+    #   process_single_case     - solves one formatting problem
+
     my $rinput_hash               = $rcall_hash->{rinput_hash};
     my $rfiles                    = $rcall_hash->{rfiles};
     my $source_stream             = $rcall_hash->{source_stream};
@@ -2059,14 +2086,6 @@ sub process_all_files {
     my $logfile_header            = $rcall_hash->{logfile_header};
     my $rpending_complaint        = $rcall_hash->{rpending_complaint};
     my $rpending_logfile_message  = $rcall_hash->{rpending_logfile_message};
-
-    # This routine is the main loop to process all files.
-    # Total formatting is done with these layers of subroutines:
-    #   perltidy                - main routine; checks run parameters
-    #  *process_all_files       - main loop to process all files; *THIS LAYER
-    #   process_filter_layer    - do any pre and post processing;
-    #   process_iteration_layer - handle any iterations on formatting
-    #   process_single_case     - solves one formatting problem
 
     my $rOpts              = $self->[_rOpts_];
     my $dot                = $self->[_file_extension_separator_];
@@ -2403,9 +2422,9 @@ EOM
 
 sub write_tidy_output {
 
-    # Write tidied output in '$routput_string' to its final destination
-
     my ( $self, $rcall_hash ) = @_;
+
+    # Write tidied output in '$routput_string' to its final destination
 
     my $routput_string   = $rcall_hash->{routput_string};
     my $rinput_file_stat = $rcall_hash->{rinput_file_stat};
@@ -3064,8 +3083,9 @@ EOM
 
 sub process_single_case {
 
-    # run the formatter on a single defined case
     my ( $self, $tokenizer, $formatter ) = @_;
+
+    # Run the formatter on a single defined case
 
     # Total formatting is done with these layers of subroutines:
     #   perltidy                - main routine; checks run parameters
@@ -4471,6 +4491,8 @@ sub process_command_line {
         $rpending_complaint_uu, $dump_options_type
     ) = @q;
 
+    # This is the outer sub which handles memoization
+
     my $use_cache = !defined($perltidyrc_stream) && !$dump_options_type;
     if ($use_cache) {
         my $cache_key = join( chr(28), @ARGV );
@@ -4499,6 +4521,8 @@ sub _process_command_line {
         $perltidyrc_stream,  $is_Windows, $Windows_type,
         $rpending_complaint, $dump_options_type
     ) = @_;
+
+    # This is the inner sub which actually processes the command line
 
     use Getopt::Long;
 
@@ -5228,6 +5252,8 @@ EOM
 sub find_file_upwards {
     my ( $search_dir, $search_file ) = @_;
 
+    # This implements the ... upward search for a file
+
     $search_dir  =~ s{/+$}{};
     $search_file =~ s{^/+}{};
 
@@ -5252,6 +5278,7 @@ sub find_file_upwards {
 sub expand_command_abbreviations {
 
     # go through @ARGV and expand any abbreviations
+    # note that @ARGV has been localized
 
     my ( $rexpansion, $rraw_options, $config_file ) = @_;
 
@@ -5547,11 +5574,11 @@ sub find_config_file {
     }
 
     # Default environment vars.
-    my @envs = qw(PERLTIDY HOME);
+    my @envs = qw( PERLTIDY HOME );
 
     # Check the NT/2k/XP locations, first a local machine def, then a
     # network def
-    push @envs, qw(USERPROFILE HOMESHARE) if $OSNAME =~ /win32/i;
+    push @envs, qw( USERPROFILE HOMESHARE ) if $OSNAME =~ /win32/i;
 
     # Now go through the environment ...
     foreach my $var (@envs) {
