@@ -338,6 +338,15 @@ EOM
     croak "unexpected return from sub Die";
 } ## end sub Fault
 
+sub bad_pattern {
+    my ($pattern) = @_;
+
+    # Return true if a regex pattern has an error
+    # Note: Formatter.pm also has a copy of this
+    my $regex_uu = eval { qr/$pattern/ };
+    return $EVAL_ERROR;
+} ## end sub bad_pattern
+
 sub make_skipping_pattern {
     my ( $rOpts, $opt_name, $default ) = @_;
 
@@ -351,7 +360,7 @@ sub make_skipping_pattern {
 
     # Note that the ending \s will match a newline
     my $pattern = '^\s*' . $param . '\s';
-    if ( Perl::Tidy::Formatter::bad_pattern($pattern) ) {
+    if ( bad_pattern($pattern) ) {
         Die(
 "ERROR: the $opt_name parameter '$param' causes the invalid regex '$pattern'\n"
         );
