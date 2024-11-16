@@ -124,10 +124,7 @@ This is probably an error introduced by a recent programming change.
 $pkg reports VERSION='$VERSION'.
 ==============================================================================
 EOM
-
-    # We shouldn't get here, but this return is to keep Perl-Critic from
-    # complaining.
-    return;
+    croak "unexpected return from sub Die";
 } ## end sub Fault
 
 my %valid_LINE_keys;
@@ -427,6 +424,8 @@ sub flush {
 
 sub initialize_for_new_group {
     my ($self) = @_;
+
+    # initialize for a new group of lines to be aligned vertically
 
     $self->[_rgroup_lines_]                = [];
     $self->[_group_type_]                  = EMPTY_STRING;
@@ -1031,10 +1030,18 @@ sub valign_input {
 
 sub join_hanging_comment {
 
+    my ( $new_line, $old_line ) = @_;
+
     # Add dummy fields to a hanging side comment to make it look
     # like the first line in its potential group.  This simplifies
     # the coding.
-    my ( $new_line, $old_line ) = @_;
+
+    # Given:
+    #   $new_line = ref to hash of the line to be possibly changed
+    #   $old_line = ref to hash of the previous reference line
+    # Return:
+    #   true if new line modified
+    #   false otherwise
 
     my $jmax = $new_line->{'jmax'};
 
@@ -1090,6 +1097,11 @@ sub join_hanging_comment {
     sub decide_if_list {
 
         my $line = shift;
+
+        # Given:
+        #   $line = ref to hash of values for a line
+        # Task:
+        #   Set 'list_type' property
 
         # A list will be taken to be a line with a forced break in which all
         # of the field separators are commas or comma-arrows (except for the
@@ -1405,7 +1417,7 @@ sub check_match {
     #  $prev_line = the line just before $new_line
     #  $group_line_count = number of lines in the current group
 
-    # returns a flag and a value as follows:
+    # Returns: a flag and a value as follows:
     #    return (0, $imax_align)   if the line does not match
     #    return (1, $imax_align)   if the line matches but does not fit
     #    return (2, $imax_align)   if the line matches and fits
@@ -1414,9 +1426,10 @@ sub check_match {
     use constant MATCH_NO_FIT  => 1;
     use constant MATCH_AND_FIT => 2;
 
+    # Return value '$return_value' describes the match with 3 possible values
     my $return_value;
 
-    # Returns '$imax_align' which is the index of the maximum matching token.
+    # Return value '$imax_align' is the index of the maximum matching token.
     # It will be used in the subsequent left-to-right sweep to align as many
     # tokens as possible for lines which partially match.
     my $imax_align = -1;
@@ -1524,8 +1537,13 @@ sub check_fit {
     # The new line has alignments identical to the current group. Now we have
     # to fit the new line into the group without causing a field to exceed the
     # line length limit.
-    #   return true if successful
-    #   return false if not successful
+
+    # Given:
+    #   $new_line = ref to hash of the new line values
+    #   $old_line = ref to hash of the previous line values
+    # Returns:
+    #   true if the new line alignments fit the old line
+    #   false otherwise
 
     my $jmax                = $new_line->{'jmax'};
     my $leading_space_count = $new_line->{'leading_space_count'};
@@ -1592,6 +1610,11 @@ sub install_new_alignments {
 
     my ($new_line) = @_;
 
+    # Given:
+    #   $new_line = ref to hash of a line starting a new group
+    # Task:
+    #   setup alignment fields for this line
+
     my $jmax           = $new_line->{'jmax'};
     my $rfield_lengths = $new_line->{'rfield_lengths'};
     my $col            = $new_line->{'leading_space_count'};
@@ -1626,9 +1649,17 @@ sub dump_array {
 
 sub level_change {
 
+    my ( $self, $leading_space_count, $diff, $level ) = @_;
+
     # compute decrease in level when we remove $diff spaces from the
     # leading spaces
-    my ( $self, $leading_space_count, $diff, $level ) = @_;
+
+    # Given:
+    #   $leading_space_count = current leading line spaces
+    #   $diff = number of spaces to remove
+    #   $level = current indentation level
+    # Return:
+    #   $level = updated level accounting for the loss of spaces
 
     if ($rOpts_indent_columns) {
         my $olev =
@@ -1925,6 +1956,15 @@ sub _flush_group_lines {
     sub sweep_top_down {
         my ( $self, $rlines, $group_level ) = @_;
 
+        # This is the first of two major sweeps to find alignments.
+        # The other is sweep_left_to_right.
+
+        # Given:
+        #   $rlines = ref to hash of lines in this main alignment group
+        #   $group_level = common indentation level of these lines
+        # Return:
+        #   $rgroups = ref to hash of subgroups created
+
         # Partition the set of lines into final alignment subgroups
         # and store the alignments with the lines.
 
@@ -2121,15 +2161,14 @@ sub two_line_pad {
 
     my ( $line_m, $line, $imax_min ) = @_;
 
+    # Decide if two adjacent, isolated lines should be aligned
+
     # Given:
-    #  two isolated (list) lines
+    #  $line_m, $line = two isolated (list) lines
     #  imax_min = number of common alignment tokens
     # Return:
     #  $pad_max = maximum suggested pad distance
     #           = 0 if alignment not recommended
-    # Note that this is only for two lines which do not have alignment tokens
-    # in common with any other lines.  It is intended for lists, but it might
-    # also be used for two non-list lines with a common leading '='.
 
     # Allow alignment if the difference in the two unpadded line lengths
     # is not more than either line length.  The idea is to avoid
@@ -2139,6 +2178,11 @@ sub two_line_pad {
     #       'VARCHAR', DBI::SQL_VARCHAR, undef, "'", "'", undef, 0, 1,
     #       1, 0, 0, 0, undef, 0, 0
     #   ];
+
+    # Note that this is only for two lines which do not have alignment tokens
+    # in common with any other lines.  It is intended for lists, but it might
+    # also be used for two non-list lines with a common leading '='.
+
     my $rfield_lengths   = $line->{'rfield_lengths'};
     my $rfield_lengths_m = $line_m->{'rfield_lengths'};
 
@@ -2185,6 +2229,16 @@ sub two_line_pad {
 sub sweep_left_to_right {
 
     my ( $rlines, $rgroups, $group_level ) = @_;
+
+    # This is the second of two major sweeps to find alignments.
+    # The other is sweep_top_down.
+
+    # Given:
+    #   $rlines = ref to hash of lines in this main alignment group
+    #   $rgroups = ref to hash of subgroups
+    #   $group_level = common indentation level of these lines
+    # Task:
+    #   add leading alignments where possible
 
     # So far we have divided the lines into groups having an equal number of
     # identical alignments.  Here we are going to look for common leading
@@ -2675,10 +2729,11 @@ sub delete_selected_tokens {
 
     my ( $line_obj, $ridel ) = @_;
 
-    # $line_obj    is the line to be modified
-    # $ridel       is a ref to list of indexes to be deleted
+    # Given:
+    #   $line_obj = the line to be modified
+    #   $ridel    = a ref to list of indexes to be deleted
 
-    # remove an unused alignment token(s) to improve alignment chances
+    # remove unused alignment token(s) to improve alignment chances
 
     return if ( !defined($line_obj) || !defined($ridel) || !@{$ridel} );
 
@@ -2803,7 +2858,14 @@ EOM
 
     sub decode_alignment_token {
 
+        my ($tok) = @_;
+
         # Unpack the values packed in an alignment token
+
+        # Given:
+        #   $tok = an alignment token
+        # Returns:
+        #   ( $raw_tok, $lev, $tag, $tok_count )
         #
         # Usage:
         #        my ( $raw_tok, $lev, $tag, $tok_count ) =
@@ -2822,7 +2884,6 @@ EOM
         #   $nport   = $port = shift || $name;
         # The first '=' may either be '=0' or '=0.1' [level 0, first equals]
         # The second '=' will be '=0.2' [level 0, second equals]
-        my ($tok) = @_;
 
         if ( defined( $decoded_token{$tok} ) ) {
             return @{ $decoded_token{$tok} };
@@ -2868,11 +2929,14 @@ EOM
     sub delete_unmatched_tokens {
         my ( $rlines, $group_level ) = @_;
 
-        # This is a important first step in vertical alignment in which
-        # we remove as many obviously un-needed alignment tokens as possible.
+        # Remove as many obviously un-needed alignment tokens as possible.
         # This will prevent them from interfering with the final alignment.
 
-        # Returns:
+        # Given:
+        #   $rlines = ref to hash of all lines in this alignment group
+        #   $group_level = their comment indentation level
+
+        # Return:
         my $max_lev_diff      = 0;    # used to avoid a call to prune_tree
         my $saw_side_comment  = 0;    # used to avoid a call for side comments
         my $saw_signed_number = 0;    # used to avoid a call for -vsn
@@ -2947,9 +3011,22 @@ EOM
 
         my ( $group_level, $rnew_lines, $saw_side_comment ) = @_;
 
-        #------------------------------------------------------------
-        # Loop to create a hash of alignment token info for each line
-        #------------------------------------------------------------
+        # Create a hash of alignment token info for each line
+        # This info will be used to find common alignments
+
+        # Given:
+        #   $group_level = common indentation level
+        #   $rnew_lines = ref to hash of line info
+        #   $saw_side_comment = true if there is a side comment
+        # Return:
+        #   $rline_hashes = ref to hash with new line vars
+        #  \@equals_info  = ref to array with info on any '=' tokens
+        #   $saw_side_comment = updated side comment flag
+        #   $max_lev_diff = maximum level change seen
+
+        #----------------
+        # Loop over lines
+        #----------------
         my $rline_hashes = [];
         my @equals_info;
         my @line_info;    # no longer used
@@ -3328,9 +3405,14 @@ sub match_line_pairs {
     my ( $rlines, $rnew_lines, $rsubgroups, $group_level ) = @_;
 
     # Compare each pair of lines and save information about common matches
-    # $rlines     = list of lines including hanging side comments
-    # $rnew_lines = list of lines without any hanging side comments
-    # $rsubgroups = list of subgroups of the new lines
+
+    # Given:
+    #   $rlines     = list of lines including hanging side comments
+    #   $rnew_lines = list of lines without any hanging side comments
+    #   $rsubgroups = list of subgroups of the new lines
+    # Return:
+    #   $saw_signed_number = true if a field has a signed number
+    #                        (needed for --valign-signed-numbers)
 
     # TODO:
     # Maybe change: imax_pair => pair_match_info = ref to array
@@ -3514,12 +3596,13 @@ sub compare_patterns {
     my $pat_m = $rcall_hash->{pat_m};
     my $pad   = $rcall_hash->{pad};
 
-    # helper routine for sub match_line_pairs to decide if patterns in two
-    # lines match well enough..Given
+    # This is a helper routine for sub match_line_pairs to decide if patterns
+    # in two lines match well enough
+    # Given:
     #   $tok_m, $pat_m = token and pattern of first line
     #   $tok, $pat     = token and pattern of second line
     #   $pad           = 0 if no padding is needed, !=0 otherwise
-    # return code:
+    # Return code:
     #   0 = patterns match, continue
     #   1 = no match
     #   2 = no match, and lines do not match at all
@@ -3631,18 +3714,27 @@ sub compare_patterns {
 sub fat_comma_to_comma {
     my ($str) = @_;
 
-    # We are changing '=>' to ',' and removing any trailing decimal count
-    # because currently fat commas have a count and commas do not.
-    # For example, we will change '=>2+{-3.2' into ',2+{-3'
+    # Given:
+    #  $str = a decorated fat comma alignment token
+
+    # Change '=>' to ','
+    # and remove any trailing decimal count because currently fat commas have a
+    # count and commas do not.
+
+    # For example, change '=>2+{-3.2' into ',2+{-3'
     if ( $str =~ /^=>([^\.]*)/ ) { $str = ',' . $1 }
     return $str;
 } ## end sub fat_comma_to_comma
 
 sub get_line_token_info {
 
-    # scan lines of tokens and return summary information about the range of
-    # levels and patterns.
     my ($rlines) = @_;
+
+    # Given:
+    #   $rlines = ref to array of lines in this group
+
+    # Scan lines of tokens and return summary information about the range of
+    # levels and patterns.
 
     # First scan to check monotonicity. Here is an example of several
     # lines which are monotonic. The = is the lowest level, and
@@ -3792,6 +3884,12 @@ sub get_line_token_info {
 
 sub prune_alignment_tree {
     my ($rlines) = @_;
+
+    # Given:
+    #   $rlines = ref to array of lines in this group
+
+    # Prune the tree of alignments to limit depth of alignments
+
     my $jmax = @{$rlines} - 1;
     return if ( $jmax <= 0 );
 
@@ -4628,8 +4726,15 @@ sub is_good_side_comment_column {
     # a previous side comment should be forgotten.  This involves
     # checking several rules.
 
-    # Return true to KEEP old comment location
-    # Return false to FORGET old comment location
+    # Given:
+    #   $line = ref to info hash for the line of interest
+    #   $line_number = number of this line in the output stream
+    #   $level = indentation level of this line
+    #   $num5 = ..see comments below
+
+    # Return:
+    #   true to KEEP old comment location
+    #   false to FORGET old comment location
     my $KEEP   = 1;
     my $FORGET = 0;
 
@@ -6244,12 +6349,17 @@ sub valign_output_step_A {
 
 sub combine_fields {
 
+    my ( $line_0, $line_1, $imax_align ) = @_;
+
+    # Given:
+    #   $line_0, $line_1 = two adjacent lines
+    #   $imax_align = index of last alignment wanted
+
+    # Task:
     # We have a group of two lines for which we do not want to align tokens
     # between index $imax_align and the side comment.  So we will delete fields
     # between $imax_align and the side comment.  Alignments have already
     # been set so we have to adjust them.
-
-    my ( $line_0, $line_1, $imax_align ) = @_;
 
     if ( !defined($imax_align) ) { $imax_align = -1 }
 
@@ -6390,6 +6500,9 @@ sub get_output_line_number {
     sub handle_cached_line {
 
         my ( $self, $rinput, $leading_string, $leading_string_length ) = @_;
+
+        # handle a cached line ..
+        # either append the current line to it or write it out
 
         # The cached line will either be:
         # - passed along to step_C, or

@@ -145,10 +145,7 @@ This is probably an error introduced by a recent programming change.
 $pkg reports VERSION='$VERSION'.
 ==============================================================================
 EOM
-
-    # We shouldn't get here, but this return is to keep Perl-Critic from
-    # complaining.
-    return;
+    croak "unexpected return from sub Die";
 } ## end sub Fault
 
 sub Fault_Warn {
@@ -1698,9 +1695,10 @@ sub K_first_code {
     $rLL = $self->[_rLL_] unless ( defined($rLL) );
 
     return unless @{$rLL};
-    my $type = $rLL->[0]->[_TYPE_];
-    if ( $type ne 'b' && $type ne '#' ) { return 0 }
-    return $self->K_next_code(0);
+    my $KK   = 0;
+    my $type = $rLL->[$KK]->[_TYPE_];
+    if ( $type ne 'b' && $type ne '#' ) { return $KK }
+    return $self->K_next_code($KK);
 } ## end sub K_first_code
 
 sub K_last_code {
@@ -4090,9 +4088,11 @@ my %closing_container_inside_ws;
 
 sub set_whitespace_flags {
 
+    my $self = shift;
+
     # This routine is called once per file to set whitespace flags for that
     # file.  This routine examines each pair of nonblank tokens and sets a flag
-    # indicating if white space is needed.
+    # indicating if they should be separated by white space.
     #
     # $rwhitespace_flags->[$j] is a flag indicating whether a white space
     # BEFORE token $j is needed, with the following values:
@@ -4101,8 +4101,6 @@ sub set_whitespace_flags {
     #             WS_OPTIONAL=  0 optional space or $j is a whitespace
     #             WS_YES     =  1 want a space BEFORE token $j
     #
-
-    my $self = shift;
 
     my $j_tight_closing_paren = -1;
     my $rLL                   = $self->[_rLL_];
@@ -4732,6 +4730,10 @@ sub set_container_ws_by_keyword {
             $closing_container_inside_ws{$sequence_number} = $ws_flag;
         }
     }
+    else {
+        DEVEL_MODE
+          && Fault("unexpected token='$word' and seqno='$sequence_number'\n");
+    }
     return;
 } ## end sub set_container_ws_by_keyword
 
@@ -4953,6 +4955,8 @@ EOM
 
     sub is_essential_whitespace {
 
+        my ( $tokenll, $typell, $tokenl, $typel, $tokenr, $typer ) = @_;
+
         # Essential whitespace means whitespace which cannot be safely deleted
         # without risking the introduction of a syntax error.
 
@@ -4972,8 +4976,6 @@ EOM
         # routine and therefore is a good test. So if a change is made, be sure
         # to use nytprof to profile with both old and revised coding using the
         # -mangle option and check differences.
-
-        my ( $tokenll, $typell, $tokenl, $typel, $tokenr, $typer ) = @_;
 
         # This is potentially a very slow routine but the following quick
         # filters typically catch and handle over 90% of the calls.
@@ -5664,9 +5666,10 @@ EOM
         # Added for c140 to make 'w ->' and 'i ->' behave the same
         $binary_bond_strength{'w'}{'->'} = 1.45 * STRONG;
 
-    # Note that the following alternative strength would make the break at the
-    # '->' rather than opening the '('.  Both have advantages and disadvantages.
-    # $binary_bond_strength{'i'}{'->'} = 0.5*STRONG + 0.5 * NOMINAL; #
+        # Note that the following alternative strength would make the break at
+        # the '->' rather than opening the '('.  Both have advantages and
+        # disadvantages.
+        # $binary_bond_strength{'i'}{'->'} = 0.5*STRONG + 0.5 * NOMINAL; #
 
         $binary_bond_strength{'))'}{'->'} = 0.1 * STRONG + 0.9 * NOMINAL;
         $binary_bond_strength{']]'}{'->'} = 0.1 * STRONG + 0.9 * NOMINAL;
@@ -5800,10 +5803,8 @@ EOM
 
         my ($self) = @_;
 
-        #-----------------------------------------------------------------
         # Define a 'bond strength' for each token pair in an output batch.
         # See comments above for definition of bond strength.
-        #-----------------------------------------------------------------
 
         my $rbond_strength_to_go = [];
 
@@ -6356,10 +6357,7 @@ sub bad_pattern {
 
     sub prepare_cuddled_block_types {
 
-        # the cuddled-else style, if used, is controlled by a hash that
-        # we construct here
-
-        # Include keywords here which should not be cuddled
+        # Construct a hash needed by the cuddled-else style
 
         my $cuddled_string = EMPTY_STRING;
         if ( $rOpts->{'cuddled-else'} ) {
@@ -6376,7 +6374,6 @@ sub bad_pattern {
             if ($cuddled_block_list) {
                 $cuddled_string .= SPACE . $cuddled_block_list;
             }
-
         }
 
         # If we have a cuddled string of the form
@@ -7187,20 +7184,24 @@ EOM
 
     sub write_line {
 
+        my ( $self, $line_of_tokens_input ) = @_;
+
         # This routine receives lines one-by-one from the tokenizer and stores
         # them in a format suitable for further processing.  After the last
         # line has been sent, the tokenizer will call sub 'finish_formatting'
         # to do the actual formatting.
 
-        my ( $self, $line_of_tokens_old ) = @_;
+        # Given:
+        #   $line_of_tokens_input = hash ref of one line from the tokenizer
 
         my $rLL            = $self->[_rLL_];
         my $line_of_tokens = {};
 
         # copy common hash key values
-        @{$line_of_tokens}{@common_keys} = @{$line_of_tokens_old}{@common_keys};
+        @{$line_of_tokens}{@common_keys} =
+          @{$line_of_tokens_input}{@common_keys};
 
-        my $line_type = $line_of_tokens_old->{_line_type};
+        my $line_type = $line_of_tokens_input->{_line_type};
         my $tee_output;
 
         my $Klimit = $self->[_Klimit_];
@@ -7221,7 +7222,7 @@ EOM
         # Handle line of code
         else {
 
-            my $rtokens = $line_of_tokens_old->{_rtokens};
+            my $rtokens = $line_of_tokens_input->{_rtokens};
             my $jmax    = @{$rtokens} - 1;
 
             if ( $jmax >= 0 ) {
@@ -7231,7 +7232,7 @@ EOM
                 #----------------------------
                 # get the tokens on this line
                 #----------------------------
-                $self->write_line_inner_loop( $line_of_tokens_old,
+                $self->write_line_inner_loop( $line_of_tokens_input,
                     $line_of_tokens );
 
                 # update Klimit for added tokens
@@ -7271,12 +7272,12 @@ EOM
 
         if ($tee_output) {
             my $fh_tee    = $self->[_fh_tee_];
-            my $line_text = $line_of_tokens_old->{_line_text};
+            my $line_text = $line_of_tokens_input->{_line_text};
             $fh_tee->print($line_text) if ($fh_tee);
         }
 
         # We must use the old line because the qw logic may change this flag
-        $last_ending_in_quote = $line_of_tokens_old->{_ending_in_quote};
+        $last_ending_in_quote = $line_of_tokens_input->{_ending_in_quote};
 
         return;
     } ## end sub write_line
@@ -7589,10 +7590,8 @@ EOM
     sub write_line_inner_loop {
         my ( $self, $line_of_tokens_old, $line_of_tokens ) = @_;
 
-        #---------------------------------------------------------------------
         # Copy the tokens on one line received from the tokenizer to their new
         # storage locations.
-        #---------------------------------------------------------------------
 
         # Input parameters:
         #  $line_of_tokens_old = line received from tokenizer
@@ -7863,6 +7862,9 @@ sub finish_formatting {
     # The file has been tokenized and is ready to be formatted.
     # All of the relevant data is stored in $self, ready to go.
 
+    # Given:
+    #   $severe_error = true if a severe error was encountered
+
     # Returns:
     #   true if input file was copied verbatim due to errors
     #   false otherwise
@@ -8023,12 +8025,12 @@ BEGIN {
 
 sub find_level_info {
 
+    my ($self) = @_;
+
     # Find level ranges and total variations of all code blocks in this file.
 
     # Returns:
     #   ref to hash with block info, with seqno as key (see below)
-
-    my ($self) = @_;
 
     # The array _rSS_ has the complete container tree for this file.
     my $rSS = $self->[_rSS_];
@@ -10006,7 +10008,10 @@ sub has_complete_package {
     }
 
     # safety check - shouldn't happen
-    return unless ( $type eq 'P' );
+    if ( $type ne 'P' ) {
+        DEVEL_MODE && Fault("Expecting type 'P' but found '$type'");
+        return;
+    }
     my $level = $item->[_LEVEL_];
     return unless ( $level == 0 );
 
@@ -10034,6 +10039,9 @@ sub is_complete_script {
     my ( $self, $rline_type_count, $rkeyword_count ) = @_;
 
     # Guess if we are formatting a complete script
+    # Given:
+    #   $rline_type_count = hash ref of count of line types
+    #   $rkeyword_count   = hash ref of count of keywords
     # Return: true or false
 
     # Goal: help decide if we should skip certain warning checks when
@@ -11680,7 +11688,12 @@ sub initialize_warn_hash {
 } ## end sub initialize_warn_hash
 
 sub make_excluded_name_hash {
-    my ($option_name)       = @_;
+    my ($option_name) = @_;
+
+    # Convert a list of words into a hash ref for an input option
+    # Given:
+    #   $option_name = the name of an input option
+    #       example:   'warn-variable-exclusion-list'
     my $rexcluded_name_hash = {};
     my $excluded_names      = $rOpts->{$option_name};
     if ($excluded_names) {
@@ -11786,6 +11799,7 @@ sub initialize_warn_variable_types {
     # Given:
     #   $wvt_in_args = true if the -wvt parameter was on the command line
     #   $num_files = number of files on the command line
+    #   $line_range_clipped = true if only part of a file is being formatted
 
     my @all_opts = qw(r s p u c);
     $rwarn_variable_types =
@@ -11821,11 +11835,15 @@ sub initialize_warn_variable_types {
 
 sub filter_excluded_names {
 
+    my ( $rwarnings, $rexcluded_name_hash ) = @_;
+
+    # Remove warnings for variable names excluded by user request
+    # for an operation like --warn-variable-types
+
     # Given:
     #   $rwarnigns = ref to list of warning info hashes
     #   $rexcluded_name_hash = ref to hash with excluded names
     # Return updated $rwarnings with excluded names removed
-    my ( $rwarnings, $rexcluded_name_hash ) = @_;
     if ( @{$rwarnings} && $rexcluded_name_hash ) {
 
         # Check for exact matches
@@ -12468,8 +12486,9 @@ sub interbracket_arrow_check {
 sub delete_side_comments {
     my ( $self, $rix_side_comments ) = @_;
 
-    # Given a list of indexes of lines with side comments, handle any
-    # requested side comment deletions.
+    # Handle any requested side comment deletions.
+    # Given:
+    #   $rix_side_comments = ref to list of indexes of lines with side comments
 
     my $rLL                  = $self->[_rLL_];
     my $rlines               = $self->[_rlines_];
@@ -12824,13 +12843,12 @@ sub respace_tokens {
 
     my $self = shift;
 
-    #--------------------------------------------------------------------------
     # This routine is called once per file to do as much formatting as possible
     # before new line breaks are set.
-    #--------------------------------------------------------------------------
 
-    # Return parameters:
-    # Set $severe_error=true if processing must terminate immediately
+    # Returns:
+    #   $severe_error = true if processing must terminate immediately
+    #   $rqw_lines    = ref to list of lines with qw quotes (for -qwaf)
     my ( $severe_error, $rqw_lines );
 
     # We do not change any spaces in --indent-only mode
@@ -13038,10 +13056,14 @@ sub respace_tokens_inner_loop {
 
     my ( $self, $Kfirst, $Klast, $input_line_number ) = @_;
 
-    #-----------------------------------------------------------------
     # Loop to copy all tokens on one line, making any spacing changes,
     # while also collecting information needed by later subs.
-    #-----------------------------------------------------------------
+
+    # Given:
+    #   $Kfirst = index of first token on this line
+    #   $Klast  = index of last token on this line
+    #   $input_line_number  = number of this line in input stream
+
     my $type;
     foreach my $KK ( $Kfirst .. $Klast ) {
 
@@ -13923,13 +13945,12 @@ sub store_token {
 
     my ( $self, $item ) = @_;
 
-    #------------------------------------------
     # Store one token during respace operations
-    #------------------------------------------
 
-    # Optional input parameter: '$item'
-    #  if defined => reference to a token to be stored
-    #  otherwise  => make and store a blank space
+    # Given:
+    #  $item =
+    #    if defined      => reference to a token to be stored
+    #    if not defined  => make and store a blank space
 
     # NOTE: this sub is called once per token so coding efficiency is critical.
 
@@ -15397,10 +15418,15 @@ sub store_new_token {
 
 sub check_Q {
 
+    my ( $self, $KK, $Kfirst, $line_number ) = @_;
+
     # Check that a quote looks okay, and report possible problems
     # to the logfile.
+    # Given:
+    #   $KK = index of the quote token
+    #   $Kfirst = index of first token on the line
+    #   $line_number = number of the line in the input stream
 
-    my ( $self, $KK, $Kfirst, $line_number ) = @_;
     my $token = $rLL->[$KK]->[_TOKEN_];
     if ( $token =~ /\t/ ) {
         $self->note_embedded_tab($line_number);
@@ -15638,10 +15664,11 @@ EOM
 
 sub package_info_maker {
 
+    my ( $self, $rK_package_list ) = @_;
+
     # Create a hash of values which can be used to find the package of any
     # token.  This sub must be called after rLL has been updated because it
     # calls parent_seqno_by_K.
-    my ( $self, $rK_package_list ) = @_;
 
     # Given:
     #  @{$rK_package_list} = a simple list of token index K of each 'package'
@@ -15875,7 +15902,7 @@ BEGIN {
 sub count_list_elements {
     my ( $self, $rarg_list ) = @_;
 
-    # Given:
+    # Given call arg hash containing:
     #   $seqno_list   = sequence number of a paren of list to be counted, or
     #   $K_list_start = starting index of list (for 'return' lists)
     #   $shift_count_min  = starting min arg count items to include
@@ -16575,7 +16602,7 @@ sub count_sub_input_args {
     # shouldn't happen:
     if ( !defined($K_sub) || $K_sub >= $K_opening_block ) {
         if ( !defined($K_sub) ) { $K_sub = 'undef' }
-        Fault("Bad K_sub=$K_sub, opening=$K_opening_block\n");
+        DEVEL_MODE && Fault("Bad K_sub=$K_sub, opening=$K_opening_block\n");
         return;
     }
 
@@ -17234,6 +17261,10 @@ sub sub_def_info_maker {
 
     my ( $self, $rpackage_lookup_list, $rprelim_call_info ) = @_;
 
+    # Given:
+    #   $rpackage_lookup_list = list with info for finding containing package
+    #   $rprelim_call_info = hash ref with first try at call info
+
     # Returns two hash references:
     #    \%sub_info_by_seqno,
     #    \%sub_seqno_by_key,
@@ -17344,6 +17375,9 @@ sub sub_def_info_maker {
 sub update_sub_call_paren_info {
 
     my ( $self, $rpackage_lookup_list ) = @_;
+
+    # Given:
+    #   $rpackage_lookup_list = list with info for finding containing package
 
     # Update the hash of info about the call parameters with arg counts
     # and package. It contains the sequence number of each paren and
@@ -18457,11 +18491,12 @@ EOM
 
 sub sort_warnings {
 
+    my ($rwarnings) = @_;
+
     # Given:
     #   $rwarnigns = ref to list of warning info hashes
     # Return updated $rwarnings
     #   - Sorted by line number
-    my ($rwarnings) = @_;
     if ( @{$rwarnings} ) {
 
         # sort by line number
@@ -18477,6 +18512,12 @@ sub sort_warnings {
 
 sub stringify_line_range {
     my ($rcalls) = @_;
+
+    # Given:
+    #   $rcalls = ref to list of call info
+    # Return:
+    #   $string = single line of text with just the line range
+
     my $string = EMPTY_STRING;
     if ( $rcalls && @{$rcalls} ) {
         my @sorted =
@@ -18658,6 +18699,8 @@ EOM
 
 sub keep_old_line_breaks {
 
+    my ($self) = @_;
+
     # Called once per file to find and mark any old line breaks which
     # should be kept.  We will be translating the input hashes into
     # token indexes.
@@ -18667,8 +18710,6 @@ sub keep_old_line_breaks {
     #     best for something like leading commas (-kbb=',')
     # = 2 make a soft break (keep building current batch)
     #     best for something like leading ->
-
-    my ($self) = @_;
 
     my $rLL = $self->[_rLL_];
     my $rKrange_code_without_comments =
@@ -18748,9 +18789,10 @@ sub keep_old_line_breaks {
 
 sub weld_containers {
 
+    my ($self) = @_;
+
     # Called once per file to do any welding operations requested by --weld*
     # flags.
-    my ($self) = @_;
 
     # This count is used to eliminate needless calls for weld checks elsewhere
     $total_weld_count = 0;
@@ -18871,6 +18913,7 @@ EOM
 } ## end sub weld_containers
 
 sub weld_cuddled_blocks {
+
     my ($self) = @_;
 
     # Called once per file to handle cuddled formatting
@@ -19272,6 +19315,13 @@ sub find_nested_pairs {
 
 sub match_paren_control_flag {
 
+    my ( $self, $seqno, $flag, $rLL ) = @_;
+
+    # Input parameters:
+    #   $seqno = sequence number of the container (should be paren)
+    #   $flag  = the flag which defines what matches
+    #   $rLL   = an optional alternate token list needed for respace operations
+
     # Decide if this paren is excluded by user request:
     #   undef matches no parens
     #   '*' matches all parens
@@ -19283,12 +19333,7 @@ sub match_paren_control_flag {
     #   'F' matches if 'f' does not.
     #   'w' matches if either 'k' or 'f' match.
     #   'W' matches if 'w' does not.
-    my ( $self, $seqno, $flag, $rLL ) = @_;
 
-    # Input parameters:
-    # $seqno = sequence number of the container (should be paren)
-    # $flag  = the flag which defines what matches
-    # $rLL   = an optional alternate token list needed for respace operations
     $rLL = $self->[_rLL_] unless ( defined($rLL) );
 
     return 0 unless ( defined($flag) );
@@ -19331,8 +19376,14 @@ EOM
 
 sub is_excluded_weld {
 
-    # decide if this weld is excluded by user request
     my ( $self, $KK, $is_leading ) = @_;
+
+    # Decide if this weld is excluded by user request
+
+    # Given:
+    #   $KK = index of this weld token
+    #   $is_leading = true if this will the outer token of a weld
+
     my $rLL         = $self->[_rLL_];
     my $rtoken_vars = $rLL->[$KK];
     my $token       = $rtoken_vars->[_TOKEN_];
@@ -19364,13 +19415,14 @@ use constant DEBUG_WELD => 0;
 
 sub setup_new_weld_measurements {
 
+    my ( $self, $Kouter_opening, $Kinner_opening ) = @_;
+
     # Define quantities to check for excess line lengths when welded.
     # Called by sub 'weld_nested_containers' and sub 'weld_nested_quotes'
 
-    my ( $self, $Kouter_opening, $Kinner_opening ) = @_;
-
-    # Given indexes of outer and inner opening containers to be welded:
-    #   $Kouter_opening, $Kinner_opening
+    # Given:
+    #   ($Kouter_opening, $Kinner_opening) = indexes of outer and inner opening
+    #     containers to be welded
 
     # Returns these variables:
     #   $new_weld_ok = true (new weld ok) or false (do not start new weld)
@@ -19589,6 +19641,7 @@ EOM
 } ## end sub setup_new_weld_measurements
 
 sub excess_line_length_for_Krange {
+
     my ( $self, $Kfirst, $Klast ) = @_;
 
     # returns $excess_length =
@@ -19628,6 +19681,7 @@ sub excess_line_length_for_Krange {
 } ## end sub excess_line_length_for_Krange
 
 sub weld_nested_containers {
+
     my ($self) = @_;
 
     # Called once per file for option '--weld-nested-containers'
@@ -20295,10 +20349,10 @@ EOM
 
 sub weld_nested_quotes {
 
+    my $self = shift;
+
     # Called once per file for option '--weld-nested-containers'. This
     # does welding on qw quotes.
-
-    my $self = shift;
 
     # See if quotes are excluded from welding
     my $rflags = $weld_nested_exclusion_rules{'q'};
@@ -20518,9 +20572,11 @@ sub is_welded_at_seqno {
 
     my ( $self, $seqno ) = @_;
 
-    # given a sequence number:
-    #   return true if it is welded either left or right
-    #   return false otherwise
+    # Given:
+    #   $seqno = a sequence number:
+    # Return:
+    #   true if it is welded either left or right
+    #   false otherwise
     return unless ( $total_weld_count && defined($seqno) );
     my $KK_o = $self->[_K_opening_container_]->{$seqno};
     return unless defined($KK_o);
@@ -20529,6 +20585,8 @@ sub is_welded_at_seqno {
 } ## end sub is_welded_at_seqno
 
 sub mark_short_nested_blocks {
+
+    my $self = shift;
 
     # This routine looks at the entire file and marks any short nested blocks
     # which should not be broken.  The results are stored in the hash
@@ -20550,7 +20608,6 @@ sub mark_short_nested_blocks {
     # The flag which is set here will be checked in two places:
     # 'sub process_line_of_CODE' and 'sub starting_one_line_block'
 
-    my $self = shift;
     return if $rOpts->{'indent-only'};
 
     my $rLL = $self->[_rLL_];
@@ -20711,9 +20768,12 @@ sub special_indentation_adjustments {
 
 sub clip_adjusted_levels {
 
+    my ( $self, $min_starting_level ) = @_;
+
     # Replace any negative adjusted levels with zero.
     # Negative levels can only occur in files with brace errors.
-    my ( $self, $min_starting_level ) = @_;
+    # Given:
+    #   $min_starting_level = minimum (adjusted) level of the input stream
 
     # Clip the original _LEVEL_ values to zero if necessary
     my $rLL = $self->[_rLL_];
@@ -20738,9 +20798,10 @@ sub clip_adjusted_levels {
 
 sub do_non_indenting_braces {
 
+    my ($self) = @_;
+
     # Called once per file to handle the --non-indenting-braces parameter.
     # Remove indentation within marked braces if requested
-    my ($self) = @_;
 
     # Any non-indenting braces have been found by sub find_non_indenting_braces
     # and are defined by the following hash:
@@ -21280,6 +21341,8 @@ use constant DEBUG_XCI => 0;
 
 sub extended_ci {
 
+    my ($self) = @_;
+
     # This routine implements the -xci (--extended-continuation-indentation)
     # flag.  We add CI to interior tokens of a container which itself has CI but
     # only if a token does not already have CI.
@@ -21299,8 +21362,6 @@ sub extended_ci {
     # the programming effort.
 
     # The operations to remove unwanted CI are done in sub 'undo_ci'.
-
-    my ($self) = @_;
 
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );

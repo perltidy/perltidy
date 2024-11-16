@@ -335,16 +335,16 @@ $pkg reports VERSION='$VERSION'.
 ==============================================================================
 EOM
 
-    # We shouldn't get here, but this return is to keep Perl-Critic from
-    # complaining.
-    return;
+    croak "unexpected return from sub Die";
 } ## end sub Fault
 
 sub make_skipping_pattern {
     my ( $rOpts, $opt_name, $default ) = @_;
+
+    # Make regex patterns for the format-skipping and code-skipping options
     my $param = $rOpts->{$opt_name};
     if ( !$param ) { $param = $default }
-    $param =~ s/^\s+//;    # allow leading spaces to be like format-skipping
+    $param =~ s/^\s+//;
     if ( $param !~ /^#/ ) {
         Die("ERROR: the $opt_name parameter '$param' must begin with '#'\n");
     }
@@ -361,7 +361,7 @@ sub make_skipping_pattern {
 
 sub check_options {
 
-    # Check Tokenizer parameters
+    # Check and pre-process tokenizer parameters
     my $rOpts = shift;
 
     %is_sub = ();
@@ -668,6 +668,11 @@ sub make_source_array {
     my ( $self, $line_source_object ) = @_;
 
     # Convert the source into an array of lines
+    # Given:
+    #   $line_source_object = the input source stream
+    # Task:
+    #   Convert the source to an array ref and store in $self
+
     my $rinput_lines = [];
 
     my $rsource = ref($line_source_object);
@@ -746,8 +751,8 @@ EOM
 sub peek_ahead {
     my ( $self, $buffer_index ) = @_;
 
-    # look $buffer_index lines ahead of the current location without disturbing
-    # the input
+    # look $buffer_index lines ahead of the current location in the input
+    # stream without disturbing the input
     my $line;
     my $rinput_lines = $self->[_rinput_lines_];
     my $line_index   = $buffer_index + $self->[_input_line_index_next_];
@@ -1830,8 +1835,9 @@ sub guess_old_indentation_level {
     return ($level);
 } ## end sub guess_old_indentation_level
 
-# This is a currently unused debug routine
 sub dump_functions {
+
+    # This is an unused debug routine, save for future use
 
     my $fh = *STDOUT;
     foreach my $pkg ( keys %{$ris_user_function} ) {
@@ -2182,13 +2188,18 @@ sub prepare_for_a_new_file {
 
         my ( $self, $numc ) = @_;
 
-     # Split the leading $numc characters from the current token (at index=$i)
-     # which is pre-type 'w' and insert the remainder back into the pretoken
-     # stream with appropriate settings.  Since we are splitting a pre-type 'w',
-     # there are three cases, depending on if the remainder starts with a digit:
-     # Case 1: remainder is type 'd', all digits
-     # Case 2: remainder is type 'd' and type 'w': digits and other characters
-     # Case 3: remainder is type 'w'
+        # This provides a way to work around the limitations of the
+        # pre-tokenization scheme upon which perltidy is based. It is rarely
+        # needed.
+
+        # Split the leading $numc characters from the current token (at
+        # index=$i) which is pre-type 'w' and insert the remainder back into
+        # the pretoken stream with appropriate settings.  Since we are
+        # splitting a pre-type 'w', there are three cases, depending on if the
+        # remainder starts with a digit:
+        # Case 1: remainder is type 'd', all digits
+        # Case 2: remainder is type 'd' and type 'w': digits & other characters
+        # Case 3: remainder is type 'w'
 
         # Examples, for $numc=1:
         #   $tok    => $tok_0 $tok_1 $tok_2
@@ -2272,7 +2283,7 @@ EOM
     sub peeked_ahead {
         my $flag = shift;
 
-        # get/set the closure flag '$peeked_ahead'
+        # get or set the closure flag '$peeked_ahead':
         # - set $peeked_ahead to $flag if given, then
         # - return current value
         $peeked_ahead = defined($flag) ? $flag : $peeked_ahead;
@@ -2534,6 +2545,8 @@ EOM
 
     sub scan_simple_identifier {
 
+        my $self = shift;
+
         # This is a wrapper for sub scan_identifier. It does a fast preliminary
         # scan for certain common identifiers:
         #   '$var', '@var', %var, *var, &var, '@{...}', '%{...}'
@@ -2550,8 +2563,6 @@ EOM
         #     ||  ---- $i_next [= next nonblank pretoken ]
         #     |----$i_plus_1 [= a bareword ]
         #     ---$i_begin [= a sigil]
-
-        my $self = shift;
 
         my $i_begin   = $i;
         my $tok_begin = $tok;
@@ -2678,6 +2689,8 @@ EOM
 
     sub method_ok_here {
 
+        my $self = shift;
+
         # Return:
         #   false if this is definitely an invalid method declaration
         #   true otherwise (even if not sure)
@@ -2689,8 +2702,6 @@ EOM
         #  method paint => sub {
         #    return;
         #  };
-
-        my $self = shift;
 
         # from do_scan_sub:
         my $i_beg   = $i + 1;
@@ -2749,6 +2760,8 @@ EOM
 
     sub class_ok_here {
 
+        my $self = shift;
+
         # Return:
         #   false if this is definitely an invalid class declaration
         #   true otherwise (even if not sure)
@@ -2766,8 +2779,6 @@ EOM
         # For example, this should produce a return of 'false':
         #
         #   class ExtendsBasicAttributes is BasicAttributes{
-
-        my $self = shift;
 
         # TEST 1: class stmt can only go where a new statement can start
         if ( !new_statement_ok() ) { return }
@@ -2853,11 +2864,12 @@ EOM
 
     sub scan_number_fast {
 
+        my $self = shift;
+
         # This is a wrapper for sub scan_number. It does a fast preliminary
         # scan for a simple integer.  It calls the original scan_number if it
         # does not find one.
 
-        my $self      = shift;
         my $i_begin   = $i;
         my $tok_begin = $tok;
         my $number;
@@ -2967,8 +2979,9 @@ EOM
         my ( $self, $thing ) = @_;
 
         # Issue warning on error if expecting operator
-        # Given: $thing = the unexpected token or issue
-        #               = undef to use current pre-token
+        # Given:
+        #   $thing = the unexpected token or issue
+        #          = undef to use current pre-token
 
         if ( $expecting == OPERATOR ) {
             if ( !defined($thing) ) { $thing = $tok }
@@ -4712,10 +4725,17 @@ EOM
 
         my ( $self, $tok_kw, $next_nonblank_token, $i_next ) = @_;
 
-        # Decide if 'sub :' can be the start of a sub attribute list.
-        # We will decide based on if the colon is followed by a
-        # bareword which is not a keyword.
-        # Changed inext+1 to inext to fixed case b1190.
+        # Decide if a ':' can introduce an attribute. For example,
+        # something like 'sub :'
+
+        # Given:
+        #   $tok_kw = a bareword token
+        #   $next_nonblank_token = a following ':' being examined
+        #   $i_next = the index of the following ':'
+
+        # We will decide based on if the colon is followed by a bareword
+        # which is not a keyword.  Changed inext+1 to inext to fixed case
+        # b1190.
         my $sub_attribute_ok_here;
         if (   $is_sub{$tok_kw}
             && $expecting != OPERATOR
@@ -5447,6 +5467,8 @@ EOM
 
     sub tokenize_this_line {
 
+        my ( $self, $line_of_tokens, $trimmed_input_line ) = @_;
+
         # This routine tokenizes one line. The results are stored in
         # the hash ref '$line_of_tokens'.
 
@@ -5458,7 +5480,6 @@ EOM
         # Returns:
         #   nothing
 
-        my ( $self, $line_of_tokens, $trimmed_input_line ) = @_;
         my $untrimmed_input_line = $line_of_tokens->{_line_text};
 
         # Extract line number for use in error messages
@@ -6491,6 +6512,8 @@ use constant DEBUG_OPERATOR_EXPECTED => 0;
 
 sub operator_expected {
 
+    my ( $self, $tok, $next_type, $blank_after_Z ) = @_;
+
     # Returns a parameter indicating what types of tokens can occur next
 
     # Call format:
@@ -6541,8 +6564,6 @@ sub operator_expected {
     # When possible, token types should be selected such that we can determine
     # the 'operator_expected' value by a simple hash lookup.  If there are
     # exceptions, that is an indication that a new type is needed.
-
-    my ( $self, $tok, $next_type, $blank_after_Z ) = @_;
 
     #--------------------------------------------
     # Section 1: Table lookup will get most cases
@@ -6857,6 +6878,8 @@ sub new_statement_ok {
 
 sub code_block_type {
 
+    my ( $self, $i, $rtokens, $rtoken_type, $max_token_index ) = @_;
+
     # Decide if this is a block of code, and its type.
     # Must be called only when $type = $token = '{'
     # The problem is to distinguish between the start of a block of code
@@ -6871,7 +6894,6 @@ sub code_block_type {
 
 # print "BLOCK_TYPE EXAMINING: type=$last_nonblank_type tok=$last_nonblank_token\n";
 
-    my ( $self, $i, $rtokens, $rtoken_type, $max_token_index ) = @_;
     if (   $last_nonblank_token eq '{'
         && $last_nonblank_type eq $last_nonblank_token )
     {
@@ -7300,6 +7322,10 @@ sub is_non_structural_brace {
 sub increase_nesting_depth {
     my ( $self, $aa, $pos ) = @_;
 
+    # Given:
+    #   $aa = integer code of container type, 0-3
+    #   $pos = position of character, for error message
+
     # USES GLOBAL VARIABLES: $rcurrent_depth,
     # $rcurrent_sequence_number, $rdepth_array,
     # $rstarting_line_of_current_depth, $statement_type
@@ -7350,9 +7376,12 @@ sub increase_nesting_depth {
 
 sub is_balanced_closing_container {
 
+    my ($aa) = @_;
+
     # Return true if a closing container can go here without error
     # Return false if not
-    my ($aa) = @_;
+    # Given:
+    #   $aa = integer code of container type, 0-3
 
     # cannot close if there was no opening
     my $cd_aa = $rcurrent_depth->[$aa];
@@ -7372,6 +7401,10 @@ sub is_balanced_closing_container {
 sub decrease_nesting_depth {
 
     my ( $self, $aa, $pos ) = @_;
+
+    # Given:
+    #   $aa = integer code of container type, 0-3
+    #   $pos = position of character, for error message
 
     # USES GLOBAL VARIABLES: $rcurrent_depth,
     # $rcurrent_sequence_number, $rdepth_array, $rstarting_line_of_current_depth
@@ -7512,10 +7545,15 @@ EOM
 
 sub peek_ahead_for_n_nonblank_pre_tokens {
 
-    # returns next n pretokens if they exist
-    # returns undef's if hits eof without seeing any pretokens
-    # USES GLOBAL VARIABLES: (none)
     my ( $self, $max_pretokens ) = @_;
+
+    # Given:
+    #   $max_pretokens = number of pretokens wanted
+    # Return:
+    #   next $max_pretokens pretokens if they exist
+    #   undef's if hits eof without seeing any pretokens
+
+    # USES GLOBAL VARIABLES: (none)
     my $line;
     my $i = 0;
     my ( $rpre_tokens, $rmap, $rpre_types );
@@ -7534,8 +7572,15 @@ sub peek_ahead_for_n_nonblank_pre_tokens {
 # look ahead for next non-blank, non-comment line of code
 sub peek_ahead_for_nonblank_token {
 
-    # USES GLOBAL VARIABLES: (none)
     my ( $self, $rtokens, $max_token_index ) = @_;
+
+    # Given:
+    #   $rtokens = ref to token array
+    #   $max_token_index = index of last token in $rtokens
+    # Task:
+    #   Update $rtokens with next nonblank token
+
+    # USES GLOBAL VARIABLES: (none)
     my $line;
     my $i = 0;
 
@@ -7563,17 +7608,20 @@ sub peek_ahead_for_nonblank_token {
 
 sub guess_if_pattern_or_conditional {
 
-    # this routine is called when we have encountered a ? following an
-    # unknown bareword, and we must decide if it starts a pattern or not
-    # input parameters:
-    #   $i - token index of the ? starting possible pattern
-    # output parameters:
-    #   $is_pattern = 0 if probably not pattern,  =1 if probably a pattern
-    #   msg = a warning or diagnostic message
-    # USES GLOBAL VARIABLES: $last_nonblank_token
-
     my ( $self, $i, $rtokens, $rtoken_type, $rtoken_map_uu, $max_token_index )
       = @_;
+
+    # This routine is called when we have encountered a ? following an
+    # unknown bareword, and we must decide if it starts a pattern or not
+    # Given:
+    #   $i - token index of the ? starting possible pattern
+    #   $rtokens ... = the token arrays
+    # Return:
+    #   $is_pattern = 0 if probably not pattern,  =1 if probably a pattern
+    #   msg = a warning or diagnostic message
+
+    # USES GLOBAL VARIABLES: $last_nonblank_token
+
     my $is_pattern = 0;
     my $msg        = "guessing that ? after '$last_nonblank_token' starts a ";
 
@@ -7667,17 +7715,19 @@ BEGIN {
 
 sub guess_if_pattern_or_division {
 
+    my ( $self, $i, $rtokens, $rtoken_type, $rtoken_map, $max_token_index ) =
+      @_;
+
     # This routine is called when we have encountered a / following an
     # unknown bareword, and we must decide if it starts a pattern or is a
     # division.
-    # input parameters:
+    # Given:
     #   $i - token index of the / starting possible pattern
-    # output parameters:
+    #   $rtokens ... = the token arrays
+    # Return:
     #   $is_pattern = 0 if probably division,  =1 if probably a pattern
     #   msg = a warning or diagnostic message
     # USES GLOBAL VARIABLES: $last_nonblank_token
-    my ( $self, $i, $rtokens, $rtoken_type, $rtoken_map, $max_token_index ) =
-      @_;
     my $msg        = "guessing that / after '$last_nonblank_token' starts a ";
     my $ibeg       = $i;
     my $is_pattern = 0;
@@ -7811,17 +7861,24 @@ sub guess_if_pattern_or_division {
     return ( $is_pattern, $msg );
 } ## end sub guess_if_pattern_or_division
 
-# try to resolve here-doc vs. shift by looking ahead for
-# non-code or the end token (currently only looks for end token)
-# returns 1 if it is probably a here doc, 0 if not
 sub guess_if_here_doc {
 
     my ( $self, $next_token ) = @_;
 
-    # This is how many lines we will search for a target as part of the
-    # guessing strategy.  It is a constant because there is probably
-    # little reason to change it.
+    # Try to resolve here-doc vs. shift by looking ahead for
+    # non-code or the end token (currently only looks for end token)
+
+    # Given:
+    #   $next_token = the next token after '<<'
+
+    # Return:
+    #   1 if it is probably a here doc
+    #   0 if not
+
     # USES GLOBAL VARIABLES: $current_package $ris_constant,
+
+    # This is how many lines we will search for a target as part of the
+    # guessing strategy.  There is probably little reason to change it.
     my $HERE_DOC_WINDOW = 40;
 
     my $here_doc_expected = 0;
@@ -7869,11 +7926,6 @@ sub guess_if_here_doc {
 
 sub scan_bare_identifier_do {
 
-    # this routine is called to scan a token starting with an alphanumeric
-    # variable or package separator, :: or '.
-    # USES GLOBAL VARIABLES: $current_package, $last_nonblank_token,
-    # $last_nonblank_type, $rparen_type, $paren_depth
-
     my (
 
         $self,
@@ -7887,6 +7939,15 @@ sub scan_bare_identifier_do {
         $max_token_index
 
     ) = @_;
+
+    # This routine is called to scan a token starting with an alphanumeric
+    # variable or package separator, :: or '.
+
+    # Given:
+    #   current scan state variables
+
+    # USES GLOBAL VARIABLES: $current_package, $last_nonblank_token,
+    # $last_nonblank_type, $rparen_type, $paren_depth
 
     my $package = undef;
 
@@ -8104,21 +8165,6 @@ sub scan_bare_identifier_do {
 
 sub scan_id_do {
 
-    # This is the new scanner and will eventually replace scan_identifier.
-    # Only type 'sub' and 'package' are implemented.
-    # Token types $ * % @ & -> are not yet implemented.
-    #
-    # Scan identifier following a type token.
-    # The type of call depends on $id_scan_state: $id_scan_state = ''
-    # for starting call, in which case $tok must be the token defining
-    # the type.
-    #
-    # If the type token is the last nonblank token on the line, a value
-    # of $id_scan_state = $tok is returned, indicating that further
-    # calls must be made to get the identifier.  If the type token is
-    # not the last nonblank token on the line, the identifier is
-    # scanned and handled and a value of '' is returned.
-
     my (
 
         $self,
@@ -8132,6 +8178,24 @@ sub scan_id_do {
         $max_token_index
 
     ) = @_;
+
+    # Scan identifier following a type token.
+    # Given:
+    #   current scan state variables
+
+    # This is the new scanner and may eventually replace scan_identifier.
+    # Only type 'sub' and 'package' are implemented.
+    # Token types $ * % @ & -> are not yet implemented.
+    #
+    # The type of call depends on $id_scan_state: $id_scan_state = ''
+    # for starting call, in which case $tok must be the token defining
+    # the type.
+    #
+    # If the type token is the last nonblank token on the line, a value
+    # of $id_scan_state = $tok is returned, indicating that further
+    # calls must be made to get the identifier.  If the type token is
+    # not the last nonblank token on the line, the identifier is
+    # scanned and handled and a value of '' is returned.
 
     use constant DEBUG_NSCAN => 0;
     my $type = EMPTY_STRING;
@@ -8244,6 +8308,8 @@ EOM
 
 sub check_prototype {
     my ( $proto, $package, $subname ) = @_;
+
+    # Classify a sub based on its prototype
     return if ( !defined($package) );
     return if ( !defined($subname) );
     if ( defined($proto) ) {
@@ -8281,8 +8347,19 @@ sub check_prototype {
 
 sub do_scan_package {
 
-    # do_scan_package parses a package name
-    # it is called with $i_beg equal to the index of the first nonblank
+    my ( $self, $rcall_hash ) = @_;
+
+    my $input_line      = $rcall_hash->{input_line};
+    my $i               = $rcall_hash->{i};
+    my $i_beg           = $rcall_hash->{i_beg};
+    my $tok             = $rcall_hash->{tok};
+    my $type            = $rcall_hash->{type};
+    my $rtokens         = $rcall_hash->{rtokens};
+    my $rtoken_map      = $rcall_hash->{rtoken_map};
+    my $max_token_index = $rcall_hash->{max_token_index};
+
+    # Parse a package name.
+    # This is called with $i_beg equal to the index of the first nonblank
     # token following a 'package' token.
     # USES GLOBAL VARIABLES: $current_package,
 
@@ -8298,17 +8375,6 @@ sub do_scan_package {
     # exponentiation or else a dotted-decimal v-string with a leading 'v'
     # character and at least three components.
     # reference http://perldoc.perl.org/functions/package.html
-
-    my ( $self, $rcall_hash ) = @_;
-
-    my $input_line      = $rcall_hash->{input_line};
-    my $i               = $rcall_hash->{i};
-    my $i_beg           = $rcall_hash->{i_beg};
-    my $tok             = $rcall_hash->{tok};
-    my $type            = $rcall_hash->{type};
-    my $rtokens         = $rcall_hash->{rtokens};
-    my $rtoken_map      = $rcall_hash->{rtoken_map};
-    my $max_token_index = $rcall_hash->{max_token_index};
 
     my $package = undef;
     my $pos_beg = $rtoken_map->[$i_beg];
@@ -8990,6 +9056,19 @@ sub do_scan_package {
 
     sub scan_complex_identifier {
 
+        (
+            my $self,
+
+            $i,
+            $id_scan_state,
+            $identifier,
+            $rtokens,
+            $max_token_index,
+            $expecting,
+            $container_type
+
+        ) = @_;
+
         # This routine assembles tokens into identifiers.  It maintains a
         # scan state, id_scan_state.  It updates id_scan_state based upon
         # current id_scan_state and token, and returns an updated
@@ -9003,19 +9082,6 @@ sub do_scan_package {
         # deleted by a DESTROY call at the end of a file. Then an
         # attempt to create multiple tokenizers can occur when multiple
         # files are processed, causing an error.
-
-        (
-            my $self,
-
-            $i,
-            $id_scan_state,
-            $identifier,
-            $rtokens,
-            $max_token_index,
-            $expecting,
-            $container_type
-
-        ) = @_;
 
         # return flag telling caller to split the pretoken
         my $split_pretoken_flag;
@@ -9301,7 +9367,19 @@ EOM
 
     sub do_scan_sub {
 
-        # do_scan_sub parses a sub name and prototype.
+        my ( $self, $rcall_hash ) = @_;
+
+        my $input_line      = $rcall_hash->{input_line};
+        my $i               = $rcall_hash->{i};
+        my $i_beg           = $rcall_hash->{i_beg};
+        my $tok             = $rcall_hash->{tok};
+        my $type            = $rcall_hash->{type};
+        my $rtokens         = $rcall_hash->{rtokens};
+        my $rtoken_map      = $rcall_hash->{rtoken_map};
+        my $id_scan_state   = $rcall_hash->{id_scan_state};
+        my $max_token_index = $rcall_hash->{max_token_index};
+
+        # Parse a sub name and prototype.
 
         # At present there are three basic CALL TYPES which are
         # distinguished by the starting value of '$tok':
@@ -9340,18 +9418,6 @@ EOM
         # USES GLOBAL VARS: $current_package, $last_nonblank_token,
         # $rsaw_function_definition,
         # $statement_type
-
-        my ( $self, $rcall_hash ) = @_;
-
-        my $input_line      = $rcall_hash->{input_line};
-        my $i               = $rcall_hash->{i};
-        my $i_beg           = $rcall_hash->{i_beg};
-        my $tok             = $rcall_hash->{tok};
-        my $type            = $rcall_hash->{type};
-        my $rtokens         = $rcall_hash->{rtokens};
-        my $rtoken_map      = $rcall_hash->{rtoken_map};
-        my $id_scan_state   = $rcall_hash->{id_scan_state};
-        my $max_token_index = $rcall_hash->{max_token_index};
 
         my $i_entry = $i;
 
@@ -9744,6 +9810,8 @@ sub find_next_noncomment_token {
 
 sub is_possible_numerator {
 
+    my ( $self, $i, $rtokens, $max_token_index ) = @_;
+
     # Look at the next non-comment character and decide if it could be a
     # numerator. Returns the following code:
     #   -1 - division not possible
@@ -9753,7 +9821,6 @@ sub is_possible_numerator {
     #    3 - division very probable: number and one of ; ] } follow
     #    4 - is division, not pattern: number and ) follow
 
-    my ( $self, $i, $rtokens, $max_token_index ) = @_;
     my $divide_possible_code = 0;
 
     my $next_token = $rtokens->[ $i + 1 ];
@@ -9817,6 +9884,8 @@ sub is_possible_numerator {
 
     sub pattern_expected {
 
+        my ( $self, $i, $rtokens, $max_token_index ) = @_;
+
         # This a filter for a possible pattern.
         # It looks at the token after a possible pattern and tries to
         # determine if that token could end a pattern.
@@ -9824,7 +9893,6 @@ sub is_possible_numerator {
         #   1 - yes
         #   0 - can't tell
         #  -1 - no
-        my ( $self, $i, $rtokens, $max_token_index ) = @_;
         my $is_pattern = 0;
 
         my $next_token = $rtokens->[ $i + 1 ];
@@ -9879,12 +9947,14 @@ sub find_next_nonblank_token_on_this_line {
 
 sub find_angle_operator_termination {
 
-    # We are looking at a '<' and want to know if it is an angle operator.
-    # We are to return:
-    #   $i = pretoken index of ending '>' if found, current $i otherwise
-    #   $type = 'Q' if found, '>' otherwise
     my ( $self, $input_line, $i_beg, $rtoken_map, $expecting, $max_token_index )
       = @_;
+
+    # We are looking at a '<' and want to know if it is an angle operator.
+    # Return:
+    #   $i = pretoken index of ending '>' if found, current $i otherwise
+    #   $type = 'Q' if found, '>' otherwise
+
     my $i    = $i_beg;
     my $type = '<';
     pos($input_line) = 1 + $rtoken_map->[$i];
@@ -10097,19 +10167,21 @@ EOM
 
 sub scan_number_do {
 
-    #  scan a number in any of the formats that Perl accepts
+    my ( $self, $input_line, $i, $rtoken_map, $input_type, $max_token_index ) =
+      @_;
+
+    #  Scan a number in any of the formats that Perl accepts
     #  Underbars (_) are allowed in decimal numbers.
-    #  input parameters -
+    #  Given:
     #      $input_line  - the string to scan
     #      $i           - pre_token index to start scanning
     #    $rtoken_map    - reference to the pre_token map giving starting
     #                    character position in $input_line of token $i
-    #  output parameters -
+    #  Return:
     #    $i            - last pre_token index of the number just scanned
+    #    $type         - the token type ('v' or 'n')
     #    number        - the number (characters); or undef if not a number
 
-    my ( $self, $input_line, $i, $rtoken_map, $input_type, $max_token_index ) =
-      @_;
     my $pos_beg = $rtoken_map->[$i];
     my $pos;
     ##my $i_begin = $i;
@@ -10257,16 +10329,6 @@ sub inverse_pretoken_map {
 
 sub find_here_doc {
 
-    # find the target of a here document, if any
-    # input parameters:
-    #   $i - token index of the second < of <<
-    #   ($i must be less than the last token index if this is called)
-    # output parameters:
-    #   $found_target = 0 didn't find target; =1 found target
-    #   HERE_TARGET - the target string (may be empty string)
-    #   $i - unchanged if not here doc,
-    #    or index of the last token of the here target
-    #   $saw_error - flag noting unbalanced quote on here target
     my (
 
         $self,
@@ -10280,6 +10342,16 @@ sub find_here_doc {
 
     ) = @_;
 
+    # Find the target of a here document, if any
+    # Given:
+    #   $i - token index of the second < of <<
+    #   ($i must be less than the last token index if this is called)
+    # Return:
+    #   $found_target = 0 didn't find target; =1 found target
+    #   HERE_TARGET - the target string (may be empty string)
+    #   $i - unchanged if not here doc,
+    #    or index of the last token of the here target
+    #   $saw_error - flag noting unbalanced quote on here target
     my $ibeg                 = $i;
     my $found_target         = 0;
     my $here_doc_target      = EMPTY_STRING;
@@ -10396,15 +10468,6 @@ sub find_here_doc {
 
 sub do_quote {
 
-    # follow (or continue following) quoted string(s)
-    # $in_quote return code:
-    #   0 - ok, found end
-    #   1 - still must find end of quote whose target is $quote_character
-    #   2 - still looking for end of first of two quotes
-    #
-    # Returns updated strings:
-    #  $quoted_string_1 = quoted string seen while in_quote=1
-    #  $quoted_string_2 = quoted string seen while in_quote=2
     my (
 
         $self,
@@ -10422,6 +10485,16 @@ sub do_quote {
         $max_token_index,
 
     ) = @_;
+
+    # Follow (or continue following) quoted string(s)
+    # $in_quote = return code:
+    #   0 - ok, found end
+    #   1 - still must find end of quote whose target is $quote_character
+    #   2 - still looking for end of first of two quotes
+    #
+    # Returns updated strings:
+    #  $quoted_string_1 = quoted string seen while in_quote=1
+    #  $quoted_string_2 = quoted string seen while in_quote=2
 
     my $quoted_string;
     if ( $in_quote == 2 ) {    # two quotes/quoted_string_1s to follow
@@ -10509,21 +10582,6 @@ BEGIN {
 
 sub follow_quoted_string {
 
-    # scan for a specific token, skipping escaped characters
-    # if the quote character is blank, use the first non-blank character
-    # input parameters:
-    #   $rtokens = reference to the array of tokens
-    #   $i = the token index of the first character to search
-    #   $in_quote = number of quoted strings being followed
-    #   $beginning_tok = the starting quote character
-    #   $quote_pos = index to check next for alphanumeric delimiter
-    # output parameters:
-    #   $i = the token index of the ending quote character
-    #   $in_quote = decremented if found end, unchanged if not
-    #   $beginning_tok = the starting quote character
-    #   $quote_pos = index to check next for alphanumeric delimiter
-    #   $quote_depth = nesting depth, since delimiters '{ ( [ <' can be nested.
-    #   $quoted_string = the text of the quote (without quotation tokens)
     my (
 
         $self,
@@ -10539,6 +10597,21 @@ sub follow_quoted_string {
 
     ) = @_;
 
+    # Scan for a specific token, skipping escaped characters.
+    # If the quote character is blank, use the first non-blank character.
+    # Given:
+    #   $rtokens = reference to the array of tokens
+    #   $i = the token index of the first character to search
+    #   $in_quote = number of quoted strings being followed
+    #   $beginning_tok = the starting quote character
+    #   $quote_pos = index to check next for alphanumeric delimiter
+    # Return:
+    #   $i = the token index of the ending quote character
+    #   $in_quote = decremented if found end, unchanged if not
+    #   $beginning_tok = the starting quote character
+    #   $quote_pos = index to check next for alphanumeric delimiter
+    #   $quote_depth = nesting depth, since delimiters '{ ( [ <' can be nested.
+    #   $quoted_string = the text of the quote (without quotation tokens)
     my ( $tok, $end_tok );
     my $i             = $i_beg - 1;
     my $quoted_string = EMPTY_STRING;
@@ -10709,6 +10782,8 @@ sub follow_quoted_string {
 
 sub indicate_error {
     my ( $self, $msg, $line_number, $input_line, $pos, $caret ) = @_;
+
+    # write input line and line with carat's showing where error was detected
     $self->interrupt_logfile();
     $self->warning($msg);
     $self->write_error_indicator_pair( $line_number, $input_line, $pos,
@@ -10730,10 +10805,15 @@ sub write_error_indicator_pair {
 
 sub make_numbered_line {
 
-    #  Given an input line, its line number, and a character position of
-    #  interest, create a string not longer than 80 characters of the form
+    my ( $lineno, $str, $pos ) = @_;
+
+    #  Given:
+    #     $lineno=line number
+    #     $str = an input line
+    #     $pos = character position of interest
+    # Create a string not longer than 80 characters of the form:
     #     $lineno: sub_string
-    #  such that the sub_string of $str contains the position of interest
+    # such that the sub_string of $str contains the position of interest
     #
     #  Here is an example of what we want, in this case we add trailing
     #  '...' because the line is long.
@@ -10758,7 +10838,6 @@ sub make_numbered_line {
     #     - $underline = a blank 'underline' which is all spaces with the same
     #       number of characters as the numbered line.
 
-    my ( $lineno, $str, $pos ) = @_;
     my $offset = ( $pos < 60 ) ? 0 : $pos - 40;
     my $excess = length($str) - $offset - 68;
     my $numc   = ( $excess > 0 ) ? 68 : undef;
@@ -10789,6 +10868,8 @@ sub make_numbered_line {
 
 sub write_on_underline {
 
+    my ( $underline, $pos, $pos_chr ) = @_;
+
     # The "underline" is a string that shows where an error is; it starts
     # out as a string of blanks with the same length as the numbered line of
     # code above it, and we have to add marking to show where an error is.
@@ -10806,8 +10887,6 @@ sub write_on_underline {
     #
     # This is a trivial thing to do with substr, but there is some
     # checking to do.
-
-    my ( $underline, $pos, $pos_chr ) = @_;
 
     # check for error..shouldn't happen
     if ( $pos < 0 || $pos > length($underline) ) {
@@ -10883,8 +10962,7 @@ sub pre_tokenize {
 
 sub show_tokens {
 
-    # this is an old debug routine
-    # not called, but saved for reference
+    # This is an uncalled debug routine, saved for reference
     my ( $rtokens, $rtoken_map ) = @_;
     my $num = scalar( @{$rtokens} );
 
