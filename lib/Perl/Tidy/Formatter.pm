@@ -4706,7 +4706,7 @@ sub set_whitespace_flags {
     } ## end main loop
 
     if ( $rOpts->{'tight-secret-operators'} ) {
-        new_secret_operator_whitespace( $rLL, $rwhitespace_flags );
+        $self->new_secret_operator_whitespace($rwhitespace_flags);
     }
     $self->[_ris_function_call_paren_] = $ris_function_call_paren;
     return $rwhitespace_flags;
@@ -5252,31 +5252,36 @@ EOM
 
     sub new_secret_operator_whitespace {
 
-        my ( $rlong_array, $rwhitespace_flags ) = @_;
+        my ( $self, $rwhitespace_flags ) = @_;
+
+        # Implement --tight-secret-operators
+        # Given:
+        #   $rwhitespace_flags = whitespase flags, to be updated
 
         # Loop over all tokens in this line
-        my ( $token, $type );
-        my $jmax = @{$rlong_array} - 1;
+        my $rLL  = $self->[_rLL_];
+        my $jmax = @{$rLL} - 1;
         foreach my $j ( 0 .. $jmax ) {
 
-            $token = $rlong_array->[$j]->[_TOKEN_];
-            $type  = $rlong_array->[$j]->[_TYPE_];
-
             # Skip unless this token might start a secret operator
+            my $type = $rLL->[$j]->[_TYPE_];
             next if ( $type eq 'b' );
+
+            my $token = $rLL->[$j]->[_TOKEN_];
             next unless ( $is_leading_secret_token{$token} );
 
-            #      Loop over all secret operators with this leading token
+            # Loop over all secret operators with this leading token
             foreach my $rpattern ( @{ $is_leading_secret_token{$token} } ) {
                 my $jend = $j - 1;
                 foreach my $tok ( @{$rpattern} ) {
                     $jend++;
-                    $jend++
 
+                    $jend++
                       if ( $jend <= $jmax
-                        && $rlong_array->[$jend]->[_TYPE_] eq 'b' );
+                        && $rLL->[$jend]->[_TYPE_] eq 'b' );
+
                     if (   $jend > $jmax
-                        || $tok ne $rlong_array->[$jend]->[_TOKEN_] )
+                        || $tok ne $rLL->[$jend]->[_TOKEN_] )
                     {
                         $jend = undef;
                         last;
@@ -5292,7 +5297,7 @@ EOM
                     $j = $jend;
                     last;
                 }
-            }    ##      End Loop over all operators
+            }    ## End Loop over all operators
         }    ## End loop over all tokens
         return;
     } ## end sub new_secret_operator_whitespace
@@ -6339,8 +6344,8 @@ EOM
 sub bad_pattern {
     my ($pattern) = @_;
 
-    # See if a pattern will compile.
-    # Note: this sub is also called from Tokenizer
+    # Return true if a regex pattern has an error
+    # Note: Tokenizer.pm also has a copy of this
     my $regex_uu = eval { qr/$pattern/ };
     return $EVAL_ERROR;
 } ## end sub bad_pattern
