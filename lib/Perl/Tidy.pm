@@ -101,6 +101,7 @@ use Encode::Guess;
 use IO::File;
 use File::Basename;
 use File::Copy;
+use File::Spec ();
 
 # perl stat function index names, based on
 #    https://perldoc.perl.org/functions/stat
@@ -405,44 +406,6 @@ EOM
 
     return $rinput_string;
 } ## end sub stream_slurp
-
-{    ## begin closure for sub catfile
-
-    my $missing_file_spec;
-
-    BEGIN {
-        $missing_file_spec = !eval { require File::Spec; 1 };
-    }
-
-    sub catfile {
-
-        # concatenate a path and file basename
-        # returns undef in case of error
-
-        my @parts = @_;
-
-        # use File::Spec if we can
-        if ( !$missing_file_spec ) {
-            return File::Spec->catfile(@parts);
-        }
-
-        # Perl 5.004 systems may not have File::Spec so we'll make
-        # a simple try.  We assume File::Basename is available.
-        # return if not successful.
-        my $name      = pop @parts;
-        my $path      = join '/', @parts;
-        my $test_file = $path . $name;
-        my ( $test_name, $test_path ) = fileparse($test_file);
-        return $test_file if ( $test_name eq $name );
-        return            if ( $OSNAME eq 'VMS' );
-
-        # this should work at least for Windows and Unix:
-        $test_file = $path . '/' . $name;
-        ( $test_name, $test_path ) = fileparse($test_file);
-        return $test_file if ( $test_name eq $name );
-        return;
-    } ## end sub catfile
-} ## end closure for sub catfile
 
 # Here is a map of the flow of data from the input source to the output
 # line sink:
@@ -2205,7 +2168,7 @@ sub process_all_files {
                       Die("unable to create directory $new_path: $OS_ERROR\n");
                 }
                 my $path = $new_path;
-                $fileroot = catfile( $path, $base );
+                $fileroot = File::Spec->catfile( $path, $base );
                 if ( !$fileroot ) {
                     Die(<<EOM);
 ------------------------------------------------------------------------
@@ -5593,12 +5556,13 @@ sub find_config_file {
             }
 
             # test ENV as directory:
-            $config_file = catfile( $ENV{$var}, ".perltidyrc" );
+            $config_file = File::Spec->catfile( $ENV{$var}, ".perltidyrc" );
             $config_file = $resolve_config_file->($config_file);
             return $config_file if $exists_config_file->($config_file);
 
             if ($is_Windows) {
-                $config_file = catfile( $ENV{$var}, "perltidy.ini" );
+                $config_file =
+                  File::Spec->catfile( $ENV{$var}, "perltidy.ini" );
                 $config_file = $resolve_config_file->($config_file);
                 return $config_file if $exists_config_file->($config_file);
             }
@@ -5620,20 +5584,20 @@ sub find_config_file {
             # i.e. C:\Documents and Settings\User\perltidy.ini
             if ($allusers) {
 
-                $config_file = catfile( $allusers, ".perltidyrc" );
+                $config_file = File::Spec->catfile( $allusers, ".perltidyrc" );
                 return $config_file if $exists_config_file->($config_file);
 
-                $config_file = catfile( $allusers, "perltidy.ini" );
+                $config_file = File::Spec->catfile( $allusers, "perltidy.ini" );
                 return $config_file if $exists_config_file->($config_file);
             }
 
             # Check system directory.
             # retain old code in case someone has been able to create
             # a file with a leading period.
-            $config_file = catfile( $system, ".perltidyrc" );
+            $config_file = File::Spec->catfile( $system, ".perltidyrc" );
             return $config_file if $exists_config_file->($config_file);
 
-            $config_file = catfile( $system, "perltidy.ini" );
+            $config_file = File::Spec->catfile( $system, "perltidy.ini" );
             return $config_file if $exists_config_file->($config_file);
         }
     }
