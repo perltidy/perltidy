@@ -21817,6 +21817,7 @@ BEGIN {
 } ## end BEGIN
 
 sub is_fragile_block_type {
+
     my ( $self, $block_type, $seqno ) = @_;
 
     # Given:
@@ -21873,6 +21874,7 @@ sub is_fragile_block_type {
     } ## end sub xlp_collapsed_lengths_initialize
 
     sub cumulative_length_to_comma {
+
         my ( $self, $KK, $K_comma, $K_closing ) = @_;
 
         # Given:
@@ -22265,7 +22267,12 @@ sub is_fragile_block_type {
 
         my ( $self, $iline, $K_begin_loop, $K_terminal, $K_last ) = @_;
 
-        # Loop over all tokens on a line for sub xlp_collapse_lengths
+        # Loop over tokens on a line for sub xlp_collapse_lengths
+
+        # Given:
+        #   $iline = line number in input stream
+        #   ($K_begin_loop, $K_terminal) = token index range to scan
+        #   $K_last = last token index on this line
 
         my $rLL                 = $self->[_rLL_];
         my $K_closing_container = $self->[_K_closing_container_];
@@ -22559,18 +22566,20 @@ EOM
 
 sub is_excluded_lp {
 
-    # Decide if this container is excluded by user request:
-    #  returns true if this token is excluded (i.e., may not use -lp)
-    #  returns false otherwise
+    my ( $self, $KK ) = @_;
+
+    # Decide if this container is excluded by user request
+
+    # Given:
+    #   $KK = index of the container opening token
+    # Return:
+    #   true if this token is excluded (i.e., may not use -lp)
+    #   false otherwise
 
     # The control hash can either describe:
     #   what to exclude:  $line_up_parentheses_control_is_lpxl = 1, or
     #   what to include:  $line_up_parentheses_control_is_lpxl = 0
 
-    # Input parameter:
-    #   $KK = index of the container opening token
-
-    my ( $self, $KK ) = @_;
     my $rLL         = $self->[_rLL_];
     my $rtoken_vars = $rLL->[$KK];
     my $token       = $rtoken_vars->[_TOKEN_];
@@ -22696,11 +22705,12 @@ sub set_excluded_lp_containers {
 
 sub process_all_lines {
 
+    my $self = shift;
+
     #----------------------------------------------------------
     # Main loop to format all lines of a file according to type
     #----------------------------------------------------------
 
-    my $self                       = shift;
     my $rlines                     = $self->[_rlines_];
     my $rOpts_keep_old_blank_lines = $rOpts->{'keep-old-blank-lines'};
     my $file_writer_object         = $self->[_file_writer_object_];
@@ -23043,7 +23053,12 @@ EOM
     } ## end sub kgb_initialize
 
     sub kgb_insert_blank_after {
+
         my ($i) = @_;
+
+        # Given:
+        #   $i = line number after which blank is requested
+
         $rhash_of_desires->{$i} = 1;
         my $ip = $i + 1;
         if ( defined( $rhash_of_desires->{$ip} )
@@ -23141,9 +23156,11 @@ EOM
 
         my ( $self, $bad_ending ) = @_;
 
-        # End a group of keywords:
-        #  $bad_ending = false if group ends ok
-        #                true  if group ends badly (strange pattern)
+        # End a group of keywords
+
+        # Given:
+        #   $bad_ending = false if group ends ok
+        #                 true  if group ends badly (strange pattern)
 
         if ( defined($ibeg) && $ibeg >= 0 ) {
 
@@ -23227,6 +23244,8 @@ EOM
 
     sub kgb_find_container_end {
 
+        my ($self) = @_;
+
         # If the keyword line is continued onto subsequent lines, find the
         # closing token '$K_closing' so that we can easily skip past the
         # contents of the container.
@@ -23234,8 +23253,6 @@ EOM
         # We only set this value if we find a simple list, meaning
         # -contents only one level deep
         # -not welded
-
-        my ($self) = @_;
 
         # First check: skip if next line is not one deeper
         my $Knext_nonblank = $self->K_next_nonblank($K_last);
@@ -23268,6 +23285,7 @@ EOM
     } ## end sub kgb_find_container_end
 
     sub kgb_add_to_group {
+
         my ( $self, $i, $token, $level ) = @_;
 
         # End the previous group if we have reached the maximum
@@ -23297,14 +23315,12 @@ EOM
         return;
     } ## end sub kgb_add_to_group
 
-    #---------------------
-    # -kgb main subroutine
-    #---------------------
-
     sub keyword_group_scan {
+
         my $self = shift;
 
         # Called once per file to process --keyword-group-blanks-* parameters.
+        # This is the main subroutine for the -kgb option
 
         # Task:
         # Manipulate blank lines around keyword groups (kgb* flags)
@@ -23661,10 +23677,11 @@ EOM
 
     sub leading_spaces_to_go {
 
-        # return the number of indentation spaces for a token in the output
-        # stream
-
         my ($ii) = @_;
+
+        # Return the number of indentation spaces for token at index $ii
+        # in the output stream
+
         return 0 if ( $ii < 0 );
         my $indentation = $leading_spaces_to_go[$ii];
         return ref($indentation) ? $indentation->get_spaces() : $indentation;
@@ -23672,13 +23689,15 @@ EOM
 
     sub create_one_line_block {
 
-        # set index starting next one-line block
+        # note that this updates a closure variable
+        $index_start_one_line_block = shift;
+
+        # Set index starting next one-line block
         # Given:
         #   $index_start_one_line_block = starting index in _to_go array
         #   undef => end current one-line block
         #
         # call with no args to delete the current one-line block
-        ($index_start_one_line_block) = @_;
         return;
     } ## end sub create_one_line_block
 
@@ -23925,9 +23944,10 @@ EOM
 
     sub flush_batch_of_CODE {
 
+        my ($self) = @_;
+
         # Finish and process the current batch.
         # This must be the only call to grind_batch_of_CODE()
-        my ($self) = @_;
 
         return if ( $max_index_to_go < 0 );
 
@@ -24045,9 +24065,10 @@ EOM
 
     sub add_missing_else {
 
+        my ($self) = @_;
+
         # Add a missing 'else' block.
         # $K_dangling_elsif = index of closing elsif brace not followed by else
-        my ($self) = @_;
 
         # Make sure everything looks okay
         if (  !$K_dangling_elsif
@@ -25006,10 +25027,10 @@ sub tight_paren_follows {
 
     my ( $self, $K_to_go_0, $K_ic ) = @_;
 
-    # Input parameters:
+    # Given:
     #   $K_to_go_0 = first token index K of this output batch (=K_to_go[0])
     #   $K_ic = index of the closing do brace (=K_to_go[$max_index_to_go])
-    # Return parameter:
+    # Return:
     #   false if we want a break after the closing do brace
     #   true if we do not want a break after the closing do brace
 
@@ -25149,6 +25170,8 @@ BEGIN {
 
 sub starting_one_line_block {
 
+    my ( $self, $Kj, $K_last_nonblank, $K_last ) = @_;
+
     # After seeing an opening curly brace, look for the closing brace and see
     # if the entire block will fit on a line.  This routine is not always right
     # so a check is made later (at the closing brace) to make sure we really
@@ -25163,14 +25186,13 @@ sub starting_one_line_block {
 
     # Calls 'create_one_line_block' if one-line block might be formed.
 
-    # Also returns a flag '$too_long':
-    #  true  = distance from opening keyword to OPENING brace exceeds
+    # Returns:
+    #  $too_long:
+    #   true  = distance from opening keyword to OPENING brace exceeds
     #          the maximum line length.
-    #  false (simple return) => not too long
+    #   false otherwise
     # Note that this flag is for distance from the statement start to the
     # OPENING brace, not the closing brace.
-
-    my ( $self, $Kj, $K_last_nonblank, $K_last ) = @_;
 
     my $rbreak_container     = $self->[_rbreak_container_];
     my $rshort_nested        = $self->[_rshort_nested_];
@@ -25569,11 +25591,16 @@ sub unstore_token_to_go {
 
 sub compare_indentation_levels {
 
-    # Check to see if output line tabbing agrees with input line
-    # this can be very useful for debugging a script which has an extra
-    # or missing brace.
-
     my ( $self, $K_first, $guessed_indentation_level, $line_number ) = @_;
+
+    # Check to see if output line leading space agrees with input line.
+    # This can be very useful for debugging a script which has an extra
+    # or missing brace.
+    # Given:
+    #   $K_first = index of first token on the line
+    #   $guessed_indentation_level = guess based on leading spaces in input
+    #   $line_number = line number in input stream
+
     return unless ( defined($K_first) );
 
     my $rLL = $self->[_rLL_];
@@ -25698,7 +25725,7 @@ sub compare_indentation_levels {
         # - If a break is made after an opening token, then a break will
         #   also be made before the corresponding closing token.
 
-        # Returns '$i_nonblank':
+        # Returns: $i_nonblank
         #   = index of the token after which the breakpoint was actually placed
         #   = undef if breakpoint was not set.
         my $i_nonblank;
@@ -25756,9 +25783,6 @@ EOM
     sub set_forced_breakpoint_AFTER {
         my ( $self, $i ) = @_;
 
-        # This routine is only called by sub set_forced_breakpoint and
-        # sub set_closing_breakpoint.
-
         # Set a breakpoint AFTER the token at index $i in the _to_go arrays.
 
         # Exceptions:
@@ -25770,6 +25794,9 @@ EOM
         # Returns:
         #   - the index of the token after which the break was set, or
         #   - undef if no break was set
+
+        # This routine is only called by sub set_forced_breakpoint and
+        # sub set_closing_breakpoint.
 
         return if ( !defined($i) );
         return if ( $i < 0 );
@@ -25901,8 +25928,11 @@ EOM
 
     sub set_closing_breakpoint {
 
-        # set a breakpoint at a matching closing token
         my ( $self, $i_break ) = @_;
+
+        # Set a breakpoint at a matching closing token
+        # Given:
+        #   $i_break = index of the opening token
 
         if ( defined( $mate_index_to_go[$i_break] ) ) {
 
@@ -25987,9 +26017,11 @@ EOM
 
     sub check_grind_input {
 
+        my ($self) = @_;
+
         # Check for valid input to sub grind_batch_of_CODE.  An error here
         # would most likely be due to an error in 'sub store_token_to_go'.
-        my ($self) = @_;
+        # NOTE: This is only called when DEVEL_MODE is set.
 
         # Be sure there are tokens in the batch
         if ( $max_index_to_go < 0 ) {
@@ -26041,6 +26073,9 @@ EOM
         # This sub directs the formatting of one complete batch of tokens.
         # The tokens of the batch are in the '_to_go' arrays.
         #-----------------------------------------------------------------
+
+        # Given:
+        #   $this_batch = ref to array of vars for this output batch
 
         $this_batch->[_peak_batch_size_] = $peak_batch_size;
         $this_batch->[_batch_count_]     = ++$batch_count;
@@ -26706,13 +26741,19 @@ EOM
 
     sub save_opening_indentation {
 
-        # This should be called after each batch of tokens is output. It
-        # saves indentations of lines of all unmatched opening tokens.
-        # These will be used by sub get_opening_indentation.
-
         my ( $self, $ri_first, $ri_last, $rindentation_list,
             $runmatched_opening_indexes )
           = @_;
+
+        # Save indentations of lines of all unmatched opening tokens.
+        # These will be used by sub get_opening_indentation.
+        # This should be called after each batch of tokens is output.
+
+        # Given:
+        #   $ri_first = ref to list of indexes of first token of output line
+        #   $ri_last  = ref to list of indexes of last token of output line
+        #   $rindentation_list = ref to indentations for each line
+        #   $runmatched_opening_indexes = list of indexes of unmatched tokens
 
         $runmatched_opening_indexes = []
           if ( !defined($runmatched_opening_indexes) );
@@ -26758,7 +26799,14 @@ EOM
     } ## end sub save_opening_indentation
 
     sub get_saved_opening_indentation {
+
         my ($seqno) = @_;
+
+        # Lookup indentation of an output line with a given container token
+
+        # Given:
+        #   $seqno = sequence number of a container token
+
         my ( $indent, $offset, $is_leading, $exists ) = ( 0, 0, 0, 0 );
 
         if ($seqno) {
@@ -26778,10 +26826,12 @@ EOM
 
 sub lookup_opening_indentation {
 
-    # get the indentation of the line in the current output batch
+    my ( $i_opening, $ri_start, $ri_last, $rindentation_list ) = @_;
+
+    # Get the indentation of the line in the current output batch
     # which output a selected opening token
     #
-    # given:
+    # Given:
     #   $i_opening - index of an opening token in the current output batch
     #                whose line indentation we need
     #   $ri_first - reference to list of the first index $i for each output
@@ -26793,11 +26843,9 @@ sub lookup_opening_indentation {
     #            this list is the last returned line number, and this is
     #            followed by the list of indentations).
     #
-    # return
+    # Return
     #   -the indentation of the line which contained token $i_opening
     #   -and its offset (number of columns) from the start of the line
-
-    my ( $i_opening, $ri_start, $ri_last, $rindentation_list ) = @_;
 
     if ( !@{$ri_last} ) {
 
@@ -26844,14 +26892,14 @@ EOM
 
 sub terminal_type_i {
 
+    my ( $ibeg, $iend ) = @_;
+
     # Given:
     #  ($ibeg, $iend) = index range of the current output buffer line
     # Returns type of last token on this line (terminal token), as follows:
     #   # for a full-line comment
     #   ' ' for a blank line
     #   otherwise returns final token type
-
-    my ( $ibeg, $iend ) = @_;
 
     # Start at the end and work backwards
     my $i      = $iend;
@@ -26892,10 +26940,11 @@ sub terminal_type_i {
 
 sub pad_array_to_go {
 
+    my ($self) = @_;
+
     # To simplify coding in break_lists and set_bond_strengths, it helps to
     # create some extra blank tokens at the end of the arrays.  We also add
     # some undef's to help guard against using invalid data.
-    my ($self) = @_;
     $K_to_go[ $max_index_to_go + 1 ]             = undef;
     $tokens_to_go[ $max_index_to_go + 1 ]        = EMPTY_STRING;
     $tokens_to_go[ $max_index_to_go + 2 ]        = EMPTY_STRING;
@@ -26938,13 +26987,19 @@ EOM
 } ## end sub pad_array_to_go
 
 sub break_all_chain_tokens {
+    #
+    my ( $self, $ri_left, $ri_right ) = @_;
 
-    # scan the current breakpoints looking for breaks at certain "chain
+    # Scan the current breakpoints looking for breaks at certain "chain
     # operators" (. : && || + etc) which often occur repeatedly in a long
     # statement.  If we see a break at any one, break at all similar tokens
     # within the same container.
-    #
-    my ( $self, $ri_left, $ri_right ) = @_;
+
+    # Given:
+    #   $ri_first - reference to list of the first index $i for each output
+    #               line in this batch
+    #   $ri_last - reference to list of the last index $i for each output line
+    #              in this batch
 
     my %saw_chain_type;
     my %left_chain_type;
@@ -27078,10 +27133,18 @@ sub break_all_chain_tokens {
 
 sub insert_additional_breaks {
 
-    # this routine will add line breaks at requested locations after
+    my ( $self, $ri_break_list, $ri_first, $ri_last ) = @_;
+
+    # This routine will add line breaks at requested locations after
     # sub break_long_lines has made preliminary breaks.
 
-    my ( $self, $ri_break_list, $ri_first, $ri_last ) = @_;
+    # Given:
+    #   $ri_break_list = list of index locations for additional breaks
+    #   $ri_first - reference to current list of the first index $i for each
+    #               output line in this batch
+    #   $ri_last - reference to current list of the last index $i for each
+    #               output line in this batch
+
     my $i_f;
     my $i_l;
     my $line_number = 0;
@@ -27143,10 +27206,11 @@ EOM
 
     sub in_same_container_i {
 
-        # Check to see if tokens at i1 and i2 are in the same container, and
+        my ( $self, $i1, $i2 ) = @_;
+
+        # Check to see if tokens at $i1 and $i2 are in the same container, and
         # not separated by certain characters: => , ? : || or
         # This is an interface between the _to_go arrays to the rLL array
-        my ( $self, $i1, $i2 ) = @_;
 
         # quick check
         my $parent_seqno_1 = $parent_seqno_to_go[$i1];
@@ -27217,7 +27281,16 @@ EOM
 
 sub break_equals {
 
+    my ( $self, $ri_left, $ri_right ) = @_;
+
     # Look for assignment operators that could use a breakpoint.
+
+    # Given:
+    #   $ri_first - reference to current list of the first index $i for each
+    #               output line in this batch
+    #   $ri_last - reference to current list of the last index $i for each
+    #               output line in this batch
+
     # For example, in the following snippet
     #
     #    $HOME = $ENV{HOME}
@@ -27235,7 +27308,6 @@ sub break_equals {
     # The logic here follows the logic in set_logical_padding, which
     # will add the padding in the second line to improve alignment.
     #
-    my ( $self, $ri_left, $ri_right ) = @_;
     my $nmax = @{$ri_right} - 1;
     return if ( $nmax < 2 );
 
@@ -27354,11 +27426,12 @@ sub break_equals {
 
     sub Debug_dump_breakpoints {
 
-        # Debug routine to dump current breakpoints...not normally called
-        # We are given indexes to the current lines:
-        # $ri_beg = ref to array of BEGinning indexes of each line
-        # $ri_end = ref to array of ENDing indexes of each line
         my ( $self, $ri_beg, $ri_end, $msg ) = @_;
+
+        # Debug routine to dump current breakpoints...not normally called
+        # Given: indexes to the current lines:
+        #   $ri_beg = ref to array of BEGinning indexes of each line
+        #   $ri_end = ref to array of ENDing indexes of each line
         print {*STDOUT} "----Dumping breakpoints from: $msg----\n";
         for my $n ( 0 .. @{$ri_end} - 1 ) {
             my $ibeg = $ri_beg->[$n];
@@ -27376,6 +27449,11 @@ sub break_equals {
     sub delete_one_line_semicolons {
 
         my ( $self, $ri_beg, $ri_end ) = @_;
+
+        # Given: indexes to the current lines:
+        #   $ri_beg = ref to array of beginning indexes of each line
+        #   $ri_end = ref to array of ending indexes of each line
+
         my $rLL                 = $self->[_rLL_];
         my $K_opening_container = $self->[_K_opening_container_];
 
@@ -28768,6 +28846,13 @@ EOM
 
         # Scan line ibeg_2 to $iend_2 up to last token for complexity.
         # We are not counting the last token in case it is an opening paren.
+
+        # Given:
+        #   $ri_end - ref to list of indexes of line-ending tokens
+        #   $n = current line index
+        #   $nmax = maximum line index
+        #   ($ibeg_2, $iend_2) = index range of line to scan
+
         # Return:
         #   true  if rhs is simple, ok to recombine
         #   false otherwise
@@ -29142,6 +29227,9 @@ sub insert_final_ternary_breaks {
 
     # Called once per batch to look for and do any final line breaks for
     # long ternary chains
+    # Given:
+    #   $ri_left = ref to array with token indexes of the left line ends
+    #   $ri_right = ref to array with token indexes of the right line ends
 
     my $nmax = @{$ri_right} - 1;
 
@@ -29210,6 +29298,10 @@ sub insert_breaks_before_list_opening_containers {
 
     # This routine is called once per batch to implement the parameters
     # --break-before-hash-brace, etc.
+
+    # Given:
+    #   $ri_left = ref to array with token indexes of the left line ends
+    #   $ri_right = ref to array with token indexes of the right line ends
 
     # Nothing to do if none of these parameters has been set
     return unless %break_before_container_types;
@@ -29319,6 +29411,8 @@ use constant DEBUG_CORRECT_LP => 0;
 
 sub correct_lp_indentation {
 
+    my ( $self, $this_batch ) = @_;
+
     # When the -lp option is used, we need to make a last pass through
     # each line to correct the indentation positions in case they differ
     # from the predictions.  This is necessary because perltidy uses a
@@ -29326,8 +29420,8 @@ sub correct_lp_indentation {
     # predictor is usually good, but sometimes stumbles.  The corrector
     # tries to patch things up once the actual opening paren locations
     # are known.
-    my ( $self, $this_batch ) = @_;
-
+    # Given:
+    #   $this_batch = ref to hash of values for this output batch
     my $ri_first = $this_batch->[_ri_first_];
     my $ri_last  = $this_batch->[_ri_last_];
 
@@ -29629,6 +29723,12 @@ sub correct_lp_indentation_pass_1 {
     # So some of the one-line blocks may be too long when given -lp
     # indentation.  We will fix that now if possible, using the list of these
     # closing block indexes.
+    # Given:
+    #   $ri_first - reference to current list of the first index $i for each
+    #               output line in this batch
+    #   $ri_last - reference to current list of the last index $i for each
+    #               output line in this batch
+    #   $ri_starting_one_line_block = list of indexes starting 1-line blocks
 
     my @ilist = @{$ri_starting_one_line_block};
     return unless (@ilist);
@@ -29673,6 +29773,9 @@ sub correct_lp_indentation_pass_1 {
 
 sub undo_lp_ci {
 
+    my ( $self, $line_open, $i_start, $closing_index, $ri_first, $ri_last ) =
+      @_;
+
     # If there is a single, long parameter within parens, like this:
     #
     #  $self->command( "/msg "
@@ -29687,9 +29790,15 @@ sub undo_lp_ci {
     #                 . $infoline->chan
     #                 . " You said $1, but did you know that it's square was "
     #                 . $1 * $1 . " ?");
+    # Given:
+    #   $line_open = index of line with opening paren
+    #   $i_start = index of token at end of starting line ["/msg" above]
+    #   $closing_index = index of the closing token
+    #   $ri_first - reference to current list of the first index $i for each
+    #               output line in this batch
+    #   $ri_last - reference to current list of the last index $i for each
+    #               output line in this batch
 
-    my ( $self, $line_open, $i_start, $closing_index, $ri_first, $ri_last ) =
-      @_;
     my $max_line = @{$ri_first} - 1;
 
     # must be multiple lines
@@ -29729,12 +29838,12 @@ use constant DEBUG_BREAK_LINES => 0;
 
 sub break_long_lines {
 
+    my ( $self, $saw_good_break, $rcolon_list, $rbond_strength_bias ) = @_;
+
     #-----------------------------------------------------------
     # Break a batch of tokens into lines which do not exceed the
     # maximum line length.
     #-----------------------------------------------------------
-
-    my ( $self, $saw_good_break, $rcolon_list, $rbond_strength_bias ) = @_;
 
     # Input parameters:
     #  $saw_good_break - a flag set by break_lists
@@ -30010,10 +30119,8 @@ BEGIN {
 
 sub break_lines_inner_loop {
 
-    #-----------------------------------------------------------------
     # Find the best next breakpoint in index range ($i_begin .. $imax)
     # which, if possible, does not exceed the maximum line length.
-    #-----------------------------------------------------------------
 
     my (
         $self,
@@ -30515,12 +30622,19 @@ sub break_lines_inner_loop {
 } ## end sub break_lines_inner_loop
 
 sub do_colon_breaks {
+
     my ( $self, $ri_colon_breaks, $ri_first, $ri_last ) = @_;
 
-    # using a simple method for deciding if we are in a ?/: chain --
-    # this is a chain if it has multiple ?/: pairs all in order;
-    # otherwise not.
-    # Note that if line starts in a ':' we count that above as a break
+    # Given:
+    #   $ri_colon_breaks = ref to list of indexes breaks at ':' tokens
+    #   $ri_first - reference to current list of the first index $i for each
+    #               output line in this batch
+    #   $ri_last - reference to current list of the last index $i for each
+    #               output line in this batch
+
+    # Add additional breaks if we are in a ?/: chain.
+    # Simplified method used here: This is a ?/: chain if it has
+    # multiple ?/: pairs all in order; otherwise not.
 
     my @insert_list = ();
     foreach ( @{$ri_colon_breaks} ) {
@@ -30684,6 +30798,12 @@ sub do_colon_breaks {
     # a new depth
     sub check_for_new_minimum_depth {
         my ( $self, $depth_t, $seqno ) = @_;
+
+        # Initialize for a new minimum depth
+
+        # Given:
+        #   $depth_t = new depth
+        #   $seqno = sequence number of the parent container
         if ( $depth_t < $minimum_depth ) {
 
             $minimum_depth = $depth_t;
@@ -30809,7 +30929,14 @@ sub do_colon_breaks {
 
     sub do_uncontained_comma_breaks {
 
-        # Handle commas not in containers...
+        my ( $self, $dd, $rbond_strength_bias ) = @_;
+
+        # Handle commas not in containers
+
+        # Given:
+        #   $dd = depth of this layer of commas
+        #   $rbond_strength_bias = array of bond strengths to be updated
+
         # This is a catch-all routine for commas that we
         # don't know what to do with because the don't fall
         # within containers.  We will bias the bond strength
@@ -30820,7 +30947,6 @@ sub do_colon_breaks {
         # won't work very well. However, the user can always
         # prevent following the old breakpoints with the
         # -iob flag.
-        my ( $self, $dd, $rbond_strength_bias ) = @_;
 
         # Check added for issue c131; an error here would be due to an
         # error initializing @comma_index when entering depth $dd.
@@ -30986,6 +31112,9 @@ EOM
     sub set_for_semicolon_breakpoints {
         my ( $self, $dd ) = @_;
 
+        # Given:
+        #   $dd = depth of this layer
+
         # Set breakpoints for semicolons in C-style 'for' containers
         foreach ( @{ $rfor_semicolon_list[$dd] } ) {
             $self->set_forced_breakpoint($_);
@@ -30995,6 +31124,9 @@ EOM
 
     sub set_logical_breakpoints {
         my ( $self, $dd ) = @_;
+
+        # Given:
+        #   $dd = depth of this layer
 
         # Set breakpoints at logical operators
         if (
@@ -31028,9 +31160,16 @@ EOM
 
     sub is_unbreakable_container {
 
-        # never break a container of one of these types
-        # because bad things can happen (map1.t)
         my $dd = shift;
+
+        # Given:
+        #   $dd = depth of this layer
+        # Return:
+        #   true if the container should not be broken
+        #   false otherwise
+
+        # never break a container of one of these types
+        # because bad things can happen (map1.t):
         return $is_sort_map_grep{ $container_type[$dd] };
     } ## end sub is_unbreakable_container
 
@@ -31038,15 +31177,20 @@ EOM
 
         my ( $self, $is_long_line, $rbond_strength_bias ) = @_;
 
-        #--------------------------------------------------------------------
         # This routine is called once per batch, if the batch is a list, to
         # set line breaks so that hierarchical structure can be displayed and
-        # so that list items can be vertically aligned.  The output of this
-        # routine is stored in the array @forced_breakpoint_to_go, which is
-        # used by sub 'break_long_lines' to set final breakpoints.  This is
-        # probably the most complex routine in perltidy, so I have
-        # broken it into pieces and over-commented it.
-        #--------------------------------------------------------------------
+        # so that list items can be vertically aligned.
+
+        # Given:
+        #   $is_long_line = true if this batch requires multiple output lines
+        #   $rbond_strength_bias = array of bond strengths to be updated
+        # Task:
+        #   Update the array @forced_breakpoint_to_go with breakpoints.
+        #   This array is used by sub 'break_long_lines' to set final
+        #   breakpoints.
+
+        # This is probably the most complex routine in perltidy,
+        # so I have broken it into pieces and over-commented it.
 
         $starting_depth = $nesting_depth_to_go[0];
 
@@ -31423,9 +31567,12 @@ EOM
 
     sub study_comma {
 
-        # study and store info for a list comma
-
         my ( $self, $i, $comma_follows_last_closing_token ) = @_;
+
+        # Study and store info for a list comma
+        # Given:
+        #  $i = index of this comma in the _to_go output batch array
+        #  $comma_follows_last_closing_token = true if it follows ')' '}' or ']'
 
         $last_dot_index[$depth]   = undef;
         $last_comma_index[$depth] = $i;
@@ -31653,6 +31800,9 @@ EOM
 
         # We have encountered a sequenced token while setting list breakpoints
 
+        # Given:
+        #  $i = index of this token in the _to_go output batch array
+
         # if closing type, one of } ) ] :
         if ( $is_closing_sequence_token{$token} ) {
 
@@ -31750,6 +31900,9 @@ EOM
     sub break_lists_increasing_depth {
 
         my ( $self, $i ) = @_;
+
+        # Given:
+        #  $i = index of this token in the _to_go output batch array
 
         #--------------------------------------------
         # prepare for a new list when depth increases
@@ -31851,6 +32004,10 @@ EOM
     sub break_lists_decreasing_depth {
 
         my ( $self, $i, $rbond_strength_bias ) = @_;
+
+        # Given:
+        #  $i = index of this token in the _to_go output batch array
+        #  $rbond_strength_bias = list of bond strengths to be updated
 
         # We have arrived at a closing container token in sub break_lists:
         # the token at index $i is one of these: ')','}', ']'
@@ -32421,6 +32578,10 @@ sub find_token_starting_list {
     # token.
     my ( $self, $i_opening_paren ) = @_;
 
+    # Given:
+    #   $i_opening_paren = index of the opening token in the _to_go arrays
+    #                      note: it could be any of { [ (
+
     # This will be the return index
     my $i_opening_minus = $i_opening_paren;
 
@@ -32491,6 +32652,8 @@ EOM
 
     sub table_maker {
 
+        my ( $self, $rhash_IN ) = @_;
+
         # Given a list of comma-separated items, set breakpoints at some of
         # the commas, if necessary, to make it easy to read.
         # This is done by making calls to 'set_forced_breakpoint'.
@@ -32502,8 +32665,6 @@ EOM
         # $rhash_IN : For contents see the calling routine
         # $rhash_A: For contents see return from sub 'table_layout_A'
         # $rhash_B: For contents see return from sub 'table_layout_B'
-
-        my ( $self, $rhash_IN ) = @_;
 
         # Find lengths of all list items needed for calculating page layout
         my $rhash_A = table_layout_A($rhash_IN);
@@ -33594,6 +33755,8 @@ EOM
 
 sub study_list_complexity {
 
+    my ( $self, $ri_term_begin, $ri_term_end, $ritem_lengths, $max_width ) = @_;
+
     # Look for complex tables which should be formatted with one term per line.
     # Returns the following:
     #
@@ -33602,7 +33765,6 @@ sub study_list_complexity {
     #  $number_of_fields_best = suggested number of fields based on
     #    complexity; = 0 if any number may be used.
     #
-    my ( $self, $ri_term_begin, $ri_term_end, $ritem_lengths, $max_width ) = @_;
     my $item_count            = @{$ri_term_begin};
     my $complex_item_count    = 0;
     my $number_of_fields_best = $rOpts_maximum_fields_per_table;
@@ -33708,12 +33870,12 @@ sub study_list_complexity {
 
 sub get_maximum_fields_wanted {
 
+    my ($ritem_lengths) = @_;
+
     # Not all tables look good with more than one field of items.
     # This routine looks at a table and decides if it should be
     # formatted with just one field or not.
     # This coding is still under development.
-    my ($ritem_lengths) = @_;
-
     my $number_of_fields_best = 0;
 
     # For just a few items, we tentatively assume just 1 field.
@@ -33800,10 +33962,11 @@ sub maximum_number_of_fields {
 
 sub compactify_table {
 
-    # given a table with a certain number of fields and a certain number
+    my ( $item_count, $number_of_fields, $formatted_lines, $odd_or_even ) = @_;
+
+    # For a table with a certain number of fields and a certain number
     # of lines, see if reducing the number of fields will make it look
     # better.
-    my ( $item_count, $number_of_fields, $formatted_lines, $odd_or_even ) = @_;
 
     # Given:
     #  $item_count = count of list items
@@ -33836,9 +33999,9 @@ sub compactify_table {
 
 sub set_ragged_breakpoints {
 
-    # Set breakpoints in a list that cannot be formatted nicely as a
-    # table.
     my ( $self, $ri_term_comma, $ri_ragged_break_list ) = @_;
+
+    # Set breakpoints in a list that cannot be formatted nicely as a table.
 
     my $break_count = 0;
     foreach ( @{$ri_ragged_break_list} ) {
@@ -33925,6 +34088,12 @@ sub copy_old_breakpoints {
 
 sub set_nobreaks {
     my ( $self, $i, $j ) = @_;
+
+    # Given:
+    #   $i = starting index in _to_go arrays
+    #   $j = ending index in _to_go arrays
+    # Task:
+    #   set nobreak_to_go for index range $i .. $j
     if ( $i >= 0 && $i <= $j && $j <= $max_index_to_go ) {
 
         0 && do {
@@ -34143,10 +34312,8 @@ sub get_available_spaces_to_go {
 
         my ( $self, $this_batch ) = @_;
 
-        #------------------------------------------------------------------
         # Define the leading whitespace for all tokens in the current batch
         # when the -lp formatting is selected.
-        #------------------------------------------------------------------
 
         # Returns number of tokens in this batch which have leading spaces
         # defined by an lp object:
@@ -35002,9 +35169,12 @@ EOM
 
     sub check_for_long_gnu_style_lines {
 
-        # look at the current estimated maximum line length, and
+        # Look at the current estimated maximum line length, and
         # remove some whitespace if it exceeds the desired maximum
         my ($ii_to_go) = @_;
+
+        # Given:
+        #   $ii_to_go = index of current token under consideration
 
         # nothing can be done if no stack items defined for this line
         return if ( $max_lp_object_list < 0 );
@@ -35222,12 +35392,13 @@ sub set_forced_lp_break {
 
 sub reduce_lp_indentation {
 
-    # reduce the leading whitespace at token $i if possible by $spaces_needed
-    # (a large value of $spaces_needed will remove all excess space)
+    my ( $self, $i, $spaces_wanted ) = @_;
+
+    # Reduce the leading whitespace at token $i if possible by $spaces_wanted
+    # (a large value of $spaces_wanted will remove all excess space)
     # NOTE: to be called from break_lists only for a sequence of tokens
     # contained between opening and closing parens/braces/brackets
 
-    my ( $self, $i, $spaces_wanted ) = @_;
     my $deleted_spaces = 0;
 
     my $item             = $leading_spaces_to_go[$i];
@@ -35254,10 +35425,15 @@ sub reduce_lp_indentation {
 
 sub check_convey_batch_input {
 
+    my ( $self, $ri_first, $ri_last ) = @_;
+
     # Check for valid input to sub convey_batch_to_vertical_aligner.  An
     # error here would most likely be due to an error in the calling
     # routine 'sub grind_batch_of_CODE'.
-    my ( $self, $ri_first, $ri_last ) = @_;
+
+    # Given
+    #   $ri_first = ref to list of starting line indexes in _to_go arrays
+    #   $ri_last  = ref to list of ending line indexes in _to_go arrays
 
     if ( !defined($ri_first) || !defined($ri_last) ) {
         Fault(<<EOM);
@@ -36517,6 +36693,10 @@ sub make_HSC_vertical_alignments {
 sub make_vertical_alignments {
     my ( $self, $ri_first, $ri_last ) = @_;
 
+    # Given:
+    #   $ri_first = ref to list of starting line indexes in _to_go arrays
+    #   $ri_last  = ref to list of ending line indexes in _to_go arrays
+
     #----------------------------
     # Shortcut for a single token
     #----------------------------
@@ -36587,11 +36767,16 @@ sub make_vertical_alignments {
 
 sub get_seqno {
 
-    # get opening and closing sequence numbers of a token for the vertical
+    my ( $self, $ii, $ending_in_quote ) = @_;
+
+    # Get opening and closing sequence numbers of a token for the vertical
     # aligner.  Assign qw quotes a value to allow qw opening and closing tokens
     # to be treated somewhat like opening and closing tokens for stacking
     # tokens by the vertical aligner.
-    my ( $self, $ii, $ending_in_quote ) = @_;
+
+    # Given:
+    #   $ii = index of token in the output batch
+    #   $ending_in_quote = true if line ends in quote
 
     my $rLL = $self->[_rLL_];
 
@@ -36614,7 +36799,12 @@ sub get_seqno {
 } ## end sub get_seqno
 
 sub undo_contained_ci {
+
     my ( $self, $ri_first, $ri_last ) = @_;
+
+    # Given:
+    #   $ri_first = ref to list of starting line indexes in _to_go arrays
+    #   $ri_last  = ref to list of ending line indexes in _to_go arrays
 
     # Undo ci for a sequence of lines in a container which all have both ci
     # and a jump in level. Written for issue git #137. This mainly occurs
@@ -36716,6 +36906,12 @@ sub undo_contained_ci {
 
         # Undo continuation indentation in certain sequences
         my ( $self, $ri_first, $ri_last, $rix_seqno_controlling_ci ) = @_;
+
+        # Given:
+        #   $ri_first = ref to list of starting line indexes in _to_go arrays
+        #   $ri_last  = ref to list of ending line indexes in _to_go arrays
+        #   $rix_seqno_controlling_ci = a control array
+
         my ( $line_1, $line_2 );
         my $max_line = @{$ri_first} - 1;
 
@@ -36966,6 +37162,8 @@ sub undo_contained_ci {
 
     sub set_logical_padding {
 
+        my ( $self, $this_batch ) = @_;
+
         # Look at a batch of lines and see if extra padding can improve the
         # alignment when there are certain leading operators. Here is an
         # example, in which some extra space is introduced before
@@ -36978,8 +37176,6 @@ sub undo_contained_ci {
         #       {
         #           &Error_OutOfRange;
         #       }
-        #
-        my ( $self, $this_batch ) = @_;
 
         my $ri_first          = $this_batch->[_ri_first_];
         my $ri_last           = $this_batch->[_ri_last_];
@@ -37628,6 +37824,8 @@ sub pad_token {
 
 sub xlp_tweak {
 
+    my ( $self, $ri_first, $ri_last ) = @_;
+
     # Remove one indentation space from unbroken containers marked with
     # 'K_extra_space'.  These are mostly two-line lists with short names
     # formatted with -xlp -pt=2.
@@ -37645,8 +37843,6 @@ sub xlp_tweak {
     #  - This must be called after 'set_logical_padding'.
     #  - This is currently only applied to -xlp. It would also work for -lp
     #    but that style is essentially frozen.
-
-    my ( $self, $ri_first, $ri_last ) = @_;
 
     # Must be 2 or more lines
     return if ( @{$ri_first} <= 1 );
@@ -37870,7 +38066,7 @@ sub xlp_tweak {
                 && $levels_to_go[$ibeg] eq $levels_to_go[$iterm] )
             {
                 $container_name{'0'} =
-                  make_uncontained_comma_name( $iterm, $ibeg );
+                  make_uncontained_comma_name( $ibeg, $iterm );
             }
         }
 
@@ -38211,7 +38407,11 @@ sub xlp_tweak {
     } ## end sub make_alignment_patterns
 
     sub make_uncontained_comma_name {
-        my ( $iterm, $ibeg ) = @_;
+        my ( $ibeg, $iterm ) = @_;
+
+        # Given:
+        #   $ibeg = first index
+        #   $iterm = last index
 
         # Make a container name by combining all leading barewords,
         # keywords and functions.
