@@ -658,6 +658,7 @@ BEGIN {
         _ris_my_sub_by_seqno_             => $i++,
         _rsub_call_paren_info_by_seqno_   => $i++,
         _rDOLLAR_underscore_by_sub_seqno_ => $i++,
+        _this_batch_                      => $i++,
 
         _LAST_SELF_INDEX_ => $i - 1,
     };
@@ -665,9 +666,8 @@ BEGIN {
 
 BEGIN {
 
-    # Index names for batch variables.
+    # Index names for variables stored in _this_batch_.
     # Do not combine with other BEGIN blocks (c101).
-    # These are stored in sub grind var $this_batch
     my $i = 0;
     use constant {
         _starting_in_quote_          => $i++,
@@ -1064,6 +1064,7 @@ sub new {
     $self->[_rDOLLAR_underscore_by_sub_seqno_] = {};
     $self->[_rK_sub_by_seqno_]                 = {};
     $self->[_ris_my_sub_by_seqno_]             = {};
+    $self->[_this_batch_]                      = [];
 
     # Mostly list characteristics and processing flags
     $self->[_rtype_count_by_seqno_]      = {};
@@ -23952,7 +23953,7 @@ EOM
         return if ( $max_index_to_go < 0 );
 
         # Create an array to hold variables for this batch
-        my $this_batch = [];
+        my $this_batch = $self->[_this_batch_] = [];
 
         $this_batch->[_starting_in_quote_] = 1 if ($starting_in_quote);
         $this_batch->[_ending_in_quote_]   = 1 if ($ending_in_quote);
@@ -23979,7 +23980,7 @@ EOM
         #-------------------
         # process this batch
         #-------------------
-        $self->grind_batch_of_CODE($this_batch);
+        $self->grind_batch_of_CODE();
 
         # Done .. this batch is history
         initialize_batch_variables();
@@ -26067,15 +26068,15 @@ EOM
 
     sub grind_batch_of_CODE {
 
-        my ( $self, $this_batch ) = @_;
+        my ($self) = @_;
 
         #-----------------------------------------------------------------
         # This sub directs the formatting of one complete batch of tokens.
         # The tokens of the batch are in the '_to_go' arrays.
         #-----------------------------------------------------------------
 
-        # Given:
-        #   $this_batch = ref to array of vars for this output batch
+        # $this_batch = ref to array of vars for this output batch
+        my $this_batch = $self->[_this_batch_];
 
         $this_batch->[_peak_batch_size_] = $peak_batch_size;
         $this_batch->[_batch_count_]     = ++$batch_count;
@@ -26117,8 +26118,7 @@ EOM
 
         my $lp_object_count_this_batch;
         if ($rOpts_line_up_parentheses) {
-            $lp_object_count_this_batch =
-              $self->set_lp_indentation($this_batch);
+            $lp_object_count_this_batch = $self->set_lp_indentation();
         }
 
         #-----------------------------
@@ -26145,7 +26145,7 @@ EOM
                 $this_batch->[_ri_first_] = [$ibeg];
                 $this_batch->[_ri_last_]  = [$ibeg];
 
-                $self->convey_batch_to_vertical_aligner($this_batch);
+                $self->convey_batch_to_vertical_aligner();
 
                 my $level = $levels_to_go[$ibeg];
                 $self->[_last_line_leading_type_]  = $types_to_go[$ibeg];
@@ -26654,13 +26654,13 @@ EOM
         # -lp corrector step
         #-------------------
         if ($lp_object_count_this_batch) {
-            $self->correct_lp_indentation($this_batch);
+            $self->correct_lp_indentation();
         }
 
         #--------------------
         # ship this batch out
         #--------------------
-        $self->convey_batch_to_vertical_aligner($this_batch);
+        $self->convey_batch_to_vertical_aligner();
 
         #-------------------------------------------------------------------
         # Write requested number of blank lines after an opening block brace
@@ -29411,7 +29411,7 @@ use constant DEBUG_CORRECT_LP => 0;
 
 sub correct_lp_indentation {
 
-    my ( $self, $this_batch ) = @_;
+    my ($self) = @_;
 
     # When the -lp option is used, we need to make a last pass through
     # each line to correct the indentation positions in case they differ
@@ -29420,8 +29420,9 @@ sub correct_lp_indentation {
     # predictor is usually good, but sometimes stumbles.  The corrector
     # tries to patch things up once the actual opening paren locations
     # are known.
-    # Given:
-    #   $this_batch = ref to hash of values for this output batch
+
+    my $this_batch = $self->[_this_batch_];
+
     my $ri_first = $this_batch->[_ri_first_];
     my $ri_last  = $this_batch->[_ri_last_];
 
@@ -34310,7 +34311,7 @@ sub get_available_spaces_to_go {
 
     sub set_lp_indentation {
 
-        my ( $self, $this_batch ) = @_;
+        my ($self) = @_;
 
         # Define the leading whitespace for all tokens in the current batch
         # when the -lp formatting is selected.
@@ -34356,7 +34357,9 @@ sub get_available_spaces_to_go {
 
         my %last_lp_equals = ();
 
-        my $rLL               = $self->[_rLL_];
+        my $rLL        = $self->[_rLL_];
+        my $this_batch = $self->[_this_batch_];
+
         my $starting_in_quote = $this_batch->[_starting_in_quote_];
 
         my $imin = 0;
@@ -35472,7 +35475,7 @@ EOM
 
 sub convey_batch_to_vertical_aligner {
 
-    my ( $self, $this_batch ) = @_;
+    my ($self) = @_;
 
     # This routine receives a batch of code for which the final line breaks
     # have been defined. Here we prepare the lines for passing to the vertical
@@ -35486,6 +35489,7 @@ sub convey_batch_to_vertical_aligner {
     my $rLL               = $self->[_rLL_];
     my $Klimit            = $self->[_Klimit_];
     my $ris_list_by_seqno = $self->[_ris_list_by_seqno_];
+    my $this_batch        = $self->[_this_batch_];
 
     my $do_not_pad              = $this_batch->[_do_not_pad_];
     my $starting_in_quote       = $this_batch->[_starting_in_quote_];
@@ -35534,7 +35538,7 @@ sub convey_batch_to_vertical_aligner {
           if ( $type_beg eq 'k'
             && $is_if_unless{$token_beg} );
 
-        $self->set_logical_padding($this_batch)
+        $self->set_logical_padding()
           if ($rOpts_logical_padding);
 
         $self->xlp_tweak( $ri_first, $ri_last )
@@ -37162,7 +37166,7 @@ sub undo_contained_ci {
 
     sub set_logical_padding {
 
-        my ( $self, $this_batch ) = @_;
+        my ($self) = @_;
 
         # Look at a batch of lines and see if extra padding can improve the
         # alignment when there are certain leading operators. Here is an
@@ -37176,6 +37180,8 @@ sub undo_contained_ci {
         #       {
         #           &Error_OutOfRange;
         #       }
+
+        my $this_batch = $self->[_this_batch_];
 
         my $ri_first          = $this_batch->[_ri_first_];
         my $ri_last           = $this_batch->[_ri_last_];
