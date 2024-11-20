@@ -1585,7 +1585,7 @@ sub K_next_code {
 sub K_next_nonblank {
     my ( $self, $KK, $rLL ) = @_;
 
-    # return the index of the next nonblank token after $KK
+    # Return the index of the next nonblank token after $KK
     # Given:
     #   $KK  = index of the token in $rLL
     #   $rLL = optional array to use (default is $self->[_rLL_])
@@ -1906,11 +1906,11 @@ sub parent_sub_seqno_by_K {
 sub is_in_block_by_i {
     my ( $self, $i ) = @_;
 
-    # returns true if
+    # Return true if
     #     token at i is contained in a BLOCK
     #     or is at root level
     #     or there is some kind of error (i.e. unbalanced file)
-    # returns false otherwise
+    # Return false otherwise
 
     if ( $i < 0 ) {
         DEVEL_MODE && Fault("Bad call, i='$i'\n");
@@ -1926,11 +1926,11 @@ sub is_in_block_by_i {
 sub is_in_block_by_K {
     my ( $self, $KK ) = @_;
 
-    # returns true if
+    # Return true if
     #     token at $KK is contained in a BLOCK
     #     or is at root level
     #     or there is some kind of error (i.e. unbalanced file)
-    # returns false otherwise
+    # Return false otherwise
 
     my $parent_seqno = $self->parent_seqno_by_K($KK);
     return SEQ_ROOT if ( !$parent_seqno || $parent_seqno == SEQ_ROOT );
@@ -1940,8 +1940,8 @@ sub is_in_block_by_K {
 sub is_in_list_by_i {
     my ( $self, $i ) = @_;
 
-    # returns true if token at i is contained in a LIST
-    # returns false otherwise
+    # Return true if token at i is contained in a LIST
+    # Return false otherwise
     my $seqno = $parent_seqno_to_go[$i];
     return if ( !$seqno );
     return if ( $seqno == SEQ_ROOT );
@@ -2601,7 +2601,7 @@ EOM
 
 sub initialize_space_after_keyword {
 
-    # default keywords for which space is introduced before an opening paren
+    # Default keywords for which space is introduced before an opening paren:
     # (at present, including them messes up vertical alignment)
     my @sak = qw(my local our state and or xor err eq ne if else elsif until
       unless while for foreach return switch case given when catch);
@@ -2625,7 +2625,7 @@ sub initialize_space_after_keyword {
 
 sub initialize_outdent_keyword {
 
-    # implement outdenting preferences for keywords
+    # Implement outdenting preferences for keywords
     %outdent_keyword = ();
     my @okw = split_words( $rOpts->{'outdent-keyword-list'} );
     if ( !@okw ) {
@@ -2646,7 +2646,7 @@ sub initialize_outdent_keyword {
 
 sub initialize_keyword_paren_inner_tightness {
 
-    # setup hash for -kpit option
+    # Setup hash for -kpit option
     %keyword_paren_inner_tightness = ();
     my $kpit_value = $rOpts->{'keyword-paren-inner-tightness'};
     if ( defined($kpit_value) && $kpit_value != 1 ) {
@@ -6791,7 +6791,7 @@ sub make_bl_pattern {
 
 sub make_bli_pattern {
 
-    # default list of block types for which -bli would apply
+    # Default list of block types for which -bli would apply:
     my $bli_list_string = 'if else elsif unless while for foreach do : sub';
     my $bli_exclusion_list_string = SPACE;
 
@@ -6816,7 +6816,7 @@ sub make_bli_pattern {
 
 sub make_keyword_group_list_pattern {
 
-    # turn any input list into a regex for recognizing selected block types.
+    # Turn any input list into a regex for recognizing selected block types.
     # Here are the defaults:
     $keyword_group_list_pattern         = '^(our|local|my|use|require|)$';
     $keyword_group_list_comment_pattern = EMPTY_STRING;
@@ -6845,7 +6845,7 @@ sub make_keyword_group_list_pattern {
 
 sub make_block_brace_vertical_tightness_pattern {
 
-    # turn any input list into a regex for recognizing selected block types
+    # Turn any input list into a regex for recognizing selected block types
     $block_brace_vertical_tightness_pattern =
       '^((if|else|elsif|unless|while|for|foreach|do|\w+:)$|sub)';
     if ( defined( $rOpts->{'block-brace-vertical-tightness-list'} )
@@ -6878,7 +6878,7 @@ sub make_blank_line_pattern {
 
 sub make_block_pattern {
 
-    #  given a string of block-type keywords, return a regex to match them
+    #  Given a string of block-type keywords, return a regex to match them
     #  The only tricky part is that labels are indicated with a single ':'
     #  and the 'sub' token text may have additional text after it (name of
     #  sub).
@@ -6943,7 +6943,7 @@ sub make_block_pattern {
 
 sub make_static_side_comment_pattern {
 
-    # create the pattern used to identify static side comments
+    # Create the pattern used to identify static side comments
     $static_side_comment_pattern = '^##';
 
     # allow the user to change it
@@ -26741,19 +26741,19 @@ EOM
 
     sub save_opening_indentation {
 
-        my ( $self, $ri_first, $ri_last, $rindentation_list,
-            $runmatched_opening_indexes )
-          = @_;
+        my ( $self, $rindentation_list ) = @_;
 
         # Save indentations of lines of all unmatched opening tokens.
         # These will be used by sub get_opening_indentation.
         # This should be called after each batch of tokens is output.
 
         # Given:
-        #   $ri_first = ref to list of indexes of first token of output line
-        #   $ri_last  = ref to list of indexes of last token of output line
         #   $rindentation_list = ref to indentations for each line
-        #   $runmatched_opening_indexes = list of indexes of unmatched tokens
+
+        # $runmatched_opening_indexes = list of indexes of unmatched tokens
+        my $this_batch = $self->[_this_batch_];
+        my $runmatched_opening_indexes =
+          $this_batch->[_runmatched_opening_indexes_];
 
         $runmatched_opening_indexes = []
           if ( !defined($runmatched_opening_indexes) );
@@ -26790,8 +26790,8 @@ EOM
             }
 
             $saved_opening_indentation{$seqno} = [
-                lookup_opening_indentation(
-                    $i_opening, $ri_first, $ri_last, $rindentation_list
+                $self->lookup_opening_indentation(
+                    $i_opening, $rindentation_list
                 )
             ];
         }
@@ -26826,7 +26826,7 @@ EOM
 
 sub lookup_opening_indentation {
 
-    my ( $i_opening, $ri_start, $ri_last, $rindentation_list ) = @_;
+    my ( $self, $i_opening, $rindentation_list ) = @_;
 
     # Get the indentation of the line in the current output batch
     # which output a selected opening token
@@ -26834,10 +26834,6 @@ sub lookup_opening_indentation {
     # Given:
     #   $i_opening - index of an opening token in the current output batch
     #                whose line indentation we need
-    #   $ri_first - reference to list of the first index $i for each output
-    #               line in this batch
-    #   $ri_last - reference to list of the last index $i for each output line
-    #              in this batch
     #   $rindentation_list - reference to a list containing the indentation
     #            used for each line.  (NOTE: the first slot in
     #            this list is the last returned line number, and this is
@@ -26846,6 +26842,14 @@ sub lookup_opening_indentation {
     # Return
     #   -the indentation of the line which contained token $i_opening
     #   -and its offset (number of columns) from the start of the line
+
+    # $ri_first - reference to list of the first index $i for each output
+    #  line in this batch
+    # $ri_last - reference to list of the last index $i for each output
+    #  line in this batch
+    my $this_batch = $self->[_this_batch_];
+    my $ri_first   = $this_batch->[_ri_first_];
+    my $ri_last    = $this_batch->[_ri_last_];
 
     if ( !@{$ri_last} ) {
 
@@ -26860,7 +26864,7 @@ sub lookup_opening_indentation {
     my $nline = $rindentation_list->[0];    # line number of previous lookup
 
     # reset line location if necessary
-    $nline = 0 if ( $i_opening < $ri_start->[$nline] );
+    $nline = 0 if ( $i_opening < $ri_first->[$nline] );
 
     # find the correct line
     if ( $i_opening <= $ri_last->[-1] ) {
@@ -26884,7 +26888,7 @@ EOM
 
     $rindentation_list->[0] =
       $nline;    # save line number to start looking next call
-    my $ibeg       = $ri_start->[$nline];
+    my $ibeg       = $ri_first->[$nline];
     my $offset     = token_sequence_length( $ibeg, $i_opening ) - 1;
     my $is_leading = ( $ibeg == $i_opening );
     return ( $rindentation_list->[ $nline + 1 ], $offset, $is_leading );
@@ -35428,16 +35432,18 @@ sub reduce_lp_indentation {
 
 sub check_convey_batch_input {
 
-    my ( $self, $ri_first, $ri_last ) = @_;
+    my ($self) = @_;
 
     # Check for valid input to sub convey_batch_to_vertical_aligner.  An
     # error here would most likely be due to an error in the calling
     # routine 'sub grind_batch_of_CODE'.
 
-    # Given
-    #   $ri_first = ref to list of starting line indexes in _to_go arrays
-    #   $ri_last  = ref to list of ending line indexes in _to_go arrays
+    my $this_batch = $self->[_this_batch_];
+    my $ri_first   = $this_batch->[_ri_first_];
+    my $ri_last    = $this_batch->[_ri_last_];
 
+    # $ri_first = ref to list of starting line indexes in _to_go arrays
+    # $ri_last  = ref to list of ending line indexes in _to_go arrays
     if ( !defined($ri_first) || !defined($ri_last) ) {
         Fault(<<EOM);
 Undefined line ranges ri_first and/r ri_last
@@ -35491,15 +35497,12 @@ sub convey_batch_to_vertical_aligner {
     my $ris_list_by_seqno = $self->[_ris_list_by_seqno_];
     my $this_batch        = $self->[_this_batch_];
 
-    my $do_not_pad              = $this_batch->[_do_not_pad_];
-    my $starting_in_quote       = $this_batch->[_starting_in_quote_];
-    my $ending_in_quote         = $this_batch->[_ending_in_quote_];
-    my $is_static_block_comment = $this_batch->[_is_static_block_comment_];
-    my $batch_CODE_type         = $this_batch->[_batch_CODE_type_];
-    my $ri_first                = $this_batch->[_ri_first_];
-    my $ri_last                 = $this_batch->[_ri_last_];
+    my $do_not_pad      = $this_batch->[_do_not_pad_];
+    my $batch_CODE_type = $this_batch->[_batch_CODE_type_];
+    my $ri_first        = $this_batch->[_ri_first_];
+    my $ri_last         = $this_batch->[_ri_last_];
 
-    $self->check_convey_batch_input( $ri_first, $ri_last ) if (DEVEL_MODE);
+    $self->check_convey_batch_input() if (DEVEL_MODE);
 
     my $n_last_line = @{$ri_first} - 1;
 
@@ -35523,15 +35526,14 @@ sub convey_batch_to_vertical_aligner {
 
     if ($rOpts_closing_side_comments) {
         ( $closing_side_comment, $cscw_block_comment ) =
-          $self->add_closing_side_comment( $ri_first, $ri_last );
+          $self->add_closing_side_comment();
     }
 
     # for multi-line batches ...
     if ( $n_last_line > 0 ) {
 
         # undo continuation indentation
-        $self->undo_ci( $ri_first, $ri_last,
-            $this_batch->[_rix_seqno_controlling_ci_] );
+        $self->undo_ci();
 
         # flush before a long if statement to avoid unwanted alignment
         $self->flush_vertical_aligner()
@@ -35541,14 +35543,13 @@ sub convey_batch_to_vertical_aligner {
         $self->set_logical_padding()
           if ($rOpts_logical_padding);
 
-        $self->xlp_tweak( $ri_first, $ri_last )
+        $self->xlp_tweak()
           if ($rOpts_extended_line_up_parentheses);
     }
 
     # -xci must undo continuation indentation even for single lines
     elsif ($rOpts_extended_continuation_indentation) {
-        $self->undo_ci( $ri_first, $ri_last,
-            $this_batch->[_rix_seqno_controlling_ci_] );
+        $self->undo_ci();
     }
     else {
         # ok: single line, no -xci
@@ -35586,8 +35587,7 @@ sub convey_batch_to_vertical_aligner {
 
     # Multiple tokens
     else {
-        $rline_alignments =
-          $self->make_vertical_alignments( $ri_first, $ri_last );
+        $rline_alignments = $self->make_vertical_alignments();
     }
 
     # ----------------------------------------------
@@ -35595,7 +35595,7 @@ sub convey_batch_to_vertical_aligner {
     # ----------------------------------------------
     my ( $type_beg_last, $type_end_last, $ibeg_next, $iend_next, $ljump );
 
-    foreach my $n ( 0 .. $n_last_line ) {
+    foreach my $nline ( 0 .. $n_last_line ) {
 
         # ----------------------------------------------------------------
         # This hash will hold the args for vertical alignment of this line
@@ -35603,7 +35603,7 @@ sub convey_batch_to_vertical_aligner {
         # ----------------------------------------------------------------
         my $rvao_args = {};
 
-        if ( $n > 0 ) {
+        if ( $nline > 0 ) {
             $type_beg_last = $type_beg;
             $type_end_last = $type_end;
 
@@ -35618,9 +35618,9 @@ sub convey_batch_to_vertical_aligner {
         my $Kbeg = $K_to_go[$ibeg];
         my $Kend = $K_to_go[$iend];
 
-        if ( $n < $n_last_line ) {
-            $ibeg_next = $ri_first->[ $n + 1 ];
-            $iend_next = $ri_last->[ $n + 1 ];
+        if ( $nline < $n_last_line ) {
+            $ibeg_next = $ri_first->[ $nline + 1 ];
+            $iend_next = $ri_last->[ $nline + 1 ];
 
             my $Kbeg_next = $K_to_go[$ibeg_next];
             $ljump =
@@ -35670,7 +35670,7 @@ sub convey_batch_to_vertical_aligner {
         # to achieve vertical alignment.  These fields are the actual text
         # which will be output, so from here on no more changes can be made to
         # the text.
-        my $rline_alignment = $rline_alignments->[$n];
+        my $rline_alignment = $rline_alignments->[$nline];
 
         # Programming check: (shouldn't happen)
         # The number of tokens which separate the fields must always be
@@ -35705,12 +35705,8 @@ EOM
 
             $ibeg,
             $iend,
-            $ri_first,
-            $ri_last,
             $rindentation_list,
             $ljump,
-            $starting_in_quote,
-            $is_static_block_comment,
 
         );
 
@@ -35728,7 +35724,7 @@ EOM
                 && $rOpts_outdent_long_comments
 
                 # but not if this is a static block comment
-                && !$is_static_block_comment
+                && !$this_batch->[_is_static_block_comment_]
             )
           )
         {
@@ -35810,18 +35806,8 @@ EOM
             && !$self->[_no_vertical_tightness_flags_] )
         {
             $rvao_args->{rvertical_tightness_flags} =
-              $self->set_vertical_tightness_flags(
-
-                $n,
-                $n_last_line,
-                $ibeg,
-                $iend,
-                $ri_first,
-                $ri_last,
-                $ending_in_quote,
-                $closing_side_comment
-
-              );
+              $self->set_vertical_tightness_flags( $nline,
+                $closing_side_comment );
         }
 
         # ----------------------------------
@@ -35843,13 +35829,13 @@ EOM
         #   : ' elsewhere in this document'
         # );
         #
-        if ( $type_beg eq ':' || $n > 0 && $type_end_last eq ':' ) {
+        if ( $type_beg eq ':' || $nline > 0 && $type_end_last eq ':' ) {
 
             my $is_terminal_ternary = 0;
-            my $last_leading_type   = $n > 0 ? $type_beg_last : ':';
+            my $last_leading_type   = $nline > 0 ? $type_beg_last : ':';
             my $terminal_type       = $types_to_go[$i_terminal];
             if (   $terminal_type ne ';'
-                && $n_last_line > $n
+                && $n_last_line > $nline
                 && $level_end == $lev )
             {
                 my $Kbeg_next = $K_to_go[$ibeg_next];
@@ -35899,7 +35885,7 @@ EOM
         # -------------------------------------------------
         # add any new closing side comment to the last line
         # -------------------------------------------------
-        if ( $closing_side_comment && $n == $n_last_line ) {
+        if ( $closing_side_comment && $nline == $n_last_line ) {
             my ( $rtokens, $rfields, $rpatterns, $rfield_lengths ) =
               @{$rline_alignment};
 
@@ -36027,14 +36013,13 @@ EOM
       # and limit total to 10 character widths
       && token_sequence_length( $ibeg, $iend ) <= 10;
 
-    # remember indentation of lines containing opening containers for
+    # Remember indentation of lines containing opening containers for
     # later use by sub get_final_indentation
-    $self->save_opening_indentation( $ri_first, $ri_last,
-        $rindentation_list, $this_batch->[_runmatched_opening_indexes_] )
+    $self->save_opening_indentation($rindentation_list)
       if ( $this_batch->[_runmatched_opening_indexes_]
         || $types_to_go[$max_index_to_go] eq 'q' );
 
-    # output any new -cscw block comment
+    # Output any new -cscw block comment
     if ($cscw_block_comment) {
         $self->flush_vertical_aligner();
         my $file_writer_object = $self->[_file_writer_object_];
@@ -36131,16 +36116,16 @@ EOM
 
     sub set_vertical_alignment_markers {
 
-        my ( $self, $ri_first, $ri_last ) = @_;
+        my ($self) = @_;
 
-        #----------------------------------------------------------------------
-        # This routine looks at output lines for certain tokens which can serve
-        # as vertical alignment markers (such as an '=').
-        #----------------------------------------------------------------------
+        # This routine looks at all output lines of a batch for certain tokens
+        # which can serve as vertical alignment markers (such as an '=').
 
-        # Input parameters:
-        #   $ri_first = ref to list of starting line indexes in _to_go arrays
-        #   $ri_last  = ref to list of ending line indexes in _to_go arrays
+        # $ri_first = ref to list of starting line indexes in _to_go arrays
+        # $ri_last  = ref to list of ending line indexes in _to_go arrays
+        my $this_batch = $self->[_this_batch_];
+        my $ri_first   = $this_batch->[_ri_first_];
+        my $ri_last    = $this_batch->[_ri_last_];
 
         # Method: We look at each token $i in this output batch and set
         # $ralignment_type_to_go->[$i] equal to those tokens at which we would
@@ -36248,10 +36233,10 @@ EOM
         # Loop over each line of this batch ...
         # -------------------------------------
 
-        foreach my $line ( 0 .. $max_line ) {
+        foreach my $nline ( 0 .. $max_line ) {
 
-            my $ibeg = $ri_first->[$line];
-            my $iend = $ri_last->[$line];
+            my $ibeg = $ri_first->[$nline];
+            my $iend = $ri_last->[$nline];
 
             next if ( $iend <= $ibeg );
 
@@ -36261,7 +36246,7 @@ EOM
             #----------------------------------
             # Loop over all tokens on this line
             #----------------------------------
-            $self->set_vertical_alignment_markers_token_loop( $line, $ibeg,
+            $self->set_vertical_alignment_markers_token_loop( $nline, $ibeg,
                 $iend );
         }
 
@@ -36277,10 +36262,10 @@ EOM
     }
 
     sub set_vertical_alignment_markers_token_loop {
-        my ( $self, $line, $ibeg, $iend ) = @_;
+        my ( $self, $nline, $ibeg, $iend ) = @_;
 
         # Input parameters:
-        #   $line = index of this line in the current batch
+        #   $nline = index of this line in the current batch
         #   $ibeg, $iend = index range of tokens to check in the _to_go arrays
 
         # Task:
@@ -36379,7 +36364,7 @@ EOM
                 {
                     if ( $ralignment_type_to_go->[$imate] ) {
                         $ralignment_type_to_go->[$imate] = EMPTY_STRING;
-                        $ralignment_counts->[$line]--;
+                        $ralignment_counts->[$nline]--;
                     }
                     pop @imatch_list;
                 }
@@ -36607,7 +36592,7 @@ EOM
 
                 else {
                     $ralignment_type_to_go->[$i] = $alignment_type;
-                    $ralignment_counts->[$line]++;
+                    $ralignment_counts->[$nline]++;
                     push @imatch_list, $i;
                 }
             }
@@ -36695,7 +36680,11 @@ sub make_HSC_vertical_alignments {
 } ## end sub make_HSC_vertical_alignments
 
 sub make_vertical_alignments {
-    my ( $self, $ri_first, $ri_last ) = @_;
+    my ($self) = @_;
+
+    my $this_batch = $self->[_this_batch_];
+    my $ri_first   = $this_batch->[_ri_first_];
+    my $ri_last    = $this_batch->[_ri_last_];
 
     # Given:
     #   $ri_first = ref to list of starting line indexes in _to_go arrays
@@ -36743,7 +36732,7 @@ sub make_vertical_alignments {
         || $types_to_go[$max_index_to_go] eq '#' )
     {
         ( $ralignment_type_to_go, $ralignment_counts ) =
-          $self->set_vertical_alignment_markers( $ri_first, $ri_last );
+          $self->set_vertical_alignment_markers();
     }
 
     #----------------------------------------------
@@ -36771,7 +36760,7 @@ sub make_vertical_alignments {
 
 sub get_seqno {
 
-    my ( $self, $ii, $ending_in_quote ) = @_;
+    my ( $self, $ii ) = @_;
 
     # Get opening and closing sequence numbers of a token for the vertical
     # aligner.  Assign qw quotes a value to allow qw opening and closing tokens
@@ -36780,7 +36769,6 @@ sub get_seqno {
 
     # Given:
     #   $ii = index of token in the output batch
-    #   $ending_in_quote = true if line ends in quote
 
     my $rLL = $self->[_rLL_];
 
@@ -36794,7 +36782,8 @@ sub get_seqno {
             $seqno = $SEQ_QW if ( $token =~ /^qw\s*[\(\{\[]/ );
         }
         else {
-            if ( !$ending_in_quote ) {
+            # _ending_in_quote_ = true if line ends in quote
+            if ( !$self->[_this_batch_]->[_ending_in_quote_] ) {
                 $seqno = $SEQ_QW if ( $token =~ /[\)\}\]]$/ );
             }
         }
@@ -36909,7 +36898,13 @@ sub undo_contained_ci {
     sub undo_ci {
 
         # Undo continuation indentation in certain sequences
-        my ( $self, $ri_first, $ri_last, $rix_seqno_controlling_ci ) = @_;
+        my ($self) = @_;
+
+        my $this_batch = $self->[_this_batch_];
+        my $ri_first   = $this_batch->[_ri_first_];
+        my $ri_last    = $this_batch->[_ri_last_];
+        my $rix_seqno_controlling_ci =
+          $this_batch->[_rix_seqno_controlling_ci_];
 
         # Given:
         #   $ri_first = ref to list of starting line indexes in _to_go arrays
@@ -37830,7 +37825,7 @@ sub pad_token {
 
 sub xlp_tweak {
 
-    my ( $self, $ri_first, $ri_last ) = @_;
+    my ($self) = @_;
 
     # Remove one indentation space from unbroken containers marked with
     # 'K_extra_space'.  These are mostly two-line lists with short names
@@ -37849,6 +37844,10 @@ sub xlp_tweak {
     #  - This must be called after 'set_logical_padding'.
     #  - This is currently only applied to -xlp. It would also work for -lp
     #    but that style is essentially frozen.
+
+    my $this_batch = $self->[_this_batch_];
+    my $ri_first   = $this_batch->[_ri_first_];
+    my $ri_last    = $this_batch->[_ri_last_];
 
     # Must be 2 or more lines
     return if ( @{$ri_first} <= 1 );
@@ -38537,12 +38536,8 @@ sub make_paren_name {
 
             $ibeg,
             $iend,
-            $ri_first,
-            $ri_last,
             $rindentation_list,
             $level_jump,
-            $starting_in_quote,
-            $is_static_block_comment,
 
         ) = @_;
 
@@ -38571,6 +38566,8 @@ sub make_paren_name {
         #    but note that there is some overlap with the functions of sub
         #    undo_ci, which was processed earlier, so care has to be taken to
         #    keep them coordinated.
+
+        my $this_batch = $self->[_this_batch_];
 
         # Find the last code token of this line
         my $i_terminal    = $iend;
@@ -38661,8 +38658,6 @@ sub make_paren_name {
 
                 $ibeg,
                 $iend,
-                $ri_first,
-                $ri_last,
                 $rindentation_list,
                 $level_jump,
                 $i_terminal,
@@ -38876,7 +38871,7 @@ sub make_paren_name {
         # Remember indentation except for multi-line quotes, which get
         # no indentation
         #-------------------------------------------------------------
-        if ( !( $ibeg == 0 && $starting_in_quote ) ) {
+        if ( !( $ibeg == 0 && $this_batch->[_starting_in_quote_] ) ) {
             $last_indentation_written    = $indentation;
             $last_unadjusted_indentation = $leading_spaces_beg;
             $last_leading_token          = $token_beg;
@@ -38984,7 +38979,7 @@ sub make_paren_name {
                 || $rOpts_outdent_labels && $type_beg eq 'J'
 
                 # or static block comments if requested
-                || $is_static_block_comment
+                || $this_batch->[_is_static_block_comment_]
                 && $rOpts_outdent_static_block_comments
             )
           )
@@ -39049,8 +39044,6 @@ sub make_paren_name {
 
             $ibeg,
             $iend,
-            $ri_first,
-            $ri_last,
             $rindentation_list,
             $level_jump,
             $i_terminal,
@@ -39148,8 +39141,6 @@ sub make_paren_name {
               = $self->get_opening_indentation(
 
                 $ibeg_weld_fix,
-                $ri_first,
-                $ri_last,
                 $rindentation_list,
                 $seqno_qw_closing
 
@@ -39297,8 +39288,8 @@ sub make_paren_name {
                         $opening_indentation, $opening_offset,
                         $is_leading,          $opening_exists
                       )
-                      = $self->get_opening_indentation( $ibeg, $ri_first,
-                        $ri_last, $rindentation_list, undef );
+                      = $self->get_opening_indentation( $ibeg,
+                        $rindentation_list, undef );
                     my $indentation = $leading_spaces_beg;
                     if ( defined($opening_indentation)
                         && get_spaces($indentation) >
@@ -39322,8 +39313,8 @@ sub make_paren_name {
                     $opening_indentation, $opening_offset,
                     $is_leading,          $opening_exists
                   )
-                  = $self->get_opening_indentation( $ibeg, $ri_first, $ri_last,
-                    $rindentation_list, undef );
+                  = $self->get_opening_indentation( $ibeg, $rindentation_list,
+                    undef );
                 my $indentation = $leading_spaces_beg;
                 if ( defined($opening_indentation)
                     && get_spaces($indentation) >
@@ -39442,7 +39433,7 @@ sub make_paren_name {
                 $opening_indentation, $opening_offset,
                 $is_leading,          $opening_exists
               )
-              = $self->get_opening_indentation( $ibeg, $ri_first, $ri_last,
+              = $self->get_opening_indentation( $ibeg,
                 $rindentation_list, undef );
             if ($is_leading) { $adjust_indentation = 2; }
         }
@@ -39489,8 +39480,6 @@ sub get_opening_indentation {
         $self,
 
         $i_closing,
-        $ri_first,
-        $ri_last,
         $rindentation_list,
         $qw_seqno
 
@@ -39504,8 +39493,7 @@ sub get_opening_indentation {
 
         # it is..look up the indentation
         ( $indent, $offset, $is_leading ) =
-          lookup_opening_indentation( $i_opening, $ri_first, $ri_last,
-            $rindentation_list );
+          $self->lookup_opening_indentation( $i_opening, $rindentation_list );
     }
 
     # if not, it should have been stored in the hash by a previous batch
@@ -39583,19 +39571,11 @@ BEGIN {
 
 sub set_vertical_tightness_flags {
 
-    my (
-        $self,
+    my ( $self, $nline, $closing_side_comment ) = @_;
 
-        $n,
-        $n_last_line,
-        $ibeg,
-        $iend,
-        $ri_first,
-        $ri_last,
-        $ending_in_quote,
-        $closing_side_comment
-
-    ) = @_;
+    # Given:
+    #   $nline = index of this line in the current output batch
+    #   $closing_side_comment = true if line has side comment
 
     # Define vertical tightness controls for the nth line of a batch.
     # Note: do not call this sub for a block comment or if
@@ -39640,6 +39620,19 @@ sub set_vertical_tightness_flags {
     #   %stack_closing_token
     #   %stack_opening_token
 
+    # Pull out needed batch variables
+    my $this_batch = $self->[_this_batch_];
+    my $ri_first   = $this_batch->[_ri_first_];
+    my $ri_last    = $this_batch->[_ri_last_];
+
+    my $n_last_line = @{$ri_first} - 1;
+    if ( $nline < 0 || $nline > $n_last_line ) {
+        DEVEL_MODE && Fault("bad line index '$nline' ; max is $n_last_line\n");
+        return;
+    }
+    my $ibeg = $ri_first->[$nline];
+    my $iend = $ri_last->[$nline];
+
     # Define these values for each vertical tightness type:
     my (
 
@@ -39653,21 +39646,14 @@ sub set_vertical_tightness_flags {
     );
 
     # get the sequence numbers of the ends of this line
-    my $vt_seqno_beg = $type_sequence_to_go[$ibeg];
-    if ( !$vt_seqno_beg ) {
-        if ( $types_to_go[$ibeg] eq 'q' ) {
-            $vt_seqno_beg = $self->get_seqno( $ibeg, $ending_in_quote );
-        }
-        else { $vt_seqno_beg = EMPTY_STRING }
-    }
-
-    my $vt_seqno_end = $type_sequence_to_go[$iend];
-    if ( !$vt_seqno_end ) {
-        if ( $types_to_go[$iend] eq 'q' ) {
-            $vt_seqno_end = $self->get_seqno( $iend, $ending_in_quote );
-        }
-        else { $vt_seqno_end = EMPTY_STRING }
-    }
+    my $vt_seqno_beg =
+        $type_sequence_to_go[$ibeg] ? $type_sequence_to_go[$ibeg]
+      : $types_to_go[$ibeg] eq 'q'  ? $self->get_seqno($ibeg)
+      :                               EMPTY_STRING;
+    my $vt_seqno_end =
+        $type_sequence_to_go[$iend] ? $type_sequence_to_go[$iend]
+      : $types_to_go[$iend] eq 'q'  ? $self->get_seqno($iend)
+      :                               EMPTY_STRING;
 
     #--------------------------------------------------------------
     # Vertical Tightness Flags Section 1:
@@ -39675,7 +39661,7 @@ sub set_vertical_tightness_flags {
     # For non-BLOCK tokens, we will need to examine the next line
     # too, so we won't consider the last line.
     #--------------------------------------------------------------
-    if ( $n < $n_last_line ) {
+    if ( $nline < $n_last_line ) {
 
         # NOTE: Section 1 has 4 sub-sections: 1a, 1b, 1c, and 1d.  The logic to
         # reach any of these end states is complex, and it is possible but very
@@ -39688,9 +39674,9 @@ sub set_vertical_tightness_flags {
         # Vertical Tightness Flags Section 1a:
         # Look for Type 1, last token of this line is a non-block opening token
         #--------------------------------------------------------------
-        my $ibeg_next = $ri_first->[ $n + 1 ];
+        my $ibeg_next = $ri_first->[ $nline + 1 ];
         my $token_end = $tokens_to_go[$iend];
-        my $iend_next = $ri_last->[ $n + 1 ];
+        my $iend_next = $ri_last->[ $nline + 1 ];
 
         if (
                $type_sequence_to_go[$iend]
@@ -40016,7 +40002,7 @@ sub set_vertical_tightness_flags {
         if ($stackable) {
 
             my $is_semicolon_terminated;
-            if ( $n + 1 == $n_last_line ) {
+            if ( $nline + 1 == $n_last_line ) {
                 my $terminal_type = terminal_type_i( $ibeg_next, $iend_next );
                 $is_semicolon_terminated = $terminal_type eq ';'
                   && $nesting_depth_to_go[$iend_next] <
@@ -40079,7 +40065,7 @@ sub set_vertical_tightness_flags {
         && $ibeg eq $iend
         && $block_type_to_go[$iend]
         && $types_to_go[$iend] eq '}'
-        && ( !$closing_side_comment || $n < $n_last_line ) )
+        && ( !$closing_side_comment || $nline < $n_last_line ) )
     {
         my $spaces = $rOpts_block_brace_tightness == 2 ? 0 : 1;
 
@@ -40651,8 +40637,13 @@ sub get_asub_block_label {
 
 sub add_closing_side_comment {
 
-    my ( $self, $ri_first, $ri_last ) = @_;
-    my $rLL = $self->[_rLL_];
+    my ($self) = @_;
+
+    my $rLL        = $self->[_rLL_];
+    my $this_batch = $self->[_this_batch_];
+
+    my $ri_first = $this_batch->[_ri_first_];
+    my $ri_last  = $this_batch->[_ri_last_];
 
     # add closing side comments after closing block braces if -csc used
     my ( $closing_side_comment, $cscw_block_comment );
