@@ -734,14 +734,17 @@ sub pod_to_html {
         # "backlink=s", "cachedir=s", "htmlroot=s", "libpods=s",
         # "podpath=s", "podroot=s"
         # Note: -css=s is handled by perltidy itself
-        foreach my $kw (qw(backlink cachedir htmlroot libpods podpath podroot))
+        foreach
+          my $kw (qw( backlink cachedir htmlroot libpods podpath podroot ))
         {
             if ( $rOpts->{$kw} ) { push @args, "--$kw=$rOpts->{$kw}" }
         }
 
         # Toggle switches; these have extra leading 'pod'
         # "header!", "index!", "recurse!", "quiet!", "verbose!"
-        foreach my $kw (qw(podheader podindex podrecurse podquiet podverbose)) {
+        foreach
+          my $kw (qw( podheader podindex podrecurse podquiet podverbose ))
+        {
             my $kwd = $kw;    # allows us to strip 'pod'
             if    ( $rOpts->{$kw} ) { $kwd =~ s/^pod//; push @args, "--$kwd" }
             elsif ( defined( $rOpts->{$kw} ) ) {

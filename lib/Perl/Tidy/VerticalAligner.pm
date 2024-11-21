@@ -2440,9 +2440,7 @@ sub sweep_left_to_right {
         # alignments we can be less restrictive.
 
         # These are 'good' alignments, which are allowed more padding:
-        my @q = qw(
-          => = ? if unless or || {
-        );
+        my @q = qw( => = ? if unless or || { );
         push @q, ',';
         @is_good_alignment_token{@q} = (0) x scalar(@q);
 
@@ -2910,18 +2908,11 @@ EOM
     BEGIN {
         my @q;
 
-        @q = qw(
-          = **= += *= &= <<= &&=
-          -= /= |= >>= ||= //=
-          .= %= ^=
-          x=
-        );
+        @q = qw( = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x= );
         @is_assignment{@q} = (1) x scalar(@q);
 
         # These tokens may be kept following an = deletion
-        @q = qw(
-          if unless or ||
-        );
+        @q = qw( if unless or || );
         @keep_after_deleted_assignment{@q} = (1) x scalar(@q);
 
     } ## end BEGIN
@@ -4290,17 +4281,10 @@ sub Dump_tree_groups {
 
     BEGIN {
 
-        my @q = qw(
-          if unless or ||
-        );
+        my @q = qw( if unless or || );
         @is_if_or{@q} = (1) x scalar(@q);
 
-        @q = qw(
-          = **= += *= &= <<= &&=
-          -= /= |= >>= ||= //=
-          .= %= ^=
-          x=
-        );
+        @q = qw( = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x= );
         @is_assignment{@q} = (1) x scalar(@q);
 
         # Vertically aligning on certain "good" tokens is usually okay

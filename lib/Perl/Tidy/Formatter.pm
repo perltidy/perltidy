@@ -723,39 +723,34 @@ BEGIN {
     # Initialize constant hashes ...
     my @q;
 
-    @q = qw(
-      = **= += *= &= <<= &&=
-      -= /= |= >>= ||= //=
-      .= %= ^=
-      x=
-    );
+    @q = qw( = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x= );
     @is_assignment{@q} = (1) x scalar(@q);
 
     # a hash needed by break_lists for efficiency:
     push @q, qw{ ; < > ~ f };
     @is_non_list_type{@q} = (1) x scalar(@q);
 
-    @q = qw(is if unless and or err last next redo return);
+    @q = qw( is if unless and or err last next redo return );
     @is_if_unless_and_or_last_next_redo_return{@q} = (1) x scalar(@q);
 
     # These block types may have text between the keyword and opening
     # curly.  Note: 'else' does not, but must be included to allow trailing
     # if/elsif text to be appended.
     # patch for SWITCH/CASE: added 'case' and 'when'
-    @q = qw(if elsif else unless while until for foreach case when catch);
+    @q = qw( if elsif else unless while until for foreach case when catch );
     @is_if_elsif_else_unless_while_until_for_foreach{@q} =
       (1) x scalar(@q);
 
     # These can either have the BLOCK form or trailing modifier form:
-    @q = qw(if unless while until for foreach);
+    @q = qw( if unless while until for foreach );
     @is_if_unless_while_until_for_foreach{@q} =
       (1) x scalar(@q);
 
     # These can have several forms
-    @q = qw(for foreach);
+    @q = qw( for foreach );
     @is_for_foreach{@q} = (1) x scalar(@q);
 
-    @q = qw(last next redo return);
+    @q = qw( last next redo return );
     @is_last_next_redo_return{@q} = (1) x scalar(@q);
 
     # Map related block names into a common name to allow vertical alignment
@@ -773,22 +768,22 @@ BEGIN {
         'grep'    => 'map',
     );
 
-    @q = qw(if unless);
+    @q = qw( if unless );
     @is_if_unless{@q} = (1) x scalar(@q);
 
-    @q = qw(if elsif);
+    @q = qw( if elsif );
     @is_if_elsif{@q} = (1) x scalar(@q);
 
-    @q = qw(if unless elsif);
+    @q = qw( if unless elsif );
     @is_if_unless_elsif{@q} = (1) x scalar(@q);
 
-    @q = qw(if unless elsif else);
+    @q = qw( if unless elsif else );
     @is_if_unless_elsif_else{@q} = (1) x scalar(@q);
 
-    @q = qw(elsif else);
+    @q = qw( elsif else );
     @is_elsif_else{@q} = (1) x scalar(@q);
 
-    @q = qw(and or err);
+    @q = qw( and or err );
     @is_and_or{@q} = (1) x scalar(@q);
 
     # Identify certain operators which often occur in chains.
@@ -797,20 +792,24 @@ BEGIN {
     #    Checkbutton => 'Transmission checked',
     #   -variable    => \$TRANS
     # This usually improves appearance so it seems ok.
-    @q = qw(&& || and or : ? . + - * /);
+    @q = qw( && || and or : ? . + - * / );
     @is_chain_operator{@q} = (1) x scalar(@q);
 
     # Operators that the user can request break before or after.
     # Note that some are keywords
-    @all_operators = qw(% + - * / x != == >= <= =~ !~ < > | &
+    @all_operators = qw(
+      % + - * / x != == >= <= =~ !~ < > | &
       = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
       . : ? && || and or err xor
     );
 
     # We can remove semicolons after blocks preceded by these keywords
-    @q =
-      qw(BEGIN END CHECK INIT AUTOLOAD DESTROY UNITCHECK continue if elsif else
-      unless while until for foreach given when default);
+    @q = qw(
+      BEGIN     END      CHECK INIT    AUTOLOAD DESTROY
+      UNITCHECK continue if    elsif   else     unless
+      while     until    for   foreach given    when
+      default
+    );
     @is_block_without_semicolon{@q} = (1) x scalar(@q);
 
     # We will allow semicolons to be added within these block types
@@ -822,9 +821,8 @@ BEGIN {
     # 3. But not okay for other perltidy types including:
     #     { } ; G t
     # 4. Test files: blktype.t, blktype1.t, semicolon.t
-    @q =
-      qw( BEGIN END CHECK INIT AUTOLOAD DESTROY UNITCHECK continue if elsif else
-      unless do while until eval for foreach );
+    @q = qw( BEGIN END CHECK INIT AUTOLOAD DESTROY UNITCHECK continue if elsif
+      else unless do while until eval for foreach );
     @ok_to_add_semicolon_for_block_type{@q} = (1) x scalar(@q);
 
     # 'L' is token for opening { at hash key
@@ -890,13 +888,13 @@ BEGIN {
     @is_soft_keep_break_type{@q} = (1) x scalar(@q);
 
     # these functions allow an identifier in the indirect object slot
-    @q = qw( print printf sort exec system say);
+    @q = qw( print printf sort exec system say );
     @is_indirect_object_taker{@q} = (1) x scalar(@q);
 
     # Define here tokens which may follow the closing brace of a do statement
     # on the same line, as in:
     #   } while ( $something);
-    my @dof = qw(until while unless if ; : );
+    my @dof = qw( until while unless if ; : );
     push @dof, ',';
     @is_do_follower{@dof} = (1) x scalar(@dof);
 
@@ -2251,7 +2249,7 @@ sub initialize_grep_and_friends {
     # Note that it is essential to always re-initialize the hash here:
     %want_one_line_block = ();
     if ( !$is_olb_exclusion_word{'*'} ) {
-        foreach (qw(sort map grep eval)) {
+        foreach (qw( sort map grep eval )) {
             if ( !$is_olb_exclusion_word{$_} ) { $want_one_line_block{$_} = 1 }
         }
     }
@@ -2284,16 +2282,9 @@ sub initialize_grep_and_friends {
     %is_block_with_ci = %is_sort_map_grep_eval_do;
     $is_block_with_ci{'sub'} = 1;
 
-    %is_keyword_returning_list = ();
-    @q                         = qw(
-      grep
-      keys
-      map
-      reverse
-      sort
-      split
-    );
+    @q = qw( grep keys map reverse sort split );
     push @q, @grep_aliases;
+    %is_keyword_returning_list = ();
     @is_keyword_returning_list{@q} = (1) x scalar(@q);
 
     # This code enables vertical alignment of grep aliases for testing.  It has
@@ -2603,8 +2594,8 @@ sub initialize_space_after_keyword {
 
     # Default keywords for which space is introduced before an opening paren:
     # (at present, including them messes up vertical alignment)
-    my @sak = qw(my local our state and or xor err eq ne if else elsif until
-      unless while for foreach return switch case given when catch);
+    my @sak = qw( my local our state and or xor err eq ne if else elsif until
+      unless while for foreach return switch case given when catch );
     %space_after_keyword = map { $_ => 1 } @sak;
 
     # first remove any or all of these if desired
@@ -2629,7 +2620,7 @@ sub initialize_outdent_keyword {
     %outdent_keyword = ();
     my @okw = split_words( $rOpts->{'outdent-keyword-list'} );
     if ( !@okw ) {
-        @okw = qw(next last redo goto return);    # defaults
+        @okw = qw( next last redo goto return );    # defaults
     }
 
     # FUTURE: if not a keyword, assume that it is an identifier
@@ -2653,7 +2644,7 @@ sub initialize_keyword_paren_inner_tightness {
         my @kpit =
           split_words( $rOpts->{'keyword-paren-inner-tightness-list'} );
         if ( !@kpit ) {
-            @kpit = qw(if elsif unless while until for foreach);    # defaults
+            @kpit = qw( if elsif unless while until for foreach );    # defaults
         }
 
         # we will allow keywords and user-defined identifiers
@@ -2672,7 +2663,7 @@ sub initialize_extended_block_tightness_list {
     my @k_list = keys %is_indirect_object_taker;
 
     # type symbols which may precede an opening block brace
-    my @t_list = qw($ @ % & *);
+    my @t_list = qw( $ @ % & * );
     push @t_list, '$#';
 
     my @all = ( @k_list, @t_list );
@@ -4067,7 +4058,7 @@ BEGIN {
 
     # The following hash is used to skip over needless if tests.
     # Be sure to update it when adding new checks in its block.
-    my @q = qw(k w C m - Q);
+    my @q = qw( k w C m - Q );
     push @q, '#';
     @is_special_ws_type{@q} = (1) x scalar(@q);
 
@@ -4896,16 +4887,17 @@ EOM
 
         # NOTE: This hash is like the global %is_sort_map_grep, but it ignores
         # grep aliases on purpose, since here we are looking parens, not braces
-        @q = qw(sort grep map);
+        @q = qw( sort grep map );
         @is_sort_grep_map{@q} = (1) x scalar(@q);
 
         @q = qw(
-          .. :: << >> ** && || // -> => += -= .= %= &= |= ^= *= <>
-          <= >= == =~ !~ != ++ -- /= x= ~~ ~. |. &. ^. ^^
+          .. :: << >> ** && || // -> => += -=
+          .= %= &= |= ^= *= <> <= >= == =~ !~
+          != ++ -- /= x= ~~ ~. |. &. ^. ^^
         );
         @is_digraph{@q} = (1) x scalar(@q);
 
-        @q = qw( ... **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~);
+        @q = qw( ... **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~ );
         @is_trigraph{@q} = (1) x scalar(@q);
 
         # These are used as a speedup filters for sub is_essential_whitespace.
@@ -5516,12 +5508,7 @@ EOM
         $right_bond_strength{'G'} = STRONG;
 
         # assignment operators
-        @q = qw(
-          = **= += *= &= <<= &&=
-          -= /= |= >>= ||= //=
-          .= %= ^=
-          x=
-        );
+        @q = qw( = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x= );
 
         # Default is to break AFTER various assignment operators
         @left_bond_strength{@q} = (STRONG) x scalar(@q);
@@ -5572,7 +5559,7 @@ EOM
         $right_bond_strength{','} = VERY_WEAK;
 
         # remaining digraphs and trigraphs not defined above
-        @q                       = qw( :: <> ++ --);
+        @q                       = qw( :: <> ++ -- );
         @left_bond_strength{@q}  = (WEAK) x scalar(@q);
         @right_bond_strength{@q} = (STRONG) x scalar(@q);
 
@@ -5583,13 +5570,13 @@ EOM
         $left_bond_strength{'err'} = VERY_WEAK - 0.02;
         $left_bond_strength{'xor'} = VERY_WEAK - 0.01;
 
-        @q = qw(ne eq);
+        @q = qw( ne eq );
         @left_bond_strength{@q} = (NOMINAL) x scalar(@q);
 
-        @q = qw(lt gt le ge);
+        @q = qw( lt gt le ge );
         @left_bond_strength{@q} = ( 0.9 * NOMINAL + 0.1 * STRONG ) x scalar(@q);
 
-        @q = qw(and or err xor ne eq);
+        @q = qw( and or err xor ne eq );
         @right_bond_strength{@q} = (NOMINAL) x scalar(@q);
 
         $right_bond_strength{'{'} = WEAK;
@@ -6357,7 +6344,7 @@ sub bad_pattern {
 
     # Add keywords here which really should not be cuddled
     BEGIN {
-        my @q = qw(if unless for foreach while);
+        my @q = qw( if unless for foreach while );
         @no_cuddle{@q} = (1) x scalar(@q);
     }
 
@@ -10141,7 +10128,7 @@ sub is_complete_script {
       :                  0;
 
     # common filter keywords
-    foreach (qw(exit print printf open system exec die)) {
+    foreach (qw( exit print printf open system exec die )) {
         if ( $rkeyword_count->{$_} ) { $score += 50; last; }
     }
 
@@ -10458,10 +10445,10 @@ sub scan_variable_usage {
         my @sigils_to_test;
         if ($check_sigil) {
             if ($check_reused) {
-                @sigils_to_test = (qw($ @ %));
+                @sigils_to_test = (qw( $ @ % ));
             }
             else {
-                foreach my $sig (qw($ @ %)) {
+                foreach my $sig (qw( $ @ % )) {
                     if ( $sig ne $sigil ) { push @sigils_to_test, $sig; }
                 }
             }
@@ -11807,7 +11794,7 @@ sub initialize_warn_variable_types {
     #   $num_files = number of files on the command line
     #   $line_range_clipped = true if only part of a file is being formatted
 
-    my @all_opts = qw(r s p u c);
+    my @all_opts = qw( r s p u c );
     $rwarn_variable_types =
       initialize_warn_hash( 'warn-variable-types', 0, \@all_opts );
 
@@ -11968,7 +11955,7 @@ sub dump_mixed_call_parens {
     my $rLL = $self->[_rLL_];
 
     my %skip_keywords;
-    my @q = qw(my our local state
+    my @q = qw( my our local state
       and cmp continue do else elsif eq ge gt le lt ne not or xor );
     @skip_keywords{@q} = (1) x scalar(@q);
 
@@ -12623,16 +12610,16 @@ my %is_ascii_type;
 BEGIN {
 
     # added 'U' to fix cases b1125 b1126 b1127
-    my @q = qw(w U);
+    my @q = qw( w U );
     @wU{@q} = (1) x scalar(@q);
 
-    @q = qw(w i q Q G C Z);
+    @q = qw( w i q Q G C Z );
     @wiq{@q} = (1) x scalar(@q);
 
-    @q = qw(w i t P S);   # Fix for c250: added new types 'P', 'S', formerly 'i'
+    @q = qw( w i t P S ); # Fix for c250: added new types 'P', 'S', formerly 'i'
     @is_witPS{@q} = (1) x scalar(@q);
 
-    @q = qw($ & % * @);
+    @q = qw( $ & % * @ );
     @is_sigil{@q} = (1) x scalar(@q);
 
     # Parens following these keywords will not be marked as lists. Note that
@@ -15849,59 +15836,20 @@ BEGIN {
     # They do not produce arrays and do not consume more than one arg, so
     # following parens are not required.
     my @q = qw(
-      abs
-      and
-      chr
-      cmp
-      continue
-      cos
-      defined
-      delete
-      do
-      else
-      elsif
-      eq
-      exp
-      fc
-      ge
-      gt
-      hex
-      int
-      lc
-      lcfirst
-      le
-      length
-      local
-      log
-      lt
-      my
-      ne
-      not
-      oct
-      or
-      ord
-      ord
-      our
-      pop
-      pos
-      rand
-      ref
-      scalar
-      shift
-      sin
-      sqrt
-      srand
-      state
-      uc
-      ucfirst
-      undef
-      xor
+      abs     and     chr     cmp    continue cos
+      defined delete  do      else   elsif    eq
+      exp     fc      ge      gt     hex      int
+      lc      lcfirst le      length local    log
+      lt      my      ne      not    oct      or
+      ord     ord     our     pop    pos      rand
+      ref     scalar  shift   sin    sqrt     srand
+      state   uc      ucfirst undef  xor
     );
     @is_non_interfering_keyword{@q} = (1) x scalar(@q);
 
     # Builtin keywords possibly taking multiple parameters but returning a
     # scalar value. These can be handled if the args are in parens.
-    @q = qw(substr join atan2);
+    @q = qw( substr join atan2 );
     @is_keyword_returning_scalar{@q} = (1) x scalar(@q);
 }
 
@@ -16362,7 +16310,7 @@ my %is_scalar_sigil;
 my %is_array_sigil;
 
 BEGIN {
-    my @q = qw(shift pop);
+    my @q = qw( shift pop );
     @is_shift_pop{@q}    = (1) x scalar(@q);
     @q                   = qw( $ * & );
     @is_scalar_sigil{@q} = (1) x scalar(@q);
@@ -18550,7 +18498,7 @@ sub initialize_warn_mismatched {
     #  o - overcount
     #  u - undercount
     $rwarn_mismatched_arg_types =
-      initialize_warn_hash( 'warn-mismatched-arg-types', 1, [qw(a o u)] );
+      initialize_warn_hash( 'warn-mismatched-arg-types', 1, [qw( a o u )] );
     $ris_warn_mismatched_arg_excluded_name =
       make_excluded_name_hash('warn-mismatched-arg-exclusion-list');
 
@@ -18560,8 +18508,8 @@ sub initialize_warn_mismatched {
     #  y - want scalar but no return seen
     #  s - want scalar but only arrays with count > 1 returned
     $rwarn_mismatched_return_types =
-      initialize_warn_hash( 'warn-mismatched-return-types', 1,
-        [qw(x o u y s)] );
+      initialize_warn_hash( 'warn-mismatched-return-types',
+        1, [qw( x o u y s )] );
     $ris_warn_mismatched_return_excluded_name =
       make_excluded_name_hash('warn-mismatched-return-exclusion-list');
     return;
@@ -19413,7 +19361,7 @@ BEGIN {
     @type_ok_after_bareword{@q} = (1) x scalar(@q);
 
     # these types do not 'like' to be separated from a following paren
-    @q = qw(w i q Q G C Z U);
+    @q = qw( w i q Q G C Z U );
     @has_tight_paren{@q} = (1) x scalar(@q);
 } ## end BEGIN
 
@@ -31683,14 +31631,14 @@ EOM
         # Setup filters for detecting very poor breaks to ignore.
         # b1097: old breaks after type 'L' and before 'R' are poor
         # b1450: old breaks at 'eq' and related operators are poor
-        my @q = qw(== <= >= !=);
+        my @q = qw( == <= >= != );
 
         @poor_types{@q}       = (1) x scalar(@q);
         @poor_next_types{@q}  = (1) x scalar(@q);
         $poor_types{'L'}      = 1;
         $poor_next_types{'R'} = 1;
 
-        @q                      = qw(eq ne le ge lt gt);
+        @q                      = qw( eq ne le ge lt gt );
         @poor_keywords{@q}      = (1) x scalar(@q);
         @poor_next_keywords{@q} = (1) x scalar(@q);
     } ## end BEGIN
@@ -32564,7 +32512,7 @@ my %is_key_type;
 BEGIN {
 
     # Added 'w' to fix b1172
-    my @q = qw(k w i Z ->);
+    my @q = qw( k w i Z -> );
     @is_kwiZ{@q} = (1) x scalar(@q);
 
     # added = for b1211
@@ -34290,7 +34238,7 @@ sub get_available_spaces_to_go {
     BEGIN {
         my @q = qw< } ) ] >;
         @hash_test1{@q} = (1) x scalar(@q);
-        @q = qw(: ? f);
+        @q = qw( : ? f );
         push @q, ',';
         @hash_test2{@q} = (1) x scalar(@q);
         @q              = qw( . || && );
@@ -36093,11 +36041,11 @@ EOM
 
         # These 'tokens' are not aligned. We need this to remove [
         # from the above list because it has type ='{'
-        @q = qw([);
+        @q = qw( [ );
         @is_not_vertical_alignment_token{@q} = (1) x scalar(@q);
 
         # these are the only types aligned at a line end
-        @q = qw(&& || =>);
+        @q = qw( && || => );
         @is_terminal_alignment_type{@q} = (1) x scalar(@q);
 
         # these tokens only align at line level
@@ -36105,7 +36053,7 @@ EOM
         @is_low_level_alignment_token{@q} = (1) x scalar(@q);
 
         # eq and ne were removed from this list to improve alignment chances
-        @q = qw(if unless and or err for foreach while until);
+        @q = qw( if unless and or err for foreach while until );
         @is_vertical_alignment_keyword{@q} = (1) x scalar(@q);
     } ## end BEGIN
 
@@ -37958,7 +37906,7 @@ sub xlp_tweak {
         @is_binary_type{@q} = (1) x scalar(@q);
 
         # token keywords which prevent using leading word as a container name
-        @q = qw(and or err eq ne cmp);
+        @q = qw( and or err eq ne cmp );
         @is_binary_keyword{@q} = (1) x scalar(@q);
 
         # Some common function calls whose args can be aligned.  These do not

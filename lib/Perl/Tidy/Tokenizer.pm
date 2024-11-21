@@ -2315,19 +2315,19 @@ EOM
     my %is_zero_continuation_block_type;
     my @q;
     @q = qw( } { BEGIN END CHECK INIT AUTOLOAD DESTROY UNITCHECK continue ;
-      if elsif else unless while until for foreach switch case given when);
+      if elsif else unless while until for foreach switch case given when );
     @is_zero_continuation_block_type{@q} = (1) x scalar(@q);
 
     my %is_logical_container;
-    @q = qw(if elsif unless while and or err not && !  || for foreach);
+    @q = qw( if elsif unless while and or err not && ! || for foreach );
     @is_logical_container{@q} = (1) x scalar(@q);
 
     my %is_binary_type;
-    @q = qw(|| &&);
+    @q = qw( || && );
     @is_binary_type{@q} = (1) x scalar(@q);
 
     my %is_binary_keyword;
-    @q = qw(and or err eq ne cmp);
+    @q = qw( and or err eq ne cmp );
     @is_binary_keyword{@q} = (1) x scalar(@q);
 
     # 'L' is token for opening { at hash key
@@ -2349,11 +2349,11 @@ EOM
     @is_closing_or_ternary_type{@q} = (1) x scalar(@q);
 
     my %is_redo_last_next_goto;
-    @q = qw(redo last next goto);
+    @q = qw( redo last next goto );
     @is_redo_last_next_goto{@q} = (1) x scalar(@q);
 
     my %is_use_require;
-    @q = qw(use require);
+    @q = qw( use require );
     @is_use_require{@q} = (1) x scalar(@q);
 
     # This hash holds the array index in $self for these keywords:
@@ -2384,7 +2384,7 @@ EOM
     );
 
     my %is_for_foreach;
-    @q = qw(for foreach);
+    @q = qw( for foreach );
     @is_for_foreach{@q} = (1) x scalar(@q);
 
     # These keywords may introduce blocks after parenthesized expressions,
@@ -2400,7 +2400,7 @@ EOM
     @is_blocktype_with_paren{@q} = (1) x scalar(@q);
 
     my %is_case_default;
-    @q = qw(case default);
+    @q = qw( case default );
     @is_case_default{@q} = (1) x scalar(@q);
 
     #------------------------
@@ -7239,7 +7239,7 @@ BEGIN {
     my @q = qw< $ & % * @ ) >;
     @is_sigil_or_paren{@q} = (1) x scalar(@q);
 
-    @q = qw(R ]);
+    @q = qw( R ] );
     @is_R_closing_sb{@q} = (1) x scalar(@q);
 } ## end BEGIN
 
@@ -7714,7 +7714,7 @@ my %is_known_function;
 BEGIN {
 
     # Constants like 'pi' in Trig.pm are common
-    my @q = qw(pi pi2 pi4 pip2 pip4);
+    my @q = qw( pi pi2 pi4 pip2 pip4 );
     @is_known_constant{@q} = (1) x scalar(@q);
 
     # parenless calls of 'ok' are common
@@ -9886,7 +9886,7 @@ sub is_possible_numerator {
         # '&&' and '|' instead of '||'
 
         # /(\)|\}|\;|\&\&|\|\||and|or|while|if|unless)/
-        my @q = qw( & && | || ? : + - * and or while if unless);
+        my @q = qw( & && | || ? : + - * and or while if unless );
         push @q, ')', '}', ']', '>', ',', ';';
         @pattern_test{@q} = (1) x scalar(@q);
     } ## end BEGIN
@@ -11167,7 +11167,7 @@ BEGIN {
     );
     @can_start_digraph{@q} = (1) x scalar(@q);
 
-    my @trigraphs = qw( ... **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~);
+    my @trigraphs = qw( ... **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~ );
     @is_trigraph{@trigraphs} = (1) x scalar(@trigraphs);
 
     my @tetragraphs = qw( <<>> );
@@ -11188,7 +11188,7 @@ BEGIN {
 
     # a list of file test letters, as in -e (Table 3-4 of 'camel 3')
     my @file_test_operators =
-      qw( A B C M O R S T W X b c d e f g k l o p r s t u w x z);
+      qw( A B C M O R S T W X b c d e f g k l o p r s t u w x z );
     @is_file_test_operator{@file_test_operators} =
       (1) x scalar(@file_test_operators);
 
@@ -11199,11 +11199,11 @@ BEGIN {
     @is_block_operator{@q} = (1) x scalar(@q);
 
     # these functions allow an identifier in the indirect object slot
-    @q = qw( print printf sort exec system say);
+    @q = qw( print printf sort exec system say );
     @is_indirect_object_taker{@q} = (1) x scalar(@q);
 
     # Note: 'field' will be added by sub check_options if --use-feature=class
-    @q = qw(my our state);
+    @q = qw( my our state );
     @is_my_our_state{@q} = (1) x scalar(@q);
 
     # These tokens may precede a code block
@@ -11211,10 +11211,13 @@ BEGIN {
     # now and we could let the extended-syntax coding handle them.
     # Added 'default' for Switch::Plain.
     # Note: 'ADJUST' will be added by sub check_options if --use-feature=class
-    @q =
-      qw( BEGIN END CHECK INIT AUTOLOAD DESTROY UNITCHECK continue if elsif else
-      unless do while until eval for foreach map grep sort
-      switch case given when default catch try finally);
+    @q = qw(
+      BEGIN     END      CHECK INIT   AUTOLOAD DESTROY
+      UNITCHECK continue if    elsif  else     unless
+      do        while    until eval   for      foreach
+      map       grep     sort  switch case     given
+      when      default  catch try    finally
+    );
     @is_code_block_token{@q} = (1) x scalar(@q);
 
     # Note: this hash was formerly named '%is_not_zero_continuation_block_type'
@@ -11473,10 +11476,7 @@ BEGIN {
     push( @Keywords, @value_requestor );
 
     # These are treated the same but are not keywords:
-    my @extra_vr = qw(
-      constant
-      vars
-    );
+    my @extra_vr = qw( constant vars );
     push( @value_requestor, @extra_vr );
 
     @expecting_term_token{@value_requestor} = (1) x scalar(@value_requestor);
@@ -11511,11 +11511,7 @@ BEGIN {
     push( @Keywords, @operator_requestor );
 
     # These are treated the same but are not considered keywords:
-    my @extra_or = qw(
-      STDERR
-      STDIN
-      STDOUT
-    );
+    my @extra_or = qw( STDERR STDIN STDOUT );
 
     push( @operator_requestor, @extra_or );
 
@@ -11563,11 +11559,11 @@ BEGIN {
     delete $really_want_term{'F'}; # file test works on $_ if no following term
     delete $really_want_term{'Y'}; # indirect object, too risky to check syntax;
                                    # let perl do it
-    @q = qw(q qq qx qr s y tr m);
+    @q = qw( q qq qx qr s y tr m );
     @is_q_qq_qx_qr_s_y_tr_m{@q} = (1) x scalar(@q);
 
     # Note added 'qw' here
-    @q = qw(q qq qw qx qr s y tr m);
+    @q = qw( q qq qw qx qr s y tr m );
     @is_q_qq_qw_qx_qr_s_y_tr_m{@q} = (1) x scalar(@q);
 
     # Quote modifiers:
@@ -11594,7 +11590,7 @@ BEGIN {
     );
 
     # Note: 'class' will be added by sub check_options if -use-feature=class
-    @q = qw(package);
+    @q = qw( package );
     @is_package{@q} = (1) x scalar(@q);
 
     @q = qw( if elsif unless );
@@ -11613,22 +11609,8 @@ BEGIN {
     @other_line_endings{@q} = (1) x scalar(@q);
 
     # These keywords are handled specially in the tokenizer code:
-    my @special_keywords = qw(
-      do
-      eval
-      format
-      m
-      package
-      q
-      qq
-      qr
-      qw
-      qx
-      s
-      sub
-      tr
-      y
-    );
+    my @special_keywords =
+      qw( do eval format m package q qq qr qw qx s sub tr y );
     push( @Keywords, @special_keywords );
 
     # Keywords after which list formatting may be used
@@ -11718,9 +11700,7 @@ BEGIN {
 
     # This list is used to decide if a pattern delimited by slashes, /pattern/,
     # can follow one of these keywords.
-    @q = qw(
-      chomp eof eval fc lc pop shift uc undef
-    );
+    @q = qw( chomp eof eval fc lc pop shift uc undef );
 
     @is_keyword_rejecting_slash_as_pattern_delimiter{@q} =
       (1) x scalar(@q);

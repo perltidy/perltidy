@@ -4812,15 +4812,8 @@ sub make_grep_alias_string {
 
     # Defaults: list operators in List::Util
     # Possible future additions:  pairfirst pairgrep pairmap
-    my $default_string = join SPACE, qw(
-      all
-      any
-      first
-      none
-      notall
-      reduce
-      reductions
-    );
+    my $default_string = join SPACE,
+      qw( all any first none notall reduce reductions );
 
     # make a hash of any excluded words
     my %is_excluded_word;
