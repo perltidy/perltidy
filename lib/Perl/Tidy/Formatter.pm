@@ -1544,8 +1544,8 @@ sub consecutive_nonblank_lines {
 
 sub split_words {
 
-    # given a string containing words separated by whitespace,
-    # return the list of words
+    # Given: a string containing words separated by whitespace,
+    # Return: the corresponding list of words
     my ($str) = @_;
     return unless defined($str);
     $str =~ s/\s+$//;
@@ -1557,10 +1557,12 @@ sub split_words {
 sub K_next_code {
     my ( $self, $KK, $rLL ) = @_;
 
-    # return the index of the next nonblank, non-comment token after $KK
     # Given:
-    #   $KK  = index of the token in $rLL
-    #   $rLL = optional array to use (default is $self->[_rLL_])
+    #   $KK  = index of a token in $rLL
+    #   $rLL = optional token array to use (default is $self->[_rLL_])
+    # Return:
+    #   The index of the next nonblank, non-comment token after $KK, or
+    #   undef if none
 
     return if ( !defined($KK) );
     return if ( $KK < 0 );
@@ -1583,10 +1585,12 @@ sub K_next_code {
 sub K_next_nonblank {
     my ( $self, $KK, $rLL ) = @_;
 
-    # Return the index of the next nonblank token after $KK
     # Given:
-    #   $KK  = index of the token in $rLL
-    #   $rLL = optional array to use (default is $self->[_rLL_])
+    #   $KK  = index of a token in $rLL
+    #   $rLL = optional token array to use (default is $self->[_rLL_])
+    # Return:
+    #   The index of the next nonblank token after $KK, or
+    #   undef if none
 
     # NOTE: does not skip over the leading type 'q' of a hanging side comment
     # (use K_next_code)
@@ -1610,10 +1614,12 @@ sub K_previous_code {
 
     my ( $self, $KK, $rLL ) = @_;
 
-    # Return the index of the previous nonblank, non-comment token before $KK
     # Given:
-    #   $KK  = index of the token in $rLL
-    #   $rLL = optional array to use (default is $self->[_rLL_])
+    #   $KK  = index of a token in $rLL
+    #   $rLL = optional token array to use (default is $self->[_rLL_])
+    # Return:
+    #   The index of the previous nonblank, non-comment token after $KK, or
+    #   undef if none
     # Call with $KK=undef to start search at the top of the array
 
     # The optional third arg is useful when we are copying tokens from an old
@@ -1647,10 +1653,12 @@ sub K_previous_nonblank {
 
     my ( $self, $KK, $rLL ) = @_;
 
-    # Return the index of the previous nonblank token before $KK
     # Given:
-    #   $KK  = index of the token in $rLL
-    #   $rLL = optional array to use (default is $self->[_rLL_])
+    #   $KK  = index of a token in $rLL
+    #   $rLL = optional token array to use (default is $self->[_rLL_])
+    # Return:
+    #   The index of the previous nonblank token after $KK, or
+    #   undef if none
     # Call with $KK=undef to start search at the top of the array
 
     # NOTE: does not skip over the leading type 'q' of a hanging side comment
@@ -1689,7 +1697,8 @@ sub K_first_code {
     # Given:
     #   $rLL = optional token array to override default
     # Return:
-    #   index $K of first non-blank, non-comment code token
+    #   index $K of first non-blank, non-comment code token, or
+    #   undef if none (no tokens in the file)
 
     $rLL = $self->[_rLL_] unless ( defined($rLL) );
 
@@ -1706,7 +1715,8 @@ sub K_last_code {
     # Given:
     #   $rLL = optional token array to override default
     # Return:
-    #   index of last non-blank, non-comment code token, or undef
+    #   index of last non-blank, non-comment code token, or
+    #   undef if none (no tokens in the file)
 
     $rLL = $self->[_rLL_] unless ( defined($rLL) );
 
@@ -14544,9 +14554,7 @@ sub add_trailing_comma {
         # any blank after the comma will be added before the closing paren,
         # below
         $self->store_new_token( ',', ',', $Kp );
-
     }
-
     return;
 
 } ## end sub add_trailing_comma
