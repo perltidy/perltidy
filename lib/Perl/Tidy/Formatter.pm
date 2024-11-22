@@ -315,7 +315,10 @@ my (
 
     # INITIALIZER: sub check_options
     $controlled_comma_style,
+
+    # INITIALIZER: sub initialize_tightness
     %tightness,
+    %multiple_token_tightness_type,
 
     #  INITIALIZER: initialize_old_breakpoint_controls
     %keep_break_before_type,
@@ -2200,15 +2203,7 @@ EOM
         $rOpts->{'long-block-line-count'} = 1_000_000;
     }
 
-    # hashes used to simplify setting whitespace
-    %tightness = (
-        '{' => $rOpts->{'brace-tightness'},
-        '}' => $rOpts->{'brace-tightness'},
-        '(' => $rOpts->{'paren-tightness'},
-        ')' => $rOpts->{'paren-tightness'},
-        '[' => $rOpts->{'square-bracket-tightness'},
-        ']' => $rOpts->{'square-bracket-tightness'},
-    );
+    initialize_tightness_vars();
 
     initialize_global_option_vars();
 
@@ -3137,6 +3132,28 @@ EOM
     return;
 
 } ## end sub initialize_keep_old_breakpoints
+
+sub initialize_tightness_vars {
+
+    # hashes used to simplify setting whitespace
+    %tightness = (
+        '{' => $rOpts->{'brace-tightness'},
+        '}' => $rOpts->{'brace-tightness'},
+        '(' => $rOpts->{'paren-tightness'},
+        ')' => $rOpts->{'paren-tightness'},
+        '[' => $rOpts->{'square-bracket-tightness'},
+        ']' => $rOpts->{'square-bracket-tightness'},
+    );
+
+    # Hash of token types which are counted as multiple tokens for
+    # default tightness.
+    # double diamond is usually spaced
+    # TODO: add user control for tightness such as 'q'
+    my @q = qw( <<>> );
+    %multiple_token_tightness_type = ();
+    @multiple_token_tightness_type{@q} = (1) x scalar(@q);
+    return;
+} ## end sub initialize_tightness_vars
 
 sub initialize_global_option_vars {
 
@@ -4078,6 +4095,7 @@ BEGIN {
 
     @q = qw( w i );
     @is_wi{@q} = (1) x scalar(@q);
+
 } ## end BEGIN
 
 use constant DEBUG_WHITE => 0;
@@ -4245,19 +4263,22 @@ sub set_whitespace_flags {
                 elsif ( $tightness_here > 1 ) {
                     $ws = WS_NO;
                 }
-                elsif ( $token eq '<<>>' ) {
 
-                    # double diamond is usually spaced
-                    $ws = WS_YES;
-                }
+                # Default (tightness = 1) depends on the container token count
                 else {
 
-                    # find the index of the closing token
+                    # Find the index of the closing token
                     my $j_closing = $K_closing_container->{$last_seqno};
+
+                    # Certain token types can be counted as multiple tokens:
+                    # these can include '<<>>', 'q', 'h'
+                    if ( $multiple_token_tightness_type{$type} ) {
+                        $ws = WS_YES;
+                    }
 
                     # If the closing token is less than five characters ahead
                     # we must take a closer look
-                    if (   defined($j_closing)
+                    elsif ( defined($j_closing)
                         && $j_closing - $j < 5
                         && $rLL->[$j_closing]->[_TYPE_SEQUENCE_] eq
                         $last_seqno )
@@ -4751,9 +4772,6 @@ sub ws_in_container {
     # Return:
     #  WS_NO  if there is just one token in the container (with exceptions)
     #  WS_YES otherwise
-
-    # double diamond is usually spaced
-    if ( $token eq '<<>>' ) { return WS_YES }
 
     # quick check
     if ( $j + 1 >= $j_closing ) { return WS_NO }
