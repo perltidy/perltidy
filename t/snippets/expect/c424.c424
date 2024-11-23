@@ -1,0 +1,2 @@
+my @chars = qw( | / - \ | / - \ );
+my @chars = qw(| / - \ | / - \ );

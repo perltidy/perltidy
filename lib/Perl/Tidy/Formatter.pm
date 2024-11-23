@@ -7452,21 +7452,26 @@ EOM
             return;
         }
 
-        # c414: do not join a '\' and a closing ')' for example like here:
+        # c414 and c424: do not join a '\' and a closing ')' like here:
         #   my @clock_chars = qw( | / - \ | / - \ );
         if (
                @words
             && $closing
             && substr( $words[-1], -1, 1 ) eq BACKSLASH
-            && (   $tightness{')'} == 2
-                || $tightness{')'} == 1 && @words == 1 )
+            && (
+                !$rOpts_add_whitespace
+                || (   $tightness{')'} == 2
+                    || $tightness{')'} == 1 && @words == 1 )
+            )
           )
         {
             # fix by including a space after the \
             $words[-1] .= SPACE;
 
             # and for symmetry, before the first word if the '(' is on this line
-            if ($opening) { $words[0] = SPACE . $words[0] }
+            if ( $opening && $rOpts_add_whitespace ) {
+                $words[0] = SPACE . $words[0];
+            }
         }
 
         #---------------------------------------------------------------------
@@ -38519,6 +38524,12 @@ sub make_paren_name {
         # This routine makes any necessary adjustments to get the final
         # indentation of a line in the Formatter.
         #--------------------------------------------------------------
+
+        # Given:
+        #   ($ibeg, $iend) = index range of tokens on this line
+        #   $rindentation_list = ref to indentation of each line in this batch,
+        #                        to be updated by this sub
+        #   $level_jump = level change to $token $ibeg from previous token
 
         # It starts with the basic indentation which has been defined for the
         # leading token, and then takes into account any options that the user

@@ -460,6 +460,10 @@
 ../snippets30.t	git162.git162
 ../snippets30.t	qwaf.def
 ../snippets30.t	qwaf.qwaf
+../snippets30.t	btct.btct1
+../snippets31.t	btct.btct2
+../snippets31.t	btct.btct3
+../snippets31.t	btct.def
 ../snippets4.t	gnu1.gnu
 ../snippets4.t	gnu2.def
 ../snippets4.t	gnu2.gnu
@@ -580,7 +584,5 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets30.t	btct.btct1
-../snippets31.t	btct.btct2
-../snippets31.t	btct.btct3
-../snippets31.t	btct.def
+../snippets31.t	c424.c424
+../snippets31.t	c424.def

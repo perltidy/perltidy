@@ -4,6 +4,8 @@
 #1 btct.btct2
 #2 btct.btct3
 #3 btct.def
+#4 c424.c424
+#5 c424.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -23,6 +25,7 @@ BEGIN {
     $rparams = {
         'btct2' => "-btct=1 -atc -wtc=1",
         'btct3' => "-btct=1 -atc -wtc=1",
+        'c424'  => "-naws -qwaf",
         'def'   => "",
     };
 
@@ -45,6 +48,11 @@ $w->bind(
 $w->bind( '<Page_Down>' => xx);
 
 $lut = byte [ [ 0, 0, 0 ], [ 10, 1, 10 ], [ 2, 20, 20 ], [ 30, 30, 3 ], ];
+----------
+
+        'c424' => <<'----------',
+my @chars = qw(   | / - \ | / - \    );
+my @chars = qw(| / - \ | / - \ );
 ----------
     };
 
@@ -135,6 +143,24 @@ $w->bind( '<Page_Down>' => xx );
 
 $lut = byte [ [ 0, 0, 0 ], [ 10, 1, 10 ], [ 2, 20, 20 ], [ 30, 30, 3 ], ];
 #3...........
+        },
+
+        'c424.c424' => {
+            source => "c424",
+            params => "c424",
+            expect => <<'#4...........',
+my @chars = qw( | / - \ | / - \ );
+my @chars = qw(| / - \ | / - \ );
+#4...........
+        },
+
+        'c424.def' => {
+            source => "c424",
+            params => "def",
+            expect => <<'#5...........',
+my @chars = qw(   | / - \ | / - \    );
+my @chars = qw(| / - \ | / - \ );
+#5...........
         },
     };
 
