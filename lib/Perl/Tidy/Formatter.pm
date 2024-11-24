@@ -32191,7 +32191,9 @@ EOM
                 $last_old_breakpoint_count
 
                 # or user wants to form long blocks with arrows
-                || $cab_flag == 2
+                # check on _rbreak_container_ added for b1500
+                || ( $cab_flag == 2
+                    && !$self->[_rbreak_container_]->{$type_sequence} )
             )
 
             # and we made breakpoints between the opening and closing

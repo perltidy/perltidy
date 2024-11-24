@@ -8439,6 +8439,16 @@ my @abc
       (
         ( $_[0] > 0 ) ? 1 : 0 );
 
+==> b1500 <==
+$config = {
+    delay => 5,
+    ppid  => $$,
+};
+$config = {
+    delay => 5,
+    ppid  => $$,
+};
+
 ==> b156 <==
 # State 1
 {

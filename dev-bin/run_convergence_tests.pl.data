@@ -12484,6 +12484,23 @@ a b c d e );
 --opening-paren-right
 --break-after-all-operators
 
+==> b1500.in <==
+$config = {
+    delay => 5, ppid => $$,
+};
+$config = {
+    delay => 5,
+    ppid  => $$
+};
+
+==> b1500.par <==
+--comma-arrow-breakpoints=2
+--add-trailing-commas
+--want-trailing-commas='i'
+--delete-trailing-commas
+--keep-old-breakpoints-after='t q .= ^.= .. i x R -> J'
+--break-at-trailing-comma-types='1'
+
 ==> b156.in <==
 # State 1
 {
