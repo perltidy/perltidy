@@ -2874,7 +2874,10 @@ EOM
     #-----------------------------------------------------------
     # The combination -xlp -xci and ci>i can be unstable (b1466)
     #-----------------------------------------------------------
-    if (   $rOpts->{'extended-line-up-parentheses'}
+    # Deactivated: the fix for b1501 also fixed b1466 in a simpler way.
+    # So this block can eventually be removed.
+    if (   0
+        && $rOpts->{'extended-line-up-parentheses'}
         && $rOpts->{'extended-continuation-indentation'}
         && $rOpts->{'continuation-indentation'} > $rOpts->{'indent-columns'}
         && $rOpts->{'indent-columns'} > 1 )

@@ -6508,7 +6508,8 @@ my $parser =
 ==> b1325 <==
 WriteMakefile(
    PREREQ_PM    => {
-      'Tk'            =>'800.025',
+      'Tk'            =>
+            '800.025',
       'Tk::DiffText'  => 0,
       'Perl::Tidy'    => 0
       , # comes in the perltidy application
@@ -6520,7 +6521,8 @@ WriteMakefile(
 
 WriteMakefile(
    PREREQ_PM    => {
-      'Tk'            =>'800.025',
+      'Tk'            =>
+            '800.025',
       'Tk::DiffText'  => 0,
       'Perl::Tidy'    => 0
       , # comes in the perltidy application
@@ -8104,8 +8106,8 @@ sub new{
                               while(($k,$v,)=each(%{$_[3]})){
                                    if($k eq"email_"){
                                         if(
-                                                 defined$groups{$_[1]}
-                                                 ->{"email_work"})
+                                                   defined$groups{$_[1]}
+                                                   ->{"email_work"})
                                         {
                                              $k="email_home";
                                         }
