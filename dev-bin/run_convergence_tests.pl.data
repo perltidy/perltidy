@@ -12501,6 +12501,39 @@ $config = {
 --keep-old-breakpoints-after='t q .= ^.= .. i x R -> J'
 --break-at-trailing-comma-types='1'
 
+==> b1501.in <==
+my%S3d_url=(
+  'emotif'=>$SGD_stem_url{'s3d'}
+    .'seq_search.pl?db=emotif&gene=',
+  'pfam'=>$SGD_stem_url{'s3d'}.'seq_search.pl?db=pfam&gene=',
+  'pfam_uk'=>$SGD_stem_url{'s3d'}
+    .'seq_search.pl?db=pfam&loc=uk&gene=',
+  'pfam_us'=>$SGD_stem_url{'s3d'}
+    .'seq_search.pl?db=pfam&loc=us&gene=',
+  'blast_nr'=>$SGD_stem_url{'s3d'}.'getblast?db=nr&name=',
+  'blast_est'=>$SGD_stem_url{'s3d'}.'getblast?db=est&name=',
+  'blast_mammal'=>$SGD_stem_url{'s3d'}
+    .'getblast?db=mammal&name=',
+  'blast_human'=>$SGD_stem_url{'s3d'}
+    .'getblast?db=human&name=',
+  'blast_worm'=>$SGD_stem_url{'s3d'}
+    .'getblast?db=worm&name=',
+  'blast_yeast'=>$SGD_stem_url{'s3d'}
+    .'getblast?db=yeast&name=',
+  'blast_worm_yeast'=>$SGD_stem_url{'s3d'}
+    .'getblast?db=worm&query=worm&name=',
+  'patmatch'=>$SGD_stem_url{'s3d2'}.'grepmatch?',##comment
+  'grepmatch'=>$SGD_stem_url{'s3d2'}.'grepmatch?',
+  'pdb_neighbors'=>$SGD_stem_url{'s3d'}
+    .'pdb_neighbors?id=CHAIN&gene=ORF_NAME'
+);
+
+==> b1501.par <==
+--maximum-line-length=61
+--indent-columns=3
+--noadd-whitespace
+--extended-line-up-parentheses
+
 ==> b156.in <==
 # State 1
 {

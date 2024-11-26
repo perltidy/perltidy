@@ -7892,10 +7892,11 @@ BEGIN {
                                     qw( *_RemoteIPAddr V_SessionType )
                   ],
                   0x93 => [
-                             ConfigStat =>qw( Z16_DeviceName V_StationUserID
-                             V_StationUserInstance
-                             Z16_UserName Z16_ServerName
-                             V_NumberLines V_NumberSpeedDials )
+                           ConfigStat =>
+                                    qw( Z16_DeviceName V_StationUserID
+                                    V_StationUserInstance
+                                    Z16_UserName Z16_ServerName
+                                    V_NumberLines V_NumberSpeedDials )
                   ],
          ) ;
 }
@@ -7907,10 +7908,11 @@ BEGIN {
                                     qw( *_RemoteIPAddr V_SessionType )
                   ],
                   0x93 => [
-                             ConfigStat =>qw( Z16_DeviceName V_StationUserID
-                             V_StationUserInstance
-                             Z16_UserName Z16_ServerName
-                             V_NumberLines V_NumberSpeedDials )
+                           ConfigStat =>
+                                    qw( Z16_DeviceName V_StationUserID
+                                    V_StationUserInstance
+                                    Z16_UserName Z16_ServerName
+                                    V_NumberLines V_NumberSpeedDials )
                   ],
          ) ;
 }
@@ -8118,50 +8120,51 @@ sub new{
                     },
                ],
                [
-                      '@1-3',
-                      0,
-                      sub{parse_value($_[2]->{ENCODING});},
+                    '@1-3',
+                    0,
+                    sub{parse_value($_[2]->{ENCODING});},
                ],
                ['params',0,sub{{}},],
                [
-                      'params',
-                      3,
-                      sub{
-                           my%hash;
-                           for(my$i=0;$i<@{$_[3]};$i+=2){
-                                push@{$hash{$_[3]->[$i]}},$_[3]->[$i+1];
-                           }
-                           \%hash;
-                      },
+                    'params',
+                    3,
+                    sub{
+                         my%hash;
+                         for(my$i=0;$i<@{$_[3]};$i+=2){
+                              push@{$hash{$_[3]->[$i]}},$_[3]->[$i+1];
+                         }
+                         \%hash;
+                    },
                ],
                [
-                      'paramlist',
-                      1,
-                      sub{$_[1]},
+                    'paramlist',
+                    1,
+                    sub{$_[1]},
                ],
                [
-                      'paramlist',
-                      5,
-                      sub{
-                           unshift(@{$_[1]},@{$_[5]},)if defined$_[5];
-                           $_[1];
-                      },
+                    'paramlist',
+                    5,
+                    sub{
+                         unshift(@{$_[1]},@{$_[5]},)if defined$_[5];
+                         $_[1];
+                    },
                ],
                [
-                      'param',
-                      5,
-                      sub{[uc($_[1]),uc($_[5]),]},
+                    'param',
+                    5,
+                    sub{[uc($_[1]),uc($_[5]),]},
                ],
                ['addressparts',1,sub{{"address",$_[1],}},],
                [
-                      'addressparts',
-                      3,
-                      sub{{"address",$_[1],"address2",$_[3],}},
+                    'addressparts',
+                    3,
+                    sub{{"address",$_[1],"address2",$_[3],}},
                ],
                [
-                      'addressparts',
-                      5,
-                      sub{{"address",$_[1],"address2",$_[3],"street",$_[5],}},
+                    'addressparts',
+                    5,
+                    sub{{"address",$_[1],"address2",$_[3],"street",$_[5],
+                    }},
                ],
           ],
           @_,
@@ -8448,6 +8451,34 @@ $config = {
     delay => 5,
     ppid  => $$,
 };
+
+==> b1501 <==
+my%S3d_url=(
+   'emotif'=>$SGD_stem_url{'s3d'}
+     .'seq_search.pl?db=emotif&gene=',
+   'pfam'=>$SGD_stem_url{'s3d'}
+     .'seq_search.pl?db=pfam&gene=',
+   'pfam_uk'=>$SGD_stem_url{'s3d'}
+     .'seq_search.pl?db=pfam&loc=uk&gene=',
+   'pfam_us'=>$SGD_stem_url{'s3d'}
+     .'seq_search.pl?db=pfam&loc=us&gene=',
+   'blast_nr'=>$SGD_stem_url{'s3d'}.'getblast?db=nr&name=',
+   'blast_est'=>$SGD_stem_url{'s3d'}.'getblast?db=est&name=',
+   'blast_mammal'=>$SGD_stem_url{'s3d'}
+     .'getblast?db=mammal&name=',
+   'blast_human'=>$SGD_stem_url{'s3d'}
+     .'getblast?db=human&name=',
+   'blast_worm'=>$SGD_stem_url{'s3d'}
+     .'getblast?db=worm&name=',
+   'blast_yeast'=>$SGD_stem_url{'s3d'}
+     .'getblast?db=yeast&name=',
+   'blast_worm_yeast'=>$SGD_stem_url{'s3d'}
+     .'getblast?db=worm&query=worm&name=',
+   'patmatch'=>$SGD_stem_url{'s3d2'}.'grepmatch?',##comment
+   'grepmatch'=>$SGD_stem_url{'s3d2'}.'grepmatch?',
+   'pdb_neighbors'=>$SGD_stem_url{'s3d'}
+     .'pdb_neighbors?id=CHAIN&gene=ORF_NAME'
+);
 
 ==> b156 <==
 # State 1

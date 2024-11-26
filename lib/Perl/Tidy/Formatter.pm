@@ -34970,10 +34970,14 @@ EOM
             }
             $available_spaces = $test_space_count - $min_gnu_indentation;
 
+            # Fix for combo -naws and -xlp (b1501; also b1466)
+            my $tol = !$rOpts_add_whitespace
+              && $rOpts_extended_line_up_parentheses ? 1 : 0;
+
             # Do not startup -lp indentation mode if no space ...
             # ... or if it puts the opening far to the right
             if ( !$in_lp_mode
-                && ( $available_spaces <= 0 || $next_opening_too_far ) )
+                && ( $available_spaces <= $tol || $next_opening_too_far ) )
             {
                 $space_count += $standard_increment;
                 $available_spaces = 0;
