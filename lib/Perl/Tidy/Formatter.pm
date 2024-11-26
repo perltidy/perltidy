@@ -14575,7 +14575,7 @@ sub add_trailing_comma {
     }
 
     # If so, and not delayed, add a comma
-    if ( $match && !$self->delay_trailing_comma_op($stable_flag) ) {
+    if ( $match && !$self->delay_trailing_comma_op( 1, $stable_flag ) ) {
 
         # any blank after the comma will be added before the closing paren,
         # below
