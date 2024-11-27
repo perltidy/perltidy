@@ -20,7 +20,7 @@
 # warn if call arg counts differ from sub definitions
 # (requires version > 20240202.04)
 --warn-mismatched-args
---warn-mismatched-arg-undercount-cutoff=5
+--warn-mismatched-arg-undercount-cutoff=0
 
 # warn if return count wanted differs from sub return statements
 --warn-mismatched-returns

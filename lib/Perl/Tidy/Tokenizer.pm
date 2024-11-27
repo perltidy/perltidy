@@ -2290,7 +2290,7 @@ EOM
     }
 
     sub peeked_ahead {
-        my $flag = shift;
+        ( ( my $flag ) ) = @_;
 
         # get or set the closure flag '$peeked_ahead':
         # - set $peeked_ahead to $flag if given, then
@@ -2985,7 +2985,8 @@ EOM
 
     # a sub to warn if token found where operator expected
     sub error_if_expecting_OPERATOR {
-        my ( $self, $thing ) = @_;
+
+        my ( $self, ($thing) ) = @_;
 
         # Issue warning on error if expecting operator
         # Given:
@@ -10911,7 +10912,7 @@ sub write_on_underline {
 
 sub pre_tokenize {
 
-    my ( $str, $max_tokens_wanted ) = @_;
+    my ( $str, ($max_tokens_wanted) ) = @_;
 
     # Input parameters:
     #  $str = string to be parsed

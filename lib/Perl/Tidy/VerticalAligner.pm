@@ -1756,7 +1756,7 @@ sub _flush_group_lines {
 
     # This is the vertical aligner internal flush, which leaves the cache
     # intact
-    my ( $self, $level_jump ) = @_;
+    my ( $self, ($level_jump) ) = @_;
 
     # $level_jump = $next_level-$group_level, if known
     #             = undef if not known

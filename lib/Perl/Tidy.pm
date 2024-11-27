@@ -167,7 +167,7 @@ EOM
 
 sub streamhandle {
 
-    my ( $filename, $mode, $is_encoded_data ) = @_;
+    my ( $filename, $mode, ($is_encoded_data) ) = @_;
 
     # Given:
     #   $filename
@@ -316,7 +316,7 @@ EOM
 
 sub stream_slurp {
 
-    my ( $filename, $timeout_in_seconds ) = @_;
+    my ( $filename, ($timeout_in_seconds) ) = @_;
 
     # Given:
     #   $filename
@@ -1204,7 +1204,7 @@ sub make_file_extension {
 
     # Make a file extension, adding any leading '.' if necessary.
     # (the '.' may actually be an '_' under VMS).
-    my ( $self, $extension, $default ) = @_;
+    my ( $self, $extension, ($default) ) = @_;
 
     # Given:
     #  $extension = the first choice (usually a user entry)

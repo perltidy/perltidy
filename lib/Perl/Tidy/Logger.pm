@@ -371,7 +371,7 @@ sub complain {
 
 sub warning {
 
-    my ( $self, $msg, $msg_line_number ) = @_;
+    my ( $self, $msg, ($msg_line_number) ) = @_;
 
     # Report errors to .ERR file (or stdout)
     # Given:

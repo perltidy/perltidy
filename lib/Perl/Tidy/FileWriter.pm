@@ -293,7 +293,7 @@ sub require_blank_code_lines {
 } ## end sub require_blank_code_lines
 
 sub write_blank_code_line {
-    my ( $self, $forced ) = @_;
+    my ( $self, ($forced) ) = @_;
 
     # Write a blank line of code, given:
     #  $forced = optional flag which, if set, forces the blank line

@@ -1424,7 +1424,7 @@ EOM
 
     # interface to Perl::Tidy::Logger routines
     sub warning {
-        my ( $msg, $msg_line_number ) = @_;
+        my ( $msg, ($msg_line_number) ) = @_;
 
         # Issue a warning message
         # Given:
@@ -1437,7 +1437,7 @@ EOM
     } ## end sub warning
 
     sub complain {
-        my ( $msg, $msg_line_number ) = @_;
+        my ( $msg, ($msg_line_number) ) = @_;
 
         # Issue a complaint message
         # Given:
@@ -1558,7 +1558,7 @@ sub split_words {
 } ## end sub split_words
 
 sub K_next_code {
-    my ( $self, $KK, $rLL ) = @_;
+    my ( $self, $KK, ($rLL) ) = @_;
 
     # Given:
     #   $KK  = index of a token in $rLL
@@ -1586,7 +1586,7 @@ sub K_next_code {
 } ## end sub K_next_code
 
 sub K_next_nonblank {
-    my ( $self, $KK, $rLL ) = @_;
+    my ( $self, $KK, ($rLL) ) = @_;
 
     # Given:
     #   $KK  = index of a token in $rLL
@@ -1615,7 +1615,7 @@ sub K_next_nonblank {
 
 sub K_previous_code {
 
-    my ( $self, $KK, $rLL ) = @_;
+    my ( $self, $KK, ($rLL) ) = @_;
 
     # Given:
     #   $KK  = index of a token in $rLL
@@ -1654,7 +1654,7 @@ EOM
 
 sub K_previous_nonblank {
 
-    my ( $self, $KK, $rLL ) = @_;
+    my ( $self, $KK, ($rLL) ) = @_;
 
     # Given:
     #   $KK  = index of a token in $rLL
@@ -1695,7 +1695,8 @@ EOM
 } ## end sub K_previous_nonblank
 
 sub K_first_code {
-    my ( $self, $rLL ) = @_;
+
+    my ( $self, ($rLL) ) = @_;
 
     # Given:
     #   $rLL = optional token array to override default
@@ -1713,7 +1714,8 @@ sub K_first_code {
 } ## end sub K_first_code
 
 sub K_last_code {
-    my ( $self, $rLL ) = @_;
+
+    my ( $self, ($rLL) ) = @_;
 
     # Given:
     #   $rLL = optional token array to override default
@@ -1758,7 +1760,7 @@ EOM
 } ## end sub get_parent_containers
 
 sub mark_parent_containers {
-    my ( $self, $seqno, $rhash, $value ) = @_;
+    my ( $self, $seqno, $rhash, ($value) ) = @_;
 
     # Task:
     #   set $rhash->{$seqno}=$value for all parent containers
@@ -10303,7 +10305,7 @@ sub expand_EXPORT_list {
 
 sub scan_variable_usage {
 
-    my ( $self, $roption ) = @_;
+    my ( $self, ($roption) ) = @_;
 
     # Scan for unused and reused lexical variables in a single sweep.
 
@@ -13972,7 +13974,7 @@ EOM
 
 sub store_token {
 
-    my ( $self, $item ) = @_;
+    my ( $self, ($item) ) = @_;
 
     # Store one token during respace operations
 
@@ -14462,6 +14464,7 @@ sub add_phantom_semicolon {
 } ## end sub add_phantom_semicolon
 
 sub delay_trailing_comma_op {
+
     my ( $self, $if_add, $stable_flag ) = @_;
 
     # Given:
@@ -14778,7 +14781,7 @@ sub delete_interbracket_arrow {
 
 sub unstore_last_nonblank_token {
 
-    my ( $self, $type, $want_space ) = @_;
+    my ( $self, $type, ($want_space) ) = @_;
 
     # remove the most recent nonblank token from the new token list
     # Input parameter:
@@ -16476,6 +16479,75 @@ EOM
     return $K_sub;
 } ## end sub find_sub_token
 
+sub count_default_sub_args {
+    my ( $self, $item, $seqno ) = @_;
+
+    # Given:
+    #   $item = hash ref with sub arg info
+    #   $seqno  => sequence number of a sub block of a paren
+    #       containing possible default args
+    # Task:
+    #   count default args and update minimum arg count in $item
+
+    my $rLL = $self->[_rLL_];
+    return unless ($seqno);
+
+    # The token before the opening must be a ',' or '('
+    my $K_o    = $self->[_K_opening_container_]->{$seqno};
+    my $K_test = $self->K_previous_code($K_o);
+    return unless defined($K_test);
+    my $token_test = $rLL->[$K_test]->[_TOKEN_];
+    return if ( $token_test ne ',' && $token_test ne '(' );
+
+    # Check that an opening token has the previous sequence number
+    if ( $token_test eq '(' ) {
+        my $seqno_o = $rLL->[$K_test]->[_TYPE_SEQUENCE_];
+        if ( !$seqno_o || $seqno_o != $seqno - 1 ) {
+
+            # shouldn't happen: may be bad call value since the token
+            # with '$seqno' was just before a closing paren
+            DEVEL_MODE && Fault("seqno_o=$seqno_o != $seqno-1\n");
+            return;
+        }
+    }
+
+    my $rtype_count = $self->[_rtype_count_by_seqno_]->{$seqno};
+    my $default_arg_count;
+    if ($rtype_count) {
+
+        # One or more commas, like:  ( ... $v1, $v2, ($d1, $d2) )=@_
+        # Note that the comma_count does not include any trailing comma
+        # so we always add 1
+        $default_arg_count = $rtype_count->{','} + 1;
+    }
+
+    if ( !defined($default_arg_count) ) {
+
+        # Check for empty parens, like:  ( ... $v1, $v2, () )=@_
+        my $K_n = $self->K_next_code($K_o);
+        my $K_c = $self->[_K_closing_container_]->{$seqno};
+        return if ( $K_n == $K_c );
+
+        # No commas but not empty, so 1 arg in parens
+        # Something like:  ( ... $v1, $v2, ($d1) )=@_
+        $default_arg_count = 1;
+    }
+    return unless ($default_arg_count);
+
+    # Update the minimum count to exclude the defaults
+    if ( $item->{shift_count_min} >= $default_arg_count ) {
+        $item->{shift_count_min} -= $default_arg_count;
+    }
+    else {
+        DEVEL_MODE
+          && Fault(
+"default count is $default_arg_count but total is $item->{shift_count_min}"
+          );
+    }
+
+    return;
+} ## end sub count_default_sub_args
+
 sub count_sub_input_args {
     my ( $self, $item ) = @_;
 
@@ -16705,6 +16777,29 @@ sub count_sub_input_args {
                     $item->{shift_count_min} = $shift_count;
                     $item->{shift_count_max} = $shift_count;
                     $self->count_list_elements($item);
+
+                    # Count default args placed in separate parens, such as:
+                    #      .. $v1 ,($def1, $def2)) = @_
+                    #      .. $v1 ,($def1, $def2),) = @_
+
+                    # look at the token before the last ')'
+                    my $K_mm_p = $self->K_previous_code($K_mm);
+                    my $token_mm_p =
+                      $K_mm_p ? $rLL->[$K_mm_p]->[_TOKEN_] : SPACE;
+
+                    # skip past a trailing comma
+                    if ( $token_mm_p eq ',' ) {
+                        $K_mm_p = $self->K_previous_code($K_mm_p);
+                        $token_mm_p =
+                          $K_mm_p ? $rLL->[$K_mm_p]->[_TOKEN_] : SPACE;
+                    }
+
+                    # if we find a closing paren, count the items and
+                    # update shift_count_min
+                    if ( $token_mm_p eq ')' ) {
+                        my $seqno_mm_p = $rLL->[$K_mm_p]->[_TYPE_SEQUENCE_];
+                        $self->count_default_sub_args( $item, $seqno_mm_p );
+                    }
 
                     # NOTE: this could disagree with $_[n] usage; we
                     # ignore this for now.
@@ -18097,7 +18192,6 @@ sub cross_check_sub_calls {
             if ( !defined($min) || $arg_count < $min ) {
                 $common_hash{$key}->{min_arg_count} = $arg_count;
             }
-
             if ( $excess < 0 ) {
                 push @{ $common_hash{$key}->{under_count} }, $rcall_item;
             }
@@ -18448,6 +18542,7 @@ EOM
             my $wmauc_min = $max_shift_count_with_undercount + 1;
             $call_arg_hint = <<EOM;
 Note: use -wmauc=$wmauc_min or greater to prevent undercount warnings in this file
+or put parentheses around default sub args and use -wmauc=0
 EOM
             $call_arg_warning_output .= $call_arg_hint;
         }
@@ -19303,7 +19398,7 @@ sub find_nested_pairs {
 
 sub match_paren_control_flag {
 
-    my ( $self, $seqno, $flag, $rLL ) = @_;
+    my ( $self, $seqno, $flag, ($rLL) ) = @_;
 
     # Input parameters:
     #   $seqno = sequence number of the container (should be paren)
@@ -23137,7 +23232,7 @@ EOM
 
     sub kgb_end_group {
 
-        my ( $self, $bad_ending ) = @_;
+        my ( $self, ($bad_ending) ) = @_;
 
         # End a group of keywords
 
@@ -24012,7 +24107,7 @@ EOM
     } ## end sub flush_vertical_aligner
 
     sub flush {
-        my ( $self, $CODE_type_flush ) = @_;
+        my ( $self, ($CODE_type_flush) ) = @_;
 
         # Sub flush is called to output any tokens in the pipeline, so that
         # an alternate source of lines can be written in the correct order
@@ -25184,7 +25279,7 @@ sub starting_one_line_block {
     my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
 
     # kill any current block - we can only go 1 deep
-    create_one_line_block();
+    create_one_line_block(undef);
 
     my $i_start = 0;
 
@@ -34143,7 +34238,7 @@ sub total_line_length {
 
 sub excess_line_length {
 
-    my ( $self, $ibeg, $iend, $ignore_right_weld ) = @_;
+    my ( $self, $ibeg, $iend, ($ignore_right_weld) ) = @_;
 
     # Return number of characters by which a line of tokens ($ibeg..$iend)
     # exceeds the allowable line length.
@@ -36018,7 +36113,7 @@ EOM
 
 sub check_batch_summed_lengths {
 
-    my ( $self, $msg ) = @_;
+    my ( $self, ($msg) ) = @_;
 
     # Debug routine for summed lengths
     #   $msg = optional debug message
@@ -40888,7 +40983,7 @@ sub wrapup {
 
     # This is the last routine called when a file is formatted.
     # Flush buffer and write any informative messages
-    my ( $self, $severe_error ) = @_;
+    my ( $self, ($severe_error) ) = @_;
 
     # Optional parameter:
     #   $severe_error = true if program is ending on an error

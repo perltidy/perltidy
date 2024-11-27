@@ -6592,7 +6592,29 @@ For example
 In this case, the sub is expecting a total of three args (C<$self>, C<$v1>, and
 C<$v2>) but only receives two (C<$self> and C<42>), so an undercount is
 reported.  This is not necessarily an error because the sub may allow for this
-possibility, but it is worth checking.  The simple static processing done by perltidy cannot determine which sub args are optional.
+possibility, but it is worth checking.
+
+Although it is not possible to automatically determine which sub args are
+optional, if optional sub args are enclosed in an extra set of parentheses,
+perltidy will take this a signal that they are optional and not issue a
+warning.  So if the above example is written as
+
+    sub gnab_gib {
+        my $self = shift;
+        my ( $v1, ($v2) ) = @_;  # <-- extra parens on $v2 indicate optional
+        ...;
+    }
+
+then perltidy will consider that the second arg is optional and not issue
+a warning for:
+
+    $self->gnab_gib(42);
+
+For multiple default call args, place one set of parens around them all. Some
+examples:
+
+    my ( $v1, ( $v2, $v3 ) ) = @_;    # <-- $v2 and $v3 are optional
+    my ( ($v1) ) = @_;                # <-- $v1 is optional
 
 =item B<i:> B<indeterminate:> a specific number of expected args for a sub could not be determined, but it is called with a specific number. This issue is reported for the B<--dump-> option but not the B<--warn-> option.
 
@@ -6664,6 +6686,11 @@ checking.  The minimum possible value of B<n> needed to avoid triggering an
 error for a program can be determined by running with B<-wma -wmauc=0>.  If
 there are undercount errors, a note at the bottom of the error output
 indicates the value of B<n> required to avoid reporting them.
+
+As noted above for the parameter B<--dump-mismatched-args>, if optional call
+args are enclosed in separate parentheses, then perltidy will recognize them as
+optional args and avoid needless warnings.  If this method is used,
+then B<-wmauc=0> should be used for maximal checking.
 
 =item *
 B<--warn-mismatched-arg-overcount-cutoff=n>, or B<-wmaoc=n>, can be used to
