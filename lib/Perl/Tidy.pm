@@ -3586,6 +3586,7 @@ sub generate_options {
     $add_option->( 'keyword-paren-inner-tightness',             'kpit',  '=i' );
     $add_option->( 'keyword-paren-inner-tightness-list',        'kpitl', '=s' );
     $add_option->( 'logical-padding',                           'lop',   '!' );
+    $add_option->( 'multiple-token-tightness',                  'mutt',  '=s' );
     $add_option->( 'nospace-after-keyword',                     'nsak',  '=s' );
     $add_option->( 'nowant-left-space',                         'nwls',  '=s' );
     $add_option->( 'nowant-right-space',                        'nwrs',  '=s' );

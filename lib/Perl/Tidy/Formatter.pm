@@ -316,9 +316,11 @@ my (
     # INITIALIZER: sub check_options
     $controlled_comma_style,
 
-    # INITIALIZER: sub initialize_tightness
+    # INITIALIZER: sub initialize_tightness_vars
     %tightness,
-    %multiple_token_tightness_type,
+
+    # INITIALIZER: sub initialize_multiple_token_tightness
+    %multiple_token_tightness,
 
     #  INITIALIZER: initialize_old_breakpoint_controls
     %keep_break_before_type,
@@ -2207,6 +2209,8 @@ EOM
 
     initialize_tightness_vars();
 
+    initialize_multiple_token_tightness();
+
     initialize_global_option_vars();
 
     initialize_line_length_vars();    # after 'initialize_global_option_vars'
@@ -3150,15 +3154,126 @@ sub initialize_tightness_vars {
         ']' => $rOpts->{'square-bracket-tightness'},
     );
 
-    # Hash of token types which are counted as multiple tokens for
-    # default tightness.
-    # double diamond is usually spaced
-    # TODO: add user control for tightness such as 'q'
-    my @q = qw( <<>> );
-    %multiple_token_tightness_type = ();
-    @multiple_token_tightness_type{@q} = (1) x scalar(@q);
     return;
 } ## end sub initialize_tightness_vars
+
+sub initialize_multiple_token_tightness {
+
+    # Initialization for --multiple-token-tightness
+    %multiple_token_tightness = ();
+
+    my $opt_name = 'multiple-token-tightness';
+    my $opt      = $rOpts->{$opt_name};
+
+    # The default is to add spaces for the double diamond
+    if ( !$opt ) {
+        $multiple_token_tightness{'<<>>'} = 1;
+        return;
+    }
+
+    # These are valid input words for perltidy token types
+    # Note that 'qw' will be translated into the actual token type 'q'
+    my %is_type_option;
+    my @type_options = qw( <<>> qw Q h );
+    @is_type_option{@type_options} = (1) x scalar(@type_options);
+
+    # These are valid input words subtypes of token type 'Q'.
+    # Note qw must be treated specially and is in the previous list.
+    my %is_Q_subtype_option;
+    my @Q_subtype_options = qw( q qq qx qr s y tr m );
+    @is_Q_subtype_option{@Q_subtype_options} =
+      (1) x scalar(@Q_subtype_options);
+
+    my %is_valid_term = ( %is_type_option, %is_Q_subtype_option );
+
+    # words can be negated by prefixing with the following character:
+    my $neg_char = '-';
+
+    # Scan the input
+    my %positive_input;
+    my %negative_input;
+    my $error_string = EMPTY_STRING;
+    if ( defined($opt) ) {
+        my @list = split_words($opt);
+        foreach my $word (@list) {
+
+            # The special word 'q*' means all of the Q_subtypes plus 'qw'
+            if ( $word eq 'q*' ) {
+                foreach (@Q_subtype_options) { $positive_input{$_} = 1 }
+                $positive_input{'qw'} = 1;
+            }
+            elsif ( $word eq $neg_char . 'q*' ) {
+                foreach (@Q_subtype_options) { $negative_input{$_} = 1 }
+                $negative_input{'qw'} = 1;
+            }
+            elsif ( $is_valid_term{$word} ) {
+                $positive_input{$word} = 1;
+            }
+            elsif ( substr( $word, 0, 1 ) eq $neg_char
+                && $is_valid_term{ substr( $word, 1 ) } )
+            {
+                $negative_input{ substr( $word, 1 ) } = 1;
+            }
+            else {
+                $error_string .= "$word ";
+            }
+        }
+    }
+
+    if ($error_string) {
+        $error_string =~ s/\s+$//;
+        Warn(<<EOM);
+Ignoring these unknown terms in --$opt_name: '$error_string'
+EOM
+    }
+
+    # The token '<<>>' is always a default unless rejected
+    if ( !$negative_input{'<<>>'} ) {
+        $positive_input{'<<>>'} = 1;
+    }
+
+    # Now construct the control hash
+    my @Q_subtype_list;
+    foreach my $word ( keys %positive_input ) {
+
+        # negative has priority over positive
+        next if ( $negative_input{$word} );
+
+        if ( $is_type_option{$word} ) {
+            if ( $word eq 'qw' ) { $word = 'q' }
+            $multiple_token_tightness{$word} = 1;
+        }
+        elsif ( $is_Q_subtype_option{$word} ) {
+            push @Q_subtype_list, $word;
+        }
+        else {
+            # something is wrong; previous checks should prevent arriving here
+            DEVEL_MODE
+              && Fault(
+                "unexpected word '$word' while initializing -mutt=$opt\n");
+            %multiple_token_tightness = ();
+            return;
+        }
+    }
+
+    # Construct a regex for the selected Q subtypes, in the form
+    #    ^(?:qq|qx|qr|q|s|y|tr|m)\b
+    if (@Q_subtype_list) {
+        my $regex = q{^(?:} . join( '|', @Q_subtype_list ) . q{)\b};
+        if ( bad_pattern($regex) ) {
+
+            # shouldn't happen; there must be a coding error
+            my $msg =
+              "ERROR: the --$opt_name input caused an invalid regex '$regex'\n";
+            DEVEL_MODE && Fault($msg);
+            Warn($msg);
+            %multiple_token_tightness = ();
+            return;
+        }
+        $multiple_token_tightness{'Q'} = $regex;
+    }
+    return;
+} ## end sub initialize_multiple_token_tightness
 
 sub initialize_global_option_vars {
 
@@ -4275,9 +4390,14 @@ sub set_whitespace_flags {
                     # Find the index of the closing token
                     my $j_closing = $K_closing_container->{$last_seqno};
 
-                    # Certain token types can be counted as multiple tokens:
-                    # these can include '<<>>', 'q', 'h'
-                    if ( $multiple_token_tightness_type{$type} ) {
+                    # Certain token types can be counted as multiple tokens for
+                    # the default tightness.  The meaning of hash values is:
+                    #   1 => match this token type
+                    #   otherwise it is a regex; match if token matches regex
+                    my $regex = $multiple_token_tightness{$type};
+                    if ( $regex
+                        && ( length($regex) == 1 || $token =~ /$regex/ ) )
+                    {
                         $ws = WS_YES;
                     }
 

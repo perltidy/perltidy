@@ -923,6 +923,8 @@ EOM
 
             'line-range-tidy' => [ '1:', '1:' ],
 
+            'multiple-token-tightness' => ['h', 'qw', 'Q', 'q*'],
+
             # Arbitrary limits to keep things readable
             'blank-lines-after-opening-block'  => [ 0, 4 ],
             'blank-lines-before-closing-block' => [ 0, 3 ],
