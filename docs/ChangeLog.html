@@ -1,8 +1,21 @@
 <h1>Perltidy Change Log</h1>
 
-<h2>2024 09 03.06</h2>
+<h2>2024 09 03.07</h2>
 
-<pre><code>- Added parameter --break-at-trailing-comma-types=s, or -btct=s, where
+<pre><code>- Added parameter --indent-leading-semicolon, -ils; see git #171. When
+this is negated, a line with a leading semicolon does not get the extra
+leading continuation indentation spaces (defined with -ci=n).
+
+- Space around here doc delimiters follow spacing controls better. For
+example, a space is now added before the closing paren here:
+
+   OLD: (without the here doc):
+   push( @script, &lt;&lt;'EOT');
+
+   NEW:
+   push( @script, &lt;&lt;'EOT' );
+
+- Added parameter --break-at-trailing-comma-types=s, or -btct=s, where
 s is a string which selects trailing commas.  For example, -btct='f(b'
 places a line break after all bare trailing commas in function calls.
 The manual has details.

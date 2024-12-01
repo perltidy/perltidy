@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2024 09 03.06
+## 2024 09 03.07
 
     - Added parameter --indent-leading-semicolon, -ils; see git #171. When
     this is negated, a line with a leading semicolon does not get the extra
