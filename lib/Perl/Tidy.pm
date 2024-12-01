@@ -3558,6 +3558,7 @@ sub generate_options {
     $add_option->( 'outdent-labels',                       'ola',   '!' );
     $add_option->( 'outdent-long-quotes',                  'olq',   '!' );
     $add_option->( 'indent-closing-brace',                 'icb',   '!' );
+    $add_option->( 'indent-leading-semicolon',             'ils',   '!' );
     $add_option->( 'closing-token-indentation',            'cti',   '=i' );
     $add_option->( 'closing-paren-indentation',            'cpi',   '=i' );
     $add_option->( 'closing-brace-indentation',            'cbi',   '=i' );
@@ -3929,6 +3930,7 @@ sub generate_options {
       hanging-side-comments
       indent-block-comments
       indent-columns=4
+      indent-leading-semicolon
       integer-range-check=2
       interbracket-arrow-complexity=1
       iterations=1

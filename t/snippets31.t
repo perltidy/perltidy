@@ -6,6 +6,8 @@
 #3 btct.def
 #4 c424.c424
 #5 c424.def
+#6 ils.def
+#7 ils.ils
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -27,6 +29,7 @@ BEGIN {
         'btct3' => "-btct=1 -atc -wtc=1",
         'c424'  => "-naws -qwaf",
         'def'   => "",
+        'ils'   => "-nils -bos",
     };
 
     ############################
@@ -53,6 +56,11 @@ $lut = byte [ [ 0, 0, 0 ], [ 10, 1, 10 ], [ 2, 20, 20 ], [ 30, 30, 3 ], ];
         'c424' => <<'----------',
 my @chars = qw(   | / - \ | / - \    );
 my @chars = qw(| / - \ | / - \ );
+----------
+
+        'ils' => <<'----------',
+$z = sqrt( $x**2 + $y**2 )
+;
 ----------
     };
 
@@ -161,6 +169,23 @@ my @chars = qw(| / - \ | / - \ );
 my @chars = qw(   | / - \ | / - \    );
 my @chars = qw(| / - \ | / - \ );
 #5...........
+        },
+
+        'ils.def' => {
+            source => "ils",
+            params => "def",
+            expect => <<'#6...........',
+$z = sqrt( $x**2 + $y**2 );
+#6...........
+        },
+
+        'ils.ils' => {
+            source => "ils",
+            params => "ils",
+            expect => <<'#7...........',
+$z = sqrt( $x**2 + $y**2 )
+;
+#7...........
         },
     };
 

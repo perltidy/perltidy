@@ -2,6 +2,10 @@
 
 ## 2024 09 03.06
 
+    - Added parameter --indent-leading-semicolon, -ils; see git #171. When
+    this is negated, a line with a leading semicolon does not get the extra
+    leading continuation indentation spaces (defined with -ci=n).
+
     - Space around here doc delimiters follow spacing controls better. For
     example, a space is now added before the closing paren here:
 

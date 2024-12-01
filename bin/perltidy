@@ -1115,6 +1115,25 @@ terminates a code block .  For example,
 
 The default is not to do this, indicated by B<-nicb>.
 
+=item B<-ils>, B<--indent-leading-semicolon>
+
+A line which begins with a leading semicolon will, by default, have the extra
+number of indentation spaces defined by B<--continuation-indentation=n>.
+This extra indentation can be removed by setting B<-nils>.
+
+    # default
+    $z = sqrt( $x**2 + $y**2 )
+
+      ;    # <-- indented by ci spaces
+
+    # -nils
+    $z = sqrt( $x**2 + $y**2 )
+
+    ;    # <-- not indented by ci spaces
+
+Note that leading semicolons do not normally occur unless requested with
+B<--break-at-old-semicolon-breakpoints> or forced, for example by
+a blank line as in this example.
 
 =item B<-nib>, B<--non-indenting-braces>
 
@@ -4680,10 +4699,18 @@ The default formatting will be:
 
   $z = sqrt( $x**2 + $y**2 );
 
-The result using B<perltidy -bos> keeps the isolated semicolon:
+Using the <-bos> flag keeps the isolated semicolon:
 
+  # perltidy -bos
   $z = sqrt( $x**2 + $y**2 )
     ;
+
+The extra continuation indentation spaces on the semicolon can be
+removed by also setting B<--noindent-leading-semicolon>.
+
+  # perltidy -bos -nils
+  $z = sqrt( $x**2 + $y**2 )
+  ;
 
 The default is not to do this, B<-nbos>.
 

@@ -234,6 +234,7 @@ my (
     $rOpts_ignore_perlcritic_comments,
     $rOpts_indent_closing_brace,
     $rOpts_indent_columns,
+    $rOpts_indent_leading_semicolon,
     $rOpts_indent_only,
     $rOpts_keep_interior_semicolons,
     $rOpts_line_up_parentheses,
@@ -3336,6 +3337,7 @@ sub initialize_global_option_vars {
     $rOpts_ignore_perlcritic_comments = $rOpts->{'ignore-perlcritic-comments'};
     $rOpts_indent_closing_brace       = $rOpts->{'indent-closing-brace'};
     $rOpts_indent_columns             = $rOpts->{'indent-columns'};
+    $rOpts_indent_leading_semicolon   = $rOpts->{'indent-leading-semicolon'};
     $rOpts_indent_only                = $rOpts->{'indent-only'};
     $rOpts_keep_interior_semicolons   = $rOpts->{'keep-interior-semicolons'};
     $rOpts_line_up_parentheses        = $rOpts->{'line-up-parentheses'};
@@ -38874,6 +38876,16 @@ sub make_paren_name {
                 $seqno_qw_closing,
 
             );
+        }
+
+        #-----------------------------------------
+        # Section 1B:
+        # if line starts with a non-sequenced item
+        #-----------------------------------------
+        else {
+            if ( $type_beg eq ';' && !$rOpts_indent_leading_semicolon ) {
+                $adjust_indentation = 1;
+            }
         }
 
         #---------------------------------------------------------
