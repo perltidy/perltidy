@@ -1321,11 +1321,50 @@ To simplify input in the case that all of the tightness flags have the same
 value <n>, the parameter <-act=n> or B<--all-containers-tightness=n> is an
 abbreviation for the combination <-pt=n -sbt=n -bt=n -bbt=n>.
 
+=item B<-mutt=s>,   B<--multiple-token-tightness=s>
+
+To review, the tightness controls described in the previous section have three
+possible integer values: 0, 1, and 2, where B<n=0> always adds a space, and
+B<n=2> never adds a space.
+
+The default value B<n=1> adds space only if the container holds multiple
+tokens.  Some perltidy tokens may be rather long, and it can be
+preferable to space some of them as if they were multple tokens.  This can be
+done with this paramter.
+
+For example, in the following expression the C<qw> list is a single token and
+therefore there the default formatting does not put spaces within the square
+brackets:
+
+    my $rlist = [qw(alpha beta gamma)];
+
+This can be changed with
+
+    # perltidy -mutt='qw'
+    my $rlist = [ qw(alpha beta gamma) ];
+
+This tells perltidy to space a C<qw>list as if it were multiple tokens when the
+default tightness is used.
+
+The parameter B<s> may contain any of the following perl operators:
+
+    qw q qq qx qr s y tr m
+
+Other possible specifications are
+
+    q*   - all of the above operators
+    Q    - all of the above plus any quoted text
+    h    - a here-doc target, such as '<<EOT'
+    <<>> - the double-diamond operator
+
+A symbol may be negated by preceding it with a carat B<^> symbol.
+The double-diamond operator is always included unless negated in this way.
+
 =item B<-xbt>,   B<--extended-block-tightness>
 
-The previous section described two controls for spacing within curly braces,
-namely B<--block-brace-tightness=n> for code block braces and
-B<--brace-tightness=n> for all other braces.
+There are two controls for spacing within curly braces, namely
+B<--block-brace-tightness=n> for code block braces and B<--brace-tightness=n>
+for all other braces.
 
 There is a little fuzziness in this division of brace types though because the
 curly braces considered by perltidy to contain code blocks for formatting
@@ -7147,15 +7186,15 @@ The following list shows all short parameter names which allow a prefix
  hbk    hbm    hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv
  hbw    hent   hic    hicm   hico   hih    hihh   hii    hij    hik
  him    hin    hip    hipd   hipu   hiq    his    hisc   hiv    hiw
- hsc    html   ibc    icb    icp    iob    ipc    isbc   iscl   kgb
- kgbd   kgbi   kis    lal    log    lop    lp     lsl    mci    mem
- nib    ohbr   okw    ola    olc    oll    olq    opr    opt    osbc
- osbr   otr    ple    pod    pvl    q      sac    sbc    sbl    scbb
- schb   scp    scsb   sct    se     sfp    sfs    skp    sob    sobb
- sohb   sop    sosb   sot    ssc    st     sts    t      tac    tbc
- toc    tp     tqw    trp    ts     tsc    tso    vbc    vc     viu
- vmll   vsc    vsn    vwe    w      wfc    wia    wma    wme    wmr
- wn     x      xbt    xci    xlp    xs
+ hsc    html   ibc    icb    icp    ils    iob    ipc    isbc   iscl
+ kgb    kgbd   kgbi   kis    lal    log    lop    lp     lsl    mci
+ mem    nib    ohbr   okw    ola    olc    oll    olq    opr    opt
+ osbc   osbr   otr    ple    pod    pvl    q      qwaf   sac    sbc
+ sbl    scbb   schb   scp    scsb   sct    se     sfp    sfs    skp
+ sob    sobb   sohb   sop    sosb   sot    ssc    st     sts    t
+ tac    tbc    toc    tp     tqw    trp    ts     tsc    tso    vbc
+ vc     viu    vmll   vsc    vsn    vwe    w      wfc    wia    wma
+ wme    wmr    wn     x      xbt    xci    xlp    xs
 
 Equivalently, the prefix 'no' or 'no-' on the corresponding long names may be
 used.

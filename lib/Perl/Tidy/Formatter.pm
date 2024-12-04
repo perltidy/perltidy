@@ -3187,8 +3187,8 @@ sub initialize_multiple_token_tightness {
 
     my %is_valid_term = ( %is_type_option, %is_Q_subtype_option );
 
-    # words can be negated by prefixing with the following character:
-    my $neg_char = '-';
+    # Words can be negated by prefixing with the following character:
+    my $neg_char = '^';
 
     # Scan the input
     my %positive_input;

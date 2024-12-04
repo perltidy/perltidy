@@ -466,6 +466,8 @@
 ../snippets31.t	btct.def
 ../snippets31.t	c424.c424
 ../snippets31.t	c424.def
+../snippets31.t	ils.def
+../snippets31.t	ils.ils
 ../snippets4.t	gnu1.gnu
 ../snippets4.t	gnu2.def
 ../snippets4.t	gnu2.gnu
@@ -586,5 +588,5 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets31.t	ils.def
-../snippets31.t	ils.ils
+../snippets31.t	mutt.def
+../snippets31.t	mutt.mutt1

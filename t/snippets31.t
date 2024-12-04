@@ -8,6 +8,8 @@
 #5 c424.def
 #6 ils.def
 #7 ils.ils
+#8 mutt.def
+#9 mutt.mutt1
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -30,6 +32,9 @@ BEGIN {
         'c424'  => "-naws -qwaf",
         'def'   => "",
         'ils'   => "-nils -bos",
+        'mutt1' => <<'----------',
+-mutt='q*'
+----------
     };
 
     ############################
@@ -61,6 +66,10 @@ my @chars = qw(| / - \ | / - \ );
         'ils' => <<'----------',
 $z = sqrt( $x**2 + $y**2 )
 ;
+----------
+
+        'mutt' => <<'----------',
+my $rlist = [qw(alpha beta gamma)];
 ----------
     };
 
@@ -186,6 +195,22 @@ $z = sqrt( $x**2 + $y**2 );
 $z = sqrt( $x**2 + $y**2 )
 ;
 #7...........
+        },
+
+        'mutt.def' => {
+            source => "mutt",
+            params => "def",
+            expect => <<'#8...........',
+my $rlist = [qw(alpha beta gamma)];
+#8...........
+        },
+
+        'mutt.mutt1' => {
+            source => "mutt",
+            params => "mutt1",
+            expect => <<'#9...........',
+my $rlist = [ qw(alpha beta gamma) ];
+#9...........
         },
     };
 
