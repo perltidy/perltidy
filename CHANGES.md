@@ -2,6 +2,25 @@
 
 ## 2024 09 03.07
 
+    - Added parameter --multiple-token-tightness=s, or -mutt=s.
+    The default value --paren-tightness=1 adds space within the parens
+    if, and only if, the container holds multiple tokens.  Some perltidy
+    tokens may be rather long, and it can be preferable to also space some of
+    them as if they were multple tokens.  This can be done with this paramter,
+    and it applies to parens as well as square brackets and curly braces.
+    For example, the default below has no space within the square brackets:
+
+        # perltidy
+        my $rlist = [qw( alpha beta gamma )];
+
+    Spaces can be obtained with:
+
+        # perltidy -mutt='q*'
+        my $rlist = [ qw( alpha beta gamma ) ];
+
+    The parameter -mutt='q*' means treat qw and similar quote operators as
+    multiple tokens.  The manual has details; git #120 has another example.
+
     - Added parameter --indent-leading-semicolon, -ils; see git #171. When
     this is negated, a line with a leading semicolon does not get the extra
     leading continuation indentation spaces (defined with -ci=n).
