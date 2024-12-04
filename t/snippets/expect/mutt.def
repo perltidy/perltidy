@@ -1,1 +1,3 @@
 my $rlist = [qw(alpha beta gamma)];
+$aqx->appendChild(
+    $parser->parse_balanced_chunk(qq(<param name="skv">$skv</param>)) );

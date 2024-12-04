@@ -70,6 +70,8 @@ $z = sqrt( $x**2 + $y**2 )
 
         'mutt' => <<'----------',
 my $rlist = [qw(alpha beta gamma)];
+$aqx->appendChild(
+        $parser->parse_balanced_chunk(qq(<param name="skv">$skv</param>)) );
 ----------
     };
 
@@ -202,6 +204,8 @@ $z = sqrt( $x**2 + $y**2 )
             params => "def",
             expect => <<'#8...........',
 my $rlist = [qw(alpha beta gamma)];
+$aqx->appendChild(
+    $parser->parse_balanced_chunk(qq(<param name="skv">$skv</param>)) );
 #8...........
         },
 
@@ -210,6 +214,8 @@ my $rlist = [qw(alpha beta gamma)];
             params => "mutt1",
             expect => <<'#9...........',
 my $rlist = [ qw(alpha beta gamma) ];
+$aqx->appendChild(
+    $parser->parse_balanced_chunk( qq(<param name="skv">$skv</param>) ) );
 #9...........
         },
     };
