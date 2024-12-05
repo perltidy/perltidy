@@ -5323,7 +5323,8 @@ EOM
 
           # retain any space after here doc operator ( see hereerr.t)
           # c419, part 2a: unless followed by '}' or ','. See also part 2b.
-          || $typel eq 'h' && $typer ne '}' && $typer ne ','
+          # or ; (git174)
+          || $typel eq 'h' && $typer ne '}' && $typer ne ',' && $typer ne ';'
 
           # Be careful with a space around ++ and --, to avoid ambiguity as to
           # which token it applies
@@ -12759,7 +12760,7 @@ EOM
 
 my %wU;
 my %wiq;
-my %is_witPS;
+my %is_withPS;
 my %is_sigil;
 my %is_nonlist_keyword;
 my %is_nonlist_type;
@@ -12776,8 +12777,8 @@ BEGIN {
     @q = qw( w i q Q G C Z );
     @wiq{@q} = (1) x scalar(@q);
 
-    @q = qw( w i t P S ); # Fix for c250: added new types 'P', 'S', formerly 'i'
-    @is_witPS{@q} = (1) x scalar(@q);
+    @q = qw( w i t h P S );   # for c250: added new types 'P', 'S', formerly 'i'
+    @is_withPS{@q} = (1) x scalar(@q);
 
     @q = qw( $ & % * @ );
     @is_sigil{@q} = (1) x scalar(@q);
@@ -13458,52 +13459,63 @@ sub respace_tokens_inner_loop {
         # Modify certain tokens here for whitespace
         # The following is not yet done, but could be:
         #   sub (x x x)
-        #     ( $type =~ /^[witPS]$/ )
-        elsif ( $is_witPS{$type} ) {
+        #     ( $type =~ /^[withPS]$/ )
+        elsif ( $is_withPS{$type} ) {
 
             # index() is several times faster than a regex test with \s here
             ##   $token =~ /\s/
             if ( index( $token, SPACE ) > 0 || index( $token, "\t" ) > 0 ) {
 
-                # change '$  var'  to '$var' etc
-                # change '@    '   to '@'
-                # Examples: <<snippets/space1.in>>
-                my $ord = ord( substr( $token, 1, 1 ) );
-                if (
-
-                    # quick test for possible blank at second char
-                    $ord > 0 && ( $ord < ORD_PRINTABLE_MIN
-                        || $ord > ORD_PRINTABLE_MAX )
-                  )
-                {
-                    my ( $sigil, $word ) = split /\s+/, $token, 2;
-
-                    # $sigil =~ /^[\$\&\%\*\@]$/ )
-                    if ( $is_sigil{$sigil} ) {
-                        $token = $sigil;
-                        $token .= $word if ( defined($word) );    # fix c104
+                # Remove space after '<<'. Note that perl may use a space after
+                # '<<' to guess tokenization for numeric targets. See git #174.
+                if ( $type eq 'h' ) {
+                    if ( $token =~ /^ (\<\<\~?) \s+ ([^\d].*) $/x ) {
+                        $token = $1 . $2;
                         $rtoken_vars->[_TOKEN_] = $token;
                     }
                 }
+                else {
 
-                # trim identifiers of trailing blanks which can occur
-                # under some unusual circumstances, such as if the
-                # identifier 'witch' has trailing blanks on input here:
-                #
-                # sub
-                # witch
-                # ()   # prototype may be on new line ...
-                # ...
-                my $ord_ch = ord( substr( $token, -1, 1 ) );
-                if (
+                    # change '$  var'  to '$var' etc
+                    # change '@    '   to '@'
+                    # Examples: <<snippets/space1.in>>
+                    my $ord = ord( substr( $token, 1, 1 ) );
+                    if (
 
-                    # quick check for possible ending space
-                    $ord_ch > 0 && ( $ord_ch < ORD_PRINTABLE_MIN
-                        || $ord_ch > ORD_PRINTABLE_MAX )
-                  )
-                {
-                    $token =~ s/\s+$//g;
-                    $rtoken_vars->[_TOKEN_] = $token;
+                        # quick test for possible blank at second char
+                        $ord > 0 && ( $ord < ORD_PRINTABLE_MIN
+                            || $ord > ORD_PRINTABLE_MAX )
+                      )
+                    {
+                        my ( $sigil, $word ) = split /\s+/, $token, 2;
+
+                        # $sigil =~ /^[\$\&\%\*\@]$/ )
+                        if ( $is_sigil{$sigil} ) {
+                            $token = $sigil;
+                            $token .= $word if ( defined($word) );    # fix c104
+                            $rtoken_vars->[_TOKEN_] = $token;
+                        }
+                    }
+
+                    # trim identifiers of trailing blanks which can occur
+                    # under some unusual circumstances, such as if the
+                    # identifier 'witch' has trailing blanks on input here:
+                    #
+                    # sub
+                    # witch
+                    # ()   # prototype may be on new line ...
+                    # ...
+                    my $ord_ch = ord( substr( $token, -1, 1 ) );
+                    if (
+
+                        # quick check for possible ending space
+                        $ord_ch > 0 && ( $ord_ch < ORD_PRINTABLE_MIN
+                            || $ord_ch > ORD_PRINTABLE_MAX )
+                      )
+                    {
+                        $token =~ s/\s+$//g;
+                        $rtoken_vars->[_TOKEN_] = $token;
+                    }
                 }
             }
 
