@@ -199,8 +199,9 @@ sub streamhandle {
 
     # NOTE: mode 'r' works but is no longer used.
     # Use sub stream_slurp instead for mode 'r', for efficiency.
-    if ( $mode ne 'w' && $mode ne 'W' ) {
-        if ( DEVEL_MODE || ( $mode ne 'r' && $mode ne 'R' ) ) {
+    $mode = lc($mode);
+    if ( $mode ne 'w' ) {
+        if ( DEVEL_MODE || $mode ne 'r' ) {
             Fault("streamhandle called in unexpected mode '$mode'\n");
         }
     }
@@ -226,7 +227,7 @@ sub streamhandle {
             # operator.  If this causes trouble, the check can be
             # skipped and we can just let it crash if there is no
             # getline.
-            if ( $mode =~ /[rR]/ ) {
+            if ( $mode eq 'r' ) {
 
                 # RT#97159; part 1 of 2: updated to use 'can'
                 if ( $ref->can('getline') ) {
@@ -245,7 +246,7 @@ EOM
 
             # Accept an object with a print method for writing.
             # See note above about IO::File
-            if ( $mode =~ /[wW]/ ) {
+            if ( $mode eq 'w' ) {
 
                 # RT#97159; part 2 of 2: updated to use 'can'
                 if ( $ref->can('print') ) {
@@ -1650,6 +1651,7 @@ sub set_output_file_permissions {
 } ## end sub set_output_file_permissions
 
 sub get_decoded_string_buffer {
+
     my ( $self, $input_file, $display_name ) = @_;
 
     # Decode the input buffer from utf8 if necessary or requested
@@ -4809,6 +4811,7 @@ EOM
 } ## end sub _process_command_line
 
 sub make_grep_alias_string {
+
     my ($rOpts) = @_;
 
     # pre-process the --grep-alias-list parameter
@@ -4864,6 +4867,7 @@ sub make_grep_alias_string {
 } ## end sub make_grep_alias_string
 
 sub cleanup_word_list {
+
     my ( $rOpts, $option_name, $rforced_words ) = @_;
 
     # Clean up the list of words in a user option to simplify use by
@@ -5208,6 +5212,7 @@ EOM
 } ## end sub check_options
 
 sub find_file_upwards {
+
     my ( $search_dir, $search_file ) = @_;
 
     # This implements the ... upward search for a file
@@ -5393,8 +5398,7 @@ sub check_vms_filename {
 
 sub Win_OS_Type {
 
-    # TODO: are these more standard names?
-    # Win32s Win95 Win98 WinMe WinNT3.51 WinNT4 Win2000 WinXP/.Net Win2003
+    my $rpending_complaint = shift;
 
     # Returns a string that determines what MS OS we are on.
     # Returns win32s,95,98,Me,NT3.51,NT4,2000,XP/.Net,Win2003
@@ -5402,7 +5406,9 @@ sub Win_OS_Type {
     # Original code contributed by: Yves Orton
     # We need to know this to decide where to look for config files
 
-    my $rpending_complaint = shift;
+    # TODO: are these more standard names?
+    # Win32s Win95 Win98 WinMe WinNT3.51 WinNT4 Win2000 WinXP/.Net Win2003
+
     my $os                 = EMPTY_STRING;
     return $os unless ( $OSNAME =~ /win32|dos/i );    # is it a MS box?
 
