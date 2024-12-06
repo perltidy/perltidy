@@ -34,6 +34,14 @@
        NEW:
        push( @script, <<'EOT' );
 
+    Also, any spaces between the '<<' and here target are removed (git #174):
+
+       OLD:
+       push( @script, <<  'EOT');
+
+       NEW:
+       push( @script, <<'EOT' );
+
     - Added parameter --break-at-trailing-comma-types=s, or -btct=s, where
     s is a string which selects trailing commas.  For example, -btct='f(b'
     places a line break after all bare trailing commas in function calls.
