@@ -4738,7 +4738,7 @@ The default formatting will be:
 
   $z = sqrt( $x**2 + $y**2 );
 
-Using the <-bos> flag keeps the isolated semicolon:
+Using the B<-bos> flag keeps the isolated semicolon:
 
   # perltidy -bos
   $z = sqrt( $x**2 + $y**2 )
