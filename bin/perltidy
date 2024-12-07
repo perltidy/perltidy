@@ -1634,15 +1634,15 @@ But the following will give a syntax error:
 For another example, the following two lines will be parsed without syntax error:
 
   # original programming, syntax ok
-  for my $severity ( reverse $SEVERITY_LOWEST+1 .. $SEVERITY_HIGHEST ) { ...  }
+  for my $severity ( reverse $LOWEST+1 .. $HIGHEST ) { ...  }
 
   # perltidy default, syntax ok
-  for my $severity ( reverse $SEVERITY_LOWEST + 1 .. $SEVERITY_HIGHEST ) { ... }
+  for my $severity ( reverse $LOWEST + 1 .. $HIGHEST ) { ... }
 
 But the following will give a syntax error:
 
   # perltidy -nwrs='+', syntax error:
-  for my $severity ( reverse $SEVERITY_LOWEST +1 .. $SEVERITY_HIGHEST ) { ... }
+  for my $severity ( reverse $LOWEST +1 .. $HIGHEST ) { ... }
 
 To avoid subtle parsing problems like this, it is best to avoid spacing a
 binary operator asymmetrically with a space on the left but not on the right.
@@ -2504,7 +2504,7 @@ The range of lines is specified by integers B<n1> and B<n2>, where B<n1> is the 
 Examples:
 
   -line-range-tidy=43:109      # tidy lines 43 through 109
-  -line-range-tidy=' 43 : 109' # tidy lines 43 through 109 (spaces ok in quotes)
+  -line-range-tidy=' 43 : 109' # tidy lines 43 through 109 (space ok in quotes)
   -line-range-tidy=1:          # tidy all lines
   -line-range-tidy=0:90        # ERROR (n1 must be >= 1)
 
@@ -3277,12 +3277,12 @@ token immediately before the container.  If given, it goes just before the
 container symbol.  The possible letters are currently 'k', 'K', 'f', 'F',
 'w', and 'W', with these meanings:
 
- 'k' matches if the previous nonblank token is a perl built-in keyword (such as 'if', 'while'),
- 'K' matches if 'k' does not, meaning that the previous token is not a keyword.
- 'f' matches if the previous token is a function other than a keyword.
- 'F' matches if 'f' does not.
- 'w' matches if either 'k' or 'f' match.
- 'W' matches if 'w' does not.
+ 'k' matches if the previous nonblank token is a perl keyword (such as 'if')
+ 'K' matches if 'k' does not, meaning that the previous token is not a keyword
+ 'f' matches if the previous token is a function other than a keyword
+ 'F' matches if 'f' does not
+ 'w' matches if either 'k' or 'f' match
+ 'W' matches if 'w' does not
 
 For example, compare
 
@@ -3307,7 +3307,7 @@ Here are some additional example strings and their meanings:
 
     '^('   - the weld must not start with a paren
     '.('   - the second and later tokens may not be parens
-    '.w('  - the second and later tokens may not keyword or function call parens
+    '.w('  - the second and later tokens may not be a keyword or call parens
     '('    - no parens in a weld
     '^K('  - exclude a leading paren preceded by a non-keyword
     '.k('  - exclude a secondary paren preceded by a keyword
@@ -4074,7 +4074,8 @@ The parameter B<--want-trailing-commas=s>, or B<-wtc=s>, defines a preferred sty
   s=m a multiline list
   s=b a multiline list with bare trailing comma
   s=i a multiline list with bare trailing comma and about one comma per line
-  s=h a multiline list with bare trailing comma and about one key=>value pair per line
+  s=h a multiline list with bare trailing comma and about one key=>value pair
+        per line
   s=0 : no list
 
   s=' ' or -wtc not defined : leave trailing commas unchanged [DEFAULT].
@@ -6063,11 +6064,11 @@ Space before and after the curly braces is optional.
 
 For a specific example, the following line
 
-        oneliner { --maximum-line-length=0 --noadd-newlines --noadd-terminal-newline}
+  oneliner { --maximum-line-length=0 --noadd-newlines --noadd-terminal-newline}
 
 or equivalently with abbreviations
 
-	oneliner { -l=0 -nanl -natnl }
+  oneliner { -l=0 -nanl -natnl }
 
 could be placed in a F<.perltidyrc> file to temporarily override the maximum
 line length with a large value, to temporarily prevent new line breaks from
@@ -6312,7 +6313,7 @@ a few symbols for special block types, as follows:
    +    - any nested inner block loop
    package - any package or class
    closure - any nameless block
-   elsif3  - an if-elsif-..-else chain with 3 or more elsif's (3 is arbitrary, see below)
+   elsif3  - an if-elsif-..-else chain with 3 or more elsif's (see below)
 
 A chain of B<if-elsif-...> blocks may be reported as a single line item by entering the word B<elsif> with an appended integer, as indicated by the last item in
 this list. The integer indicates the number of B<elsif> blocks required for
@@ -6815,7 +6816,7 @@ These issue types are illustrated with the following code
 
     ( $name, $flags, $access) = wimp(); # 'o' (want array 3 > 2)
     ($name) = wimp();                   # 'u' (want array 1 < 2)
-    $name   = wimp();                   # 's' (want scalar but 2 values returned)
+    $name   = wimp();  # 's' (want scalar but 2 values returned)
 
 This analysis works by scanning all call statements and all sub return
 statements, and comparing the the number of items wanted with the possible
