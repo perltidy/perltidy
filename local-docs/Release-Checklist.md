@@ -2,8 +2,9 @@
 
 - basic quality control:
   - 'make test' successful for all commit candidates
-  - run 'devbin/run__convergence_tests.pl' for all commit candidates
-  - Run perlcritic
+  - run ``devbin/run_convergence_tests.pl`` for all commit candidates
+  - run perlcritic
+  - run ``check_text.pl`` on all files
   - run NYTProf and check the activity and performance of all changed code
   - IMPORTANT: random testing minimum test duration without irregularities:
     - 3 cpu hours for a commit candidate
