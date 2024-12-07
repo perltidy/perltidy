@@ -18955,6 +18955,12 @@ sub keep_old_line_breaks {
                 next if ( !defined($Kp) );
                 next if ( $is_opening_type{ $rLL->[$Kp]->[_TYPE_] } );
 
+                # ignore -bom if this does not look like a method call; c426
+                my $Kn = $self->K_next_nonblank($Kfirst);
+                next if ( !defined($Kn) );
+                my $token_n = $rLL->[$Kn]->[_TYPE_];
+                next if ( $token_n eq '{' || $token_n eq '[' );
+
                 $rbreak_before_Kfirst->{$Kfirst} = 2;
             }
 
@@ -18979,6 +18985,12 @@ sub keep_old_line_breaks {
                 # requests breaking before the closing paren, automated logic
                 # opens the opening paren when the closing paren opens.
                 # Relevant cases are b977, b1215, b1270, b1303
+
+                # ignore -bom if this does not look like a method call; c426
+                $Kn = $self->K_next_nonblank($Kn);
+                next if ( !defined($Kn) );
+                my $token_n = $rLL->[$Kn]->[_TYPE_];
+                next if ( $token_n eq '{' || $token_n eq '[' );
 
                 $rbreak_container->{$seqno} = 1;
             }
