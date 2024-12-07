@@ -198,7 +198,7 @@ Show summary of usage and exit.
 
 Show perltidy VERSION number and exit.
 
-=item	B<-o>=filename,    B<--outfile>=filename
+=item   B<-o>=filename,    B<--outfile>=filename
 
 Name of the output file (only if a single input file is being
 processed).  If no output file is specified, and output is not
@@ -206,7 +206,7 @@ redirected to the standard output (see B<-st>), the output will go to
 F<filename.tdy>. [Note: - does not redirect to standard output. Use
 B<-st> instead.]
 
-=item	B<-st>,    B<--standard-output>
+=item   B<-st>,    B<--standard-output>
 
 Perltidy must be able to operate on an arbitrarily large number of files
 in a single run, with each output being directed to a different output
@@ -219,7 +219,7 @@ request outputting to the standard output.  For example,
 This option may only be used if there is just a single input file.
 The default is B<-nst> or B<--nostandard-output>.
 
-=item	B<-se>,    B<--standard-error-output>
+=item   B<-se>,    B<--standard-error-output>
 
 If perltidy detects an error when processing file F<somefile.pl>, its
 default behavior is to write error messages to file F<somefile.pl.ERR>.
@@ -228,13 +228,13 @@ output stream instead.  This directive may be negated with B<-nse>.
 Thus, you may place B<-se> in a F<.perltidyrc> and override it when
 desired with B<-nse> on the command line.
 
-=item	B<-oext>=ext,    B<--output-file-extension>=ext
+=item   B<-oext>=ext,    B<--output-file-extension>=ext
 
 Change the extension of the output file to be F<ext> instead of the
 default F<tdy> (or F<html> in case the -B<-html> option is used).
 See L<"Specifying File Extensions">.
 
-=item	B<-opath>=path,    B<--output-path>=path
+=item   B<-opath>=path,    B<--output-path>=path
 
 When perltidy creates a filename for an output file, by default it merely
 appends an extension to the path and basename of the input file.  This
@@ -255,7 +255,7 @@ If the path contains spaces, it should be placed in quotes.
 This parameter will be ignored if output is being directed to standard output,
 or if it is being specified explicitly with the B<--outfile=s> parameter.
 
-=item	B<-b>,    B<--backup-and-modify-in-place>
+=item   B<-b>,    B<--backup-and-modify-in-place>
 
 Modify the input file or files in-place and save the original with the
 extension F<.bak>.  Any existing F<.bak> file will be deleted.  See next
@@ -276,7 +276,7 @@ B<--nostandard-output> (B<-nst>) flag after the B<-pbp> flag because it contains
 B<--standard-output> flag as one of its components, which means that output
 will go to the standard output stream.
 
-=item	B<-bext>=ext,    B<--backup-file-extension>=ext
+=item   B<-bext>=ext,    B<--backup-file-extension>=ext
 
 This parameter serves two purposes: (1) to change the extension of the backup
 file to be something other than the default F<.bak>, and (2) to indicate
@@ -1460,8 +1460,8 @@ Some programmers prefer a space before all terminal semicolons.  The
 default is for no such space, and is indicated with B<-nsts> or
 B<--nospace-terminal-semicolon>.
 
-	$i = 1 ;     #  -sts
-	$i = 1;      #  -nsts   (default)
+        $i = 1 ;     #  -sts
+        $i = 1;      #  -nsts   (default)
 
 =item B<-sfs>,   B<--space-for-semicolon>
 
@@ -1915,12 +1915,12 @@ you may use B<-nibc> to keep block comments left-justified.  Here is an
 example:
 
              # this comment is indented      (-ibc, default)
-	     if ($task) { yyy(); }
+             if ($task) { yyy(); }
 
 The alternative is B<-nibc>:
 
  # this comment is not indented              (-nibc)
-	     if ($task) { yyy(); }
+             if ($task) { yyy(); }
 
 See also the next item, B<-isbc>, as well as B<-sbc>, for other ways to
 have some indented and some outdented block comments.
@@ -3107,14 +3107,14 @@ symbol.
 
 For example:
 
-	# default formatting
+        # default formatting
         do {
             {
                 next if $x == $y;
             }
         } until $x++ > $z;
 
-	# perltidy -wn
+        # perltidy -wn
         do { {
             next if $x == $y;
         } } until $x++ > $z;
@@ -3134,7 +3134,7 @@ the outer container of an adjacent pair. Consequently, any number of adjacent
 opening or closing symbols may join together in weld.  For example, here are
 three levels of wrapped function calls:
 
-	# default formatting
+        # default formatting
         my (@date_time) = Localtime(
             Date_to_Time(
                 Add_Delta_DHMS(
@@ -3164,7 +3164,7 @@ is achieved in a single run.
 
 Here is an example illustrating a welded container within a welded containers:
 
-	# default formatting
+        # default formatting
         $x->badd(
             bmul(
                 $class->new(
@@ -3176,7 +3176,7 @@ Here is an example illustrating a welded container within a welded containers:
             )
         );
 
-	# perltidy -wn
+        # perltidy -wn
         $x->badd( bmul(
             $class->new( abs(
                 $sx * int( $xr->numify() ) & $sy * int( $yr->numify() )
@@ -3189,7 +3189,7 @@ modified with the B<--vertical-tightness-closing=n> (B<-vtc=n>) flag (described
 in the next section).  For example,
 the same example adding B<-vtc=2> is
 
-	# perltidy -wn -vtc=2
+        # perltidy -wn -vtc=2
         $x->badd( bmul(
             $class->new( abs(
                 $sx * int( $xr->numify() ) & $sy * int( $yr->numify() ) ) ),
@@ -3948,7 +3948,7 @@ leading whitespace to indicate the indentation level. For example, here is an
 example of the default formatting of a poorly formatted B<qw> list:
 
     # perltidy
-    @fields = qw( $st_dev	   $st_ino    $st_mode $st_nlink   $st_uid
+    @fields = qw( $st_dev          $st_ino    $st_mode $st_nlink   $st_uid
       $st_gid $st_rdev    $st_size $st_atime   $st_mtime  $st_ctime
       $st_blksize $st_blocks);
 
@@ -5981,7 +5981,7 @@ Here is an example of a F<.perltidyrc> file:
   # This implements a highly spaced style
   -se    # errors to standard error output
   -w     # show all warnings
-  -bl	 # braces on new lines
+  -bl    # braces on new lines
   -pt=0  # parens not tight at all
   -bt=0  # braces not tight
   -sbt=0 # square brackets not tight
@@ -6052,10 +6052,10 @@ shorthand for one or more styles which are frequently, but not always,
 used.  The notation is to group the options within curly braces which
 are preceded by the name of the alias (without leading dashes), like this:
 
-	newword {
-	-opt1
-	-opt2
-	}
+        newword {
+        -opt1
+        -opt2
+        }
 
 where B<newword> is the abbreviation, and B<opt1>, etc, are existing parameters
 I<or other abbreviations>.  The main syntax requirement is that the new
@@ -6076,7 +6076,7 @@ being added, and to prevent an extra newline character from being added the
 file.  All other settings in the F<.perltidyrc> file still apply.  Thus it
 provides a way to format a long 'one liner' when perltidy is invoked with
 
-	perltidy --oneliner ...
+        perltidy --oneliner ...
 
 (Either C<-oneliner> or C<--oneliner> may be used).
 
@@ -6894,7 +6894,7 @@ Use B<--nolook-for-selfloader>, or B<-nlsl>, to deactivate this feature.
 The flag B<-html> causes perltidy to write an html file with extension
 F<.html>.  So, for example, the following command
 
-	perltidy -html somefile.pl
+        perltidy -html somefile.pl
 
 will produce a syntax-colored html file named F<somefile.pl.html>
 which may be viewed with a browser.
@@ -7064,31 +7064,31 @@ hex RGB color value or an ascii name for a color, such as 'red'.
 To illustrate, the following command will produce an html
 file F<somefile.pl.html> with "aqua" keywords:
 
-	perltidy -html -hck=00ffff somefile.pl
+        perltidy -html -hck=00ffff somefile.pl
 
 and this should be equivalent for most browsers:
 
-	perltidy -html -hck=aqua somefile.pl
+        perltidy -html -hck=aqua somefile.pl
 
 Perltidy merely writes any non-hex names that it sees in the html file.
 The following 16 color names are defined in the HTML 3.2 standard:
 
-	black   => 000000,
-	silver  => c0c0c0,
-	gray    => 808080,
-	white   => ffffff,
-	maroon  => 800000,
-	red     => ff0000,
-	purple  => 800080,
-	fuchsia => ff00ff,
-	green   => 008000,
-	lime    => 00ff00,
-	olive   => 808000,
-	yellow  => ffff00
-	navy    => 000080,
-	blue    => 0000ff,
-	teal    => 008080,
-	aqua    => 00ffff,
+        black   => 000000,
+        silver  => c0c0c0,
+        gray    => 808080,
+        white   => ffffff,
+        maroon  => 800000,
+        red     => ff0000,
+        purple  => 800080,
+        fuchsia => ff00ff,
+        green   => 008000,
+        lime    => 00ff00,
+        olive   => 808000,
+        yellow  => ffff00
+        navy    => 000080,
+        blue    => 0000ff,
+        teal    => 008080,
+        aqua    => 00ffff,
 
 Many more names are supported in specific browsers, but it is safest
 to use the hex codes for other colors.  Helpful color tables can be
@@ -7108,7 +7108,7 @@ NOT use italics, use B<--nohtml-italic-xxxxxx> or B<-nhix>.
 For example, to use bold braces and lime color, non-bold, italics keywords the
 following command would be used:
 
-	perltidy -html -hbs -hck=00FF00 -nhbk -hik somefile.pl
+        perltidy -html -hbs -hck=00FF00 -nhbk -hik somefile.pl
 
 The background color can be specified with B<--html-color-background=n>,
 or B<-hcbg=n> for short, where n is a 6 character hex RGB value.  The
