@@ -133,7 +133,7 @@ F<vars.txt>.
 
 This will produce a file F<somefile.pl.html> containing the script with
 html markup.  The output file will contain an embedded style sheet in
-the <HEAD> section which may be edited to change the appearance.
+the C<<HEAD>> section which may be edited to change the appearance.
 
   perltidy -html -css=mystyle.css somefile.pl
 
@@ -144,7 +144,7 @@ it will be created.  If it exists, it will not be overwritten.
 
   perltidy -html -pre somefile.pl
 
-Write an html snippet with only the PRE section to F<somefile.pl.html>.
+Write an html snippet with only the C<<PRE>> section to F<somefile.pl.html>.
 This is useful when code snippets are being formatted for inclusion in a
 larger web page.  No style sheet will be written in this case.
 
@@ -297,11 +297,11 @@ created and only deleted if there were no errors).
 
 Here are some examples:
 
-  Parameter           Extension          Backup File Treatment
-  <-bext=bak>         F<.bak>            Keep (same as the default behavior)
-  <-bext='/'>         F<.bak>            Delete if no errors
-  <-bext='/backup'>   F<.backup>         Delete if no errors
-  <-bext='original/'> F<.original>       Delete if no errors
+  Parameter          Extension      Backup File Treatment
+  -bext=bak         .bak            Keep (same as the default behavior)
+  -bext='/'         .bak            Delete if no errors
+  -bext='/backup'   .backup         Delete if no errors
+  -bext='original/' .original       Delete if no errors
 
 =item B<-bm=s>,  B<--backup-method=s>
 
@@ -1318,8 +1318,8 @@ example below.
  %bf = map {$_ => -M $_} grep {/\.deb$/} dirents '.';     # -bbt=2
 
 To simplify input in the case that all of the tightness flags have the same
-value <n>, the parameter <-act=n> or B<--all-containers-tightness=n> is an
-abbreviation for the combination <-pt=n -sbt=n -bt=n -bbt=n>.
+value B<n>, the parameter B<-act=n> or B<--all-containers-tightness=n> is an
+abbreviation for the combination B<-pt=n -sbt=n -bt=n -bbt=n>.
 
 =item B<-mutt=s>,   B<--multiple-token-tightness=s>
 
@@ -4943,7 +4943,7 @@ such blank lines from being introduced.
 
 The parameter B<-blbs=n> requests that least B<n> blank lines precede a sub
 definition which does not follow a comment and which is more than one-line
-long.  The default is <-blbs=1>.  B<BEGIN> and B<END> blocks are included.
+long.  The default is B<-blbs=1>.  B<BEGIN> and B<END> blocks are included.
 
 The requested number of blanks statement will be inserted regardless of the
 value of B<--maximum-consecutive-blank-lines=n> (B<-mbl=n>) with the exception
@@ -6906,7 +6906,7 @@ fully reformatted, html copy of a script.
 =item  The B<-pre> flag for code snippets
 
 When the B<-pre> flag is given, only the pre-formatted section, within
-the <PRE> and </PRE> tags, will be output.  This simplifies inclusion
+the C<<PRE>> and C<</PRE>> tags, will be output.  This simplifies inclusion
 of the output in other files.  The default is to output a complete
 web page.
 
