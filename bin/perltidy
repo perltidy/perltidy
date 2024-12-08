@@ -4045,7 +4045,7 @@ set.
 
 This option is on by default.  Use B<-ndrc> to turn it off.
 
-=item B<--want-trailing-commas=s> or B<-wtc=s>, B<--add-trailing-commas> or B<-atc>, and B<--delete-trailing-commas> or B<-dtc>
+=item B<Adding and Deleting Trailing Commas>
 
 A B<trailing comma> is a comma following the last item of a list. Perl allows
 trailing commas but they are not required.  Including them can sometimes
