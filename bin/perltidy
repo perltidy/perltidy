@@ -3973,14 +3973,17 @@ Some things to note are:
 =over 4
 
 =item *
+
 This only works for B<qw> quotes which begin with B<qw(>, with no space
 before the paren.
 
 =item *
+
 If the option B<--space-function-paren> is employed, it is ignored for
 these special function calls because it would deactivate them.
 
 =item *
+
 Otherwise the various formatting control flags operate on these lists the same
 as for other comma-separated lists. In particular, note that if
 B<--break-at-old-comma-breakpoints>, or B<-boc>, is set, then the old line
@@ -3988,6 +3991,7 @@ break locations will be retained. And old line breaks will be retained if
 there are any blank lines between the opening and closing parens.
 
 =item *
+
 Before using this option for the first time, it is a good idea to scan the code
 and decide if any lists have a special order which should be retained.  This
 can be accomplished for example by changing the quote delimiters to something
@@ -4024,6 +4028,7 @@ actions taken when this flag is set are as follows:
 Repeated commas like ',,' are removed with a warning.
 
 =item *
+
 Repeated fat commas like '=> =>' are removed with a warning.
 
 =item *
@@ -4058,12 +4063,15 @@ parameters:
 =over 4
 
 =item *
+
 B<--want-trailing-commas=s, -wtc=s> - defines where trailing commas are wanted (the style)
 
 =item *
+
 B<--add-trailing-commas,    -atc>   - gives permission to add trailing commas to match the style wanted
 
 =item *
+
 B<--delete-trailing-commas, -dtc>   - gives permission to delete trailing commas which do not match the style wanted
 
 =back
@@ -4309,9 +4317,11 @@ available for these lone commas:
 =over 4
 
 =item *
+
 B<--add-lone-trailing-commas, -altc>  - gives permission to add a comma if it will be the only comma. This is on by default and explained below.
 
 =item *
+
 B<--delete-lone-trailing-commas, -dltc>  - gives permission to delete the only comma in a list. This is on by default and explained below.
 
 =back
@@ -5723,17 +5733,20 @@ Some points regarding B<-vsn> are:
 =over 4
 
 =item *
+
 This option works by inserting a single space ahead of unsigned numbers
 when possible. This is not done if it would require increasing the
 maximum width of a column.
 
 =item *
+
 This option is mainly limited to lists of comma-separated numbers.  For
 multiline lists of numbers, having trailing commas can sometimes improve the
 results.  If missing, perltidy can add them for example
 with parameters B<-wtc=b -atc>.  See L<"Adding and Deleting Commas">.
 
 =item *
+
 This option has a control parameter B<--valign-signed-number-limit=N>, or
 B<-vsnl=N>. This value controls formatting of very long columns of numbers and
 should not normally need to be changed.  To see its purpose, consider a very
@@ -6239,10 +6252,12 @@ B<--warn->:
 =over 4
 
 =item *
+
 The B<--dump-> parameters read a file, write information to the standard output,
 and then exit without doing any formatting.
 
 =item *
+
 The B<--warn-> parameters, on the other hand, cause perltidy to function
 normally but issue warnings to the error output when certain conditions are
 encountered.
@@ -6332,33 +6347,39 @@ C<somefile.pl>:
 =over 4
 
 =item *
+
 This selects both C<subs> and C<packages> which have 20 or more lines of code.
 This can be useful in code which contains multiple packages.
 
     perltidy -dbs -dbt='sub package' somefile.pl >blocks.csv
 
 =item *
+
 This selects block types C<sub for foreach while> with 10 or more code lines.
 
     perltidy -dbs -dbl=10 -dbt='sub for foreach while' somefile.pl >blocks.csv
 
 =item *
+
 This selects blocks with 2 or more code lines which are type C<sub> or which
 are inner loops.
 
     perltidy -dbs -dbl=2 -dbt='sub +' somefile.pl >blocks.csv
 
 =item *
+
 This selects every block and package.
 
     perltidy -dbs -dbl=1 -dbt='* closure' somefile.pl >blocks.csv
 
 =item *
+
 This selects every if-chain which contains 2 or more C<elsif> blocks:
 
     perltidy -dbs -dbl=1 -dbt='elsif2' somefile.pl >blocks.csv
 
 =item *
+
 This selects every C<while> block with 6 or more code lines
 
     perltidy -dbs -dbt=while -dbl=6 somfile.pl >while.csv
@@ -6692,6 +6713,7 @@ B<Notes and Limitations:>
 =over 4
 
 =item *
+
 This option works best for subs which unpack call args in an orderly manner
 near the beginning of the sub from C<@_> and/or with C<shift> operations.  It
 will also work for direct access to specific elements of the @_ array.  However
@@ -6699,12 +6721,15 @@ if the coding for arg extraction is complex then the number of sub args will be
 considered indeterminate and a count cannot be checked.
 
 =item *
+
 Sub calls made without parentheses around the args are not checked.
 
 =item *
+
 Anonymous subs and lexical subs (introduced with C<my>) are not checked.
 
 =item *
+
 Only calls which appear to be to subs defined within the file being
 processed are checked. But note that a file may contain multiple packages.
 
@@ -6724,6 +6749,7 @@ Several companion controls are available to avoid unwanted error messages:
 =over 4
 
 =item *
+
 B<--warn-mismatched-arg-types=s>, or B<-wmat=s>, can be used to
 select specific tests, type B<a> (arrow test) or B<o> (overcounts) or B<u> (undercounts). All checks may be requested with B<-wmat='*'> or B<-wmat=1>. This is the default.
 
@@ -6734,6 +6760,7 @@ To restrict the check to a specific warning type, set the string equal to the le
 will format F<somefile.pl> and report any arrow-type mismatches and overcount mismatches, but will skip undercount mismatches.
 
 =item *
+
 B<--warn-mismatched-arg-exclusion-list>, or B<-wmaxl=string>, can be given to
 skip the warning checks for a list of subroutine names, entered as a quoted
 string of space- or comma-separated names, without a package prefix. All subs
@@ -6741,6 +6768,7 @@ with those names will be skipped, regardless of package. A leading and/or
 trailing B<*> on a name may be used to indicate a partial string match.
 
 =item *
+
 B<--warn-mismatched-arg-undercount-cutoff=n>, or B<-wmauc=n>, can be used to
 avoid B<undercount> warnings when the expected number of args is less than B<n>.
 Please note that this number B<n> is the number of args from the point of
@@ -6760,6 +6788,7 @@ optional args and avoid needless warnings.  If this method is used,
 then B<-wmauc=0> should be used for maximal checking.
 
 =item *
+
 B<--warn-mismatched-arg-overcount-cutoff=n>, or B<-wmaoc=n>, can be used to
 avoid B<overcount> warnings when the expected number of args is less than B<n>.
 The default value is B<n=1>. This avoids warning messages for subroutines
@@ -6846,6 +6875,7 @@ The following companion controls are available to avoid unwanted error messages:
 =over 4
 
 =item *
+
 B<--warn-mismatched-return-types=string>, or B<-wmrt=string>, can be used to limit checks.
 
 To restrict the checking, set the string equal to the letter(s) of that warning,
@@ -6858,6 +6888,7 @@ types B<u> and B<y>.  All checks may be requested with B<-wmrt='*'> or
 B<-wmrt=1>.  This is the default.
 
 =item *
+
 B<--warn-mismatched-return-exclusion-list>, or B<-wmrxl=string>, can be given to
 skip the warning checks for a list of subroutine names, entered as a quoted
 string of space- or comma-separated names, without a package prefix. All subs
