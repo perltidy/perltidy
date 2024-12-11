@@ -7083,14 +7083,17 @@ SOAP::Transport::HTTP::Daemon->new (
                                     LocalAddr => $host,
                                     LocalPort => $port,
                                     Reuse => 1,
-)->dispatch_with ({ 'urn:WishListCustomer' => 'WishListCustomer' } )
-  ->objects_by_reference ('WishListCustomer')->handle ;
+  )
+  ->dispatch_with ({ 'urn:WishListCustomer' => 'WishListCustomer' } )
+  ->objects_by_reference ('WishListCustomer')
+  ->handle ;
 
 SOAP::Transport::HTTP::Daemon->new (LocalAddr => $host,
                                     LocalPort => $port,
                                     Reuse => 1,)
   ->dispatch_with ({ 'urn:WishListCustomer' => 'WishListCustomer' } )
-  ->objects_by_reference ('WishListCustomer')->handle ;
+  ->objects_by_reference ('WishListCustomer')
+  ->handle ;
 
 
 ==> b1395 <==
@@ -7486,14 +7489,16 @@ print join( "\n",
 ==> b1430 <==
          $t->post_ok(
                   "//$auth_userid:$password@/api/v1/advanced_editor/macros" =>
-                          json => $macro_values )->status_is(400)
+                          json => $macro_values )
+                 ->status_is(400)
                  ->json_is( '/errors' => [ {
                   message => "Read-only.", path => "/body/macro_id",
                  } ] );
 
          $t->post_ok(
                   "//$auth_userid:$password@/api/v1/advanced_editor/macros" =>
-                          json => $macro_values )->status_is(400)
+                          json => $macro_values )
+                 ->status_is(400)
                  ->json_is( '/errors' => [ {
                   message => "Read-only.", path => "/body/macro_id",
                  } ] );
@@ -7687,7 +7692,8 @@ $last = after (
 
 
 ==> b1445 <==
-         $cfg->
+         $cfg
+                  ->
                   {
                   $type
                   }
@@ -7697,7 +7703,8 @@ $last = after (
                   die
 "Unrecognized $type number: $num\n";
 
-         $cfg->
+         $cfg
+                  ->
                   {
                   $type
                   }

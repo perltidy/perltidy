@@ -861,7 +861,8 @@ Some pod after __END__ to delete with -dp and trim with -trp
 # This single line should break into multiple lines, even with -l=0
 # sub 'tight_paren_follows' should break the do block
 $body =
-  SOAP::Data->name('~V:Fault')->attr( { 'xmlns' => $SOAP::Constants::NS_ENV } )
+  SOAP::Data->name('~V:Fault')
+  ->attr( { 'xmlns' => $SOAP::Constants::NS_ENV } )
   ->value(
     \SOAP::Data->set_value(
         SOAP::Data->name(

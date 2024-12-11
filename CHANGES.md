@@ -2,6 +2,25 @@
 
 ## 2024 09 03.07
 
+    - Line breaks at long chains of method calls now break at all calls
+      with args in parens, as in this example from git #171
+
+        # Old default
+        sub bla_p( $value = 42 ) {
+            return Mojo::Promise->resolve($value)->then( sub { shift() / 2 } )
+              ->then( sub { shift() + 6 } )->then( sub { shift() / 2 } )
+              ->catch( sub { warn shift } );
+        }
+
+        # New default
+        sub bla_p( $value = 42 ) {
+            return Mojo::Promise->resolve($value)
+              ->then( sub { shift() / 2 } )
+              ->then( sub { shift() + 6 } )
+              ->then( sub { shift() / 2 } )
+              ->catch( sub { warn shift } );
+        }
+
     - An update for parameter --break-at-old-method-breakpoints, or -bom,
     has been made to insure that it only applies to lines beginning with
     method calls, as intended.  Line breaks for all lines beginning with
@@ -1700,7 +1719,7 @@
 
 ## 2019 06 01
 
-    - rt #128477: Prevent inconsistent owner/group and setuid/setgid bits. 
+    - rt #128477: Prevent inconsistent owner/group and setuid/setgid bits.
       In the -b (--backup-and-modify-in-place) mode, an attempt is made to set ownership
       of the output file equal to the input file, if they differ.
       In all cases, if the final output file ownership differs from input file, any setuid/setgid bits are cleared.

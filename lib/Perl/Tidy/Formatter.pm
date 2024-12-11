@@ -653,6 +653,9 @@ BEGIN {
         _last_vt_type_                => $i++,
         _rwant_arrow_before_seqno_    => $i++,
 
+        _rseqno_arrow_call_chain_start_ => $i++,
+        _rarrow_call_chain_             => $i++,
+
         # these vars are defined after call to respace tokens:
         _rK_package_list_                 => $i++,
         _rK_AT_underscore_by_sub_seqno_   => $i++,
@@ -1174,6 +1177,9 @@ sub new {
     $self->[_no_vertical_tightness_flags_] = 0;
     $self->[_last_vt_type_]                = 0;
     $self->[_rwant_arrow_before_seqno_]    = {};
+
+    $self->[_rseqno_arrow_call_chain_start_] = {};
+    $self->[_rarrow_call_chain_]             = {};
 
     $self->[_save_logfile_] =
       defined($logger_object) && $logger_object->get_save_logfile();
@@ -2777,9 +2783,10 @@ sub initialize_token_break_preferences {
     $break_after->( split_words( $rOpts->{'want-break-after'} ) );
     $break_before->( split_words( $rOpts->{'want-break-before'} ) );
 
-    # make note if breaks are before certain key types
+    # Make note if breaks are before certain key types
+    # Added '->' for git #171.
     %want_break_before = ();
-    foreach my $tok ( @all_operators, ',' ) {
+    foreach my $tok ( @all_operators, ',', '->' ) {
         $want_break_before{$tok} =
           $left_bond_strength{$tok} < $right_bond_strength{$tok};
     }
@@ -12843,10 +12850,13 @@ my $rblock_type_of_seqno;
 my $rwant_arrow_before_seqno;
 my $ris_sub_block;
 my $ris_asub_block;
+my $rseqno_arrow_call_chain_start;
+my $rarrow_call_chain;
 
 my $K_opening_container;
 my $K_closing_container;
 my @K_sequenced_token_list;
+my @seqno_paren_arrow;
 
 my %K_first_here_doc_by_seqno;
 
@@ -12943,6 +12953,8 @@ sub initialize_respace_tokens_closure {
     $rK_return_by_sub_seqno        = $self->[_rK_return_by_sub_seqno_];
     $rK_wantarray_by_sub_seqno     = $self->[_rK_wantarray_by_sub_seqno_];
     $rsub_call_paren_info_by_seqno = $self->[_rsub_call_paren_info_by_seqno_];
+    $rseqno_arrow_call_chain_start = $self->[_rseqno_arrow_call_chain_start_];
+    $rarrow_call_chain             = $self->[_rarrow_call_chain_];
     $rDOLLAR_underscore_by_sub_seqno =
       $self->[_rDOLLAR_underscore_by_sub_seqno_];
     $rK_sub_by_seqno     = $self->[_rK_sub_by_seqno_];
@@ -12988,6 +13000,9 @@ sub initialize_respace_tokens_closure {
     $K_closing_container = $self->[_K_closing_container_] = {};
 
     @K_sequenced_token_list = ();
+
+    # array for saving seqno's of ')->' for possible line breaks, git #171
+    @seqno_paren_arrow = ();
 
     return;
 
@@ -13719,43 +13734,15 @@ EOM
             }
         }
 
-        # Old patch to add space to something like "x10".
-        # Note: This is now done in the Tokenizer, but this code remains
-        # for reference.
-        elsif ( $type eq 'n' ) {
-            if ( substr( $token, 0, 1 ) eq 'x' && $token =~ /^x\d+/ ) {
-                $token =~ s/x/x /;
-                $rtoken_vars->[_TOKEN_] = $token;
-                if (DEVEL_MODE) {
-                    Fault(<<EOM);
-Near line $input_line_number, Unexpected need to split a token '$token' - this should now be done by the Tokenizer
-EOM
-                }
+        elsif ( $type eq '->' ) {
+            if ( $last_nonblank_code_token eq ')' ) {
+
+                # save seqno of closing paren with arrow, ')->', git #171
+                # (the paren seqno is still on the stack)
+                my $seqno_paren = $seqno_stack{$depth_next};
+                if ($seqno_paren) { push @seqno_paren_arrow, $seqno_paren }
             }
         }
-
-        # check for a qw quote
-        elsif ( $type eq 'q' ) {
-
-            # Trim spaces from right of qw quotes.  Also trim from the left for
-            # safety (the tokenizer should have done this).
-            # To avoid trimming qw quotes use -ntqw; this causes the
-            # tokenizer to set them as type 'Q' instead of 'q'.
-            $token =~ s/^ \s+ | \s+ $//gx;
-            $rtoken_vars->[_TOKEN_] = $token;
-            if ( $self->[_save_logfile_] && $token =~ /\t/ ) {
-                $self->note_embedded_tab($input_line_number);
-            }
-            if (   $rwhitespace_flags->[$KK] == WS_YES
-                && @{$rLL_new}
-                && $rLL_new->[-1]->[_TYPE_] ne 'b'
-                && $rOpts_add_whitespace )
-            {
-                $self->store_token();
-            }
-            $self->store_token($rtoken_vars);
-            next;
-        } ## end if ( $type eq 'q' )
 
         # delete repeated commas if requested
         elsif ( $type eq ',' ) {
@@ -13799,6 +13786,28 @@ EOM
                 }
             }
         }
+
+        # check a quote for problems
+        elsif ( $type eq 'Q' ) {
+            $self->check_Q( $KK, $Kfirst, $input_line_number )
+              if ( $self->[_save_logfile_] );
+        }
+
+        # Old patch to add space to something like "x10".
+        # Note: This is now done in the Tokenizer, but this code remains
+        # for reference.
+        elsif ( $type eq 'n' ) {
+            if ( substr( $token, 0, 1 ) eq 'x' && $token =~ /^x\d+/ ) {
+                $token =~ s/x/x /;
+                $rtoken_vars->[_TOKEN_] = $token;
+                if (DEVEL_MODE) {
+                    Fault(<<EOM);
+Near line $input_line_number, Unexpected need to split a token '$token' - this should now be done by the Tokenizer
+EOM
+                }
+            }
+        }
+
         elsif ( $type eq '=>' ) {
             if (   $last_nonblank_code_type eq '=>'
                 && $rOpts->{'delete-repeated-commas'} )
@@ -13835,17 +13844,35 @@ EOM
             }
         }
 
+        # check for a qw quote
+        elsif ( $type eq 'q' ) {
+
+            # Trim spaces from right of qw quotes.  Also trim from the left for
+            # safety (the tokenizer should have done this).
+            # To avoid trimming qw quotes use -ntqw; this causes the
+            # tokenizer to set them as type 'Q' instead of 'q'.
+            $token =~ s/^ \s+ | \s+ $//gx;
+            $rtoken_vars->[_TOKEN_] = $token;
+            if ( $self->[_save_logfile_] && $token =~ /\t/ ) {
+                $self->note_embedded_tab($input_line_number);
+            }
+            if (   $rwhitespace_flags->[$KK] == WS_YES
+                && @{$rLL_new}
+                && $rLL_new->[-1]->[_TYPE_] ne 'b'
+                && $rOpts_add_whitespace )
+            {
+                $self->store_token();
+            }
+            $self->store_token($rtoken_vars);
+            next;
+        } ## end if ( $type eq 'q' )
+
         # change 'LABEL   :'   to 'LABEL:'
         elsif ( $type eq 'J' ) {
             $token =~ s/\s+//g;
             $rtoken_vars->[_TOKEN_] = $token;
         }
 
-        # check a quote for problems
-        elsif ( $type eq 'Q' ) {
-            $self->check_Q( $KK, $Kfirst, $input_line_number )
-              if ( $self->[_save_logfile_] );
-        }
         else {
             # no special processing for this token type
         }
@@ -14102,6 +14129,45 @@ EOM
             }
         }
     }
+
+    # Search for chains of method calls of the form (git #171)
+    #      )->xxx( )->xxx(  )->
+    # We have previously saved the seqno of all ')->' combinations
+    my $in_chain_seqno = 0;
+    while ( my $seqno = shift @seqno_paren_arrow ) {
+
+        #      ) -> func (
+        #      ) -> func (
+        # $Kc--^         ^--$K_test
+
+        my $Kc      = $K_closing_container->{$seqno};
+        my $K_arrow = $self->K_next_nonblank( $Kc,      $rLL_new );
+        my $K_func  = $self->K_next_nonblank( $K_arrow, $rLL_new );
+        my $K_test  = $self->K_next_nonblank( $K_func,  $rLL_new );
+
+        last if ( !defined($K_test) );
+
+        # ignore index operation like ')->{' or ')->[' and end any chain
+        my $tok = $rLL_new->[$K_func]->[_TOKEN_];
+        if ( $tok eq '[' || $tok eq '{' ) { $in_chain_seqno = 0; next }
+
+        # mark seqno of parens which are part of a call chain
+        my $seqno_start = $in_chain_seqno ? $in_chain_seqno : $seqno;
+        $rseqno_arrow_call_chain_start->{$seqno} = $seqno_start;
+
+        # save a list of the arrows, needed to set line breaks
+        push @{ $rarrow_call_chain->{$seqno_start} }, $K_arrow;
+
+        # See if this chain continues
+        if (   @seqno_paren_arrow
+            && defined($K_test)
+            && $rLL_new->[$K_test]->[_TOKEN_] eq '('
+            && $rLL_new->[$K_test]->[_TYPE_SEQUENCE_] eq $seqno_paren_arrow[0] )
+        {
+            $in_chain_seqno ||= $seqno;
+        }
+        else { $in_chain_seqno = 0 }
+    } ## end while ( my $seqno = shift...)
 
     return;
 } ## end sub respace_post_loop_ops
@@ -27232,6 +27298,8 @@ sub break_all_chain_tokens {
     my %left_chain_type;
     my %right_chain_type;
     my %interior_chain_type;
+    my @i_arrow_breaks;
+    my @insert_list;
     my $nmax = @{$ri_right} - 1;
 
     # scan the left and right end tokens of all lines
@@ -27245,6 +27313,16 @@ sub break_all_chain_tokens {
         $typer = '+' if ( $typer eq '-' );
         $typel = '*' if ( $typel eq '/' );    # treat * and / the same
         $typer = '*' if ( $typer eq '/' );
+
+        # Breaks at method calls are handled specially below (git #171)
+        if ( $typel eq '->' && $want_break_before{$typel} ) {
+            push @i_arrow_breaks, $il;
+            next;
+        }
+        if ( $typer eq '->' && !$want_break_before{$typer} ) {
+            push @i_arrow_breaks, $ir;
+            next;
+        }
 
         my $keyl = $typel eq 'k' ? $tokens_to_go[$il] : $typel;
         my $keyr = $typer eq 'k' ? $tokens_to_go[$ir] : $typer;
@@ -27261,7 +27339,40 @@ sub break_all_chain_tokens {
             $count++;
         }
     }
-    return unless $count;
+
+    # Handle any method call chain breaks immediately (git #171)
+    if (@i_arrow_breaks) {
+        my %is_end_i;
+        @is_end_i{ @{$ri_left} }  = (1) x scalar( @{$ri_left} );
+        @is_end_i{ @{$ri_right} } = (1) x scalar( @{$ri_right} );
+        my $one = $want_break_before{'->'} ? 1 : 0;
+
+        foreach my $ii (@i_arrow_breaks) {
+            my $ip = iprev_to_go($ii);
+            next if ( $ip < 0 || $tokens_to_go[$ip] ne ')' );
+            my $seqno = $type_sequence_to_go[$ip];
+            my $seqno_start =
+              $self->[_rseqno_arrow_call_chain_start_]->{$seqno};
+            next unless ($seqno_start);
+            my @Klist = @{ $self->[_rarrow_call_chain_]->{$seqno_start} };
+            my $Kref  = $K_to_go[0];
+            foreach my $KK (@Klist) {
+                my $i_K = $KK - $Kref;
+                next if ( $i_K <= 0 || $i_K >= $max_index_to_go );
+                next if ( $is_end_i{$i_K} );
+                if ( $K_to_go[$i_K] != $KK ) {
+                    ## shouldn't happen due to previous checks on i vs K
+                    DEVEL_MODE && Fault(<<EOM);
+                        unexpected array offset error i=$i_K K=$KK Kref= $Kref
+EOM
+                    next;
+                }
+                push @insert_list, $i_K - $one;
+            }
+        }
+    }
+
+    return unless $count || @insert_list;
 
     # now look for any interior tokens of the same types
     $count = 0;
@@ -27281,7 +27392,7 @@ sub break_all_chain_tokens {
             }
         }
     }
-    return unless $count;
+    return unless $count || @insert_list;
 
     my @keys = keys %saw_chain_type;
 
@@ -27294,7 +27405,6 @@ sub break_all_chain_tokens {
     }
 
     # now make a list of all new break points
-    my @insert_list;
 
     # loop over all chain types
     foreach my $key (@keys) {

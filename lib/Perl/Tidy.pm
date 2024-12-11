@@ -5409,7 +5409,7 @@ sub Win_OS_Type {
     # TODO: are these more standard names?
     # Win32s Win95 Win98 WinMe WinNT3.51 WinNT4 Win2000 WinXP/.Net Win2003
 
-    my $os                 = EMPTY_STRING;
+    my $os = EMPTY_STRING;
     return $os unless ( $OSNAME =~ /win32|dos/i );    # is it a MS box?
 
     # Systems built from Perl source may not have Win32.pm
