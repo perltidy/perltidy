@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2024 09 03.07
+## 2024 09 03.08
 
     - Line breaks at long chains of method calls now break at all calls
       with args in parens, as in this example from git #171

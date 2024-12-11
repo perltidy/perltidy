@@ -16,7 +16,7 @@
 package Perl::Tidy::FileWriter;
 use strict;
 use warnings;
-our $VERSION = '20240903.07';
+our $VERSION = '20240903.08';
 use Carp;
 
 use constant DEVEL_MODE   => 0;
