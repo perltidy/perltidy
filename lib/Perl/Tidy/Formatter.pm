@@ -12767,7 +12767,7 @@ EOM
 
 my %wU;
 my %wiq;
-my %is_withPS;
+my %is_wit;
 my %is_sigil;
 my %is_nonlist_keyword;
 my %is_nonlist_type;
@@ -12784,8 +12784,8 @@ BEGIN {
     @q = qw( w i q Q G C Z );
     @wiq{@q} = (1) x scalar(@q);
 
-    @q = qw( w i t h P S );   # for c250: added new types 'P', 'S', formerly 'i'
-    @is_withPS{@q} = (1) x scalar(@q);
+    @q = qw( w i t );    # for c250: added new types 'P', 'S', formerly 'i'
+    @is_wit{@q} = (1) x scalar(@q);
 
     @q = qw( $ & % * @ );
     @is_sigil{@q} = (1) x scalar(@q);
@@ -13474,137 +13474,55 @@ sub respace_tokens_inner_loop {
         # Modify certain tokens here for whitespace
         # The following is not yet done, but could be:
         #   sub (x x x)
-        #     ( $type =~ /^[withPS]$/ )
-        elsif ( $is_withPS{$type} ) {
+        #     ( $type =~ /^[wit]$/ )
+        elsif ( $is_wit{$type} ) {
 
             # index() is several times faster than a regex test with \s here
             ##   $token =~ /\s/
             if ( index( $token, SPACE ) > 0 || index( $token, "\t" ) > 0 ) {
 
-                # Remove space after '<<'. Note that perl may use a space after
-                # '<<' to guess tokenization for numeric targets. See git #174.
-                if ( $type eq 'h' ) {
-                    if ( $token =~ /^ (\<\<\~?) \s+ ([^\d].*) $/x ) {
-                        $token = $1 . $2;
-                        $rtoken_vars->[_TOKEN_] = $token;
-                    }
-                }
-                else {
+                # change '$  var'  to '$var' etc
+                # change '@    '   to '@'
+                # Examples: <<snippets/space1.in>>
+                my $ord = ord( substr( $token, 1, 1 ) );
+                if (
 
-                    # change '$  var'  to '$var' etc
-                    # change '@    '   to '@'
-                    # Examples: <<snippets/space1.in>>
-                    my $ord = ord( substr( $token, 1, 1 ) );
-                    if (
-
-                        # quick test for possible blank at second char
-                        $ord > 0 && ( $ord < ORD_PRINTABLE_MIN
-                            || $ord > ORD_PRINTABLE_MAX )
-                      )
-                    {
-                        my ( $sigil, $word ) = split /\s+/, $token, 2;
-
-                        # $sigil =~ /^[\$\&\%\*\@]$/ )
-                        if ( $is_sigil{$sigil} ) {
-                            $token = $sigil;
-                            $token .= $word if ( defined($word) );    # fix c104
-                            $rtoken_vars->[_TOKEN_] = $token;
-                        }
-                    }
-
-                    # trim identifiers of trailing blanks which can occur
-                    # under some unusual circumstances, such as if the
-                    # identifier 'witch' has trailing blanks on input here:
-                    #
-                    # sub
-                    # witch
-                    # ()   # prototype may be on new line ...
-                    # ...
-                    my $ord_ch = ord( substr( $token, -1, 1 ) );
-                    if (
-
-                        # quick check for possible ending space
-                        $ord_ch > 0 && ( $ord_ch < ORD_PRINTABLE_MIN
-                            || $ord_ch > ORD_PRINTABLE_MAX )
-                      )
-                    {
-                        $token =~ s/\s+$//g;
-                        $rtoken_vars->[_TOKEN_] = $token;
-                    }
-                }
-            }
-
-            # Trim spaces in sub definitions
-            if ( $type eq 'S' ) {
-
-                # save the NEW index of this token which will normally
-                # be @{$rLL_new} plus 1 because a blank is usually inserted
-                # ahead of it. The user routine will back up if necessary.
-                # Note that an isolated prototype starting on new line will
-                # be marked as 'S' but start with '(' and must be skipped.
-                if ( substr( $token, 0, 1 ) ne '(' ) {
-
-                    $K_last_S = @{$rLL_new} + 1;
-
-                    # also, remember if this is a 'my' sub
-                    $K_last_S_is_my = $last_nonblank_code_type eq 'k'
-                      && (
-                        $last_nonblank_code_token eq 'my'
-                        || (   $last_nonblank_code_token eq 'sub'
-                            && $last_last_nonblank_code_type eq 'k'
-                            && $last_last_nonblank_code_token eq 'my' )
-                      );
-                }
-
-                # Note: an asub with prototype like this will come this way
-                # and be partially treated as a named sub
-                #     sub () {
-
-                # -spp = 0 : no space before opening prototype paren
-                # -spp = 1 : stable (follow input spacing)
-                # -spp = 2 : always space before opening prototype paren
-                if ( !defined($rOpts_space_prototype_paren)
-                    || $rOpts_space_prototype_paren == 1 )
+                    # quick test for possible blank at second char
+                    $ord > 0 && ( $ord < ORD_PRINTABLE_MIN
+                        || $ord > ORD_PRINTABLE_MAX )
+                  )
                 {
-                    ## default: stable
-                }
-                elsif ( $rOpts_space_prototype_paren == 0 ) {
-                    $token =~ s/\s+\(/\(/;
-                }
-                elsif ( $rOpts_space_prototype_paren == 2 ) {
-                    $token =~ s/\(/ (/;
-                }
-                else {
-                    ## should have been caught with the integer range check
-                    ## continue with the default
-                    DEVEL_MODE && Fault(<<EOM);
-unexpected integer value space-prototype-paren=$rOpts_space_prototype_paren
-EOM
+                    my ( $sigil, $word ) = split /\s+/, $token, 2;
+
+                    # $sigil =~ /^[\$\&\%\*\@]$/ )
+                    if ( $is_sigil{$sigil} ) {
+                        $token = $sigil;
+                        $token .= $word if ( defined($word) );    # fix c104
+                        $rtoken_vars->[_TOKEN_] = $token;
+                    }
                 }
 
-                # one space max, and no tabs
-                $token =~ s/\s+/ /g;
-                $rtoken_vars->[_TOKEN_] = $token;
+                # trim identifiers of trailing blanks which can occur
+                # under some unusual circumstances, such as if the
+                # identifier 'witch' has trailing blanks on input here:
+                #
+                # sub
+                # witch
+                # ()   # prototype may be on new line ...
+                # ...
+                my $ord_ch = ord( substr( $token, -1, 1 ) );
+                if (
 
-                $self->[_ris_special_identifier_token_]->{$token} = 'sub';
-            }
-
-            # and trim spaces in package statements (added for c250)
-            elsif ( $type eq 'P' ) {
-
-                # clean up spaces in package identifiers, like
-                #   "package        Bob::Dog;"
-                if ( $token =~ s/\s+/ /g ) {
+                    # quick check for possible ending space
+                    $ord_ch > 0 && ( $ord_ch < ORD_PRINTABLE_MIN
+                        || $ord_ch > ORD_PRINTABLE_MAX )
+                  )
+                {
+                    $token =~ s/\s+$//g;
                     $rtoken_vars->[_TOKEN_] = $token;
-                    $self->[_ris_special_identifier_token_]->{$token} =
-                      'package';
                 }
-
-                # remember the new K of this package; this may be
-                # off by 1 if a blank gets inserted before it
-                push @{$rK_package_list}, scalar( @{$rLL_new} );
             }
-            elsif ( $type eq 'i' ) {
+            if ( $type eq 'i' ) {
                 if ( $token eq '@_' && $current_sub_seqno ) {
 
                     # remember the new K of this @_; this may be
@@ -13865,7 +13783,88 @@ EOM
             }
             $self->store_token($rtoken_vars);
             next;
-        } ## end if ( $type eq 'q' )
+        }
+
+        # Remove space after '<<'. Note that perl may use a space after
+        # '<<' to guess tokenization for numeric targets. See git #174.
+        elsif ( $type eq 'h' ) {
+            if ( index( $token, SPACE ) > 0 || index( $token, "\t" ) > 0 ) {
+                if ( $token =~ /^ (\<\<\~?) \s+ ([^\d].*) $/x ) {
+                    $token = $1 . $2;
+                    $rtoken_vars->[_TOKEN_] = $token;
+                }
+            }
+        }
+        elsif ( $type eq 'S' ) {
+
+            # Trim spaces in sub definitions
+
+            # save the NEW index of this token which will normally
+            # be @{$rLL_new} plus 1 because a blank is usually inserted
+            # ahead of it. The user routine will back up if necessary.
+            # Note that an isolated prototype starting on new line will
+            # be marked as 'S' but start with '(' and must be skipped.
+            if ( substr( $token, 0, 1 ) ne '(' ) {
+
+                $K_last_S = @{$rLL_new} + 1;
+
+                # also, remember if this is a 'my' sub
+                $K_last_S_is_my = $last_nonblank_code_type eq 'k'
+                  && (
+                    $last_nonblank_code_token eq 'my'
+                    || (   $last_nonblank_code_token eq 'sub'
+                        && $last_last_nonblank_code_type eq 'k'
+                        && $last_last_nonblank_code_token eq 'my' )
+                  );
+            }
+
+            # Note: an asub with prototype like this will come this way
+            # and be partially treated as a named sub
+            #     sub () {
+
+            # -spp = 0 : no space before opening prototype paren
+            # -spp = 1 : stable (follow input spacing)
+            # -spp = 2 : always space before opening prototype paren
+            if ( !defined($rOpts_space_prototype_paren)
+                || $rOpts_space_prototype_paren == 1 )
+            {
+                ## default: stable
+            }
+            elsif ( $rOpts_space_prototype_paren == 0 ) {
+                $token =~ s/\s+\(/\(/;
+            }
+            elsif ( $rOpts_space_prototype_paren == 2 ) {
+                $token =~ s/\(/ (/;
+            }
+            else {
+                ## should have been caught with the integer range check
+                ## continue with the default
+                DEVEL_MODE && Fault(<<EOM);
+unexpected integer value space-prototype-paren=$rOpts_space_prototype_paren
+EOM
+            }
+
+            # one space max, and no tabs
+            $token =~ s/\s+/ /g;
+            $rtoken_vars->[_TOKEN_] = $token;
+
+            $self->[_ris_special_identifier_token_]->{$token} = 'sub';
+        }
+
+        # and trim spaces in package statements (added for c250)
+        elsif ( $type eq 'P' ) {
+
+            # clean up spaces in package identifiers, like
+            #   "package        Bob::Dog;"
+            if ( $token =~ s/\s+/ /g ) {
+                $rtoken_vars->[_TOKEN_] = $token;
+                $self->[_ris_special_identifier_token_]->{$token} = 'package';
+            }
+
+            # remember the new K of this package; this may be
+            # off by 1 if a blank gets inserted before it
+            push @{$rK_package_list}, scalar( @{$rLL_new} );
+        }
 
         # change 'LABEL   :'   to 'LABEL:'
         elsif ( $type eq 'J' ) {
