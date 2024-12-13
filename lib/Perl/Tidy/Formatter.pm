@@ -14169,6 +14169,15 @@ EOM
         else { $in_chain_seqno = 0 }
     } ## end while ( my $seqno = shift...)
 
+    # For efficiency, remove chains with length < 2
+    foreach my $seqno ( keys %{$rseqno_arrow_call_chain_start} ) {
+        my $seqno_start = $rseqno_arrow_call_chain_start->{$seqno};
+        if ( @{ $rarrow_call_chain->{$seqno_start} } < 2 ) {
+            delete $rseqno_arrow_call_chain_start->{$seqno};
+            delete $rarrow_call_chain->{$seqno_start};
+        }
+    }
+
     return;
 } ## end sub respace_post_loop_ops
 
@@ -26902,6 +26911,9 @@ EOM
 
                 $self->break_all_chain_tokens( $ri_first, $ri_last );
 
+                $self->break_method_call_chains( $ri_first, $ri_last )
+                  if ( %{ $self->[_rseqno_arrow_call_chain_start_] } );
+
                 $self->break_equals( $ri_first, $ri_last )
                   if @{$ri_first} >= 3;
 
@@ -27279,8 +27291,72 @@ EOM
     return;
 } ## end sub pad_array_to_go
 
+sub break_method_call_chains {
+
+    my ( $self, $ri_left, $ri_right ) = @_;
+
+    # If there is a break at any member of a method call chain, break
+    # at each method call in the chain (all or none logic). git #171.
+
+    # Given:
+    #   $ri_first - reference to list of the first index $i for each output
+    #               line in this batch
+    #   $ri_last - reference to list of the last index $i for each output line
+    #              in this batch
+
+    return unless ( %{ $self->[_rseqno_arrow_call_chain_start_] } );
+
+    # Look for '->' breakpoints
+    my @i_arrow_breaks;
+    my $rlist = !$want_break_before{'->'} ? $ri_right : $ri_left;
+    foreach my $ii ( @{$rlist} ) {
+        if ( $types_to_go[$ii] eq '->' ) { push @i_arrow_breaks, $ii }
+    }
+    return unless (@i_arrow_breaks);
+
+    # See if these are part of a call chain
+    my @insert_list;
+    my %is_end_i;
+    @is_end_i{ @{$ri_left} }  = (1) x scalar( @{$ri_left} );
+    @is_end_i{ @{$ri_right} } = (1) x scalar( @{$ri_right} );
+    my $one = !$want_break_before{'->'} ? 0 : 1;
+    foreach my $ii (@i_arrow_breaks) {
+
+        my $ip = iprev_to_go($ii);
+        next if ( $ip < 0 || $tokens_to_go[$ip] ne ')' );
+        my $seqno       = $type_sequence_to_go[$ip];
+        my $seqno_start = $self->[_rseqno_arrow_call_chain_start_]->{$seqno};
+        next unless ($seqno_start);
+
+        # Found a call chain...
+        my @Klist = @{ $self->[_rarrow_call_chain_]->{$seqno_start} };
+        my $Kref  = $K_to_go[0];
+        foreach my $KK (@Klist) {
+
+            # Add missing breaks
+            my $i_K = $KK - $Kref;
+            next if ( $i_K <= 0 || $i_K >= $max_index_to_go );
+            next if ( $is_end_i{$i_K} );
+            if ( $K_to_go[$i_K] != $KK ) {
+                ## shouldn't happen due to previous checks on i vs K
+                DEVEL_MODE && Fault(<<EOM);
+                        unexpected array offset error i=$i_K K=$KK Kref= $Kref
+EOM
+                next;
+            }
+            push @insert_list, $i_K - $one;
+        }
+    }
+
+    # Insert any new break points
+    if (@insert_list) {
+        $self->insert_additional_breaks( \@insert_list, $ri_left, $ri_right );
+    }
+    return;
+} ## end sub break_method_call_chains
+
 sub break_all_chain_tokens {
-    #
+
     my ( $self, $ri_left, $ri_right ) = @_;
 
     # Scan the current breakpoints looking for breaks at certain "chain
@@ -27298,12 +27374,11 @@ sub break_all_chain_tokens {
     my %left_chain_type;
     my %right_chain_type;
     my %interior_chain_type;
-    my @i_arrow_breaks;
     my @insert_list;
     my $nmax = @{$ri_right} - 1;
 
     # scan the left and right end tokens of all lines
-    my $count = 0;
+    my $end_count = 0;
     for my $n ( 0 .. $nmax ) {
         my $il    = $ri_left->[$n];
         my $ir    = $ri_right->[$n];
@@ -27314,68 +27389,26 @@ sub break_all_chain_tokens {
         $typel = '*' if ( $typel eq '/' );    # treat * and / the same
         $typer = '*' if ( $typer eq '/' );
 
-        # Breaks at method calls are handled specially below (git #171)
-        if ( $typel eq '->' && $want_break_before{$typel} ) {
-            push @i_arrow_breaks, $il;
-            next;
-        }
-        if ( $typer eq '->' && !$want_break_before{$typer} ) {
-            push @i_arrow_breaks, $ir;
-            next;
-        }
-
         my $keyl = $typel eq 'k' ? $tokens_to_go[$il] : $typel;
         my $keyr = $typer eq 'k' ? $tokens_to_go[$ir] : $typer;
         if ( $is_chain_operator{$keyl} && $want_break_before{$typel} ) {
             next if ( $typel eq '?' );
             push @{ $left_chain_type{$keyl} }, $il;
             $saw_chain_type{$keyl} = 1;
-            $count++;
+            $end_count++;
         }
         if ( $is_chain_operator{$keyr} && !$want_break_before{$typer} ) {
             next if ( $typer eq '?' );
             push @{ $right_chain_type{$keyr} }, $ir;
             $saw_chain_type{$keyr} = 1;
-            $count++;
+            $end_count++;
         }
     }
 
-    # Handle any method call chain breaks immediately (git #171)
-    if (@i_arrow_breaks) {
-        my %is_end_i;
-        @is_end_i{ @{$ri_left} }  = (1) x scalar( @{$ri_left} );
-        @is_end_i{ @{$ri_right} } = (1) x scalar( @{$ri_right} );
-        my $one = $want_break_before{'->'} ? 1 : 0;
-
-        foreach my $ii (@i_arrow_breaks) {
-            my $ip = iprev_to_go($ii);
-            next if ( $ip < 0 || $tokens_to_go[$ip] ne ')' );
-            my $seqno = $type_sequence_to_go[$ip];
-            my $seqno_start =
-              $self->[_rseqno_arrow_call_chain_start_]->{$seqno};
-            next unless ($seqno_start);
-            my @Klist = @{ $self->[_rarrow_call_chain_]->{$seqno_start} };
-            my $Kref  = $K_to_go[0];
-            foreach my $KK (@Klist) {
-                my $i_K = $KK - $Kref;
-                next if ( $i_K <= 0 || $i_K >= $max_index_to_go );
-                next if ( $is_end_i{$i_K} );
-                if ( $K_to_go[$i_K] != $KK ) {
-                    ## shouldn't happen due to previous checks on i vs K
-                    DEVEL_MODE && Fault(<<EOM);
-                        unexpected array offset error i=$i_K K=$KK Kref= $Kref
-EOM
-                    next;
-                }
-                push @insert_list, $i_K - $one;
-            }
-        }
-    }
-
-    return unless $count || @insert_list;
+    return unless $end_count;
 
     # now look for any interior tokens of the same types
-    $count = 0;
+    my $interior_count = 0;
     my $has_interior_dot_or_plus;
     for my $n ( 0 .. $nmax ) {
         my $il = $ri_left->[$n];
@@ -27387,12 +27420,12 @@ EOM
             $key = '*' if ( $key eq '/' );
             if ( $saw_chain_type{$key} ) {
                 push @{ $interior_chain_type{$key} }, $i;
-                $count++;
+                $interior_count++;
                 $has_interior_dot_or_plus ||= ( $key eq '.' || $key eq '+' );
             }
         }
     }
-    return unless $count || @insert_list;
+    return unless $interior_count;
 
     my @keys = keys %saw_chain_type;
 
