@@ -17,7 +17,7 @@ Perl::Tidy - Parses and beautifies perl source
         errorfile         => $errorfile,
         teefile           => $teefile,
         debugfile         => $debugfile,
-        formatter         => $formatter,           # callback object (see below)
+        formatter         => $formatter,    # callback object (see below)
         dump_options      => $dump_options,
         dump_options_type => $dump_options_type,
         prefilter         => $prefilter_coderef,
@@ -46,17 +46,17 @@ The following list of parameters may be any of the following: a
 filename, an ARRAY reference, a SCALAR reference, or an object with
 either a B<getline> or B<print> method, as appropriate.
 
-        source            - the source of the script to be formatted
-        destination       - the destination of the formatted output
-        stderr            - standard error output
-        perltidyrc        - the .perltidyrc file
-        logfile           - the .LOG file stream, if any
-        errorfile         - the .ERR file stream, if any
-        dump_options      - ref to a hash to receive parameters (see below),
-        dump_options_type - controls contents of dump_options
-        dump_getopt_flags - ref to a hash to receive Getopt flags
-        dump_options_category - ref to a hash giving category of options
-        dump_abbreviations    - ref to a hash giving all abbreviations
+    source            - the source of the script to be formatted
+    destination       - the destination of the formatted output
+    stderr            - standard error output
+    perltidyrc        - the .perltidyrc file
+    logfile           - the .LOG file stream, if any
+    errorfile         - the .ERR file stream, if any
+    dump_options      - ref to a hash to receive parameters (see below),
+    dump_options_type - controls contents of dump_options
+    dump_getopt_flags - ref to a hash to receive Getopt flags
+    dump_options_category - ref to a hash giving category of options
+    dump_abbreviations    - ref to a hash giving all abbreviations
 
 The following chart illustrates the logic used to decide how to
 treat a parameter.
@@ -311,8 +311,8 @@ code and error streams, and illustrates checking for errors.
       source      => \$source_string,
       destination => \$dest_string,
       stderr      => \$stderr_string,
-      errorfile   => \$errorfile_string,    # ignored when -se flag is set
-      ##phasers   => 'stun',                # uncomment to trigger an error
+      errorfile   => \$errorfile_string,  # ignored when -se flag is set
+      ##phasers   => 'stun',              # uncomment to trigger an error
   );
 
   if ($error) {
