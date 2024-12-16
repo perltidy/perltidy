@@ -4713,34 +4713,31 @@ a breakpoint, but method chains will fill to the line width before a break is
 considered.  With B<-bom>, breaks before the arrow are preserved, so if you
 have pre-formatted a method chain:
 
-  my $q = $rs
-    ->related_resultset('CDs')
-    ->related_resultset('Tracks')
-    ->search({
-      'track.id' => {-ident => 'none_search.id'},
-    })->as_query;
+    # perltidy -bom
+    $Document
+      ->schild(0)
+      ->schildren();
 
-It will B<keep> these breaks, rather than become this:
+the flag B<-bom> will B<keep> these line breaks, rather than become this:
 
-  my $q = $rs->related_resultset('CDs')->related_resultset('Tracks')->search({
-      'track.id' => {-ident => 'none_search.id'},
-    })->as_query;
+    # perltidy [DEFAULT]
+    $Document->schild(0)->schildren();
 
 This flag will also look for and keep a 'cuddled' style of calls,
 in which lines begin with a closing paren followed by a call arrow,
 as in this example:
 
-  # perltidy -bom -wn
-  my $q = $rs->related_resultset(
-      'CDs'
-  )->related_resultset(
-      'Tracks'
-  )->search( {
-      'track.id' => { -ident => 'none_search.id' },
-  } )->as_query;
+    # perltidy -bom
+    my $q = $rs->related_resultset(
+        'CDs'
+    )->related_resultset(
+        'Tracks'
+    )->search(
+        {
+            'track.id' => { -ident => 'none_search.id' },
+        }
+    )->as_query;
 
-You may want to include the B<--weld-nested-containers> flag in this case to keep
-nested braces and parens together, as in the last line.
 
 =item B<-bos>,  B<--break-at-old-semicolon-breakpoints>
 
