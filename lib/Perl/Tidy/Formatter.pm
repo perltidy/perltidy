@@ -39828,6 +39828,21 @@ sub make_paren_name {
             # not a closing type
         }
 
+        # A final check: reset the flag value from 1 to 0 if moving left would
+        # give this closing token less indentation than the line with its
+        # opening token. We could do this check at the top for more efficiency
+        # except for -lp.  For -lp, if the $adjust_indentation flag flips from
+        # 1 to 2, then the -lp logic can do a better recovery if it knows that
+        # the $default_adjust_indentation=1 instead of 0 (c435)
+        if ( $adjust_indentation == 1 ) {
+            my $no_left_adjustment_space = defined($opening_indentation)
+              && get_spaces($leading_spaces_beg) <=
+              get_spaces($opening_indentation);
+            if ($no_left_adjustment_space) {
+                $adjust_indentation = 0;
+            }
+        }
+
         return (
 
             $adjust_indentation,

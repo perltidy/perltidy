@@ -5131,7 +5131,7 @@ $bc[
       =sqrt (
     (
       $vecs**2
-  )->sumover )
+    )->sumover )
       +0.0001;
 
   # S2
@@ -5139,7 +5139,7 @@ $bc[
       =sqrt (
     (
       $vecs**2
-  )->sumover )
+    )->sumover )
       +0.0001;
 
 ==> b1218 <==
@@ -6410,12 +6410,12 @@ my %config = (
         my $h =
           $integerValue->copy()->bmod(
                                       '16'
-        )->bstr();
+          )->bstr();
 
         my $h =
           $integerValue->copy()->bmod(
                                       '16'
-        )->bstr();
+          )->bstr();
 
 ==> b1319 <==
 # S1

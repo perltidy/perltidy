@@ -289,7 +289,7 @@ my $q = $rs
     {
         'track.id' => { -ident => 'none_search.id' },
     }
-)->as_query;
+  )->as_query;
 #6...........
         },
 
