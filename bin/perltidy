@@ -734,7 +734,7 @@ use on a command line.
 =item B<-it=n>,   B<--iterations=n>
 
 This flag causes perltidy to do B<n> complete iterations.  The reason for this
-flag is that code beautification is an iterative process and in some
+flag is that code formatting is an iterative process and in some
 cases the output from perltidy can be different if it is applied a second time.
 For most purposes the default of B<n=1> should be satisfactory.  However B<n=2>
 can be useful when a major style change is being made, or when code is being
@@ -749,12 +749,10 @@ This flag has no effect when perltidy is used to generate html.
 =item B<-conv>,   B<--converge>
 
 This flag is equivalent to B<-it=4> and is included to simplify iteration
-control.  For all practical purposes one either does or does not want to be
-sure that the output is converged, and there is no penalty to using a large
-iteration limit since perltidy will check for convergence and stop iterating as
-soon as possible.  The default is B<-nconv> (no convergence check).  Using
-B<-conv> will approximately double run time since typically one extra iteration
-is required to verify convergence.  No extra iterations are required if no new
+control.  Perltidy will check for convergence and stop iterating as soon as
+possible.  The default is B<-nconv> (no convergence check).  Using B<-conv>
+will approximately double run time since typically one extra iteration is
+required to verify convergence.  No extra iterations are required if no new
 line breaks are made, and two extra iterations are occasionally needed when
 reformatting complex code structures, such as deeply nested ternary statements.
 
@@ -3831,7 +3829,8 @@ we can break it open with
             '<Page_Down>' => xx,
         );
 
-Afterwards, we could switch to B<btct=b> since the trailing comma is now bare.
+Afterwards, we could switch to B<-btct='b'> since the trailing comma is now
+bare.
 But the B<-btct> parameter must be retained in this case because otherwise this
 small list will be flattened the next time it is formatted.
 
@@ -4257,10 +4256,6 @@ line breaks.  Running with B<--converge> gives the desired result:
 
 because comma changes are based on the line breaks after the first iteration.
 
-The additional computer time needed by the B<--converge> option to do another
-iteration or two will not be noticeable except for files with many thousands of
-lines.
-
 A parameter B<--delay-trailing-comma-operations>, or B<-dtco>, is available to
 control this behavior if desired. Negating this parameter, with B<-ndtco>, tells
 perltidy to always use the starting state to make decisions regarding comma
@@ -4275,9 +4270,9 @@ probably the reason.
 
 =item *
 
-If the parameter B<--break-at-trailing-comma-types> is also employed, it
-operates on the state after any adding or deleting of commas. And it
-will allow trailing commas to be added in most edge cases.  For example,
+If the parameter B<--break-at-trailing-comma-types>, or B<-btct>. is also
+employed, it operates on the state after any adding or deleting of commas. And
+it will allow trailing commas to be added in most edge cases.  For example,
 given the following input text
 
     plot(
@@ -4372,10 +4367,10 @@ then perltidy can add and/or delete a lone comma:
     );
 
 But it turns out that these cases usually coincide with situations where the
-B<--weld-nested-containers>, or B<-wn>, would apply, and adding such commas can
-block welding.  For example, the B<-wn> parameter would succeed on the first of
-the above snippets, but it would fail on the second because of the added
-trailing comma.
+B<--weld-nested-containers>, or B<-wn>, parameter would apply, and adding such
+commas can block welding.  For example, the B<-wn> parameter would succeed on
+the first of the above snippets, but it would fail on the second because of the
+added trailing comma.
 
 The parameter B<--add-lone-trailing-commas>, or B<-altc> allows these commas to
 be added, provide that B<--add-trailing-commas> is also set. It is on by
