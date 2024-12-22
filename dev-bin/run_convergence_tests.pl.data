@@ -12534,6 +12534,24 @@ my%S3d_url=(
 --noadd-whitespace
 --extended-line-up-parentheses
 
+==> b1502.in <==
+my $species =
+        new Bio::Species(
+    -classification =>
+            [ qw(
+        sapiens Homo Hominidae Catarrhini Primates Eutheria
+        Mammalia Vertebrata Chordata Metazoa Eukaryota
+            ) ]
+        );
+
+==> b1502.par <==
+--maximum-line-length=29
+--continuation-indentation=8
+--line-up-parentheses
+--weld-nested-containers
+--stack-opening-paren
+--stack-closing-square-bracket
+
 ==> b156.in <==
 # State 1
 {

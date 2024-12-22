@@ -20712,6 +20712,10 @@ sub weld_nested_quotes {
         # look bad.
         next if ( $Kinner_closing == $Kinner_opening );
 
+        # RULE: Avoid welding under stress. Fixes b1502.
+        my $inner_level = $rLL->[$Kinner_opening]->[_LEVEL_];
+        if ( $inner_level >= $high_stress_level ) { next }
+
         # Only weld to quotes delimited with container tokens. This is
         # because welding to arbitrary quote delimiters can produce code
         # which is less readable than without welding.

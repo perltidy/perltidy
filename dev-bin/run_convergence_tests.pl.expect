@@ -8489,6 +8489,15 @@ my%S3d_url=(
      .'pdb_neighbors?id=CHAIN&gene=ORF_NAME'
 );
 
+==> b1502 <==
+my $species =
+        new Bio::Species(
+    -classification => [ qw(
+                sapiens Homo Hominidae Catarrhini Primates Eutheria
+                Mammalia Vertebrata Chordata Metazoa Eukaryota
+        ) ]
+        );
+
 ==> b156 <==
 # State 1
 {
