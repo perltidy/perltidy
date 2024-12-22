@@ -6481,12 +6481,12 @@ BEGIN {
     # Fix for c250: add new type 'P' for package (expecting VERSION or {}
     # after package NAMESPACE, so expecting TERM)
     # Fix for c250: add new type 'S' for sub (not expecting operator)
-    my @q = qw(
+    my @q = qw#
       ; ! + x & ?  F J - p / Y : % f U ~ A G j L P S * . | ^ < = [ m { \ > t
       || >= != mm *= => .. !~ == && |= .= pp -= =~ += <= %= ^= x= ~~ ** << /=
       &= // >> ~. &. |. ^.
       ... **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~
-    );
+      #;
     push @q, ',';
     push @q, '(';     # for completeness, not currently a token type
     push @q, '->';    # was previously in UNKNOWN
@@ -6502,7 +6502,7 @@ BEGIN {
     # 'q' is currently excluded because it might be a prototype
     # Fix for c030: removed '->' from this list:
     # Fix for c250: added 'i' because new type 'P' was added
-    @q = qw( -- C h R ++ ] Q <> i );    ## n v q );
+    @q = qw( -- C h R ++ ] Q <> i );
     push @q, ')';
     @op_expected_table{@q} = (OPERATOR) x scalar(@q);
 
@@ -6962,9 +6962,7 @@ sub code_block_type {
         return $last_nonblank_token;
     }
 
-# otherwise, look at previous token.  This must be a code block if
-# it follows any of these:
-# /^(BEGIN|END|CHECK|INIT|AUTOLOAD|DESTROY|UNITCHECK|continue|if|elsif|else|unless|do|while|until|eval|for|foreach|map|grep|sort)$/
+    # otherwise, see if a block must follow the previous token (such as 'if'):
     elsif ($is_code_block_token{$last_nonblank_token}
         || $is_grep_alias{$last_nonblank_token} )
     {
@@ -11157,10 +11155,10 @@ BEGIN {
 
     my @q;
 
-    my @digraphs = qw(
+    my @digraphs = qw#
       .. :: << >> ** && || // -> => += -= .= %= &= |= ^= *= <>
       <= >= == =~ !~ != ++ -- /= x= ~~ ~. |. &. ^. ^^
-    );
+      #;
     @is_digraph{@digraphs} = (1) x scalar(@digraphs);
 
     @q = qw(
@@ -11239,232 +11237,62 @@ BEGIN {
     # to their right, or at least they are not expected to be followed
     # immediately by operators.
     my @value_requestor = qw(
-      AUTOLOAD
-      BEGIN
-      CHECK
-      DESTROY
-      END
-      EQ
-      GE
-      GT
-      INIT
-      LE
-      LT
-      NE
-      UNITCHECK
-      abs
-      accept
-      alarm
-      and
-      atan2
-      bind
-      binmode
-      bless
-      break
-      caller
-      chdir
-      chmod
-      chomp
-      chop
-      chown
-      chr
-      chroot
-      close
-      closedir
-      cmp
-      connect
-      continue
-      cos
-      crypt
-      dbmclose
-      dbmopen
-      defined
-      delete
-      die
-      dump
-      each
-      else
-      elsif
-      eof
-      eq
-      evalbytes
-      exec
-      exists
-      exit
-      exp
-      fc
-      fcntl
-      fileno
-      flock
-      for
-      foreach
-      formline
-      ge
-      getc
-      getgrgid
-      getgrnam
-      gethostbyaddr
-      gethostbyname
-      getnetbyaddr
-      getnetbyname
-      getpeername
-      getpgrp
-      getpriority
-      getprotobyname
-      getprotobynumber
-      getpwnam
-      getpwuid
-      getservbyname
-      getservbyport
-      getsockname
-      getsockopt
-      glob
-      gmtime
-      goto
-      grep
-      gt
-      hex
-      if
-      index
-      int
-      ioctl
-      join
-      keys
-      kill
-      last
-      lc
-      lcfirst
-      le
-      length
-      link
-      listen
-      local
-      localtime
-      lock
-      log
-      lstat
-      lt
-      map
-      mkdir
-      msgctl
-      msgget
-      msgrcv
-      msgsnd
-      my
-      ne
-      next
-      no
-      not
-      oct
-      open
-      opendir
-      or
-      ord
-      our
-      pack
-      pipe
-      pop
-      pos
-      print
-      printf
-      prototype
-      push
-      quotemeta
-      rand
-      read
-      readdir
-      readlink
-      readline
-      readpipe
-      recv
-      redo
-      ref
-      rename
-      require
-      reset
-      return
-      reverse
-      rewinddir
-      rindex
-      rmdir
-      scalar
-      seek
-      seekdir
-      select
-      semctl
-      semget
-      semop
-      send
-      sethostent
-      setnetent
-      setpgrp
-      setpriority
-      setprotoent
-      setservent
-      setsockopt
-      shift
-      shmctl
-      shmget
-      shmread
-      shmwrite
-      shutdown
-      sin
-      sleep
-      socket
-      socketpair
-      sort
-      splice
-      split
-      sprintf
-      sqrt
-      srand
-      stat
-      state
-      study
-      substr
-      symlink
-      syscall
-      sysopen
-      sysread
-      sysseek
-      system
-      syswrite
-      tell
-      telldir
-      tie
-      tied
-      truncate
-      uc
-      ucfirst
-      umask
-      undef
-      unless
-      unlink
-      unpack
-      unshift
-      untie
-      until
-      use
-      utime
-      values
-      vec
-      waitpid
-      warn
-      while
-      write
-      xor
-
-      switch
-      case
-      default
-      given
-      when
-      err
-      say
-      isa
-
-      catch
-
+      AUTOLOAD         BEGIN         CHECK        DESTROY
+      END              EQ            GE           GT
+      INIT             LE            LT           NE
+      UNITCHECK        abs           accept       alarm
+      and              atan2         bind         binmode
+      bless            break         caller       chdir
+      chmod            chomp         chop         chown
+      chr              chroot        close        closedir
+      cmp              connect       continue     cos
+      crypt            dbmclose      dbmopen      defined
+      delete           die           dump         each
+      else             elsif         eof          eq
+      evalbytes        exec          exists       exit
+      exp              fc            fcntl        fileno
+      flock            for           foreach      formline
+      ge               getc          getgrgid     getgrnam
+      gethostbyaddr    gethostbyname getnetbyaddr getnetbyname
+      getpeername      getpgrp       getpriority  getprotobyname
+      getprotobynumber getpwnam      getpwuid     getservbyname
+      getservbyport    getsockname   getsockopt   glob
+      gmtime           goto          grep         gt
+      hex              if            index        int
+      ioctl            join          keys         kill
+      last             lc            lcfirst      le
+      length           link          listen       local
+      localtime        lock          log          lstat
+      lt               map           mkdir        msgctl
+      msgget           msgrcv        msgsnd       my
+      ne               next          no           not
+      oct              open          opendir      or
+      ord              our           pack         pipe
+      pop              pos           print        printf
+      prototype        push          quotemeta    rand
+      read             readdir       readlink     readline
+      readpipe         recv          redo         ref
+      rename           require       reset        return
+      reverse          rewinddir     rindex       rmdir
+      scalar           seek          seekdir      select
+      semctl           semget        semop        send
+      sethostent       setnetent     setpgrp      setpriority
+      setprotoent      setservent    setsockopt   shift
+      shmctl           shmget        shmread      shmwrite
+      shutdown         sin           sleep        socket
+      socketpair       sort          splice       split
+      sprintf          sqrt          srand        stat
+      state            study         substr       symlink
+      syscall          sysopen       sysread      sysseek
+      system           syswrite      tell         telldir
+      tie              tied          truncate     uc
+      ucfirst          umask         undef        unless
+      unlink           unpack        unshift      untie
+      until            use           utime        values
+      vec              waitpid       warn         while
+      write            xor           case         catch
+      default          err           given        isa
+      say              switch        when
     );
 
     # Note: 'ADJUST', 'field' are added by sub check_options
@@ -11486,26 +11314,11 @@ BEGIN {
     # so that they might be followed by an operator, or at least
     # not a term.
     my @operator_requestor = qw(
-      endgrent
-      endhostent
-      endnetent
-      endprotoent
-      endpwent
-      endservent
-      fork
-      getgrent
-      gethostent
-      getlogin
-      getnetent
-      getppid
-      getprotoent
-      getpwent
-      getservent
-      setgrent
-      setpwent
-      time
-      times
-      wait
+      endgrent    endhostent endnetent  endprotoent
+      endpwent    endservent fork       getgrent
+      gethostent  getlogin   getnetent  getppid
+      getprotoent getpwent   getservent setgrent
+      setpwent    time       times      wait
       wantarray
     );
 
@@ -11618,79 +11431,25 @@ BEGIN {
     # WARNING: do not include |map|grep|eval or perl may die on
     # syntax errors (map1.t).
     my @keyword_taking_list = qw(
-      and
-      chmod
-      chomp
-      chop
-      chown
-      dbmopen
-      die
-      elsif
-      exec
-      fcntl
-      for
-      foreach
-      formline
-      getsockopt
-      if
-      index
-      ioctl
-      join
-      kill
-      local
-      msgctl
-      msgrcv
-      msgsnd
-      my
-      open
-      or
-      our
-      pack
-      print
-      printf
-      push
-      read
-      readpipe
-      recv
-      return
-      reverse
-      rindex
-      seek
-      select
-      semctl
-      semget
-      send
-      setpriority
-      setsockopt
-      shmctl
-      shmget
-      shmread
-      shmwrite
-      socket
-      socketpair
-      sort
-      splice
-      split
-      sprintf
-      state
-      substr
-      syscall
-      sysopen
-      sysread
-      sysseek
-      system
-      syswrite
-      tie
-      unless
-      unlink
-      unpack
-      unshift
-      until
-      vec
-      warn
+      and        chmod      chomp      chop
+      chown      dbmopen    die        elsif
+      exec       fcntl      for        foreach
+      formline   getsockopt given      if
+      index      ioctl      join       kill
+      local      msgctl     msgrcv     msgsnd
+      my         open       or         our
+      pack       print      printf     push
+      read       readpipe   recv       return
+      reverse    rindex     seek       select
+      semctl     semget     send       setpriority
+      setsockopt shmctl     shmget     shmread
+      shmwrite   socket     socketpair sort
+      splice     split      sprintf    state
+      substr     syscall    sysopen    sysread
+      sysseek    system     syswrite   tie
+      unless     unlink     unpack     unshift
+      until      vec        warn       when
       while
-      given
-      when
     );
 
     # NOTE: This hash is available but not currently used
@@ -11712,72 +11471,17 @@ BEGIN {
     # to give a warning about ambiguous syntax before a /.
     # Note: split has been omitted (see note below).
     my @keywords_taking_optional_arg = qw(
-      abs
-      alarm
-      caller
-      chdir
-      chomp
-      chop
-      chr
-      chroot
-      close
-      cos
-      defined
-      die
-      eof
-      eval
-      evalbytes
-      exit
-      exp
-      fc
-      getc
-      glob
-      gmtime
-      hex
-      int
-      last
-      lc
-      lcfirst
-      length
-      localtime
-      log
-      lstat
-      mkdir
-      next
-      oct
-      ord
-      pop
-      pos
-      print
-      printf
-      prototype
-      quotemeta
-      rand
-      readline
-      readlink
-      readpipe
-      redo
-      ref
-      require
-      reset
-      reverse
-      rmdir
-      say
-      select
-      shift
-      sin
-      sleep
-      sqrt
-      srand
-      stat
-      study
-      tell
-      uc
-      ucfirst
-      umask
-      undef
-      unlink
-      warn
+      abs      alarm    caller    chdir     chomp   chop
+      chr      chroot   close     cos       defined die
+      eof      eval     evalbytes exit      exp     fc
+      getc     glob     gmtime    hex       int     last
+      lc       lcfirst  length    localtime log     lstat
+      mkdir    next     oct       ord       pop     pos
+      print    printf   prototype quotemeta rand    readline
+      readlink readpipe redo      ref       require reset
+      reverse  rmdir    say       select    shift   sin
+      sleep    sqrt     srand     stat      study   tell
+      uc       ucfirst  umask     undef     unlink  warn
       write
     );
     @is_keyword_taking_optional_arg{@keywords_taking_optional_arg} =
