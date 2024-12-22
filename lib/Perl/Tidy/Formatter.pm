@@ -806,11 +806,11 @@ BEGIN {
 
     # Operators that the user can request break before or after.
     # Note that some are keywords
-    @all_operators = qw(
+    @all_operators = qw{
       % + - * / x != == >= <= =~ !~ < > | &
       = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
       . : ? && || and or err xor
-    );
+    };
 
     # We can remove semicolons after blocks preceded by these keywords
     @q = qw(
@@ -2249,7 +2249,7 @@ sub initialize_grep_and_friends {
     # re-initialize the hashes ... this is critical!
     %is_sort_map_grep = ();
 
-    my @q = qw(sort map grep);
+    my @q = qw( sort map grep );
     @is_sort_map_grep{@q} = (1) x scalar(@q);
 
     my $olbxl = $rOpts->{'one-line-block-exclusion-list'};
@@ -3713,7 +3713,7 @@ sub initialize_trailing_comma_rules {
 
     %trailing_comma_rules = ();
 
-    my $rvalid_flags = [qw(0 1 * m b h i)];
+    my $rvalid_flags = [qw( 0 1 * m b h i )];
 
     # This hash shows i.e. that 'm' includes all 'b' includes all 'i' ...etc
     # It is used to check for overlap when both + and - signs are used to
@@ -4084,15 +4084,11 @@ sub initialize_whitespace_hashes {
       **= &&= ||= //= <=> A k f w F n C Y U G v P S ^^
       #;
 
-    my @spaces_left_side = qw<
-      t ! ~ m p { \ h pp mm Z j
-    >;
+    my @spaces_left_side = qw< t ! ~ m p { \ h pp mm Z j >;
     push( @spaces_left_side, '#' );    # avoids warning message
 
     # c349: moved **= from @spaces_right_side to @spaces_both_sides
-    my @spaces_right_side = qw<
-      ; } ) ] R J ++ --
-    >;
+    my @spaces_right_side = qw< ; } ) ] R J ++ -- >;
     push( @spaces_right_side, ',' );    # avoids warning message
 
     %want_left_space  = ();
@@ -5052,11 +5048,11 @@ EOM
         @q = qw( sort grep map );
         @is_sort_grep_map{@q} = (1) x scalar(@q);
 
-        @q = qw(
+        @q = qw{
           .. :: << >> ** && || // -> => += -=
           .= %= &= |= ^= *= <> <= >= == =~ !~
           != ++ -- /= x= ~~ ~. |. &. ^. ^^
-        );
+        };
         @is_digraph{@q} = (1) x scalar(@q);
 
         @q = qw( ... **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~ );
@@ -5482,7 +5478,7 @@ EOM
     sub initialize_bond_strength_hashes {
 
         my @q;
-        @q = qw(if unless while until for foreach);
+        @q = qw( if unless while until for foreach );
         @is_good_keyword_breakpoint{@q} = (1) x scalar(@q);
 
         @q = qw/ ( [ { } ] ) /;
@@ -31292,8 +31288,8 @@ sub do_colon_breaks {
 
     BEGIN {
 
-        my @q = qw< k R } ) ] Y Z U w i q Q .
-          = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=>;
+        my @q = qw# k R } ) ] Y Z U w i q Q .
+          = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x= #;
         @is_uncontained_comma_break_included_type{@q} = (1) x scalar(@q);
     } ## end BEGIN
 
@@ -32935,7 +32931,7 @@ BEGIN {
     @is_kwiZ{@q} = (1) x scalar(@q);
 
     # added = for b1211
-    @q = qw<( [ { L R } ] ) = b>;
+    @q = qw< ( [ { L R } ] ) = b >;
     push @q, ',';
     @is_key_type{@q} = (1) x scalar(@q);
 } ## end BEGIN
@@ -38320,11 +38316,11 @@ sub xlp_tweak {
         @is_use_like{@q} = (1) x scalar(@q);
 
         # token types which prevent using leading word as a container name
-        @q = qw(
+        @q = qw{
           x / : % . | ^ < = > || >= != *= => !~ == && |= .= -= =~ += <=
           %= ^= x= ~~ ** << /= &= // >> ~. &. |. ^.
           **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~
-        );
+        };
         push @q, ',';
         @is_binary_type{@q} = (1) x scalar(@q);
 
