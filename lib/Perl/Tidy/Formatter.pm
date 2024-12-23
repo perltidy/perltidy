@@ -19792,10 +19792,16 @@ sub setup_new_weld_measurements {
                     my $iline_prev    = $rLL->[$Kprev]->[_LINE_INDEX_];
                     my $rK_range_prev = $rlines->[$iline_prev]->{_rK_range};
                     my ( $Kfirst_prev, $Klast_prev_uu ) = @{$rK_range_prev};
+                    my $nb_count = 0;
                     foreach my $KK ( reverse( $Kfirst_prev .. $Kref - 1 ) ) {
                         next if ( $rLL->[$KK]->[_TYPE_] eq 'b' );
                         $Kref = $KK;
-                        last;
+
+                        # Continue at type 'w' to get previous dash.  Example:
+                        #   -classification => [ qw(
+                        # This fixes b1502.
+                        last if ( $nb_count || $rLL->[$KK]->[_TYPE_] ne 'w' );
+                        $nb_count++;
                     }
                 }
             }
@@ -20712,7 +20718,7 @@ sub weld_nested_quotes {
         # look bad.
         next if ( $Kinner_closing == $Kinner_opening );
 
-        # RULE: Avoid welding under stress. Fixes b1502.
+        # RULE: Avoid welding under stress. This is an alternate b1502 fix.
         my $inner_level = $rLL->[$Kinner_opening]->[_LEVEL_];
         if ( $inner_level >= $high_stress_level ) { next }
 
