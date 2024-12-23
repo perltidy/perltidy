@@ -6150,6 +6150,8 @@ B<--dump-want-right-space> or B<-dwrs>  will write the hash C<%want_right_space>
 to standard output and quit.  See the section on controlling whitespace
 around tokens.
 
+See L<"Analyzing Code"> for additional B<--dump-> parameters.
+
 =item B<Other parameters related to processing>
 
 B<--no-memoize> or B<-nmem>  will turn of memoizing.
