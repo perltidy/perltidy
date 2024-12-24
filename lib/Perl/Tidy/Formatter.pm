@@ -8093,13 +8093,11 @@ EOM
         $self->find_multiline_qw($rqw_lines);
     }
 
-##    POSSIBLE FUTURE OPTION:
-##    # Dump unique hash keys
-##    $rOpts->{'dump-unique-hash_keys'}=1;
-##    if ( $rOpts->{'dump-unique-hash_keys'} ) {
-##        $self->dump_unique_hash_keys();
-##        Exit(0);
-##    }
+    # Dump unique hash keys
+    if ( $rOpts->{'dump-unique-keys'} ) {
+        $self->dump_unique_keys();
+        Exit(0);
+    }
 
     # Dump any requested block summary data
     if ( $rOpts->{'dump-block-summary'} ) {
@@ -8805,16 +8803,16 @@ sub follow_if_chain {
     return $rchain;
 } ## end sub follow_if_chain
 
-sub dump_unique_hash_keys {
+sub dump_unique_keys {
     my ($self) = @_;
 
-    # NOTE: This is a possible future dump option, still under development
-    # Implement --dump-unique-hash-keys; -duk?
-    # Look through all tokens and dump list of hash keys used just one time
+    # Implement --dump-unique-keys, -duk
+    # Dump a list of hash keys used just one time
 
     my $rLL                 = $self->[_rLL_];
     my $Klimit              = $self->[_Klimit_];
     my $ris_list_by_seqno   = $self->[_ris_list_by_seqno_];
+    my $K_opening_container = $self->[_K_opening_container_];
     my $K_closing_container = $self->[_K_closing_container_];
 
     my $KK = -1;
@@ -8827,7 +8825,7 @@ sub dump_unique_hash_keys {
     # Main loop to examine all hash keys and quotes
     #----------------------------------------------
     my @Q_list;
-    my @q_list;
+    my @K_start_qw_list;
     my $rwords = {};
 
     my $push_KK_last_nb = sub {
@@ -8887,14 +8885,18 @@ sub dump_unique_hash_keys {
         $KK_this_nb = $KK;
         my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
         if ($seqno) {
-            ##my $token = $rLL->[$KK]->[_TOKEN_];
             if ( $is_opening_type{$type} ) {
-
+                ## nothing special todo yet
             }
             else {
-
                 # closing hash brace, '}'
                 if ( $type eq 'R' ) {
+
+                    # require a single item within the hash braces
+                    my $Ko = $K_opening_container->{$seqno};
+                    next if ( !defined($Ko) );
+                    my $Kn = $self->K_next_code($Ko);
+                    next if ( !defined($Kn) || $Kn != $KK_last_nb );
                     $push_KK_last_nb->();
                 }
             }
@@ -8910,7 +8912,11 @@ sub dump_unique_hash_keys {
                 push @Q_list, $KK;
             }
             elsif ( $type eq 'q' ) {
-                push @q_list, $KK;
+                if ( !defined($KK_last_nb)
+                    || $rLL->[$KK_last_nb]->[_TYPE_] ne 'q' )
+                {
+                    push @K_start_qw_list, $KK;
+                }
             }
             elsif ( $type eq 'k' ) {
 
@@ -8979,11 +8985,14 @@ sub dump_unique_hash_keys {
 
     return if ( !%unique_words );
 
-    # TODO: check each remaining word against the list of type q tokens
-    foreach my $K_uu (@q_list) {
-
-        # TODO: may need to check for multiline
-
+    # Remove any keys which are also in a qw list
+    foreach my $Kqw (@K_start_qw_list) {
+        my ( $K_last_q_uu, $rlist ) = $self->get_qw_list($Kqw);
+        foreach my $word ( @{$rlist} ) {
+            if ( $unique_words{$word} ) {
+                delete $unique_words{$word};
+            }
+        }
     }
 
     return if ( !%unique_words );
@@ -9012,7 +9021,7 @@ EOM
 
     return;
 
-} ## end sub dump_unique_hash_keys
+} ## end sub dump_unique_keys
 
 sub dump_block_summary {
     my ($self) = @_;

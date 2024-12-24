@@ -931,6 +931,7 @@ EOM
         dump-mixed-call-parens
         dump-mismatched-args
         dump-mismatched-returns
+        dump-unique-keys
         )
       )
     {
@@ -3823,6 +3824,7 @@ sub generate_options {
     $add_option->( 'dump-short-names',                'dsn',   '!' );
     $add_option->( 'dump-token-types',                'dtt',   '!' );
     $add_option->( 'dump-unusual-variables',          'duv',   '!' );
+    $add_option->( 'dump-unique-keys',                'duk',   '!' );
     $add_option->( 'dump-want-left-space',            'dwls',  '!' );
     $add_option->( 'dump-want-right-space',           'dwrs',  '!' );
     $add_option->( 'fuzzy-line-length',               'fll',   '!' );
