@@ -8819,7 +8819,7 @@ sub dump_unique_keys {
     my $KK_last_nb;
     my $KK_this_nb = 0;
 
-    my $K_end_constant = -1;
+    my $K_end_skip = -1;
 
     #----------------------------------------------
     # Main loop to examine all hash keys and quotes
@@ -8834,7 +8834,7 @@ sub dump_unique_keys {
         # 'Q' or 'w', then update its count
 
         # We are ignoring constant definitions
-        if ( $KK < $K_end_constant ) { return }
+        if ( $KK < $K_end_skip ) { return }
 
         my $type_last  = $rLL->[$KK_last_nb]->[_TYPE_];
         my $token_last = $rLL->[$KK_last_nb]->[_TOKEN_];
@@ -8886,7 +8886,14 @@ sub dump_unique_keys {
         my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
         if ($seqno) {
             if ( $is_opening_type{$type} ) {
-                ## nothing special todo yet
+                if ( $type eq 'L' ) {
+
+                    # Skip past something like ${word}
+                    if ( $KK_last_nb && $rLL->[$KK_last_nb]->[_TYPE_] eq 't' ) {
+                        my $Kc = $K_closing_container->{$seqno};
+                        if ( $Kc > $K_end_skip ) { $K_end_skip = $Kc }
+                    }
+                }
             }
             else {
                 # closing hash brace, '}'
@@ -8933,7 +8940,7 @@ sub dump_unique_keys {
                         # skip a block of constant definitions
                         my $token_n = $rLL->[$Kn]->[_TOKEN_];
                         if ( $token_n eq '{' ) {
-                            $K_end_constant = $K_closing_container->{$seqno_n};
+                            $K_end_skip = $K_closing_container->{$seqno_n};
                         }
                         else {
                             ## unexpected format, skip
@@ -8942,7 +8949,7 @@ sub dump_unique_keys {
                     else {
 
                         # skip a single constant definition
-                        $K_end_constant = $Kn + 1;
+                        $K_end_skip = $Kn + 1;
                     }
                 }
             }
@@ -9005,7 +9012,7 @@ sub dump_unique_keys {
         my $lno = $rLL->[$K]->[_LINE_INDEX_] + 1;
         push @list, [ $word, $lno ];
     }
-    @list = sort { $a->[1] <=> $b->[1] || $a->[0] <=> $b->[0] } @list;
+    @list = sort { $a->[1] <=> $b->[1] || $a->[0] cmp $b->[0] } @list;
     foreach my $item (@list) {
         my ( $word, $lno ) = @{$item};
         $output_string .= "$word,$lno\n";
