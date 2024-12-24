@@ -8093,6 +8093,14 @@ EOM
         $self->find_multiline_qw($rqw_lines);
     }
 
+##    POSSIBLE FUTURE OPTION:
+##    # Dump unique hash keys
+##    $rOpts->{'dump-unique-hash_keys'}=1;
+##    if ( $rOpts->{'dump-unique-hash_keys'} ) {
+##        $self->dump_unique_hash_keys();
+##        Exit(0);
+##    }
+
     # Dump any requested block summary data
     if ( $rOpts->{'dump-block-summary'} ) {
         $self->dump_block_summary();
@@ -8796,6 +8804,215 @@ sub follow_if_chain {
 
     return $rchain;
 } ## end sub follow_if_chain
+
+sub dump_unique_hash_keys {
+    my ($self) = @_;
+
+    # NOTE: This is a possible future dump option, still under development
+    # Implement --dump-unique-hash-keys; -duk?
+    # Look through all tokens and dump list of hash keys used just one time
+
+    my $rLL                 = $self->[_rLL_];
+    my $Klimit              = $self->[_Klimit_];
+    my $ris_list_by_seqno   = $self->[_ris_list_by_seqno_];
+    my $K_closing_container = $self->[_K_closing_container_];
+
+    my $KK = -1;
+    my $KK_last_nb;
+    my $KK_this_nb = 0;
+
+    my $K_end_constant = -1;
+
+    #----------------------------------------------
+    # Main loop to examine all hash keys and quotes
+    #----------------------------------------------
+    my @Q_list;
+    my @q_list;
+    my $rwords = {};
+
+    my $push_KK_last_nb = sub {
+
+        # if the previous nonblank token was a hash key of type
+        # 'Q' or 'w', then update its count
+
+        # We are ignoring constant definitions
+        if ( $KK < $K_end_constant ) { return }
+
+        my $type_last  = $rLL->[$KK_last_nb]->[_TYPE_];
+        my $token_last = $rLL->[$KK_last_nb]->[_TOKEN_];
+        my $word;
+        if ( $type_last eq 'w' ) {
+            $word = $token_last;
+        }
+        elsif ( $type_last eq 'Q' ) {
+            $word = substr( $token_last, 1, -1 );
+
+            # Ignore text with interpolated values
+            my $ch0 = substr( $token_last, 0, 1 );
+            if ( $ch0 eq '"' ) {
+                foreach my $sigil ( '$', '@' ) {
+                    my $pos = index( $word, $sigil );
+                    next   if ( $pos < 0 );
+                    return if ( $pos == 0 );
+                    my $ch_test = substr( $word, $pos - 1, 1 );
+                    return if ( $ch_test ne '\\' );
+                }
+            }
+
+            pop @Q_list;
+        }
+        else {
+            # not a quote - possibly identifier
+            return;
+        }
+        return unless ($word);
+        if ( !defined( $rwords->{$word} ) ) {
+            $rwords->{$word} = [ 1, $KK_last_nb ];
+        }
+        else {
+            $rwords->{$word}->[0]++;
+        }
+        return;
+    }; ## end $push_KK_last_nb = sub
+
+    #--------------------------
+    # Main loop over all tokens
+    #--------------------------
+    while ( ++$KK <= $Klimit ) {
+
+        my $type = $rLL->[$KK]->[_TYPE_];
+        next if ( $type eq 'b' );
+        next if ( $type eq '#' );
+        $KK_last_nb = $KK_this_nb;
+        $KK_this_nb = $KK;
+        my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+        if ($seqno) {
+            ##my $token = $rLL->[$KK]->[_TOKEN_];
+            if ( $is_opening_type{$type} ) {
+
+            }
+            else {
+
+                # closing hash brace, '}'
+                if ( $type eq 'R' ) {
+                    $push_KK_last_nb->();
+                }
+            }
+        }
+        else {
+            if ( $type eq '=>' ) {
+                my $parent_seqno = $self->parent_seqno_by_K($KK);
+                if ( $parent_seqno && $ris_list_by_seqno->{$parent_seqno} ) {
+                    $push_KK_last_nb->();
+                }
+            }
+            elsif ( $type eq 'Q' ) {
+                push @Q_list, $KK;
+            }
+            elsif ( $type eq 'q' ) {
+                push @q_list, $KK;
+            }
+            elsif ( $type eq 'k' ) {
+
+                # Look for 'use constant' and define its ending token
+                if ( $rLL->[$KK]->[_TOKEN_] eq 'use' ) {
+                    my $Kn = $self->K_next_code($KK);
+                    next if ( !defined($Kn) );
+                    next if ( $rLL->[$Kn]->[_TOKEN_] ne 'constant' );
+                    $Kn = $self->K_next_code($Kn);
+                    next if ( !defined($Kn) );
+                    my $seqno_n = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
+                    if ($seqno_n) {
+
+                        # skip a block of constant definitions
+                        my $token_n = $rLL->[$Kn]->[_TOKEN_];
+                        if ( $token_n eq '{' ) {
+                            $K_end_constant = $K_closing_container->{$seqno_n};
+                        }
+                        else {
+                            ## unexpected format, skip
+                        }
+                    }
+                    else {
+
+                        # skip a single constant definition
+                        $K_end_constant = $Kn + 1;
+                    }
+                }
+            }
+            else {
+                # continue search
+            }
+        }
+    } ## end while ( ++$KK <= $Klimit )
+
+    # find hash keys seen just one time
+    my %unique_words;
+    foreach my $key ( keys %{$rwords} ) {
+        my ( $count, $K ) = @{ $rwords->{$key} };
+        next if ( $count != 1 );
+        $unique_words{$key} = $K;
+    }
+
+    return if ( !%unique_words );
+
+    # check each unique word against the list of type Q tokens
+    if (@Q_list) {
+        my $imax = $#Q_list;
+        foreach my $i ( 0 .. $imax ) {
+
+            # Ignore multiline quotes
+            my $K = $Q_list[$i];
+            if (   ( $i == 0 || $Q_list[ $i - 1 ] + 1 != $K )
+                && ( $i == $imax || $Q_list[ $i + 1 ] != $K + 1 ) )
+            {
+
+                # remove quotes
+                my $word = substr( $rLL->[$K]->[_TOKEN_], 1, -1 );
+
+                if ( $unique_words{$word} ) {
+                    delete $unique_words{$word};
+                }
+            }
+        }
+    }
+
+    return if ( !%unique_words );
+
+    # TODO: check each remaining word against the list of type q tokens
+    foreach my $K_uu (@q_list) {
+
+        # TODO: may need to check for multiline
+
+    }
+
+    return if ( !%unique_words );
+
+    # report unique words
+    my $output_string = EMPTY_STRING;
+    my @list;
+    foreach my $word ( keys %unique_words ) {
+        my $K   = $unique_words{$word};
+        my $lno = $rLL->[$K]->[_LINE_INDEX_] + 1;
+        push @list, [ $word, $lno ];
+    }
+    @list = sort { $a->[1] <=> $b->[1] || $a->[0] <=> $b->[0] } @list;
+    foreach my $item (@list) {
+        my ( $word, $lno ) = @{$item};
+        $output_string .= "$word,$lno\n";
+    }
+    if ($output_string) {
+        my $input_stream_name = get_input_stream_name();
+        chomp $output_string;
+        print {*STDOUT} <<EOM;
+$input_stream_name: output for --dump-unique-hash-keys
+$output_string
+EOM
+    }
+
+    return;
+
+} ## end sub dump_unique_hash_keys
 
 sub dump_block_summary {
     my ($self) = @_;
