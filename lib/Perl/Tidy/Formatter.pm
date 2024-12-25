@@ -5379,14 +5379,14 @@ EOM
         # token lists for perl secret operators as compiled by Philippe Bruhat
         # at: https://metacpan.org/module/perlsecret
         %secret_operators = (
-            'Goatse'             => [qw#= ( ) =#],        #=( )=
-            'Venus1'             => [qw#0 +#],            # 0+
-            'Venus2'             => [qw#+ 0#],            # +0
-            'Enterprise'         => [qw#) x ! !#],        # ()x!!
-            'Kite1'              => [qw#~ ~ <>#],         # ~~<>
-            'Kite2'              => [qw#~~ <>#],          # ~~<>
-            'Winking Fat Comma'  => [ ( ',', '=>' ) ],    # ,=>
-            'Bang bang         ' => [qw#! !#],            # !!
+            'Goatse'            => [qw#= ( ) =#],        #=( )=
+            'Venus1'            => [qw#0 +#],            # 0+
+            'Venus2'            => [qw#+ 0#],            # +0
+            'Enterprise'        => [qw#) x ! !#],        # ()x!!
+            'Kite1'             => [qw#~ ~ <>#],         # ~~<>
+            'Kite2'             => [qw#~~ <>#],          # ~~<>
+            'Winking Fat Comma' => [ ( ',', '=>' ) ],    # ,=>
+            'Bang bang'         => [qw#! !#],            # !!
         );
 
         # The following operators and constants are not included because they
@@ -8815,6 +8815,9 @@ sub dump_unique_keys {
     my $K_opening_container = $self->[_K_opening_container_];
     my $K_closing_container = $self->[_K_closing_container_];
 
+    # stack holds [$seqno, $KK, $KK_last_nb]
+    my @stack;
+
     my $KK = -1;
     my $KK_last_nb;
     my $KK_this_nb = 0;
@@ -8827,6 +8830,41 @@ sub dump_unique_keys {
     my @Q_list;
     my @K_start_qw_list;
     my $rwords = {};
+
+    # Hardwired table of of known keys to be excluded
+    my %is_known_key = (
+        ALRM     => { '$SIG' => 1 },
+        TERM     => { '$SIG' => 1 },
+        INT      => { '$SIG' => 1 },
+        __DIE__  => { '$SIG' => 1 },
+        __WARN__ => { '$SIG' => 1 },
+        HOME     => { '$ENV' => 1 },
+        PERL5LIB => { '$ENV' => 1 },
+        PERLLIB  => { '$ENV' => 1 },
+    );
+
+    my $is_known_hash = sub {
+        my ($key) = @_;
+
+        # Given a hash key '$key',
+        # Return:
+        #   true if it is known and should be excluded
+        #   false if it is not known
+
+        my $rhash_names = $is_known_key{$key};
+        return if ( !$rhash_names );
+
+        # The key is known, now see if its hash name is known
+        return if ( !@stack );
+        my $Kbrace = $stack[-1]->[1];
+        my $Khash  = $stack[-1]->[2];
+        return if ( !defined($Kbrace) );
+        return if ( !defined($Khash) );
+        return if ( $rLL->[$Kbrace]->[_TYPE_] ne 'L' );
+        my $hash_name = $rLL->[$Khash]->[_TOKEN_];
+        return if ( !$rhash_names->{$hash_name} );
+        return 1;
+    }; ## end $is_known_hash = sub
 
     my $push_KK_last_nb = sub {
 
@@ -8864,6 +8902,10 @@ sub dump_unique_keys {
             return;
         }
         return unless ($word);
+
+        # Skip known hash keys
+        if ( $is_known_key{$word} && $is_known_hash->($word) ) { return }
+
         if ( !defined( $rwords->{$word} ) ) {
             $rwords->{$word} = [ 1, $KK_last_nb ];
         }
@@ -8886,6 +8928,7 @@ sub dump_unique_keys {
         my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
         if ($seqno) {
             if ( $is_opening_type{$type} ) {
+
                 if ( $type eq 'L' ) {
 
                     # Skip past something like ${word}
@@ -8894,18 +8937,36 @@ sub dump_unique_keys {
                         if ( $Kc > $K_end_skip ) { $K_end_skip = $Kc }
                     }
                 }
+                push @stack, [ $seqno, $KK, $KK_last_nb ];
             }
-            else {
-                # closing hash brace, '}'
+            elsif ( $is_closing_type{$type} ) {
+
                 if ( $type eq 'R' ) {
 
                     # require a single item within the hash braces
                     my $Ko = $K_opening_container->{$seqno};
-                    next if ( !defined($Ko) );
                     my $Kn = $self->K_next_code($Ko);
-                    next if ( !defined($Kn) || $Kn != $KK_last_nb );
-                    $push_KK_last_nb->();
+                    if ( defined($Kn) && $Kn == $KK_last_nb ) {
+                        $push_KK_last_nb->();
+                    }
                 }
+
+                my $item = pop @stack;
+                if ( !$item || $item->[0] != $seqno ) {
+                    if (DEVEL_MODE) {
+
+                        # shouldn't happen for a balanced file
+                        my $num = @stack;
+                        my $got = $num ? $item->[0] : 'undef';
+                        my $lno = $rLL->[$KK]->[_LINE_INDEX_];
+                        Fault <<EOM;
+stack error at seqno=$seqno type=$type num=$num got seqno=$got lno=$lno
+EOM
+                    }
+                }
+            }
+            else {
+                ## ternary
             }
         }
         else {
