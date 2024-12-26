@@ -8831,17 +8831,23 @@ sub dump_unique_keys {
     my @K_start_qw_list;
     my $rwords = {};
 
-    # Hardwired table of of known keys to be excluded
-    my %is_known_key = (
-        ALRM     => { '$SIG' => 1 },
-        TERM     => { '$SIG' => 1 },
-        INT      => { '$SIG' => 1 },
-        __DIE__  => { '$SIG' => 1 },
-        __WARN__ => { '$SIG' => 1 },
-        HOME     => { '$ENV' => 1 },
-        PERL5LIB => { '$ENV' => 1 },
-        PERLLIB  => { '$ENV' => 1 },
-    );
+    my %is_known_key;
+
+    my $add_known_keys = sub {
+        my ( $rhash, $name ) = @_;
+        foreach my $key ( keys %{$rhash} ) {
+            if ( !defined( $is_known_key{$key} ) ) {
+                $is_known_key{$key} = { $name => 1 };
+            }
+            else {
+                $is_known_key{$key}->{$name} = 1;
+            }
+        }
+    }; ## end $add_known_keys = sub
+
+    $add_known_keys->( \%SIG, '$SIG' );
+    $add_known_keys->( \%ENV, '$ENV' );
+    $add_known_keys->( \%!,   '$!' );
 
     my $is_known_hash = sub {
         my ($key) = @_;
@@ -8934,7 +8940,11 @@ sub dump_unique_keys {
                     # Skip past something like ${word}
                     if ( $KK_last_nb && $rLL->[$KK_last_nb]->[_TYPE_] eq 't' ) {
                         my $Kc = $K_closing_container->{$seqno};
-                        if ( $Kc > $K_end_skip ) { $K_end_skip = $Kc }
+                        my $Kn = $self->K_next_code($KK);
+                        $Kn = $self->K_next_code($Kn);
+                        if ( $Kn && $Kc && $Kn == $Kc && $Kc > $K_end_skip ) {
+                            $K_end_skip = $Kc;
+                        }
                     }
                 }
                 push @stack, [ $seqno, $KK, $KK_last_nb ];
