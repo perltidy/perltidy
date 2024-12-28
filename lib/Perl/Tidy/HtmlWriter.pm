@@ -12,6 +12,7 @@ our $VERSION = '20240903.08';
 use Carp;
 use English qw( -no_match_vars );
 use File::Basename;
+use File::Temp qw();
 
 use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };

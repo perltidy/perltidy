@@ -103,6 +103,9 @@
         $st_blocks
     );
 
+    - Added missing 'use File::Temp' for -html option. This was causing the
+      message: "Undefined subroutine &File::Temp::tempfile called at ..."
+
 ## 2024 09 03
 
     - Add partial support for Syntax::Operator::In and Syntax::Keyword::Match
