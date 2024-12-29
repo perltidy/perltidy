@@ -6554,6 +6554,23 @@ this wildcard suffix is in the exclusion list:
 
     -wvxl='*_uu'
 
+=item B<Use --dump-unique-keys> to help locate misspelled hash keys
+
+The parameter B<--dump-unique-keys>, or B<-duk>, dumps a list of hash keys
+which appear to be used just once, and do not appear among the quoted
+strings in a file. For example:
+
+   perltidy -duk File.pm >output.txt
+
+The lines in the output file list each unique key and its line number.
+Typically, most of the listed keys listed will be perfectly valid keys needed,
+for example, for communication with other modules or for future development.
+But the list might also include something unexpected, such as a misspelled key.
+
+A program C<dump_unique_keys.pl> at
+L<https://github.com/perltidy/perltidy/tree/master/examples> can run perltidy
+with B<-duk> on multiple files, and then remove any common keys from the list.
+
 =item B<Use --dump-mixed-call-parens to find functions called both with and without parens>
 
 The parameter B<--dump-mixed-call-parens>, or B<-dmcp>, provides information on

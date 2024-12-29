@@ -2,6 +2,14 @@
 
 ## 2024 09 03.08
 
+    - A new parameter --dump-unique-keys, or B<-duk>, dumps a list of hash keys
+      which appear to be used just once, and do not appear among the quoted
+      strings in a file. For example:
+
+         perltidy -duk File.pm >output.txt
+
+      The purpose is to help locate misspelled hash keys.
+
     - Line breaks at long chains of method calls now break at all calls
       with args in parens, as in this example from git #171
 
