@@ -535,6 +535,7 @@ BEGIN {
         _user_formatter_           => $i++,
         _input_copied_verbatim_    => $i++,
         _input_output_difference_  => $i++,
+        _dump_to_stdout_           => $i++,
     };
 } ## end BEGIN
 
@@ -935,10 +936,13 @@ EOM
         )
       )
     {
-        if ( $rOpts->{$opt_name} && $num_files != 1 ) {
-            Die(<<EOM);
+        if ( $rOpts->{$opt_name} ) {
+            $self->[_dump_to_stdout_] = 1;
+            if ( $num_files != 1 ) {
+                Die(<<EOM);
 --$opt_name expects 1 filename in the arg list but saw $num_files filenames
 EOM
+            }
         }
     }
 
@@ -2304,6 +2308,11 @@ EOM
                 $output_file             = $fileroot . $output_extension;
                 $output_name             = $output_file;
             }
+        }
+
+        # prepare standard output in case of a dump to stdout
+        if ( $is_encoded_data && $self->[_dump_to_stdout_] ) {
+            binmode *STDOUT, ':encoding(UTF-8)';
         }
 
         $rstatus->{'file_count'} += 1;

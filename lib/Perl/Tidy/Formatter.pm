@@ -8831,7 +8831,21 @@ sub dump_unique_keys {
     my @K_start_qw_list;
     my $rwords = {};
 
-    my %is_known_key;
+    # Table of some known keys
+    my %is_known_key = (
+        ALRM     => { '$SIG' => 1 },
+        TERM     => { '$SIG' => 1 },
+        INT      => { '$SIG' => 1 },
+        __DIE__  => { '$SIG' => 1 },
+        __WARN__ => { '$SIG' => 1 },
+        HOME     => { '$ENV' => 1 },
+        USER     => { '$ENV' => 1 },
+        LOGNAME  => { '$ENV' => 1 },
+        PATH     => { '$ENV' => 1 },
+        SHELL    => { '$ENV' => 1 },
+        PERL5LIB => { '$ENV' => 1 },
+        PERLLIB  => { '$ENV' => 1 },
+    );
 
     my $add_known_keys = sub {
         my ( $rhash, $name ) = @_;
@@ -8845,6 +8859,7 @@ sub dump_unique_keys {
         }
     }; ## end $add_known_keys = sub
 
+    # Add keys which may be unique to this environment.
     $add_known_keys->( \%SIG, '$SIG' );
     $add_known_keys->( \%ENV, '$ENV' );
     $add_known_keys->( \%!,   '$!' );
@@ -8909,11 +8924,12 @@ sub dump_unique_keys {
         }
         return unless ($word);
 
-        # Skip known hash keys
-        if ( $is_known_key{$word} && $is_known_hash->($word) ) { return }
+        # Bump count of known keys by 1 so that they will not appear as unique
+        my $one = 1;
+        if ( $is_known_key{$word} && $is_known_hash->($word) ) { $one++ }
 
         if ( !defined( $rwords->{$word} ) ) {
-            $rwords->{$word} = [ 1, $KK_last_nb ];
+            $rwords->{$word} = [ $one, $KK_last_nb ];
         }
         else {
             $rwords->{$word}->[0]++;
@@ -9092,7 +9108,7 @@ EOM
         my $input_stream_name = get_input_stream_name();
         chomp $output_string;
         print {*STDOUT} <<EOM;
-$input_stream_name: output for --dump-unique-hash-keys
+==> $input_stream_name <==
 $output_string
 EOM
     }
