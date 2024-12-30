@@ -1,6 +1,10 @@
 # Perltidy Change Log
 
-## 2024 09 03.08
+## 2024 09 03.09
+
+    - Added missing 'use File::Temp' for -html option. This was causing the
+      message: "Undefined subroutine &File::Temp::tempfile called at ..."
+      See git #176.
 
     - A new parameter --dump-unique-keys, or B<-duk>, dumps a list of hash keys
       which appear to be used just once, and do not appear among the quoted
@@ -110,9 +114,6 @@
         $st_atime $st_mtime $st_ctime $st_blksize
         $st_blocks
     );
-
-    - Added missing 'use File::Temp' for -html option. This was causing the
-      message: "Undefined subroutine &File::Temp::tempfile called at ..."
 
 ## 2024 09 03
 

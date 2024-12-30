@@ -146,7 +146,7 @@
 
 <pre><code>  perltidy -html somefile.pl</code></pre>
 
-<p>This will produce a file <i>somefile.pl.html</i> containing the script with html markup. The output file will contain an embedded style sheet in the &lt;HEAD&gt; section which may be edited to change the appearance.</p>
+<p>This will produce a file <i>somefile.pl.html</i> containing the script with html markup. The output file will contain an embedded style sheet in the <code>&lt;HEAD</code>&gt; section which may be edited to change the appearance.</p>
 
 <pre><code>  perltidy -html -css=mystyle.css somefile.pl</code></pre>
 
@@ -154,7 +154,7 @@
 
 <pre><code>  perltidy -html -pre somefile.pl</code></pre>
 
-<p>Write an html snippet with only the PRE section to <i>somefile.pl.html</i>. This is useful when code snippets are being formatted for inclusion in a larger web page. No style sheet will be written in this case.</p>
+<p>Write an html snippet with only the <code>&lt;PRE</code>&gt; section to <i>somefile.pl.html</i>. This is useful when code snippets are being formatted for inclusion in a larger web page. No style sheet will be written in this case.</p>
 
 <pre><code>  perltidy -html -ss &gt;mystyle.css</code></pre>
 
@@ -265,11 +265,11 @@
 
 <p>Here are some examples:</p>
 
-<pre><code>  Parameter           Extension          Backup File Treatment
-  &lt;-bext=bak&gt;         F&lt;.bak&gt;            Keep (same as the default behavior)
-  &lt;-bext=&#39;/&#39;&gt;         F&lt;.bak&gt;            Delete if no errors
-  &lt;-bext=&#39;/backup&#39;&gt;   F&lt;.backup&gt;         Delete if no errors
-  &lt;-bext=&#39;original/&#39;&gt; F&lt;.original&gt;       Delete if no errors</code></pre>
+<pre><code>  Parameter          Extension      Backup File Treatment
+  -bext=bak         .bak            Keep (same as default behavior)
+  -bext=&#39;/&#39;         .bak            Delete if no errors
+  -bext=&#39;/backup&#39;   .backup         Delete if no errors
+  -bext=&#39;original/&#39; .original       Delete if no errors</code></pre>
 
 </dd>
 <dt id="bm-s---backup-method-s"><b>-bm=s</b>, <b>--backup-method=s</b></dt>
@@ -571,7 +571,7 @@
 <dt id="it-n---iterations-n"><b>-it=n</b>, <b>--iterations=n</b></dt>
 <dd>
 
-<p>This flag causes perltidy to do <b>n</b> complete iterations. The reason for this flag is that code beautification is an iterative process and in some cases the output from perltidy can be different if it is applied a second time. For most purposes the default of <b>n=1</b> should be satisfactory. However <b>n=2</b> can be useful when a major style change is being made, or when code is being beautified on check-in to a source code control system. It has been found to be extremely rare for the output to change after 2 iterations. If a value <b>n</b> is greater than 2 is input then a convergence test will be used to stop the iterations as soon as possible, almost always after 2 iterations. See the next item for a simplified iteration control.</p>
+<p>This flag causes perltidy to do <b>n</b> complete iterations. The reason for this flag is that code formatting is an iterative process and in some cases the output from perltidy can be different if it is applied a second time. For most purposes the default of <b>n=1</b> should be satisfactory. However <b>n=2</b> can be useful when a major style change is being made, or when code is being beautified on check-in to a source code control system. It has been found to be extremely rare for the output to change after 2 iterations. If a value <b>n</b> is greater than 2 is input then a convergence test will be used to stop the iterations as soon as possible, almost always after 2 iterations. See the next item for a simplified iteration control.</p>
 
 <p>This flag has no effect when perltidy is used to generate html.</p>
 
@@ -579,7 +579,7 @@
 <dt id="conv---converge"><b>-conv</b>, <b>--converge</b></dt>
 <dd>
 
-<p>This flag is equivalent to <b>-it=4</b> and is included to simplify iteration control. For all practical purposes one either does or does not want to be sure that the output is converged, and there is no penalty to using a large iteration limit since perltidy will check for convergence and stop iterating as soon as possible. The default is <b>-nconv</b> (no convergence check). Using <b>-conv</b> will approximately double run time since typically one extra iteration is required to verify convergence. No extra iterations are required if no new line breaks are made, and two extra iterations are occasionally needed when reformatting complex code structures, such as deeply nested ternary statements.</p>
+<p>This flag is equivalent to <b>-it=4</b> and is included to simplify iteration control. Perltidy will check for convergence and stop iterating as soon as possible. The default is <b>-nconv</b> (no convergence check). Using <b>-conv</b> will approximately double run time since typically one extra iteration is required to verify convergence. No extra iterations are required if no new line breaks are made, and two extra iterations are occasionally needed when reformatting complex code structures, such as deeply nested ternary statements.</p>
 
 </dd>
 </dl>
@@ -617,29 +617,29 @@
 
 <p>Please see the section <a href="#pbp---perl-best-practices">&quot;<b>-pbp</b>, <b>--perl-best-practices</b>&quot;</a> for an example of how this flag can improve the formatting of ternary statements. It can also improve indentation of some multiline qw lists as shown below.</p>
 
-<pre><code>            # perltidy
-            foreach $color (
-                qw(
+<pre><code>        # perltidy
+        foreach $color (
+            qw(
+            AntiqueWhite3 Bisque1 Bisque2 Bisque3 Bisque4
+            SlateBlue3 RoyalBlue1 SteelBlue2 DeepSkyBlue3
+            ),
+            qw(
+            LightBlue1 DarkSlateGray1 Aquamarine2 DarkSeaGreen2
+            SeaGreen1 Yellow1 IndianRed1 IndianRed2 Tan1 Tan4
+            )
+          )
+
+        # perltidy -xci
+        foreach $color (
+            qw(
                 AntiqueWhite3 Bisque1 Bisque2 Bisque3 Bisque4
                 SlateBlue3 RoyalBlue1 SteelBlue2 DeepSkyBlue3
-                ),
-                qw(
+            ),
+            qw(
                 LightBlue1 DarkSlateGray1 Aquamarine2 DarkSeaGreen2
                 SeaGreen1 Yellow1 IndianRed1 IndianRed2 Tan1 Tan4
-                )
-              )
-
-            # perltidy -xci
-            foreach $color (
-                qw(
-                    AntiqueWhite3 Bisque1 Bisque2 Bisque3 Bisque4
-                    SlateBlue3 RoyalBlue1 SteelBlue2 DeepSkyBlue3
-                ),
-                qw(
-                    LightBlue1 DarkSlateGray1 Aquamarine2 DarkSeaGreen2
-                    SeaGreen1 Yellow1 IndianRed1 IndianRed2 Tan1 Tan4
-                )
-              )</code></pre>
+            )
+          )</code></pre>
 
 </dd>
 <dt id="mci---minimize-continuation-indentation"><b>-mci</b>, <b>--minimize-continuation-indentation</b></dt>
@@ -647,17 +647,17 @@
 
 <p>This flag allows perltidy to remove continuation indentation in some special cases where it is not really unnecessary. For a simple example, the default formatting for the following snippet is:</p>
 
-<pre><code>        # perltidy -nmci
-        $self-&gt;blurt( &quot;Error: No INPUT definition for type &#39;$type&#39;, typekind &#39;&quot;
-              . $type-&gt;xstype
-              . &quot;&#39; found&quot; );</code></pre>
+<pre><code>    # perltidy -nmci
+    $self-&gt;blurt( &quot;Error: No INPUT for type &#39;$type&#39;, typekind &#39;&quot;
+          . $type-&gt;xstype
+          . &quot;&#39; found&quot; );</code></pre>
 
 <p>The second and third lines are one level deep in a container, and are also statement continuations, so they get indented by the sum of the full indentation <b>-i</b> value and the continuation indentation <b>-ci</b> value. If this flag is set, the indentation is reduced by <b>-ci</b> spaces, giving</p>
 
-<pre><code>        # perltidy -mci
-        $self-&gt;blurt( &quot;Error: No INPUT definition for type &#39;$type&#39;, typekind &#39;&quot;
-            . $type-&gt;xstype
-            . &quot;&#39; found&quot; );</code></pre>
+<pre><code>    # perltidy -mci
+    $self-&gt;blurt( &quot;Error: No INPUT for type &#39;$type&#39;, typekind &#39;&quot;
+        . $type-&gt;xstype
+        . &quot;&#39; found&quot; );</code></pre>
 
 <p>This flag is off by default.</p>
 
@@ -765,10 +765,10 @@
 
 <p>A second optional item of information which can be given for parentheses is an alphanumeric letter which is used to limit the selection further depending on the type of token immediately before the paren. The possible letters are currently &#39;k&#39;, &#39;K&#39;, &#39;f&#39;, &#39;F&#39;, &#39;w&#39;, and &#39;W&#39;, with these meanings for matching whatever precedes an opening paren:</p>
 
-<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl built-in keyword
+<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl keyword
      (such as &#39;if&#39;, &#39;while&#39;),
- &#39;K&#39; matches if &#39;k&#39; does not, meaning that the previous token is not a keyword.
- &#39;f&#39; matches if the previous token is a function other than a keyword.
+ &#39;K&#39; matches if &#39;k&#39; does not: previous token is not a keyword
+ &#39;f&#39; matches if previous token is a function (not a keyword)
  &#39;F&#39; matches if &#39;f&#39; does not.
  &#39;w&#39; matches if either &#39;k&#39; or &#39;f&#39; match.
  &#39;W&#39; matches if &#39;w&#39; does not.</code></pre>
@@ -793,8 +793,8 @@
 
 <pre><code>  &#39;0&#39; or blank: no restriction is placed on container contents
   &#39;1&#39; the container contents must be a simple list without sublists
-  &#39;2&#39; the container contents must be a simple list without sublists, without
-      code blocks, and without ternary operators</code></pre>
+  &#39;2&#39; the container contents must be a simple list without sublists,
+      without code blocks, and without ternary operators</code></pre>
 
 <p>For example,</p>
 
@@ -878,14 +878,14 @@
 
 <p>Normally, lines of code contained within a pair of block braces receive one additional level of indentation. This flag, which is enabled by default, causes perltidy to look for opening block braces which are followed by a special side comment. This special side comment is <b>#&lt;&lt;&lt;</b> by default. If found, the code between this opening brace and its corresponding closing brace will not be given the normal extra indentation level. For example:</p>
 
-<pre><code>            { #&lt;&lt;&lt;   a closure to contain lexical vars
+<pre><code>        { #&lt;&lt;&lt;   a closure to contain lexical vars
 
-            my $var;  # this line does not get one level of indentation
-            ...
+        my $var;  # this line does not get one level of indentation
+        ...
 
-            }
+        }
 
-            # this line does not &#39;see&#39; $var;</code></pre>
+        # this line does not &#39;see&#39; $var;</code></pre>
 
 <p>This can be useful, for example, when combining code from different files. Different sections of code can be placed within braces to keep their lexical variables from being visible to the end of the file. To keep the new braces from causing all of their contained code to be indented if you run perltidy, and possibly introducing new line breaks in long lines, you can mark the opening braces with this special side comment.</p>
 
@@ -1005,19 +1005,51 @@
  $obj-&gt;{ $parsed_sql-&gt;{&#39;table&#39;}[0] };      # -bt=1 (default)
  $obj-&gt;{$parsed_sql-&gt;{&#39;table&#39;}[0]};        # -bt=2</code></pre>
 
-<p>And finally, curly braces which contain blocks of code are controlled by the parameter <b>-bbt=n</b> or <b>--block-brace-tightness=n</b> as illustrated in the example below.</p>
+<p>And finally, curly braces which contain blocks of code are controlled by the parameter <b>-bbt=n</b> or <b>--block-brace-tightness=n</b> as illustrated in the example below (<b>-bbt=0</b> is the default).</p>
 
-<pre><code> %bf = map { $_ =&gt; -M $_ } grep { /\.deb$/ } dirents &#39;.&#39;; # -bbt=0 (default)
+<pre><code> %bf = map { $_ =&gt; -M $_ } grep { /\.deb$/ } dirents &#39;.&#39;; # -bbt=0
  %bf = map { $_ =&gt; -M $_ } grep {/\.deb$/} dirents &#39;.&#39;;   # -bbt=1
  %bf = map {$_ =&gt; -M $_} grep {/\.deb$/} dirents &#39;.&#39;;     # -bbt=2</code></pre>
 
-<p>To simplify input in the case that all of the tightness flags have the same value &lt;n&gt;, the parameter &lt;-act=n&gt; or <b>--all-containers-tightness=n</b> is an abbreviation for the combination &lt;-pt=n -sbt=n -bt=n -bbt=n&gt;.</p>
+<p>To simplify input in the case that all of the tightness flags have the same value <b>n</b>, the parameter <b>-act=n</b> or <b>--all-containers-tightness=n</b> is an abbreviation for the combination <b>-pt=n -sbt=n -bt=n -bbt=n</b>.</p>
+
+</dd>
+<dt id="mutt-s---multiple-token-tightness-s"><b>-mutt=s</b>, <b>--multiple-token-tightness=s</b></dt>
+<dd>
+
+<p>To review, the tightness controls described in the previous section have three possible integer values: 0, 1, and 2, where <b>n=0</b> always adds a space, and <b>n=2</b> never adds a space.</p>
+
+<p>The default value <b>n=1</b> adds space only if the container holds multiple tokens. Some perltidy tokens may be rather long, and it can be preferable to space some of them as if they were multple tokens. This can be done with this paramter.</p>
+
+<p>For example, in the following expression the <code>qw</code> list is a single token and therefore there the default formatting does not put spaces within the square brackets:</p>
+
+<pre><code>    my $rlist = [qw(alpha beta gamma)];</code></pre>
+
+<p>This can be changed with</p>
+
+<pre><code>    # perltidy -mutt=&#39;qw&#39;
+    my $rlist = [ qw(alpha beta gamma) ];</code></pre>
+
+<p>This tells perltidy to space a <code>qw</code>list as if it were multiple tokens when the default tightness is used.</p>
+
+<p>The parameter <b>s</b> may contain any of the following perl operators:</p>
+
+<pre><code>    qw q qq qx qr s y tr m</code></pre>
+
+<p>Other possible specifications are</p>
+
+<pre><code>    q*   - all of the above operators
+    Q    - all of the above plus any quoted text
+    h    - a here-doc target, such as &#39;&lt;&lt;EOT&#39;
+    &lt;&lt;&gt;&gt; - the double-diamond operator</code></pre>
+
+<p>A symbol may be negated by preceding it with a carat <b>^</b> symbol. The double-diamond operator is always included unless negated in this way.</p>
 
 </dd>
 <dt id="xbt---extended-block-tightness"><b>-xbt</b>, <b>--extended-block-tightness</b></dt>
 <dd>
 
-<p>The previous section described two controls for spacing within curly braces, namely <b>--block-brace-tightness=n</b> for code block braces and <b>--brace-tightness=n</b> for all other braces.</p>
+<p>There are two controls for spacing within curly braces, namely <b>--block-brace-tightness=n</b> for code block braces and <b>--brace-tightness=n</b> for all other braces.</p>
 
 <p>There is a little fuzziness in this division of brace types though because the curly braces considered by perltidy to contain code blocks for formatting purposes, such as highlighting code structure, exclude some of the small code blocks used by Perl mainly for isolating terms. These include curly braces following a keyword where an indirect object might occur, or curly braces following a type symbol. For example, perltidy does not mark the following braces as code block braces:</p>
 
@@ -1046,11 +1078,11 @@
 
 <p>Examples:</p>
 
-<pre><code>   -xbtl=&#39;k&#39;          # selects just the keywords [DEFAULT]
-   -xbtl=&quot;t&quot;          # selects just the special type symbols
-   -xbtl=&quot;k t&quot;        # selects all keywords and symbols, or more simply
-   -xbtl=&quot;kt&quot;         # selects all keywords and symbols
-   -xbtl=&quot;print say&quot;  # selects just keywords B&lt;print&gt; and B&lt;say&gt;:</code></pre>
+<pre><code>  -xbtl=&#39;k&#39;          # selects just the keywords [DEFAULT]
+  -xbtl=&quot;t&quot;          # selects just the special type symbols
+  -xbtl=&quot;k t&quot;        # selects all keywords and symbols, or simply
+  -xbtl=&quot;kt&quot;         # selects all keywords and symbols
+  -xbtl=&quot;print say&quot;  # selects just keywords B&lt;print&gt; and B&lt;say&gt;:</code></pre>
 
 <p>Here are some formatting examples using the default values of <b>--brace-tightness=n</b> and <b>--block-brace-tightness=n</b>. Note that in these examples <b>$ref</b> is in block braces but <b>$key</b> is not.</p>
 
@@ -1229,15 +1261,15 @@
 <p>For another example, the following two lines will be parsed without syntax error:</p>
 
 <pre><code>  # original programming, syntax ok
-  for my $severity ( reverse $SEVERITY_LOWEST+1 .. $SEVERITY_HIGHEST ) { ...  }
+  for my $severity ( reverse $LOWEST+1 .. $HIGHEST ) { ...  }
 
   # perltidy default, syntax ok
-  for my $severity ( reverse $SEVERITY_LOWEST + 1 .. $SEVERITY_HIGHEST ) { ... }</code></pre>
+  for my $severity ( reverse $LOWEST + 1 .. $HIGHEST ) { ... }</code></pre>
 
 <p>But the following will give a syntax error:</p>
 
 <pre><code>  # perltidy -nwrs=&#39;+&#39;, syntax error:
-  for my $severity ( reverse $SEVERITY_LOWEST +1 .. $SEVERITY_HIGHEST ) { ... }</code></pre>
+  for my $severity ( reverse $LOWEST +1 .. $HIGHEST ) { ... }</code></pre>
 
 <p>To avoid subtle parsing problems like this, it is best to avoid spacing a binary operator asymmetrically with a space on the left but not on the right.</p>
 
@@ -1521,13 +1553,13 @@
 <p>This parameter causes perltidy to ignore the length of side comments when setting line breaks. The default, <b>-niscl</b>, is to include the length of side comments when breaking lines to stay within the length prescribed by the <b>-l=n</b> maximum line length parameter. For example, the following long single line would remain intact with -l=80 and -iscl:</p>
 
 <pre><code>     perltidy -l=80 -iscl
-        $vmsfile =~ s/;[\d\-]*$//; # Clip off version number; we can use a newer version as well</code></pre>
+        $vmsfile =~ s/;[\d\-]*$//; # Clip off version number; we can use a newer version</code></pre>
 
 <p>whereas without the -iscl flag the line will be broken:</p>
 
 <pre><code>     perltidy -l=80
         $vmsfile =~ s/;[\d\-]*$//
-          ;    # Clip off version number; we can use a newer version as well</code></pre>
+          ;    # Clip off version number; we can use a newer version</code></pre>
 
 </dd>
 <dt id="ipc---ignore-perlcritic-comments"><b>-ipc</b>, <b>--ignore-perlcritic-comments</b></dt>
@@ -1825,7 +1857,7 @@
 
 <p><b>--code-skipping</b> uses starting and ending markers &#39;#&lt;&lt;V&#39; and &#39;#&gt;&gt;V&#39;, like this:</p>
 
-<pre><code> #&lt;&lt;V  code skipping: perltidy will pass this verbatim without error checking
+<pre><code> #&lt;&lt;V  code skipping: perltidy passes this verbatim, no error checking
 
     token ident_digit {
         [ [ &lt;?word&gt; | _ | &lt;?digit&gt; ] &lt;?ident_digit&gt;
@@ -1870,9 +1902,9 @@
 
 <p>Some examples show how example strings become patterns:</p>
 
-<pre><code> -fsb=&#39;#\{\{\{&#39; becomes /^#\{\{\{\s/  which matches  #{{{ but not #{{{{
- -fsb=&#39;#\*\*&#39;   becomes /^#\*\*\s/    which matches  #** but not #***
- -fsb=&#39;#\*{2,}&#39; becomes /^#\*{2,}\s/  which matches  #** and #*****</code></pre>
+<pre><code> -fsb=&#39;#\{\{\{&#39; becomes /^#\{\{\{\s/ which matches #{{{ but not #{{{{
+ -fsb=&#39;#\*\*&#39;   becomes /^#\*\*\s/   which matches #** but not #***
+ -fsb=&#39;#\*{2,}&#39; becomes /^#\*{2,}\s/ which matches #** and #*****</code></pre>
 
 </dd>
 <dt id="fse-string---format-skipping-end-string"><b>-fse=string</b>, <b>--format-skipping-end=string</b></dt>
@@ -1918,10 +1950,12 @@
 
 <p>Examples:</p>
 
-<pre><code>  -line-range-tidy=43:109      # tidy lines 43 through 109
-  -line-range-tidy=&#39; 43 : 109&#39; # tidy lines 43 through 109 (spaces ok in quotes)
-  -line-range-tidy=1:          # tidy all lines
-  -line-range-tidy=0:90        # ERROR (n1 must be &gt;= 1)</code></pre>
+<pre><code> --line-range-tidy=43:109      # tidy lines 43 through 109
+ --line-range-tidy=&#39; 43 : 109&#39; # tidy lines 43 through 109
+ --line-range-tidy=1:          # tidy all lines
+ --line-range-tidy=0:90        # ERROR (n1 must be &gt;= 1)</code></pre>
+
+<p>The second example shows that spaces are okay if placed in quotes.</p>
 
 </dd>
 </dl>
@@ -2038,8 +2072,8 @@
 <p>Cuddled formatting is only possible between a pair of code blocks if the closing brace of the first block starts a new line. If a block is encountered which is entirely on a single line, and cuddled formatting is selected, it is necessary to make a decision as to whether or not to &quot;break&quot; the block, meaning to cause it to span multiple lines. This parameter controls that decision. The options are:</p>
 
 <pre><code>   cbo=0  Never force a short block to break.
-   cbo=1  If the first of a pair of blocks is broken in the input file,
-          then break the second [DEFAULT].
+   cbo=1  If the first of a pair of blocks is broken in the input
+          file, then break the second [DEFAULT].
    cbo=2  Break open all blocks for maximal cuddled formatting.</code></pre>
 
 <p>The default and recommended value is <b>cbo=1</b>. With this value, if the starting block of a chain spans multiple lines, then a cascade of breaks will occur for remaining blocks causing the entire chain to be cuddled.</p>
@@ -2390,10 +2424,10 @@
 <p>If the trailing code requires multiple lines, then</p>
 
 <pre><code>  -bfvt=0 Insert a line break
-  -bfvt=1 Insert a line break except for a cuddled block chain [Default]
+  -bfvt=1 Insert a line break except for a cuddled block chain
   -bfvt=2 Do not insert a line break</code></pre>
 
-<p>So the most compact code is achieved with <b>-bfvt=2</b>.</p>
+<p>The default is <b>-bfvt=1</b>. The most compact code is achieved with <b>-bfvt=2</b>.</p>
 
 <p>Example (non-cuddled, multiple lines ):</p>
 
@@ -2483,33 +2517,33 @@
 
 <p>Here is an example illustrating a welded container within a welded containers:</p>
 
-<pre><code>        # default formatting
-        $x-&gt;badd(
-            bmul(
-                $class-&gt;new(
-                    abs(
-                        $sx * int( $xr-&gt;numify() ) &amp; $sy * int( $yr-&gt;numify() )
-                    )
-                ),
-                $m
-            )
-        );
-
-        # perltidy -wn
-        $x-&gt;badd( bmul(
-            $class-&gt;new( abs(
-                $sx * int( $xr-&gt;numify() ) &amp; $sy * int( $yr-&gt;numify() )
-            ) ),
+<pre><code>    # default formatting
+    $x-&gt;badd(
+        bmul(
+            $class-&gt;new(
+                abs(
+                    $sx * int( $xr-&gt;num() ) &amp; $sy * int( $yr-&gt;num() )
+                )
+            ),
             $m
-        ) );</code></pre>
+        )
+    );
+
+    # perltidy -wn
+    $x-&gt;badd( bmul(
+        $class-&gt;new( abs(
+            $sx * int( $xr-&gt;num() ) &amp; $sy * int( $yr-&gt;num() )
+        ) ),
+        $m
+    ) );</code></pre>
 
 <p>The welded closing tokens are by default on a separate line but this can be modified with the <b>--vertical-tightness-closing=n</b> (<b>-vtc=n</b>) flag (described in the next section). For example, the same example adding <b>-vtc=2</b> is</p>
 
-<pre><code>        # perltidy -wn -vtc=2
-        $x-&gt;badd( bmul(
-            $class-&gt;new( abs(
-                $sx * int( $xr-&gt;numify() ) &amp; $sy * int( $yr-&gt;numify() ) ) ),
-            $m ) );</code></pre>
+<pre><code>    # perltidy -wn -vtc=2
+    $x-&gt;badd( bmul(
+        $class-&gt;new( abs(
+            $sx * int( $xr-&gt;num() ) &amp; $sy * int( $yr-&gt;num() ) ) ),
+        $m ) );</code></pre>
 
 <p>This format option is quite general but there are some limitations.</p>
 
@@ -2569,25 +2603,26 @@
 
 <p>A third optional item of information which can be given is an alphanumeric letter which is used to limit the selection further depending on the type of token immediately before the container. If given, it goes just before the container symbol. The possible letters are currently &#39;k&#39;, &#39;K&#39;, &#39;f&#39;, &#39;F&#39;, &#39;w&#39;, and &#39;W&#39;, with these meanings:</p>
 
-<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl built-in keyword (such as &#39;if&#39;, &#39;while&#39;),
- &#39;K&#39; matches if &#39;k&#39; does not, meaning that the previous token is not a keyword.
- &#39;f&#39; matches if the previous token is a function other than a keyword.
- &#39;F&#39; matches if &#39;f&#39; does not.
- &#39;w&#39; matches if either &#39;k&#39; or &#39;f&#39; match.
- &#39;W&#39; matches if &#39;w&#39; does not.</code></pre>
+<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl keyword
+     (such as &#39;if&#39;, &#39;while&#39;),
+ &#39;K&#39; matches if &#39;k&#39; does not: previous token is not a keyword
+ &#39;f&#39; matches if previous token is a function (not a keyword)
+ &#39;F&#39; matches if &#39;f&#39; does not
+ &#39;w&#39; matches if either &#39;k&#39; or &#39;f&#39; match
+ &#39;W&#39; matches if &#39;w&#39; does not</code></pre>
 
 <p>For example, compare</p>
 
 <pre><code>        # perltidy -wn
         if ( defined( $_Cgi_Query{
-            $Config{&#39;methods&#39;}{&#39;authentication&#39;}{&#39;remote&#39;}{&#39;cgi&#39;}{&#39;username&#39;}
+            $Config{&#39;methods&#39;}{&#39;auth&#39;}{&#39;remote&#39;}{&#39;cgi&#39;}{&#39;username&#39;}
         } ) )</code></pre>
 
 <p>with</p>
 
 <pre><code>        # perltidy -wn -wnxl=&#39;^K( {&#39;
         if ( defined(
-            $_Cgi_Query{ $Config{&#39;methods&#39;}{&#39;authentication&#39;}{&#39;remote&#39;}{&#39;cgi&#39;}
+            $_Cgi_Query{ $Config{&#39;methods&#39;}{&#39;auth&#39;}{&#39;remote&#39;}{&#39;cgi&#39;}
                   {&#39;username&#39;} }
         ) )</code></pre>
 
@@ -2595,14 +2630,14 @@
 
 <p>Here are some additional example strings and their meanings:</p>
 
-<pre><code>    &#39;^(&#39;   - the weld must not start with a paren
-    &#39;.(&#39;   - the second and later tokens may not be parens
-    &#39;.w(&#39;  - the second and later tokens may not keyword or function call parens
-    &#39;(&#39;    - no parens in a weld
-    &#39;^K(&#39;  - exclude a leading paren preceded by a non-keyword
-    &#39;.k(&#39;  - exclude a secondary paren preceded by a keyword
-    &#39;[ {&#39;  - exclude all brackets and braces
-    &#39;[ ( ^K{&#39; - exclude everything except nested structures like do {{  ... }}</code></pre>
+<pre><code> &#39;^(&#39;   - the weld must not start with a paren
+ &#39;.(&#39;   - second and later tokens may not be parens
+ &#39;.w(&#39;  - second and later tokens may not be a keyword or call parens
+ &#39;(&#39;    - no parens in a weld
+ &#39;^K(&#39;  - exclude a leading paren preceded by a non-keyword
+ &#39;.k(&#39;  - exclude a secondary paren preceded by a keyword
+ &#39;[ {&#39;  - exclude all brackets and braces
+ &#39;[ ( ^K{&#39; - exclude all except nested structures like do {{  ... }}</code></pre>
 
 </dd>
 <dt id="Vertical-tightness-of-non-block-curly-braces-parentheses-and-square-brackets"><b>Vertical tightness</b> of non-block curly braces, parentheses, and square brackets.</dt>
@@ -2686,26 +2721,26 @@
 
 <p>The difference between <b>-vt=1</b> and <b>-vt=2</b> is shown here:</p>
 
-<pre><code>    # perltidy -lp -vt=1
-    $init-&gt;add(
-                mysprintf( &quot;(void)find_threadsv(%s);&quot;,
-                           cstring( $threadsv_names[ $op-&gt;targ ] )
-                )
-    );
+<pre><code>  # perltidy -lp -vt=1
+  $init-&gt;add(
+              mysprintf( &quot;(void)find_threadsv(%s);&quot;,
+                         cstring( $threadsv_names[ $op-&gt;targ ] )
+              )
+  );
 
-    # perltidy -lp -vt=2
-    $init-&gt;add( mysprintf( &quot;(void)find_threadsv(%s);&quot;,
-                           cstring( $threadsv_names[ $op-&gt;targ ] )
-                )
-    );</code></pre>
+  # perltidy -lp -vt=2
+  $init-&gt;add( mysprintf( &quot;(void)find_threadsv(%s);&quot;,
+                         cstring( $threadsv_names[ $op-&gt;targ ] )
+              )
+  );</code></pre>
 
 <p>With <b>-vt=1</b>, the line ending in <code>add(</code> does not combine with the next line because the next line is not balanced. This can help with readability, but <b>-vt=2</b> can be used to ignore this rule.</p>
 
 <p>The tightest, and least readable, code is produced with both <code>-vt=2</code> and <code>-vtc=2</code>:</p>
 
-<pre><code>    # perltidy -lp -vt=2 -vtc=2
-    $init-&gt;add( mysprintf( &quot;(void)find_threadsv(%s);&quot;,
-                           cstring( $threadsv_names[ $op-&gt;targ ] ) ) );</code></pre>
+<pre><code>  # perltidy -lp -vt=2 -vtc=2
+  $init-&gt;add( mysprintf( &quot;(void)find_threadsv(%s);&quot;,
+                         cstring( $threadsv_names[ $op-&gt;targ ] ) ) );</code></pre>
 
 <p>Notice how the code in all of these examples collapses vertically as <b>-vt</b> increases, but the indentation remains unchanged. This is because perltidy implements the <b>-vt</b> parameter by first formatting as if <b>-vt=0</b>, and then simply overwriting one output line on top of the next, if possible, to achieve the desired vertical tightness. The <b>-lp</b> (<b>--line-up-parentheses</b>) indentation style has been designed to allow this vertical collapse to occur, which is why it is required for the <b>-vt</b> parameter.</p>
 
@@ -2936,13 +2971,13 @@
 
 <p>This formatting loses the nice structure. The original line breaks can be retained by adding comment or a blank line somewhere between the two parens. For example,</p>
 
-<pre><code>    my @list = (
-        1,    # a side comment forces the original line breakpoints to be kept
-        1, 1,
-        1, 2, 1,
-        1, 3, 3, 1,
-        1, 4, 6, 4, 1,
-    );</code></pre>
+<pre><code>  my @list = (
+      1,    # a side comment forces the original breakpoints to be kept
+      1, 1,
+      1, 2, 1,
+      1, 3, 3, 1,
+      1, 4, 6, 4, 1,
+  );</code></pre>
 
 <p>We could achieve the same result with a blank line or full comment anywhere between the opening and closing parens. Vertical alignment of the list items will still occur if possible. The blank line method is shown here:</p>
 
@@ -3010,7 +3045,7 @@
             &#39;&lt;Page_Down&gt;&#39; =&gt; xx,
         );</code></pre>
 
-<p>Afterwards, we could switch to <b>btct=b</b> since the trailing comma is now bare. But the <b>-btct</b> parameter must be retained in this case because otherwise this small list will be flattened the next time it is formatted.</p>
+<p>Afterwards, we could switch to <b>-btct=&#39;b&#39;</b> since the trailing comma is now bare. But the <b>-btct</b> parameter must be retained in this case because otherwise this small list will be flattened the next time it is formatted.</p>
 
 <p>This logic can be restricted to specific container types by including an opening token ahead of the letter in the above table. For example</p>
 
@@ -3020,9 +3055,10 @@
 
 <p>For parentheses, an additional item of information which can be given is an alphanumeric letter which is used to limit the selection further depending on the type of token immediately before the opening paren. The possible letters are currently &#39;k&#39;, &#39;K&#39;, &#39;f&#39;, &#39;F&#39;, &#39;w&#39;, and &#39;W&#39;, with these meanings for matching whatever precedes an opening paren:</p>
 
-<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl built-in keyword
- &#39;K&#39; matches if &#39;k&#39; does not, meaning that the previous token is not a keyword.
- &#39;f&#39; matches if the previous token is a function other than a keyword.
+<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl keyword
+     (such as &#39;if&#39;, &#39;while&#39;),
+ &#39;K&#39; matches if &#39;k&#39; does not: previous token is not a keyword
+ &#39;f&#39; matches if previous token is a function (not a keyword)
  &#39;F&#39; matches if &#39;f&#39; does not.
  &#39;w&#39; matches if either &#39;k&#39; or &#39;f&#39; match.
  &#39;W&#39; matches if &#39;w&#39; does not.</code></pre>
@@ -3100,7 +3136,7 @@
 <p>This option tells perltidy to format a <b>qw</b> list which is delimited with parentheses as if it were a function call whose call args are a list of quoted items. Normally, a <b>qw</b> list is output verbatim except for an adjustment of leading whitespace to indicate the indentation level. For example, here is an example of the default formatting of a poorly formatted <b>qw</b> list:</p>
 
 <pre><code>    # perltidy
-    @fields = qw( $st_dev          $st_ino    $st_mode $st_nlink   $st_uid
+    @fields = qw( $st_dev     $st_ino    $st_mode $st_nlink   $st_uid
       $st_gid $st_rdev    $st_size $st_atime   $st_mtime  $st_ctime
       $st_blksize $st_blocks);</code></pre>
 
@@ -3177,7 +3213,7 @@
 <p>This option is on by default. Use <b>-ndrc</b> to turn it off.</p>
 
 </dd>
-<dt id="want-trailing-commas-s-or--wtc-s---add-trailing-commas-or--atc-and---delete-trailing-commas-or--dtc"><b>--want-trailing-commas=s</b> or <b>-wtc=s</b>, <b>--add-trailing-commas</b> or <b>-atc</b>, and <b>--delete-trailing-commas</b> or <b>-dtc</b></dt>
+<dt id="Adding-and-Deleting-Trailing-Commas"><b>Adding and Deleting Trailing Commas</b></dt>
 <dd>
 
 <p>A <b>trailing comma</b> is a comma following the last item of a list. Perl allows trailing commas but they are not required. Including them can sometimes simplify the maintenance of large or complex lists, and help display structure. But they may not be appropriate in all lists, for example in a list which always has just one term. By default, perltidy does not add or delete trailing commas, but it is possible to manipulate them with the following set of related parameters:</p>
@@ -3197,14 +3233,15 @@
 
 <p>The parameter <b>--want-trailing-commas=s</b>, or <b>-wtc=s</b>, defines a preferred style. The string <b>s</b> indicates which lists should get trailing commas, as follows:</p>
 
-<pre><code>  s=1 or &#39;*&#39; : every list
-  s=m a multiline list
-  s=b a multiline list with bare trailing comma
-  s=i a multiline list with bare trailing comma and about one comma per line
-  s=h a multiline list with bare trailing comma and about one key=&gt;value pair per line
-  s=0 : no list
+<pre><code> s=1 or &#39;*&#39; : every list
+ s=m a multiline list
+ s=b a multiline list, bare trailing comma
+ s=i a multiline list, bare trailing comma, about one comma per line
+ s=h a multiline list, bare trailing comma, about one key=&gt;value
+       pair per line
+ s=0 : no list
 
-  s=&#39; &#39; or -wtc not defined : leave trailing commas unchanged [DEFAULT].</code></pre>
+ s=&#39; &#39; or not defined : leave trailing commas unchanged [DEFAULT]</code></pre>
 
 <p>where:</p>
 
@@ -3234,16 +3271,16 @@
 
 <p>Here are some example parameter combinations and their meanings</p>
 
-<pre><code>  -wtc=0 -dtc   : delete all trailing commas
-  -wtc=1 -atc   : add trailing commas to all lists
-  -wtc=m -atc   : add trailing commas to all multiline lists
-                  (single line lists remain unchanged)
-  -wtc=b -atc   : add commas as necessary so that all lists whose
-                  closing bracket starts a new line have trailing commas
-  -wtc=b -dtc   : all trailing commas which are not bare
-                  (not followed by a newline) get deleted.
-  -wtc=b -atc -dtc  : do both of the above operations so that
-                      all trailing commas are bare</code></pre>
+<pre><code> -wtc=0 -dtc   : delete all trailing commas
+ -wtc=1 -atc   : add trailing commas to all lists
+ -wtc=m -atc   : add trailing commas to all multiline lists
+                 (single line lists remain unchanged)
+ -wtc=b -atc   : add commas so that all lists whose closing
+                 bracket starts a new line have trailing commas
+ -wtc=b -dtc   : all trailing commas which are not bare
+                 (not followed by a newline) get deleted.
+ -wtc=b -atc -dtc  : do both of the above operations so that
+                     all trailing commas are bare</code></pre>
 
 <p>For example, given the following input</p>
 
@@ -3270,9 +3307,10 @@
 
 <p>For parentheses, an additional item of information which can be given is an alphanumeric letter which is used to limit the selection further depending on the type of token immediately before the opening paren. The possible letters are currently &#39;k&#39;, &#39;K&#39;, &#39;f&#39;, &#39;F&#39;, &#39;w&#39;, and &#39;W&#39;, with these meanings for matching whatever precedes an opening paren:</p>
 
-<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl built-in keyword
- &#39;K&#39; matches if &#39;k&#39; does not, meaning that the previous token is not a keyword.
- &#39;f&#39; matches if the previous token is a function other than a keyword.
+<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl keyword
+     (such as &#39;if&#39;, &#39;while&#39;),
+ &#39;K&#39; matches if &#39;k&#39; does not: previous token is not a keyword
+ &#39;f&#39; matches if previous token is a function (not a keyword)
  &#39;F&#39; matches if &#39;f&#39; does not.
  &#39;w&#39; matches if either &#39;k&#39; or &#39;f&#39; match.
  &#39;W&#39; matches if &#39;w&#39; does not.</code></pre>
@@ -3321,15 +3359,13 @@
 
 <p>because comma changes are based on the line breaks after the first iteration.</p>
 
-<p>The additional computer time needed by the <b>--converge</b> option to do another iteration or two will not be noticeable except for files with many thousands of lines.</p>
-
 <p>A parameter <b>--delay-trailing-comma-operations</b>, or <b>-dtco</b>, is available to control this behavior if desired. Negating this parameter, with <b>-ndtco</b>, tells perltidy to always use the starting state to make decisions regarding comma addition and deletion, even when iterations are requested. This should not normally be necessary.</p>
 
 </li>
 <li><p>Perltidy does not add a trailing comma in some <b>edge cases</b> which appear to be near a stability limit. So if a comma is unexpectedly not added, this is probably the reason.</p>
 
 </li>
-<li><p>If the parameter <b>--break-at-trailing-comma-types</b> is also employed, it operates on the state after any adding or deleting of commas. And it will allow trailing commas to be added in most edge cases. For example, given the following input text</p>
+<li><p>If the parameter <b>--break-at-trailing-comma-types</b>, or <b>-btct</b>. is also employed, it operates on the state after any adding or deleting of commas. And it will allow trailing commas to be added in most edge cases. For example, given the following input text</p>
 
 <pre><code>    plot(
         &#39;g&#39;, Canvas =&gt; $overview_canvas
@@ -3405,7 +3441,7 @@
         },
     );</code></pre>
 
-<p>But it turns out that these cases usually coincide with situations where the <b>--weld-nested-containers</b>, or <b>-wn</b>, would apply, and adding such commas can block welding. For example, the <b>-wn</b> parameter would succeed on the first of the above snippets, but it would fail on the second because of the added trailing comma.</p>
+<p>But it turns out that these cases usually coincide with situations where the <b>--weld-nested-containers</b>, or <b>-wn</b>, parameter would apply, and adding such commas can block welding. For example, the <b>-wn</b> parameter would succeed on the first of the above snippets, but it would fail on the second because of the added trailing comma.</p>
 
 <p>The parameter <b>--add-lone-trailing-commas</b>, or <b>-altc</b> allows these commas to be added, provide that <b>--add-trailing-commas</b> is also set. It is on by default. Users of <b>-wn</b> may want to turn it off with <b>--noadd-lone-trailing-commas</b>, <b>-naltc</b> to prevent such commas from being added.</p>
 
@@ -3455,7 +3491,7 @@
 
 <p>In the following expression, the arrow operator &#39;-&gt;&#39; between the closing and opening brackets of hash keys and array indexes are optional:</p>
 
-<pre><code>   return $self-&gt;{&#39;commandline&#39;}-&gt;{&#39;arg_list&#39;}-&gt;[0]-&gt;[0]-&gt;{&#39;hostgroups&#39;};</code></pre>
+<pre><code>   return $self-&gt;{&#39;commandline&#39;}-&gt;{&#39;args&#39;}-&gt;[0]-&gt;[0]-&gt;{&#39;hgroups&#39;};</code></pre>
 
 <p>These will be called <b>interbracket arrows</b> here, for lack of a better term. Perltidy will not change them by default, but they can be added or removed with the following parameters.</p>
 
@@ -3467,7 +3503,7 @@
 <p>This parameter deletes interbracket arrows. Applied to the above example we have</p>
 
 <pre><code>    # perltidy -dia
-    return $self-&gt;{&#39;commandline&#39;}{&#39;arg_list&#39;}[0][0]{&#39;hostgroups&#39;};</code></pre>
+    return $self-&gt;{&#39;commandline&#39;}{&#39;args&#39;}[0][0]{&#39;hgroups&#39;};</code></pre>
 
 <p>By default this applies to all interbracket arrows, but selective deletion is possible with controls described below.</p>
 
@@ -3478,7 +3514,7 @@
 <p>This parameter adds interbracket arrows. Applied to the line of code above, we get back the original line.</p>
 
 <pre><code>    # perltidy -aia
-    return $self-&gt;{&#39;commandline&#39;}-&gt;{&#39;arg_list&#39;}-&gt;[0]-&gt;[0]-&gt;{&#39;hostgroups&#39;};</code></pre>
+    return $self-&gt;{&#39;commandline&#39;}-&gt;{&#39;args&#39;}-&gt;[0]-&gt;[0]-&gt;{&#39;hgroups&#39;};</code></pre>
 
 <p>Selective changes can be made with controls described below.</p>
 
@@ -3544,16 +3580,16 @@
 
 <p>This parameter makes it possible to skip adding or deleting arrows following a container which is complex in some sense. Three levels of complexity can be specified with the integer <b>n</b>, as follows:</p>
 
-<pre><code>   n=0   the contents of the left container must be a single thing (token)
-   n=1   the left container must not contain other containers [DEFAULT]
-   n=2   the left container may contain anything</code></pre>
+<pre><code> n=0  the left container must contain be a single thing (token)
+ n=1  the left container must not contain other containers [DEFAULT]
+ n=2  the left container may contain anything</code></pre>
 
 <p>Some examples:</p>
 
-<pre><code>    # Container                complexity
-    {&#39;commandline&#39;}            0 single token         OK by default
-    { $type . $name }          1 multiple tokens      OK by default
-    [ $plot{&#39;x-axis&#39;} - 1 ]    2 contains a container SKIPPED by default</code></pre>
+<pre><code> # Container               complexity
+ {&#39;commandline&#39;}           0 single token         OK by default
+ { $type . $name }         1 multiple tokens      OK by default
+ [ $plot{&#39;x-axis&#39;} - 1 ]   2 contains a container SKIPPED by default</code></pre>
 
 <p>So, with the default complexity level of 1, an arrow could be added or deleted following the first two of these containers but not the third.</p>
 
@@ -3663,17 +3699,17 @@
 <p>For example, given this snippet:</p>
 
 <pre><code>    return unless $cmd = $cmd || ($dot
-        &amp;&amp; $Last_Shell) || &amp;prompt(&#39;|&#39;);
+        &amp;&amp; $Last) || &amp;prompt(&#39;|&#39;);
 
     # perltidy -bol [default]
     return
       unless $cmd = $cmd
       || ( $dot
-        &amp;&amp; $Last_Shell )
+        &amp;&amp; $Last )
       || &amp;prompt(&#39;|&#39;);
 
     # perltidy -nbol
-    return unless $cmd = $cmd || ( $dot &amp;&amp; $Last_Shell ) || &amp;prompt(&#39;|&#39;);</code></pre>
+    return unless $cmd = $cmd || ( $dot &amp;&amp; $Last ) || &amp;prompt(&#39;|&#39;);</code></pre>
 
 </dd>
 <dt id="bom---break-at-old-method-breakpoints"><b>-bom</b>, <b>--break-at-old-method-breakpoints</b></dt>
@@ -3681,31 +3717,28 @@
 
 <p>By default, a method call arrow <code>-&gt;</code> is considered a candidate for a breakpoint, but method chains will fill to the line width before a break is considered. With <b>-bom</b>, breaks before the arrow are preserved, so if you have pre-formatted a method chain:</p>
 
-<pre><code>  my $q = $rs
-    -&gt;related_resultset(&#39;CDs&#39;)
-    -&gt;related_resultset(&#39;Tracks&#39;)
-    -&gt;search({
-      &#39;track.id&#39; =&gt; {-ident =&gt; &#39;none_search.id&#39;},
-    })-&gt;as_query;</code></pre>
+<pre><code>    # perltidy -bom
+    $Document
+      -&gt;schild(0)
+      -&gt;schildren();</code></pre>
 
-<p>It will <b>keep</b> these breaks, rather than become this:</p>
+<p>the flag <b>-bom</b> will <b>keep</b> these line breaks, rather than become this:</p>
 
-<pre><code>  my $q = $rs-&gt;related_resultset(&#39;CDs&#39;)-&gt;related_resultset(&#39;Tracks&#39;)-&gt;search({
-      &#39;track.id&#39; =&gt; {-ident =&gt; &#39;none_search.id&#39;},
-    })-&gt;as_query;</code></pre>
+<pre><code>    # perltidy [DEFAULT]
+    $Document-&gt;schild(0)-&gt;schildren();</code></pre>
 
 <p>This flag will also look for and keep a &#39;cuddled&#39; style of calls, in which lines begin with a closing paren followed by a call arrow, as in this example:</p>
 
-<pre><code>  # perltidy -bom -wn
-  my $q = $rs-&gt;related_resultset(
-      &#39;CDs&#39;
-  )-&gt;related_resultset(
-      &#39;Tracks&#39;
-  )-&gt;search( {
-      &#39;track.id&#39; =&gt; { -ident =&gt; &#39;none_search.id&#39; },
-  } )-&gt;as_query;</code></pre>
-
-<p>You may want to include the <b>--weld-nested-containers</b> flag in this case to keep nested braces and parens together, as in the last line.</p>
+<pre><code>    # perltidy -bom
+    my $q = $rs-&gt;related_resultset(
+        &#39;CDs&#39;
+    )-&gt;related_resultset(
+        &#39;Tracks&#39;
+    )-&gt;search(
+        {
+            &#39;track.id&#39; =&gt; { -ident =&gt; &#39;none_search.id&#39; },
+        }
+    )-&gt;as_query;</code></pre>
 
 </dd>
 <dt id="bos---break-at-old-semicolon-breakpoints"><b>-bos</b>, <b>--break-at-old-semicolon-breakpoints</b></dt>
@@ -3720,7 +3753,7 @@
 
 <pre><code>  $z = sqrt( $x**2 + $y**2 );</code></pre>
 
-<p>Using the &lt;-bos&gt; flag keeps the isolated semicolon:</p>
+<p>Using the <b>-bos</b> flag keeps the isolated semicolon:</p>
 
 <pre><code>  # perltidy -bos
   $z = sqrt( $x**2 + $y**2 )
@@ -3804,10 +3837,10 @@
 
 <p>It is possible to be more specific in matching parentheses by preceding them with a letter. The possible letters are &#39;k&#39;, &#39;K&#39;, &#39;f&#39;, &#39;F&#39;, &#39;w&#39;, and &#39;W&#39;, with these meanings (these are the same as used in the <b>--weld-nested-exclusion-list</b> and <b>--line-up-parentheses-exclusion-list</b> parameters):</p>
 
-<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl built-in keyword
+<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl keyword
      (such as &#39;if&#39;, &#39;while&#39;),
- &#39;K&#39; matches if &#39;k&#39; does not, meaning that the previous token is not a keyword.
- &#39;f&#39; matches if the previous token is a function other than a keyword.
+ &#39;K&#39; matches if &#39;k&#39; does not: previous token is not a keyword
+ &#39;f&#39; matches if previous token is a function (not a keyword)
  &#39;F&#39; matches if &#39;f&#39; does not.
  &#39;w&#39; matches if either &#39;k&#39; or &#39;f&#39; match.
  &#39;W&#39; matches if &#39;w&#39; does not.</code></pre>
@@ -3895,7 +3928,7 @@
 <dt id="blbs-n---blank-lines-before-subs-n"><b>-blbs=n</b>, <b>--blank-lines-before-subs=n</b></dt>
 <dd>
 
-<p>The parameter <b>-blbs=n</b> requests that least <b>n</b> blank lines precede a sub definition which does not follow a comment and which is more than one-line long. The default is &lt;-blbs=1&gt;. <b>BEGIN</b> and <b>END</b> blocks are included.</p>
+<p>The parameter <b>-blbs=n</b> requests that least <b>n</b> blank lines precede a sub definition which does not follow a comment and which is more than one-line long. The default is <b>-blbs=1</b>. <b>BEGIN</b> and <b>END</b> blocks are included.</p>
 
 <p>The requested number of blanks statement will be inserted regardless of the value of <b>--maximum-consecutive-blank-lines=n</b> (<b>-mbl=n</b>) with the exception that if <b>-mbl=0</b> then no blanks will be output.</p>
 
@@ -4007,8 +4040,8 @@
 <p>The possible values of <b>n</b> are:</p>
 
 <pre><code> n=0 ignore all old blank lines
- n=1 stable: keep old blanks, but limited by the value of the B&lt;-mbl=n&gt; flag
- n=2 keep all old blank lines, regardless of the value of the B&lt;-mbl=n&gt; flag</code></pre>
+ n=1 stable: keep old blanks, but limited by the B&lt;-mbl=n&gt; flag
+ n=2 keep all old blank lines, regardless of the B&lt;-mbl=n&gt; flag</code></pre>
 
 <p>The default is <b>n=1</b>.</p>
 
@@ -4053,38 +4086,38 @@
 
 <p>Before describing the meaning of the parameters in detail let us look at an example which is formatted with default parameter settings.</p>
 
-<pre><code>        print &quot;Entering test 2\n&quot;;
-        use Test;
-        use Encode qw(from_to encode decode
-          encode_utf8 decode_utf8
-          find_encoding is_utf8);
-        use charnames qw(greek);
-        my @encodings     = grep( /iso-?8859/, Encode::encodings() );
-        my @character_set = ( &#39;0&#39; .. &#39;9&#39;, &#39;A&#39; .. &#39;Z&#39;, &#39;a&#39; .. &#39;z&#39; );
-        my @source        = qw(ascii iso8859-1 cp1250);
-        my @destiny       = qw(cp1047 cp37 posix-bc);
-        my @ebcdic_sets   = qw(cp1047 cp37 posix-bc);
-        my $str           = join( &#39;&#39;, map( chr($_), 0x20 .. 0x7E ) );
-        return unless ($str);</code></pre>
+<pre><code>    print &quot;Entering test 2\n&quot;;
+    use Test;
+    use Encode qw(from_to encode decode
+      encode_utf8 decode_utf8
+      find_encoding is_utf8);
+    use charnames qw(greek);
+    my @encodings     = grep( /iso-?8859/, Encode::encodings() );
+    my @character_set = ( &#39;0&#39; .. &#39;9&#39;, &#39;A&#39; .. &#39;Z&#39;, &#39;a&#39; .. &#39;z&#39; );
+    my @source        = qw(ascii iso8859-1 cp1250);
+    my @destiny       = qw(cp1047 cp37 posix-bc);
+    my @ebcdic_sets   = qw(cp1047 cp37 posix-bc);
+    my $str           = join( &#39;&#39;, map( chr($_), 0x20 .. 0x7E ) );
+    return unless ($str);</code></pre>
 
 <p>using <b>perltidy -kgb</b> gives:</p>
 
-<pre><code>        print &quot;Entering test 2\n&quot;;
-                                      &lt;----------this blank controlled by -kgbb
-        use Test;
-        use Encode qw(from_to encode decode
-          encode_utf8 decode_utf8
-          find_encoding is_utf8);
-        use charnames qw(greek);
-                                      &lt;---------this blank controlled by -kgbi
-        my @encodings     = grep( /iso-?8859/, Encode::encodings() );
-        my @character_set = ( &#39;0&#39; .. &#39;9&#39;, &#39;A&#39; .. &#39;Z&#39;, &#39;a&#39; .. &#39;z&#39; );
-        my @source        = qw(ascii iso8859-1 cp1250);
-        my @destiny       = qw(cp1047 cp37 posix-bc);
-        my @ebcdic_sets   = qw(cp1047 cp37 posix-bc);
-        my $str           = join( &#39;&#39;, map( chr($_), 0x20 .. 0x7E ) );
-                                      &lt;----------this blank controlled by -kgba
-        return unless ($str);</code></pre>
+<pre><code>    print &quot;Entering test 2\n&quot;;
+                              &lt;----------this blank controlled by -kgbb
+    use Test;
+    use Encode qw(from_to encode decode
+      encode_utf8 decode_utf8
+      find_encoding is_utf8);
+    use charnames qw(greek);
+                              &lt;---------this blank controlled by -kgbi
+    my @encodings     = grep( /iso-?8859/, Encode::encodings() );
+    my @character_set = ( &#39;0&#39; .. &#39;9&#39;, &#39;A&#39; .. &#39;Z&#39;, &#39;a&#39; .. &#39;z&#39; );
+    my @source        = qw(ascii iso8859-1 cp1250);
+    my @destiny       = qw(cp1047 cp37 posix-bc);
+    my @ebcdic_sets   = qw(cp1047 cp37 posix-bc);
+    my $str           = join( &#39;&#39;, map( chr($_), 0x20 .. 0x7E ) );
+                              &lt;----------this blank controlled by -kgba
+    return unless ($str);</code></pre>
 
 <p>Blank lines have been introduced around the <b>my</b> and <b>use</b> sequences. What happened is that the default keyword list includes <b>my</b> and <b>use</b> but not <b>print</b> and <b>return</b>. So a continuous sequence of nine <b>my</b> and <b>use</b> statements was located. This number exceeds the default threshold of five, so blanks were placed before and after the entire group. Then, since there was also a subsequence of six <b>my</b> lines, a blank line was introduced to separate them.</p>
 
@@ -4168,7 +4201,8 @@
 
 <p><b>-pbp</b> is an abbreviation for the parameters in the book <b>Perl Best Practices</b> by Damian Conway:</p>
 
-<pre><code>    -l=78 -i=4 -ci=4 -st -se -vt=2 -cti=0 -pt=1 -bt=1 -sbt=1 -bbt=1 -nsfs -nolq
+<pre><code>    -l=78 -i=4 -ci=4 -st -se -vt=2 -cti=0 -pt=1 -bt=1 -sbt=1 -bbt=1
+    -nsfs -nolq
     -wbb=&quot;% + - * / x != == &gt;= &lt;= =~ !~ &lt; &gt; | &amp; =
           **= += *= &amp;= &lt;&lt;= &amp;&amp;= -= /= |= &gt;&gt;= ||= //= .= %= ^= x=&quot;</code></pre>
 
@@ -4184,7 +4218,7 @@
         )
         . (
         $page
-        ? ( $section ? &#39; in &#39; : &#39;&#39; ) . &quot;the $page$page_ext manpage&quot;
+        ? ( $section ? &#39; in &#39; : &#39;&#39; ) . &quot;the $page_ext manpage&quot;
         : &#39; elsewhere in this document&#39;
         );
 
@@ -4196,7 +4230,7 @@
       )
       . (
         $page
-        ? ( $section ? &#39; in &#39; : &#39;&#39; ) . &quot;the $page$page_ext manpage&quot;
+        ? ( $section ? &#39; in &#39; : &#39;&#39; ) . &quot;the $page_ext manpage&quot;
         : &#39; elsewhere in this document&#39;
       );
 
@@ -4207,7 +4241,7 @@
         :                   &quot;the section on $section&quot;
         )
         . ( $page
-            ? ( $section ? &#39; in &#39; : &#39;&#39; ) . &quot;the $page$page_ext manpage&quot;
+            ? ( $section ? &#39; in &#39; : &#39;&#39; ) . &quot;the $page_ext manpage&quot;
             : &#39; elsewhere in this document&#39;
         );</code></pre>
 
@@ -4281,9 +4315,9 @@
 
 <p>This flag controls the placement of semicolons at the end of one-line blocks. Semicolons are optional before a closing block brace, and frequently they are omitted at the end of a one-line block containing just a single statement. By default, perltidy follows the input file regarding these semicolons, but this behavior can be controlled by this flag. The values of n are:</p>
 
-<pre><code>  n=0 remove terminal semicolons in one-line blocks having a single statement
-  n=1 stable; keep input file placement of terminal semicolons [DEFAULT ]
-  n=2 add terminal semicolons in all one-line blocks</code></pre>
+<pre><code> n=0 remove terminal semicolons in single-statement one-line blocks
+ n=1 stable; keep input terminal semicolons [DEFAULT ]
+ n=2 add terminal semicolons in all one-line blocks</code></pre>
 
 <p>Note that the <b>n=2</b> option has no effect if adding semicolons is prohibited with the <b>-nasc</b> flag. Also not that while <b>n=2</b> adds missing semicolons to all one-line blocks, regardless of complexity, the <b>n=0</b> option only removes ending semicolons which terminate one-line blocks containing just one semicolon. So these two options are not exact inverses.</p>
 
@@ -4407,8 +4441,8 @@
 
 <p>If it is simpler to specify only the token types which are to be aligned, then include the types which are to be aligned in the list of <b>--valign-inclusion-list</b>. In that case you may leave the <b>valign-exclusion-list</b> undefined, or use the special symbol <b>*</b> for the exclusion list. For example, the following parameters enable alignment only at commas and &#39;fat commas&#39;:</p>
 
-<pre><code>  --valign-inclusion-list=&#39;, =&gt;&#39;
-  --valign-exclusion-list=&#39;*&#39;     ( this is optional and may be omitted )</code></pre>
+<pre><code> --valign-inclusion-list=&#39;, =&gt;&#39;
+ --valign-exclusion-list=&#39;*&#39;  ( this is optional and may be omitted )</code></pre>
 
 <p>These parameter lists should consist of space-separated tokens from the above list of possible alignment tokens, or a &#39;*&#39;. If an unrecognized token appears, it is simply ignored. And if a specific token is entered in both lists by mistake then the exclusion list has priority.</p>
 
@@ -4419,24 +4453,24 @@
 
 <p>To illustrate, consider the following snippet with default formatting</p>
 
-<pre><code>    # perltidy
-    $co_description = ($color) ? &#39;bold cyan&#39;  : &#39;&#39;;           # description
-    $co_prompt      = ($color) ? &#39;bold green&#39; : &#39;&#39;;           # prompt
-    $co_unused      = ($color) ? &#39;on_green&#39;   : &#39;reverse&#39;;    # unused</code></pre>
+<pre><code>  # perltidy
+  $co_description = ($color) ? &#39;bold cyan&#39;  : &#39;&#39;;           # descr
+  $co_prompt      = ($color) ? &#39;bold green&#39; : &#39;&#39;;           # prompt
+  $co_unused      = ($color) ? &#39;on_green&#39;   : &#39;reverse&#39;;    # unused</code></pre>
 
 <p>To exclude all alignments except the equals (i.e., include only equals) we could use:</p>
 
-<pre><code>    # perltidy -vil=&#39;=&#39;
-    $co_description = ($color) ? &#39;bold cyan&#39; : &#39;&#39;;          # description
-    $co_prompt      = ($color) ? &#39;bold green&#39; : &#39;&#39;;         # prompt
-    $co_unused      = ($color) ? &#39;on_green&#39; : &#39;reverse&#39;;    # unused</code></pre>
+<pre><code>  # perltidy -vil=&#39;=&#39;
+  $co_description = ($color) ? &#39;bold cyan&#39; : &#39;&#39;;          # descr
+  $co_prompt      = ($color) ? &#39;bold green&#39; : &#39;&#39;;         # prompt
+  $co_unused      = ($color) ? &#39;on_green&#39; : &#39;reverse&#39;;    # unused</code></pre>
 
 <p>To exclude only the equals we could use:</p>
 
-<pre><code>    # perltidy -vxl=&#39;=&#39;
-    $co_description = ($color) ? &#39;bold cyan&#39; : &#39;&#39;;     # description
-    $co_prompt = ($color) ? &#39;bold green&#39; : &#39;&#39;;         # prompt
-    $co_unused = ($color) ? &#39;on_green&#39; : &#39;reverse&#39;;    # unused</code></pre>
+<pre><code>  # perltidy -vxl=&#39;=&#39;
+  $co_description = ($color) ? &#39;bold cyan&#39; : &#39;&#39;;     # descr
+  $co_prompt = ($color) ? &#39;bold green&#39; : &#39;&#39;;         # prompt
+  $co_unused = ($color) ? &#39;on_green&#39; : &#39;reverse&#39;;    # unused</code></pre>
 
 <p>Notice in this last example that although only the equals alignment was excluded, the ternary alignments were also lost. This happens because the vertical aligner sweeps from left-to-right and usually stops if an important alignment cannot be made for some reason.</p>
 
@@ -4448,19 +4482,19 @@
 
 <p>By default, postfix <b>if</b> terms align and postfix <b>unless</b> terms align, but separately. For example,</p>
 
-<pre><code>    # perltidy [DEFAULT]
-    print &quot;Tried to add: @ResolveRPM\n&quot; if ( @ResolveRPM and !$Quiet );
-    print &quot;Would need: @DepList\n&quot;      if ( @DepList    and !$Quiet );
-    print &quot;RPM Output:\n&quot;                 unless $Quiet;
-    print join( &quot;\n&quot;, @RPMOutput ) . &quot;\n&quot; unless $Quiet;</code></pre>
+<pre><code>  # perltidy [DEFAULT]
+  print &quot;Tried to add: @Resolve\n&quot; if ( @Resolve and !$Quiet );
+  print &quot;Would need: @DepList\n&quot;   if ( @DepList and !$Quiet );
+  print &quot;Output:\n&quot;                  unless $Quiet;
+  print join( &quot;\n&quot;, @Output ) . &quot;\n&quot; unless $Quiet;</code></pre>
 
-<p>The <b>-viu</b> flag causes a postfix <b>unless</b> to be treated as if it were a postfix <b>if</b> for purposes of alignment. Thus</p>
+<p>The <b>-viu</b> flag causes a postfix <b>unless</b> to be treated as if it were a postfix <b>if</b> for purposes of alignment, and thus they align:</p>
 
-<pre><code>    # perltidy -viu
-    print &quot;Tried to add: @ResolveRPM\n&quot;   if ( @ResolveRPM and !$Quiet );
-    print &quot;Would need: @DepList\n&quot;        if ( @DepList    and !$Quiet );
-    print &quot;RPM Output:\n&quot;                 unless $Quiet;
-    print join( &quot;\n&quot;, @RPMOutput ) . &quot;\n&quot; unless $Quiet;</code></pre>
+<pre><code>  # perltidy -viu
+  print &quot;Tried to add: @Resolve\n&quot;   if ( @Resolve and !$Quiet );
+  print &quot;Would need: @DepList\n&quot;     if ( @DepList and !$Quiet );
+  print &quot;Output:\n&quot;                  unless $Quiet;
+  print join( &quot;\n&quot;, @Output ) . &quot;\n&quot; unless $Quiet;</code></pre>
 
 </dd>
 <dt id="Aligning-signed-numbers-with---valign-signed-numbers-or--vsn"><b>Aligning signed numbers with --valign-signed-numbers or -vsn</b></dt>
@@ -4744,11 +4778,11 @@
 
 <p>For a specific example, the following line</p>
 
-<pre><code>        oneliner { --maximum-line-length=0 --noadd-newlines --noadd-terminal-newline}</code></pre>
+<pre><code>  oneliner { --maximum-line-length=0 --noadd-newlines --noadd-terminal-newline}</code></pre>
 
 <p>or equivalently with abbreviations</p>
 
-<pre><code>        oneliner { -l=0 -nanl -natnl }</code></pre>
+<pre><code>  oneliner { -l=0 -nanl -natnl }</code></pre>
 
 <p>could be placed in a <i>.perltidyrc</i> file to temporarily override the maximum line length with a large value, to temporarily prevent new line breaks from being added, and to prevent an extra newline character from being added the file. All other settings in the <i>.perltidyrc</i> file still apply. Thus it provides a way to format a long &#39;one liner&#39; when perltidy is invoked with</p>
 
@@ -4795,6 +4829,8 @@
 <p><b>--dump-want-left-space</b> or <b>-dwls</b> will write the hash <code>%want_left_space</code> to standard output and quit. See the section on controlling whitespace around tokens.</p>
 
 <p><b>--dump-want-right-space</b> or <b>-dwrs</b> will write the hash <code>%want_right_space</code> to standard output and quit. See the section on controlling whitespace around tokens.</p>
+
+<p>See <a href="#Analyzing-Code">&quot;Analyzing Code&quot;</a> for additional <b>--dump-</b> parameters.</p>
 
 </dd>
 <dt id="Other-parameters-related-to-processing"><b>Other parameters related to processing</b></dt>
@@ -4882,16 +4918,16 @@
 
 <p>produces an output file <i>blocks.csv</i> whose lines hold these parameters:</p>
 
-<pre><code>    filename     - the name of the file
-    line         - the line number of the opening brace of this block
-    line_count   - the number of lines between opening and closing braces
-    code_lines   - the number of lines excluding blanks, comments, and pod
-    type         - the block type (sub, for, foreach, ...)
-    name         - the block name if applicable (sub name, label, asub name)
-    depth        - the nesting depth of the opening block brace
-    max_change   - the change in depth to the most deeply nested code block
-    block_count  - the total number of code blocks nested in this block
-    mccabe_count - the McCabe complexity measure of this code block</code></pre>
+<pre><code>  filename     - name of the file
+  line         - line number of the opening brace of this block
+  line_count   - number of lines between opening and closing braces
+  code_lines   - number of lines excluding blanks, comments, and pod
+  type         - block type (sub, for, foreach, ...)
+  name         - block name if applicable (sub or asub name, label..)
+  depth        - nesting depth of the opening block brace
+  max_change   - change in depth to the most deeply nested code block
+  block_count  - total number of code blocks nested in this block
+  mccabe_count - McCabe complexity measure of this code block</code></pre>
 
 <p>This feature was developed to help identify complex sections of code as an aid in refactoring. The McCabe complexity measure follows the definition used by Perl::Critic. By default the table contains these values for subroutines, but the user may request them for any or all blocks of code or packages. For blocks which are loops nested within loops, a postfix &#39;+&#39; to the <code>type</code> is added to indicate possible code complexity. Although the table does not otherwise indicate which blocks are nested in other blocks, this can be determined by computing and comparing the block ending line numbers.</p>
 
@@ -4910,7 +4946,7 @@
    +    - any nested inner block loop
    package - any package or class
    closure - any nameless block
-   elsif3  - an if-elsif-..-else chain with 3 or more elsif&#39;s (3 is arbitrary, see below)</code></pre>
+   elsif3  - an if-elsif- chain with 3 or more elsif&#39;s (see below)</code></pre>
 
 <p>A chain of <b>if-elsif-...</b> blocks may be reported as a single line item by entering the word <b>elsif</b> with an appended integer, as indicated by the last item in this list. The integer indicates the number of <b>elsif</b> blocks required for a chain to be reported. If you use this, you may want to also use <b>-dbl=n</b>, with a smaller number of lines <b>n</b> than the default.</p>
 
@@ -5071,6 +5107,18 @@
 <pre><code>    -wvxl=&#39;*_uu&#39;</code></pre>
 
 </dd>
+<dt id="Use---dump-unique-keys-to-help-locate-misspelled-hash-keys"><b>Use --dump-unique-keys</b> to help locate misspelled hash keys</dt>
+<dd>
+
+<p>The parameter <b>--dump-unique-keys</b>, or <b>-duk</b>, dumps a list of hash keys which appear to be used just once, and do not appear among the quoted strings in a file. For example:</p>
+
+<pre><code>   perltidy -duk File.pm &gt;output.txt</code></pre>
+
+<p>The lines in the output file list each unique key and its line number. Typically, most of the listed keys listed will be perfectly valid keys needed, for example, for communication with other modules or for future development. But the list might also include something unexpected, such as a misspelled key.</p>
+
+<p>A program <code>dump_unique_keys.pl</code> at <a href="https://github.com/perltidy/perltidy/tree/master/examples">https://github.com/perltidy/perltidy/tree/master/examples</a> can run perltidy with <b>-duk</b> on multiple files, and then remove any common keys from the list.</p>
+
+</dd>
 <dt id="Use---dump-mixed-call-parens-to-find-functions-called-both-with-and-without-parens"><b>Use --dump-mixed-call-parens to find functions called both with and without parens</b></dt>
 <dd>
 
@@ -5172,7 +5220,7 @@
 
 <pre><code>    sub gnab_gib {
         my $self = shift;
-        my ( $v1, ($v2) ) = @_;  # &lt;-- extra parens on $v2 indicate optional
+        my ( $v1, ($v2) ) = @_;  # &lt;-- $v2 is optional
         ...;
     }</code></pre>
 
@@ -5182,8 +5230,8 @@
 
 <p>For multiple default call args, place one set of parens around them all. Some examples:</p>
 
-<pre><code>    my ( $v1, ( $v2, $v3 ) ) = @_;    # &lt;-- $v2 and $v3 are optional
-    my ( ($v1) ) = @_;                # &lt;-- $v1 is optional</code></pre>
+<pre><code>    my ( ($v1) ) = @_;              # &lt;-- $v1 is optional
+    my ( $v1, ( $v2, $v3 ) ) = @_;  # &lt;-- $v2, $v3 are optional</code></pre>
 
 </dd>
 <dt id="i:-indeterminate:-a-specific-number-of-expected-args-for-a-sub-could-not-be-determined-but-it-is-called-with-a-specific-number.-This-issue-is-reported-for-the---dump--option-but-not-the---warn--option"><b>i:</b> <b>indeterminate:</b> a specific number of expected args for a sub could not be determined, but it is called with a specific number. This issue is reported for the <b>--dump-</b> option but not the <b>--warn-</b> option.</dt>
@@ -5293,8 +5341,8 @@
         ( $name, $flags ); # 2 values but no &#39;return&#39; statement
     }
 
-    ( $name, $flags ) = macho();  # &#39;x&#39; (want array but no return stmt)
-    $name = macho();              # &#39;y&#39; (want scalar but no return stmt)
+    ( $name, $flags ) = macho();  # &#39;x&#39; (want array, but no return)
+    $name = macho();              # &#39;y&#39; (want scalar but no return)
 
     sub wimp {
         ...;
@@ -5303,7 +5351,7 @@
 
     ( $name, $flags, $access) = wimp(); # &#39;o&#39; (want array 3 &gt; 2)
     ($name) = wimp();                   # &#39;u&#39; (want array 1 &lt; 2)
-    $name   = wimp();                   # &#39;s&#39; (want scalar but 2 values returned)</code></pre>
+    $name   = wimp();  # &#39;s&#39; (want scalar but 2 values returned)</code></pre>
 
 <p>This analysis works by scanning all call statements and all sub return statements, and comparing the the number of items wanted with the possible number of items returned. If a specific value for either of these numbers cannot be determined for a call then it cannot be checked.</p>
 
@@ -5367,7 +5415,7 @@
 <dt id="The--pre-flag-for-code-snippets">The <b>-pre</b> flag for code snippets</dt>
 <dd>
 
-<p>When the <b>-pre</b> flag is given, only the pre-formatted section, within the &lt;PRE&gt; and &lt;/PRE&gt; tags, will be output. This simplifies inclusion of the output in other files. The default is to output a complete web page.</p>
+<p>When the <b>-pre</b> flag is given, only the pre-formatted section, within the <code>&lt;PRE</code>&gt; and <code>&lt;/PRE</code>&gt; tags, will be output. This simplifies inclusion of the output in other files. The default is to output a complete web page.</p>
 
 </dd>
 <dt id="The--nnn-flag-for-line-numbering">The <b>-nnn</b> flag for line numbering</dt>
@@ -5561,20 +5609,20 @@
  ce     conv   cpb    cs     csc    cscb   cscw   dac    dbc    dbs
  dcbl   dcsc   ddf    dia    dior   dln    dltc   dma    dmcp   dmr
  dnl    dop    dp     dpro   drc    dsc    dsm    dsn    dtc    dtco
- dtt    duv    dwic   dwls   dwrs   dws    eos    f      fpva   frm
- fs     fso    gcs    hbc    hbcm   hbco   hbh    hbhh   hbi    hbj
- hbk    hbm    hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv
- hbw    hent   hic    hicm   hico   hih    hihh   hii    hij    hik
- him    hin    hip    hipd   hipu   hiq    his    hisc   hiv    hiw
- hsc    html   ibc    icb    icp    iob    ipc    isbc   iscl   kgb
- kgbd   kgbi   kis    lal    log    lop    lp     lsl    mci    mem
- nib    ohbr   okw    ola    olc    oll    olq    opr    opt    osbc
- osbr   otr    ple    pod    pvl    q      sac    sbc    sbl    scbb
- schb   scp    scsb   sct    se     sfp    sfs    skp    sob    sobb
- sohb   sop    sosb   sot    ssc    st     sts    t      tac    tbc
- toc    tp     tqw    trp    ts     tsc    tso    vbc    vc     viu
- vmll   vsc    vsn    vwe    w      wfc    wia    wma    wme    wmr
- wn     x      xbt    xci    xlp    xs</code></pre>
+ dtt    duk    duv    dwic   dwls   dwrs   dws    eos    f      fpva
+ frm    fs     fso    gcs    hbc    hbcm   hbco   hbh    hbhh   hbi
+ hbj    hbk    hbm    hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc
+ hbv    hbw    hent   hic    hicm   hico   hih    hihh   hii    hij
+ hik    him    hin    hip    hipd   hipu   hiq    his    hisc   hiv
+ hiw    hsc    html   ibc    icb    icp    ils    iob    ipc    isbc
+ iscl   kgb    kgbd   kgbi   kis    lal    log    lop    lp     lsl
+ mci    mem    nib    ohbr   okw    ola    olc    oll    olq    opr
+ opt    osbc   osbr   otr    ple    pod    pvl    q      qwaf   sac
+ sbc    sbl    scbb   schb   scp    scsb   sct    se     sfp    sfs
+ skp    sob    sobb   sohb   sop    sosb   sot    ssc    st     sts
+ t      tac    tbc    toc    tp     tqw    trp    ts     tsc    tso
+ vbc    vc     viu    vmll   vsc    vsn    vwe    w      wfc    wia
+ wma    wme    wmr    wn     x      xbt    xci    xlp    xs</code></pre>
 
 <p>Equivalently, the prefix &#39;no&#39; or &#39;no-&#39; on the corresponding long names may be used.</p>
 
@@ -5652,7 +5700,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20240903.07</p>
+<p>This man page documents perltidy version 20240903.09</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

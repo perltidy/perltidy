@@ -1,8 +1,64 @@
 <h1>Perltidy Change Log</h1>
 
-<h2>2024 09 03.07</h2>
+<h2>2024 09 03.09</h2>
 
-<pre><code>- Added parameter --indent-leading-semicolon, -ils; see git #171. When
+<pre><code>- Added missing 'use File::Temp' for -html option. This was causing the
+  message: "Undefined subroutine &amp;File::Temp::tempfile called at ..."
+  See git #176.
+
+- A new parameter --dump-unique-keys, or B&lt;-duk&gt;, dumps a list of hash keys
+  which appear to be used just once, and do not appear among the quoted
+  strings in a file. For example:
+
+     perltidy -duk File.pm &gt;output.txt
+
+  The purpose is to help locate misspelled hash keys.
+
+- Line breaks at long chains of method calls now break at all calls
+  with args in parens, as in this example from git #171
+
+    # Old default
+    sub bla_p( $value = 42 ) {
+        return Mojo::Promise-&gt;resolve($value)-&gt;then( sub { shift() / 2 } )
+          -&gt;then( sub { shift() + 6 } )-&gt;then( sub { shift() / 2 } )
+          -&gt;catch( sub { warn shift } );
+    }
+
+    # New default
+    sub bla_p( $value = 42 ) {
+        return Mojo::Promise-&gt;resolve($value)
+          -&gt;then( sub { shift() / 2 } )
+          -&gt;then( sub { shift() + 6 } )
+          -&gt;then( sub { shift() / 2 } )
+          -&gt;catch( sub { warn shift } );
+    }
+
+- An update for parameter --break-at-old-method-breakpoints, or -bom,
+has been made to insure that it only applies to lines beginning with
+method calls, as intended.  Line breaks for all lines beginning with
+'-&gt;', even non-method calls, can be retained by using
+--keep-old-breakpoints_before='-&gt;'.
+
+- Added parameter --multiple-token-tightness=s, or -mutt=s.
+The default value --paren-tightness=1 adds space within the parens
+if, and only if, the container holds multiple tokens.  Some perltidy
+tokens may be rather long, and it can be preferable to also space some of
+them as if they were multple tokens.  This can be done with this paramter,
+and it applies to parens as well as square brackets and curly braces.
+For example, the default below has no space within the square brackets:
+
+    # perltidy
+    my $rlist = [qw( alpha beta gamma )];
+
+Spaces can be obtained with:
+
+    # perltidy -mutt='q*'
+    my $rlist = [ qw( alpha beta gamma ) ];
+
+The parameter -mutt='q*' means treat qw and similar quote operators as
+multiple tokens.  The manual has details; git #120 has another example.
+
+- Added parameter --indent-leading-semicolon, -ils; see git #171. When
 this is negated, a line with a leading semicolon does not get the extra
 leading continuation indentation spaces (defined with -ci=n).
 
@@ -11,6 +67,14 @@ example, a space is now added before the closing paren here:
 
    OLD: (without the here doc):
    push( @script, &lt;&lt;'EOT');
+
+   NEW:
+   push( @script, &lt;&lt;'EOT' );
+
+Also, any spaces between the '&lt;&lt;' and here target are removed (git #174):
+
+   OLD:
+   push( @script, &lt;&lt;  'EOT');
 
    NEW:
    push( @script, &lt;&lt;'EOT' );
@@ -1691,7 +1755,7 @@ signatures.  Reformatting with the current version will fix the problem.
 
 <h2>2019 06 01</h2>
 
-<pre><code>- rt #128477: Prevent inconsistent owner/group and setuid/setgid bits. 
+<pre><code>- rt #128477: Prevent inconsistent owner/group and setuid/setgid bits.
   In the -b (--backup-and-modify-in-place) mode, an attempt is made to set ownership
   of the output file equal to the input file, if they differ.
   In all cases, if the final output file ownership differs from input file, any setuid/setgid bits are cleared.

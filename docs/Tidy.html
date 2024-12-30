@@ -45,7 +45,7 @@
         errorfile         =&gt; $errorfile,
         teefile           =&gt; $teefile,
         debugfile         =&gt; $debugfile,
-        formatter         =&gt; $formatter,           # callback object (see below)
+        formatter         =&gt; $formatter,    # callback object (see below)
         dump_options      =&gt; $dump_options,
         dump_options_type =&gt; $dump_options_type,
         prefilter         =&gt; $prefilter_coderef,
@@ -65,17 +65,17 @@
 
 <p>The module accepts input and output streams by a variety of methods. The following list of parameters may be any of the following: a filename, an ARRAY reference, a SCALAR reference, or an object with either a <b>getline</b> or <b>print</b> method, as appropriate.</p>
 
-<pre><code>        source            - the source of the script to be formatted
-        destination       - the destination of the formatted output
-        stderr            - standard error output
-        perltidyrc        - the .perltidyrc file
-        logfile           - the .LOG file stream, if any
-        errorfile         - the .ERR file stream, if any
-        dump_options      - ref to a hash to receive parameters (see below),
-        dump_options_type - controls contents of dump_options
-        dump_getopt_flags - ref to a hash to receive Getopt flags
-        dump_options_category - ref to a hash giving category of options
-        dump_abbreviations    - ref to a hash giving all abbreviations</code></pre>
+<pre><code>    source            - the source of the script to be formatted
+    destination       - the destination of the formatted output
+    stderr            - standard error output
+    perltidyrc        - the .perltidyrc file
+    logfile           - the .LOG file stream, if any
+    errorfile         - the .ERR file stream, if any
+    dump_options      - ref to a hash to receive parameters (see below),
+    dump_options_type - controls contents of dump_options
+    dump_getopt_flags - ref to a hash to receive Getopt flags
+    dump_options_category - ref to a hash giving category of options
+    dump_abbreviations    - ref to a hash giving all abbreviations</code></pre>
 
 <p>The following chart illustrates the logic used to decide how to treat a parameter.</p>
 
@@ -271,8 +271,8 @@
       source      =&gt; \$source_string,
       destination =&gt; \$dest_string,
       stderr      =&gt; \$stderr_string,
-      errorfile   =&gt; \$errorfile_string,    # ignored when -se flag is set
-      ##phasers   =&gt; &#39;stun&#39;,                # uncomment to trigger an error
+      errorfile   =&gt; \$errorfile_string,  # ignored when -se flag is set
+      ##phasers   =&gt; &#39;stun&#39;,              # uncomment to trigger an error
   );
 
   if ($error) {
@@ -399,7 +399,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents Perl::Tidy version 20240903.07</p>
+<p>This man page documents Perl::Tidy version 20240903.09</p>
 
 <h1 id="LICENSE">LICENSE</h1>
 

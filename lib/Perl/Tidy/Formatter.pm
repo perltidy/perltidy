@@ -76,7 +76,7 @@ use constant BACKSLASH    => q{\\};
 use Carp;
 use English    qw( -no_match_vars );
 use List::Util qw( min max first );    # min, max first are in Perl 5.8
-our $VERSION = '20240903.08';
+our $VERSION = '20240903.09';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -8860,9 +8860,9 @@ sub dump_unique_keys {
     }; ## end $add_known_keys = sub
 
     # Add keys which may be unique to this environment.
-    $add_known_keys->( \%SIG, '$SIG' );
-    $add_known_keys->( \%ENV, '$ENV' );
-    $add_known_keys->( \%!,   '$!' );
+    $add_known_keys->( \%SIG,   '$SIG' );
+    $add_known_keys->( \%ENV,   '$ENV' );
+    $add_known_keys->( \%ERRNO, '$!' );
 
     my $is_known_hash = sub {
         my ($key) = @_;

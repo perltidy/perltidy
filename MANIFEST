@@ -17,6 +17,7 @@ docs/tutorial.html
 examples/bbtidy.pl
 examples/break_long_quotes.pl
 examples/delete_ending_blank_lines.pl
+examples/dump_unique_keys.pl
 examples/ex_mp.pl
 examples/filter_example.in
 examples/filter_example.pl

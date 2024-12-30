@@ -5,7 +5,7 @@ use File::Temp qw{ tempfile };
 
 # Run perltidy --dump-unique-keys on multiple files, and
 # show hash keys which just appear in one file.
-# Requires Perl::Tidy version 20240903.08 or higher
+# Requires Perl::Tidy version 20240903.09 or higher
 
 main();
 
