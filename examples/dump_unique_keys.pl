@@ -7,6 +7,16 @@ use File::Temp qw{ tempfile };
 # show hash keys which just appear in one file.
 # Requires Perl::Tidy version 20240903.09 or higher
 
+# The latest version of this file should be at:
+# https://github.com/perltidy/perltidy/blob/master/examples/dump_unique_keys.pl
+
+my ( $fh_tmp, $tmpfile );
+END {
+    if ( defined($tmpfile) && -e $tmpfile ) {
+        unlink($tmpfile) or warn "Could not unlink $tmpfile: $!";
+    }
+}
+
 main();
 
 sub main {
@@ -33,7 +43,7 @@ EOM
         if ( !-e $file ) { die "file '$file' not found\n" }
     }
 
-    my ( $fh_tmp, $tmpfile ) = tempfile();
+    ( $fh_tmp, $tmpfile ) = tempfile();
     if ( !$fh_tmp ) {
         die "unable to open temporary file $tmpfile\n";
     }
@@ -82,11 +92,6 @@ EOM
 
     print {*STDOUT} $output_string;
 
-    END {
-        if ( defined($tmpfile) && -e $tmpfile ) {
-            unlink($tmpfile) or warn "Could not unlink $tmpfile: $!";
-        }
-    }
 } ## end sub main
 
 sub read_MANIFEST {
