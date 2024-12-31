@@ -5,6 +5,9 @@ use Perl::Tidy;
 use File::Copy;
 use File::Temp qw(tempfile);
 use English;
+
+use constant EMPTY_STRING => q{};
+use constant SPACE        => q{ };
 $| = 1;
 
 # a script to help make a new version of perltidy
@@ -45,7 +48,8 @@ my $fh_log;
 # These are the main steps, in approximate order, for making a new version
 # Note: Since perl critic is in the .tidyallrc, a separate 'PC' step is not
 # needed
-my $rsteps = [qw( CHK CONV TOK V CY PC TIDY T CL DOCS MANIFEST DIST)];
+my $rsteps =
+  [qw( CHK CONV TOK SCAN MAN V YEAR PC TIDY T CL DOCS MANIFEST DIST )];
 
 my $rstatus = {};
 foreach my $step ( @{$rsteps} ) { $rstatus->{$step} = 'TBD' }
@@ -56,8 +60,10 @@ my $rcode = {
           unless $rstatus->{CHK} eq 'OK';
         $rstatus->{CHK} = 'OK';
     },
+    'SCAN'     => \&scan_for_bad_characters,
+    'MAN'      => \&check_man_pages,
     'V'        => \&update_version_number,
-    'CY'       => \&update_copyright_date,
+    'YEAR'     => \&update_copyright_date,
     'PC'       => \&run_perl_critic,
     'TIDY'     => \&run_tidyall,
     'CONV'     => \&run_convergence_tests,
@@ -84,8 +90,10 @@ Perltidy Build Main Menu - Case Insensitive
 -------------------------------------------
 
 chk      - view release CHecKlist          status: $rstatus->{'CHK'}
+scan     - scan for bad characters         status: $rstatus->{'SCAN'}
+man      - check man pages                 status: $rstatus->{'MAN'}
 v        - check/update Version Number     status: $rstatus->{'V'}
-cy       - check/update Copyright Year     status: $rstatus->{'CY'}
+year     - check/update copyright Year     status: $rstatus->{'YEAR'}
 tidy     - run tidyall (tidy & critic)     status: $rstatus->{'TIDY'}
 pc       - run PerlCritic (critic only)    status: $rstatus->{'PC'}
 conv     - run convergence tests           status: $rstatus->{'CONV'}
@@ -349,6 +357,12 @@ sub make_dist {
         make_zip($tar_gz_file);
     }
 
+    query(<<EOM);
+Remember to do a test install on perl-5.8.1:
+  perlbrew
+  use perl-5.8.1
+EOM
+
     if (
         ifyes(
             "run cpants_lint.pl to check $tar_gz_file? [Y/N], <cr>='Y'", "Y"
@@ -392,6 +406,126 @@ sub make_zip {
     return;
 } ## end sub make_zip
 
+sub get_modules {
+
+    # TODO: these could be obtained from MANIFEST
+    my @modules = qw(
+      lib/Perl/Tidy.pm
+      lib/Perl/Tidy/Debugger.pm
+      lib/Perl/Tidy/Diagnostics.pm
+      lib/Perl/Tidy/FileWriter.pm
+      lib/Perl/Tidy/Formatter.pm
+      lib/Perl/Tidy/HtmlWriter.pm
+      lib/Perl/Tidy/IOScalar.pm
+      lib/Perl/Tidy/IOScalarArray.pm
+      lib/Perl/Tidy/IndentationItem.pm
+      lib/Perl/Tidy/Logger.pm
+      lib/Perl/Tidy/Tokenizer.pm
+      lib/Perl/Tidy/VerticalAligner.pm
+      lib/Perl/Tidy/VerticalAligner/Alignment.pm
+      lib/Perl/Tidy/VerticalAligner/Line.pm
+    );
+    return \@modules;
+} ## end sub get_modules
+
+sub scan_for_bad_characters {
+
+    $rstatus->{'SCAN'} = 'TBD';
+    my $rmodules = get_modules();
+    my $saw_pod  = scan_for_pod($rmodules);
+    return if ($saw_pod);
+
+    my $errors = EMPTY_STRING;
+    my $saw_tabs_or_spaces;
+    foreach my $file ( @{$rmodules} ) {
+        my $string = slurp_to_string($file);
+
+        # Non-ascii characters in perltidy modules slows down formatting
+        if ( $string =~ /[^[:ascii:]]/ ) {
+            $errors .= "$file has non-ascii characters\n";
+        }
+
+        # Tabs and line-ending spaces are sometimes left by an editor. Usually
+        # formatting removes them, but not if they are in some kind of quoted
+        # text.
+        if ( $string =~ /\t/ ) {
+            $errors .= "$file has tab character(s)\n";
+            $saw_tabs_or_spaces++;
+        }
+        if ( $string =~ /([^\s]) $/m ) {
+            $errors .= "$file has line-ending space(s)\n";
+            $saw_tabs_or_spaces++;
+        }
+    }
+    if ($errors) {
+        print $errors;
+        if ($saw_tabs_or_spaces) {
+            print <<'EOM';
+Note: One way to locate tabs and ending spaces in File.pm is
+    grep -P '\t' File.pm
+    grep -P '\s$' File.pm
+EOM
+        }
+        query("hit <cr>\n");
+
+        return;
+    }
+
+    $rstatus->{'SCAN'} = 'OK';
+    query("Scan OK, hit <cr>\n");
+    return;
+} ## end sub scan_for_bad_characters
+
+sub check_man_page_width {
+    my ($file) = @_;
+
+    # Show man pages wider than 80 characters. Sometimes this is unavoidable,
+    # such as when illustrating a side comment > 80 chars, but these should
+    # be kept to a minimum.
+    return if ( !defined($file) || !-e $file );
+
+    my ( $fh1, $tmpfile1 ) = File::Temp::tempfile();
+    my $cmd1 = "pod2man $file >$tmpfile1";
+    system_echo($cmd1);
+    $fh1->close();
+    my ( $fh2, $tmpfile2 ) = File::Temp::tempfile();
+    my $cmd2 = "MANWIDTH=80; export MANWIDTH; man $tmpfile1 >$tmpfile2";
+    system_echo($cmd2);
+    $fh2->close();
+    my $string = slurp_to_string($tmpfile2);
+    my @lines  = split /^/, $string;
+    my $long_lines;
+    my $count = 0;
+
+    foreach my $line (@lines) {
+        $line =~ s/\s+$//;
+        next if ( length($line) <= 80 );
+        $count++;
+        if ( $count <= 8 ) { $long_lines .= $line . "\n" }
+    }
+    if ($count) {
+        print "File '$file' has $count lines >80 chars:\n";
+        print $long_lines;
+    }
+    if ( -e $tmpfile1 ) { unlink($tmpfile1) }
+    if ( -e $tmpfile2 ) { unlink($tmpfile2) }
+    return;
+} ## end sub check_man_page_width
+
+sub check_man_pages {
+
+    $rstatus->{'MAN'} = 'TBD';
+    my $man1 = "bin/perltidy";
+    my $man3 = "lib/Perl/Tidy.pod";
+    foreach my $file ( $man1, $man3 ) {
+        print "Checking $file..\n";
+        check_man_page_width($file);
+    }
+    query("Man page scan complete, hit <cr>\n");
+    $rstatus->{'MAN'} = 'OK';
+    return;
+} ## end sub check_man_pages
+
 sub update_version_number {
 
     my $reported_VERSION = $Perl::Tidy::VERSION;
@@ -423,7 +557,7 @@ sub update_version_number {
         push @sources, $lib_path . $module;
     }
 
-    my $saw_pod = scan_for_pod(@sources);
+    my $saw_pod = scan_for_pod( \@sources );
     return if ($saw_pod);
 
     # I have removed this one; it was useful in development
@@ -547,13 +681,14 @@ sub update_copyright_date {
     # bin/perltidy: 1 spot
     # lib/Perl/Tidy.pm: 2 places
 
-    $rstatus->{'CY'} = 'TBD';
+    $rstatus->{'YEAR'} = 'TBD';
     my $reported_VERSION = $Perl::Tidy::VERSION;
     my $reported_year    = substr( $reported_VERSION, 0, 4 );
     if ( !$reported_year || $reported_year !~ /\d\d\d\d/ ) {
         query("Cannot find reported year in $reported_VERSION\n");
         return;
     }
+
     my $file_Tidy     = "lib/Perl/" . "Tidy.pm";
     my $file_perltidy = "bin/perltidy";
     foreach my $source_file ( $file_perltidy, $file_Tidy ) {
@@ -562,7 +697,13 @@ sub update_copyright_date {
         $string =~
 s/2000-(\d\d\d\d) by Steve Hancock/2000-$reported_year by Steve Hancock/g;
         if ( $string ne $old_string ) {
-            print "Copyright year needs to be updated in $source_file\n";
+            my $diff_msg = compare_string_buffers( \$old_string, \$string );
+            print <<EOM;
+===================================================
+Copyright year needs to be updated in $source_file:
+$diff_msg
+===================================================
+EOM
             if ( ifyes("OK. Continue and make this change? [Y/N]") ) {
                 my $tmpfile = $source_file . ".tmp";
                 spew_string_to_file( $string, $tmpfile );
@@ -570,22 +711,25 @@ s/2000-(\d\d\d\d) by Steve Hancock/2000-$reported_year by Steve Hancock/g;
                   ( stat $source_file )[2] & oct(7777);
                 if ($input_file_permissions) {
 
-                    # give output script same permissions as input script, but
+                    # give output file same permissions as input file, but
                     # be sure it is user-writable
                     chmod( $input_file_permissions | oct(600), $tmpfile );
                 }
-
-                # Now show diffs and move file if okay
-                # Move original file to /tmp, then
-                query("wrote to $tmpfile, please check then move <cr>\n");
-###             rename( $tmpfile, $source_file )
-###               or query("problem renaming $tmpfile to $source_file:  $!\n");
-                $rstatus->{'CY'} = 'OK';
+                my $backup_file = $source_file . ".bak";
+                File::Copy::copy( $source_file, $backup_file )
+                  or die(
+                    "File::Copy failed trying to backup $source_file: $OS_ERROR"
+                  );
+                rename( $tmpfile, $source_file )
+                  or die("problem renaming $tmpfile to $source_file:  $!\n");
+                print
+"Moved $source_file to $backup_file and updated $source_file\n";
+                $rstatus->{'YEAR'} = 'OK';
             }
         }
         else {
             print "Copyright years are up to date in $source_file\n";
-            $rstatus->{'CY'} = 'OK';
+            $rstatus->{'YEAR'} = 'OK';
         }
     }
     query("hit <cr> to continue\n");
@@ -661,6 +805,160 @@ sub ifyes {
         goto ASK;
     }
 } ## end sub ifyes
+
+sub line_diff {
+
+    my ( $s1, $s2 ) = @_;
+
+    # Given two strings, Return
+    #  $diff_marker = a string with caret (^) symbols indicating differences
+    #  $pos1 = character position of first difference; pos1=-1 if no difference
+
+    # Form exclusive or of the strings, which has null characters where strings
+    # have same common characters so non-null characters indicate character
+    # differences.
+    my $diff_marker = EMPTY_STRING;
+    my $pos         = -1;
+    my $pos1        = -1;
+    if ( defined($s1) && defined($s2) ) {
+        my $mask = $s1 ^ $s2;
+
+        while ( $mask =~ /[^\0]/g ) {
+            my $pos_last = $pos;
+            $pos = $LAST_MATCH_START[0];
+            if ( $pos1 < 0 ) { $pos1 = $pos; }
+            $diff_marker .= SPACE x ( $pos - $pos_last - 1 ) . '^';
+
+            # we could continue to mark all differences, but there is no point
+            last;
+        } ## end while ( $mask =~ /[^\0]/g)
+    }
+    return ( $diff_marker, $pos1 );
+} ## end sub line_diff
+
+sub compare_string_buffers {
+
+    my ( $rbufi, $rbufo ) = @_;
+
+    # Compare input and output string buffers and return a brief text
+    # description of the first difference.
+    my ( @aryi, @aryo );
+    my ( $leni, $leno ) = ( 0, 0 );
+    if ( defined($rbufi) ) {
+        $leni = length( ${$rbufi} );
+        @aryi = split /^/, ${$rbufi};
+    }
+    if ( defined($rbufo) ) {
+        $leno = length( ${$rbufo} );
+        @aryo = split /^/, ${$rbufo};
+    }
+    my $nlines_i = @aryi;
+    my $nlines_o = @aryo;
+    my $msg      = <<EOM;
+Input   file length has $leni chars in $nlines_i lines
+Output  file length has $leno chars in $nlines_o lines
+EOM
+    return $msg unless ( $leni && $leno );
+
+    my $truncate = sub {
+        my ( $str, $lenmax ) = @_;
+        if ( length($str) > $lenmax ) {
+            $str = substr( $str, 0, $lenmax ) . "...";
+        }
+        return $str;
+    }; ## end $truncate = sub
+
+    my $last_nonblank_line  = EMPTY_STRING;
+    my $last_nonblank_count = 0;
+
+    # loop over lines until we find a difference
+    my $count = 0;
+    while ( @aryi && @aryo ) {
+        $count++;
+        my $linei = shift @aryi;
+        my $lineo = shift @aryo;
+        chomp $linei;
+        chomp $lineo;
+        if ( $linei eq $lineo ) {
+            if ( length($linei) ) {
+                $last_nonblank_line  = $linei;
+                $last_nonblank_count = $count;
+            }
+            next;
+        }
+
+        #---------------------------
+        # lines differ ... finish up
+        #---------------------------
+        my ( $line_diff, $pos1 ) = line_diff( $linei, $lineo );
+        my $ch1    = $pos1 + 1;
+        my $reason = "Files first differ at character $ch1 of line $count";
+
+        my ( $leading_ws_i, $leading_ws_o ) = ( EMPTY_STRING, EMPTY_STRING );
+        if ( $linei =~ /^(\s+)/ ) { $leading_ws_i = $1; }
+        if ( $lineo =~ /^(\s+)/ ) { $leading_ws_o = $1; }
+        if ( $leading_ws_i ne $leading_ws_o ) {
+            $reason .= "; leading whitespace differs";
+            if ( $leading_ws_i =~ /\t/ ) {
+                $reason .= "; input has tab char";
+            }
+        }
+        else {
+            my ( $trailing_ws_i, $trailing_ws_o ) =
+              ( EMPTY_STRING, EMPTY_STRING );
+            if ( $linei =~ /(\s+)$/ ) { $trailing_ws_i = $1; }
+            if ( $lineo =~ /(\s+)$/ ) { $trailing_ws_o = $1; }
+            if ( $trailing_ws_i ne $trailing_ws_o ) {
+                $reason .= "; trailing whitespace differs";
+            }
+        }
+        $msg .= $reason . "\n";
+
+        # limit string display length
+        if ( $pos1 > 60 ) {
+            my $drop = $pos1 - 40;
+            $linei     = "..." . substr( $linei, $drop );
+            $lineo     = "..." . substr( $lineo, $drop );
+            $line_diff = SPACE x 3 . substr( $line_diff, $drop );
+        }
+        $linei              = $truncate->( $linei,              72 );
+        $lineo              = $truncate->( $lineo,              72 );
+        $last_nonblank_line = $truncate->( $last_nonblank_line, 72 );
+
+        if ($last_nonblank_line) {
+            $msg .= <<EOM;
+ $last_nonblank_count:$last_nonblank_line
+EOM
+        }
+        $line_diff = SPACE x ( 2 + length($count) ) . $line_diff;
+        $msg .= <<EOM;
+<$count:$linei
+>$count:$lineo
+$line_diff
+EOM
+        return $msg;
+    } ## end while ( @aryi && @aryo )
+
+    #------------------------------------------------------
+    # no differences found, see if one file has fewer lines
+    #------------------------------------------------------
+    if ( $nlines_i > $nlines_o ) {
+        $msg .= <<EOM;
+Files initially match file but output file has fewer lines
+EOM
+    }
+    elsif ( $nlines_i < $nlines_o ) {
+        $msg .= <<EOM;
+Files initially match file but input file has fewer lines
+EOM
+    }
+    else {
+        $msg .= <<EOM;
+Text in lines of file match but checksums differ. Perhaps line endings differ.
+EOM
+    }
+    return $msg;
+} ## end sub compare_string_buffers
 
 sub update_all_sources {
     my ( $new_VERSION, @sources ) = @_;
@@ -740,7 +1038,9 @@ sub scan_for_pod {
     # code. Mixing pod for debugging and pod for documentation would be
     # confusing.  Any pod markers left in a .pm file are probably leftovers
     # from debugging and need to be removed.
-    my (@sources) = @_;
+
+    my ($rsources) = @_;
+    my (@sources)  = @{$rsources};
 
     foreach my $source_file (@sources) {
 
