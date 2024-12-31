@@ -34,6 +34,8 @@ EOM
         if ( -e $MANIFEST && -f $MANIFEST ) {
             my $rfiles = read_MANIFEST($MANIFEST);
             @files = @{$rfiles};
+            my $num=@files;
+            print STDERR "Reading $MANIFEST...found $num files\n";
         }
     }
 
@@ -48,13 +50,17 @@ EOM
         die "unable to open temporary file $tmpfile\n";
     }
 
-    # Loop to run perltidy -duk on each file
+    # Loop to run perltidy -duk on each file: 
+    # - capture standard output to a file for further processing
+    # - any error messages go to the standard error output
     my %seen;
+    my $saw_error;
     foreach my $file (@files) {
         next if ( $seen{$file}++ );
-        my $cmd = "perltidy -npro -duk $file >>$tmpfile";
+        next if (!-e $file || -z $file );
+        my $cmd = "perltidy -npro -duk $file >>$tmpfile -se";
         my $err = system($cmd);
-        if ($err) { die "perltidy return error $err\n" }
+        if ($err) { $saw_error++; warn "perltidy returned error for '$file'\n" }
     }
 
     my $fh;
@@ -62,6 +68,7 @@ EOM
         die "cannot open my temp file '$tmpfile': $!\n";
     }
 
+    # read the captured output and find duplicate words
     my %word_count;
     my @lines;
     foreach my $line (<$fh>) {
@@ -79,17 +86,30 @@ EOM
     }
     $fh->close();
 
+    # remove duplicate words
     my @dups = grep { $word_count{$_} > 1 } keys %word_count;
     my %is_dup;
     @is_dup{@dups} = (1) x scalar(@dups);
 
-    my $output_string = "";
+    my $last_word = "START";
+    my @new_lines;
     foreach my $item (@lines) {
         my ( $line, $word ) = @{$item};
-        next if ( defined($word) && $is_dup{$word} );
-        $output_string .= $line;
+        if ( defined($word) ) {
+
+            # line with word: skip duplicate words
+            next if ( $is_dup{$word} );
+        }
+        else {
+
+            # line with filename: remove previous line if it also was a filename
+            if ( !defined($last_word) ) { pop @new_lines }
+        }
+        $last_word = $word;
+        push @new_lines, $line;
     }
 
+    my $output_string .= join "", @new_lines;
     print {*STDOUT} $output_string;
 
 } ## end sub main
