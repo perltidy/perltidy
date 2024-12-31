@@ -4,6 +4,7 @@ use warnings;
 use Perl::Tidy;
 use File::Copy;
 use File::Temp qw(tempfile);
+use English;
 $| = 1;
 
 # a script to help make a new version of perltidy
@@ -44,7 +45,7 @@ my $fh_log;
 # These are the main steps, in approximate order, for making a new version
 # Note: Since perl critic is in the .tidyallrc, a separate 'PC' step is not
 # needed
-my $rsteps = [qw( CHK CONV TOK V PC TIDY T CL DOCS MANIFEST DIST)];
+my $rsteps = [qw( CHK CONV TOK V CY PC TIDY T CL DOCS MANIFEST DIST)];
 
 my $rstatus = {};
 foreach my $step ( @{$rsteps} ) { $rstatus->{$step} = 'TBD' }
@@ -56,6 +57,7 @@ my $rcode = {
         $rstatus->{CHK} = 'OK';
     },
     'V'        => \&update_version_number,
+    'CY'       => \&update_copyright_date,
     'PC'       => \&run_perl_critic,
     'TIDY'     => \&run_tidyall,
     'CONV'     => \&run_convergence_tests,
@@ -83,6 +85,7 @@ Perltidy Build Main Menu - Case Insensitive
 
 chk      - view release CHecKlist          status: $rstatus->{'CHK'}
 v        - check/update Version Number     status: $rstatus->{'V'}
+cy       - check/update Copyright Year     status: $rstatus->{'CY'}
 tidy     - run tidyall (tidy & critic)     status: $rstatus->{'TIDY'}
 pc       - run PerlCritic (critic only)    status: $rstatus->{'PC'}
 conv     - run convergence tests           status: $rstatus->{'CONV'}
@@ -105,9 +108,12 @@ EOM
         elsif ( $ans eq 'Q' || $ans eq 'X' ) {
             return;
         }
-    }
+        else {
+            ## unknown response
+        }
+    } ## end while (1)
     return;
-}
+} ## end sub main
 
 sub post_result {
     my ($fout) = @_;
@@ -124,7 +130,7 @@ sub post_result {
     openurl("$fout");
     hitcr();
     return;
-}
+} ## end sub post_result
 
 sub run_tidyall {
     my $fout = "tmp/tidyall.out";
@@ -156,7 +162,7 @@ sub run_tidyall {
     }
     openurl("$fout");
     return;
-}
+} ## end sub run_tidyall
 
 sub run_convergence_tests {
     my $fout = "tmp/run_convergence_tests.out";
@@ -183,7 +189,7 @@ sub run_convergence_tests {
     }
     openurl("$fout");
     return;
-}
+} ## end sub run_convergence_tests
 
 sub run_tokenizer_tests {
     my $fout = "tmp/run_tokenizer_tests.out";
@@ -210,7 +216,7 @@ sub run_tokenizer_tests {
     }
     openurl("$fout");
     return;
-}
+} ## end sub run_tokenizer_tests
 
 sub run_perl_critic {
     my $pcoutput = "tmp/perlcritic.out";
@@ -236,7 +242,7 @@ sub run_perl_critic {
     }
     openurl("$pcoutput");
     return;
-}
+} ## end sub run_perl_critic
 
 sub make_tests {
 
@@ -249,7 +255,7 @@ sub make_tests {
     $rstatus->{'T'} = $result =~ 'Result: PASS' ? 'OK' : 'TBD';
     hitcr();
     return $rstatus->{'T'};
-}
+} ## end sub make_tests
 
 sub make_docs {
 
@@ -265,8 +271,8 @@ sub make_docs {
         )
       )
     {
-        my $errfile = "tmp/podchecker.err";
-        my $result  = sys_command("podchecker $file 2>$errfile");
+        my $errfile   = "tmp/podchecker.err";
+        my $result_uu = sys_command("podchecker $file 2>$errfile");
 
         #if ( $result) {
         my $fh;
@@ -297,17 +303,17 @@ sub make_docs {
     $rstatus->{'DOCS'} = $status;
     hitcr();
     return;
-}
+} ## end sub make_docs
 
 sub make_manifest {
 
-    my $fout   = "tmp/manifest.out";
-    my $result = sys_command("make manifest >$fout 2>$fout");
-    my $status = "OK";
+    my $fout      = "tmp/manifest.out";
+    my $result_uu = sys_command("make manifest >$fout 2>$fout");
+    my $status    = "OK";
     $rstatus->{'MANIFEST'} = $status;
     post_result($fout);
     return;
-}
+} ## end sub make_manifest
 
 sub make_dist {
     my $result;
@@ -350,13 +356,13 @@ sub make_dist {
       )
     {
         my $fout = "tmp/cpants_lint.out";
-        if ( -e $fout ) { unlink $fout }
+        if ( -e $fout ) { unlink($fout) }
         my $cmd = "cpants_lint.pl $tar_gz_file >$fout 2>$fout";
         system_echo($cmd);
         post_result($fout);
     }
     return;
-}
+} ## end sub make_dist
 
 sub make_zip {
 
@@ -384,7 +390,7 @@ sub make_zip {
     # move it
     $result = sys_command("mv /tmp/$zip_name .");
     return;
-}
+} ## end sub make_zip
 
 sub update_version_number {
 
@@ -426,7 +432,7 @@ sub update_version_number {
   RETRY:
     print <<EOM;
 
-A Release VERSION is an integer, the approximate YYMMDD of the release.
+A Release VERSION is an integer, the approximate YYYYMMDD of the release.
 A Development VERSION is (Last Release).(Development Number)
 
 The Development Number is a 2 digit number starting at 01 after a release is
@@ -478,9 +484,12 @@ EOM
     elsif ( $ans eq 'Q' || $ans eq 'X' ) {
         return;
     }
+    else {
+        ## unknown response
+    }
     goto RETRY if ( ifyes("?? I didn't get that, try again? [Y/N]") );
     return;
-}
+} ## end sub update_version_number
 
 sub get_new_development_version {
     my ($reported_VERSION) = @_;
@@ -514,7 +523,7 @@ sub get_new_development_version {
 
     $new_VERSION = join '.', @parts;
     return $new_VERSION;
-}
+} ## end sub get_new_development_version
 
 sub get_new_release_version {
     my ($reported_VERSION) = @_;
@@ -530,7 +539,89 @@ sub get_new_release_version {
         $new_VERSION = query("Enter release VERSION:");
     }
     return $new_VERSION;
-}
+} ## end sub get_new_release_version
+
+sub update_copyright_date {
+
+    # check/update copyright date in
+    # bin/perltidy: 1 spot
+    # lib/Perl/Tidy.pm: 2 places
+
+    $rstatus->{'CY'} = 'TBD';
+    my $reported_VERSION = $Perl::Tidy::VERSION;
+    my $reported_year    = substr( $reported_VERSION, 0, 4 );
+    if ( !$reported_year || $reported_year !~ /\d\d\d\d/ ) {
+        query("Cannot find reported year in $reported_VERSION\n");
+        return;
+    }
+    my $file_Tidy     = "lib/Perl/" . "Tidy.pm";
+    my $file_perltidy = "bin/perltidy";
+    foreach my $source_file ( $file_perltidy, $file_Tidy ) {
+        my $string     = slurp_to_string($source_file);
+        my $old_string = $string;
+        $string =~
+s/2000-(\d\d\d\d) by Steve Hancock/2000-$reported_year by Steve Hancock/g;
+        if ( $string ne $old_string ) {
+            print "Copyright year needs to be updated in $source_file\n";
+            if ( ifyes("OK. Continue and make this change? [Y/N]") ) {
+                my $tmpfile = $source_file . ".tmp";
+                spew_string_to_file( $string, $tmpfile );
+                my $input_file_permissions =
+                  ( stat $source_file )[2] & oct(7777);
+                if ($input_file_permissions) {
+
+                    # give output script same permissions as input script, but
+                    # be sure it is user-writable
+                    chmod( $input_file_permissions | oct(600), $tmpfile );
+                }
+
+                # Now show diffs and move file if okay
+                # Move original file to /tmp, then
+                query("wrote to $tmpfile, please check then move <cr>\n");
+###             rename( $tmpfile, $source_file )
+###               or query("problem renaming $tmpfile to $source_file:  $!\n");
+                $rstatus->{'CY'} = 'OK';
+            }
+        }
+        else {
+            print "Copyright years are up to date in $source_file\n";
+            $rstatus->{'CY'} = 'OK';
+        }
+    }
+    query("hit <cr> to continue\n");
+    return;
+} ## end sub update_copyright_date
+
+sub slurp_to_string {
+    my ($filename) = @_;
+    my $buf;
+    if ( open( my $fh, '<', $filename ) ) {
+        local $INPUT_RECORD_SEPARATOR = undef;
+        $buf = <$fh>;
+        $fh->close() or Warn("Cannot close $filename\n");
+    }
+    else {
+        Warn("Cannot open $filename: $OS_ERROR\n");
+        return;
+    }
+    return $buf;
+} ## end sub slurp_to_string
+
+sub spew_string_to_file {
+
+    my ( $string, $fname ) = @_;
+
+    # write to a temporary
+    my $ftmp;
+    if ( !open( $ftmp, '>', $fname ) ) {
+        query("cannot open $fname: $!\n");
+        return;
+    }
+    if ( !$ftmp ) { query("Could not get a temporary file"); return }
+    $ftmp->print($string);
+    $ftmp->close();
+    return;
+} ## end sub spew_string_to_file
 
 sub query {
     my ($msg) = @_;
@@ -538,23 +629,23 @@ sub query {
     my $ans = <STDIN>;
     chomp $ans;
     return $ans;
-}
+} ## end sub query
 
 sub queryu {
     return uc query(@_);
 }
 
 sub hitcr {
-    my ($msg) = @_;
+    my ( ($msg) ) = @_;
     if ($msg) { $msg .= " Hit <cr> to continue"; }
     else      { $msg = "Hit <cr> to continue" }
     query($msg);
-}
+} ## end sub hitcr
 
 sub ifyes {
 
     # Updated to have default, which should be "Y" or "N"
-    my ( $msg, $default ) = @_;
+    my ( $msg, ($default) ) = @_;
     my $count = 0;
   ASK:
     my $ans = query($msg);
@@ -569,7 +660,7 @@ sub ifyes {
         print STDERR "Please answer 'Y' or 'N'\n";
         goto ASK;
     }
-}
+} ## end sub ifyes
 
 sub update_all_sources {
     my ( $new_VERSION, @sources ) = @_;
@@ -610,7 +701,7 @@ EOM
         else {
             push @unchanged, $source_file;
         }
-    }
+    } ## end while ( my $source_file =...)
 
     local $" = ') (';
     print <<EOM;
@@ -640,7 +731,7 @@ EOM
         hitcr();
     }
     return 1;
-}
+} ## end sub update_all_sources
 
 sub scan_for_pod {
 
@@ -679,7 +770,7 @@ EOM
         if ($result) {
             push @files_with_pod, $source_file;
         }
-    }
+    } ## end while ( my $source_file =...)
 
     my $saw_pod = @files_with_pod;
     print <<EOM;
@@ -704,7 +795,7 @@ EOM
     }
 
     return $saw_pod;
-}
+} ## end sub scan_for_pod
 
 sub make_tag_script {
     my ( $new_VERSION, $runme ) = @_;
@@ -719,7 +810,7 @@ EOM
 
     close RUN;
     system("chmod 0755 $runme");
-}
+} ## end sub make_tag_script
 
 sub update_VERSION {
     my ( $new_VERSION, $source_file ) = @_;
@@ -793,6 +884,9 @@ EOM
                     $new_VERSION_line = "=head2 $spaced_new_VERSION";
                     $line             = $new_VERSION_line . "\n";
                 }
+                else {
+                    ## keep looking
+                }
             }
         }
 
@@ -830,14 +924,14 @@ EOM
             }
         }
         $ftmp->print($line);
-    }
+    } ## end while ( my $line = <$fh> )
 
     $ftmp->close();
 
     # Report results
     if ( !$old_VERSION_line ) {
         query("could not find old VERSION in file!");
-        unlink $tmpfile;
+        unlink($tmpfile);
         return;
     }
 
@@ -847,7 +941,7 @@ NEW line: $new_VERSION_line
 EOM
     if ( $old_VERSION_line eq $new_VERSION_line ) {
         query("OK. Lines are the same. Nothing to do here.");
-        unlink $tmpfile;
+        unlink($tmpfile);
         return;
     }
     if ( ifyes("OK. Continue and make this change? [Y/N]") ) {
@@ -863,9 +957,9 @@ EOM
         return $new_VERSION_line;
     }
 
-    unlink $tmpfile;
+    unlink($tmpfile);
     return;
-}
+} ## end sub update_VERSION
 
 sub openurl {
     my $url      = shift;
@@ -885,14 +979,14 @@ sub openurl {
         die
 "Cannot locate or failed to open default browser; please open '$url' manually.";
     }
-}
+} ## end sub openurl
 
 sub system_echo {
-    my ( $cmd, $quiet ) = @_;
+    my ( $cmd, ($quiet) ) = @_;
     print "$cmd\n" unless ($quiet);
     system $cmd;
     return;
-}
+} ## end sub system_echo
 
 sub sys_command {
     my $cmd = shift;
@@ -907,7 +1001,7 @@ sub sys_command {
     }
 
     return $result;
-}
+} ## end sub sys_command
 __END__
 
 OLD SCRIPT FOLLOWS, FOR REFERENCE
