@@ -1755,6 +1755,7 @@ sub find_starting_indentation_level {
         # ( or, for now, an =pod line)
         my $msg = EMPTY_STRING;
         my $in_code_skipping;
+        my $line_for_guess;
         while ( defined( $line = $self->peek_ahead( $i++ ) ) ) {
 
             # if first line is #! then assume starting level is zero
@@ -1765,6 +1766,10 @@ sub find_starting_indentation_level {
 
             # ignore lines fenced off with code-skipping comments
             if ( $line =~ /^\s*#/ ) {
+
+                # use first comment for indentation guess in case of no code
+                if ( !defined($line_for_guess) ) { $line_for_guess = $line }
+
                 if ( !$in_code_skipping ) {
                     if (   $rOpts_code_skipping
                         && $line =~ /$code_skipping_pattern_begin/ )
@@ -1790,9 +1795,15 @@ sub find_starting_indentation_level {
 
             next if ( $line =~ /^\s*$/ );    # skip past blank lines
 
-            $starting_level = $self->guess_old_indentation_level($line);
+            # use first line of code for indentation guess
+            $line_for_guess = $line;
             last;
         } ## end while ( defined( $line = ...))
+
+        if ( defined($line_for_guess) ) {
+            $starting_level =
+              $self->guess_old_indentation_level($line_for_guess);
+        }
         $msg = "Line $i implies starting-indentation-level = $starting_level\n";
         $self->write_logfile_entry("$msg");
     }

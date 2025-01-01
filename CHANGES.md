@@ -2,6 +2,12 @@
 
 ## 2024 09 03.09
 
+    - If a file consists only of comments, then the starting indentation will
+      be guessed from the indentation of the first comment. Previously it would
+      be guessed to be zero. Parameter --starting-indentation-level=n can be
+      used to specify an indentation and avoid a guess. This issue can
+      arise when formatting a block of comments from within an editor.
+
     - Added missing 'use File::Temp' for -html option. This was causing the
       message: "Undefined subroutine &File::Temp::tempfile called at ..."
       See git #176.
