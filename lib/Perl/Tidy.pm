@@ -3216,10 +3216,24 @@ sub line_diff {
 
 sub compare_string_buffers {
 
-    my ( $rbufi, $rbufo ) = @_;
+    my ( $string_i, $string_o, ($max_diff_count) ) = @_;
 
     # Compare input and output string buffers and return a brief text
     # description of the first difference.
+
+    # Given:
+    #   $string_i = input string, or ref to input string
+    #   $string_o = output string, or ref to output string
+    #   $max_diff_count = optional maximum number of differences to show,
+    #       default=1
+    # Return:
+    #   a string showing differences
+
+    my $rbufi = ref($string_i) ? $string_i : \$string_i;
+    my $rbufo = ref($string_o) ? $string_o : \$string_o;
+
+    if ( !defined($max_diff_count) ) { $max_diff_count = 1 }
+
     my ( @aryi, @aryo );
     my ( $leni, $leno ) = ( 0, 0 );
     if ( defined($rbufi) ) {
@@ -3250,7 +3264,8 @@ EOM
     my $last_nonblank_count = 0;
 
     # loop over lines until we find a difference
-    my $count = 0;
+    my $count      = 0;
+    my $diff_count = 0;
     while ( @aryi && @aryo ) {
         $count++;
         my $linei = shift @aryi;
@@ -3314,8 +3329,11 @@ EOM
 >$count:$lineo
 $line_diff
 EOM
-        return $msg;
+        $diff_count++;
+        last if ( $diff_count >= $max_diff_count );
     } ## end while ( @aryi && @aryo )
+
+    if ($diff_count) { return $msg }
 
     #------------------------------------------------------
     # no differences found, see if one file has fewer lines
@@ -6160,7 +6178,7 @@ sub show_version {
     print {*STDOUT} <<"EOM";
 This is perltidy, v$VERSION
 
-Copyright 2000-2024, Steve Hancock
+Copyright 2000-2024 by Steve Hancock
 
 Perltidy is free software and may be copied under the terms of the GNU
 General Public License, which is included in the distribution files.
