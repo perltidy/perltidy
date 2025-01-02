@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2024 09 03.09
+## 2025 01 05
 
     - If a file consists only of comments, then the starting indentation will
       be guessed from the indentation of the first comment. Previously it would
@@ -18,7 +18,7 @@
 
          perltidy -duk File.pm >output.txt
 
-      The purpose is to help locate misspelled hash keys.
+      This can help locate misspelled hash keys.
 
     - Line breaks at long chains of method calls now break at all calls
       with args in parens, as in this example from git #171
@@ -39,8 +39,8 @@
               ->catch( sub { warn shift } );
         }
 
-    - An update for parameter --break-at-old-method-breakpoints, or -bom,
-    has been made to insure that it only applies to lines beginning with
+    - Parameter --break-at-old-method-breakpoints, or -bom, has been
+    updated to insure that it only applies to lines beginning with
     method calls, as intended.  Line breaks for all lines beginning with
     '->', even non-method calls, can be retained by using
     --keep-old-breakpoints_before='->'.

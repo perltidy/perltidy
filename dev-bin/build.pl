@@ -44,6 +44,7 @@ chdir $git_home;
 my $logfile   = "dev-bin/build.log";
 my $changelog = "CHANGES.md";
 my $fh_log;
+my $source_VERSION = $Perl::Tidy::VERSION;
 
 # These are the main steps, in approximate order, for making a new version
 # Note: Since perl critic is in the .tidyallrc, a separate 'PC' step is not
@@ -83,7 +84,6 @@ $fh_log->close();
 
 sub main {
     while (1) {
-##A        - run All Steps...
         print <<EOM;
 -------------------------------------------
 Perltidy Build Main Menu - Case Insensitive
@@ -537,10 +537,9 @@ sub check_man_pages {
 
 sub update_version_number {
 
-    my $reported_VERSION = $Perl::Tidy::VERSION;
-    my $lib_path         = "lib/Perl/";
-    my $bin_path         = "bin/";
-    my @sources          = (
+    my $lib_path = "lib/Perl/";
+    my $bin_path = "bin/";
+    my @sources  = (
         $lib_path . "Tidy.pm",
         $lib_path . "Tidy.pod",
         $bin_path . "perltidy",
@@ -581,7 +580,7 @@ A Development VERSION is (Last Release).(Development Number)
 The Development Number is a 2 digit number starting at 01 after a release is
 continually bumped along at significant points during development.
 
-The VERSION reported by Perl::Tidy.pm is '$reported_VERSION'
+The VERSION reported by Perl::Tidy.pm is '$source_VERSION'
 What would you like to do?
 
 CA  Check that All files have the current VERSION
@@ -592,8 +591,8 @@ EOM
 
     my $ans = queryu(":");
     if ( $ans eq 'BV' ) {
-        my $new_VERSION = get_new_development_version($reported_VERSION);
-        next if ( $new_VERSION == $reported_VERSION );
+        my $new_VERSION = get_new_development_version();
+        next if ( $new_VERSION == $source_VERSION );
         if ( ifyes("New version will be: '$new_VERSION'. OK? [Y/N]") ) {
             my $ok = update_all_sources( $new_VERSION, @sources );
             $rstatus->{'V'} = $ok ? 'OK' : 'TBD';
@@ -601,8 +600,8 @@ EOM
         return;
     }
     elsif ( $ans eq 'RV' ) {
-        my $new_VERSION = get_new_release_version($reported_VERSION);
-        next if ( $new_VERSION == $reported_VERSION );
+        my $new_VERSION = get_new_release_version();
+        next if ( $new_VERSION == $source_VERSION );
         if ( ifyes("New version will be: '$new_VERSION'. OK? [Y/N]") ) {
             my $ok = update_all_sources( $new_VERSION, @sources );
             $rstatus->{'V'} = $ok ? 'OK' : 'TBD';
@@ -610,7 +609,7 @@ EOM
         return;
     }
     elsif ( $ans eq 'CA' ) {
-        my $new_VERSION = $reported_VERSION;
+        my $new_VERSION = $source_VERSION;
         my $ok          = update_all_sources( $new_VERSION, @sources );
         $rstatus->{'V'} = $ok ? 'OK' : 'TBD';
         return;
@@ -619,7 +618,7 @@ EOM
     # I have left this as a hidden menu item for testing
     # but it is not on the menu because it would be confusing
     elsif ( $ans eq 'CS' ) {
-        my $new_VERSION = $reported_VERSION;
+        my $new_VERSION = $source_VERSION;
         my @check       = grep { ifyes("Check $_? [Y/N]") } @sources;
         update_all_sources( $new_VERSION, @check );
         return;
@@ -635,9 +634,8 @@ EOM
 } ## end sub update_version_number
 
 sub get_new_development_version {
-    my ($reported_VERSION) = @_;
-    my $new_VERSION        = $reported_VERSION;
-    my @parts              = split /\./, $reported_VERSION;
+    my $new_VERSION = $source_VERSION;
+    my @parts       = split /\./, $source_VERSION;
     if ( @parts == 1 ) {
 
         # first development after release
@@ -669,8 +667,7 @@ sub get_new_development_version {
 } ## end sub get_new_development_version
 
 sub get_new_release_version {
-    my ($reported_VERSION) = @_;
-    my $new_VERSION = $reported_VERSION;
+    my $new_VERSION = $source_VERSION;
     my ( $day, $month, $year ) = (localtime)[ 3, 4, 5 ];
     $year  += 1900;
     $month += 1;
@@ -691,10 +688,9 @@ sub update_copyright_date {
     # lib/Perl/Tidy.pm: 2 places
 
     $rstatus->{'YEAR'} = 'TBD';
-    my $reported_VERSION = $Perl::Tidy::VERSION;
-    my $reported_year    = substr( $reported_VERSION, 0, 4 );
+    my $reported_year = substr( $source_VERSION, 0, 4 );
     if ( !$reported_year || $reported_year !~ /\d\d\d\d/ ) {
-        query("Cannot find reported year in $reported_VERSION\n");
+        query("Cannot find reported year in $source_VERSION\n");
         return;
     }
 
@@ -737,7 +733,8 @@ EOM
             }
         }
         else {
-            print "Copyright years are up to date in $source_file\n";
+            print
+"Copyright year and version year are '$reported_year' in $source_file\n";
             $rstatus->{'YEAR'} = 'OK';
         }
     }
@@ -1055,6 +1052,10 @@ To avoid error, I put this last command in a script $runme
 EOM
         hitcr();
     }
+
+    # Keep track of the current source version since it differs from the
+    # running version.
+    $source_VERSION = $new_VERSION;
     return 1;
 } ## end sub update_all_sources
 
@@ -1065,6 +1066,9 @@ sub scan_for_pod {
     # code. Mixing pod for debugging and pod for documentation would be
     # confusing.  Any pod markers left in a .pm file are probably leftovers
     # from debugging and need to be removed.
+
+    # And they should not contain __END__ or __DATA__ sections. The reason
+    # is that this would cause the pm2pl script to fail.
 
     my ($rsources) = @_;
     my (@sources)  = @{$rsources};
@@ -1091,20 +1095,47 @@ EOM
     }
 
     my @files_with_pod;
+    my @files_with_END;
+    my @files_with_DATA;
+    my @files_with_FIXME;
     while ( my $source_file = shift @sources ) {
         next unless ( $source_file =~ /\.pm$/ );
         my $result = qx/grep "^=cut" $source_file/;
         if ($result) {
             push @files_with_pod, $source_file;
         }
+        $result = qx/grep "^__END__" $source_file/;
+        if ($result) {
+            push @files_with_END, $source_file;
+        }
+        $result = qx/grep "^__DATA__" $source_file/;
+        if ($result) {
+            push @files_with_DATA, $source_file;
+        }
+        $result = qx/grep "FIXME" $source_file/;
+        if ($result) {
+            push @files_with_FIXME, $source_file;
+        }
     } ## end while ( my $source_file =...)
 
-    my $saw_pod = @files_with_pod;
+    my $saw_pod   = @files_with_pod;
+    my $saw_END   = @files_with_END;
+    my $saw_DATA  = @files_with_DATA;
+    my $saw_FIXME = @files_with_FIXME;
+    my $saw_problem = $saw_pod || $saw_END || $saw_DATA;
+
+    if ($saw_FIXME) {
+        local $" = ') (';
+        query(<<EOM);
+NOTE: Some files have 'FIXME': (@files_with_FIXME);
+hit <cr> to continue
+EOM
+    }
+
     print <<EOM;
 -------------------------------------------------------------------
-Scanning for pod in .pm files...
+Scanning for pod __END__  and __DATA__ in .pm files...
 EOM
-
     if ($saw_pod) {
         local $" = ') (';
         query(<<EOM);
@@ -1114,14 +1145,32 @@ Please remove the pod text before continuing, hit <cr> to continue.
 -------------------------------------------------------------------
 EOM
     }
-    else {
+    if ($saw_END) {
+        local $" = ') (';
+        query(<<EOM);
+Found files with pod text: (@files_with_END);
+The convention in perltidy is not to have an __END__ section in '.pm' files.
+Please remove the __END__ text before continuing, hit <cr> to continue.
+-------------------------------------------------------------------
+EOM
+    }
+    if ($saw_DATA) {
+        local $" = ') (';
+        query(<<EOM);
+Found files with pod text: (@files_with_DATA);
+The convention in perltidy is not to have an __DATA__ section in '.pm' files.
+Please remove the __DATA__ text before continuing, hit <cr> to continue.
+-------------------------------------------------------------------
+EOM
+    }
+    if ( !$saw_problem ) {
         print <<EOM;
-OK - no pod text found in .pm files
+OK - no pod text, __END__ or __DATA  found in .pm files
 -------------------------------------------------------------------
 EOM
     }
 
-    return $saw_pod;
+    return $saw_problem;
 } ## end sub scan_for_pod
 
 sub make_tag_script {

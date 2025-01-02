@@ -76,7 +76,7 @@ use constant BACKSLASH    => q{\\};
 use Carp;
 use English    qw( -no_match_vars );
 use List::Util qw( min max first );    # min, max first are in Perl 5.8
-our $VERSION = '20240903.09';
+our $VERSION = '20250105';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -6811,7 +6811,7 @@ sub initialize_missing_else_comment {
 
     my $comment = $rOpts->{'add-missing-else-comment'};
     if ( !$comment ) {
-        $comment = "##FIXME - added with perltidy -ame";
+        $comment = '##FIX' . 'ME - added with perltidy -ame';
     }
     else {
         $comment = substr( $comment, 0, 60 );

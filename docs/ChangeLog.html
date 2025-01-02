@@ -1,8 +1,14 @@
 <h1>Perltidy Change Log</h1>
 
-<h2>2024 09 03.09</h2>
+<h2>2025 01 05</h2>
 
-<pre><code>- Added missing 'use File::Temp' for -html option. This was causing the
+<pre><code>- If a file consists only of comments, then the starting indentation will
+  be guessed from the indentation of the first comment. Previously it would
+  be guessed to be zero. Parameter --starting-indentation-level=n can be
+  used to specify an indentation and avoid a guess. This issue can
+  arise when formatting a block of comments from within an editor.
+
+- Added missing 'use File::Temp' for -html option. This was causing the
   message: "Undefined subroutine &amp;File::Temp::tempfile called at ..."
   See git #176.
 
@@ -33,8 +39,8 @@
           -&gt;catch( sub { warn shift } );
     }
 
-- An update for parameter --break-at-old-method-breakpoints, or -bom,
-has been made to insure that it only applies to lines beginning with
+- Parameter --break-at-old-method-breakpoints, or -bom, has been
+updated to insure that it only applies to lines beginning with
 method calls, as intended.  Line breaks for all lines beginning with
 '-&gt;', even non-method calls, can be retained by using
 --keep-old-breakpoints_before='-&gt;'.

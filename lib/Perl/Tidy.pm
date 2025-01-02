@@ -3,7 +3,7 @@
 #
 #    perltidy - a perl script indenter and formatter
 #
-#    Copyright (c) 2000-2024 by Steve Hancock
+#    Copyright (c) 2000-2025 by Steve Hancock
 #    Distributed under the GPL license agreement; see file COPYING
 #
 #    This program is free software; you can redistribute it and/or modify
@@ -136,7 +136,7 @@ BEGIN {
     # then the Release version must be bumped, and it is probably past time for
     # a release anyway.
 
-    $VERSION = '20240903.09';
+    $VERSION = '20250105';
 } ## end BEGIN
 
 sub DESTROY {
@@ -6178,7 +6178,7 @@ sub show_version {
     print {*STDOUT} <<"EOM";
 This is perltidy, v$VERSION
 
-Copyright 2000-2024 by Steve Hancock
+Copyright 2000-2025 by Steve Hancock
 
 Perltidy is free software and may be copied under the terms of the GNU
 General Public License, which is included in the distribution files.
