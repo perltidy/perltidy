@@ -126,7 +126,7 @@ my (
     %quote_modifiers,
     %is_semicolon_or_t,
     %is_sort_map_grep,
-    %is_sort_map_grep_eval_do,
+    %is_sort_map_grep_eval_do_sub,
     %is_tetragraph,
     %is_trigraph,
     %is_valid_token_type,
@@ -6882,12 +6882,15 @@ sub new_statement_ok {
         && $last_nonblank_type eq $last_nonblank_token )
     {
 
-        # a new statement can follow certain closing block braces ...
-        # FIXME: The following has worked well but returns true in some cases
-        # where it really should not.  We could fix this by either excluding
-        # certain blocks, like sort/map/grep/eval/asub or by just including
-        # certain blocks.
-        return $rbrace_type->[$brace_depth];
+        # A new statement can follow certain closing block braces ...
+        # Previously, a true was always returned, and this worked ok.
+        # Update c443: now we return false for certain blocks which must be
+        # followed by a ';'.  See comments elsewhere on
+        # '%is_zero_continuation_block_type'. The value of $brace_depth has
+        # also been corrected, it was off by 1.
+        my $block_type = $rbrace_type->[ $brace_depth + 1 ];
+        return $block_type
+          && !$is_sort_map_grep_eval_do_sub{$block_type};
     }
 
     # otherwise, it is a label if and only if it follows a ';' (real or fake)
@@ -11232,8 +11235,9 @@ BEGIN {
 
     # Note: this hash was formerly named '%is_not_zero_continuation_block_type'
     # to contrast it with the block types in '%is_zero_continuation_block_type'
-    @q = qw( sort map grep eval do );
-    @is_sort_map_grep_eval_do{@q} = (1) x scalar(@q);
+    # Note: added 'sub' for anonymous sub blocks (c443)
+    @q = qw( sort map grep eval do sub );
+    @is_sort_map_grep_eval_do_sub{@q} = (1) x scalar(@q);
 
     @q = qw( sort map grep );
     @is_sort_map_grep{@q} = (1) x scalar(@q);
