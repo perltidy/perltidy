@@ -1118,46 +1118,51 @@ EOM
         }
     } ## end while ( my $source_file =...)
 
+    my $saw_FIXME = @files_with_FIXME;
     my $saw_pod   = @files_with_pod;
     my $saw_END   = @files_with_END;
     my $saw_DATA  = @files_with_DATA;
-    my $saw_FIXME = @files_with_FIXME;
-    my $saw_problem = $saw_pod || $saw_END || $saw_DATA;
 
+    my $saw_problem;
+    print <<EOM;
+-------------------------------------------------------------------
+Scanning .pm files for ##FIXME pod __END__  and __DATA__ ...
+EOM
     if ($saw_FIXME) {
+        $saw_problem = 1;
         local $" = ') (';
         query(<<EOM);
-NOTE: Some files have 'FIXME': (@files_with_FIXME);
-hit <cr> to continue
+Found $saw_FIXME files have 'FIXME': (@files_with_FIXME);
+These should be fixed if possible.
+-------------------------------------------------------------------
 EOM
     }
 
-    print <<EOM;
--------------------------------------------------------------------
-Scanning for pod __END__  and __DATA__ in .pm files...
-EOM
     if ($saw_pod) {
+        $saw_problem = 1;
         local $" = ') (';
         query(<<EOM);
-Found files with pod text: (@files_with_pod);
+Found $saw_pod files with pod text: (@files_with_pod);
 The convention in perltidy is not to have pod code in '.pm' files.
 Please remove the pod text before continuing, hit <cr> to continue.
 -------------------------------------------------------------------
 EOM
     }
     if ($saw_END) {
+        $saw_problem = 1;
         local $" = ') (';
         query(<<EOM);
-Found files with pod text: (@files_with_END);
+Found $saw_END files with __END__: (@files_with_END);
 The convention in perltidy is not to have an __END__ section in '.pm' files.
 Please remove the __END__ text before continuing, hit <cr> to continue.
 -------------------------------------------------------------------
 EOM
     }
     if ($saw_DATA) {
+        $saw_problem = 1;
         local $" = ') (';
         query(<<EOM);
-Found files with pod text: (@files_with_DATA);
+Found $saw_DATA files with __DATA__: (@files_with_DATA);
 The convention in perltidy is not to have an __DATA__ section in '.pm' files.
 Please remove the __DATA__ text before continuing, hit <cr> to continue.
 -------------------------------------------------------------------
@@ -1165,7 +1170,7 @@ EOM
     }
     if ( !$saw_problem ) {
         print <<EOM;
-OK - no pod text, __END__ or __DATA  found in .pm files
+OK - no ##FIXME, pod text, __END__ or __DATA  found in .pm files
 -------------------------------------------------------------------
 EOM
     }
