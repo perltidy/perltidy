@@ -3721,8 +3721,9 @@ sub generate_options {
     $add_option->( 'stack-opening-paren',                     'sop',   '!' );
     $add_option->( 'stack-opening-square-bracket',            'sosb',  '!' );
 
-    # FIXME: --vt and --vtc are actually expansions now, so these two lines
-    # should eventually be removed.
+    # NOTE: --vt and --vtc are actually expansions now, so these two lines
+    # might eventually be removed. But search for 'msdos' to see notes about
+    # an issue with 'msdos' that could be a problem if msdos is still used.
     $add_option->( 'vertical-tightness',         'vt',  '=i' );
     $add_option->( 'vertical-tightness-closing', 'vtc', '=i' );
 
@@ -4337,10 +4338,12 @@ sub generate_options {
         'vtc=0' => [qw(pvtc=0 bvtc=0 sbvtc=0)],
         'vtc=1' => [qw(pvtc=1 bvtc=1 sbvtc=1)],
         'vtc=2' => [qw(pvtc=2 bvtc=2 sbvtc=2)],
+        'vtc=3' => [qw(pvtc=3 bvtc=3 sbvtc=3)],
 
         'vertical-tightness-closing=0' => [qw(pvtc=0 bvtc=0 sbvtc=0)],
         'vertical-tightness-closing=1' => [qw(pvtc=1 bvtc=1 sbvtc=1)],
         'vertical-tightness-closing=2' => [qw(pvtc=2 bvtc=2 sbvtc=2)],
+        'vertical-tightness-closing=3' => [qw(pvtc=3 bvtc=3 sbvtc=3)],
 
         'otr'                   => [qw(opr ohbr osbr)],
         'opening-token-right'   => [qw(opr ohbr osbr)],
