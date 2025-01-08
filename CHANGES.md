@@ -12,7 +12,7 @@
       message: "Undefined subroutine &File::Temp::tempfile called at ..."
       See git #176.
 
-    - A new parameter --dump-unique-keys, or B<-duk>, dumps a list of hash keys
+    - A new parameter --dump-unique-keys, or -duk, dumps a list of hash keys
       which appear to be used just once, and do not appear among the quoted
       strings in a file. For example:
 
@@ -49,7 +49,7 @@
     The default value --paren-tightness=1 adds space within the parens
     if, and only if, the container holds multiple tokens.  Some perltidy
     tokens may be rather long, and it can be preferable to also space some of
-    them as if they were multple tokens.  This can be done with this paramter,
+    them as if they were multiple tokens.  This can be done with this parameter,
     and it applies to parens as well as square brackets and curly braces.
     For example, the default below has no space within the square brackets:
 
