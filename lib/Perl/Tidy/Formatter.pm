@@ -11273,8 +11273,10 @@ sub scan_variable_usage {
 
             if ( !$count ) {
 
-                # typically global vars are for external access so we
+                # Typically global vars are for external access so we
                 # do not report them as type 'u' (unused)
+                # NOTE: 'use vars' is not currently needed in the following
+                # test but is retained in case coding ever changes
                 next if ( $keyword eq 'our' || $keyword eq 'use vars' );
 
                 push @warnings,
@@ -12036,8 +12038,8 @@ EOM
         @warnings =
           sort { $a->{K} <=> $b->{K} || $a->{letter} cmp $b->{letter} }
 
-          # FIXME: this limitation may eventually just be for 'our' vars
-          # after 'use vars' coding is finalized
+          # NOTE: 'use vars' is not currently needed in the following test
+          # but is retained in case coding ever changes
           grep {
             ( $_->{keyword} ne 'our' && $_->{keyword} ne 'use vars' )
               || !$is_exempted_global_name{ $_->{name} }
