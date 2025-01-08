@@ -444,6 +444,10 @@ sub scan_for_bad_characters {
     my $saw_pod  = scan_for_pod($rmodules);
     return if ($saw_pod);
 
+    print <<EOM;
+Scanning for tabs, non-ascii, and line-ending spaces ...
+EOM
+
     my $errors = EMPTY_STRING;
     my $saw_tabs_or_spaces;
     foreach my $file ( @{$rmodules} ) {
@@ -451,7 +455,8 @@ sub scan_for_bad_characters {
 
         # Non-ascii characters in perltidy modules slows down formatting
         if ( $string =~ /[^[:ascii:]]/ ) {
-            $errors .= "$file has non-ascii characters\n";
+            my $line_list = get_non_ascii_lines( $string, 5 );
+            $errors .= "$file has non-ascii characters at $line_list\n";
         }
 
         # Tabs and line-ending spaces are sometimes left by an editor. Usually
@@ -481,9 +486,35 @@ EOM
     }
 
     $rstatus->{'SCAN'} = 'OK';
-    query("Scan OK, hit <cr>\n");
+    query("OK, hit <cr>\n");
     return;
 } ## end sub scan_for_bad_characters
+
+sub get_non_ascii_lines {
+
+    my ( $string, ($max) ) = @_;
+
+    # Return a string with a list of lines having non-ascii characters
+
+    # Given:
+    #   $string = the text of a file
+    #   $max = optional maximum number of lines to show (default 20)
+
+    if ( !defined($max) || $max <= 0 ) { $max = 20 }
+    my $msg   = EMPTY_STRING;
+    my $lno   = 0;
+    my $count = 0;
+    my @lines = split /^/, $string;
+    foreach my $line (@lines) {
+        chomp $line;
+        $lno++;
+        if ( $line =~ /[^[:ascii:]]/ ) {
+            if ( $count > $max ) { $line .= " ..."; last }
+            $msg .= " $line";
+        }
+    }
+    return $msg;
+} ## end sub get_non_ascii_lines
 
 sub check_man_page_width {
     my ($file) = @_;
@@ -1170,8 +1201,7 @@ EOM
     }
     if ( !$saw_problem ) {
         print <<EOM;
-OK - no ##FIXME, pod text, __END__ or __DATA  found in .pm files
--------------------------------------------------------------------
+OK
 EOM
     }
 
