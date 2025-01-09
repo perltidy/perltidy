@@ -8815,6 +8815,9 @@ sub dump_unique_keys {
     my $K_opening_container = $self->[_K_opening_container_];
     my $K_closing_container = $self->[_K_closing_container_];
 
+    # For possible future use:
+    my $saw_Getopt_Long;
+
     # stack holds [$seqno, $KK, $KK_last_nb]
     my @stack;
 
@@ -8829,7 +8832,15 @@ sub dump_unique_keys {
     #----------------------------------------------
     my @Q_list;
     my @K_start_qw_list;
+    my @GetOptions_keys;
+    my @Q_getopts;
     my $rwords = {};
+    my %is_GetOptions_call_by_seqno;
+
+    # See https://perldoc.perl.org/perlref
+    my %is_typeglob_slot_key;
+    my @q = qw( SCALAR ARRAY HASH CODE IO FILEHANDLE GLOB FORMAT NAME PACKAGE );
+    @is_typeglob_slot_key{@q} = (1) x scalar(@q);
 
     # Table of some known keys
     my %is_known_key = (
@@ -8915,7 +8926,6 @@ sub dump_unique_keys {
                     return if ( $ch_test ne '\\' );
                 }
             }
-
             pop @Q_list;
         }
         else {
@@ -8927,6 +8937,22 @@ sub dump_unique_keys {
         # Bump count of known keys by 1 so that they will not appear as unique
         my $one = 1;
         if ( $is_known_key{$word} && $is_known_hash->($word) ) { $one++ }
+
+        # and bump count for a know typeglob key like *foo{SCALAR};
+        elsif ( $is_typeglob_slot_key{$word} ) {
+            my $type_this = $rLL->[$KK_this_nb]->[_TYPE_];
+            if ( $type_this eq 'R' ) {
+                my $Kp = $self->K_previous_code($KK_last_nb);
+                $Kp = $self->K_previous_code($Kp);
+                if ( defined($Kp) ) {
+                    my $token_p = $rLL->[$Kp]->[_TOKEN_];
+                    if ( substr( $token_p, 0, 1 ) eq '*' ) { $one++ }
+                }
+            }
+        }
+        else {
+            ## no other special cases yet
+        }
 
         if ( !defined( $rwords->{$word} ) ) {
             $rwords->{$word} = [ $one, $KK_last_nb ];
@@ -8954,7 +8980,11 @@ sub dump_unique_keys {
                 if ( $type eq 'L' ) {
 
                     # Skip past something like ${word}
-                    if ( $KK_last_nb && $rLL->[$KK_last_nb]->[_TYPE_] eq 't' ) {
+                    my $type_last =
+                      defined($KK_last_nb)
+                      ? $rLL->[$KK_last_nb]->[_TYPE_]
+                      : 'b';
+                    if ( $type_last eq 't' ) {
                         my $Kc = $K_closing_container->{$seqno};
                         my $Kn = $self->K_next_code($KK);
                         $Kn = $self->K_next_code($Kn);
@@ -8999,7 +9029,12 @@ EOM
             if ( $type eq '=>' ) {
                 my $parent_seqno = $self->parent_seqno_by_K($KK);
                 if ( $parent_seqno && $ris_list_by_seqno->{$parent_seqno} ) {
-                    $push_KK_last_nb->();
+                    if ( $is_GetOptions_call_by_seqno{$parent_seqno} ) {
+                        push @GetOptions_keys, $KK_last_nb;
+                    }
+                    else {
+                        $push_KK_last_nb->();
+                    }
                 }
             }
             elsif ( $type eq 'Q' ) {
@@ -9018,15 +9053,23 @@ EOM
                 if ( $rLL->[$KK]->[_TOKEN_] eq 'use' ) {
                     my $Kn = $self->K_next_code($KK);
                     next if ( !defined($Kn) );
-                    next if ( $rLL->[$Kn]->[_TOKEN_] ne 'constant' );
+                    my $token_n = $rLL->[$Kn]->[_TOKEN_];
+
+                    if ( length($token_n) >= 12
+                        && substr( $token_n, 0, 12 ) eq 'Getopt::Long' )
+                    {
+                        ## FIXME needs to be by package
+                        $saw_Getopt_Long = 1;
+                        next;
+                    }
+                    next if ( $token_n ne 'constant' );
                     $Kn = $self->K_next_code($Kn);
                     next if ( !defined($Kn) );
                     my $seqno_n = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
                     if ($seqno_n) {
 
                         # skip a block of constant definitions
-                        my $token_n = $rLL->[$Kn]->[_TOKEN_];
-                        if ( $token_n eq '{' ) {
+                        if ( $rLL->[$Kn]->[_TOKEN_] eq '{' ) {
                             $K_end_skip = $K_closing_container->{$seqno_n};
                         }
                         else {
@@ -9040,13 +9083,45 @@ EOM
                     }
                 }
             }
+            elsif ( $type eq 'U' || $type eq 'w' ) {
+
+                # 'GetOptions(' will marked be type 'U'
+                # 'GetOptions (' will be marked type 'w' # has space '('
+                my $token = $rLL->[$KK]->[_TOKEN_];
+
+                # Look GetOptions call (Getopt::Long, for example:
+                #    GetOptions ("length=i" => \$length,
+                #                "file=s"   => \$data)
+                if ( $token eq 'GetOptions' ) {
+                    my $Kn = $self->K_next_nonblank($KK);
+                    if ( $Kn && $rLL->[$Kn]->[_TOKEN_] eq '(' ) {
+                        my $seqno_n = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
+                        $is_GetOptions_call_by_seqno{$seqno_n} = 1;
+                    }
+                }
+
+                # Look getopts call (Getopt::Std), for example:
+                #    getopts('oif:')
+                elsif ( $token eq 'getopts' ) {
+                    my $Kn = $self->K_next_nonblank($KK);
+                    if ( $Kn && $rLL->[$Kn]->[_TOKEN_] eq '(' ) {
+                        $Kn = $self->K_next_nonblank($Kn);
+                        if ( $Kn && $rLL->[$Kn]->[_TYPE_] eq 'Q' ) {
+                            push @Q_getopts, $Kn;
+                        }
+                    }
+                }
+                else {
+                    ## no other special checks
+                }
+            }
             else {
                 # continue search
             }
         }
     } ## end while ( ++$KK <= $Klimit )
 
-    # find hash keys seen just one time
+    # Find hash keys seen just one time
     my %unique_words;
     foreach my $key ( keys %{$rwords} ) {
         my ( $count, $K ) = @{ $rwords->{$key} };
@@ -9056,7 +9131,7 @@ EOM
 
     return if ( !%unique_words );
 
-    # check each unique word against the list of type Q tokens
+    # Check each unique word against the list of type Q tokens
     if (@Q_list) {
         my $imax = $#Q_list;
         foreach my $i ( 0 .. $imax ) {
@@ -9077,6 +9152,52 @@ EOM
         }
     }
 
+    # Check words against any option keys passed to GetOptions
+    foreach my $Kopt (@GetOptions_keys) {
+        my $word = $rLL->[$Kopt]->[_TOKEN_];
+        my $ch1  = substr( $word, 0, 1 );
+        if ( $ch1 eq "'" || $ch1 eq '"' ) {
+            $word = substr( $word, 1, -1 );
+        }
+        if ( $unique_words{$word} ) {
+            delete $unique_words{$word};
+        }
+
+        # Remove optional flag
+        if ( $word =~ /^([a-zA-Z_].*)(?:!|\+|=s|:s|=i|:i|=f|:f)$/x ) {
+            $word = $1;
+            if ( $unique_words{$word} ) {
+                delete $unique_words{$word};
+            }
+        }
+
+        # check for something like 'length|height';
+        if ( index( $word, '|' ) > 0 ) {
+            my @words = split '|', $word;
+            foreach my $w (@words) {
+                if ( $unique_words{$w} ) {
+                    delete $unique_words{$w};
+                }
+            }
+        }
+    }
+
+    # Remove single letters seen in first arg to getopts
+    foreach my $Kopt (@Q_getopts) {
+        my $word = $rLL->[$Kopt]->[_TOKEN_];
+        my $ch1  = substr( $word, 0, 1 );
+        if ( $ch1 eq "'" || $ch1 eq '"' ) {
+            $word = substr( $word, 1, -1 );
+        }
+        $word =~ s/://g;
+        my @letters = split //, $word;
+        foreach my $letter (@letters) {
+            if ( $unique_words{$letter} ) {
+                delete $unique_words{$letter};
+            }
+        }
+    }
+
     return if ( !%unique_words );
 
     # Remove any keys which are also in a qw list
@@ -9091,7 +9212,7 @@ EOM
 
     return if ( !%unique_words );
 
-    # report unique words
+    # Report unique words
     my $output_string = EMPTY_STRING;
     my @list;
     foreach my $word ( keys %unique_words ) {
