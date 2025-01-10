@@ -442,51 +442,50 @@ sub scan_for_bad_characters {
     $rstatus->{'SCAN'} = 'TBD';
     my $rmodules = get_modules();
     my $saw_pod  = scan_for_pod($rmodules);
-    return if ($saw_pod);
 
     print <<EOM;
 Scanning for tabs, non-ascii, and line-ending spaces ...
 EOM
 
     my $errors = EMPTY_STRING;
-    my $saw_tabs_or_spaces;
     foreach my $file ( @{$rmodules} ) {
         my $string = slurp_to_string($file);
 
         # Non-ascii characters in perltidy modules slows down formatting
-        if ( $string =~ /[^[:ascii:]]/ ) {
-            my $line_list = get_non_ascii_lines( $string, 5 );
+        my $line_list = get_non_ascii_lines( $string, 5 );
+        if ($line_list) {
             $errors .= "$file has non-ascii characters at $line_list\n";
         }
 
-        # Tabs and line-ending spaces are sometimes left by an editor. Usually
-        # formatting removes them, but not if they are in some kind of quoted
-        # text.
-        if ( $string =~ /\t/ ) {
-            $errors .= "$file has tab character(s)\n";
-            $saw_tabs_or_spaces++;
+        # Tabs and line-ending spaces are sometimes left by an editor.
+        # Usually formatting removes them, but not if they are in some
+        # kind of quoted text.
+        $line_list = get_tab_lines( $string, 5 );
+        if ($line_list) {
+            $errors .= "$file has tab characters at $line_list\n";
         }
-        if ( $string =~ /([^\s]) $/m ) {
-            $errors .= "$file has line-ending space(s)\n";
-            $saw_tabs_or_spaces++;
+        $line_list = get_line_ending_space_lines( $string, 5 );
+        if ($line_list) {
+            $errors .= "$file has line-ending spaces at $line_list\n";
         }
     }
     if ($errors) {
         print $errors;
-        if ($saw_tabs_or_spaces) {
-            print <<'EOM';
-Note: One way to locate tabs and ending spaces in File.pm is
-    grep -P '\t' File.pm
-    grep -P '\s$' File.pm
-EOM
-        }
-        query("hit <cr>\n");
-
-        return;
+        ## Note: One way to locate tabs and ending spaces in File.pm is
+        ## grep -P '\t' File.pm
+        ## grep -P '\s$' File.pm
     }
+    else {
+        print "..none found\n";
 
-    $rstatus->{'SCAN'} = 'OK';
-    query("OK, hit <cr>\n");
+    }
+    if ( $saw_pod || $errors ) {
+        query("hit <cr>\n");
+    }
+    else {
+        $rstatus->{'SCAN'} = 'OK';
+        query("OK, hit <cr>\n");
+    }
     return;
 } ## end sub scan_for_bad_characters
 
@@ -499,6 +498,7 @@ sub get_non_ascii_lines {
     # Given:
     #   $string = the text of a file
     #   $max = optional maximum number of lines to show (default 20)
+    if ( $string !~ /[^[:ascii:]]/ ) { return }
 
     if ( !defined($max) || $max <= 0 ) { $max = 20 }
     my $msg   = EMPTY_STRING;
@@ -506,15 +506,67 @@ sub get_non_ascii_lines {
     my $count = 0;
     my @lines = split /^/, $string;
     foreach my $line (@lines) {
-        chomp $line;
         $lno++;
         if ( $line =~ /[^[:ascii:]]/ ) {
-            if ( $count > $max ) { $line .= " ..."; last }
-            $msg .= " $line";
+            if ( $count > $max ) { $msg .= " ..."; last }
+            $msg .= " $lno";
         }
     }
     return $msg;
 } ## end sub get_non_ascii_lines
+
+sub get_tab_lines {
+
+    my ( $string, ($max) ) = @_;
+
+    # Return a string with a list of lines having tab characters
+
+    # Given:
+    #   $string = the text of a file
+    #   $max = optional maximum number of lines to show (default 20)
+    if ( $string !~ /\t/ ) { return }
+
+    if ( !defined($max) || $max <= 0 ) { $max = 20 }
+    my $msg   = EMPTY_STRING;
+    my $lno   = 0;
+    my $count = 0;
+    my @lines = split /^/, $string;
+    foreach my $line (@lines) {
+        $lno++;
+        if ( $line =~ /\t/ ) {
+            if ( $count > $max ) { $msg .= " ..."; last }
+            $msg .= " $lno";
+        }
+    }
+    return $msg;
+} ## end sub get_tab_lines
+
+sub get_line_ending_space_lines {
+
+    my ( $string, ($max) ) = @_;
+
+    # Return a string with a list of lines ending in a space
+
+    # Given:
+    #   $string = the text of a file
+    #   $max = optional maximum number of lines to show (default 20)
+    if ( $string !~ /([^\s]) $/m ) { return }
+
+    if ( !defined($max) || $max <= 0 ) { $max = 20 }
+    my $msg   = EMPTY_STRING;
+    my $lno   = 0;
+    my $count = 0;
+    my @lines = split /^/, $string;
+    foreach my $line (@lines) {
+        $lno++;
+        chomp $line;
+        if ( $line =~ /\s$/ ) {
+            if ( $count > $max ) { $msg .= " ..."; last }
+            $msg .= " $lno";
+        }
+    }
+    return $msg;
+} ## end sub get_line_ending_space_lines
 
 sub check_man_page_width {
     my ($file) = @_;
@@ -1163,7 +1215,7 @@ EOM
         $saw_problem = 1;
         local $" = ') (';
         query(<<EOM);
-Found $saw_FIXME files have 'FIXME': (@files_with_FIXME);
+Found $saw_FIXME files with 'FIXME': (@files_with_FIXME);
 These should be fixed if possible.
 -------------------------------------------------------------------
 EOM
