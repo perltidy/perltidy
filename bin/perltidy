@@ -1953,16 +1953,16 @@ This parameter causes perltidy to ignore the length of side comments when
 setting line breaks.  The default, B<-niscl>, is to include the length of
 side comments when breaking lines to stay within the length prescribed
 by the B<-l=n> maximum line length parameter.  For example, the following
-long single line would remain intact with -l=80 and -iscl:
+single line would remain intact with -l=50 and -iscl:
 
-     perltidy -l=80 -iscl
-        $vmsfile =~ s/;[\d\-]*$//; # Clip off version number; we can use a newer version
+    # perltidy -l=50 -iscl
+    $vmsfile =~ s/;[\d\-]*$//;    # Clip off version number
 
 whereas without the -iscl flag the line will be broken:
 
-     perltidy -l=80
-        $vmsfile =~ s/;[\d\-]*$//
-          ;    # Clip off version number; we can use a newer version
+    # perltidy -l=50
+    $vmsfile =~
+      s/;[\d\-]*$//;    # Clip off version number
 
 =item B<-ipc>,  B<--ignore-perlcritic-comments>
 
@@ -2250,24 +2250,28 @@ a hanging side comment.
 
 =back
 
-For example, assuming C<@month_of_year> is
-left-adjusted:
+For example, assuming C<@month_of_year> is left-adjusted, the default
+formatting for the following snippet is:
 
-    @month_of_year = (    # -sbc (default)
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct',
-    ##  'Dec', 'Nov'
-        'Nov', 'Dec');
-
-Without this convention, the above code would become
-
-    @month_of_year = (   # -nsbc
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct',
-
-        ##  'Dec', 'Nov'
-        'Nov', 'Dec'
+    # perltidy -sbc [default]
+    @month_of_year = (
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    ##  'Jul', 'Aug', 'Sep', 'Oct', 'Dec', 'Nov'
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     );
 
-which is not as clear.
+This can be useful for displaying code which has been commented out.
+Without this convention, the above code would become
+
+    # perltidy -nsbc
+    @month_of_year = (
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+
+        ##  'Jul', 'Aug', 'Sep', 'Oct', 'Dec', 'Nov'
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    );
+
+which is less clear.
 The default is to use B<-sbc>.  This may be deactivated with B<-nsbc>.
 
 =item B<-sbcp=string>, B<--static-block-comment-prefix=string>
@@ -6073,11 +6077,15 @@ I<or other abbreviations>.  The main syntax requirement is that the new
 abbreviation along with its opening curly brace must begin on a new line.
 Space before and after the curly braces is optional.
 
-For a specific example, the following line
+For a specific example, the following definition
 
-  oneliner { --maximum-line-length=0 --noadd-newlines --noadd-terminal-newline}
+  oneliner {
+    --maximum-line-length=0
+    --noadd-newlines
+    --noadd-terminal-newline
+  }
 
-or equivalently with abbreviations
+or equivalently, with abbreviations,
 
   oneliner { -l=0 -nanl -natnl }
 
@@ -6352,12 +6360,6 @@ This selects both C<subs> and C<packages> which have 20 or more lines of code.
 This can be useful in code which contains multiple packages.
 
     perltidy -dbs -dbt='sub package' somefile.pl >blocks.csv
-
-=item *
-
-This selects block types C<sub for foreach while> with 10 or more code lines.
-
-    perltidy -dbs -dbl=10 -dbt='sub for foreach while' somefile.pl >blocks.csv
 
 =item *
 
