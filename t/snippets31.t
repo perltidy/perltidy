@@ -10,6 +10,8 @@
 #7 ils.ils
 #8 mutt.def
 #9 mutt.mutt1
+#10 c446.c446
+#11 c446.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -30,6 +32,10 @@ BEGIN {
         'btct2' => "-btct=1 -atc -wtc=1",
         'btct3' => "-btct=1 -atc -wtc=1",
         'c424'  => "-naws -qwaf",
+        'c446'  => <<'----------',
+--qw-as-function
+--paren-tightness=2
+----------
         'def'   => "",
         'ils'   => "-nils -bos",
         'mutt1' => <<'----------',
@@ -61,6 +67,18 @@ $lut = byte [ [ 0, 0, 0 ], [ 10, 1, 10 ], [ 2, 20, 20 ], [ 30, 30, 3 ], ];
         'c424' => <<'----------',
 my @chars = qw(   | / - \ | / - \    );
 my @chars = qw(| / - \ | / - \ );
+----------
+
+        'c446' => <<'----------',
+push @paths, qw(
+    ../\
+    c:.\\../\
+    c:/\..//
+    c://.\/./\
+    \\.\\../\
+    //\..//
+    //.\/./\
+);
 ----------
 
         'ils' => <<'----------',
@@ -217,6 +235,31 @@ my $rlist = [ qw(alpha beta gamma) ];
 $aqx->appendChild(
     $parser->parse_balanced_chunk( qq(<param name="skv">$skv</param>) ) );
 #9...........
+        },
+
+        'c446.c446' => {
+            source => "c446",
+            params => "c446",
+            expect => <<'#10...........',
+push @paths,
+  qw( ../\ c:.\\../\ c:/\..// c://.\/./\ \\.\\../\ //\..// //.\/./\ );
+#10...........
+        },
+
+        'c446.def' => {
+            source => "c446",
+            params => "def",
+            expect => <<'#11...........',
+push @paths, qw(
+  ../\
+  c:.\\../\
+  c:/\..//
+  c://.\/./\
+  \\.\\../\
+  //\..//
+  //.\/./\
+);
+#11...........
         },
     };
 

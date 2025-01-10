@@ -645,6 +645,7 @@ BEGIN {
         _ris_assigned_structure_           => $i++,
         _ris_short_broken_eval_block_      => $i++,
         _ris_bare_trailing_comma_by_seqno_ => $i++,
+        _rtightness_override_by_seqno_     => $i++,
 
         _rseqno_non_indenting_brace_by_ix_ => $i++,
         _rmax_vertical_tightness_          => $i++,
@@ -1170,6 +1171,7 @@ sub new {
     $self->[_ris_assigned_structure_]           = {};
     $self->[_ris_short_broken_eval_block_]      = {};
     $self->[_ris_bare_trailing_comma_by_seqno_] = {};
+    $self->[_rtightness_override_by_seqno_]     = {};
 
     $self->[_rseqno_non_indenting_brace_by_ix_] = {};
     $self->[_rmax_vertical_tightness_]          = {};
@@ -4252,6 +4254,8 @@ sub set_whitespace_flags {
     my $K_closing_container   = $self->[_K_closing_container_];
     my $jmax                  = @{$rLL} - 1;
 
+    my $rtightness_override_by_seqno = $self->[_rtightness_override_by_seqno_];
+
     %opening_container_inside_ws = ();
     %closing_container_inside_ws = ();
 
@@ -4379,6 +4383,10 @@ sub set_whitespace_flags {
                 if ( $type eq 'w' && substr( $token, 0, 1 ) eq '^' ) {
                     $tightness_here = 1;
                 }
+
+                # c446
+                my $tseq = $rtightness_override_by_seqno->{$last_seqno};
+                if ( defined($tseq) ) { $tightness_here = $tseq }
 
                 #=============================================================
 
@@ -4566,6 +4574,10 @@ sub set_whitespace_flags {
                 my $ws_override = $closing_container_inside_ws{$seqno};
                 if ($ws_override) { $ws = $ws_override }
             }
+
+            # c446
+            my $tseq = $rtightness_override_by_seqno->{$seqno};
+            if ( defined($tseq) ) { $ws = $tseq > 0 ? WS_NO : WS_YES }
 
             $ws_4 = $ws_3 = $ws_2 = $ws
               if DEBUG_WHITE;
@@ -7583,28 +7595,6 @@ EOM
             return;
         }
 
-        # c414 and c424: do not join a '\' and a closing ')' like here:
-        #   my @clock_chars = qw( | / - \ | / - \ );
-        if (
-               @words
-            && $closing
-            && substr( $words[-1], -1, 1 ) eq BACKSLASH
-            && (
-                !$rOpts_add_whitespace
-                || (   $tightness{')'} == 2
-                    || $tightness{')'} == 1 && @words == 1 )
-            )
-          )
-        {
-            # fix by including a space after the \
-            $words[-1] .= SPACE;
-
-            # and for symmetry, before the first word if the '(' is on this line
-            if ( $opening && $rOpts_add_whitespace ) {
-                $words[0] = SPACE . $words[0];
-            }
-        }
-
         #---------------------------------------------------------------------
         # This is the point of no return if the transformation has not started
         #---------------------------------------------------------------------
@@ -7624,7 +7614,6 @@ EOM
             my $seqno = $in_qw_seqno;
 
             # update relevant seqno hashes
-            $self->[_K_opening_container_]->{$seqno} = @{$rLL};
             $rdepth_of_opening_seqno->[$seqno] = $nesting_depth;
             $nesting_depth++;
             $self->[_rI_opening_]->[$seqno] = @{$rSS};
@@ -7641,6 +7630,7 @@ EOM
             push @{$rLL}, $rtoken_qw;
 
             # make and push the '(' with the new sequence number
+            $self->[_K_opening_container_]->{$seqno} = @{$rLL};
             my $rtoken_opening = copy_token_as_type( $rtoken_q, '{', '(' );
             $rtoken_opening->[_TYPE_SEQUENCE_] = $seqno;
             push @{$rLL}, $rtoken_opening;
@@ -7710,6 +7700,17 @@ EOM
                 # be necessary to change the range [Kfirst,Klast] of the
                 # previous line and the current line.
                 $rLL->[-1]->[_TYPE_] = 'b';
+            }
+
+            # Force paren tightness = 0 if closing paren follows a backslash
+            # c414, c424, and c446. for example:
+            #   my @clock_chars = qw( | / - \ | / - \ );
+            my $iQ = $rLL->[-1]->[_TYPE_] eq 'Q' ? -1 : -2;
+            if ( substr( $rLL->[$iQ]->[_TOKEN_], -1, 1 ) eq BACKSLASH ) {
+                $self->[_rtightness_override_by_seqno_]->{$in_qw_seqno} = 0;
+                if ( !$rOpts_add_whitespace ) {
+                    $rLL->[$iQ]->[_TOKEN_] .= SPACE;
+                }
             }
 
             # follow input spacing before ')'
