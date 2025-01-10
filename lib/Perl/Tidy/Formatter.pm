@@ -8816,7 +8816,6 @@ sub dump_unique_keys {
     my $K_opening_container = $self->[_K_opening_container_];
     my $K_closing_container = $self->[_K_closing_container_];
 
-    # For possible future use:
     my $saw_Getopt_Long;
 
     # stack holds [$seqno, $KK, $KK_last_nb]
@@ -8964,6 +8963,29 @@ sub dump_unique_keys {
         return;
     }; ## end $push_KK_last_nb = sub
 
+    my $getopt_subwords = sub {
+
+        my ($word) = @_;
+
+        # Given:
+        #   $word= a string which may be a key to Getopts::Long,
+        # Return: a ref to a list of all possible contained sub words
+
+        # For example, for the string
+        #   'func-mask|M=s'
+        # we return two words, 'func-mask' and 'M'
+
+        my @subwords;
+
+        # Remove any optional trailing flag
+        if ( $word =~ /^([a-zA-Z_].*)(?:!|\+|=s|:s|=i|:i|=f|:f)$/x ) {
+            $word = $1;
+        }
+
+        push @subwords, split /\|/, $word;
+        return \@subwords;
+    }; ## end $getopt_subwords = sub
+
     #--------------------------
     # Main loop over all tokens
     #--------------------------
@@ -9059,7 +9081,6 @@ EOM
                     if ( length($token_n) >= 12
                         && substr( $token_n, 0, 12 ) eq 'Getopt::Long' )
                     {
-                        ## FIXME needs to be by package
                         $saw_Getopt_Long = 1;
                         next;
                     }
@@ -9132,6 +9153,12 @@ EOM
 
     return if ( !%unique_words );
 
+    # If we expect but did not see GetOptions hash keys, test all quotes
+    my $scan_quotes_for_keys =
+         $saw_Getopt_Long
+      && %is_GetOptions_call_by_seqno
+      && !@GetOptions_keys;
+
     # Check each unique word against the list of type Q tokens
     if (@Q_list) {
         my $imax = $#Q_list;
@@ -9149,6 +9176,15 @@ EOM
                 if ( $unique_words{$word} ) {
                     delete $unique_words{$word};
                 }
+
+                if ( $scan_quotes_for_keys && $word !~ /\s/ ) {
+                    my $rlist = $getopt_subwords->($word);
+                    foreach my $subword ( @{$rlist} ) {
+                        if ( $unique_words{$subword} ) {
+                            delete $unique_words{$subword};
+                        }
+                    }
+                }
             }
         }
     }
@@ -9156,29 +9192,21 @@ EOM
     # Check words against any option keys passed to GetOptions
     foreach my $Kopt (@GetOptions_keys) {
         my $word = $rLL->[$Kopt]->[_TOKEN_];
-        my $ch1  = substr( $word, 0, 1 );
+
+        my $ch1 = substr( $word, 0, 1 );
         if ( $ch1 eq "'" || $ch1 eq '"' ) {
             $word = substr( $word, 1, -1 );
         }
+
         if ( $unique_words{$word} ) {
             delete $unique_words{$word};
         }
 
-        # Remove optional flag
-        if ( $word =~ /^([a-zA-Z_].*)(?:!|\+|=s|:s|=i|:i|=f|:f)$/x ) {
-            $word = $1;
-            if ( $unique_words{$word} ) {
-                delete $unique_words{$word};
-            }
-        }
-
-        # check for something like 'length|height';
-        if ( index( $word, '|' ) > 0 ) {
-            my @words = split '|', $word;
-            foreach my $w (@words) {
-                if ( $unique_words{$w} ) {
-                    delete $unique_words{$w};
-                }
+        # remove any optional flag and retry
+        my $rsubwords = $getopt_subwords->($word);
+        foreach my $subword ( @{$rsubwords} ) {
+            if ( $unique_words{$subword} ) {
+                delete $unique_words{$subword};
             }
         }
     }
@@ -9207,6 +9235,14 @@ EOM
         foreach my $word ( @{$rlist} ) {
             if ( $unique_words{$word} ) {
                 delete $unique_words{$word};
+            }
+            if ($scan_quotes_for_keys) {
+                my $rsubwords = $getopt_subwords->($word);
+                foreach my $subword ( @{$rsubwords} ) {
+                    if ( $unique_words{$subword} ) {
+                        delete $unique_words{$subword};
+                    }
+                }
             }
         }
     }
