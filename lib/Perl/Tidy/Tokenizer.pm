@@ -1181,6 +1181,23 @@ $lno: $diff
 EOM
         }
     }
+
+    # Try to give a hint
+    my $level_diff_1 = $rhistory_level_diff->[1];
+    my $ln_0         = $rhistory_line_number->[0];
+    my $ln_1         = $rhistory_line_number->[1];
+    if ( $level_diff_1 < 0 ) {
+        push @output_lines,
+          "There may be an extra '}' between lines $ln_0 and $ln_1\n";
+    }
+    elsif ( $level_diff_1 > 0 ) {
+        push @output_lines,
+          "There may be a missing '}' between lines $ln_0 and $ln_1\n";
+    }
+    else {
+        ## two leading zeros in the table - probably can't happen - no hint
+    }
+
     push @output_lines, "\n";
     my $output_str = join EMPTY_STRING, @output_lines;
 
