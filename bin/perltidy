@@ -6900,11 +6900,11 @@ B<--warn-mismatched-return-types=string>, or B<-wmrt=string>, can be used to lim
 To restrict the checking, set the string equal to the letter(s) of that warning,
 any B<x>, B<y>, B<o>, B<u>, or B<s>.  For example
 
-   perltidy -wmrt='x o s' somefile.pl
+   perltidy -wmr -wmrt='x o s' somefile.pl
 
 will format F<somefile.pl> and report issue types B<x>, B<o>, and B<s> but not
 types B<u> and B<y>.  All checks may be requested with B<-wmrt='*'> or
-B<-wmrt=1>.  This is the default.
+B<-wmrt=1>.  This is the default if this parameter is not specified.
 
 =item *
 
