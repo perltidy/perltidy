@@ -8804,6 +8804,32 @@ sub follow_if_chain {
     return $rchain;
 } ## end sub follow_if_chain
 
+sub get_interpolated_hash_keys {
+
+    my ($str) = @_;
+
+    # Find hash keys of interpolated variables in a quoted string
+
+    # Given:
+    #  $str=a quoted string with possible interpolated vars
+    # Return:
+    #  ref to list of interpolated hash keys
+    # Example: for the string:
+    #  "bla bla bla $rhash->{key1} and  $other_hash{'key2'} ... @{$rlist}"
+    #  finds 'key1' and 'key2'
+
+    my @keys;
+    while ( $str =~ m/\$[A-Za-z_][A-Za-z_\d]*(?:->)?\{([^\}]+)\}/gc ) {
+        my $key = $1;
+        my $ch1 = substr( $key, 0, 1 );
+        if ( $ch1 eq "'" ) {
+            $key = substr( $key, 1, -1 );
+        }
+        push @keys, $key;
+    } ## end while ( $str =~ ...)
+    return \@keys;
+} ## end sub get_interpolated_hash_keys
+
 sub dump_unique_keys {
     my ($self) = @_;
 
@@ -8816,7 +8842,9 @@ sub dump_unique_keys {
     my $K_opening_container = $self->[_K_opening_container_];
     my $K_closing_container = $self->[_K_closing_container_];
 
-    my $saw_Getopt_Long;
+    my $saw_Getopt_Long;     # true for 'use Getopt::Long'
+    my $ix_HERE_END = -1;    # the line index of the last here target read
+    my @keys_in_HERE_docs;
 
     # stack holds [$seqno, $KK, $KK_last_nb]
     my @stack;
@@ -9137,6 +9165,22 @@ EOM
                     ## no other special checks
                 }
             }
+
+            # a here doc - look for interpolated hash keys
+            elsif ( $type eq 'h' ) {
+                my $ix_line = $rLL->[$KK]->[_LINE_INDEX_];
+                my $ix_HERE = max( $ix_HERE_END, $ix_line );
+
+                # collect the here doc text
+                ( $ix_HERE_END, my $here_text ) =
+                  $self->get_here_text($ix_HERE);
+
+                my $token = $rLL->[$KK]->[_TOKEN_];
+                if ( is_interpolated_here_doc($token) ) {
+                    my $rkeys = get_interpolated_hash_keys($here_text);
+                    push @keys_in_HERE_docs, @{$rkeys};
+                }
+            }
             else {
                 # continue search
             }
@@ -9164,15 +9208,22 @@ EOM
         my $imax = $#Q_list;
         foreach my $i ( 0 .. $imax ) {
 
-            # Ignore multiline quotes
-            my $K = $Q_list[$i];
+            my $K    = $Q_list[$i];
+            my $word = substr( $rLL->[$K]->[_TOKEN_], 1, -1 );
+
+            my $rkeys = get_interpolated_hash_keys($word);
+            foreach my $key ( @{$rkeys} ) {
+                if ( $unique_words{$key} ) {
+                    delete $unique_words{$key};
+                }
+            }
+
+            # Ignore multiline quotes for the remaining checks
             if (   ( $i == 0 || $Q_list[ $i - 1 ] + 1 != $K )
                 && ( $i == $imax || $Q_list[ $i + 1 ] != $K + 1 ) )
             {
 
                 # remove quotes
-                my $word = substr( $rLL->[$K]->[_TOKEN_], 1, -1 );
-
                 if ( $unique_words{$word} ) {
                     delete $unique_words{$word};
                 }
@@ -9188,6 +9239,17 @@ EOM
             }
         }
     }
+
+    return if ( !%unique_words );
+
+    # Check words against any hash keys in here docs
+    foreach my $key (@keys_in_HERE_docs) {
+        if ( $unique_words{$key} ) {
+            delete $unique_words{$key};
+        }
+    }
+
+    return if ( !%unique_words );
 
     # Check words against any option keys passed to GetOptions
     foreach my $Kopt (@GetOptions_keys) {
@@ -9210,6 +9272,8 @@ EOM
             }
         }
     }
+
+    return if ( !%unique_words );
 
     # Remove single letters seen in first arg to getopts
     foreach my $Kopt (@Q_getopts) {
@@ -11965,16 +12029,17 @@ EOM
             #-----------
             elsif ( $type eq 'h' ) {
 
-                # scan here-doc if it is interpolated
-                if ( $check_unused && is_interpolated_here_doc($token) ) {
-                    my $ix_HERE = max( $ix_HERE_END, $ix_line );
+                if ($check_unused) {
 
                     # collect the here doc text
+                    my $ix_HERE = max( $ix_HERE_END, $ix_line );
                     ( $ix_HERE_END, my $here_text ) =
                       $self->get_here_text($ix_HERE);
 
-                    # scan the here-doc text
-                    $scan_quoted_text->($here_text);
+                    # scan here-doc if it is interpolated
+                    if ( is_interpolated_here_doc($token) ) {
+                        $scan_quoted_text->($here_text);
+                    }
                 }
             }
 
