@@ -78,6 +78,11 @@ use English    qw( -no_match_vars );
 use List::Util qw( min max first );    # min, max first are in Perl 5.8
 our $VERSION = '20250105';
 
+# hash keys found with perltidy -duk
+my @unique_hash_keys_uu =
+  qw( break-open-compact-parens }] TERM INT USER LOGNAME PATH SHELL PERL5LIB
+  PERLLIB unlike isnt );
+
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
 
@@ -8815,11 +8820,10 @@ sub get_interpolated_hash_keys {
     # Return:
     #  ref to list of interpolated hash keys
     # Example: for the string:
-    #  "bla bla bla $rhash->{key1} and  $other_hash{'key2'} ... @{$rlist}"
-    #  finds 'key1' and 'key2'
-
+    #  "$rhash->{key1} and $other_hash{'key2'} and ${$rlist}"
+    #  finds 'key1' and 'key2' and not '$rlist'
     my @keys;
-    while ( $str =~ m/\$[A-Za-z_][A-Za-z_\d]*(?:->)?\{([^\}]+)\}/gc ) {
+    while ( $str =~ m/ \$[A-Za-z_]\w* (?:->)? \{ ([^\$\@\}][^\}]*) \}/gcx ) {
         my $key = $1;
         my $ch1 = substr( $key, 0, 1 );
         if ( $ch1 eq "'" ) {
@@ -8830,11 +8834,10 @@ sub get_interpolated_hash_keys {
     return \@keys;
 } ## end sub get_interpolated_hash_keys
 
-sub dump_unique_keys {
+sub scan_unique_keys {
     my ($self) = @_;
 
-    # Implement --dump-unique-keys, -duk
-    # Dump a list of hash keys used just one time
+    # Scan for hash keys needed to implement --dump-unique-keys, -duk
 
     my $rLL                 = $self->[_rLL_];
     my $Klimit              = $self->[_Klimit_];
@@ -8865,9 +8868,14 @@ sub dump_unique_keys {
     my $rwords = {};
     my %is_GetOptions_call_by_seqno;
 
+    my @q;
+    my %is_GetOptions_call;
+    @q = qw( GetOptions GetOptionsFromArray GetOptionsFromString );
+    @is_GetOptions_call{@q} = (1) x scalar(@q);
+
     # See https://perldoc.perl.org/perlref
     my %is_typeglob_slot_key;
-    my @q = qw( SCALAR ARRAY HASH CODE IO FILEHANDLE GLOB FORMAT NAME PACKAGE );
+    @q = qw( SCALAR ARRAY HASH CODE IO FILEHANDLE GLOB FORMAT NAME PACKAGE );
     @is_typeglob_slot_key{@q} = (1) x scalar(@q);
 
     # Table of some known keys
@@ -8928,8 +8936,14 @@ sub dump_unique_keys {
 
     my $push_KK_last_nb = sub {
 
-        # if the previous nonblank token was a hash key of type
+        # If the previous nonblank token was a hash key of type
         # 'Q' or 'w', then update its count
+        my ( ($parent_seqno) ) = @_;
+
+        # Given:
+        #   $parent_seqno = sequence number of container:
+        #    - required for a key followed by '=>'
+        #    - not required for a key in hash braces
 
         # We are ignoring constant definitions
         if ( $KK < $K_end_skip ) { return }
@@ -8983,36 +8997,98 @@ sub dump_unique_keys {
         }
 
         if ( !defined( $rwords->{$word} ) ) {
-            $rwords->{$word} = [ $one, $KK_last_nb ];
+            $rwords->{$word} = {
+                count        => $one,
+                K            => $KK_last_nb,
+                parent_seqno => $parent_seqno,
+            };
         }
         else {
-            $rwords->{$word}->[0]++;
+            $rwords->{$word}->{count}++;
         }
         return;
     }; ## end $push_KK_last_nb = sub
 
-    my $getopt_subwords = sub {
+    my $getopt_subword = sub {
 
-        my ($word) = @_;
+        my ($word_in) = @_;
 
         # Given:
-        #   $word= a string which may be a key to Getopts::Long,
-        # Return: a ref to a list of all possible contained sub words
+        #   $word= a string which may or may not be a key to Getopts::Long,
+        # Return:
+        #   the corresponding hash key
 
-        # For example, for the string
-        #   'func-mask|M=s'
-        # we return two words, 'func-mask' and 'M'
+        # Input:               Output:
+        # 'func-mask|M=s'      'func-mask'
+        # 'foo=s{2,4}'         'foo'
+        my $word = $word_in;
 
-        my @subwords;
+        # split on pipe symbols; the first word is the key
+        my @parts = split /\|/, $word;
+        return $word_in if ( !@parts );
+        $word = $parts[0];
 
-        # Remove any optional trailing flag
-        if ( $word =~ /^([a-zA-Z_].*)(?:!|\+|=s|:s|=i|:i|=f|:f)$/x ) {
-            $word = $1;
+        # remove one or two optional leading dashes
+        $word =~ s/^--?//;
+
+        # remove any trailing flag
+        if ( @parts == 1 ) {
+            $word =~ s/^([\w_\-]+)(?:\!|\+|=s|:s|=i|:i|=f|:f)/$1/;
         }
 
-        push @subwords, split /\|/, $word;
-        return \@subwords;
-    }; ## end $getopt_subwords = sub
+        # revert if the possible key name does not look reasonable
+        if ( !$word || $word !~ /^[\w\-]+$/ ) {
+            $word = $word_in;
+        }
+
+        return $word;
+    }; ## end $getopt_subword = sub
+
+    my $remove_sets_of_unwanted_keys = sub {
+
+        # Look for containers of multiple hash keys which are only defined
+        # once, and remove them from further consideration. These are probably
+        # for communication with other packages and thus not of interest.  The
+        # idea is that it is unlikely that the user has misspelled an entire
+        # set of keys.
+
+        # Count keys by container
+        my %total_count_by_seqno;
+        my %unique_key_count_by_seqno;
+        foreach my $key ( keys %{$rwords} ) {
+            my $count        = $rwords->{$key}->{count};
+            my $parent_seqno = $rwords->{$key}->{parent_seqno};
+            next if ( !$parent_seqno );
+            $total_count_by_seqno{$parent_seqno}++;
+            $unique_key_count_by_seqno{$parent_seqno}++ if ( $count == 1 );
+        }
+
+        # Find sets of keys which are all, or nearly all, unique.
+        # Currently, only sets of 3 or more keys are considered large
+        # enough for the application of this logic.
+        my %delete_this_seqno;
+        foreach my $seqno ( keys %total_count_by_seqno ) {
+            my $total_count      = $total_count_by_seqno{$seqno};
+            my $unique_key_count = $unique_key_count_by_seqno{$seqno};
+            next if ( !$unique_key_count );
+            next if ( $total_count < 3 );
+            if ( $unique_key_count == $total_count ) {
+                $delete_this_seqno{$seqno} = 1;
+            }
+        }
+
+        # Bump counts of keys to be deleted from further consideration
+        my @deleted_key_list;
+        foreach my $key ( keys %{$rwords} ) {
+            my $parent_seqno = $rwords->{$key}->{parent_seqno};
+            next if ( !$parent_seqno );
+            next if ( !$delete_this_seqno{$parent_seqno} );
+            $rwords->{$key}->{count}++;
+            push @deleted_key_list, $key;
+        }
+
+        return;
+    }; ## end $remove_sets_of_unwanted_keys = sub
 
     #--------------------------
     # Main loop over all tokens
@@ -9084,11 +9160,13 @@ EOM
                         push @GetOptions_keys, $KK_last_nb;
                     }
                     else {
-                        $push_KK_last_nb->();
+                        $push_KK_last_nb->($parent_seqno);
                     }
                 }
             }
             elsif ( $type eq 'Q' ) {
+
+                # Save for later comparison with hash keys.
                 push @Q_list, $KK;
             }
             elsif ( $type eq 'q' ) {
@@ -9105,20 +9183,24 @@ EOM
                     my $Kn = $self->K_next_code($KK);
                     next if ( !defined($Kn) );
                     my $token_n = $rLL->[$Kn]->[_TOKEN_];
-
                     if ( length($token_n) >= 12
                         && substr( $token_n, 0, 12 ) eq 'Getopt::Long' )
                     {
                         $saw_Getopt_Long = 1;
                         next;
                     }
+
+                    # Handle 'use constant' ... we will skip these hash keys.
+                    # For example, we do not want to mark '_mode_' and '_uid_'
+                    # here as unique hash keys since they become subs:
+                    #     use constant { _mode_  => 2, _uid_ => 4 }
                     next if ( $token_n ne 'constant' );
                     $Kn = $self->K_next_code($Kn);
                     next if ( !defined($Kn) );
                     my $seqno_n = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
                     if ($seqno_n) {
 
-                        # skip a block of constant definitions
+                        # Set flag to skip over a block of constant definitions.
                         if ( $rLL->[$Kn]->[_TOKEN_] eq '{' ) {
                             $K_end_skip = $K_closing_container->{$seqno_n};
                         }
@@ -9142,7 +9224,7 @@ EOM
                 # Look GetOptions call (Getopt::Long, for example:
                 #    GetOptions ("length=i" => \$length,
                 #                "file=s"   => \$data)
-                if ( $token eq 'GetOptions' ) {
+                if ( $is_GetOptions_call{$token} ) {
                     my $Kn = $self->K_next_nonblank($KK);
                     if ( $Kn && $rLL->[$Kn]->[_TOKEN_] eq '(' ) {
                         my $seqno_n = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
@@ -9175,6 +9257,9 @@ EOM
                 ( $ix_HERE_END, my $here_text ) =
                   $self->get_here_text($ix_HERE);
 
+                # Any found keys are saved for checking against keys found
+                # in the text, but they are not entered as candidates for
+                # unique keys.
                 my $token = $rLL->[$KK]->[_TOKEN_];
                 if ( is_interpolated_here_doc($token) ) {
                     my $rkeys = get_interpolated_hash_keys($here_text);
@@ -9187,21 +9272,26 @@ EOM
         }
     } ## end while ( ++$KK <= $Klimit )
 
+    # Remove collections of keys which look uninteresting
+    $remove_sets_of_unwanted_keys->();
+
+    my $missing_GetOptions_keys =
+         $saw_Getopt_Long
+      && %is_GetOptions_call_by_seqno
+      && !@GetOptions_keys;
+
     # Find hash keys seen just one time
     my %unique_words;
     foreach my $key ( keys %{$rwords} ) {
-        my ( $count, $K ) = @{ $rwords->{$key} };
+        my $count = $rwords->{$key}->{count};
+        my $K     = $rwords->{$key}->{K};
         next if ( $count != 1 );
         $unique_words{$key} = $K;
     }
 
     return if ( !%unique_words );
 
-    # If we expect but did not see GetOptions hash keys, test all quotes
-    my $scan_quotes_for_keys =
-         $saw_Getopt_Long
-      && %is_GetOptions_call_by_seqno
-      && !@GetOptions_keys;
+    # Now go back and look for these keys in any saved quotes ...
 
     # Check each unique word against the list of type Q tokens
     if (@Q_list) {
@@ -9228,12 +9318,10 @@ EOM
                     delete $unique_words{$word};
                 }
 
-                if ( $scan_quotes_for_keys && $word !~ /\s/ ) {
-                    my $rlist = $getopt_subwords->($word);
-                    foreach my $subword ( @{$rlist} ) {
-                        if ( $unique_words{$subword} ) {
-                            delete $unique_words{$subword};
-                        }
+                if ( $missing_GetOptions_keys && $word !~ /\s/ ) {
+                    my $subword = $getopt_subword->($word);
+                    if ( $unique_words{$subword} ) {
+                        delete $unique_words{$subword};
                     }
                 }
             }
@@ -9265,11 +9353,9 @@ EOM
         }
 
         # remove any optional flag and retry
-        my $rsubwords = $getopt_subwords->($word);
-        foreach my $subword ( @{$rsubwords} ) {
-            if ( $unique_words{$subword} ) {
-                delete $unique_words{$subword};
-            }
+        my $subword = $getopt_subword->($word);
+        if ( $unique_words{$subword} ) {
+            delete $unique_words{$subword};
         }
     }
 
@@ -9300,12 +9386,10 @@ EOM
             if ( $unique_words{$word} ) {
                 delete $unique_words{$word};
             }
-            if ($scan_quotes_for_keys) {
-                my $rsubwords = $getopt_subwords->($word);
-                foreach my $subword ( @{$rsubwords} ) {
-                    if ( $unique_words{$subword} ) {
-                        delete $unique_words{$subword};
-                    }
+            if ($missing_GetOptions_keys) {
+                my $subword = $getopt_subword->($word);
+                if ( $unique_words{$subword} ) {
+                    delete $unique_words{$subword};
                 }
             }
         }
@@ -9313,7 +9397,7 @@ EOM
 
     return if ( !%unique_words );
 
-    # Report unique words
+    # Report any remaining unique words
     my $output_string = EMPTY_STRING;
     my @list;
     foreach my $word ( keys %unique_words ) {
@@ -9326,6 +9410,17 @@ EOM
         my ( $word, $lno ) = @{$item};
         $output_string .= "$word,$lno\n";
     }
+    return $output_string;
+
+} ## end sub scan_unique_keys
+
+sub dump_unique_keys {
+    my ($self) = @_;
+
+    # Dump a list of hash keys used just one time to STDOUT
+    # This sub is called when
+    #   --dump-unique-keys (-duk) is set.
+    my $output_string = $self->scan_unique_keys();
     if ($output_string) {
         my $input_stream_name = get_input_stream_name();
         chomp $output_string;
@@ -9334,9 +9429,7 @@ EOM
 $output_string
 EOM
     }
-
     return;
-
 } ## end sub dump_unique_keys
 
 sub dump_block_summary {
@@ -12833,11 +12926,11 @@ sub scan_call_parens {
         my $rwarning = {
             token       => $token,
             token_next  => $token_Kn,
-            want        => $want_paren,
             note        => $note,
             line_number => $rLL->[$KK]->[_LINE_INDEX_] + 1,
-            KK          => $KK,
-            Kn          => $Kn,
+##          want        => $want_paren,
+##          KK          => $KK,
+##          Kn          => $Kn,
         };
         push @{$rwarnings}, $rwarning;
     }
@@ -17912,9 +18005,9 @@ sub count_sub_return_args {
         # retain old vars during transition phase
         # Note: using <= to match old results but could use <
         if ( !defined($return_count_min) || $count <= $return_count_min ) {
-            $return_count_min           = $count;
-            $item->{return_count_min}   = $count;
-            $item->{K_return_count_min} = $K_return;
+            $return_count_min = $count;
+            $item->{return_count_min} = $count;
+##          $item->{K_return_count_min} = $K_return;
         }
 
         # Note: using >= to match old results but could use >
@@ -18583,10 +18676,10 @@ sub cross_check_sub_calls {
         next unless defined($arg_count);
         if ( $call_type eq '->' ) {
             $arg_count += 1;
-            $upper_bound_call_info{$key}->{method_call_count}++;
+##          $upper_bound_call_info{$key}->{method_call_count}++;
         }
         else {
-            $upper_bound_call_info{$key}->{direct_call_count}++;
+##          $upper_bound_call_info{$key}->{direct_call_count}++;
         }
         my $max = $upper_bound_call_info{$key}->{max_arg_count};
         my $min = $upper_bound_call_info{$key}->{min_arg_count};
@@ -18919,7 +19012,7 @@ sub cross_check_sub_calls {
                   $rsub_item->{return_count_indefinite};
                 $rK_return_list =
                   $self->[_rK_return_by_sub_seqno_]->{$seqno_sub};
-                $common_hash{$key}->{rK_return_list} = $rK_return_list;
+##              $common_hash{$key}->{rK_return_list} = $rK_return_list;
                 $rK_return_count_hash = $rsub_item->{rK_return_count_hash};
             }
         }
@@ -31813,7 +31906,7 @@ sub do_colon_breaks {
 
                 $self->table_maker(
                     {
-                        depth            => $dd,
+##                      depth            => $dd,
                         i_opening_paren  => $opening_structure_index_stack[$dd],
                         i_closing_paren  => $i,
                         item_count       => $item_count_stack[$dd],
@@ -34573,13 +34666,13 @@ EOM
             _item_count_B      => $item_count,
 
             # New variables
-            _columns                 => $columns,
-            _formatted_columns       => $formatted_columns,
-            _formatted_lines         => $formatted_lines,
-            _max_width               => $max_width,
-            _new_identifier_count    => $new_identifier_count,
-            _number_of_fields        => $number_of_fields,
-            _odd_or_even             => $odd_or_even,
+            _columns              => $columns,
+            _formatted_columns    => $formatted_columns,
+            _formatted_lines      => $formatted_lines,
+            _max_width            => $max_width,
+            _new_identifier_count => $new_identifier_count,
+            _number_of_fields     => $number_of_fields,
+##          _odd_or_even             => $odd_or_even,
             _packed_columns          => $packed_columns,
             _packed_lines            => $packed_lines,
             _pair_width              => $pair_width,
