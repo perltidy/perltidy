@@ -78,10 +78,9 @@ use English    qw( -no_match_vars );
 use List::Util qw( min max first );    # min, max first are in Perl 5.8
 our $VERSION = '20250105';
 
-# hash keys found with perltidy -duk
-my @unique_hash_keys_uu =
-  qw( break-open-compact-parens }] TERM INT USER LOGNAME PATH SHELL PERL5LIB
-  PERLLIB unlike isnt );
+# List of hash keys to prevent -duk from listing them.
+# 'break-open-compact-parens' is an unimplemented option.
+my @unique_hash_keys_uu = qw( break-open-compact-parens }] );
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -8105,6 +8104,10 @@ EOM
         Exit(0);
     }
 
+    if ( $rOpts->{'warn-unique-keys'} ) {
+        $self->warn_unique_keys();
+    }
+
     # Dump any requested block summary data
     if ( $rOpts->{'dump-block-summary'} ) {
         $self->dump_block_summary();
@@ -8955,11 +8958,48 @@ sub scan_unique_keys {
             $word = $token_last;
         }
         elsif ( $type_last eq 'Q' ) {
-            $word = substr( $token_last, 1, -1 );
+
+            # Look for quotes only starting with q( qq( ' "" ...
+            # We know that we are at the end of this Q token, so the
+            # last character is some kind of quote marker.
+            # It would be extremely unlikely that it is a multiline Q
+            # since it is a hash key, so we can do some simple checks.
+            my $ch0 = substr( $token_last, 0, 1 );
+            my $ch1 = substr( $token_last, 1, 1 );
+            my $is_interpolated;
+            if ( $ch0 eq 'q' ) {
+                if ( $ch1 =~ /\W/ ) {
+
+                    # something like q(
+                    $word = substr( $token_last, 2, -1 );
+                }
+
+                elsif ( $ch1 eq 'q' ) {
+
+                    # something like qq(
+                    $is_interpolated = 1;
+                    $word            = substr( $token_last, 3, -1 );
+                }
+                else {
+
+                    # strange for a hash key - give up
+                    return;
+                }
+            }
+            elsif ( $ch0 eq '"' ) {
+                $word            = substr( $token_last, 1, -1 );
+                $is_interpolated = 1;
+            }
+            elsif ( $ch0 eq "'" ) {
+                $word = substr( $token_last, 1, -1 );
+            }
+            else {
+                ## ignore a quote token such as tr// or y// ...
+                return;
+            }
 
             # Ignore text with interpolated values
-            my $ch0 = substr( $token_last, 0, 1 );
-            if ( $ch0 eq '"' ) {
+            if ($is_interpolated) {
                 foreach my $sigil ( '$', '@' ) {
                     my $pos = index( $word, $sigil );
                     next   if ( $pos < 0 );
@@ -9044,7 +9084,7 @@ sub scan_unique_keys {
         return $word;
     }; ## end $getopt_subword = sub
 
-    my $remove_sets_of_unwanted_keys = sub {
+    my $filter_out_large_sets = sub {
 
         # Look for containers of multiple hash keys which are only defined
         # once, and remove them from further consideration. These are probably
@@ -9064,15 +9104,17 @@ sub scan_unique_keys {
         }
 
         # Find sets of keys which are all, or nearly all, unique.
-        # Currently, only sets of 3 or more keys are considered large
-        # enough for the application of this logic.
         my %delete_this_seqno;
         foreach my $seqno ( keys %total_count_by_seqno ) {
             my $total_count      = $total_count_by_seqno{$seqno};
             my $unique_key_count = $unique_key_count_by_seqno{$seqno};
             next if ( !$unique_key_count );
-            next if ( $total_count < 3 );
-            if ( $unique_key_count == $total_count ) {
+
+            # This is only for sets of multiple keys
+            next if ( $total_count <= 1 );
+
+            # Ignore this set if most of the keys are unique
+            if ( $unique_key_count > $total_count / 2 ) {
                 $delete_this_seqno{$seqno} = 1;
             }
         }
@@ -9088,7 +9130,7 @@ sub scan_unique_keys {
         }
 
         return;
-    }; ## end $remove_sets_of_unwanted_keys = sub
+    }; ## end $filter_out_large_sets = sub
 
     #--------------------------
     # Main loop over all tokens
@@ -9273,7 +9315,7 @@ EOM
     } ## end while ( ++$KK <= $Klimit )
 
     # Remove collections of keys which look uninteresting
-    $remove_sets_of_unwanted_keys->();
+    $filter_out_large_sets->();
 
     my $missing_GetOptions_keys =
          $saw_Getopt_Long
@@ -9431,6 +9473,22 @@ EOM
     }
     return;
 } ## end sub dump_unique_keys
+
+sub warn_unique_keys {
+    my ($self) = @_;
+
+    # process a --warn-unique-keys command
+
+    my $wuk_key       = 'warn-unique-keys';
+    my $output_string = $self->scan_unique_keys();
+    if ($output_string) {
+        my $message = "Begin scan for --$wuk_key\n";
+        $message .= $output_string;
+        $message .= "End scan for --$wuk_key\n";
+        warning($message);
+    }
+    return;
+} ## end sub warn_unique_keys
 
 sub dump_block_summary {
     my ($self) = @_;

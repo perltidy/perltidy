@@ -44,6 +44,9 @@ use constant BACKSLASH    => q{\\};
 
 { #<<< A non-indenting brace to contain all lexical variables
 
+# List of hash keys to prevent -duk from listing them.
+my @unique_hash_keys_uu = qw( RPerl );
+
 # Parent sequence number of tree of containers; must be 1
 use constant SEQ_ROOT => 1;
 

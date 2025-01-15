@@ -3518,10 +3518,10 @@ sub match_line_pairs {
                             {
                                 group_level => $group_level,
                                 tok         => $tok,
-                                tok_m       => $tok_m,
                                 pat         => $pat,
                                 pat_m       => $pat_m,
                                 pad         => $pad,
+##                              tok_m       => $tok_m,
                             }
                         );
                         if ($match_code) {

@@ -3818,6 +3818,9 @@ sub generate_options {
     $add_option->( 'want-call-parens',             'wcp',  '=s' );
     $add_option->( 'nowant-call-parens',           'nwcp', '=s' );
 
+    # FIXME: this option is for debugging and may eventually be removed
+    $add_option->( 'warn-unique-keys', 'wuk', '!' );
+
     $add_option->( 'warn-mismatched-args',                  'wma',   '!' );
     $add_option->( 'warn-mismatched-arg-types',             'wmat',  '=s' );
     $add_option->( 'warn-mismatched-arg-undercount-cutoff', 'wmauc', '=i' );
