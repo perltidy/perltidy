@@ -208,10 +208,10 @@ EOM
             write_list( $PROFILES_file, $rprofiles );
             last;
         }
-    }
+    } ## end while (1)
 
     write_GO();
-}
+} ## end sub main
 
 sub filter_files {
     my ($rlist) = @_;
@@ -246,7 +246,7 @@ sub filter_files {
       map  { [ $_, -e $_ ? -s $_ : 0 ] } @{$rlist};
 
     return $rlist;
-}
+} ## end sub filter_files
 
 sub filter_profiles {
     my ($rlist) = @_;
@@ -264,14 +264,14 @@ sub filter_profiles {
       map  { [ ( split /\./, $_ ) ] } @{$rlist};    # split into [base,ext]
 
     return $rlist;
-}
+} ## end sub filter_profiles
 
 sub uniq {
     my ($rlist) = @_;
     my %seen    = ();
     my @uniqu   = grep { !$seen{$_}++ } @{$rlist};
     return \@uniqu;
-}
+} ## end sub uniq
 
 sub define_new_files {
 
@@ -314,10 +314,10 @@ EOM
                 $rnew_files = reduce_total_file_size( $rnew_files, $fraction );
             }
         }
-    }
+    } ## end while (1)
     $rnew_files = [ sort @{$rnew_files} ];
     return $rnew_files;
-}
+} ## end sub define_new_files
 
 sub add_files {
 
@@ -362,10 +362,10 @@ EOM
         }
         elsif ( $ans eq 'Y' ) { $rnew_files = $rold_files; last }
         elsif ( $ans eq 'Q' ) { last }
-    }
+    } ## end while (1)
     $rnew_files = [ sort @{$rnew_files} ];
     return $rnew_files;
-}
+} ## end sub add_files
 
 sub file_size_sum_mb {
     my ($rfiles) = @_;
@@ -375,7 +375,7 @@ sub file_size_sum_mb {
         $sum_mb += $size_in_mb;
     }
     return $sum_mb;
-}
+} ## end sub file_size_sum_mb
 
 sub reduce_total_file_size {
     my ( $rfiles, $fraction ) = @_;
@@ -397,7 +397,7 @@ sub reduce_total_file_size {
         push @new_files, $fname;
     }
     return \@new_files;
-}
+} ## end sub reduce_total_file_size
 
 sub get_profile_info {
 
@@ -414,7 +414,7 @@ sub get_profile_info {
     Last profile      : $profileN
 EOM
     return $profile_info;
-}
+} ## end sub get_profile_info
 
 sub get_file_info {
     my ($rf) = @_;
@@ -434,7 +434,7 @@ sub get_file_info {
     Last file      : $fileN
 EOM
     return $file_info;
-}
+} ## end sub get_file_info
 
 sub default_config {
     $rsetup = {
@@ -447,7 +447,7 @@ sub default_config {
         append_flags       => "",
     };
     return;
-}
+} ## end sub default_config
 
 sub write_GO {
 
@@ -496,20 +496,20 @@ EOM
     system("chmod +x $runme");
     print STDOUT "Edit $config_file if you want to make any changes\n";
     print STDOUT "then enter ./$runme\n";
-}
+} ## end sub write_GO
 
 sub write_config {
     my ($ofile) = @_;
     my $hash = Data::Dumper->Dump( [$rsetup], ["rsetup"] );
     my $fh;
-    if ( !open( $fh, '>', $ofile, ) ) {
+    if ( !open( $fh, '>', $ofile ) ) {
         print "cannot open $ofile :$!\n";
         return;
     }
     $fh->print("$hash\n");
     $fh->close();
     return;
-}
+} ## end sub write_config
 
 sub read_config {
 
@@ -533,7 +533,7 @@ EOM
     do $ifile;
 
     return;
-}
+} ## end sub read_config
 
 sub read_list {
     my ($fname) = @_;
@@ -551,10 +551,10 @@ sub read_list {
         $line         =~ s/\s+$//;
         next if $line =~ /^#/;
         push @{$rlist}, $line;
-    }
+    } ## end while ( my $line = <$fh> )
     $fh->close();
     return $rlist;
-}
+} ## end sub read_list
 
 sub write_list {
     my ( $fname, $rlist ) = @_;
@@ -571,7 +571,7 @@ sub write_list {
     }
     $fh->close();
     return;
-}
+} ## end sub write_list
 
 sub query {
     my ($msg) = @_;
@@ -579,7 +579,7 @@ sub query {
     my $ans = <STDIN>;
     chomp $ans;
     return $ans;
-}
+} ## end sub query
 
 sub queryu {
     return uc query(@_);
@@ -603,7 +603,7 @@ sub ifyes {
         print STDERR "Please answer 'Y' or 'N'\n";
         goto ASK;
     }
-}
+} ## end sub ifyes
 
 sub get_output_filename {
     my ( $msg, $default ) = @_;
@@ -622,7 +622,7 @@ sub get_output_filename {
           unless ( ifyes("file '$filename' exists; Overwrite? [Y/N]") );
     }
     return $filename;
-}
+} ## end sub get_output_filename
 
 sub get_input_filename {
     my ( $msg, $ext, $default ) = @_;
@@ -646,7 +646,7 @@ sub get_input_filename {
         }
     }
     return $filename;
-}
+} ## end sub get_input_filename
 
 sub get_num {
     my ( $msg, $default ) = @_;
@@ -659,7 +659,7 @@ sub get_num {
     my $val = eval($ans);
     if ($@) { warn $@; $val = $ans; }
     return $val;
-}
+} ## end sub get_num
 
 {    # make_profiles
 
@@ -689,7 +689,7 @@ sub get_num {
         close IN;
         unlink $tmpnam if ( -e $tmpnam );
         return $rparameters;
-    }
+    } ## end sub get_parameters
 
     sub get_integer_option_range {
 
@@ -709,11 +709,11 @@ sub get_num {
                 if ( $_ eq 'undef' ) { $_ = undef }
             }
             $integer_option_range{$opt} = [ $min, $max, $default ];
-        }
+        } ## end while ( my $line = <IN> )
         close IN;
         unlink $tmpnam if ( -e $tmpnam );
         return \%integer_option_range;
-    }
+    } ## end sub get_integer_option_range
 
     BEGIN {
 
@@ -759,7 +759,7 @@ EOM
                     }
                 }
                 elsif ( $ans eq 'R' ) { @{$rprofiles} = []; last }
-            }
+            } ## end while (1)
         }
         my $max_cases =
           get_num( "Number of new random profiles to generate", 10000 );
@@ -803,7 +803,7 @@ EOM
             $fh->close();
             push @{$rprofiles}, $profile;
         }
-    }
+    } ## end sub make_profiles
 
     sub get_random_parameters {
 
@@ -923,7 +923,10 @@ EOM
 
             'line-range-tidy' => [ '1:', '1:' ],
 
-            'multiple-token-tightness' => ['h', 'qw', 'Q', 'q*'],
+            'multiple-token-tightness' => [ 'h', 'qw', 'Q', 'q*' ],
+
+            'pack-operator-types' =>
+              [ '->', '&&', '||', ':', '.', '+', '*', 'and', 'or' ],
 
             # Arbitrary limits to keep things readable
             'blank-lines-after-opening-block'  => [ 0, 4 ],
@@ -1154,7 +1157,7 @@ EOM
             }
         }
         return \@random_parameters;
-    }
+    } ## end sub get_random_parameters
 }
 
 sub check_DEVEL_MODE {
@@ -1177,7 +1180,7 @@ EOM
             }
         }
         push @output, $line;
-    }
+    } ## end while (<$fh>)
     $fh->close();
 
     if ( $changed_count && @output ) {
@@ -1190,4 +1193,4 @@ EOM
         $fh_out->close();
         print STDERR "Changed to DEVEL_MODE => 1\n";
     }
-}
+} ## end sub check_DEVEL_MODE
