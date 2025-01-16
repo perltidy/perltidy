@@ -8962,6 +8962,31 @@ sub scan_unique_keys {
     $add_known_keys->( \%ENV,   '$ENV' );
     $add_known_keys->( \%ERRNO, '$!' );
 
+    my $get_hash_name = sub {
+
+        # Get a name of the hash corresponding to a key in hash braces, if
+        # possible.  We have just encountered token at $KK and about to close
+        # the stack.
+        #    $rOpts->{'something'}
+        #    |       |           |
+        #   $Khash   $Kbrace     $KK
+        return if ( !@stack );
+        my $Kbrace = $stack[-1]->[1];
+        my $Khash  = $stack[-1]->[2];
+        return if ( !defined($Kbrace) );
+        return if ( !defined($Khash) );
+        return if ( $rLL->[$Kbrace]->[_TYPE_] ne 'L' );
+        my $hash_name = $rLL->[$Khash]->[_TOKEN_];
+
+        if ( $hash_name eq '->' ) {
+            $Khash = $self->K_previous_code($Khash);
+            return if ( !defined($Khash) );
+            $hash_name = $rLL->[$Khash]->[_TOKEN_] . $hash_name;
+        }
+        return if ( substr( $hash_name, 0, 1 ) ne '$' );
+        return $hash_name;
+    }; ## end $get_hash_name = sub
+
     my $is_known_hash = sub {
         my ( $key, $all_caps ) = @_;
 
@@ -8976,13 +9001,8 @@ sub scan_unique_keys {
         return if ( !$rhash_names && !$all_caps );
 
         # The key is known, now see if its hash name is known
-        return if ( !@stack );
-        my $Kbrace = $stack[-1]->[1];
-        my $Khash  = $stack[-1]->[2];
-        return if ( !defined($Kbrace) );
-        return if ( !defined($Khash) );
-        return if ( $rLL->[$Kbrace]->[_TYPE_] ne 'L' );
-        my $hash_name = $rLL->[$Khash]->[_TOKEN_];
+        my $hash_name = $get_hash_name->();
+        return if ( !$hash_name );
         return 1 if ( $all_caps && $hash_name eq '$ENV' );
         return 1 if ( $rhash_names->{$hash_name} );
         return;
@@ -9093,10 +9113,12 @@ sub scan_unique_keys {
         }
 
         if ( !defined( $rwords->{$word} ) ) {
+
+            my $id = $parent_seqno ? $parent_seqno : $get_hash_name->();
             $rwords->{$word} = {
-                count        => $one,
-                K            => $KK_last_nb,
-                parent_seqno => $parent_seqno,
+                count   => $one,
+                K       => $KK_last_nb,
+                hash_id => $id,
             };
         }
         else {
@@ -9149,21 +9171,21 @@ sub scan_unique_keys {
         # set of keys.
 
         # Count keys by container
-        my %total_count_by_seqno;
-        my %unique_key_count_by_seqno;
+        my %total_count_by_id;
+        my %unique_key_count_by_id;
         foreach my $key ( keys %{$rwords} ) {
-            my $count        = $rwords->{$key}->{count};
-            my $parent_seqno = $rwords->{$key}->{parent_seqno};
-            next if ( !$parent_seqno );
-            $total_count_by_seqno{$parent_seqno}++;
-            $unique_key_count_by_seqno{$parent_seqno}++ if ( $count == 1 );
+            my $count   = $rwords->{$key}->{count};
+            my $hash_id = $rwords->{$key}->{hash_id};
+            next if ( !$hash_id );
+            $total_count_by_id{$hash_id}++;
+            $unique_key_count_by_id{$hash_id}++ if ( $count == 1 );
         }
 
         # Find sets of keys which are all, or nearly all, unique.
-        my %delete_this_seqno;
-        foreach my $seqno ( keys %total_count_by_seqno ) {
-            my $total_count      = $total_count_by_seqno{$seqno};
-            my $unique_key_count = $unique_key_count_by_seqno{$seqno};
+        my %delete_this_id;
+        foreach my $id ( keys %total_count_by_id ) {
+            my $total_count      = $total_count_by_id{$id};
+            my $unique_key_count = $unique_key_count_by_id{$id};
             next if ( !$unique_key_count );
 
             # This is only for sets of multiple keys
@@ -9171,16 +9193,16 @@ sub scan_unique_keys {
 
             # Ignore this set if most of the keys are unique
             if ( $unique_key_count > $total_count / 2 ) {
-                $delete_this_seqno{$seqno} = 1;
+                $delete_this_id{$id} = 1;
             }
         }
 
         # Bump counts of keys to be deleted from further consideration
         my @deleted_key_list;
         foreach my $key ( keys %{$rwords} ) {
-            my $parent_seqno = $rwords->{$key}->{parent_seqno};
-            next if ( !$parent_seqno );
-            next if ( !$delete_this_seqno{$parent_seqno} );
+            my $hash_id = $rwords->{$key}->{hash_id};
+            next if ( !$hash_id );
+            next if ( !$delete_this_id{$hash_id} );
             $rwords->{$key}->{count}++;
             push @deleted_key_list, $key;
         }
