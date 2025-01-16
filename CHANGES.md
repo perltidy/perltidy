@@ -43,7 +43,7 @@
     updated to insure that it only applies to lines beginning with
     method calls, as intended.  Line breaks for all lines beginning with
     '->', even non-method calls, can be retained by using
-    --keep-old-breakpoints_before='->'.
+    --keep-old-breakpoints-before='->'.
 
     - Added parameter --multiple-token-tightness=s, or -mutt=s.
     The default value --paren-tightness=1 adds space within the parens
