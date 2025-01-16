@@ -1,0 +1,3 @@
+sub bla_p( $value = 42 ) {
+    return Mojo::Promise->resolve($value)->then( sub { shift() / 2 } ) ->then( sub { shift() + 6 } )->then( sub { shift() / 2 } ) ->catch( sub { warn shift } );
+}

@@ -405,6 +405,9 @@ my (
     # INITIALIZER: sub initialize_call_paren_style
     %call_paren_style,
 
+    # INITIALIZER: sub initialize_pack_operator_types
+    %pack_operator_types,
+
     # INITIALIZER: sub initialize_warn_variable_types
     $rwarn_variable_types,
     $ris_warn_variable_excluded_name,
@@ -2139,8 +2142,6 @@ sub check_options {
 
     initialize_missing_else_comment();
 
-    initialize_call_paren_style();
-
     initialize_warn_variable_types( $wvt_in_args, $num_files,
         $line_range_clipped );
 
@@ -2181,6 +2182,8 @@ sub check_options {
     }
 
     initialize_line_up_parentheses();
+
+    initialize_pack_operator_types();
 
     check_tabs();
 
@@ -2918,6 +2921,43 @@ EOM
 
     return;
 } ## end sub initialize_line_up_parentheses
+
+sub initialize_pack_operator_types {
+
+    # Setup the control hash for --pack-operator-types
+    %pack_operator_types = ();
+
+    my @ok = qw( -> && || and or : ? . + - * / );
+    my %is_ok;
+    @is_ok{@ok} = (1) x scalar(@ok);
+
+    my $long_name = 'pack-operator-types';
+    my %hash;
+    my @unknown;
+    if ( $rOpts->{$long_name} ) {
+        my @words = split_words( $rOpts->{$long_name} );
+        foreach my $word (@words) {
+            if   ( $word eq '?' )  { $word        = ':' }
+            if   ( $word eq '/' )  { $word        = '*' }
+            if   ( $word eq '-' )  { $word        = '+' }
+            if   ( $is_ok{$word} ) { $hash{$word} = 1 }
+            else                   { push @unknown, $word }
+        }
+        if (@unknown) {
+            my $num = @unknown;
+            local $LIST_SEPARATOR = SPACE;
+            Warn(<<EOM);
+$num unrecognized types(s) were input with --$long_name :
+@unknown
+EOM
+        }
+    }
+
+    # Transfer the result to the global hash
+    %pack_operator_types = %hash;
+
+    return;
+} ## end sub initialize_pack_operator_types
 
 sub check_tabs {
 
@@ -27653,7 +27693,8 @@ EOM
                 $self->break_all_chain_tokens( $ri_first, $ri_last );
 
                 $self->break_method_call_chains( $ri_first, $ri_last )
-                  if ( %{ $self->[_rseqno_arrow_call_chain_start_] } );
+                  if ( %{ $self->[_rseqno_arrow_call_chain_start_] }
+                    && !$pack_operator_types{'->'} );
 
                 $self->break_equals( $ri_first, $ri_last )
                   if @{$ri_first} >= 3;
@@ -28182,6 +28223,8 @@ sub break_all_chain_tokens {
 
     # loop over all chain types
     foreach my $key (@keys) {
+
+        next if ( $pack_operator_types{$key} );
 
         # loop over all interior chain tokens
         foreach my $itest ( @{ $interior_chain_type{$key} } ) {

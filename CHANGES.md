@@ -1,5 +1,14 @@
 # Perltidy Change Log
 
+## 2025 01 05.01
+
+    - A new option --pack-opening-types='->' has been added to provide more
+      control over breaks of method call chains.  It tells perltidy not to
+      break at every method call when a chain of calls spans multiple lines.
+      This was the behavior in versions prior to 20250105. The default
+      starting with 20250105 is to break at each call of a method call chain
+      which spans multiple lines. See git #171.
+
 ## 2025 01 05
 
     - If a file consists only of comments, then the starting indentation will

@@ -470,6 +470,8 @@
 ../snippets31.t	ils.ils
 ../snippets31.t	mutt.def
 ../snippets31.t	mutt.mutt1
+../snippets31.t	c446.c446
+../snippets31.t	c446.def
 ../snippets4.t	gnu1.gnu
 ../snippets4.t	gnu2.def
 ../snippets4.t	gnu2.gnu
@@ -590,5 +592,5 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets31.t	c446.c446
-../snippets31.t	c446.def
+../snippets31.t	pot.def
+../snippets31.t	pot.pot1

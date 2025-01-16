@@ -12,6 +12,8 @@
 #9 mutt.mutt1
 #10 c446.c446
 #11 c446.def
+#12 pot.def
+#13 pot.pot1
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -40,6 +42,9 @@ BEGIN {
         'ils'   => "-nils -bos",
         'mutt1' => <<'----------',
 -mutt='q*'
+----------
+        'pot1' => <<'----------',
+-pot='->'
 ----------
     };
 
@@ -90,6 +95,12 @@ $z = sqrt( $x**2 + $y**2 )
 my $rlist = [qw(alpha beta gamma)];
 $aqx->appendChild(
         $parser->parse_balanced_chunk(qq(<param name="skv">$skv</param>)) );
+----------
+
+        'pot' => <<'----------',
+sub bla_p( $value = 42 ) {
+    return Mojo::Promise->resolve($value)->then( sub { shift() / 2 } ) ->then( sub { shift() + 6 } )->then( sub { shift() / 2 } ) ->catch( sub { warn shift } );
+}
 ----------
     };
 
@@ -260,6 +271,32 @@ push @paths, qw(
   //.\/./\
 );
 #11...........
+        },
+
+        'pot.def' => {
+            source => "pot",
+            params => "def",
+            expect => <<'#12...........',
+sub bla_p( $value = 42 ) {
+    return Mojo::Promise->resolve($value)
+      ->then( sub { shift() / 2 } )
+      ->then( sub { shift() + 6 } )
+      ->then( sub { shift() / 2 } )
+      ->catch( sub { warn shift } );
+}
+#12...........
+        },
+
+        'pot.pot1' => {
+            source => "pot",
+            params => "pot1",
+            expect => <<'#13...........',
+sub bla_p( $value = 42 ) {
+    return Mojo::Promise->resolve($value)->then( sub { shift() / 2 } )
+      ->then( sub { shift() + 6 } )->then( sub { shift() / 2 } )
+      ->catch( sub { warn shift } );
+}
+#13...........
         },
     };
 
