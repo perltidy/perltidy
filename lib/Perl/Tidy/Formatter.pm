@@ -317,6 +317,8 @@ my (
     %is_re_match_op,
     %is_my_state_our,
     %is_keyword_with_special_leading_term,
+    %is_s_y_m_slash,
+    %is_tr_qx_qr,
 
     # INITIALIZER: sub check_options
     $controlled_comma_style,
@@ -947,6 +949,12 @@ BEGIN {
     @q =
       qw( chmod formline grep join kill map pack printf push sprintf unshift );
     @is_keyword_with_special_leading_term{@q} = (1) x scalar(@q);
+
+    # used to check for certain token quote types
+    @q                  = qw( s y m / );
+    @is_s_y_m_slash{@q} = (1) x scalar(@q);
+    @q                  = qw( tr qx qr );
+    @is_tr_qx_qr{@q}    = (1) x scalar(@q);
 
 } ## end BEGIN
 
@@ -8915,7 +8923,7 @@ sub scan_unique_keys {
     $add_known_keys->( \%ERRNO, '$!' );
 
     my $is_known_hash = sub {
-        my ($key) = @_;
+        my ( $key, $all_caps ) = @_;
 
         # Given a hash key '$key',
         # Return:
@@ -8923,7 +8931,9 @@ sub scan_unique_keys {
         #   false if it is not known
 
         my $rhash_names = $is_known_key{$key};
-        return if ( !$rhash_names );
+
+        # allow any key in all caps to match %ENV
+        return if ( !$rhash_names && !$all_caps );
 
         # The key is known, now see if its hash name is known
         return if ( !@stack );
@@ -8933,8 +8943,9 @@ sub scan_unique_keys {
         return if ( !defined($Khash) );
         return if ( $rLL->[$Kbrace]->[_TYPE_] ne 'L' );
         my $hash_name = $rLL->[$Khash]->[_TOKEN_];
-        return if ( !$rhash_names->{$hash_name} );
-        return 1;
+        return 1 if ( $all_caps && $hash_name eq '$ENV' );
+        return 1 if ( $rhash_names->{$hash_name} );
+        return;
     }; ## end $is_known_hash = sub
 
     my $push_KK_last_nb = sub {
@@ -9017,8 +9028,13 @@ sub scan_unique_keys {
         return unless ($word);
 
         # Bump count of known keys by 1 so that they will not appear as unique
-        my $one = 1;
-        if ( $is_known_key{$word} && $is_known_hash->($word) ) { $one++ }
+        my $one      = 1;
+        my $all_caps = $word =~ /^[A-Z_]+$/;
+        if ( ( $is_known_key{$word} || $all_caps )
+            && $is_known_hash->( $word, $all_caps ) )
+        {
+            $one++;
+        }
 
         # and bump count for a know typeglob key like *foo{SCALAR};
         elsif ( $is_typeglob_slot_key{$word} ) {
@@ -9208,8 +9224,17 @@ EOM
             }
             elsif ( $type eq 'Q' ) {
 
+                # Find the entire range in case of multiline quotes.
+                my $KK_end_Q = $KK;
+                while ($KK_end_Q < $Klimit
+                    && $rLL->[ $KK_end_Q + 1 ]->[_TYPE_] eq 'Q' )
+                {
+                    $KK_end_Q++;
+                }
+
                 # Save for later comparison with hash keys.
-                push @Q_list, $KK;
+                push @Q_list, [ $KK, $KK_end_Q ];
+                $KK = $KK_end_Q;
             }
             elsif ( $type eq 'q' ) {
                 if ( !defined($KK_last_nb)
@@ -9340,20 +9365,39 @@ EOM
         my $imax = $#Q_list;
         foreach my $i ( 0 .. $imax ) {
 
-            my $K    = $Q_list[$i];
-            my $word = substr( $rLL->[$K]->[_TOKEN_], 1, -1 );
+            my ( $K, $Kend ) = @{ $Q_list[$i] };
+            my $string = $rLL->[$K]->[_TOKEN_];
 
-            my $rkeys = get_interpolated_hash_keys($word);
-            foreach my $key ( @{$rkeys} ) {
-                if ( $unique_words{$key} ) {
-                    delete $unique_words{$key};
+            # Skip a quote beginning with one of: s y m / tr qx qr
+            my $ch1 = substr( $string, 0, 1 );
+            my $ch2 = substr( $string, 0, 2 );
+            next if ( $is_s_y_m_slash{$ch1} || $is_tr_qx_qr{$ch2} );
+
+            # We should now have a quote beginning with one of: ' " q qq
+
+            my $is_multiline;
+            if ( $Kend > $K ) {
+                $is_multiline = 1;
+                foreach my $Kx ( $K + 1 .. $Kend ) {
+                    $string .= $rLL->[$Kx]->[_TOKEN_];
+                }
+            }
+
+            # Strip off leading and ending quote characters.
+            my $ib   = $ch2 eq 'qq' ? 3 : $ch1 eq 'q' ? 2 : 1;
+            my $word = substr( $string, $ib, -1 );
+
+            if ( $ch2 eq 'qq' || $ch1 eq '"' ) {
+                my $rkeys = get_interpolated_hash_keys($word);
+                foreach my $key ( @{$rkeys} ) {
+                    if ( $unique_words{$key} ) {
+                        delete $unique_words{$key};
+                    }
                 }
             }
 
             # Ignore multiline quotes for the remaining checks
-            if (   ( $i == 0 || $Q_list[ $i - 1 ] + 1 != $K )
-                && ( $i == $imax || $Q_list[ $i + 1 ] != $K + 1 ) )
-            {
+            if ( !$is_multiline ) {
 
                 # remove quotes
                 if ( $unique_words{$word} ) {
@@ -13463,7 +13507,6 @@ my %is_wit;
 my %is_sigil;
 my %is_nonlist_keyword;
 my %is_nonlist_type;
-my %is_s_y_m_slash;
 my %is_unexpected_equals;
 my %is_ascii_type;
 
@@ -13491,9 +13534,6 @@ BEGIN {
     # Parens following these types will not be marked as lists
     @q = qw( && || );
     @is_nonlist_type{@q} = (1) x scalar(@q);
-
-    @q = qw( s y m / );
-    @is_s_y_m_slash{@q} = (1) x scalar(@q);
 
     @q = qw( = == != );
     @is_unexpected_equals{@q} = (1) x scalar(@q);
@@ -27997,7 +28037,7 @@ sub break_method_call_chains {
     my ( $self, $ri_left, $ri_right ) = @_;
 
     # If there is a break at any member of a method call chain, break
-    # at each method call in the chain (all or none logic). git #171.
+    # at each method call in the chain (all or none logic). See git #171.
 
     # Given:
     #   $ri_first - reference to list of the first index $i for each output
