@@ -76,7 +76,7 @@ use constant BACKSLASH    => q{\\};
 use Carp;
 use English    qw( -no_match_vars );
 use List::Util qw( min max first );    # min, max first are in Perl 5.8
-our $VERSION = '20250105';
+our $VERSION = '20250105.01';
 
 # List of hash keys to prevent -duk from listing them.
 # 'break-open-compact-parens' is an unimplemented option.
@@ -9002,7 +9002,7 @@ sub scan_unique_keys {
 
         # The key is known, now see if its hash name is known
         my $hash_name = $get_hash_name->();
-        return if ( !$hash_name );
+        return   if ( !$hash_name );
         return 1 if ( $all_caps && $hash_name eq '$ENV' );
         return 1 if ( $rhash_names->{$hash_name} );
         return;
@@ -9151,7 +9151,7 @@ sub scan_unique_keys {
 
         # remove any trailing flag
         if ( @parts == 1 ) {
-            $word =~ s/^([\w_\-]+)(?:\!|\+|=s|:s|=i|:i|=f|:f)/$1/;
+            $word =~ s/^([\w_\-]+)(?:[\!|\+]|=s|:s|=i|:i|=f|:f)/$1/;
         }
 
         # revert if the possible key name does not look reasonable
