@@ -19,11 +19,6 @@ use constant SPACE        => q{ };
 
 { #<<< A non-indenting brace to contain all lexical variables
 
-# List of hash keys to prevent -duk from listing them.
-# These are abbreviations for html input options.
-my @unique_hash_keys_uu =
-  qw( hcbg pre toc ntoc nnn hent nhent css nss ss pod npod frm nfrm text sext );
-
 # class variables
 my (
 

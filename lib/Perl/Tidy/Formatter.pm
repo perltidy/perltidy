@@ -8976,14 +8976,29 @@ sub scan_unique_keys {
         return if ( !defined($Kbrace) );
         return if ( !defined($Khash) );
         return if ( $rLL->[$Kbrace]->[_TYPE_] ne 'L' );
-        my $hash_name = $rLL->[$Khash]->[_TOKEN_];
+        my $Khash_end = $Khash;
+        my $token     = $rLL->[$Khash]->[_TOKEN_];
 
-        if ( $hash_name eq '->' ) {
+        # walk back to find a '$'
+        if ( $token eq '->' ) {
             $Khash = $self->K_previous_code($Khash);
             return if ( !defined($Khash) );
-            $hash_name = $rLL->[$Khash]->[_TOKEN_] . $hash_name;
+            $token = $rLL->[$Khash]->[_TOKEN_];
         }
-        return if ( substr( $hash_name, 0, 1 ) ne '$' );
+        if ( $token eq '}' ) {
+            my $seqno = $rLL->[$Khash]->[_TYPE_SEQUENCE_];
+            return if ( !defined($seqno) );
+            my $Ko = $K_opening_container->{$seqno};
+            return if ( !$Ko );
+            $Khash = $Ko - 1;
+            $token = $rLL->[$Khash]->[_TOKEN_];
+        }
+        return if ( substr( $token, 0, 1 ) ne '$' );
+
+        my $hash_name = $token;
+        foreach my $Kh ( $Khash + 1 .. $Khash_end ) {
+            $hash_name .= $rLL->[$Kh]->[_TOKEN_];
+        }
         return $hash_name;
     }; ## end $get_hash_name = sub
 
