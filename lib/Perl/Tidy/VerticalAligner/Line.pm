@@ -13,6 +13,11 @@ use warnings;
 our $VERSION = '20250105.01';
 use English qw( -no_match_vars );
 
+{
+    # List of hash keys to prevent -duk from listing them.
+    my @unique_hash_keys_uu = qw( maximum_line_length );
+}
+
 sub AUTOLOAD {
 
     # Catch any undefined sub calls so that we are sure to get

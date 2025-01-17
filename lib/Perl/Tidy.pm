@@ -139,6 +139,11 @@ BEGIN {
     $VERSION = '20250105.01';
 } ## end BEGIN
 
+{
+    # List of hash keys to prevent -duk from listing them.
+    my @unique_hash_keys_uu = qw( html-toc-extension html-src-extension * );
+}
+
 sub DESTROY {
     my $self = shift;
 

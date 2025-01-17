@@ -49,3 +49,6 @@
 # Use 'perltidy -dmcp filename' to find mixed call paren usage.
 # Prefer call parens for these keywords:
 --want-call-parens='open unlink substr defined ref scalar int'
+
+# Warn if any unexpected hash keys are seen.
+--warn-unique-keys
