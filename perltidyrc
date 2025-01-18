@@ -17,6 +17,14 @@
 --warn-variable-types='*'
 --warn-variable-exclusion-list='$self $class *_uu'
 
+# Warn if any unexpected hash keys are seen. To prevent a known unique
+# hash key such as 'maximum_line_length' from being found, a line
+# such as the following is placed in the corresponding source code:
+#    my @unique_hash_keys_uu = qw( maximum_line_length );
+# The name '@unique_hash_keys_uu' is arbitrary but should end in _uu
+# to be itself excluded from warnings, as noted above.
+--warn-unique-keys
+
 # warn if call arg counts differ from sub definitions
 # (requires version > 20240202.04)
 --warn-mismatched-args
@@ -30,7 +38,7 @@
 
 # Add closing side comments for subs, asubs, and while blocks
 # while blocks are marked because they can be tricky to get right.
-# The default interval (-csci=6) is used but a value of 10 might 
+# The default interval (-csci=6) is used but a value of 10 might
 # be a little better. But changing -csci would change a lot of lines.
 --closing-side-comments
 --closing-side-comment-list='sub asub while'
@@ -49,6 +57,3 @@
 # Use 'perltidy -dmcp filename' to find mixed call paren usage.
 # Prefer call parens for these keywords:
 --want-call-parens='open unlink substr defined ref scalar int'
-
-# Warn if any unexpected hash keys are seen.
---warn-unique-keys
