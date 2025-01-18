@@ -8896,8 +8896,12 @@ sub scan_unique_keys {
     my $K_opening_container = $self->[_K_opening_container_];
     my $K_closing_container = $self->[_K_closing_container_];
 
-    my $saw_Getopt_Long;     # true for 'use Getopt::Long'
-    my $ix_HERE_END = -1;    # the line index of the last here target read
+    return if ( !$Klimit );
+
+    my $saw_Getopt_Long;       # true for 'use Getopt::Long'
+    my $saw_Getopt_Std;        # true for 'use Getopt::Std'
+    my $Getopt_Std_hash_id;    # name of option hash for 'use Getopt::Std'
+    my $ix_HERE_END = -1;      # the line index of the last here target read
     my @keys_in_HERE_docs;
 
     # stack holds [$seqno, $KK, $KK_last_nb]
@@ -9327,10 +9331,16 @@ EOM
                     my $Kn = $self->K_next_code($KK);
                     next if ( !defined($Kn) );
                     my $token_n = $rLL->[$Kn]->[_TOKEN_];
-                    if ( length($token_n) >= 12
-                        && substr( $token_n, 0, 12 ) eq 'Getopt::Long' )
-                    {
+
+                    if ( index( $token_n, 'Getopt::Std' ) == 0 ) {
+                        $saw_Getopt_Std = 1;
+                        next;
+                    }
+                    if ( index( $token_n, 'Getopt::Long' ) == 0 ) {
                         $saw_Getopt_Long = 1;
+                        next;
+                    }
+                    if ( $token_n ne 'constant' ) {
                         next;
                     }
 
@@ -9338,7 +9348,6 @@ EOM
                     # For example, we do not want to mark '_mode_' and '_uid_'
                     # here as unique hash keys since they become subs:
                     #     use constant { _mode_  => 2, _uid_ => 4 }
-                    next if ( $token_n ne 'constant' );
                     $Kn = $self->K_next_code($Kn);
                     next if ( !defined($Kn) );
                     my $seqno_n = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
@@ -9378,12 +9387,27 @@ EOM
 
                 # Look getopts call (Getopt::Std), for example:
                 #    getopts('oif:')
-                elsif ( $token eq 'getopts' ) {
+                #    getopts('oif:', \my %opts);
+                #    getopt('oDI:', \my %opts);
+                elsif ( $token eq 'getopts' || $token eq 'getopt' ) {
                     my $Kn = $self->K_next_nonblank($KK);
                     if ( $Kn && $rLL->[$Kn]->[_TOKEN_] eq '(' ) {
+
+                        # Look for the first arg as a quoted string
+                        my $seqno_n = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
                         $Kn = $self->K_next_nonblank($Kn);
                         if ( $Kn && $rLL->[$Kn]->[_TYPE_] eq 'Q' ) {
                             push @Q_getopts, $Kn;
+                        }
+
+                        # Look for hash name if two-arg call
+                        $Kn = $self->K_next_nonblank($Kn);
+                        if ( $Kn && $rLL->[$Kn]->[_TYPE_] eq ',' ) {
+                            my $Kc = $K_closing_container->{$seqno_n};
+                            $Kn = $self->K_previous_code($Kc);
+                            my $id = $rLL->[$Kn]->[_TOKEN_];
+                            $id =~ s/^\%/\$/;
+                            $Getopt_Std_hash_id = $id;
                         }
                     }
                 }
@@ -9524,18 +9548,39 @@ EOM
 
     return if ( !%unique_words );
 
-    # Remove single letters seen in first arg to getopts
-    foreach my $Kopt (@Q_getopts) {
-        my $word = $rLL->[$Kopt]->[_TOKEN_];
-        my $ch1  = substr( $word, 0, 1 );
-        if ( $ch1 eq "'" || $ch1 eq '"' ) {
-            $word = substr( $word, 1, -1 );
+    # For two-arg call to Getopt::Std ...
+    if ( $Getopt_Std_hash_id && $saw_Getopt_Std ) {
+
+        # If we managed to read the first arg..remove single letters seen
+        foreach my $Kopt (@Q_getopts) {
+            my $word = $rLL->[$Kopt]->[_TOKEN_];
+            my $ch1  = substr( $word, 0, 1 );
+            if ( $ch1 eq "'" || $ch1 eq '"' ) {
+                $word = substr( $word, 1, -1 );
+            }
+            $word =~ s/://g;
+            my @letters = split //, $word;
+            foreach my $letter (@letters) {
+                if ( $unique_words{$letter} ) {
+                    delete $unique_words{$letter};
+                }
+            }
         }
-        $word =~ s/://g;
-        my @letters = split //, $word;
-        foreach my $letter (@letters) {
-            if ( $unique_words{$letter} ) {
-                delete $unique_words{$letter};
+
+        # If we found a getopts hash name but did not read the first string,
+        # remove all single-character keys in that hash name (typically $opt)
+        if ( !@Q_getopts ) {
+            foreach my $key ( keys %unique_words ) {
+                next if ( length($key) != 1 );
+                next if ( $key !~ /[A-Za-z\?]/ );
+
+                # For now, delete any single letter key.
+                # The hash name can become a ref with different name
+                # through sub calls.
+                ##my $hash_id = $rwords->{$key}->{hash_id};
+                ##if ( $hash_id && $hash_id eq $Getopt_Std_hash_id ) {
+                delete $unique_words{$key};
+                ##}
             }
         }
     }
