@@ -8890,13 +8890,14 @@ sub scan_unique_keys {
 
     # Scan for hash keys needed to implement --dump-unique-keys, -duk
 
-    my $rLL                 = $self->[_rLL_];
-    my $Klimit              = $self->[_Klimit_];
-    my $ris_list_by_seqno   = $self->[_ris_list_by_seqno_];
-    my $K_opening_container = $self->[_K_opening_container_];
-    my $K_closing_container = $self->[_K_closing_container_];
+    my $rLL                  = $self->[_rLL_];
+    my $Klimit               = $self->[_Klimit_];
+    my $ris_list_by_seqno    = $self->[_ris_list_by_seqno_];
+    my $K_opening_container  = $self->[_K_opening_container_];
+    my $K_closing_container  = $self->[_K_closing_container_];
+    my $rtype_count_by_seqno = $self->[_rtype_count_by_seqno_];
 
-    return if ( !$Klimit );
+    return if ( !defined($Klimit) || $Klimit < 1 );
 
     my $saw_Getopt_Long;       # true for 'use Getopt::Long'
     my $saw_Getopt_Std;        # true for 'use Getopt::Std'
@@ -9005,6 +9006,47 @@ sub scan_unique_keys {
         }
         return $hash_name;
     }; ## end $get_hash_name = sub
+
+    my $get_ancestor_seqno = sub {
+        my ($seqno_in) = @_;
+
+        # Given:
+        #   $seqno_in=the sequence number of a list with a single key, such as
+        #    { name => $value }
+        # Task:
+        #   Walk back up the tree in search of a list container with multiple
+        #   commas.
+        # Return:
+        #   The matching ancestor seqno if any,
+        #   $seqno_in if none
+        my $rparent_of_seqno = $self->[_rparent_of_seqno_];
+        my $seqno_last       = $seqno_in;
+        while ( my $seqno = $rparent_of_seqno->{$seqno_last} ) {
+            last if ( $seqno == SEQ_ROOT );
+            if ( $seqno >= $seqno_last || $seqno < SEQ_ROOT ) {
+                ## shouldn't happen - parent containers have lower seq numbers
+                DEVEL_MODE && Fault(<<EOM);
+Error in 'get_ancestor_seqno': expecting seqno=$seqno < last seqno=$seqno_last
+EOM
+                last;
+            }
+            $seqno_last = $seqno;
+            my $rtype_count     = $rtype_count_by_seqno->{$seqno};
+            my $fat_comma_count = $rtype_count->{'=>'};
+            my $comma_count     = $rtype_count->{','};
+
+            # give up at a non-list
+            last if ( !$fat_comma_count && !$comma_count );
+
+            # keep going unless multiple commas
+            next if ( !$rtype_count->{','} );
+
+            # success
+            return $seqno;
+        } ## end while ( my $seqno = $rparent_of_seqno...)
+
+        return $seqno_in;
+    }; ## end $get_ancestor_seqno = sub
 
     my $is_known_hash = sub {
         my ( $key, $all_caps ) = @_;
@@ -9133,7 +9175,16 @@ sub scan_unique_keys {
 
         if ( !defined( $rwords->{$word} ) ) {
 
-            my $id = $parent_seqno ? $parent_seqno : $get_hash_name->();
+            my $id = $parent_seqno;
+            if ( !$id ) {
+                $id = $get_hash_name->();
+            }
+            else {
+                my $rtype_count = $rtype_count_by_seqno->{$parent_seqno};
+                if ( !$rtype_count->{','} ) {
+                    $id = $get_ancestor_seqno->($parent_seqno);
+                }
+            }
             $rwords->{$word} = {
                 count   => $one,
                 K       => $KK_last_nb,
