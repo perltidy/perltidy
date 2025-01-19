@@ -8923,6 +8923,7 @@ sub scan_unique_keys {
     my @Q_getopts;
     my $rwords = {};
     my %is_GetOptions_call_by_seqno;
+    my %unique_words;
 
     my @q;
     my %is_GetOptions_call;
@@ -9240,41 +9241,58 @@ EOM
         # idea is that it is unlikely that the user has misspelled an entire
         # set of keys.
 
-        # Count keys by container
+        # Count keys by container:
+        # _pre_q count is the count before using quotes
+        # _post_q count is the count after using quotes
         my %total_count_by_id;
-        my %unique_key_count_by_id;
+        my %unique_key_count_by_id_pre_q;
+        my %unique_key_count_by_id_post_q;
         foreach my $key ( keys %{$rwords} ) {
             my $count   = $rwords->{$key}->{count};
             my $hash_id = $rwords->{$key}->{hash_id};
             next if ( !$hash_id );
             $total_count_by_id{$hash_id}++;
-            $unique_key_count_by_id{$hash_id}++ if ( $count == 1 );
+            $unique_key_count_by_id_pre_q{$hash_id}++ if ( $count == 1 );
+            $unique_key_count_by_id_post_q{$hash_id}++
+              if ( $unique_words{$key} );
         }
 
         # Find sets of keys which are all, or nearly all, unique.
         my %delete_this_id;
         foreach my $id ( keys %total_count_by_id ) {
-            my $total_count      = $total_count_by_id{$id};
-            my $unique_key_count = $unique_key_count_by_id{$id};
-            next if ( !$unique_key_count );
+            my $total_count = $total_count_by_id{$id};
 
             # This is only for sets of multiple keys
             next if ( $total_count <= 1 );
 
-            # Ignore this set if most of the keys are unique
-            if ( $unique_key_count > $total_count / 2 ) {
-                $delete_this_id{$id} = 1;
+            my $unique_key_count_pre_q  = $unique_key_count_by_id_pre_q{$id};
+            my $unique_key_count_post_q = $unique_key_count_by_id_post_q{$id};
+            next if ( !$unique_key_count_pre_q );
+
+            if ( !defined($unique_key_count_post_q) ) {
+                $unique_key_count_post_q = 0;
             }
+
+            # Look at the decision both ways ...
+            my $delete_pre_q  = $unique_key_count_pre_q > $total_count / 2;
+            my $delete_post_q = $unique_key_count_post_q > $total_count / 2;
+
+            # Use a combined logic:
+            # The pre_q result produces fewest keys, but might miss some.
+            # The post_q result produces most unique keys, sometimes too many.
+            # If they differ, we use the pre_q result if the post_q wil produce
+            # a more than N unique keys (N=2 for now).
+            $delete_this_id{$id} =
+              $delete_post_q || $delete_pre_q && $unique_key_count_post_q > 2;
         }
 
         # Bump counts of keys to be deleted from further consideration
-        my @deleted_key_list;
         foreach my $key ( keys %{$rwords} ) {
             my $hash_id = $rwords->{$key}->{hash_id};
             next if ( !$hash_id );
             next if ( !$delete_this_id{$hash_id} );
             $rwords->{$key}->{count}++;
-            push @deleted_key_list, $key;
+            if ( $unique_words{$key} ) { delete $unique_words{$key} }
         }
 
         return;
@@ -9491,8 +9509,8 @@ EOM
         }
     } ## end while ( ++$KK <= $Klimit )
 
-    # Remove collections of keys which look uninteresting
-    $filter_out_large_sets->();
+    # This filter is moved to below for better results
+    # $filter_out_large_sets->();
 
     my $missing_GetOptions_keys =
          $saw_Getopt_Long
@@ -9500,7 +9518,6 @@ EOM
       && !@GetOptions_keys;
 
     # Find hash keys seen just one time
-    my %unique_words;
     foreach my $key ( keys %{$rwords} ) {
         my $count = $rwords->{$key}->{count};
         my $K     = $rwords->{$key}->{K};
@@ -9653,6 +9670,11 @@ EOM
             }
         }
     }
+
+    return if ( !%unique_words );
+
+    # Filter out groups of unique keys which are probably uninteresting
+    $filter_out_large_sets->();
 
     return if ( !%unique_words );
 
