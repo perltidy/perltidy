@@ -318,7 +318,6 @@ my (
     %is_my_state_our,
     %is_keyword_with_special_leading_term,
     %is_s_y_m_slash,
-    %is_tr_qx_qr,
 
     # INITIALIZER: sub check_options
     $controlled_comma_style,
@@ -954,10 +953,8 @@ BEGIN {
     @is_keyword_with_special_leading_term{@q} = (1) x scalar(@q);
 
     # used to check for certain token quote types
-    @q                  = qw( s y m / );
+    @q = qw( s y m / );
     @is_s_y_m_slash{@q} = (1) x scalar(@q);
-    @q                  = qw( tr qx qr );
-    @is_tr_qx_qr{@q}    = (1) x scalar(@q);
 
 } ## end BEGIN
 
@@ -8951,6 +8948,22 @@ sub scan_unique_keys {
         PERLLIB  => { '$ENV' => 1 },
     );
 
+    # Number of leading characters to remove for quote types
+    # Zero values indicate types not used
+    my %ib_hash = (
+        "'"  => 1,
+        '"'  => 1,
+        '/'  => 1,
+        'm'  => 2,
+        's'  => 2,
+        'y'  => 0,
+        'tr' => 0,
+        'qx' => 3,
+        'qr' => 3,
+        'qq' => 3,
+        'q'  => 2,
+    );
+
     my $add_known_keys = sub {
         my ( $rhash, $name ) = @_;
         foreach my $key ( keys %{$rhash} ) {
@@ -9537,12 +9550,16 @@ EOM
             my ( $K, $Kend ) = @{ $Q_list[$i] };
             my $string = $rLL->[$K]->[_TOKEN_];
 
-            # Skip a quote beginning with one of: s y m / tr qx qr
+            # What type of quote?
             my $ch1 = substr( $string, 0, 1 );
             my $ch2 = substr( $string, 0, 2 );
-            next if ( $is_s_y_m_slash{$ch1} || $is_tr_qx_qr{$ch2} );
 
-            # We should now have a quote beginning with one of: ' " q qq
+            # Note that we must check two chars first, then 1, because
+            # of ambiguity when $ch1='q';
+            my $ib = $ib_hash{$ch2};
+            if ( !$ib ) { $ib = $ib_hash{$ch1} }
+            next if ( !defined($ib) || $ib <= 0 );
+            my $is_interpolated = $ch1 ne 'q' && $ch1 ne "'";
 
             my $is_multiline;
             if ( $Kend > $K ) {
@@ -9553,10 +9570,11 @@ EOM
             }
 
             # Strip off leading and ending quote characters.
-            my $ib   = $ch2 eq 'qq' ? 3 : $ch1 eq 'q' ? 2 : 1;
+            # Note: we do not need to be precise on removing ending characters
+            # in this case.
             my $word = substr( $string, $ib, -1 );
 
-            if ( $ch2 eq 'qq' || $ch1 eq '"' ) {
+            if ($is_interpolated) {
                 my $rkeys = get_interpolated_hash_keys($word);
                 foreach my $key ( @{$rkeys} ) {
                     if ( $unique_words{$key} ) {
