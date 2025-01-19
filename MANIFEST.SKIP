@@ -55,6 +55,7 @@
 \.#
 \.rej$
 \..*\.sw.?$
+\.tdy$
 
 # Avoid OS-specific files/dirs
 # Mac OSX metadata
@@ -102,7 +103,7 @@ _config.yml
 \.perlcriticrc
 
 # perltidyrc
-\bperltidyrc
+\bperltidyrc$
 
 # any shell scripts
 \.sh$
