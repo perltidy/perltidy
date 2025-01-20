@@ -9095,7 +9095,7 @@ EOM
         #    - not required for a key in hash braces
 
         # We are ignoring constant definitions
-        if ( $KK < $K_end_skip ) { return }
+        if ( $KK_last_nb < $K_end_skip ) { return }
 
         my $type_last  = $rLL->[$KK_last_nb]->[_TYPE_];
         my $token_last = $rLL->[$KK_last_nb]->[_TOKEN_];
