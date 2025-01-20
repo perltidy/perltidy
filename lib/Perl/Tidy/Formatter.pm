@@ -8887,12 +8887,11 @@ sub scan_unique_keys {
 
     # Scan for hash keys needed to implement --dump-unique-keys, -duk
 
-    my $rLL                  = $self->[_rLL_];
-    my $Klimit               = $self->[_Klimit_];
-    my $ris_list_by_seqno    = $self->[_ris_list_by_seqno_];
-    my $K_opening_container  = $self->[_K_opening_container_];
-    my $K_closing_container  = $self->[_K_closing_container_];
-    my $rtype_count_by_seqno = $self->[_rtype_count_by_seqno_];
+    my $rLL                 = $self->[_rLL_];
+    my $Klimit              = $self->[_Klimit_];
+    my $ris_list_by_seqno   = $self->[_ris_list_by_seqno_];
+    my $K_opening_container = $self->[_K_opening_container_];
+    my $K_closing_container = $self->[_K_closing_container_];
 
     return if ( !defined($Klimit) || $Klimit < 1 );
 
@@ -9025,41 +9024,57 @@ sub scan_unique_keys {
         my ($seqno_in) = @_;
 
         # Given:
-        #   $seqno_in=the sequence number of a list with a single key, such as
+        #   $seqno_in=the sequence number of a list with hash key items, like
         #    { name => $value }
         # Task:
-        #   Walk back up the tree in search of a list container with multiple
-        #   commas.
+        #   Walk back up the tree in search of the outermost list container
         # Return:
-        #   The matching ancestor seqno if any,
-        #   $seqno_in if none
+        #   The most outer ancestor matching ancestor seqno
+
+        # The goal is to find the outermost common sequence number of
+        # a tree with hash keys and values. This is needed to help filter
+        # out large static data trees.
+
+        # Be sure we have a valid starting point
+        if ( !$seqno_in || $seqno_in <= SEQ_ROOT ) { return $seqno_in }
+
+        # This will be the outermost container found so far:
+        my $seqno_last_ok = $seqno_in;
+
+        # Loop upward..
         my $rparent_of_seqno = $self->[_rparent_of_seqno_];
-        my $seqno_last       = $seqno_in;
-        while ( my $seqno = $rparent_of_seqno->{$seqno_last} ) {
+        while ( my $seqno = $rparent_of_seqno->{$seqno_last_ok} ) {
             last if ( $seqno == SEQ_ROOT );
-            if ( $seqno >= $seqno_last || $seqno < SEQ_ROOT ) {
+            if ( $seqno >= $seqno_last_ok || $seqno < SEQ_ROOT ) {
                 ## shouldn't happen - parent containers have lower seq numbers
                 DEVEL_MODE && Fault(<<EOM);
-Error in 'get_ancestor_seqno': expecting seqno=$seqno < last seqno=$seqno_last
+Error in 'get_ancestor_seqno': expecting seqno=$seqno < last seqno=$seqno_last_ok
 EOM
                 last;
             }
-            $seqno_last = $seqno;
-            my $rtype_count     = $rtype_count_by_seqno->{$seqno};
-            my $fat_comma_count = $rtype_count->{'=>'};
-            my $comma_count     = $rtype_count->{','};
 
-            # give up at a non-list
-            last if ( !$fat_comma_count && !$comma_count );
+            last if ( !$ris_list_by_seqno->{$seqno} );
 
-            # keep going unless multiple commas
-            next if ( !$rtype_count->{','} );
+            # Be sure this container is part of a list structure, and not for
+            # example a sub call within a list. The previous token should
+            # be an opening token or comma or fat comma
+            my $Ko   = $K_opening_container->{$seqno_last_ok};
+            my $Kp   = $self->K_previous_code($Ko);
+            my $tokp = $Kp ? $rLL->[$Kp]->[_TOKEN_] : ';';
+            if (   $tokp eq ','
+                || $tokp eq '=>'
+                || $is_opening_token{$tokp} )
+            {
 
-            # success
-            return $seqno;
+                # looks ok, keep going
+                $seqno_last_ok = $seqno;
+                next;
+            }
+
+            last;
         } ## end while ( my $seqno = $rparent_of_seqno...)
 
-        return $seqno_in;
+        return $seqno_last_ok;
     }; ## end $get_ancestor_seqno = sub
 
     my $is_known_hash = sub {
@@ -9194,10 +9209,7 @@ EOM
                 $id = $get_hash_name->();
             }
             else {
-                my $rtype_count = $rtype_count_by_seqno->{$parent_seqno};
-                if ( !$rtype_count->{','} ) {
-                    $id = $get_ancestor_seqno->($parent_seqno);
-                }
+                $id = $get_ancestor_seqno->($parent_seqno);
             }
             $rwords->{$word} = {
                 count   => $one,
