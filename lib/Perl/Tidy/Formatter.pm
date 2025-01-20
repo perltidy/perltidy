@@ -9020,16 +9020,16 @@ sub scan_unique_keys {
         return $hash_name;
     }; ## end $get_hash_name = sub
 
+    my %ancestor_seqno_cache;
     my $get_ancestor_seqno = sub {
         my ($seqno_in) = @_;
 
         # Given:
-        #   $seqno_in=the sequence number of a list with hash key items, like
-        #    { name => $value }
+        #   $seqno_in = the sequence number of a list with hash key items
         # Task:
         #   Walk back up the tree in search of the outermost list container
         # Return:
-        #   The most outer ancestor matching ancestor seqno
+        #   $seqno_out = The most outer ancestor matching ancestor seqno
 
         # The goal is to find the outermost common sequence number of
         # a tree with hash keys and values. This is needed to help filter
@@ -9038,17 +9038,21 @@ sub scan_unique_keys {
         # Be sure we have a valid starting point
         if ( !$seqno_in || $seqno_in <= SEQ_ROOT ) { return $seqno_in }
 
+        # use any cached value for efficiency
+        my $seqno_cache = $ancestor_seqno_cache{$seqno_in};
+        if ( defined($seqno_cache) ) { return $seqno_cache }
+
         # This will be the outermost container found so far:
-        my $seqno_last_ok = $seqno_in;
+        my $seqno_out = $seqno_in;
 
         # Loop upward..
         my $rparent_of_seqno = $self->[_rparent_of_seqno_];
-        while ( my $seqno = $rparent_of_seqno->{$seqno_last_ok} ) {
+        while ( my $seqno = $rparent_of_seqno->{$seqno_out} ) {
             last if ( $seqno == SEQ_ROOT );
-            if ( $seqno >= $seqno_last_ok || $seqno < SEQ_ROOT ) {
+            if ( $seqno >= $seqno_out || $seqno < SEQ_ROOT ) {
                 ## shouldn't happen - parent containers have lower seq numbers
                 DEVEL_MODE && Fault(<<EOM);
-Error in 'get_ancestor_seqno': expecting seqno=$seqno < last seqno=$seqno_last_ok
+Error in 'get_ancestor_seqno': expecting seqno=$seqno < last seqno=$seqno_out
 EOM
                 last;
             }
@@ -9058,7 +9062,7 @@ EOM
             # Be sure this container is part of a list structure, and not for
             # example a sub call within a list. The previous token should
             # be an opening token or comma or fat comma
-            my $Ko   = $K_opening_container->{$seqno_last_ok};
+            my $Ko   = $K_opening_container->{$seqno_out};
             my $Kp   = $self->K_previous_code($Ko);
             my $tokp = $Kp ? $rLL->[$Kp]->[_TOKEN_] : ';';
             if (   $tokp eq ','
@@ -9067,14 +9071,15 @@ EOM
             {
 
                 # looks ok, keep going
-                $seqno_last_ok = $seqno;
+                $seqno_out = $seqno;
                 next;
             }
 
             last;
         } ## end while ( my $seqno = $rparent_of_seqno...)
 
-        return $seqno_last_ok;
+        $ancestor_seqno_cache{$seqno_in} = $seqno_out;
+        return $seqno_out;
     }; ## end $get_ancestor_seqno = sub
 
     my $is_known_hash = sub {
@@ -9258,6 +9263,32 @@ EOM
         return $word;
     }; ## end $getopt_subword = sub
 
+    my $dubious_key = sub {
+
+        my ($key) = @_;
+
+        # Given:
+        #   $key = a key which is unique and about to be filtered out
+        # Return:
+        #   true if we should not filter it out for some reason
+        #   false if it is ok to filter it out
+
+        # Do not remove a key with mixed interior underscores and dashes,
+        # such as 'encode-output_strings', since this is a common typo.
+        my $len            = length($key);
+        my $pos_dash       = index( $key, '-', 1 );
+        my $pos_underscore = index( $key, '_', 1 );
+        my $interior_dash  = $pos_dash > 0 && $pos_dash < $len - 1;
+        my $interior_underscore =
+          $pos_underscore > 0 && $pos_underscore < $len - 1;
+        if ( $interior_dash && $interior_underscore ) { return 1 }
+
+        # additonal checks can go here
+
+        # ok to filter this key out
+        return;
+    }; ## end $dubious_key = sub
+
     my $filter_out_large_sets = sub {
 
         # Look for containers of multiple hash keys which are only defined
@@ -9311,11 +9342,27 @@ EOM
               $delete_post_q || $delete_pre_q && $unique_key_count_post_q > 2;
         }
 
-        # Bump counts of keys to be deleted from further consideration
+        # locate keys to be deleted
+        my %mark_as_non_unique;
+        my %is_dubious_key;
+        my $dubious_count = 0;
         foreach my $key ( keys %{$rwords} ) {
             my $hash_id = $rwords->{$key}->{hash_id};
             next if ( !$hash_id );
             next if ( !$delete_this_id{$hash_id} );
+            if ( $dubious_key->($key) ) {
+                $is_dubious_key{$key} = 1;
+                $dubious_count++;
+            }
+            $mark_as_non_unique{$key} = 1;
+        }
+
+        # Bump counts of keys to be deleted from further consideration
+        foreach my $key ( keys %mark_as_non_unique ) {
+
+            # but keep dubious keys if there is just 1
+            if ( $is_dubious_key{$key} && $dubious_count == 1 ) { next }
+
             $rwords->{$key}->{count}++;
             if ( $unique_words{$key} ) { delete $unique_words{$key} }
         }

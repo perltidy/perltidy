@@ -6569,6 +6569,10 @@ Typically, most of the listed keys listed will be perfectly valid keys needed,
 for example, for communication with other modules or for future development.
 But the list might also include something unexpected, such as a misspelled key.
 
+To avoid listing large tables of data, the following rule is applied:
+in a collection of related keys, if more than half are unique,
+then none of them are listed.
+
 A program C<dump_unique_keys.pl> at
 L<https://github.com/perltidy/perltidy/tree/master/examples> can run perltidy
 with B<-duk> on multiple files, and then remove any common keys from the list.
