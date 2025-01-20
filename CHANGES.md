@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2025 01 05.01
+## 2025 01 05.02
 
     - A new option --pack-opening-types='->' has been added to provide more
       control over breaks of method call chains.  It tells perltidy not to

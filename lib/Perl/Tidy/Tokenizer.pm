@@ -33,7 +33,7 @@ use strict;
 use warnings;
 use English qw( -no_match_vars );
 
-our $VERSION = '20250105.01';
+our $VERSION = '20250105.02';
 
 use Carp;
 
