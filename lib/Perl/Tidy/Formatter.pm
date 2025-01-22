@@ -646,6 +646,7 @@ BEGIN {
         _rending_multiline_qw_seqno_by_K_   => $i++,
         _rKrange_multiline_qw_by_seqno_     => $i++,
         _rmultiline_qw_has_extra_level_     => $i++,
+        _ris_qwaf_by_seqno_                 => $i++,
 
         _rcollapsed_length_by_seqno_       => $i++,
         _rbreak_before_container_by_seqno_ => $i++,
@@ -1176,6 +1177,7 @@ sub new {
     $self->[_rending_multiline_qw_seqno_by_K_]   = {};
     $self->[_rKrange_multiline_qw_by_seqno_]     = {};
     $self->[_rmultiline_qw_has_extra_level_]     = {};
+    $self->[_ris_qwaf_by_seqno_]                 = {};
 
     $self->[_rcollapsed_length_by_seqno_]       = {};
     $self->[_rbreak_before_container_by_seqno_] = {};
@@ -7661,6 +7663,7 @@ EOM
             $in_qw_seqno = ++$last_new_seqno;
             $added_seqno_count++;
             my $seqno = $in_qw_seqno;
+            $self->[_ris_qwaf_by_seqno_]->{$seqno} = 1;
 
             # update relevant seqno hashes
             $rdepth_of_opening_seqno->[$seqno] = $nesting_depth;
@@ -8892,6 +8895,7 @@ sub scan_unique_keys {
     my $ris_list_by_seqno   = $self->[_ris_list_by_seqno_];
     my $K_opening_container = $self->[_K_opening_container_];
     my $K_closing_container = $self->[_K_closing_container_];
+    my $ris_qwaf_by_seqno   = $self->[_ris_qwaf_by_seqno_];
 
     return if ( !defined($Klimit) || $Klimit < 1 );
 
@@ -9455,7 +9459,8 @@ EOM
                 }
 
                 # Save for later comparison with hash keys.
-                push @Q_list, [ $KK, $KK_end_Q ];
+                my $seqno_Q = @stack ? $stack[-1]->[0] : undef;
+                push @Q_list, [ $KK, $KK_end_Q, $seqno_Q ];
                 $KK = $KK_end_Q;
             }
             elsif ( $type eq 'q' ) {
@@ -9606,21 +9611,27 @@ EOM
         my $imax = $#Q_list;
         foreach my $i ( 0 .. $imax ) {
 
-            my ( $K, $Kend ) = @{ $Q_list[$i] };
+            my ( $K, $Kend, $seqno_Q ) = @{ $Q_list[$i] };
             my $string = $rLL->[$K]->[_TOKEN_];
 
             # What type of quote?
-            my $ch1 = substr( $string, 0, 1 );
-            my $ch2 = substr( $string, 0, 2 );
+            my $ch1       = substr( $string, 0, 1 );
+            my $ch2       = substr( $string, 0, 2 );
+            my $is_qwaf_Q = defined($seqno_Q) && $ris_qwaf_by_seqno->{$seqno_Q};
 
             # Note that we must check two chars first, then 1, because
-            # of ambiguity when $ch1='q';
-            my $ib = $ib_hash{$ch2};
-            if ( !$ib ) { $ib = $ib_hash{$ch1} }
-            next if ( !defined($ib) || $ib <= 0 );
-            my $is_interpolated = $ch1 ne 'q' && $ch1 ne "'";
+            # of ambiguity when $ch1='q'. Also note that type Q tokens
+            # in a qwaf call are not contained within quote marks.
+            my $is_interpolated = 0;
+            my $ib              = 0;
+            if ( !$is_qwaf_Q ) {
+                $ib = $ib_hash{$ch2};
+                if ( !$ib ) { $ib = $ib_hash{$ch1} }
+                next if ( !defined($ib) || $ib <= 0 );
+                $is_interpolated = $ch1 ne 'q' && $ch1 ne "'";
+            }
 
-            my $is_multiline;
+            my $is_multiline = 0;
             if ( $Kend > $K ) {
                 $is_multiline = 1;
                 foreach my $Kx ( $K + 1 .. $Kend ) {
@@ -9631,7 +9642,7 @@ EOM
             # Strip off leading and ending quote characters.
             # Note: we do not need to be precise on removing ending characters
             # in this case.
-            my $word = substr( $string, $ib, -1 );
+            my $word = $is_qwaf_Q ? $string : substr( $string, $ib, -1 );
 
             if ($is_interpolated) {
                 my $rkeys = get_interpolated_hash_keys($word);
@@ -9735,6 +9746,22 @@ EOM
     # Remove any keys which are also in a qw list
     foreach my $Kqw (@K_start_qw_list) {
         my ( $K_last_q_uu, $rlist ) = $self->get_qw_list($Kqw);
+        if ( !defined($rlist) ) {
+            ## must be a bad index $Kqw in @K_start_qw_list
+            my ( $lno, $type, $token ) = ( 'undef', 'undef', 'undef' );
+            if (   defined($Kqw)
+                && $Kqw >= 0
+                && $Kqw <= $Klimit )
+            {
+                $lno   = $rLL->[$Kqw]->[_LINE_INDEX_] + 1;
+                $type  = $rLL->[$Kqw]->[_TYPE_];
+                $token = $rLL->[$Kqw]->[_TOKEN_];
+            }
+            DEVEL_MODE
+              && Fault(
+                "$lno: Empty return for K=$Kqw type='$type' token='$token'\n");
+            next;
+        }
         foreach my $word ( @{$rlist} ) {
             if ( $unique_words{$word} ) {
                 delete $unique_words{$word};
