@@ -8889,6 +8889,8 @@ sub scan_unique_keys {
     my ($self) = @_;
 
     # Scan for hash keys needed to implement --dump-unique-keys, -duk
+    use constant DEBUG_WUK => 0;
+    my $debug_output_started;
 
     my $rLL                 = $self->[_rLL_];
     my $Klimit              = $self->[_Klimit_];
@@ -8924,6 +8926,7 @@ sub scan_unique_keys {
     my $rwords = {};
     my %is_GetOptions_call_by_seqno;
     my %unique_words;
+    my %first_key_by_id;
 
     my @q;
     my %is_GetOptions_call;
@@ -9225,6 +9228,11 @@ EOM
                 K       => $KK_last_nb,
                 hash_id => $id,
             };
+
+            # save debug info
+            if ( defined($id) && !defined( $first_key_by_id{$id} ) ) {
+                $first_key_by_id{$id} = $word;
+            }
         }
         else {
             $rwords->{$word}->{count}++;
@@ -9344,6 +9352,30 @@ EOM
             # a more than N unique keys (N=2 for now).
             $delete_this_id{$id} =
               $delete_post_q || $delete_pre_q && $unique_key_count_post_q > 2;
+
+            if ( DEBUG_WUK && defined($id) ) {
+                my $key    = $first_key_by_id{$id};
+                my $Kfirst = $rwords->{$key}->{K};
+
+                # TODO: escape $key if it would cause trouble in a .csv file.
+                #  (low priority since this is debug output)
+                if ( defined($Kfirst) ) {
+                    if ( !$debug_output_started ) {
+                        print <<EOM;
+line,id,first-key,total-count,early-count,late-count,warn?
+EOM
+                    }
+                    $debug_output_started = 1;
+                    my $lno = $rLL->[$Kfirst]->[_LINE_INDEX_] + 1;
+                    my $issue_warning =
+                        $unique_key_count_post_q == 0 ? 'NO'
+                      : $delete_this_id{$id}          ? 'NO'
+                      :                                 'YES';
+                    print <<EOM;
+$lno,"$id","$key",$total_count,$unique_key_count_pre_q,$unique_key_count_post_q,$issue_warning
+EOM
+                }
+            }
         }
 
         # locate keys to be deleted
