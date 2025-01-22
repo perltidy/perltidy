@@ -3476,6 +3476,7 @@ sub generate_options {
     @option_string = qw(
       html!
       noprofile
+      nopro
       no-profile
       npro
       recombine!
@@ -4580,7 +4581,7 @@ sub _process_command_line {
     foreach my $i (@ARGV) {
 
         $i =~ s/^--/-/;
-        if ( $i =~ /^-(npro|noprofile|no-profile)$/ ) {
+        if ( $i =~ /^-(npro|noprofile|nopro|no-profile)$/ ) {
             $saw_ignore_profile = 1;
         }
 
