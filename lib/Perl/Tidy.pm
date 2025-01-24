@@ -3991,7 +3991,7 @@ sub generate_options {
       minimum-space-to-comment=4
       warn-mismatched-arg-undercount-cutoff=4
       warn-mismatched-arg-overcount-cutoff=1
-      warn-unique-keys-cutoff=2
+      warn-unique-keys-cutoff=1
       nobrace-left-and-indent
       nocuddled-else
       nodelete-old-whitespace
@@ -4167,9 +4167,10 @@ sub generate_options {
         'square-bracket-vertical-tightness-closing' => [ 0, 3 ],
         'starting-indentation-level'                => [ 0, undef ],
         'timeout-in-seconds'                        => [ 0, undef ],
+        'valign-signed-numbers-limit'               => [ 0, undef ],
         'vertical-tightness'                        => [ 0, 2 ],
         'vertical-tightness-closing'                => [ 0, 3 ],
-        'valign-signed-numbers-limit'               => [ 0, undef ],
+        'warn-unique-keys-cutoff'                   => [ 1, undef ],
         'whitespace-cycle'                          => [ 0, undef ],
     );
 

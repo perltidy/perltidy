@@ -6564,18 +6564,38 @@ strings in a file. For example:
 
    perltidy -duk File.pm >output.txt
 
-The lines in the output file list each unique key and its line number.
-Typically, most of the listed keys listed will be perfectly valid keys needed,
-for example, for communication with other modules or for future development.
-But the list might also include something unexpected, such as a misspelled key.
+The lines in the output file list unique keys and line numbers.
 
-To avoid listing large tables of data, the following rule is applied:
-in a collection of related keys, if more than half are unique,
-then none of them are listed.
+Many programs contain sets of hash keys which are largely unique to that
+program but which are used for communication with other programs. A filter is
+used to avoid listing such keys. This filter is described in the next section.
 
 A program C<dump_unique_keys.pl> at
 L<https://github.com/perltidy/perltidy/tree/master/examples> can run perltidy
 with B<-duk> on multiple files, and then remove any common keys from the list.
+
+=item B<Use --warn-unique-keys-cutoff=N>, or B<-wukc=N>, to adjust the unique
+keys filter.
+
+This parameter controls the filter used by both B<--dump-unique-keys> and its
+B<--warn-> counterpart B<--warn-unique-keys>.  The filter works as follows: if
+a related set of keys has more than B<N> unique keys, then none of them are
+listed.  The default value is B<N=1>, which produces the causes the minimum
+number of keys to be reported.  Increasing B<N> above 1 will allow more unique
+keys to be reported.
+
+=item B<Use --warn-unique-keys> to warn of possible misspelled hash keys
+
+The parameter B<--warn-unique-keys>, or B<-wuk>, can be used to produce a
+warning of a possible misspelled hash key during normal processing. It works
+like the previous B<-dump> version but writes to the standard error output
+if unique keys are found during normal formatting.
+
+For some scripts, this will produce unwanted warnings for a few keys, even
+though the filter described above attempts to avoid this. A way to avoid
+warnings for specific keys is to list them somewhere in the program in a B<qw>
+list. This will be seen during the key scan, and the then keys will not be
+considered unique.
 
 =item B<Use --dump-mixed-call-parens to find functions called both with and without parens>
 
