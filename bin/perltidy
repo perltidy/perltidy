@@ -6578,11 +6578,15 @@ with B<-duk> on multiple files, and then remove any common keys from the list.
 keys filter.
 
 This parameter controls the filter used by both B<--dump-unique-keys> and its
-B<--warn-> counterpart B<--warn-unique-keys>.  The filter works as follows: if
-a related set of keys has more than B<N> unique keys, then none of them are
-listed.  The default value is B<N=1>, which produces the causes the minimum
-number of keys to be reported.  Increasing B<N> above 1 will allow more unique
-keys to be reported.
+counterpart B<--warn-unique-keys>, described below.  The filter works as
+follows: if a related set of keys has more than B<N> unique keys, then none of
+them are listed.  The default value is B<N=1>, which causes the minimum number
+of keys to be reported.  Increasing B<N> above 1 will allow more unique keys to
+be reported.
+
+Thus, a value B<N=1> will catch up to 1 error per set of related keys. A value
+B<N=2> will catch up to two errors per set, but at the same time may produce
+more unwanted warnings.
 
 =item B<Use --warn-unique-keys> to warn of possible misspelled hash keys
 
@@ -7368,7 +7372,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20250105.02
+This man page documents perltidy version 20250105.03
 
 =head1 BUG REPORTS
 
