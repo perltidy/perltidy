@@ -46,12 +46,7 @@ use constant BACKSLASH    => q{\\};
 
 # List of hash keys to prevent -duk from listing them.
 # (note the backtick in this list)
-my @unique_hash_keys_uu = qw(
-  `                  RPerl
-  _curly_brace_depth _square_bracket_depth
-  _paren_depth       _ending_in_quote
-  _rtype_sequence
-);
+my @unique_hash_keys_uu = qw( ` RPerl _rtype_sequence _ending_in_quote );
 
 # Parent sequence number of tree of containers; must be 1
 use constant SEQ_ROOT => 1;

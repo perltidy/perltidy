@@ -80,7 +80,8 @@ our $VERSION = '20250105.02';
 
 # List of hash keys to prevent -duk from listing them.
 # 'break-open-compact-parens' is an unimplemented option.
-my @unique_hash_keys_uu = qw( break-open-compact-parens }] );
+my @unique_hash_keys_uu =
+  qw( rOpts file_writer_object unlike isnt break-open-compact-parens }] );
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -274,6 +275,7 @@ my (
     $rOpts_whitespace_cycle,
     $rOpts_extended_block_tightness,
     $rOpts_extended_line_up_parentheses,
+    $rOpts_warn_unique_keys_cutoff,
 
     # Static hashes
     # INITIALIZER: BEGIN block
@@ -3439,6 +3441,7 @@ sub initialize_global_option_vars {
     $rOpts_valign_wide_equals        = $rOpts->{'valign-wide-equals'};
     $rOpts_variable_maximum_line_length =
       $rOpts->{'variable-maximum-line-length'};
+    $rOpts_warn_unique_keys_cutoff = $rOpts->{'warn-unique-keys-cutoff'};
 
     # Note that both opening and closing tokens can access the opening
     # and closing flags of their container types.
@@ -8890,7 +8893,6 @@ sub scan_unique_keys {
 
     # Scan for hash keys needed to implement --dump-unique-keys, -duk
     use constant DEBUG_WUK => 0;
-    my $debug_output_started;
 
     my $rLL                 = $self->[_rLL_];
     my $Klimit              = $self->[_Klimit_];
@@ -8901,6 +8903,7 @@ sub scan_unique_keys {
 
     return if ( !defined($Klimit) || $Klimit < 1 );
 
+    my $saw_File_Temp;         # true for 'use File::Temp'
     my $saw_Getopt_Long;       # true for 'use Getopt::Long'
     my $saw_Getopt_Std;        # true for 'use Getopt::Std'
     my $Getopt_Std_hash_id;    # name of option hash for 'use Getopt::Std'
@@ -8953,6 +8956,10 @@ sub scan_unique_keys {
         PERL5LIB => { '$ENV' => 1 },
         PERLLIB  => { '$ENV' => 1 },
     );
+
+    @q = qw( CLEANUP DIR EXLOCK PERMS SUFFIX TEMPLATE TMPDIR UNLINK );
+    my %is_File_Temp_key;
+    @is_File_Temp_key{@q} = (1) x scalar(@q);
 
     # Number of leading characters to remove for quote types
     # Zero values indicate types not used
@@ -9021,9 +9028,12 @@ sub scan_unique_keys {
         return if ( substr( $token, 0, 1 ) ne '$' );
 
         my $hash_name = $token;
+        my $count     = 0;
         foreach my $Kh ( $Khash + 1 .. $Khash_end ) {
             $hash_name .= $rLL->[$Kh]->[_TOKEN_];
+            $count++;
         }
+        if ( $count > 0 ) { $hash_name =~ s/\s//g }
         return $hash_name;
     }; ## end $get_hash_name = sub
 
@@ -9197,6 +9207,9 @@ EOM
         {
             $one++;
         }
+        elsif ( $all_caps && $saw_File_Temp && $is_File_Temp_key{$word} ) {
+            $one++;
+        }
 
         # and bump count for a know typeglob key like *foo{SCALAR};
         elsif ( $is_typeglob_slot_key{$word} ) {
@@ -9309,19 +9322,21 @@ EOM
         # idea is that it is unlikely that the user has misspelled an entire
         # set of keys.
 
+        my @debug_output;
+
         # Count keys by container:
         # _pre_q count is the count before using quotes
         # _post_q count is the count after using quotes
         my %total_count_by_id;
-        my %unique_key_count_by_id_pre_q;
-        my %unique_key_count_by_id_post_q;
+        my %unique_count_by_id_pre_q;
+        my %unique_count_by_id_post_q;
         foreach my $key ( keys %{$rwords} ) {
             my $count   = $rwords->{$key}->{count};
             my $hash_id = $rwords->{$key}->{hash_id};
             next if ( !$hash_id );
             $total_count_by_id{$hash_id}++;
-            $unique_key_count_by_id_pre_q{$hash_id}++ if ( $count == 1 );
-            $unique_key_count_by_id_post_q{$hash_id}++
+            $unique_count_by_id_pre_q{$hash_id}++ if ( $count == 1 );
+            $unique_count_by_id_post_q{$hash_id}++
               if ( $unique_words{$key} );
         }
 
@@ -9330,28 +9345,24 @@ EOM
         foreach my $id ( keys %total_count_by_id ) {
             my $total_count = $total_count_by_id{$id};
 
+            #---------------------------------------
             # This is only for sets of multiple keys
+            #---------------------------------------
             next if ( $total_count <= 1 );
 
-            my $unique_key_count_pre_q  = $unique_key_count_by_id_pre_q{$id};
-            my $unique_key_count_post_q = $unique_key_count_by_id_post_q{$id};
-            next if ( !$unique_key_count_pre_q );
+            my $unique_count_pre_q  = $unique_count_by_id_pre_q{$id};
+            my $unique_count_post_q = $unique_count_by_id_post_q{$id};
+            next if ( !$unique_count_pre_q );
 
-            if ( !defined($unique_key_count_post_q) ) {
-                $unique_key_count_post_q = 0;
+            if ( !defined($unique_count_post_q) ) {
+                $unique_count_post_q = 0;
             }
 
-            # Look at the decision both ways ...
-            my $delete_pre_q  = $unique_key_count_pre_q > $total_count / 2;
-            my $delete_post_q = $unique_key_count_post_q > $total_count / 2;
-
-            # Use a combined logic:
-            # The pre_q result produces fewest keys, but might miss some.
-            # The post_q result produces most unique keys, sometimes too many.
-            # If they differ, we use the pre_q result if the post_q wil produce
-            # a more than N unique keys (N=2 for now).
+            # Filter rule: do not issue a warning for a related group
+            # of keys which has more than N unique keys. The default
+            # value of N is 2. Delete keys which get filtered out.
             $delete_this_id{$id} =
-              $delete_post_q || $delete_pre_q && $unique_key_count_post_q > 2;
+              $unique_count_post_q > $rOpts_warn_unique_keys_cutoff;
 
             if ( DEBUG_WUK && defined($id) ) {
                 my $key    = $first_key_by_id{$id};
@@ -9360,20 +9371,18 @@ EOM
                 # TODO: escape $key if it would cause trouble in a .csv file.
                 #  (low priority since this is debug output)
                 if ( defined($Kfirst) ) {
-                    if ( !$debug_output_started ) {
-                        print <<EOM;
-line,id,first-key,total-count,early-count,late-count,warn?
-EOM
-                    }
-                    $debug_output_started = 1;
                     my $lno = $rLL->[$Kfirst]->[_LINE_INDEX_] + 1;
                     my $issue_warning =
-                        $unique_key_count_post_q == 0 ? 'NO'
-                      : $delete_this_id{$id}          ? 'NO'
-                      :                                 'YES';
-                    print <<EOM;
-$lno,"$id","$key",$total_count,$unique_key_count_pre_q,$unique_key_count_post_q,$issue_warning
-EOM
+                        $unique_count_post_q == 0 ? 'NO'
+                      : $delete_this_id{$id}      ? 'NO'
+                      :                             'YES';
+                    push @debug_output,
+                      [
+                        $lno,                "$id",
+                        "$key",              $total_count,
+                        $unique_count_pre_q, $unique_count_post_q,
+                        $issue_warning
+                      ];
                 }
             }
         }
@@ -9403,6 +9412,16 @@ EOM
             if ( $unique_words{$key} ) { delete $unique_words{$key} }
         }
 
+        if (@debug_output) {
+            @debug_output = sort { $a->[0] <=> $b->[0] } @debug_output;
+            print <<EOM;
+line,id,first-key,total-count,early-count,late-count,warn?
+EOM
+            foreach my $rvals (@debug_output) {
+                my $line = join ',', @{$rvals};
+                print $line, "\n";
+            }
+        }
         return;
     }; ## end $filter_out_large_sets = sub
 
@@ -9516,6 +9535,10 @@ EOM
                     }
                     if ( index( $token_n, 'Getopt::Long' ) == 0 ) {
                         $saw_Getopt_Long = 1;
+                        next;
+                    }
+                    if ( index( $token_n, 'File::Temp' ) == 0 ) {
+                        $saw_File_Temp = 1;
                         next;
                     }
                     if ( $token_n ne 'constant' ) {
@@ -9780,7 +9803,7 @@ EOM
         my ( $K_last_q_uu, $rlist ) = $self->get_qw_list($Kqw);
         if ( !defined($rlist) ) {
             ## must be a bad index $Kqw in @K_start_qw_list
-            my ( $lno, $type, $token ) = ( 'undef', 'undef', 'undef' );
+            my ( $lno, $type, $token ) = qw ( undef undef undef );
             if (   defined($Kqw)
                 && $Kqw >= 0
                 && $Kqw <= $Klimit )
@@ -9855,9 +9878,11 @@ sub warn_unique_keys {
     # process a --warn-unique-keys command
 
     my $wuk_key       = 'warn-unique-keys';
+    my $wukc_key      = 'warn-unique-keys-cutoff';
     my $output_string = $self->scan_unique_keys();
     if ($output_string) {
-        my $message = "Begin scan for --$wuk_key\n";
+        my $message =
+"Begin scan for --$wuk_key using --$wukc_key=$rOpts_warn_unique_keys_cutoff\n";
         $message .= $output_string;
         $message .= "End scan for --$wuk_key\n";
         warning($message);

@@ -3824,8 +3824,9 @@ sub generate_options {
     $add_option->( 'warn-variable-exclusion-list', 'wvxl', '=s' );
     $add_option->( 'want-call-parens',             'wcp',  '=s' );
     $add_option->( 'nowant-call-parens',           'nwcp', '=s' );
-    $add_option->( 'warn-unique-keys',             'wuk',  '!' );
 
+    $add_option->( 'warn-unique-keys',                      'wuk',   '!' );
+    $add_option->( 'warn-unique-keys-cutoff',               'wukc',  '=i' );
     $add_option->( 'warn-mismatched-args',                  'wma',   '!' );
     $add_option->( 'warn-mismatched-arg-types',             'wmat',  '=s' );
     $add_option->( 'warn-mismatched-arg-undercount-cutoff', 'wmauc', '=i' );
@@ -3990,6 +3991,7 @@ sub generate_options {
       minimum-space-to-comment=4
       warn-mismatched-arg-undercount-cutoff=4
       warn-mismatched-arg-overcount-cutoff=1
+      warn-unique-keys-cutoff=2
       nobrace-left-and-indent
       nocuddled-else
       nodelete-old-whitespace
