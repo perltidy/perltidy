@@ -8903,9 +8903,6 @@ sub scan_unique_keys {
 
     return if ( !defined($Klimit) || $Klimit < 1 );
 
-    my $saw_File_Temp;         # true for 'use File::Temp'
-    my $saw_Getopt_Long;       # true for 'use Getopt::Long'
-    my $saw_Getopt_Std;        # true for 'use Getopt::Std'
     my $Getopt_Std_hash_id;    # name of option hash for 'use Getopt::Std'
     my $ix_HERE_END = -1;      # the line index of the last here target read
     my @keys_in_HERE_docs;
@@ -8941,8 +8938,8 @@ sub scan_unique_keys {
     @q = qw( SCALAR ARRAY HASH CODE IO FILEHANDLE GLOB FORMAT NAME PACKAGE );
     @is_typeglob_slot_key{@q} = (1) x scalar(@q);
 
-    # Table of some known keys
-    my %is_known_key = (
+    # Table of keys of hashes which are always available
+    my %is_fixed_key = (
         ALRM     => { '$SIG' => 1 },
         TERM     => { '$SIG' => 1 },
         INT      => { '$SIG' => 1 },
@@ -8957,9 +8954,15 @@ sub scan_unique_keys {
         PERLLIB  => { '$ENV' => 1 },
     );
 
-    @q = qw( CLEANUP DIR EXLOCK PERMS SUFFIX TEMPLATE TMPDIR UNLINK );
-    my %is_File_Temp_key;
-    @is_File_Temp_key{@q} = (1) x scalar(@q);
+    # Keys of some known modules
+    # FIXME: need to add more modules, this is just a start
+    my %known_module_keys_leading_match = (
+        'File::Temp' =>
+          [qw( CLEANUP DIR EXLOCK PERMS SUFFIX TEMPLATE TMPDIR UNLINK )],
+        'Test::More'               => [qw( tests skip_all import )],
+        'Unicode::Collate::Locale' =>
+          [qw( locale normalization upper_before_lower )],
+    );
 
     # Number of leading characters to remove for quote types
     # Zero values indicate types not used
@@ -8980,19 +8983,58 @@ sub scan_unique_keys {
     my $add_known_keys = sub {
         my ( $rhash, $name ) = @_;
         foreach my $key ( keys %{$rhash} ) {
-            if ( !defined( $is_known_key{$key} ) ) {
-                $is_known_key{$key} = { $name => 1 };
+            if ( !defined( $is_fixed_key{$key} ) ) {
+                $is_fixed_key{$key} = { $name => 1 };
             }
             else {
-                $is_known_key{$key}->{$name} = 1;
+                $is_fixed_key{$key}->{$name} = 1;
             }
         }
     }; ## end $add_known_keys = sub
 
+    # FIXME: See if this is useful
     # Add keys which may be unique to this environment.
     $add_known_keys->( \%SIG,   '$SIG' );
     $add_known_keys->( \%ENV,   '$ENV' );
     $add_known_keys->( \%ERRNO, '$!' );
+
+    my %saw_use_module;         # updated during main loop scan
+    my %is_known_module_key;    # set by the following sub after scan
+    my $saw_Getopt_Long;        # for 'use Getopt::Long'
+    my $saw_Getopt_Std;         # for 'use Getopt::Std'
+    my $set_known_module_keys = sub {
+
+        # Look through the hash of 'use module' statements and populate
+        # %is_known_module_key, a hash of keys which are not unique if certain
+        # modules are used.  This is called just after we have finished
+        # scanning the file to help remove known keys.
+        foreach my $module_seen ( keys %saw_use_module ) {
+
+            # Check for certain module names requiring special processing
+            if ( index( $module_seen, 'Getopt::Std' ) == 0 ) {
+                $saw_Getopt_Std = 1;
+                next;
+            }
+            if ( index( $module_seen, 'Getopt::Long' ) == 0 ) {
+                $saw_Getopt_Long = 1;
+                next;
+            }
+
+            # Add keys for known modules, require leading name match only
+            foreach my $name ( keys %known_module_keys_leading_match ) {
+                if ( index( $module_seen, $name ) == 0 ) {
+                    my $rkeys = $known_module_keys_leading_match{$name};
+                    foreach my $key ( @{$rkeys} ) {
+                        $is_known_module_key{$key} = 1;
+                    }
+                }
+            }
+
+            # Loop to add keys for known modules with exact name match goes here
+
+        }
+        return;
+    }; ## end $set_known_module_keys = sub
 
     my $get_hash_name = sub {
 
@@ -9025,7 +9067,8 @@ sub scan_unique_keys {
             $Khash = $Ko - 1;
             $token = $rLL->[$Khash]->[_TOKEN_];
         }
-        return if ( substr( $token, 0, 1 ) ne '$' );
+        my $ch1 = substr( $token, 0, 1 );
+        return if ( $ch1 ne '$' && $ch1 ne '*' );
 
         my $hash_name = $token;
         my $count     = 0;
@@ -9099,26 +9142,77 @@ EOM
         return $seqno_out;
     }; ## end $get_ancestor_seqno = sub
 
-    my $is_known_hash = sub {
-        my ( $key, $all_caps ) = @_;
+    my $is_fixed_hash = sub {
+        my ( $key, $all_caps, $id ) = @_;
 
         # Given a hash key '$key',
         # Return:
         #   true if it is known and should be excluded
         #   false if it is not known
 
-        my $rhash_names = $is_known_key{$key};
+        my $rhash_names = $is_fixed_key{$key};
 
         # allow any key in all caps to match %ENV
         return if ( !$rhash_names && !$all_caps );
 
         # The key is known, now see if its hash name is known
-        my $hash_name = $get_hash_name->();
-        return   if ( !$hash_name );
-        return 1 if ( $all_caps && $hash_name eq '$ENV' );
-        return 1 if ( $rhash_names->{$hash_name} );
+        return   if ( !$id );
+        return 1 if ( $all_caps && $id eq '$ENV' );
+        return 1 if ( $rhash_names->{$id} );
         return;
-    }; ## end $is_known_hash = sub
+    }; ## end $is_fixed_hash = sub
+
+    my $is_known_key = sub {
+        my ($key) = @_;
+
+        # Return:
+        #   true if $key is a known key and not unique
+        #   false otherwise
+
+        # This sub must be called after the file is scanned, so that all
+        # 'use' statements have been seen.
+
+        my $info = $rwords->{$key};
+        if ( !defined($info) ) {
+            DEVEL_MODE && Fault("shouldn't happen\n");
+            return;
+        }
+
+        my $count = $info->{count};
+        if ( $count > 1 ) {
+            DEVEL_MODE && Fault("shouldn't happen\n");
+            return 1;
+        }
+
+        #-----------------------------------------------------------------
+        # Category 1: keys associated with certain 'use module' statements
+        #-----------------------------------------------------------------
+        if ( $is_known_module_key{$key} ) {
+            return 1;
+        }
+
+        #-----------------------------------------------------------------------
+        # Category 2: # typeglob key: *foo{SCALAR}, or  *{$stash->{$var}}{ARRAY}
+        #-----------------------------------------------------------------------
+        my $id = $info->{hash_id};
+        if ( $is_typeglob_slot_key{$key}
+            && substr( $id, 0, 1 ) eq '*' )
+        {
+            return 1;
+        }
+
+        #-----------------------------------------------------------
+        # Category 3: a key for a fixed hash like %ENV, %SIG, %ERRNO
+        #-----------------------------------------------------------
+        my $all_caps = $key =~ /^[A-Z_]+$/;
+        if ( ( $is_fixed_key{$key} || $all_caps )
+            && $is_fixed_hash->( $key, $all_caps, $id ) )
+        {
+            return 1;
+        }
+
+        return;
+    }; ## end $is_known_key = sub
 
     my $push_KK_last_nb = sub {
 
@@ -9200,33 +9294,6 @@ EOM
         return unless ($word);
 
         # Bump count of known keys by 1 so that they will not appear as unique
-        my $one      = 1;
-        my $all_caps = $word =~ /^[A-Z_]+$/;
-        if ( ( $is_known_key{$word} || $all_caps )
-            && $is_known_hash->( $word, $all_caps ) )
-        {
-            $one++;
-        }
-        elsif ( $all_caps && $saw_File_Temp && $is_File_Temp_key{$word} ) {
-            $one++;
-        }
-
-        # and bump count for a know typeglob key like *foo{SCALAR};
-        elsif ( $is_typeglob_slot_key{$word} ) {
-            my $type_this = $rLL->[$KK_this_nb]->[_TYPE_];
-            if ( $type_this eq 'R' ) {
-                my $Kp = $self->K_previous_code($KK_last_nb);
-                $Kp = $self->K_previous_code($Kp);
-                if ( defined($Kp) ) {
-                    my $token_p = $rLL->[$Kp]->[_TOKEN_];
-                    if ( substr( $token_p, 0, 1 ) eq '*' ) { $one++ }
-                }
-            }
-        }
-        else {
-            ## no other special cases yet
-        }
-
         if ( !defined( $rwords->{$word} ) ) {
 
             my $id = $parent_seqno;
@@ -9236,10 +9303,13 @@ EOM
             else {
                 $id = $get_ancestor_seqno->($parent_seqno);
             }
+
             $rwords->{$word} = {
-                count   => $one,
-                K       => $KK_last_nb,
-                hash_id => $id,
+                count    => 1,
+                hash_id  => $id,
+                K        => $KK_last_nb,
+                is_known => 0,
+##              parent_seqno => $parent_seqno,
             };
 
             # save debug info
@@ -9402,13 +9472,13 @@ EOM
             $mark_as_non_unique{$key} = 1;
         }
 
-        # Bump counts of keys to be deleted from further consideration
+        # Remove keys to be deleted from further consideration
         foreach my $key ( keys %mark_as_non_unique ) {
 
             # but keep dubious keys if there is just 1
             if ( $is_dubious_key{$key} && $dubious_count == 1 ) { next }
 
-            $rwords->{$key}->{count}++;
+            ##$rwords->{$key}->{count}++
             if ( $unique_words{$key} ) { delete $unique_words{$key} }
         }
 
@@ -9524,24 +9594,15 @@ EOM
             elsif ( $type eq 'k' ) {
 
                 # Look for 'use constant' and define its ending token
-                if ( $rLL->[$KK]->[_TOKEN_] eq 'use' ) {
+                my $token = $rLL->[$KK]->[_TOKEN_];
+                if ( $token eq 'use' || $token eq 'require' ) {
                     my $Kn = $self->K_next_code($KK);
                     next if ( !defined($Kn) );
                     my $token_n = $rLL->[$Kn]->[_TOKEN_];
 
-                    if ( index( $token_n, 'Getopt::Std' ) == 0 ) {
-                        $saw_Getopt_Std = 1;
-                        next;
-                    }
-                    if ( index( $token_n, 'Getopt::Long' ) == 0 ) {
-                        $saw_Getopt_Long = 1;
-                        next;
-                    }
-                    if ( index( $token_n, 'File::Temp' ) == 0 ) {
-                        $saw_File_Temp = 1;
-                        next;
-                    }
-                    if ( $token_n ne 'constant' ) {
+                    $saw_use_module{$token_n} = $Kn;
+
+                    if ( $token_n ne 'constant' && $token ne 'use' ) {
                         next;
                     }
 
@@ -9641,8 +9702,8 @@ EOM
         }
     } ## end while ( ++$KK <= $Klimit )
 
-    # This filter is moved to below for better results
-    # $filter_out_large_sets->();
+    # Make a list of keys known to any modules which have been seen
+    $set_known_module_keys->();
 
     my $missing_GetOptions_keys =
          $saw_Getopt_Long
@@ -9652,8 +9713,15 @@ EOM
     # Find hash keys seen just one time
     foreach my $key ( keys %{$rwords} ) {
         my $count = $rwords->{$key}->{count};
-        my $K     = $rwords->{$key}->{K};
         next if ( $count != 1 );
+
+        # Filter out some known keys
+        if ( $is_known_key->($key) ) {
+            $rwords->{$key}->{is_known} = 1;
+            next;
+        }
+
+        my $K = $rwords->{$key}->{K};
         $unique_words{$key} = $K;
     }
 
