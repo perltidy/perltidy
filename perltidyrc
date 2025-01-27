@@ -23,7 +23,10 @@
 #    my @unique_hash_keys_uu = qw( maximum_line_length );
 # The name '@unique_hash_keys_uu' is arbitrary but should end in _uu
 # to be itself excluded from warnings, as noted above.
+# The cutoff number N is increased to 2 from the default 1 to slightly
+# improve the chance of catching an error. (requires version > 20240105.02)
 --warn-unique-keys
+--warn-unique-keys-cutoff=2
 
 # warn if call arg counts differ from sub definitions
 # (requires version > 20240202.04)

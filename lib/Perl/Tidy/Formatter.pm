@@ -8955,13 +8955,30 @@ sub scan_unique_keys {
     );
 
     # Keys of some known modules
-    # FIXME: need to add more modules, this is just a start
     my %known_module_keys_leading_match = (
         'File::Temp' =>
           [qw( CLEANUP DIR EXLOCK PERMS SUFFIX TEMPLATE TMPDIR UNLINK )],
         'Test::More'               => [qw( tests skip_all import )],
+        'Test'                     => [qw(tests)],
         'Unicode::Collate::Locale' =>
           [qw( locale normalization upper_before_lower )],
+        'Config::Perl::V' => [
+            qw(
+              build config  derived environment
+              inc   options osname  patches
+              stamp version
+            )
+        ],
+        'HTTP::Tiny' => [
+            qw(
+              SSL_options  agent       cookie_jar default_headers
+              http_proxy   https_proxy keep_alive local_address
+              max_redirect max_size    no_proxy   proxy
+              timeout      verify_SSL
+            ),
+            qw( content data_callback peer successders trailer_callback ),
+            qw( content headers protocol reason redirects status url ),
+        ],
     );
 
     # Number of leading characters to remove for quote types
@@ -8992,7 +9009,6 @@ sub scan_unique_keys {
         }
     }; ## end $add_known_keys = sub
 
-    # FIXME: See if this is useful
     # Add keys which may be unique to this environment.
     $add_known_keys->( \%SIG,   '$SIG' );
     $add_known_keys->( \%ENV,   '$ENV' );
@@ -9191,13 +9207,13 @@ EOM
             return 1;
         }
 
+        my $id = $info->{hash_id};
+        return if ( !$id );
+
         #-----------------------------------------------------------------------
         # Category 2: # typeglob key: *foo{SCALAR}, or  *{$stash->{$var}}{ARRAY}
         #-----------------------------------------------------------------------
-        my $id = $info->{hash_id};
-        if ( $is_typeglob_slot_key{$key}
-            && substr( $id, 0, 1 ) eq '*' )
-        {
+        if ( $is_typeglob_slot_key{$key} && substr( $id, 0, 1 ) eq '*' ) {
             return 1;
         }
 
@@ -9208,6 +9224,13 @@ EOM
         if ( ( $is_fixed_key{$key} || $all_caps )
             && $is_fixed_hash->( $key, $all_caps, $id ) )
         {
+            return 1;
+        }
+
+        #---------------------------
+        # Category 4: $Config values
+        #---------------------------
+        if ( $id eq '$Config' || $id eq '$Config::Config' ) {
             return 1;
         }
 
