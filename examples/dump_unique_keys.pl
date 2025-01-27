@@ -11,6 +11,7 @@ use File::Temp qw{ tempfile };
 # https://github.com/perltidy/perltidy/blob/master/examples/dump_unique_keys.pl
 
 my ( $fh_tmp, $tmpfile );
+
 END {
     if ( defined($tmpfile) && -e $tmpfile ) {
         unlink($tmpfile) or warn "Could not unlink $tmpfile: $!";
@@ -23,18 +24,28 @@ sub main {
 
     my $usage = <<EOM;
 Run perltidy --dump-unique-keys on multiple files
-Usage: $0 file1 file2 ...
-  if no files are given, look for MANIFEST and use files lib/.../*.pm
+Usage:
+  $0 [ --warn-unique-keys-cutoff=N ] file1 file2 ...
+  $0 [ -wutc=N ] file1 file2 ...
+  If no files are given, look for MANIFEST and use files lib/.../*.pm
+  N is the maximum number of unique keys, per set of related keys, to show.
+  The default value of N is 1. It may be increased to show more unused keys.
 EOM
 
-    my @files = @ARGV;
+    my @files;
+    my @args;
+    foreach my $str (@ARGV) {
+        if   ( substr( $str, 0, 1 ) eq '-' ) { push @args,  $str }
+        else                                 { push @files, $str }
+    }
+    my $argstr = join ' ', @args;
 
     if ( !@files ) {
         my $MANIFEST = "MANIFEST";
         if ( -e $MANIFEST && -f $MANIFEST ) {
             my $rfiles = read_MANIFEST($MANIFEST);
             @files = @{$rfiles};
-            my $num=@files;
+            my $num = @files;
             print STDERR "Reading $MANIFEST...found $num files\n";
         }
     }
@@ -50,15 +61,15 @@ EOM
         die "unable to open temporary file $tmpfile\n";
     }
 
-    # Loop to run perltidy -duk on each file: 
+    # Loop to run perltidy -duk on each file:
     # - capture standard output to a file for further processing
     # - any error messages go to the standard error output
     my %seen;
     my $saw_error;
     foreach my $file (@files) {
         next if ( $seen{$file}++ );
-        next if (!-e $file || -z $file );
-        my $cmd = "perltidy -npro -duk $file >>$tmpfile -se";
+        next if ( !-e $file || -z $file );
+        my $cmd = "perltidy -npro -duk $argstr $file >>$tmpfile -se";
         my $err = system($cmd);
         if ($err) { $saw_error++; warn "perltidy returned error for '$file'\n" }
     }
