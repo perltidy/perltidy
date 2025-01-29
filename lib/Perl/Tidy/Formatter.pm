@@ -8956,12 +8956,38 @@ sub scan_unique_keys {
 
     # Keys of some known modules
     my %known_module_keys_leading_match = (
+
+        # Common core modules
         'File::Temp' =>
           [qw( CLEANUP DIR EXLOCK PERMS SUFFIX TEMPLATE TMPDIR UNLINK )],
-        'Test::More'               => [qw( tests skip_all import )],
-        'Test'                     => [qw(tests)],
-        'Unicode::Collate::Locale' =>
-          [qw( locale normalization upper_before_lower )],
+        'File::Path' => [
+            qw(
+              chmod  error group keep_root mode owner
+              result safe  uid   user      verbose
+            )
+        ],
+        'Test::More' => [qw( tests skip_all import )],
+        'Test'       => [qw( tests onfail   todo )],
+
+        # Unicode::Collate and subclass Unicode::Colate::Locale
+        'Unicode::Collate' => [
+            qw(
+              UCA_Version              alternate
+              backwards                entry
+              hangul_terminator        highestFFFF
+              identical                ignoreName
+              ignoreChar               ignore_level2
+              katakana_before_hiragana level
+              long_contraction         minimalFFFE
+              normalization            overrideCJK
+              overrideHangul           preprocess
+              rearrange                rewrite
+              suppress                 table
+              undefName                undefChar
+              upper_before_lower       variable
+            ),
+            qw(locale),
+        ],
         'Config::Perl::V' => [
             qw(
               build config  derived environment
@@ -8979,6 +9005,13 @@ sub scan_unique_keys {
             qw( content data_callback peer successders trailer_callback ),
             qw( content headers protocol reason redirects status url ),
         ],
+        'Math::BigInt'   => [qw( lib try only upgrade )],
+        'Math::BigFloat' => [qw( lib try only )],
+        'Memoize'        => [qw( NORMALIZER INSTALL SCALAR_CACHE LIST_CACHE )],
+
+        # Other common modules
+        'DateTime' =>
+          [qw( year month day hour minute second nanosecond time_zone )],
     );
 
     # Number of leading characters to remove for quote types
