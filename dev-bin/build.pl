@@ -604,6 +604,83 @@ sub check_man_page_width {
     return;
 } ## end sub check_man_page_width
 
+sub update_table_of_negated_switches {
+    my ($source_file) = @_;
+    print "\nChecking table of negated switches...\n";
+
+    # Make the list of negated switches
+    my $tmp_pod = 'tmp/negated_switches.pod';
+    my $cmd     = "t/snippets/dump_negated_switches.pl >$tmp_pod";
+    if ( system($cmd) ) {
+        query("could not dump negated switches to $tmp_pod\n");
+        return;
+    }
+    my $part2_new = slurp_to_string($tmp_pod);
+
+    # Get the header for this section.  It should be as follows, but is
+    # extracted here to allow change.
+    # my $switches_header = '=head1 SWITCHES WHICH MAY BE NEGATED';
+    my @lines           = split /^/, $part2_new;
+    my $switches_header = $lines[0];
+    $switches_header =~ s/\s*//;
+
+    # Read the pod file
+    my $string = slurp_to_string($source_file);
+
+    # Split the pod into three sections, with the middle section being
+    # the section of negated switches.
+    my $pos0 = 0;
+    my $pos1 = index( $string, $switches_header );
+    if ( $pos1 < 0 ) { query("cannot find first header\n"); return }
+    my $pos2 = index( $string, '=head1', $pos1 + 1 );
+    if ( $pos2 < $pos1 ) { query("cannot find second header\n"); return }
+    my $part1 = substr( $string, $pos0, $pos1 );
+    my $part2 = substr( $string, $pos1, $pos2 - $pos1 );
+    my $part3 = substr( $string, $pos2 );
+
+    # Any changes??
+    if ( $part2_new eq $part2 ) {
+        print "OK: Table of negated switches is up to date\n";
+    }
+    else {
+        print "Table of negated switches needs to be updated..\n";
+        my $string_new = $part1 . $part2_new . $part3;
+        my $tmpfile    = "tmp/perltidy";
+        spew_string_to_file( $string_new, $tmpfile );
+        my $fdiff  = "tmp/perltidy.diff";
+        my $result = sys_command("diff $source_file $tmpfile >$fdiff");
+        if ($result) {
+            query("Strange; Error running diff ...\n");
+            return;
+        }
+        else {
+            post_result($fdiff);
+        }
+        if ( ifyes("Update $source_file with the diffs shown? [Y/N]") ) {
+            my $backup_file = $source_file . ".bak";
+            if ( -e $backup_file ) {
+                File::Copy::copy( $backup_file, "/tmp" )
+                  or die(
+                    "File::Copy failed trying to backup $backup_file: $OS_ERROR"
+                  );
+            }
+            File::Copy::copy( $source_file, $backup_file )
+              or
+              die("File::Copy failed trying to backup $source_file: $OS_ERROR");
+            rename( $tmpfile, $source_file )
+              or die("problem renaming $tmpfile to $source_file:  $!\n");
+            print
+              "Moved $source_file to $backup_file and updated $source_file\n";
+        }
+        else {
+            query(
+"TBD: The new section is '$tmp_pod' and the updated pod file is '$tmpfile'\n"
+            );
+        }
+    }
+    return;
+} ## end sub update_table_of_negated_switches
+
 sub check_man_pages {
 
     $rstatus->{'MAN'} = 'TBD';
@@ -613,6 +690,7 @@ sub check_man_pages {
         print "Checking $file..\n";
         check_man_page_width($file);
     }
+    update_table_of_negated_switches($man1);
     query("Man page scan complete, hit <cr>\n");
     $rstatus->{'MAN'} = 'OK';
     return;
