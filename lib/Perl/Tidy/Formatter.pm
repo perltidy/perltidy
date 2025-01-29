@@ -2928,7 +2928,11 @@ sub initialize_pack_operator_types {
     # Setup the control hash for --pack-operator-types
     %pack_operator_types = ();
 
-    my @ok = qw( -> && || and or : ? . + - * / );
+    # This option is currently only implemented for '->' and '.' chains.
+    # The possibility exists to extend this to other chain operators
+    # in the future, but some programming and a lot of testing are required.
+    my @ok = qw( -> . && || and or : ? + - * / );
+    ##my @ok = qw( -> . );
     my %is_ok;
     @is_ok{@ok} = (1) x scalar(@ok);
 
@@ -30391,7 +30395,8 @@ EOM
               $summed_lengths_to_go[$ibeg_2];
             my $iend_1_minus = max( $ibeg_1, iprev_to_go($iend_1) );
 
-            my $combine_ok = (
+            my $combine_ok = $pack_operator_types{'.'};
+            $combine_ok ||= (
 
                 # ... unless there is just one and we can reduce
                 # this to two lines if we do.  For example, this
@@ -30626,7 +30631,8 @@ EOM
             my $summed_len_2 = $summed_lengths_to_go[ $iend_2 + 1 ] -
               $summed_lengths_to_go[$ibeg_2];
 
-            my $combine_ok = (
+            my $combine_ok = $pack_operator_types{'.'};
+            $combine_ok ||= (
 
                 # ... unless there is just one and we can reduce
                 # this to two lines if we do.  For example, this

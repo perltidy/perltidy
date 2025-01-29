@@ -5,10 +5,10 @@
     - A new option --warn-unused-keys, or -wuk, has been added which will
       produce warnings for unused hash keys during formatting. This is similar
       to --dump-unused-keys, which just exits and does not continue formatting.
-      A new parameter --warn-unused-keys-cutoff=N provides control over the
-      filter which prevents warnings for keys which appear to be members of
-      large hashes used to communicate with external packages. The manual has
-      details.  See git #177.
+      A related new parameter --warn-unused-keys-cutoff=N provides control
+      over a filter which prevents warnings for keys which appear to be
+      members of large hashes used to communicate with external packages.
+      The manual has details.  See git #177.
 
     - A new option --pack-opening-types='->' has been added to provide more
       control over breaks of method call chains.  It tells perltidy not to

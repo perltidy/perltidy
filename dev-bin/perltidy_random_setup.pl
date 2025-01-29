@@ -925,8 +925,7 @@ EOM
 
             'multiple-token-tightness' => [ 'h', 'qw', 'Q', 'q*' ],
 
-            'pack-operator-types' =>
-              [ '->', '&&', '||', ':', '.', '+', '*', 'and', 'or' ],
+            'pack-operator-types' => [ '->', '.' ],
 
             # Arbitrary limits to keep things readable
             'blank-lines-after-opening-block'  => [ 0, 4 ],

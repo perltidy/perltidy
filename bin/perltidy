@@ -4661,6 +4661,36 @@ Sometimes it turns out that the else block should not reachable, in which case
 an error exit might be appropriate. In any case, having the B<else> block can
 improve code maintainability.
 
+=head2 Controlling Breaks at Certain Chain Operators
+
+For a statment which consists of a chain of certain binary operators, the
+default line break logic is: (1) if a statement fits on one line, then it is
+formatted as one line, or (2) if the statement requires multiple lines, then a
+break is made at all of the chain operators. Additional rules apply, but this
+is the basic one.
+
+The parameter B<--pack-operator-types=s>, or B<-pot=s>, can be used to change
+this for certain operators which may be specified with the string B<s>. These
+are the concatenation operator B<s='.'> and the method call arrow
+B<s='-E<gt>'>.  When this parameter is selected for an operator, no special
+breaks are made, so there will be a minimal number of line breaks.
+For example, here is the default formatting for a method call chain:
+
+    # perltidy -l=60
+    Data::Dumper->new( [ \%errors ] )
+      ->Indent(2)
+      ->Terse(1)
+      ->Sortkeys(1)
+      ->Dump;
+
+and this is the alternative formatting with this parameter:
+
+    # perltidy -l=60 -pot='->'
+    Data::Dumper->new( [ \%errors ] )->Indent(2)->Terse(1)
+      ->Sortkeys(1)->Dump;
+
+Note that this option only applies to arrows which follow a closing paren.
+
 =head2 Retaining or Ignoring Existing Line Breaks
 
 Several additional parameters are available for controlling the extent
