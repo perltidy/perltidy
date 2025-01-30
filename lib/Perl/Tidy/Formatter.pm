@@ -9016,6 +9016,13 @@ sub scan_unique_keys {
         # Other common modules
         'DateTime' =>
           [qw( year month day hour minute second nanosecond time_zone )],
+        'Moo' => [
+            qw(
+              builder  clearer coerce   default handles   init_arg
+              is       isa     lazy     moosify predicate reader
+              required trigger weak_ref writer
+            )
+        ],
     );
 
     # Number of leading characters to remove for quote types
