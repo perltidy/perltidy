@@ -57,7 +57,7 @@ coerce Q2RawStatGroupArray, from ArrayRef [Q2StatGroup], via {
   [ map {
       my $g = $_->as_hash;
       $g->{stats} = [ map { scalar $_->as_array } @{ $g->{stats} } ]; $g;
-    } @$_;
+    } @$_
   ]
 };
 ----------
@@ -215,7 +215,7 @@ coerce Q2RawStatGroupArray, from ArrayRef [Q2StatGroup], via {
       my $g = $_->as_hash;
       $g->{stats} = [ map { scalar $_->as_array } @{ $g->{stats} } ];
       $g;
-    } @$_;
+    } @$_
   ]
 };
 #1...........

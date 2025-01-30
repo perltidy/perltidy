@@ -173,9 +173,7 @@ my $html_prelim_fh            = $self->{_html_prelim_fh};
         'break5' => <<'----------',
 # do not break at .'s after the ?
 return (
-    ( $pod eq $pod2 ) & amp;
-      &amp;
-      ( $htype eq "NAME" )
+     $pod eq $pod2 
   )
   ? "\n&lt;A NAME=\""
   . $value
@@ -307,11 +305,7 @@ use constant {
             params => "def",
             expect => <<'#10...........',
 # do not break at .'s after the ?
-return (
-    ( $pod eq $pod2 ) & amp;
-    &amp;
-    ( $htype eq "NAME" )
-  )
+return ( $pod eq $pod2 )
   ? "\n&lt;A NAME=\"" . $value . "\"&gt;\n$text&lt;/A&gt;\n"
   : "\n$type$pod2.html\#" . $value . "\"&gt;$text&lt;\/A&gt;\n";
 #10...........

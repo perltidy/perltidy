@@ -15183,18 +15183,32 @@ EOM
         my $is_list;
         my $rtype_count = $rtype_count_by_seqno->{$seqno};
         if ($rtype_count) {
-            my $comma_count     = $rtype_count->{','};
-            my $fat_comma_count = $rtype_count->{'=>'};
-            my $semicolon_count = $rtype_count->{';'};
-            if ( $rtype_count->{'f'} ) {
-                $semicolon_count += $rtype_count->{'f'};
-            }
 
             # We will define a list to be a container with one or more commas
-            # and no semicolons. Note that we have included the semicolons
-            # in a 'for' container in the semicolon count to keep c-style for
-            # statements from being formatted as lists.
-            if ( ( $comma_count || $fat_comma_count ) && !$semicolon_count ) {
+            # and no semicolons.
+
+            if ( $rtype_count->{';'} ) {
+
+                # Not a list .. check for possible error. For now, just see if
+                # this ';' is in a '(' or '[' container. Checking type '{' is
+                # tricky and not done yet.
+                my $token_opening = $rLL_new->[$K_opening]->[_TOKEN_];
+                if ( $token_opening eq '(' || $token_opening eq '[' ) {
+                    my $lno = $rLL_new->[$K_opening]->[_LINE_INDEX_] + 1;
+                    ##FIXME: may add control switch to deactivate
+                    warning(<<EOM);
+Unexpected ';' in container beginning with '$token_opening' at line $lno
+EOM
+                }
+            }
+
+            # Type 'f' is semicolon in a c-style 'for' statement
+            elsif ( $rtype_count->{'f'} ) {
+                ## not a list
+            }
+            elsif ( $rtype_count->{','} || $rtype_count->{'=>'} ) {
+
+                # has commas but no semicolons
                 $is_list = 1;
 
                 # We need to do one more check for a parenthesized list:
@@ -15211,6 +15225,9 @@ EOM
                           : !$is_nonlist_type{$type_p};
                     }
                 }
+            }
+            else {
+                ## no commas or semicolons - not a list
             }
         }
 
@@ -42687,3 +42704,4 @@ sub wrapup {
 
 } ## end package Perl::Tidy::Formatter
 1;
+

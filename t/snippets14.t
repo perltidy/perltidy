@@ -186,7 +186,6 @@ sub { @J::ISA = qw/F/; @H::ISA = qw/K G/ },
 sub { @H::ISA = qw/G/; @B::ISA = qw/B/ },
 sub { @B::ISA = qw//; @K::ISA = qw/K J I/ },
 sub { @K::ISA = qw/J I/; @D::ISA = qw/A H B C/ },
-return;
 );
 my %extractor_for = (
     quotelike => [ $ws, $variable,    $id, { MATCH => \&extract_quotelike } ],
@@ -561,7 +560,6 @@ doit(
     sub { @H::ISA = qw/G/;   @B::ISA = qw/B/ },
     sub { @B::ISA = qw//;    @K::ISA = qw/K J I/ },
     sub { @K::ISA = qw/J I/; @D::ISA = qw/A H B C/ },
-    return;
 );
 my %extractor_for = (
     quotelike => [ $ws, $variable,    $id, { MATCH => \&extract_quotelike } ],
@@ -680,7 +678,6 @@ doit(
     sub { @H::ISA = qw/G/;   @B::ISA = qw/B/ },
     sub { @B::ISA = qw//;    @K::ISA = qw/K J I/ },
     sub { @K::ISA = qw/J I/; @D::ISA = qw/A H B C/ },
-    return;
 );
 my %extractor_for = (
     quotelike => [ $ws, $variable,    $id, { MATCH => \&extract_quotelike } ],

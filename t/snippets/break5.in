@@ -1,8 +1,6 @@
 # do not break at .'s after the ?
 return (
-    ( $pod eq $pod2 ) & amp;
-      &amp;
-      ( $htype eq "NAME" )
+     $pod eq $pod2 
   )
   ? "\n&lt;A NAME=\""
   . $value
