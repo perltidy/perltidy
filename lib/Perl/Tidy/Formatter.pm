@@ -8931,6 +8931,7 @@ sub scan_unique_keys {
     my %is_GetOptions_call_by_seqno;
     my %unique_words;
     my %first_key_by_id;
+    my $missing_GetOptions_keys;
 
     my @q;
     my %is_GetOptions_call;
@@ -9023,6 +9024,8 @@ sub scan_unique_keys {
               required trigger weak_ref writer
             )
         ],
+        'Compress::Zlib' =>
+          [qw( Level Method WindowBits MemLevel Strategy Dictionary Bufsize )],
     );
 
     # Number of leading characters to remove for quote types
@@ -9562,6 +9565,42 @@ EOM
         return;
     }; ## end $filter_out_large_sets = sub
 
+    my $delete_unique_quoted_words = sub {
+
+        my ($rlist) = @_;
+
+        # Given:
+        #  $rlist = ref to list of words seen in quotes, or a single word
+        # Task:
+        #  remove matches to the current list of unique words
+
+        if ( !ref($rlist) ) { $rlist = [$rlist] }
+
+        foreach my $word ( @{$rlist} ) {
+
+            # remove quotes
+            if ( $unique_words{$word} ) {
+                delete $unique_words{$word};
+            }
+
+            # try removing a leading dash from the quote
+            if ( length($word) > 1 && substr( $word, 0, 1 ) eq '-' ) {
+                my $subword = substr( $word, 1 );
+                if ( $unique_words{$subword} ) {
+                    delete $unique_words{$subword};
+                }
+            }
+
+            if ( $missing_GetOptions_keys && $word !~ /\s/ ) {
+                my $subword = $getopt_subword->($word);
+                if ( $unique_words{$subword} ) {
+                    delete $unique_words{$subword};
+                }
+            }
+        }
+        return;
+    }; ## end $delete_unique_quoted_words = sub
+
     #--------------------------
     # Main loop over all tokens
     #--------------------------
@@ -9772,12 +9811,14 @@ EOM
     # Make a list of keys known to any modules which have been seen
     $set_known_module_keys->();
 
-    my $missing_GetOptions_keys =
+    $missing_GetOptions_keys =
          $saw_Getopt_Long
       && %is_GetOptions_call_by_seqno
       && !@GetOptions_keys;
 
+    #----------------------------------
     # Find hash keys seen just one time
+    #----------------------------------
     foreach my $key ( keys %{$rwords} ) {
         my $count = $rwords->{$key}->{count};
         next if ( $count != 1 );
@@ -9796,7 +9837,9 @@ EOM
 
     # Now go back and look for these keys in any saved quotes ...
 
+    #---------------------------------------------------------
     # Check each unique word against the list of type Q tokens
+    #---------------------------------------------------------
     if (@Q_list) {
         my $imax = $#Q_list;
         foreach my $i ( 0 .. $imax ) {
@@ -9845,18 +9888,7 @@ EOM
 
             # Ignore multiline quotes for the remaining checks
             if ( !$is_multiline ) {
-
-                # remove quotes
-                if ( $unique_words{$word} ) {
-                    delete $unique_words{$word};
-                }
-
-                if ( $missing_GetOptions_keys && $word !~ /\s/ ) {
-                    my $subword = $getopt_subword->($word);
-                    if ( $unique_words{$subword} ) {
-                        delete $unique_words{$subword};
-                    }
-                }
+                $delete_unique_quoted_words->($word);
             }
         }
     }
@@ -9872,7 +9904,9 @@ EOM
 
     return if ( !%unique_words );
 
+    #---------------------------------------------------------
     # Check words against any option keys passed to GetOptions
+    #---------------------------------------------------------
     foreach my $Kopt (@GetOptions_keys) {
         my $word = $rLL->[$Kopt]->[_TOKEN_];
 
@@ -9933,7 +9967,9 @@ EOM
 
     return if ( !%unique_words );
 
+    #--------------------------------------------
     # Remove any keys which are also in a qw list
+    #--------------------------------------------
     foreach my $Kqw (@K_start_qw_list) {
         my ( $K_last_q_uu, $rlist ) = $self->get_qw_list($Kqw);
         if ( !defined($rlist) ) {
@@ -9952,22 +9988,15 @@ EOM
                 "$lno: Empty return for K=$Kqw type='$type' token='$token'\n");
             next;
         }
-        foreach my $word ( @{$rlist} ) {
-            if ( $unique_words{$word} ) {
-                delete $unique_words{$word};
-            }
-            if ($missing_GetOptions_keys) {
-                my $subword = $getopt_subword->($word);
-                if ( $unique_words{$subword} ) {
-                    delete $unique_words{$subword};
-                }
-            }
-        }
+
+        $delete_unique_quoted_words->($rlist);
     }
 
     return if ( !%unique_words );
 
+    #------------------------------------------------------------------
     # Filter out groups of unique keys which are probably uninteresting
+    #------------------------------------------------------------------
     $filter_out_large_sets->();
 
     return if ( !%unique_words );
@@ -15187,16 +15216,15 @@ EOM
             # We will define a list to be a container with one or more commas
             # and no semicolons.
 
+            my $token_opening = $rLL_new->[$K_opening]->[_TOKEN_];
             if ( $rtype_count->{';'} ) {
 
                 # Not a list .. check for possible error. For now, just see if
                 # this ';' is in a '(' or '[' container. Checking type '{' is
                 # tricky and not done yet.
-                my $token_opening = $rLL_new->[$K_opening]->[_TOKEN_];
                 if ( $token_opening eq '(' || $token_opening eq '[' ) {
                     my $lno = $rLL_new->[$K_opening]->[_LINE_INDEX_] + 1;
-                    ##FIXME: may add control switch to deactivate
-                    warning(<<EOM);
+                    complain(<<EOM);
 Unexpected ';' in container beginning with '$token_opening' at line $lno
 EOM
                 }
@@ -15214,7 +15242,7 @@ EOM
                 # We need to do one more check for a parenthesized list:
                 # At an opening paren following certain tokens, such as 'if',
                 # we do not want to format the contents as a list.
-                if ( $rLL_new->[$K_opening]->[_TOKEN_] eq '(' ) {
+                if ( $token_opening eq '(' ) {
                     my $Kp = $self->K_previous_code( $K_opening, $rLL_new );
                     if ( defined($Kp) ) {
                         my $type_p  = $rLL_new->[$Kp]->[_TYPE_];
@@ -42704,4 +42732,3 @@ sub wrapup {
 
 } ## end package Perl::Tidy::Formatter
 1;
-
