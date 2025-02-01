@@ -41318,6 +41318,9 @@ sub set_vertical_tightness_flags {
     my $ibeg = $ri_first->[$nline];
     my $iend = $ri_last->[$nline];
 
+    # Fix for b1503-b1506
+    my $is_under_stress = $levels_to_go[$ibeg] > $high_stress_level;
+
     # Define these values for each vertical tightness type:
     my (
 
@@ -41362,11 +41365,14 @@ sub set_vertical_tightness_flags {
         my $ibeg_next = $ri_first->[ $nline + 1 ];
         my $token_end = $tokens_to_go[$iend];
         my $iend_next = $ri_last->[ $nline + 1 ];
-
         if (
                $type_sequence_to_go[$iend]
             && !$block_type_to_go[$iend]
             && $is_opening_token{$token_end}
+
+            # minimal fix for b1503; this also works ok without the 'w' check
+            # but that changes more existing code.
+            && !($is_under_stress && $types_to_go[$ibeg_next] eq 'w')
             && (
                 $opening_vertical_tightness{$token_end} > 0
 

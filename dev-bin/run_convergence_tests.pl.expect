@@ -8498,6 +8498,20 @@ my $species =
         ) ]
         );
 
+==> b1503 <==
+         open(
+                  MEMINFO
+                  )
+                  ||
+                  die
+"can't open $MEMINFO: $!";
+         open(
+                  MEMINFO
+                  )
+                  ||
+                  die
+"can't open $MEMINFO: $!";
+
 ==> b156 <==
 # State 1
 {

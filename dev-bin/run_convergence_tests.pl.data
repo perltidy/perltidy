@@ -12552,6 +12552,26 @@ my $species =
 --stack-opening-paren
 --stack-closing-square-bracket
 
+==> b1503.in <==
+         open
+                  (
+                  MEMINFO
+                  )
+                  ||
+                  die
+"can't open $MEMINFO: $!";
+         open(    MEMINFO
+                  )
+                  ||
+                  die
+"can't open $MEMINFO: $!";
+
+==> b1503.par <==
+--maximum-line-length=15
+--indent-columns=9
+--continuation-indentation=9
+--paren-vertical-tightness=1
+
 ==> b156.in <==
 # State 1
 {
