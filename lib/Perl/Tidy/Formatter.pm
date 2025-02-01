@@ -320,6 +320,7 @@ my (
     %is_my_state_our,
     %is_keyword_with_special_leading_term,
     %is_s_y_m_slash,
+    %is_sigil,
 
     # INITIALIZER: sub check_options
     $controlled_comma_style,
@@ -958,6 +959,9 @@ BEGIN {
     # used to check for certain token quote types
     @q = qw( s y m / );
     @is_s_y_m_slash{@q} = (1) x scalar(@q);
+
+    @q = qw( $ & % * @ );
+    @is_sigil{@q} = (1) x scalar(@q);
 
 } ## end BEGIN
 
@@ -2099,6 +2103,94 @@ sub cumulative_length_before_K {
     my $rLL = $self->[_rLL_];
     return ( $KK <= 0 ) ? 0 : $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
 } ## end sub cumulative_length_before_K
+
+# Number of leading characters to remove for quote types
+# Zero values indicate types not used
+my %Q_leading_chars = (
+    "'"  => 1,
+    '"'  => 1,
+    '/'  => 1,
+    'm'  => 2,
+    's'  => 2,
+    'y'  => 2,
+    'tr' => 3,
+    'qx' => 3,
+    'qr' => 3,
+    'qq' => 3,
+    'q'  => 2,
+);
+
+# hash keys which are quotes may be one of these types
+my %is_simple_quote_type = (
+    "'"  => 1,
+    '"'  => 1,
+    'qq' => 1,
+    'q'  => 1,
+);
+
+sub Q_spy {
+
+    my ( $string, ($is_qwaf_Q) ) = @_;
+
+    # Look at the first few characters of a type Q token and identify
+    # its specific type, based on the above hash.
+
+    # Given:
+    #    $string = A token type Q; if multiline, then the first token.
+    #    $is_qwaf_Q = true if this is a special type Q within a qw list
+    #     formatted with -qwaf. These do not have containing quote marks.
+    # Returns:
+    #    - nothing if the type cannot be identified, or
+    #    - hash with these values otherwise:
+    #      nch = number of leading characters to remove to reveal the text
+    #      is_simple = true if this quote is one of these types: qq q ' "
+    #      is_interpolated = true if this quote type may contain code
+    #      ch_key = first one or two characters indicating type
+    #                  i.e. one of the above hash keys.
+    # Note:
+    #    - The number $nch is the minimum number; but it could be more
+    #      if there are spaces before before the leading '(' or other delimiter,
+    #    - This call works for multiline quotes provided that this sub is
+    #      called with the first Q token in the string, not an intermediate one.
+    #    - For efficiency, caller can handle common cases of leading ' or "
+    #    - On return, caller should check the token type with $ch_key to decide
+    #      how to parse further.
+    #    - For the simple quote-type operators, the inner text can be found as:
+    #      my $text = $is_qwaf_Q ? $string : substr( $string, $nch, -1 );
+    #    where:
+    #      $string = the concatenation of all type Q tokens, if multiline.
+
+    # Note that here we must check for the two char case first, then 1, because
+    # of ambiguity when $ch1='q'.
+
+    # Values for $is_qwaf_Q:
+    my $is_interpolated = 0;
+    my $is_simple       = 1;
+    my $nch             = 0;
+    my $ch_key          = EMPTY_STRING;
+
+    # Note that type Q tokens in a qwaf call are not contained within quotes
+    if ( !$is_qwaf_Q ) {
+        my $ch1 = substr( $string, 0, 1 );
+        my $ch2 = substr( $string, 0, 2 );
+        $nch    = $Q_leading_chars{$ch2};
+        $ch_key = $ch2;
+        if ( !defined($nch) ) {
+            $nch    = $Q_leading_chars{$ch1};
+            $ch_key = $ch1;
+        }
+        return if ( !defined($nch) );
+        $is_simple       = $is_simple_quote_type{$ch_key};
+        $is_interpolated = $ch1 ne 'q' && $ch1 ne "'";
+    }
+    return {
+        nch             => $nch,
+        is_simple       => $is_simple,
+        is_interpolated => $is_interpolated,
+## TBD: Unique key not used yet, for future use:
+##      ch_key          => $ch_key,
+    };
+} ## end sub Q_spy
 
 ###########################################
 # CODE SECTION 3: Check and process options
@@ -8898,12 +8990,32 @@ sub scan_unique_keys {
     # Scan for hash keys needed to implement --dump-unique-keys, -duk
     use constant DEBUG_WUK => 0;
 
-    my $rLL                 = $self->[_rLL_];
-    my $Klimit              = $self->[_Klimit_];
-    my $ris_list_by_seqno   = $self->[_ris_list_by_seqno_];
-    my $K_opening_container = $self->[_K_opening_container_];
-    my $K_closing_container = $self->[_K_closing_container_];
-    my $ris_qwaf_by_seqno   = $self->[_ris_qwaf_by_seqno_];
+    # How it works:
+    # We divide all pieces of quoted text into two categories:
+    # - Primary: text which appear as hash keys
+    # - Secondary: other quoted text which may or may not be hash keys
+    # Primary hash keys are currently text which:
+    #   - occurs before a fat fat comma, such as : "word => $val", and
+    #   - text which occurs within hash braces, like "$hash{word}" or
+    #     a slice like @hash{word1, word2};
+    # Secondary quotes are basically all other quoted text.
+
+    # We keep a count of the number of occurances of each Primary key, and
+    # compare each Primary key with the Secondary quotes.  The reported unique
+    # hash keys are the set of Primary keys which occur just once and are not
+    # matched by any other Secondary quotes.
+
+    # Current limitation:
+    # - Hash keys which occur within quoted text or here docs are processed as
+    #   secondary quotes rather than as primary keys.
+
+    my $rLL                  = $self->[_rLL_];
+    my $Klimit               = $self->[_Klimit_];
+    my $ris_list_by_seqno    = $self->[_ris_list_by_seqno_];
+    my $K_opening_container  = $self->[_K_opening_container_];
+    my $K_closing_container  = $self->[_K_closing_container_];
+    my $ris_qwaf_by_seqno    = $self->[_ris_qwaf_by_seqno_];
+    my $rtype_count_by_seqno = $self->[_rtype_count_by_seqno_];
 
     return if ( !defined($Klimit) || $Klimit < 1 );
 
@@ -8911,7 +9023,7 @@ sub scan_unique_keys {
     my $ix_HERE_END = -1;      # the line index of the last here target read
     my @keys_in_HERE_docs;
 
-    # stack holds [$seqno, $KK, $KK_last_nb]
+    # stack holds keys _seqno, _KK, _KK_last_nb, _is_slice
     my @stack;
 
     my $KK = -1;
@@ -8924,6 +9036,7 @@ sub scan_unique_keys {
     # Main loop to examine all hash keys and quotes
     #----------------------------------------------
     my @Q_list;
+    my @mw_list;
     my @K_start_qw_list;
     my @GetOptions_keys;
     my @Q_getopts;
@@ -9024,24 +9137,12 @@ sub scan_unique_keys {
               required trigger weak_ref writer
             )
         ],
-        'Compress::Zlib' =>
-          [qw( Level Method WindowBits MemLevel Strategy Dictionary Bufsize )],
-    );
-
-    # Number of leading characters to remove for quote types
-    # Zero values indicate types not used
-    my %ib_hash = (
-        "'"  => 1,
-        '"'  => 1,
-        '/'  => 1,
-        'm'  => 2,
-        's'  => 2,
-        'y'  => 0,
-        'tr' => 0,
-        'qx' => 3,
-        'qr' => 3,
-        'qq' => 3,
-        'q'  => 2,
+        'Compress::Zlib' => [
+            qw(
+              -Level    -Method     -WindowBits -MemLevel
+              -Strategy -Dictionary -Bufsize
+            )
+        ],
     );
 
     my $add_known_keys = sub {
@@ -9102,21 +9203,21 @@ sub scan_unique_keys {
     my $get_hash_name = sub {
 
         # Get a name of the hash corresponding to a key in hash braces, if
-        # possible.  We have just encountered token at $KK and about to close
-        # the stack.
+        # possible.  This will be used to identify related hash keys.
+        # We have just encountered token at $KK and about to close the stack.
         #    $rOpts->{'something'}
         #    |       |           |
         #   $Khash   $Kbrace     $KK
         return if ( !@stack );
-        my $Kbrace = $stack[-1]->[1];
-        my $Khash  = $stack[-1]->[2];
+        my $Kbrace = $stack[-1]->{_KK};
+        my $Khash  = $stack[-1]->{_KK_last_nb};
         return if ( !defined($Kbrace) );
         return if ( !defined($Khash) );
         return if ( $rLL->[$Kbrace]->[_TYPE_] ne 'L' );
         my $Khash_end = $Khash;
         my $token     = $rLL->[$Khash]->[_TOKEN_];
 
-        # walk back to find a '$'
+        # Walk back to find a '$'
         if ( $token eq '->' ) {
             $Khash = $self->K_previous_code($Khash);
             return if ( !defined($Khash) );
@@ -9133,6 +9234,7 @@ sub scan_unique_keys {
         my $ch1 = substr( $token, 0, 1 );
         return if ( $ch1 ne '$' && $ch1 ne '*' );
 
+        # Construct the final name, removing any spaces
         my $hash_name = $token;
         my $count     = 0;
         foreach my $Kh ( $Khash + 1 .. $Khash_end ) {
@@ -9143,9 +9245,50 @@ sub scan_unique_keys {
         return $hash_name;
     }; ## end $get_hash_name = sub
 
+    my $is_hash_slice = sub {
+
+        # We are at an opening hash brace.
+        # Look back to see if this is a slice.
+        # Return:
+        #  a name for the slice, or
+        #  undef if not a slice
+
+        my $Ktest = $KK_last_nb;
+        my $token = $rLL->[$Ktest]->[_TOKEN_];
+
+        # walk back to find a '$'
+        if ( $token eq '->' ) {
+            $Ktest = $self->K_previous_code($Ktest);
+            return if ( !defined($Ktest) );
+            $token = $rLL->[$Ktest]->[_TOKEN_];
+        }
+        if ( $token eq '}' ) {
+            my $seqno = $rLL->[$Ktest]->[_TYPE_SEQUENCE_];
+            return if ( !defined($seqno) );
+            my $Ko = $K_opening_container->{$seqno};
+            return if ( !$Ko );
+            $Ktest = $Ko - 1;
+            $token = $rLL->[$Ktest]->[_TOKEN_];
+        }
+        my $ch1 = substr( $token, 0, 1 );
+
+        # NOTE: at present, we require an @ sigil to recognize a hash slice.
+        if ( $ch1 eq '@' ) {
+
+            # convert sigil to '$' to match other group members
+            my $id = '$' . substr( $token, 1 );
+            return $id;
+        }
+        return;
+    }; ## end $is_hash_slice = sub
+
     my %ancestor_seqno_cache;
     my $get_ancestor_seqno = sub {
         my ($seqno_in) = @_;
+
+        # The goal is to find the outermost common sequence number of
+        # a tree with hash keys and values. This is needed to help filter
+        # out large static data trees.
 
         # Given:
         #   $seqno_in = the sequence number of a list with hash key items
@@ -9154,12 +9297,19 @@ sub scan_unique_keys {
         # Return:
         #   $seqno_out = The most outer ancestor matching ancestor seqno
 
-        # The goal is to find the outermost common sequence number of
-        # a tree with hash keys and values. This is needed to help filter
-        # out large static data trees.
+        # Be sure we have a valid starting sequence number
+        if ( !$seqno_in ) {
+            return;
+        }
 
-        # Be sure we have a valid starting point
-        if ( !$seqno_in || $seqno_in <= SEQ_ROOT ) { return $seqno_in }
+        # Handle a possible parenless-call:
+        # FIXME: A better strategy might be to keep track of the most recent
+        # keyword or function name and use it.
+        if ( $seqno_in <= SEQ_ROOT || !$ris_list_by_seqno->{$seqno_in} ) {
+            return $seqno_in;
+        }
+
+        # Continue for a normal list..
 
         # use any cached value for efficiency
         my $seqno_cache = $ancestor_seqno_cache{$seqno_in};
@@ -9302,38 +9452,25 @@ EOM
         my $token_last = $rLL->[$KK_last_nb]->[_TOKEN_];
         my $word;
         if ( $type_last eq 'w' ) {
+
             $word = $token_last;
+
+            # Combine a leading '-' if any
+            if ( @mw_list && $mw_list[-1] eq $KK_last_nb ) {
+                $word = '-' . $word;
+
+                # and remove it from the list of quoted words
+                pop @mw_list;
+            }
         }
         elsif ( $type_last eq 'Q' ) {
 
-            # Look for quotes only starting with q( qq( ' "" ...
-            # We know that we are at the end of this Q token, so the
-            # last character is some kind of quote marker.
-            # It would be extremely unlikely that it is a multiline Q
-            # since it is a hash key, so we can do some simple checks.
-            my $ch0 = substr( $token_last, 0, 1 );
-            my $ch1 = substr( $token_last, 1, 1 );
+            return if ( length($token_last) < 2 );
+
+            # Assume that this is not a multiline Q, since this is a hash key.
             my $is_interpolated;
-            if ( $ch0 eq 'q' ) {
-                if ( $ch1 =~ /\W/ ) {
-
-                    # something like q(
-                    $word = substr( $token_last, 2, -1 );
-                }
-
-                elsif ( $ch1 eq 'q' ) {
-
-                    # something like qq(
-                    $is_interpolated = 1;
-                    $word            = substr( $token_last, 3, -1 );
-                }
-                else {
-
-                    # strange for a hash key - give up
-                    return;
-                }
-            }
-            elsif ( $ch0 eq '"' ) {
+            my $ch0 = substr( $token_last, 0, 1 );
+            if ( $ch0 eq '"' ) {
                 $word            = substr( $token_last, 1, -1 );
                 $is_interpolated = 1;
             }
@@ -9341,8 +9478,12 @@ EOM
                 $word = substr( $token_last, 1, -1 );
             }
             else {
-                ## ignore a quote token such as tr// or y// ...
-                return;
+                my $rQ_info = Q_spy($token_last);
+                if ( defined($rQ_info) && $rQ_info->{is_simple} ) {
+                    $is_interpolated = $rQ_info->{is_interpolated};
+                    my $nch = $rQ_info->{nch};
+                    $word = substr( $token_last, $nch, -1 );
+                }
             }
 
             # Ignore text with interpolated values
@@ -9355,7 +9496,14 @@ EOM
                     return if ( $ch_test ne '\\' );
                 }
             }
-            pop @Q_list;
+
+            # We accept this as a hash key, so remove it from the quote list
+            if ( @Q_list && $Q_list[-1]->[0] eq $KK_last_nb ) {
+                pop @Q_list;
+            }
+            else {
+                ## Shouldn't happen
+            }
         }
         else {
             # not a quote - possibly identifier
@@ -9366,20 +9514,22 @@ EOM
         # Bump count of known keys by 1 so that they will not appear as unique
         if ( !defined( $rwords->{$word} ) ) {
 
-            my $id = $parent_seqno;
-            if ( !$id ) {
+            my $slice_name = @stack ? $stack[-1]->{_slice_name} : EMPTY_STRING;
+            my $id         = $parent_seqno;
+            if ($slice_name) {
+                $id = $slice_name;
+            }
+            elsif ( !$id ) {
                 $id = $get_hash_name->();
             }
             else {
                 $id = $get_ancestor_seqno->($parent_seqno);
             }
-
             $rwords->{$word} = {
                 count    => 1,
                 hash_id  => $id,
                 K        => $KK_last_nb,
                 is_known => 0,
-##              parent_seqno => $parent_seqno,
             };
 
             # save debug info
@@ -9548,7 +9698,6 @@ EOM
             # but keep dubious keys if there is just 1
             if ( $is_dubious_key{$key} && $dubious_count == 1 ) { next }
 
-            ##$rwords->{$key}->{count}++
             if ( $unique_words{$key} ) { delete $unique_words{$key} }
         }
 
@@ -9583,14 +9732,6 @@ EOM
                 delete $unique_words{$word};
             }
 
-            # try removing a leading dash from the quote
-            if ( length($word) > 1 && substr( $word, 0, 1 ) eq '-' ) {
-                my $subword = substr( $word, 1 );
-                if ( $unique_words{$subword} ) {
-                    delete $unique_words{$subword};
-                }
-            }
-
             if ( $missing_GetOptions_keys && $word !~ /\s/ ) {
                 my $subword = $getopt_subword->($word);
                 if ( $unique_words{$subword} ) {
@@ -9600,6 +9741,46 @@ EOM
         }
         return;
     }; ## end $delete_unique_quoted_words = sub
+
+    my $is_static_hash_key = sub {
+
+        # Return:
+        #   true if $KK_last_nb is a simple fixed quote-like hash key
+        #   false otherwise
+        my $Ktest = $KK_last_nb;
+        return unless defined($Ktest);
+        my $type = $rLL->[$Ktest]->[_TYPE_];
+
+        # This is just for barewords and quoted text
+        return unless ( $type eq 'w' || $type eq 'Q' );
+
+        # Backup one token at a dashed bareword
+        if ( @mw_list && $mw_list[-1] eq $Ktest ) { $Ktest -= 1 }
+
+        # Now look back for a comma or opening hash brace
+        $Ktest -= 1;
+        return if ( $Ktest <= 0 );
+        $type = $rLL->[$Ktest]->[_TYPE_];
+        if ( $type eq 'b' ) {
+            $Ktest--;
+            $type = $rLL->[$Ktest]->[_TYPE_];
+        }
+        if ( $type eq '#' ) {
+            $Ktest--;
+            $type = $rLL->[$Ktest]->[_TYPE_];
+            if ( $type eq 'b' ) {
+                $Ktest--;
+                $type = $rLL->[$Ktest]->[_TYPE_];
+            }
+        }
+        if ( $type eq 'L' ) { return 1 }
+        if ( $type eq ',' ) {
+            if ( @stack && $stack[-1]->{_slice_name} ) {
+                return 1;
+            }
+        }
+        return;
+    }; ## end $is_static_hash_key = sub
 
     #--------------------------
     # Main loop over all tokens
@@ -9615,6 +9796,7 @@ EOM
         if ($seqno) {
             if ( $is_opening_type{$type} ) {
 
+                my $slice_name;
                 if ( $type eq 'L' ) {
 
                     # Skip past something like ${word}
@@ -9630,28 +9812,34 @@ EOM
                             $K_end_skip = $Kc;
                         }
                     }
+
+                    # check for a slice
+                    my $rtype_count = $rtype_count_by_seqno->{$seqno};
+                    if ( $rtype_count->{','} ) {
+                        $slice_name = $is_hash_slice->();
+                    }
                 }
-                push @stack, [ $seqno, $KK, $KK_last_nb ];
+                push @stack,
+                  {
+                    _seqno      => $seqno,
+                    _KK         => $KK,
+                    _KK_last_nb => $KK_last_nb,
+                    _slice_name => $slice_name,
+                  };
             }
             elsif ( $is_closing_type{$type} ) {
-
                 if ( $type eq 'R' ) {
-
-                    # require a single item within the hash braces
-                    my $Ko = $K_opening_container->{$seqno};
-                    my $Kn = $self->K_next_code($Ko);
-                    if ( defined($Kn) && $Kn == $KK_last_nb ) {
+                    if ( $is_static_hash_key->() ) {
                         $push_KK_last_nb->();
                     }
                 }
-
                 my $item = pop @stack;
-                if ( !$item || $item->[0] != $seqno ) {
+                if ( !$item || $item->{_seqno} != $seqno ) {
                     if (DEVEL_MODE) {
 
                         # shouldn't happen for a balanced file
                         my $num = @stack;
-                        my $got = $num ? $item->[0] : 'undef';
+                        my $got = $num ? $item->{_seqno} : 'undef';
                         my $lno = $rLL->[$KK]->[_LINE_INDEX_];
                         Fault <<EOM;
 stack error at seqno=$seqno type=$type num=$num got seqno=$got lno=$lno
@@ -9666,12 +9854,19 @@ EOM
         else {
             if ( $type eq '=>' ) {
                 my $parent_seqno = $self->parent_seqno_by_K($KK);
-                if ( $parent_seqno && $ris_list_by_seqno->{$parent_seqno} ) {
-                    if ( $is_GetOptions_call_by_seqno{$parent_seqno} ) {
-                        push @GetOptions_keys, $KK_last_nb;
-                    }
-                    else {
-                        $push_KK_last_nb->($parent_seqno);
+                if ( $is_GetOptions_call_by_seqno{$parent_seqno} ) {
+                    push @GetOptions_keys, $KK_last_nb;
+                }
+                else {
+                    $push_KK_last_nb->($parent_seqno);
+                }
+            }
+            elsif ( $type eq ',' ) {
+
+                # in a slice?
+                if ( @stack && $stack[-1]->{_slice_name} ) {
+                    if ( $is_static_hash_key->() ) {
+                        $push_KK_last_nb->();
                     }
                 }
             }
@@ -9686,7 +9881,7 @@ EOM
                 }
 
                 # Save for later comparison with hash keys.
-                my $seqno_Q = @stack ? $stack[-1]->[0] : undef;
+                my $seqno_Q = @stack ? $stack[-1]->{_seqno} : undef;
                 push @Q_list, [ $KK, $KK_end_Q, $seqno_Q ];
                 $KK = $KK_end_Q;
             }
@@ -9708,7 +9903,7 @@ EOM
 
                     $saw_use_module{$token_n} = $Kn;
 
-                    if ( $token_n ne 'constant' && $token ne 'use' ) {
+                    if ( $token_n ne 'constant' || $token ne 'use' ) {
                         next;
                     }
 
@@ -9779,6 +9974,14 @@ EOM
                         }
                     }
                 }
+
+                # check for -word
+                elsif ($KK > 0
+                    && $rLL->[ $KK - 1 ]->[_TOKEN_] eq '-'
+                    && $rLL->[ $KK - 1 ]->[_TYPE_] eq 'm' )
+                {
+                    push @mw_list, $KK;
+                }
                 else {
                     ## no other special checks
                 }
@@ -9847,21 +10050,28 @@ EOM
             my ( $K, $Kend, $seqno_Q ) = @{ $Q_list[$i] };
             my $string = $rLL->[$K]->[_TOKEN_];
 
-            # What type of quote?
-            my $ch1       = substr( $string, 0, 1 );
-            my $ch2       = substr( $string, 0, 2 );
+            # Determine the quote type from its leading characters.
+            # Note that tokens in a qwaf call are not contained in quote marks.
             my $is_qwaf_Q = defined($seqno_Q) && $ris_qwaf_by_seqno->{$seqno_Q};
-
-            # Note that we must check two chars first, then 1, because
-            # of ambiguity when $ch1='q'. Also note that type Q tokens
-            # in a qwaf call are not contained within quote marks.
+            my $ib        = 0;
             my $is_interpolated = 0;
-            my $ib              = 0;
             if ( !$is_qwaf_Q ) {
-                $ib = $ib_hash{$ch2};
-                if ( !$ib ) { $ib = $ib_hash{$ch1} }
-                next if ( !defined($ib) || $ib <= 0 );
-                $is_interpolated = $ch1 ne 'q' && $ch1 ne "'";
+                next if ( length($string) < 2 );
+                my $ch1 = substr( $string, 0, 1 );
+                if ( $ch1 eq '"' ) {
+                    $ib              = 1;
+                    $is_interpolated = 1;
+                }
+                elsif ( $ch1 eq "'" ) {
+                    $ib              = 1;
+                    $is_interpolated = 0;
+                }
+                else {
+                    my $rQ_info = Q_spy($string);
+                    next if ( !defined($rQ_info) );
+                    $ib              = $rQ_info->{nch};
+                    $is_interpolated = $rQ_info->{is_interpolated};
+                }
             }
 
             my $is_multiline = 0;
@@ -9889,6 +10099,17 @@ EOM
             # Ignore multiline quotes for the remaining checks
             if ( !$is_multiline ) {
                 $delete_unique_quoted_words->($word);
+            }
+        }
+    }
+    return if ( !%unique_words );
+
+    # Check list of barewords quoted with a leading dash
+    if (@mw_list) {
+        foreach my $Kmw (@mw_list) {
+            my $word = '-' . $rLL->[$Kmw]->[_TOKEN_];
+            if ( $unique_words{$word} ) {
+                delete $unique_words{$word};
             }
         }
     }
@@ -11639,6 +11860,7 @@ sub expand_quoted_word_list {
         elsif ( $type eq 'Q' ) {
 
             # single quoted word
+            # FIXME: check for other quote types
             next if ( length($token) < 3 );
             my $name = substr( $token, 1, -1 );
             push @list, $name;
@@ -12032,6 +12254,7 @@ sub scan_variable_usage {
 
     my $checkin_new_constant = sub {
         my ( $KK, $word ) = @_;
+        return if ( !defined($word) );
         my $line_index = $rLL->[$KK]->[_LINE_INDEX_];
         my $rvars      = {
             count      => 0,
@@ -12080,11 +12303,20 @@ sub scan_variable_usage {
         my $type_n  = $rLL->[$Kn]->[_TYPE_];
         my $token_n = $rLL->[$Kn]->[_TOKEN_];
 
-        # version?
+        # step past a version
         if ( $type_n eq 'n' || $type_n eq 'v' ) {
             $Kn      = $self->K_next_code($Kn);
             $type_n  = $rLL->[$Kn]->[_TYPE_];
             $token_n = $rLL->[$Kn]->[_TOKEN_];
+        }
+
+        # patch for qw as function (qwaf)
+        my $is_qwaf_Q;
+        if ( $type_n eq 'U' && $token_n eq 'qw' ) {
+            $Kn        = $self->K_next_code($Kn);
+            $type_n    = $rLL->[$Kn]->[_TYPE_];
+            $token_n   = $rLL->[$Kn]->[_TOKEN_];
+            $is_qwaf_Q = 1;
         }
 
         if ( $token_n eq '(' ) {
@@ -12098,13 +12330,31 @@ sub scan_variable_usage {
             $checkin_new_constant->( $Kn, $token_n );
         }
 
-        # use constant '_meth1_',1;
+        # use constant '_meth1_',1  or other quote type
         elsif ( $type_n eq 'Q' ) {
 
-            # don't try to handle anything strange
-            if ( length($token_n) < 3 ) { return }
-            my $name = substr( $token_n, 1, -1 );
-            $checkin_new_constant->( $Kn, $name );
+            # This Q token is assumed to be a single token
+            my $name;
+            if ($is_qwaf_Q) {
+                $name = $token_n;
+            }
+            elsif ( length($token_n) > 2 ) {
+                my $ch0 = substr( $token_n, 0, 1 );
+                if ( $ch0 eq '"' || $ch0 eq "'" ) {
+                    $name = substr( $token_n, 1, -1 );
+                }
+                else {
+                    my $rQ_info = Q_spy($token_n);
+                    if ( defined($rQ_info) && $rQ_info->{is_simple} ) {
+                        my $nch = $rQ_info->{nch};
+                        $name = substr( $token_n, $nch, -1 );
+                    }
+                }
+            }
+            else {
+                ## empty string
+            }
+            $checkin_new_constant->( $Kn, $name ) if ( defined($name) );
         }
 
         # use constant qw(_meth2_ 2);
@@ -12150,7 +12400,18 @@ sub scan_variable_usage {
                     }
                     elsif ( $type eq 'Q' ) {
                         if ( length($token) < 3 ) { return }
-                        my $name = substr( $token, 1, -1 );
+                        my $ch0 = substr( $token, 0, 1 );
+                        my $name;
+                        if ( $ch0 eq '"' || $ch0 eq "'" ) {
+                            $name = substr( $token, 1, -1 );
+                        }
+                        else {
+                            my $rQ_info = Q_spy($token);
+                            if ( defined($rQ_info) && $rQ_info->{is_simple} ) {
+                                my $nch = $rQ_info->{nch};
+                                $name = substr( $token, $nch, -1 );
+                            }
+                        }
                         $checkin_new_constant->( $Kx, $name );
                     }
                     else {
@@ -14024,7 +14285,6 @@ EOM
 my %wU;
 my %wiq;
 my %is_wit;
-my %is_sigil;
 my %is_nonlist_keyword;
 my %is_nonlist_type;
 my %is_unexpected_equals;
@@ -14041,9 +14301,6 @@ BEGIN {
 
     @q = qw( w i t );    # for c250: added new types 'P', 'S', formerly 'i'
     @is_wit{@q} = (1) x scalar(@q);
-
-    @q = qw( $ & % * @ );
-    @is_sigil{@q} = (1) x scalar(@q);
 
     # Parens following these keywords will not be marked as lists. Note that
     # 'for' is not included and is handled separately, by including 'f' in the
@@ -41365,6 +41622,7 @@ sub set_vertical_tightness_flags {
         my $ibeg_next = $ri_first->[ $nline + 1 ];
         my $token_end = $tokens_to_go[$iend];
         my $iend_next = $ri_last->[ $nline + 1 ];
+
         if (
                $type_sequence_to_go[$iend]
             && !$block_type_to_go[$iend]
@@ -41372,7 +41630,7 @@ sub set_vertical_tightness_flags {
 
             # minimal fix for b1503; this also works ok without the 'w' check
             # but that changes more existing code.
-            && !($is_under_stress && $types_to_go[$ibeg_next] eq 'w')
+            && !( $is_under_stress && $types_to_go[$ibeg_next] eq 'w' )
             && (
                 $opening_vertical_tightness{$token_end} > 0
 
