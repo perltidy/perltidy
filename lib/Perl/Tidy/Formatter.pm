@@ -8990,24 +8990,30 @@ sub scan_unique_keys {
     # Scan for hash keys needed to implement --dump-unique-keys, -duk
     use constant DEBUG_WUK => 0;
 
-    # How it works:
-    # We divide all pieces of quoted text into two categories:
-    # - Primary: text which appear as hash keys
-    # - Secondary: other quoted text which may or may not be hash keys
-    # Primary hash keys are currently text which:
-    #   - occurs before a fat fat comma, such as : "word => $val", and
+    # There are three main phases of the operation:
+
+    # PHASE 1: We scan the file and store all hash keys fount in the hash
+    # %{$rhash_keys_trove}, including a count for each. These are keys which:
+    #   - occur before a fat fat comma, such as : "word => $val", and
     #   - text which occurs within hash braces, like "$hash{word}" or
     #     a slice like @hash{word1, word2};
-    # Secondary quotes are basically all other quoted text.
+    # During this scan we save pointers to all quotes and here docs,
+    # for use in the second phase.
 
-    # We keep a count of the number of occurances of each Primary key, and
-    # compare each Primary key with the Secondary quotes.  The reported unique
-    # hash keys are the set of Primary keys which occur just once and are not
-    # matched by any other Secondary quotes.
+    # PHASE 2: We find the keys which occur just once, and store their
+    # index in the hash %K_unique_key. Then we compare all quoted text
+    # with these unique keys.  If a key matches a quoted string, then
+    # it is removed from the set of unique keys.
+
+    # PHASE 3: We apply a filter to remove sets of multiple related keys
+    # for which most keys are unique.  These are most likely used for
+    # communication with other code and thus unlikely to be errors.
+
+    # PHASE 4: Any remaining keys are output along with their line number.
 
     # Current limitation:
     # - Hash keys which occur within quoted text or here docs are processed as
-    #   secondary quotes rather than as primary keys.
+    #   quotes rather than as primary keys.
 
     my $rLL                  = $self->[_rLL_];
     my $Klimit               = $self->[_Klimit_];
@@ -9032,17 +9038,14 @@ sub scan_unique_keys {
 
     my $K_end_skip = -1;
 
-    #----------------------------------------------
-    # Main loop to examine all hash keys and quotes
-    #----------------------------------------------
+    my $rhash_key_trove = {};
+    my %K_unique_key;
     my @Q_list;
     my @mw_list;
     my @K_start_qw_list;
     my @GetOptions_keys;
     my @Q_getopts;
-    my $rwords = {};
     my %is_GetOptions_call_by_seqno;
-    my %unique_words;
     my %first_key_by_id;
     my $missing_GetOptions_keys;
 
@@ -9385,7 +9388,7 @@ EOM
         # This sub must be called after the file is scanned, so that all
         # 'use' statements have been seen.
 
-        my $info = $rwords->{$key};
+        my $info = $rhash_key_trove->{$key};
         if ( !defined($info) ) {
             DEVEL_MODE && Fault("shouldn't happen\n");
             return;
@@ -9512,7 +9515,7 @@ EOM
         return unless ($word);
 
         # Bump count of known keys by 1 so that they will not appear as unique
-        if ( !defined( $rwords->{$word} ) ) {
+        if ( !defined( $rhash_key_trove->{$word} ) ) {
 
             my $slice_name = @stack ? $stack[-1]->{_slice_name} : EMPTY_STRING;
             my $id         = $parent_seqno;
@@ -9525,7 +9528,7 @@ EOM
             else {
                 $id = $get_ancestor_seqno->($parent_seqno);
             }
-            $rwords->{$word} = {
+            $rhash_key_trove->{$word} = {
                 count    => 1,
                 hash_id  => $id,
                 K        => $KK_last_nb,
@@ -9538,7 +9541,7 @@ EOM
             }
         }
         else {
-            $rwords->{$word}->{count}++;
+            $rhash_key_trove->{$word}->{count}++;
         }
         return;
     }; ## end $push_KK_last_nb = sub
@@ -9620,14 +9623,14 @@ EOM
         my %total_count_by_id;
         my %unique_count_by_id_pre_q;
         my %unique_count_by_id_post_q;
-        foreach my $key ( keys %{$rwords} ) {
-            my $count   = $rwords->{$key}->{count};
-            my $hash_id = $rwords->{$key}->{hash_id};
+        foreach my $key ( keys %{$rhash_key_trove} ) {
+            my $count   = $rhash_key_trove->{$key}->{count};
+            my $hash_id = $rhash_key_trove->{$key}->{hash_id};
             next if ( !$hash_id );
             $total_count_by_id{$hash_id}++;
             $unique_count_by_id_pre_q{$hash_id}++ if ( $count == 1 );
             $unique_count_by_id_post_q{$hash_id}++
-              if ( $unique_words{$key} );
+              if ( $K_unique_key{$key} );
         }
 
         # Find sets of keys which are all, or nearly all, unique.
@@ -9656,7 +9659,7 @@ EOM
 
             if ( DEBUG_WUK && defined($id) ) {
                 my $key    = $first_key_by_id{$id};
-                my $Kfirst = $rwords->{$key}->{K};
+                my $Kfirst = $rhash_key_trove->{$key}->{K};
 
                 # TODO: escape $key if it would cause trouble in a .csv file.
                 #  (low priority since this is debug output)
@@ -9681,8 +9684,8 @@ EOM
         my %mark_as_non_unique;
         my %is_dubious_key;
         my $dubious_count = 0;
-        foreach my $key ( keys %{$rwords} ) {
-            my $hash_id = $rwords->{$key}->{hash_id};
+        foreach my $key ( keys %{$rhash_key_trove} ) {
+            my $hash_id = $rhash_key_trove->{$key}->{hash_id};
             next if ( !$hash_id );
             next if ( !$delete_this_id{$hash_id} );
             if ( $dubious_key->($key) ) {
@@ -9698,7 +9701,7 @@ EOM
             # but keep dubious keys if there is just 1
             if ( $is_dubious_key{$key} && $dubious_count == 1 ) { next }
 
-            if ( $unique_words{$key} ) { delete $unique_words{$key} }
+            if ( $K_unique_key{$key} ) { delete $K_unique_key{$key} }
         }
 
         if (@debug_output) {
@@ -9728,14 +9731,14 @@ EOM
         foreach my $word ( @{$rlist} ) {
 
             # remove quotes
-            if ( $unique_words{$word} ) {
-                delete $unique_words{$word};
+            if ( $K_unique_key{$word} ) {
+                delete $K_unique_key{$word};
             }
 
             if ( $missing_GetOptions_keys && $word !~ /\s/ ) {
                 my $subword = $getopt_subword->($word);
-                if ( $unique_words{$subword} ) {
-                    delete $unique_words{$subword};
+                if ( $K_unique_key{$subword} ) {
+                    delete $K_unique_key{$subword};
                 }
             }
         }
@@ -9782,9 +9785,9 @@ EOM
         return;
     }; ## end $is_static_hash_key = sub
 
-    #--------------------------
-    # Main loop over all tokens
-    #--------------------------
+    #----------------------------------------------------------------
+    # PHASE 1: loop over all tokens to find hash keys and save quotes
+    #----------------------------------------------------------------
     while ( ++$KK <= $Klimit ) {
 
         my $type = $rLL->[$KK]->[_TYPE_];
@@ -10019,30 +10022,30 @@ EOM
       && %is_GetOptions_call_by_seqno
       && !@GetOptions_keys;
 
-    #----------------------------------
+    #----------------------------------------------------
+    # PHASE 2: remove unique keys which match quoted text
+    #----------------------------------------------------
+
     # Find hash keys seen just one time
-    #----------------------------------
-    foreach my $key ( keys %{$rwords} ) {
-        my $count = $rwords->{$key}->{count};
+    foreach my $key ( keys %{$rhash_key_trove} ) {
+        my $count = $rhash_key_trove->{$key}->{count};
         next if ( $count != 1 );
 
         # Filter out some known keys
         if ( $is_known_key->($key) ) {
-            $rwords->{$key}->{is_known} = 1;
+            $rhash_key_trove->{$key}->{is_known} = 1;
             next;
         }
 
-        my $K = $rwords->{$key}->{K};
-        $unique_words{$key} = $K;
+        my $K = $rhash_key_trove->{$key}->{K};
+        $K_unique_key{$key} = $K;
     }
 
-    return if ( !%unique_words );
+    return if ( !%K_unique_key );
 
     # Now go back and look for these keys in any saved quotes ...
 
-    #---------------------------------------------------------
     # Check each unique word against the list of type Q tokens
-    #---------------------------------------------------------
     if (@Q_list) {
         my $imax = $#Q_list;
         foreach my $i ( 0 .. $imax ) {
@@ -10090,8 +10093,8 @@ EOM
             if ($is_interpolated) {
                 my $rkeys = get_interpolated_hash_keys($word);
                 foreach my $key ( @{$rkeys} ) {
-                    if ( $unique_words{$key} ) {
-                        delete $unique_words{$key};
+                    if ( $K_unique_key{$key} ) {
+                        delete $K_unique_key{$key};
                     }
                 }
             }
@@ -10102,32 +10105,30 @@ EOM
             }
         }
     }
-    return if ( !%unique_words );
+    return if ( !%K_unique_key );
 
     # Check list of barewords quoted with a leading dash
     if (@mw_list) {
         foreach my $Kmw (@mw_list) {
             my $word = '-' . $rLL->[$Kmw]->[_TOKEN_];
-            if ( $unique_words{$word} ) {
-                delete $unique_words{$word};
+            if ( $K_unique_key{$word} ) {
+                delete $K_unique_key{$word};
             }
         }
     }
 
-    return if ( !%unique_words );
+    return if ( !%K_unique_key );
 
     # Check words against any hash keys in here docs
     foreach my $key (@keys_in_HERE_docs) {
-        if ( $unique_words{$key} ) {
-            delete $unique_words{$key};
+        if ( $K_unique_key{$key} ) {
+            delete $K_unique_key{$key};
         }
     }
 
-    return if ( !%unique_words );
+    return if ( !%K_unique_key );
 
-    #---------------------------------------------------------
     # Check words against any option keys passed to GetOptions
-    #---------------------------------------------------------
     foreach my $Kopt (@GetOptions_keys) {
         my $word = $rLL->[$Kopt]->[_TOKEN_];
 
@@ -10136,18 +10137,18 @@ EOM
             $word = substr( $word, 1, -1 );
         }
 
-        if ( $unique_words{$word} ) {
-            delete $unique_words{$word};
+        if ( $K_unique_key{$word} ) {
+            delete $K_unique_key{$word};
         }
 
         # remove any optional flag and retry
         my $subword = $getopt_subword->($word);
-        if ( $unique_words{$subword} ) {
-            delete $unique_words{$subword};
+        if ( $K_unique_key{$subword} ) {
+            delete $K_unique_key{$subword};
         }
     }
 
-    return if ( !%unique_words );
+    return if ( !%K_unique_key );
 
     # For two-arg call to Getopt::Std ...
     if ( $Getopt_Std_hash_id && $saw_Getopt_Std ) {
@@ -10162,8 +10163,8 @@ EOM
             $word =~ s/://g;
             my @letters = split //, $word;
             foreach my $letter (@letters) {
-                if ( $unique_words{$letter} ) {
-                    delete $unique_words{$letter};
+                if ( $K_unique_key{$letter} ) {
+                    delete $K_unique_key{$letter};
                 }
             }
         }
@@ -10171,26 +10172,24 @@ EOM
         # If we found a getopts hash name but did not read the first string,
         # remove all single-character keys in that hash name (typically $opt)
         if ( !@Q_getopts ) {
-            foreach my $key ( keys %unique_words ) {
+            foreach my $key ( keys %K_unique_key ) {
                 next if ( length($key) != 1 );
                 next if ( $key !~ /[A-Za-z\?]/ );
 
                 # For now, delete any single letter key.
                 # The hash name can become a ref with different name
                 # through sub calls.
-                ##my $hash_id = $rwords->{$key}->{hash_id};
+                ##my $hash_id = $rhash_key_trove->{$key}->{hash_id};
                 ##if ( $hash_id && $hash_id eq $Getopt_Std_hash_id ) {
-                delete $unique_words{$key};
+                delete $K_unique_key{$key};
                 ##}
             }
         }
     }
 
-    return if ( !%unique_words );
+    return if ( !%K_unique_key );
 
-    #--------------------------------------------
     # Remove any keys which are also in a qw list
-    #--------------------------------------------
     foreach my $Kqw (@K_start_qw_list) {
         my ( $K_last_q_uu, $rlist ) = $self->get_qw_list($Kqw);
         if ( !defined($rlist) ) {
@@ -10213,20 +10212,22 @@ EOM
         $delete_unique_quoted_words->($rlist);
     }
 
-    return if ( !%unique_words );
+    return if ( !%K_unique_key );
 
     #------------------------------------------------------------------
-    # Filter out groups of unique keys which are probably uninteresting
+    # PHASE 3: filter out multiple related keys which are mostly unique
     #------------------------------------------------------------------
     $filter_out_large_sets->();
 
-    return if ( !%unique_words );
+    return if ( !%K_unique_key );
 
-    # Report any remaining unique words
+    #-------------------------------------------
+    # PHASE 4: Report any remaining unique words
+    #-------------------------------------------
     my $output_string = EMPTY_STRING;
     my @list;
-    foreach my $word ( keys %unique_words ) {
-        my $K   = $unique_words{$word};
+    foreach my $word ( keys %K_unique_key ) {
+        my $K   = $K_unique_key{$word};
         my $lno = $rLL->[$K]->[_LINE_INDEX_] + 1;
         push @list, [ $word, $lno ];
     }
