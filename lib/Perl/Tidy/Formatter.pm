@@ -3023,8 +3023,8 @@ sub initialize_pack_operator_types {
     # This option is currently only implemented for '->' and '.' chains.
     # The possibility exists to extend this to other chain operators
     # in the future, but some programming and a lot of testing are required.
-    my @ok = qw( -> . && || and or : ? + - * / );
-    ##my @ok = qw( -> . );
+    ##my @ok = qw( -> . && || and or : ? + - * / );
+    my @ok = qw( -> . );
     my %is_ok;
     @is_ok{@ok} = (1) x scalar(@ok);
 
