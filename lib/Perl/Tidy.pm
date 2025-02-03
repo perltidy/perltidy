@@ -3790,6 +3790,8 @@ sub generate_options {
     $add_option->( 'maximum-consecutive-blank-lines', 'mbl',  '=i' );
     $add_option->( 'keep-old-blank-lines',            'kbl',  '=i' );
 
+    $add_option->( 'keep-old-blank-lines-exclusion-list', 'kblxl', '=s' );
+
     $add_option->( 'keyword-group-blanks-list',         'kgbl', '=s' );
     $add_option->( 'keyword-group-blanks-size',         'kgbs', '=s' );
     $add_option->( 'keyword-group-blanks-repeat-count', 'kgbr', '=i' );

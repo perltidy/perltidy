@@ -467,6 +467,9 @@ my (
     $keyword_group_list_pattern,
     $keyword_group_list_comment_pattern,
 
+    # INITIALIZER: sub initialize_keep_old_blank_lines_hash
+    %keep_old_blank_lines_exclusion_types,
+
     # INITIALIZER: sub make_closing_side_comment_prefix
     $closing_side_comment_prefix_pattern,
 
@@ -2344,6 +2347,8 @@ EOM
     initialize_weld_fat_comma_rules();
 
     initialize_lpxl_lpil();
+
+    initialize_keep_old_blank_lines_hash();
 
     return;
 } ## end sub check_options
@@ -7325,6 +7330,53 @@ EOM
     return;
 } ## end sub make_closing_side_comment_prefix
 
+sub initialize_keep_old_blank_lines_hash {
+
+    # Initialize the control hash for --keep-old-blank-lines-exclusion-list
+    %keep_old_blank_lines_exclusion_types = ();
+    my $long_name  = 'keep-old-blank-lines-exclusion-list';
+    my $short_name = 'kblxl';
+    my $opts       = $rOpts->{$long_name};
+    return if ( !defined($opts) );
+    my @words = split_words($opts);
+
+    # Valid input types:
+    my %top;
+    my %bottom;
+
+    my @q = qw( }b {b );
+    push @q, '#b';
+    @top{@q} = (1) x scalar(@q);
+
+    @q = qw( b{ b} bS bP );
+    push @q, 'b#';
+    @bottom{@q} = (1) x scalar(@q);
+
+    my @unknown_types;
+    foreach my $str (@words) {
+        if ( $top{$str} ) {
+            my $tok = substr( $str, -1 );
+            $keep_old_blank_lines_exclusion_types{top}->{$tok} = 1;
+        }
+        elsif ( $bottom{$str} ) {
+            my $tok = substr( $str, 1 );
+            $keep_old_blank_lines_exclusion_types{bottom}->{$tok} = 1;
+        }
+        else {
+            push @unknown_types, $str;
+        }
+        if (@unknown_types) {
+            my $num = @unknown_types;
+            local $LIST_SEPARATOR = SPACE;
+            Warn(<<EOM);
+$num unrecognized token types were input with --$short_name :
+@unknown_types
+EOM
+        }
+    }
+    return;
+} ## end sub initialize_keep_old_blank_lines_hash
+
 ##################################################
 # CODE SECTION 4: receive lines from the tokenizer
 ##################################################
@@ -8252,7 +8304,8 @@ EOM
     }
 
     if ( $rOpts->{'warn-unique-keys'} ) {
-        $self->warn_unique_keys();
+        $self->warn_unique_keys()
+          if ( $self->[_logger_object_] );
     }
 
     # Dump any requested block summary data
@@ -24533,6 +24586,268 @@ sub set_excluded_lp_containers {
     return;
 } ## end sub set_excluded_lp_containers
 
+sub keep_old_blank_lines_exclusions {
+    my ( $self, $rwant_blank_line_after ) = @_;
+
+    # Set a flag to remove selected blank lines from the input stream
+
+    # FIXME: does not currently check for format and code skipping
+    # (need to check; it may not need to)
+    return if ( !%keep_old_blank_lines_exclusion_types );
+    my $top_control    = $keep_old_blank_lines_exclusion_types{top};
+    my $bottom_control = $keep_old_blank_lines_exclusion_types{bottom};
+
+    my $rLL                  = $self->[_rLL_];
+    my $rlines               = $self->[_rlines_];
+    my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
+    my $i_first_blank;    # first blank of a group
+    my $i_last_blank;     # last blank of a group
+
+    my $top_match = sub {
+        my ( $ii, $rcontrol ) = @_;
+
+        # Decide if line at index $ii matches the criterion in the control hash
+        # for deleting blank lines which follow this line.
+
+        # Possible top tests are : '{b' '}b' '#b'
+        # where 'b' denotes the blank line position
+
+        # Given:
+        #   $ii = index of a line of code to be checked
+        #   $rcontrol = hash with keys to be matched
+
+        # Return:
+        #  true if this line matches the condition
+        #  false otherwise
+
+        my $line_of_tokens = $rlines->[$ii];
+        my $line_type      = $line_of_tokens->{_line_type};
+        return if ( $line_type ne 'CODE' );
+
+        # Note that we could also check for block comments here
+        # my $CODE_type = $line_of_tokens->{_code_type};
+        # return if ($CODE_type);
+
+        my $rK_range = $line_of_tokens->{_rK_range};
+        my ( $Kfirst, $Klast ) = @{$rK_range};
+        return if ( !defined($Klast) );
+        my $type_last = $rLL->[$Klast]->[_TYPE_];
+
+        if ( $type_last eq '#' ) {
+
+            # check for a block comment, type '#b'
+            if ( $Klast eq $Kfirst ) {
+                if ( $rcontrol->{$type_last} ) {
+                    return $type_last;
+                }
+                return;
+            }
+
+            # ignore a side comment
+            $Klast = $self->K_previous_nonblank($Klast);
+            return if ( !defined($Klast) || $Klast < $Kfirst );
+            $type_last = $rLL->[$Klast]->[_TYPE_];
+        }
+
+        # possible top tests: '{b'
+        if ( $rcontrol->{$type_last} ) {
+
+            # '{b' = inverse of -blao=i
+            # '}b'   not an inverse but uses the -blao pattern if set
+            if ( $type_last eq '{' || $type_last eq '}' ) {
+                my $seqno = $rLL->[$Klast]->[_TYPE_SEQUENCE_];
+                return if ( !$seqno );
+                my $block_type = $rblock_type_of_seqno->{$seqno};
+                return if ( !$block_type );
+                if ( $block_type =~ /$blank_lines_after_opening_block_pattern/ )
+                {
+                    return $type_last;
+                }
+            }
+            else {
+                ## unexpected type
+            }
+        }
+        return;
+    }; ## end $top_match = sub
+
+    my $bottom_match = sub {
+        my ( $ii, $rcontrol ) = @_;
+
+        # Decide if line at index $ii matches the criterion in the control hash
+        # for deleting blank lines which precede this line.
+
+        # Possible bottom tests are : 'b#' 'b{' 'b}' 'bS' 'bP'
+        # where 'b' denotes the blank line position
+
+        # Given:
+        #   $ii = index of a line of code to be checked
+        #   $rcontrol = hash with keys of leading token types to be matched
+
+        # Return:
+        #  token type matched if this line matches the condition
+        #  undef otherwise
+
+        my $line_of_tokens = $rlines->[$ii];
+        my $line_type      = $line_of_tokens->{_line_type};
+        return if ( $line_type ne 'CODE' );
+
+        # my $CODE_type = $line_of_tokens->{_code_type};
+        # return if ($CODE_type);
+
+        my $rK_range = $line_of_tokens->{_rK_range};
+        my ( $Kfirst, $Klast ) = @{$rK_range};
+        return if ( !defined($Klast) );
+        my $type_last = $rLL->[$Klast]->[_TYPE_];
+        if ( $type_last eq '#' ) {
+
+            # check for a block comment 'b#'
+            if ( $Klast eq $Kfirst ) {
+                if ( $rcontrol->{$type_last} ) {
+                    return $type_last;
+                }
+                return;
+            }
+
+            # ignore a side comment
+            $Klast = $self->K_previous_nonblank($Klast);
+            return if ( !defined($Klast) || $Klast < $Kfirst );
+            $type_last = $rLL->[$Klast]->[_TYPE_];
+        }
+
+        # Bottom tests: 'b{' 'b}' 'bS' 'bP'
+        # All of these are based on the first token of the line following
+        # the blank lines.
+        my $token_first = $rLL->[$Kfirst]->[_TOKEN_];
+        my $type_first  = $rLL->[$Kfirst]->[_TYPE_];
+
+        # Special check for case 'b{', inverse of -bbb
+        if ( $type_first eq 'k' ) {
+            if (   $rcontrol->{'{'}
+                && $is_if_unless_while_until_for_foreach{$token_first} )
+            {
+
+                #FIXME: look for closing block brace, or multiline ??
+                # This is simplified for testing
+                my $token_last = $rLL->[$Klast]->[_TOKEN_];
+                if ( $token_last eq '{' ) {
+                    return $type_first;
+                }
+                return;
+            }
+            return;
+        }
+
+        # For other tests 'b}' 'bS' 'bP' the token types match
+        if ( $rcontrol->{$type_first} ) {
+
+            # 'b}' inverse of -blbc
+            if ( $type_first eq '}' ) {
+                my $seqno = $rLL->[$Kfirst]->[_TYPE_SEQUENCE_];
+                return if ( !$seqno );
+                my $block_type = $rblock_type_of_seqno->{$seqno};
+                return if ( !$block_type );
+                return ( $block_type =~
+                      /$blank_lines_before_closing_block_pattern/ );
+            }
+            elsif ( $type_first eq 'P' ) { return 1 }
+            elsif ( $type_first eq 'S' ) {
+
+                # FIXME: should be multiline to match ???
+                return $type_first;
+            }
+            else {
+                ## unexpected type
+            }
+        }
+        return;
+    }; ## end $bottom_match = sub
+
+    my $end_blank_group = sub {
+
+        my ( ($ending_in_blank) ) = @_;
+
+        # Decide if the blank lines group in the index range
+        # $i_first_blank .. $i_last_blank should be deleted.
+
+        # Given:
+        #   $ending_in_blank = true if the last blank is the end of file
+        #                      false if not
+        # Return:
+        #   true if this group should be deleted
+        #   false if not
+
+        if ( !defined($i_first_blank) || !defined($i_last_blank) ) { return }
+
+        # Check code line before start of blank group
+        my $delete_blanks_top;
+        if ( $top_control && $i_first_blank > 0 ) {
+            $delete_blanks_top = $top_match->( $i_first_blank - 1 );
+        }
+
+        # Check code line after end of blank group
+        my $delete_blanks_bottom;
+        if (   ( !$delete_blanks_top || $delete_blanks_top eq '#' )
+            && $bottom_control
+            && !$ending_in_blank )
+        {
+            $delete_blanks_bottom =
+              $bottom_match->( $i_last_blank + 1, $bottom_control );
+        }
+
+        if ( $delete_blanks_top || $delete_blanks_bottom ) {
+
+            # Do not delete blanks between comment blocks
+            my $delete_blanks =
+                 $delete_blanks_top  && !$delete_blanks_bottom
+              || !$delete_blanks_top && $delete_blanks_bottom
+              || $delete_blanks_top ne '#'
+              || $delete_blanks_bottom ne '#';
+
+            # Signal deletion by setting the deletion flag for this group
+            if ($delete_blanks) {
+                foreach my $ii ( $i_first_blank .. $i_last_blank ) {
+                    $rwant_blank_line_after->{$ii} = 2;
+                }
+            }
+        }
+
+        $i_first_blank = undef;
+        $i_last_blank  = undef;
+        return;
+    }; ## end $end_blank_group = sub
+
+    # Main loop to locate groups of blank lines and decide if they
+    # they should be deleted
+    my $i = -1;
+    foreach my $line_of_tokens ( @{$rlines} ) {
+        $i++;
+        my $line_type = $line_of_tokens->{_line_type};
+        if ( $line_type ne 'CODE' ) {
+            if ( defined($i_last_blank) ) {
+                $end_blank_group->();
+            }
+            next;
+        }
+        my $CODE_type = $line_of_tokens->{_code_type};
+        if ( $CODE_type eq 'BL' ) {
+            if ( !defined($i_first_blank) ) {
+                $i_first_blank = $i;
+            }
+            $i_last_blank = $i;
+        }
+        else {
+            if ( defined($i_first_blank) ) {
+                $end_blank_group->();
+            }
+        }
+    }
+    if ( defined($i_first_blank) ) {
+        $end_blank_group->(1);
+    }
+    return;
+} ## end sub keep_old_blank_lines_exclusions
+
 ######################################
 # CODE SECTION 6: Process line-by-line
 ######################################
@@ -24557,6 +24872,9 @@ sub process_all_lines {
 
     # set locations for blanks around long runs of keywords
     my $rwant_blank_line_after = $self->keyword_group_scan();
+
+    $self->keep_old_blank_lines_exclusions($rwant_blank_line_after)
+      if ( $rOpts_keep_old_blank_lines == 1 );
 
     my $line_type      = EMPTY_STRING;
     my $i_last_POD_END = -10;
