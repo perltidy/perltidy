@@ -468,7 +468,7 @@ my (
     $keyword_group_list_comment_pattern,
 
     # INITIALIZER: sub initialize_keep_old_blank_lines_hash
-    %keep_old_blank_lines_exclusion_types,
+    %keep_old_blank_lines_exceptions,
 
     # INITIALIZER: sub make_closing_side_comment_prefix
     $closing_side_comment_prefix_pattern,
@@ -7332,10 +7332,10 @@ EOM
 
 sub initialize_keep_old_blank_lines_hash {
 
-    # Initialize the control hash for --keep-old-blank-lines-exclusion-list
-    %keep_old_blank_lines_exclusion_types = ();
-    my $long_name  = 'keep-old-blank-lines-exclusion-list';
-    my $short_name = 'kblxl';
+    # Initialize the control hash for --keep-old-blank-lines-exceptions
+    %keep_old_blank_lines_exceptions = ();
+    my $long_name  = 'keep-old-blank-lines-exceptions';
+    my $short_name = 'kblx';
     my $opts       = $rOpts->{$long_name};
     return if ( !defined($opts) );
     my @words = split_words($opts);
@@ -7353,24 +7353,37 @@ sub initialize_keep_old_blank_lines_hash {
     my @unknown_types;
 
     # Table of translations to make thes closer to perltidy token types
-    my %translate = {
+    # This must include all characters except 'b'
+    my %translate = (
         'c' => '#',
         's' => 'S',
         'p' => 'P',
         '}' => '}',
         '{' => '{',
-    };
+    );
 
     foreach my $str (@words) {
         if ( $top{$str} ) {
-            my $tok = substr( $str, -1 );
+            my $tok = substr( $str, 0, 1 );
             $tok = $translate{$tok};
-            $keep_old_blank_lines_exclusion_types{top}->{$tok} = 1;
+            if ( !defined($tok) ) {
+                ## This can only happen if the input has introduced an new
+                ## character which is not in the translation table
+                DEVEL_MODE && Fault("No top translation for $str\n");
+                next;
+            }
+            $keep_old_blank_lines_exceptions{top}->{$tok} = 1;
         }
         elsif ( $bottom{$str} ) {
-            my $tok = substr( $str, 1 );
+            my $tok = substr( $str, 1, 1 );
             $tok = $translate{$tok};
-            $keep_old_blank_lines_exclusion_types{bottom}->{$tok} = 1;
+            if ( !defined($tok) ) {
+                ## This can only happen if the input has introduced an new
+                ## character which is not in the translation table
+                DEVEL_MODE && Fault("No bottom translation for $str\n");
+                next;
+            }
+            $keep_old_blank_lines_exceptions{bottom}->{$tok} = 1;
         }
         else {
             push @unknown_types, $str;
@@ -24601,9 +24614,9 @@ sub keep_old_blank_lines_exclusions {
 
     # Set a flag to remove selected blank lines from the input stream
 
-    return if ( !%keep_old_blank_lines_exclusion_types );
-    my $top_control    = $keep_old_blank_lines_exclusion_types{top};
-    my $bottom_control = $keep_old_blank_lines_exclusion_types{bottom};
+    return if ( !%keep_old_blank_lines_exceptions );
+    my $top_control    = $keep_old_blank_lines_exceptions{top};
+    my $bottom_control = $keep_old_blank_lines_exceptions{bottom};
 
     my $rLL                  = $self->[_rLL_];
     my $rlines               = $self->[_rlines_];
@@ -24612,7 +24625,7 @@ sub keep_old_blank_lines_exclusions {
     my $i_last_blank;     # last blank of a group
 
     my $top_match = sub {
-        my ( $ii, $rcontrol ) = @_;
+        my ($ii) = @_;
 
         # Decide if line at index $ii matches the criterion in the control hash
         # for deleting blank lines which follow this line.
@@ -24622,7 +24635,6 @@ sub keep_old_blank_lines_exclusions {
 
         # Given:
         #   $ii = index of a line of code to be checked
-        #   $rcontrol = hash with keys to be matched
 
         # Return:
         #  false if no match
@@ -24646,7 +24658,7 @@ sub keep_old_blank_lines_exclusions {
 
             # check for a block comment, type '#b'
             if ( $Klast eq $Kfirst ) {
-                if ( $rcontrol->{$type_last} ) {
+                if ( $top_control->{$type_last} ) {
 
                     # leave a blank line if the next token is also a comment
                     my $Kn = $self->K_next_nonblank($Klast);
@@ -24664,7 +24676,7 @@ sub keep_old_blank_lines_exclusions {
         }
 
         # possible top tests: '{b'
-        if ( $rcontrol->{$type_last} ) {
+        if ( $top_control->{$type_last} ) {
 
             # '{b' = inverse of -blao=i
             # '}b'   not an inverse but uses the -blao pattern if set
@@ -24672,11 +24684,13 @@ sub keep_old_blank_lines_exclusions {
                 my $seqno = $rLL->[$Klast]->[_TYPE_SEQUENCE_];
                 return if ( !$seqno );
                 my $block_type = $rblock_type_of_seqno->{$seqno};
-                return if ( !$block_type );
-                if ( $block_type =~ /$blank_lines_after_opening_block_pattern/ )
+                if (   $block_type
+                    && $block_type =~
+                    /$blank_lines_after_opening_block_pattern/ )
                 {
-                    return $type_last;
+                    return 1;
                 }
+                return;
             }
             else {
                 ## unexpected type
@@ -24686,7 +24700,7 @@ sub keep_old_blank_lines_exclusions {
     }; ## end $top_match = sub
 
     my $bottom_match = sub {
-        my ( $ii, $rcontrol ) = @_;
+        my ($ii) = @_;
 
         # Decide if line at index $ii matches the criterion in the control hash
         # for deleting blank lines which precede this line.
@@ -24696,11 +24710,11 @@ sub keep_old_blank_lines_exclusions {
 
         # Given:
         #   $ii = index of a line of code to be checked
-        #   $rcontrol = hash with keys of leading token types to be matched
 
         # Return:
-        #  token type matched if this line matches the condition
-        #  undef otherwise
+        #  false if no match
+        #  1  if match without restriction
+        #  -1 for match which requires keeping 1 essential blank line
 
         my $line_of_tokens = $rlines->[$ii];
         my $line_type      = $line_of_tokens->{_line_type};
@@ -24717,7 +24731,7 @@ sub keep_old_blank_lines_exclusions {
 
             # check for a block comment 'b#'
             if ( $Klast eq $Kfirst ) {
-                if ( $rcontrol->{$type_last} ) {
+                if ( $bottom_control->{$type_last} ) {
 
                     # leave a blank line if the previous token is also a comment
                     my $Kp = $self->K_previous_nonblank($Kfirst);
@@ -24742,23 +24756,29 @@ sub keep_old_blank_lines_exclusions {
 
         # Special check for case 'b{', inverse of -bbb
         if ( $type_first eq 'k' ) {
-            if (   $rcontrol->{'{'}
-                && $is_if_unless_while_until_for_foreach{$token_first} )
+            if (   $bottom_control->{'{'}
+                && $is_if_unless_while_until_for_foreach{$token_first}
+                && !$rLL->[$Kfirst]->[_CI_LEVEL_] )
             {
 
-                #FIXME: look for closing block brace, or multiline ??
-                # This is simplified for testing
-                my $token_last = $rLL->[$Klast]->[_TOKEN_];
-                if ( $token_last eq '{' ) {
-                    return $type_first;
+                # NOTE: we check ci to insure that this is not a trailing
+                # operation, but no checks are currently made to see if this is
+                # a one-line block. So this will remove more blanks
+                # than the corresponding -bbb option adds.
+                return 1;
+            }
+
+            # Apply 'S' to BEGIN and END blocks to make the inverse of -bbs
+            if ( $bottom_control->{'S'} ) {
+                if ( $token_first eq 'BEGIN' || $token_first eq 'END' ) {
+                    return 1;
                 }
-                return;
             }
             return;
         }
 
         # For other tests 'b}' 'bS' 'bP' the token types match
-        if ( $rcontrol->{$type_first} ) {
+        if ( $bottom_control->{$type_first} ) {
 
             # 'b}' inverse of -blbc
             if ( $type_first eq '}' ) {
@@ -24766,14 +24786,20 @@ sub keep_old_blank_lines_exclusions {
                 return if ( !$seqno );
                 my $block_type = $rblock_type_of_seqno->{$seqno};
                 return if ( !$block_type );
-                return ( $block_type =~
-                      /$blank_lines_before_closing_block_pattern/ );
+                if (
+                    $block_type =~ /$blank_lines_before_closing_block_pattern/ )
+                {
+                    return 1;
+                }
             }
             elsif ( $type_first eq 'P' ) { return 1 }
             elsif ( $type_first eq 'S' ) {
 
-                # FIXME: should be multiline to match ???
-                return $type_first;
+                # NOTE: no checks are currently made to see if this is a
+                # one-line or multi-line sub. So this will remove more blanks
+                # than the corresponding -bbs option adds. And see above patch
+                # which makes this work for BEGIN and END blocks.
+                return 1;
             }
             else {
                 ## unexpected type
@@ -43323,3 +43349,4 @@ sub wrapup {
 
 } ## end package Perl::Tidy::Formatter
 1;
+

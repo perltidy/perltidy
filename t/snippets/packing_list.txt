@@ -594,3 +594,12 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
+../snippets31.t	kblx.def
+../snippets31.t	kblx.kblx1
+../snippets31.t	kblx.kblx2
+../snippets31.t	kblx.kblx3
+../snippets31.t	kblx.kblx4
+../snippets31.t	kblx.kblx5
+../snippets32.t	kblx.kblx6
+../snippets32.t	kblx.kblx7
+../snippets32.t	kblx.kblx8

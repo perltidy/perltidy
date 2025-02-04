@@ -5093,7 +5093,7 @@ cannot be exactly undone, so some experimentation with these controls is
 recommended before using them.
 
 If necessary, it is possible to approximately undo these and other blank line
-controls with the parameter B<--keep-old-blank-lines-exclusion-list=s>
+controls with the parameter B<--keep-old-blank-lines-exceptions=s>
 described below.
 
 =item B<-mbl=n> B<--maximum-consecutive-blank-lines=n>
@@ -5117,25 +5117,25 @@ The possible values of B<n> are:
 
  n=0 ignore all old blank lines
  n=1 stable: keep old blanks, but limited by the B<-mbl=n> flag, but
-     remove existing blanks matching the B<--kblxl=s> flag (next section)
+     remove existing blanks matching the B<--kblx=s> flag (next section)
  n=2 keep all old blank lines, regardless of the B<-mbl=n> flag
 
-The default is B<n=1>. With this option, you may selectively filter out
-selected blank lines from the input stream before formatting begins using
-the parameter described in the next section.
+The default and recommended setting is B<n=1>. With this option, you may
+selectively filter out selected blank lines from the input stream before
+formatting begins using the parameter described in the next section.
 
-The option B<n=0> should be used with caution because it will remove
+The setting B<n=0> should be used with caution because it will remove
 all blank lines, including lines which might be essential for controlling
-vertical alignment.
+vertical alignment, and for preventing unwanted hanging side comments.
 
-=item B<-kblxl=s>,  B<--keep-old-blank-lines-exclusion-list=s>
+=item B<-kblx=s>,  B<--keep-old-blank-lines-exceptions=s>
 
 Most of the blank line controls described above specify a minimum number of
 blank lines, rather than a maximum, so they cannot be used remove lines.  This
 parameter allows blank lines to be removed by selectively ignoring them in the
 input stream.  It operates when B<--keep-old-blank-lines=1>, which is the
-default as described above. The selection is made with a string with one or
-more of the following special values:
+default as described above. The selection of blank lines to exclude is made
+with a string with one or more of the following special values:
 
    'b{' 'b}' '{b' '}b' 'bp' 'bs' 'bc' 'cb'
 
@@ -5144,7 +5144,7 @@ with respect to the next or previous token type. The token types B<{> and B<}>
 are opening and closing B<code blocks>, the character B<p> is a B<package>
 statement, B<s> is a B<sub> definition, and B<c> is a block B<comment>.
 
-So for example B<bs> means one or more B<blank lines before a sub> definition
+So for example B<bs> means one or more B<blank lines before a sub>
 will be ignored in the input stream.  Note that this is approximately the
 opposite of the parameter B<-blanks-before-subs> described above.
 
@@ -5154,18 +5154,18 @@ C<{> and C<}> operators apply are the same as the corresponding operator which
 adds blank lines, described above. The following table shows these
 relationships:
 
-   Symbol  Inverse  Applies to block types
+   kblx=   Inverse  Applies to block types
    b{      -bbb      if unless while until for foreach
-   b}      -blbc=i  -blbcl=s
+   b}      -blbc=i  -blbcl=s [default = sub]
    {b      -blao=i  -blaol=s [default = sub]
    }b      [none]   -blaol=s
-   bp      -bbp
-   bs      -bbs
+   bp      -blbp=n
+   bs      -blbs=n
    bc      -bbc
    cb      [none - comments before blanks]
 
 So, for example, the table indicates that to approximately remove the blank
-lines introduced by a B<-blao> operation we could use B<-kblxl='{b'>.
+lines introduced by a B<-blao> operation we could use B<-kblx='{b'>.
 
 Some notes on using this parameter:
 
@@ -5178,12 +5178,13 @@ space-separated.
 
 =item *
 
-The comment controls do not apply to blank lines between comments.
+The comment deletion controls will keep at least one blank line between
+groups of comments, and between a side comment and following line comment.
 
 =item *
 
-These operations are independent of any other blank line operations, so
-they may be used in the same run as other blank line controls. So it can
+These operations occur on the input stream, before other blank line operations,
+so they may be used in the same run as other blank line controls. So it can
 happen that these controls will remove blanks from the input stream
 while other controls add blank lines back.
 

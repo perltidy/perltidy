@@ -927,7 +927,7 @@ EOM
 
             'pack-operator-types' => [ '->', '.' ],
 
-            'keep-old-blank-lines-exclusion-list' =>
+            'keep-old-blank-lines-exceptions' =>
               [ '}b', '{b', 'cb', 'b{', 'b}', 'bs', 'bp', 'bc' ],
 
             # Arbitrary limits to keep things readable
@@ -1002,7 +1002,7 @@ EOM
             'valign-exclusion-list'       => 0,
             'valign-inclusion-list'       => 1,
 
-            'keep-old-blank-lines-exclusion-list' => 1,
+            'keep-old-blank-lines-exceptions' => 1,
         );
 
         ###################################################################

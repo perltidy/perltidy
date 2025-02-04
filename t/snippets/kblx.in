@@ -1,0 +1,36 @@
+package A::B;
+
+sub write_line {
+
+    my ( $self, $line ) = @_;
+
+    if ( defined($line) ) {
+        $self->write_line($line);
+    }
+    return;
+
+}
+
+package C::D;
+
+sub dump_verbatim {
+
+    my $self = shift;
+
+    # block comments
+    # block comments
+
+    my $rlines = $self->[_rlines_];
+
+    foreach my $line ( @{$rlines} ) {
+        my $input_line = $line->{_line_text};
+        $self->write_unindented_line($input_line);
+    }
+
+    return;
+
+}    ## static side comment
+
+# coment before side comment
+
+# comment after blank and comment

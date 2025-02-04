@@ -2,6 +2,12 @@
 
 ## 2025 01 05.03
 
+    - A new option --keep-old-blank-lines-exceptions=s, or --kblx=s,
+      allows selected blank lines to be ignored when an input stream
+      is read. The parameter s is used to select the blank lines to
+      be ignored. This option provides an inverse to other blank line
+      parameters. The manual has details. See discussion git #180.
+
     - A new option --warn-unused-keys, or -wuk, has been added which will
       produce warnings for unused hash keys during formatting. This is similar
       to --dump-unused-keys, which just exits and does not continue formatting.
