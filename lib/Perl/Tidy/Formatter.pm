@@ -7344,22 +7344,32 @@ sub initialize_keep_old_blank_lines_hash {
     my %top;
     my %bottom;
 
-    my @q = qw( }b {b );
-    push @q, '#b';
+    my @q = qw( }b {b cb );
     @top{@q} = (1) x scalar(@q);
 
-    @q = qw( b{ b} bS bP );
-    push @q, 'b#';
+    @q = qw( b{ b} bs bp bc );
     @bottom{@q} = (1) x scalar(@q);
 
     my @unknown_types;
+
+    # Table of translations to make thes closer to perltidy token types
+    my %translate = {
+        'c' => '#',
+        's' => 'S',
+        'p' => 'P',
+        '}' => '}',
+        '{' => '{',
+    };
+
     foreach my $str (@words) {
         if ( $top{$str} ) {
             my $tok = substr( $str, -1 );
+            $tok = $translate{$tok};
             $keep_old_blank_lines_exclusion_types{top}->{$tok} = 1;
         }
         elsif ( $bottom{$str} ) {
             my $tok = substr( $str, 1 );
+            $tok = $translate{$tok};
             $keep_old_blank_lines_exclusion_types{bottom}->{$tok} = 1;
         }
         else {
@@ -9045,9 +9055,9 @@ sub scan_unique_keys {
 
     # There are three main phases of the operation:
 
-    # PHASE 1: We scan the file and store all hash keys fount in the hash
-    # %{$rhash_keys_trove}, including a count for each. These are keys which:
-    #   - occur before a fat fat comma, such as : "word => $val", and
+    # PHASE 1: We scan the file and store all hash keys found in the hash
+    # %{$rhash_key_trove}, including a count for each. These are keys which:
+    #   - occur before a fat comma, such as : "word => $val", and
     #   - text which occurs within hash braces, like "$hash{word}" or
     #     a slice like @hash{word1, word2};
     # During this scan we save pointers to all quotes and here docs,
@@ -24591,8 +24601,6 @@ sub keep_old_blank_lines_exclusions {
 
     # Set a flag to remove selected blank lines from the input stream
 
-    # FIXME: does not currently check for format and code skipping
-    # (need to check; it may not need to)
     return if ( !%keep_old_blank_lines_exclusion_types );
     my $top_control    = $keep_old_blank_lines_exclusion_types{top};
     my $bottom_control = $keep_old_blank_lines_exclusion_types{bottom};
@@ -24617,8 +24625,9 @@ sub keep_old_blank_lines_exclusions {
         #   $rcontrol = hash with keys to be matched
 
         # Return:
-        #  true if this line matches the condition
-        #  false otherwise
+        #  false if no match
+        #  1  if match without restriction
+        #  -1 for match which requires keeping 1 essential blank line
 
         my $line_of_tokens = $rlines->[$ii];
         my $line_type      = $line_of_tokens->{_line_type};
@@ -24638,7 +24647,12 @@ sub keep_old_blank_lines_exclusions {
             # check for a block comment, type '#b'
             if ( $Klast eq $Kfirst ) {
                 if ( $rcontrol->{$type_last} ) {
-                    return $type_last;
+
+                    # leave a blank line if the next token is also a comment
+                    my $Kn = $self->K_next_nonblank($Klast);
+                    return ( defined($Kn) && $rLL->[$Kn]->[_TYPE_] eq '#' )
+                      ? -1
+                      : 1;
                 }
                 return;
             }
@@ -24704,7 +24718,12 @@ sub keep_old_blank_lines_exclusions {
             # check for a block comment 'b#'
             if ( $Klast eq $Kfirst ) {
                 if ( $rcontrol->{$type_last} ) {
-                    return $type_last;
+
+                    # leave a blank line if the previous token is also a comment
+                    my $Kp = $self->K_previous_nonblank($Kfirst);
+                    return ( defined($Kp) && $rLL->[$Kp]->[_TYPE_] eq '#' )
+                      ? -1
+                      : 1;
                 }
                 return;
             }
@@ -24780,35 +24799,24 @@ sub keep_old_blank_lines_exclusions {
         if ( !defined($i_first_blank) || !defined($i_last_blank) ) { return }
 
         # Check code line before start of blank group
-        my $delete_blanks_top;
+        my $delete_blanks;
         if ( $top_control && $i_first_blank > 0 ) {
-            $delete_blanks_top = $top_match->( $i_first_blank - 1 );
+            $delete_blanks = $top_match->( $i_first_blank - 1 );
         }
 
         # Check code line after end of blank group
-        my $delete_blanks_bottom;
-        if (   ( !$delete_blanks_top || $delete_blanks_top eq '#' )
-            && $bottom_control
-            && !$ending_in_blank )
-        {
-            $delete_blanks_bottom =
+        if ( !$delete_blanks && $bottom_control && !$ending_in_blank ) {
+            $delete_blanks =
               $bottom_match->( $i_last_blank + 1, $bottom_control );
         }
 
-        if ( $delete_blanks_top || $delete_blanks_bottom ) {
+        # Signal deletion by setting the deletion flag for this group
+        if ($delete_blanks) {
 
-            # Do not delete blanks between comment blocks
-            my $delete_blanks =
-                 $delete_blanks_top  && !$delete_blanks_bottom
-              || !$delete_blanks_top && $delete_blanks_bottom
-              || $delete_blanks_top ne '#'
-              || $delete_blanks_bottom ne '#';
-
-            # Signal deletion by setting the deletion flag for this group
-            if ($delete_blanks) {
-                foreach my $ii ( $i_first_blank .. $i_last_blank ) {
-                    $rwant_blank_line_after->{$ii} = 2;
-                }
+            # A negative $delete_blanks flag indicates to keep 1 essential blank
+            if ( $delete_blanks < 0 ) { $i_first_blank++ }
+            foreach my $ii ( $i_first_blank .. $i_last_blank ) {
+                $rwant_blank_line_after->{$ii} = 2;
             }
         }
 

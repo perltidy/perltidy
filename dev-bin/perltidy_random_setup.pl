@@ -928,7 +928,7 @@ EOM
             'pack-operator-types' => [ '->', '.' ],
 
             'keep-old-blank-lines-exclusion-list' =>
-              [ '}b', '{b', '#b', 'b{', 'b}', 'bS', 'bP', 'b#' ],
+              [ '}b', '{b', 'cb', 'b{', 'b}', 'bs', 'bp', 'bc' ],
 
             # Arbitrary limits to keep things readable
             'blank-lines-after-opening-block'  => [ 0, 4 ],

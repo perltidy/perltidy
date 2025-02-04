@@ -80,7 +80,7 @@ lines=30
 # list of mccabe numbers can be obtained with perltidy -dbs file.pl >file.csv
 # sub scan_variable_usage has score 267 and still  growing
 [Subroutines::ProhibitExcessComplexity]
-max_mccabe=280
+max_mccabe=290
 
 # This policy can be very helpful for locating complex code, but sometimes
 # deep nests are the best option, especially in error handling and debug
