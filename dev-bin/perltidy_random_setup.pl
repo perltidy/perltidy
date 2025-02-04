@@ -927,6 +927,9 @@ EOM
 
             'pack-operator-types' => [ '->', '.' ],
 
+            'keep-old-blank-lines-exclusion-list' =>
+              [ '}b', '{b', '#b', 'b{', 'b}', 'bS', 'bP', 'b#' ],
+
             # Arbitrary limits to keep things readable
             'blank-lines-after-opening-block'  => [ 0, 4 ],
             'blank-lines-before-closing-block' => [ 0, 3 ],
@@ -998,6 +1001,8 @@ EOM
             'keep-old-breakpoints-before' => 1,
             'valign-exclusion-list'       => 0,
             'valign-inclusion-list'       => 1,
+
+            'keep-old-blank-lines-exclusion-list' => 1,
         );
 
         ###################################################################
@@ -1080,7 +1085,9 @@ EOM
                     if (   $name =~ /-(list|prefix)/
                         || $name =~ /character-encoding/ )
                     {
-                        next unless ( $name =~ /^valign-/ );
+                        next
+                          unless ( $name =~ /^valign-/
+                            || $name eq 'keep-old-blank-lines-exclusion-list' );
                     }
                 }
                 my $rrange = $option_range{$name};

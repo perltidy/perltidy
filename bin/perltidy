@@ -5092,22 +5092,9 @@ consequence is that introducing blank lines with these and other controls
 cannot be exactly undone, so some experimentation with these controls is
 recommended before using them.
 
-For example, suppose that for some reason we decide to introduce one blank
-space at the beginning and ending of all blocks.  We could do
-this using
-
-  perltidy -blao=2 -blbc=2 -blaol='*' -blbcl='*' filename
-
-Now suppose the script continues to be developed, but at some later date we
-decide we don't want these spaces after all. We might expect that running with
-the flags B<-blao=0> and B<-blbc=0> will undo them.  However, by default
-perltidy retains single blank lines, so the blank lines remain.
-
-We can easily fix this by telling perltidy to ignore old blank lines by
-including the added parameter B<--keep-old-blank-lines=0> and rerunning. Then
-the unwanted blank lines will be gone.  However, this will cause all old blank
-lines to be ignored, perhaps even some that were added by hand to improve
-formatting. So please be cautious when using these parameters.
+If necessary, it is possible to approximately undo these and other blank line
+controls with the parameter B<--keep-old-blank-lines-exclusion-list=s>
+described below.
 
 =item B<-mbl=n> B<--maximum-consecutive-blank-lines=n>
 
@@ -5129,10 +5116,83 @@ treated.
 The possible values of B<n> are:
 
  n=0 ignore all old blank lines
- n=1 stable: keep old blanks, but limited by the B<-mbl=n> flag
+ n=1 stable: keep old blanks, but limited by the B<-mbl=n> flag, but
+     remove existing blanks matching the B<--kblxl=s> flag (next section)
  n=2 keep all old blank lines, regardless of the B<-mbl=n> flag
 
-The default is B<n=1>.
+The default is B<n=1>. With this option, you may selectively filter out
+selected blank lines from the input stream before formatting begins using
+the parameter described in the next section.
+
+The option B<n=0> should be used with caution because it will remove
+all blank lines, including lines which might be essential for controlling
+vertical alignment.
+
+=item B<-kblxl=s>,  B<--keep-old-blank-lines-exclusion-list=s>
+
+Most of the blank line controls described above specify a minimum number of
+blank lines, rather than a maximum, so they cannot be used remove lines.  This
+parameter allows blank lines to be removed by selectively ignoring them in the
+input stream.  It operates when B<--keep-old-blank-lines=1>, which is the
+default as described above. The selection is made with a string with one or
+more of the following special values:
+
+   'b{' 'b}' '{b' '}b' 'bP' 'bS' 'b#' '#b'
+
+In these symbols, the character B<b> indicates the location of B<blank lines>
+with respect to the next or previous token type. The token types B<{> and B<}>
+are opening and closing B<code blocks>, the character B<P> is a B<package>
+statement, B<S> is a B<sub> definition, and B<#> is a block comment.
+
+So for example B<bS> means one or more B<blank lines before a sub> definition
+will be ignored in the input stream.  Note that this is approximately the
+opposite of the parameter B<-blanks-before-subs> described above.
+
+In fact, these parameters provide approximate inverses to all of the previously
+described blank line options. To simplify things, the block types to which the
+C<{> and C<}> operators apply are the same as the corresponding operator which
+adds blank lines, described above. The following table shows these
+relationships:
+
+   Symbol  Inverse  Applies to block types
+   b{      -bbb      if unless while until for foreach
+   b}      -blbc=i  -blbcl=s
+   {b      -blao=i  -blaol=s [default = sub]
+   }b      [none]   -blaol=s
+   bP      -bbp
+   bS      -bbs
+   b#      -bbc
+   #b      [none]
+
+So, for example, the table indicates that to approximately remove the blank
+lines introduced by a B<-blao> operation we could use B<-kblxl='{b'>.
+
+Some notes on using this parameter:
+
+=over 4
+
+=item *
+
+The parameter string may contain multiple operators provided that they are
+space-separated.
+
+=item *
+
+The comment controls do not apply to blank lines between comments.
+
+=item *
+
+These operations are independent of any other blank line operations, so
+they may be used in the same run as other blank line controls. So it can
+happen that these controls will remove blanks from the input stream
+while other controls add blank lines back.
+
+=item *
+
+These operations will normally only be needed occasionally to correct
+some problems, or undo an unwanted operation.
+
+=back
 
 =item B<-sob>,  B<--swallow-optional-blank-lines>
 
