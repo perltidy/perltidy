@@ -11919,6 +11919,7 @@ sub expand_quoted_word_list {
     my $Klimit = @{$rLL} - 1;
     my @list;
     my $Kn = $Kbeg - 1;
+    my $is_qwaf_Q;
     while ( ++$Kn <= $Klimit ) {
 
         my $type  = $rLL->[$Kn]->[_TYPE_];
@@ -11926,11 +11927,11 @@ sub expand_quoted_word_list {
 
         next if ( $type eq 'b' );
         next if ( $type eq '#' );
-        next if ( $token eq '(' );
-        next if ( $token eq ')' );
-        next if ( $token eq ',' );
+        next if ( $type eq ',' );
         last if ( $type eq ';' );
         last if ( $token eq '}' );
+        next if ( $token eq '(' );
+        if ( $token eq ')' ) { $is_qwaf_Q = 0; next }
 
         if ( $type eq 'q' ) {
 
@@ -11941,14 +11942,38 @@ sub expand_quoted_word_list {
             push @list, @{$rlist};
         }
         elsif ( $type eq 'Q' ) {
-
-            # single quoted word
-            # FIXME: check for other quote types
-            next if ( length($token) < 3 );
-            my $name = substr( $token, 1, -1 );
-            push @list, $name;
+            my $name;
+            if ($is_qwaf_Q) {
+                $name = $token;
+            }
+            elsif ( length($token) > 2 ) {
+                my $ch0 = substr( $token, 0, 1 );
+                if ( $ch0 eq '"' || $ch0 eq "'" ) {
+                    $name = substr( $token, 1, -1 );
+                }
+                else {
+                    my $rQ_info = Q_spy($token);
+                    if ( defined($rQ_info) && $rQ_info->{is_simple} ) {
+                        my $nch = $rQ_info->{nch};
+                        $name = substr( $token, $nch, -1 );
+                    }
+                }
+            }
+            else {
+                ## empty string
+            }
+            if ( defined($name) ) { push @list, $name }
         }
-
+        elsif ( $type eq 'U' ) {
+            if ( $token eq 'qw' ) {
+                $Kn = $self->K_next_nonblank($Kn);
+                return if ( !defined($Kn) || $rLL->[$Kn]->[_TOKEN_] ne '(' );
+                my $seqno = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
+                return if ( !defined($seqno) );
+                return if ( !$self->[_ris_qwaf_by_seqno_]->{$seqno} );
+                $is_qwaf_Q = $seqno;
+            }
+        }
         else {
 
             # Give up on anything else..
@@ -24660,13 +24685,15 @@ sub keep_old_blank_lines_exclusions {
         return if ( !defined($Klast) );
         my $type_last = $rLL->[$Klast]->[_TYPE_];
 
+        my $Klast_true = $Klast;
         if ( $type_last eq '#' ) {
 
             # check for a block comment, type '#b'
             if ( $Klast eq $Kfirst ) {
                 if ( $top_control->{$type_last} ) {
 
-                    # leave a blank line if the next token is also a comment
+                    # keep 1 blank line between a side comment and comment
+                    # to avoid creating a hanging side comment
                     my $Kn = $self->K_next_nonblank($Klast);
                     return ( defined($Kn) && $rLL->[$Kn]->[_TYPE_] eq '#' )
                       ? -1
@@ -24694,7 +24721,14 @@ sub keep_old_blank_lines_exclusions {
                     && $block_type =~
                     /$blank_lines_after_opening_block_pattern/ )
                 {
-                    return 1;
+                    if ( $Klast_true == $Klast ) { return 1 }
+
+                    # keep 1 blank line between a side comment and comment
+                    # to avoid creating a hanging side comment
+                    my $Kn = $self->K_next_nonblank($Klast_true);
+                    return ( defined($Kn) && $rLL->[$Kn]->[_TYPE_] eq '#' )
+                      ? -1
+                      : 1;
                 }
                 return;
             }
@@ -24739,7 +24773,8 @@ sub keep_old_blank_lines_exclusions {
             if ( $Klast eq $Kfirst ) {
                 if ( $bottom_control->{$type_last} ) {
 
-                    # leave a blank line if the previous token is also a comment
+                    # keep 1 blank line between command and preceding
+                    # a side comment to avoid creating a hanging side comment
                     my $Kp = $self->K_previous_nonblank($Kfirst);
                     return ( defined($Kp) && $rLL->[$Kp]->[_TYPE_] eq '#' )
                       ? -1
