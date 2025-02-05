@@ -9165,6 +9165,12 @@ sub scan_unique_keys {
         ],
         'Test::More' => [qw( tests skip_all import )],
         'Test'       => [qw( tests onfail   todo )],
+        'warnings'   => [qw( FATAL NONFATAL )],
+        'open'       => [qw( IN OUT IO )],
+
+        # Note that ExtUtils::MakeMaker has a large number of keys
+        # but they are not included here because they will typically
+        # be removed with the filter
 
         # Unicode::Collate and subclass Unicode::Colate::Locale
         'Unicode::Collate' => [
@@ -9382,7 +9388,7 @@ sub scan_unique_keys {
         }
 
         # Handle a possible parenless-call:
-        # FIXME: A better strategy might be to keep track of the most recent
+        # NOTE: A better strategy might be to keep track of the most recent
         # keyword or function name and use it.
         if ( $seqno_in <= SEQ_ROOT || !$ris_list_by_seqno->{$seqno_in} ) {
             return $seqno_in;
@@ -43349,4 +43355,3 @@ sub wrapup {
 
 } ## end package Perl::Tidy::Formatter
 1;
-
