@@ -24655,6 +24655,27 @@ sub keep_old_blank_lines_exclusions {
     my $i_first_blank;    # first blank of a group
     my $i_last_blank;     # last blank of a group
 
+    my $top_line_has_static_side_comment = sub {
+
+        # Returns:
+        #   true if the top code line has a static side comment
+        #   false otherwise
+        my $ii = $i_first_blank - 1;
+        return if ( $ii < 0 );
+        my $line_of_tokens = $rlines->[$ii];
+        my $line_type      = $line_of_tokens->{_line_type};
+        return if ( $line_type ne 'CODE' );
+        my $rK_range = $line_of_tokens->{_rK_range};
+        my ( $Kfirst, $Klast ) = @{$rK_range};
+        return if ( !defined($Klast) );
+        return if ( $Kfirst == $Klast );
+        my $type = $rLL->[$Klast]->[_TYPE_];
+        return if ( $type ne '#' );
+        my $token = $rLL->[$Klast]->[_TOKEN_];
+        if ( $token =~ /$static_side_comment_pattern/ ) { return 1 }
+        return;
+    }; ## end $top_line_has_static_side_comment = sub
+
     my $top_match = sub {
         my ($ii) = @_;
 
@@ -24669,7 +24690,7 @@ sub keep_old_blank_lines_exclusions {
 
         # Return:
         #  false if no match
-        #  1  if match without restriction
+        #   1 if match without restriction on blank line removal
         #  -1 for match which requires keeping 1 essential blank line
 
         my $line_of_tokens = $rlines->[$ii];
@@ -24685,57 +24706,78 @@ sub keep_old_blank_lines_exclusions {
         return if ( !defined($Klast) );
         my $type_last = $rLL->[$Klast]->[_TYPE_];
 
+        # See if line has a comment
         my $Klast_true = $Klast;
         if ( $type_last eq '#' ) {
 
-            # check for a block comment, type '#b'
+            # For a full line comment...
             if ( $Klast eq $Kfirst ) {
+
+                # Check for a block comment control, type '#b'
                 if ( $top_control->{$type_last} ) {
 
-                    # keep 1 blank line between a side comment and comment
-                    # to avoid creating a hanging side comment
+                    # Keep 1 blank line if the line following the blanks
+                    # is also a full-line comment
                     my $Kn = $self->K_next_nonblank($Klast);
                     return ( defined($Kn) && $rLL->[$Kn]->[_TYPE_] eq '#' )
                       ? -1
                       : 1;
                 }
+
+                # Nothing to do
                 return;
             }
 
-            # ignore a side comment
+            # For a side comment .. back up 1 token
             $Klast = $self->K_previous_nonblank($Klast);
             return if ( !defined($Klast) || $Klast < $Kfirst );
             $type_last = $rLL->[$Klast]->[_TYPE_];
         }
 
-        # possible top tests: '{b'
+        # Check for possible top test
         if ( $top_control->{$type_last} ) {
 
             # '{b' = inverse of -blao=i
             # '}b'   not an inverse but uses the -blao pattern if set
-            if ( $type_last eq '{' || $type_last eq '}' ) {
-                my $seqno = $rLL->[$Klast]->[_TYPE_SEQUENCE_];
-                return if ( !$seqno );
-                my $block_type = $rblock_type_of_seqno->{$seqno};
-                if (   $block_type
-                    && $block_type =~
-                    /$blank_lines_after_opening_block_pattern/ )
-                {
-                    if ( $Klast_true == $Klast ) { return 1 }
-
-                    # keep 1 blank line between a side comment and comment
-                    # to avoid creating a hanging side comment
-                    my $Kn = $self->K_next_nonblank($Klast_true);
-                    return ( defined($Kn) && $rLL->[$Kn]->[_TYPE_] eq '#' )
-                      ? -1
-                      : 1;
-                }
+            if ( $type_last ne '{' && $type_last ne '}' ) {
+                ## unexpected type - shouldn't happen
+                DEVEL_MODE && Fault("Unexpected top test type: '$type_last'\n");
                 return;
             }
-            else {
-                ## unexpected type
+            my $seqno = $rLL->[$Klast]->[_TYPE_SEQUENCE_];
+            return if ( !$seqno );
+            my $block_type = $rblock_type_of_seqno->{$seqno};
+            if (   $block_type
+                && $block_type =~ /$blank_lines_after_opening_block_pattern/ )
+            {
+
+                # This is a match ...
+
+                # Ok to delete all blanks if no side comment here
+                if ( $Klast_true == $Klast ) { return 1 }
+
+                # Ok to delete all blanks if no block comment ahead
+                my $Kn = $self->K_next_nonblank($Klast_true);
+                if ( !defined($Kn) || $rLL->[$Kn]->[_TYPE_] ne '#' ) {
+                    return 1;
+                }
+
+                # Ok to delete all blanks if this side comment is static
+                my $token = $rLL->[$Klast_true]->[_TOKEN_];
+                if ( $token =~ /$static_side_comment_pattern/ ) { return 1 }
+
+                # The top line has simple side comment, the bottom line is
+                # a comment, so we must keep at least 1 blank line to avoid
+                # forming a hanging side comment. This logic is slightly
+                # simplified but on the safe side.
+                return -1;
             }
+
+            # Not a match
+            return;
         }
+
+        # Not a match
         return;
     }; ## end $top_match = sub
 
@@ -24746,22 +24788,19 @@ sub keep_old_blank_lines_exclusions {
         # for deleting blank lines which precede this line.
 
         # Possible bottom tests are : 'b#' 'b{' 'b}' 'bS' 'bP'
-        # where 'b' denotes the blank line position
+        # where 'b' denotes the blank line position, S=sub, P=package
 
         # Given:
         #   $ii = index of a line of code to be checked
 
         # Return:
         #  false if no match
-        #  1  if match without restriction
+        #   1 if match without restriction
         #  -1 for match which requires keeping 1 essential blank line
 
         my $line_of_tokens = $rlines->[$ii];
         my $line_type      = $line_of_tokens->{_line_type};
         return if ( $line_type ne 'CODE' );
-
-        # my $CODE_type = $line_of_tokens->{_code_type};
-        # return if ($CODE_type);
 
         my $rK_range = $line_of_tokens->{_rK_range};
         my ( $Kfirst, $Klast ) = @{$rK_range};
@@ -24769,21 +24808,27 @@ sub keep_old_blank_lines_exclusions {
         my $type_last = $rLL->[$Klast]->[_TYPE_];
         if ( $type_last eq '#' ) {
 
-            # check for a block comment 'b#'
+            # Handle a full-line comment
             if ( $Klast eq $Kfirst ) {
+
+                # Check for a block comment 'b#'
                 if ( $bottom_control->{$type_last} ) {
 
-                    # keep 1 blank line between command and preceding
-                    # a side comment to avoid creating a hanging side comment
+                    # This bottom line is a comment. Now check for comments
+                    # above.
                     my $Kp = $self->K_previous_nonblank($Kfirst);
-                    return ( defined($Kp) && $rLL->[$Kp]->[_TYPE_] eq '#' )
-                      ? -1
-                      : 1;
+                    if ( $rLL->[$Kp]->[_TYPE_] ne '#' ) { return 1 }
+
+                    # The upper line has a comment. We can delete
+                    # all blanks only if it is a static side comment.
+                    return $top_line_has_static_side_comment->() ? 1 : -1;
                 }
+
+                # Not a match
                 return;
             }
 
-            # ignore a side comment
+            # This line has a side comment .. back up 1 token
             $Klast = $self->K_previous_nonblank($Klast);
             return if ( !defined($Klast) || $Klast < $Kfirst );
             $type_last = $rLL->[$Klast]->[_TYPE_];

@@ -590,7 +590,6 @@ sub dump_verbatim {
     return;
 
 }    ## static side comment
-
 # coment before side comment
 
 # comment after blank and comment
