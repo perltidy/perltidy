@@ -24655,26 +24655,29 @@ sub keep_old_blank_lines_exclusions {
     my $i_first_blank;    # first blank of a group
     my $i_last_blank;     # last blank of a group
 
-    my $top_line_has_static_side_comment = sub {
+    my $line_CODE_info = sub {
 
-        # Returns:
-        #   true if the top code line has a static side comment
-        #   false otherwise
-        my $ii = $i_first_blank - 1;
+        # Given:
+        #   $ii = index of a line
+        # Return:
+        #   undef if not a line of code, or
+        #   {Kfirst=>$Kfirst, Klast=>$Klast, CODE_type=>$CODE_type}
+
+        my ($ii) = @_;
         return if ( $ii < 0 );
         my $line_of_tokens = $rlines->[$ii];
         my $line_type      = $line_of_tokens->{_line_type};
         return if ( $line_type ne 'CODE' );
-        my $rK_range = $line_of_tokens->{_rK_range};
+        my $CODE_type = $line_of_tokens->{_code_type};
+        my $rK_range  = $line_of_tokens->{_rK_range};
         my ( $Kfirst, $Klast ) = @{$rK_range};
         return if ( !defined($Klast) );
-        return if ( $Kfirst == $Klast );
-        my $type = $rLL->[$Klast]->[_TYPE_];
-        return if ( $type ne '#' );
-        my $token = $rLL->[$Klast]->[_TOKEN_];
-        if ( $token =~ /$static_side_comment_pattern/ ) { return 1 }
-        return;
-    }; ## end $top_line_has_static_side_comment = sub
+        return {
+            Kfirst    => $Kfirst,
+            Klast     => $Klast,
+            CODE_type => $CODE_type,
+        };
+    }; ## end $line_CODE_info = sub
 
     my $top_match = sub {
         my ($ii) = @_;
@@ -24716,8 +24719,8 @@ sub keep_old_blank_lines_exclusions {
                 # Check for a block comment control, type '#b'
                 if ( $top_control->{$type_last} ) {
 
-                    # Keep 1 blank line if the line following the blanks
-                    # is also a full-line comment
+                    # Always keep 1 blank line if the lines above and below
+                    # the blank lines are full-line comments
                     my $Kn = $self->K_next_nonblank($Klast);
                     return ( defined($Kn) && $rLL->[$Kn]->[_TYPE_] eq '#' )
                       ? -1
@@ -24762,13 +24765,29 @@ sub keep_old_blank_lines_exclusions {
                     return 1;
                 }
 
+                # If there is code below it is a block comment of some type.
+                # We must leave 1 blank if it is possible to form a hanging
+                # side comment.
+
                 # Ok to delete all blanks if this side comment is static
                 my $token = $rLL->[$Klast_true]->[_TOKEN_];
                 if ( $token =~ /$static_side_comment_pattern/ ) { return 1 }
 
-                # The top line has simple side comment, the bottom line is
-                # a comment, so we must keep at least 1 blank line to avoid
-                # forming a hanging side comment. This logic is slightly
+                my $rinfo = $line_CODE_info->( $i_last_blank + 1 );
+
+                # If no code below, then ok to delete blanks
+                return 1 if ( !defined($rinfo) );
+
+                # If static block comment below, ok to delete blanks
+                my $CODE_type_bottom = $rinfo->{CODE_type};
+                if ( $CODE_type_bottom eq 'SBC' || $CODE_type_bottom eq 'SBCX' )
+                {
+                    return 1;
+                }
+
+                # The top line has simple side comment, the bottom line is a
+                # non-static comment, so we must keep at least 1 blank line to
+                # avoid forming a hanging side comment. This logic is slightly
                 # simplified but on the safe side.
                 return -1;
             }
@@ -24815,13 +24834,44 @@ sub keep_old_blank_lines_exclusions {
                 if ( $bottom_control->{$type_last} ) {
 
                     # This bottom line is a comment. Now check for comments
-                    # above.
+                    # above. Quick check:
                     my $Kp = $self->K_previous_nonblank($Kfirst);
                     if ( $rLL->[$Kp]->[_TYPE_] ne '#' ) { return 1 }
 
-                    # The upper line has a comment. We can delete
-                    # all blanks only if it is a static side comment.
-                    return $top_line_has_static_side_comment->() ? 1 : -1;
+                    # Only upper comment is possible
+                    my $rinfo = $line_CODE_info->( $i_first_blank - 1 );
+
+                    # No code above - ok to delete blanks
+                    return 1 if ( !defined($rinfo) );
+
+                    my $Kfirst_top = $rinfo->{Kfirst};
+                    my $Klast_top  = $rinfo->{Klast};
+
+                    # If full line comment above then we must keep one blank
+                    if ( $Kfirst_top == $Klast_top ) { return -1 }
+
+                    # We should have a side comment above by the preliminary
+                    # check
+                    my $type_top = $rLL->[$Klast_top]->[_TYPE_];
+                    return 1 if ( $type_top ne '#' );    ## shouldn't happen
+
+                    # A static side comment above cannot form hanging side
+                    # comment below - ok to remove all blank lines.
+                    my $token_top = $rLL->[$Klast_top]->[_TOKEN_];
+                    if ( $token_top =~ /$static_side_comment_pattern/ ) {
+                        return 1;
+                    }
+
+                    # A static block comment below cannot form hanging side
+                    # comment - ok to remove all blank lines.
+                    my $CODE_type = $line_of_tokens->{_code_type};
+                    if ( $CODE_type eq 'SBC' || $CODE_type eq 'SBCX' ) {
+                        return 1;
+                    }
+
+                    # A new hanging side comment could be formed if we remove
+                    # all blank lines, so we must leave 1
+                    return -1;
                 }
 
                 # Not a match
