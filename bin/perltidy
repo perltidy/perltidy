@@ -6679,6 +6679,9 @@ Thus, a value B<N=1> will catch up to 1 error per set of related keys. A value
 B<N=2> will catch up to two errors per set, but at the same time may produce
 more unwanted warnings.
 
+For the special case B<N=1> some extra filtering is done to minimize unwanted
+warnings. For examples, unique keys in ALL CAPS are not reported for B<N=1>.
+
 =item B<Use --warn-unique-keys> to warn of possible misspelled hash keys
 
 The parameter B<--warn-unique-keys>, or B<-wuk>, can be used to produce a

@@ -80,8 +80,10 @@ our $VERSION = '20250105.03';
 
 # List of hash keys to prevent -duk from listing them.
 # 'break-open-compact-parens' is an unimplemented option.
+# 'Unicode::Collate::Locale' is in the data for scan_unique_keys
 my @unique_hash_keys_uu =
-  qw( rOpts file_writer_object unlike isnt break-open-compact-parens }] );
+  qw( rOpts file_writer_object unlike isnt break-open-compact-parens }]
+  Unicode::Collate::Locale );
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -9066,7 +9068,7 @@ sub scan_unique_keys {
     # Scan for hash keys needed to implement --dump-unique-keys, -duk
     use constant DEBUG_WUK => 0;
 
-    # There are three main phases of the operation:
+    # There are the main phases of the operation:
 
     # PHASE 1: We scan the file and store all hash keys found in the hash
     # %{$rhash_key_trove}, including a count for each. These are keys which:
@@ -9152,7 +9154,7 @@ sub scan_unique_keys {
     );
 
     # Keys of some known modules
-    my %known_module_keys_leading_match = (
+    my %known_module_keys = (
 
         # Common core modules
         'File::Temp' =>
@@ -9172,7 +9174,6 @@ sub scan_unique_keys {
         # but they are not included here because they will typically
         # be removed with the filter
 
-        # Unicode::Collate and subclass Unicode::Colate::Locale
         'Unicode::Collate' => [
             qw(
               UCA_Version              alternate
@@ -9230,6 +9231,22 @@ sub scan_unique_keys {
         ],
     );
 
+    # List of any parent modules with keys to load for a module.
+    # This can be extended as necessary.
+    my %parent_modules = (
+
+        # Unicode::Collate::Local is a subclass of Unicode::Colate
+        'Unicode::Collate::Locale' => ['Unicode::Collate'],
+    );
+
+    # Some keys associated with modules starting with a certain text
+    # These are used in the last step of filtering
+    my %modules_with_common_keys = (
+        CCFLAGS     => ['ExtUtils::'],
+        INSTALLDIRS => ['ExtUtils::'],
+        tests       => ['Test::'],
+    );
+
     my $add_known_keys = sub {
         my ( $rhash, $name ) = @_;
         foreach my $key ( keys %{$rhash} ) {
@@ -9251,6 +9268,7 @@ sub scan_unique_keys {
     my %is_known_module_key;    # set by the following sub after scan
     my $saw_Getopt_Long;        # for 'use Getopt::Long'
     my $saw_Getopt_Std;         # for 'use Getopt::Std'
+
     my $set_known_module_keys = sub {
 
         # Look through the hash of 'use module' statements and populate
@@ -9269,18 +9287,26 @@ sub scan_unique_keys {
                 next;
             }
 
-            # Add keys for known modules, require leading name match only
-            foreach my $name ( keys %known_module_keys_leading_match ) {
-                if ( index( $module_seen, $name ) == 0 ) {
-                    my $rkeys = $known_module_keys_leading_match{$name};
-                    foreach my $key ( @{$rkeys} ) {
-                        $is_known_module_key{$key} = 1;
-                    }
+            # Add keys for this module if known
+            my $rkeys = $known_module_keys{$module_seen};
+            if ( defined($rkeys) ) {
+                foreach my $key ( @{$rkeys} ) {
+                    $is_known_module_key{$key} = 1;
                 }
             }
 
-            # Loop to add keys for known modules with exact name match goes here
-
+            # And add keys for any parent classes
+            my $rparent_list = $parent_modules{$module_seen};
+            if ( defined($rparent_list) ) {
+                foreach my $name ( @{$rparent_list} ) {
+                    my $rk = $known_module_keys{$name};
+                    if ( defined($rk) ) {
+                        foreach my $key ( @{$rk} ) {
+                            $is_known_module_key{$key} = 1;
+                        }
+                    }
+                }
+            }
         }
         return;
     }; ## end $set_known_module_keys = sub
@@ -9689,6 +9715,22 @@ EOM
         return;
     }; ## end $dubious_key = sub
 
+    my $delete_key_if_saw_call = sub {
+        my ( $key, $subname ) = @_;
+
+        # Look for something like "plan('tests'=>" or "plan tests=>"
+        return if ( !defined( $K_unique_key{$key} ) );
+        my $K  = $K_unique_key{$key};
+        my $Kp = $self->K_previous_nonblank($K);
+        if ( defined($Kp) && $rLL->[$Kp]->[_TOKEN_] eq '(' ) {
+            $Kp = $self->K_previous_nonblank($Kp);
+        }
+        if ( defined($Kp) && $rLL->[$Kp]->[_TOKEN_] eq $subname ) {
+            delete $K_unique_key{$key};
+        }
+        return;
+    }; ## end $delete_key_if_saw_call = sub
+
     my $filter_out_large_sets = sub {
 
         # Look for containers of multiple hash keys which are only defined
@@ -9784,6 +9826,55 @@ EOM
             if ( $is_dubious_key{$key} && $dubious_count == 1 ) { next }
 
             if ( $K_unique_key{$key} ) { delete $K_unique_key{$key} }
+        }
+
+        return if ( !%K_unique_key );
+
+        # Check for some keys which are common to a lot of modules
+        # For example, many modules beginning with 'Test::' have a 'tests' key
+        foreach my $key ( keys %K_unique_key ) {
+            my $rmodules = $modules_with_common_keys{$key};
+
+            # This is a common key
+            if ($rmodules) {
+                foreach my $module ( @{$rmodules} ) {
+
+                    # If we saw a module which matches the start of the name...
+                    foreach my $module_seen ( keys %saw_use_module ) {
+
+                        # we can remove it
+                        if ( index( $module_seen, $module ) eq 0 ) {
+                            delete $K_unique_key{$key};
+                            last;
+                        }
+                    }
+                }
+            }
+
+            next if ( !$K_unique_key{$key} );
+
+            # Some additional filters when the cutoff is 1
+            if ( $rOpts_warn_unique_keys_cutoff <= 1 ) {
+
+                # Delete key if it is not contained in a list
+                # i.e. use overload 'xx' => ...
+                my $hash_id = $rhash_key_trove->{$key}->{hash_id};
+                if ( !$hash_id ) {
+                    delete $K_unique_key{$key};
+                    next;
+                }
+
+                # Delete key if ALL CAPS
+                if ( $key eq uc($key) ) {
+                    delete $K_unique_key{$key};
+                    next;
+                }
+
+                if ( $key eq 'tests' ) {
+                    $delete_key_if_saw_call->( $key, 'plan' );
+                    next;
+                }
+            }
         }
 
         if (@debug_output) {
@@ -24836,7 +24927,9 @@ sub keep_old_blank_lines_exclusions {
                     # This bottom line is a comment. Now check for comments
                     # above. Quick check:
                     my $Kp = $self->K_previous_nonblank($Kfirst);
-                    if ( $rLL->[$Kp]->[_TYPE_] ne '#' ) { return 1 }
+                    if ( !defined($Kp) || $rLL->[$Kp]->[_TYPE_] ne '#' ) {
+                        return 1;
+                    }
 
                     # Only upper comment is possible
                     my $rinfo = $line_CODE_info->( $i_first_blank - 1 );
