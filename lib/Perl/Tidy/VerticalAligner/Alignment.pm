@@ -9,7 +9,7 @@ package Perl::Tidy::VerticalAligner::Alignment;
 use strict;
 use warnings;
 
-our $VERSION = '20250105.03';
+our $VERSION = '20250105.04';
 
 sub new {
     my ( $class, $rarg ) = @_;

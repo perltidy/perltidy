@@ -37,6 +37,7 @@
       <li><a href="#Adding-and-Deleting-Commas">Adding and Deleting Commas</a></li>
       <li><a href="#Adding-and-Deleting-Interbracket-Arrows">Adding and Deleting Interbracket Arrows</a></li>
       <li><a href="#Missing-Else-Blocks">Missing Else Blocks</a></li>
+      <li><a href="#Controlling-Breaks-at-Certain-Chain-Operators">Controlling Breaks at Certain Chain Operators</a></li>
       <li><a href="#Retaining-or-Ignoring-Existing-Line-Breaks">Retaining or Ignoring Existing Line Breaks</a></li>
       <li><a href="#Blank-Line-Control">Blank Line Control</a></li>
       <li><a href="#Styles">Styles</a></li>
@@ -1550,16 +1551,16 @@
 <dt id="iscl---ignore-side-comment-lengths"><b>-iscl</b>, <b>--ignore-side-comment-lengths</b></dt>
 <dd>
 
-<p>This parameter causes perltidy to ignore the length of side comments when setting line breaks. The default, <b>-niscl</b>, is to include the length of side comments when breaking lines to stay within the length prescribed by the <b>-l=n</b> maximum line length parameter. For example, the following long single line would remain intact with -l=80 and -iscl:</p>
+<p>This parameter causes perltidy to ignore the length of side comments when setting line breaks. The default, <b>-niscl</b>, is to include the length of side comments when breaking lines to stay within the length prescribed by the <b>-l=n</b> maximum line length parameter. For example, the following single line would remain intact with -l=50 and -iscl:</p>
 
-<pre><code>     perltidy -l=80 -iscl
-        $vmsfile =~ s/;[\d\-]*$//; # Clip off version number; we can use a newer version</code></pre>
+<pre><code>    # perltidy -l=50 -iscl
+    $vmsfile =~ s/;[\d\-]*$//;    # Clip off version number</code></pre>
 
 <p>whereas without the -iscl flag the line will be broken:</p>
 
-<pre><code>     perltidy -l=80
-        $vmsfile =~ s/;[\d\-]*$//
-          ;    # Clip off version number; we can use a newer version</code></pre>
+<pre><code>    # perltidy -l=50
+    $vmsfile =~
+      s/;[\d\-]*$//;    # Clip off version number</code></pre>
 
 </dd>
 <dt id="ipc---ignore-perlcritic-comments"><b>-ipc</b>, <b>--ignore-perlcritic-comments</b></dt>
@@ -1769,23 +1770,26 @@
 </li>
 </ul>
 
-<p>For example, assuming <code>@month_of_year</code> is left-adjusted:</p>
+<p>For example, assuming <code>@month_of_year</code> is left-adjusted, the default formatting for the following snippet is:</p>
 
-<pre><code>    @month_of_year = (    # -sbc (default)
-        &#39;Jan&#39;, &#39;Feb&#39;, &#39;Mar&#39;, &#39;Apr&#39;, &#39;May&#39;, &#39;Jun&#39;, &#39;Jul&#39;, &#39;Aug&#39;, &#39;Sep&#39;, &#39;Oct&#39;,
-    ##  &#39;Dec&#39;, &#39;Nov&#39;
-        &#39;Nov&#39;, &#39;Dec&#39;);</code></pre>
-
-<p>Without this convention, the above code would become</p>
-
-<pre><code>    @month_of_year = (   # -nsbc
-        &#39;Jan&#39;, &#39;Feb&#39;, &#39;Mar&#39;, &#39;Apr&#39;, &#39;May&#39;, &#39;Jun&#39;, &#39;Jul&#39;, &#39;Aug&#39;, &#39;Sep&#39;, &#39;Oct&#39;,
-
-        ##  &#39;Dec&#39;, &#39;Nov&#39;
-        &#39;Nov&#39;, &#39;Dec&#39;
+<pre><code>    # perltidy -sbc [default]
+    @month_of_year = (
+        &#39;Jan&#39;, &#39;Feb&#39;, &#39;Mar&#39;, &#39;Apr&#39;, &#39;May&#39;, &#39;Jun&#39;,
+    ##  &#39;Jul&#39;, &#39;Aug&#39;, &#39;Sep&#39;, &#39;Oct&#39;, &#39;Dec&#39;, &#39;Nov&#39;
+        &#39;Jul&#39;, &#39;Aug&#39;, &#39;Sep&#39;, &#39;Oct&#39;, &#39;Nov&#39;, &#39;Dec&#39;
     );</code></pre>
 
-<p>which is not as clear. The default is to use <b>-sbc</b>. This may be deactivated with <b>-nsbc</b>.</p>
+<p>This can be useful for displaying code which has been commented out. Without this convention, the above code would become</p>
+
+<pre><code>    # perltidy -nsbc
+    @month_of_year = (
+        &#39;Jan&#39;, &#39;Feb&#39;, &#39;Mar&#39;, &#39;Apr&#39;, &#39;May&#39;, &#39;Jun&#39;,
+
+        ##  &#39;Jul&#39;, &#39;Aug&#39;, &#39;Sep&#39;, &#39;Oct&#39;, &#39;Dec&#39;, &#39;Nov&#39;
+        &#39;Jul&#39;, &#39;Aug&#39;, &#39;Sep&#39;, &#39;Oct&#39;, &#39;Nov&#39;, &#39;Dec&#39;
+    );</code></pre>
+
+<p>which is less clear. The default is to use <b>-sbc</b>. This may be deactivated with <b>-nsbc</b>.</p>
 
 </dd>
 <dt id="sbcp-string---static-block-comment-prefix-string"><b>-sbcp=string</b>, <b>--static-block-comment-prefix=string</b></dt>
@@ -3681,6 +3685,27 @@
 
 <p>Sometimes it turns out that the else block should not reachable, in which case an error exit might be appropriate. In any case, having the <b>else</b> block can improve code maintainability.</p>
 
+<h2 id="Controlling-Breaks-at-Certain-Chain-Operators">Controlling Breaks at Certain Chain Operators</h2>
+
+<p>For a statment which consists of a chain of certain binary operators, the default line break logic is: (1) if a statement fits on one line, then it is formatted as one line, or (2) if the statement requires multiple lines, then a break is made at all of the chain operators. Additional rules apply, but this is the basic one.</p>
+
+<p>The parameter <b>--pack-operator-types=s</b>, or <b>-pot=s</b>, can be used to change this for certain operators which may be specified with the string <b>s</b>. These are the concatenation operator <b>s=&#39;.&#39;</b> and the method call arrow <b>s=&#39;-&gt;&#39;</b>. When this parameter is selected for an operator, no special breaks are made, so there will be a minimal number of line breaks. For example, here is the default formatting for a method call chain:</p>
+
+<pre><code>    # perltidy -l=60
+    Data::Dumper-&gt;new( [ \%errors ] )
+      -&gt;Indent(2)
+      -&gt;Terse(1)
+      -&gt;Sortkeys(1)
+      -&gt;Dump;</code></pre>
+
+<p>and this is the alternative formatting with this parameter:</p>
+
+<pre><code>    # perltidy -l=60 -pot=&#39;-&gt;&#39;
+    Data::Dumper-&gt;new( [ \%errors ] )-&gt;Indent(2)-&gt;Terse(1)
+      -&gt;Sortkeys(1)-&gt;Dump;</code></pre>
+
+<p>Note that this option only applies to arrows which follow a closing paren.</p>
+
 <h2 id="Retaining-or-Ignoring-Existing-Line-Breaks">Retaining or Ignoring Existing Line Breaks</h2>
 
 <p>Several additional parameters are available for controlling the extent to which line breaks in the input script influence the output script. In most cases, the default parameter values are set so that, if a choice is possible, the output style follows the input style. For example, if a short logical container is broken in the input script, then the default behavior is for it to remain broken in the output script.</p>
@@ -4015,13 +4040,7 @@
 
 <p>These blank line controls introduce a certain minimum number of blank lines in the text, but the final number of blank lines may be greater, depending on values of the other blank line controls and the number of old blank lines. A consequence is that introducing blank lines with these and other controls cannot be exactly undone, so some experimentation with these controls is recommended before using them.</p>
 
-<p>For example, suppose that for some reason we decide to introduce one blank space at the beginning and ending of all blocks. We could do this using</p>
-
-<pre><code>  perltidy -blao=2 -blbc=2 -blaol=&#39;*&#39; -blbcl=&#39;*&#39; filename</code></pre>
-
-<p>Now suppose the script continues to be developed, but at some later date we decide we don&#39;t want these spaces after all. We might expect that running with the flags <b>-blao=0</b> and <b>-blbc=0</b> will undo them. However, by default perltidy retains single blank lines, so the blank lines remain.</p>
-
-<p>We can easily fix this by telling perltidy to ignore old blank lines by including the added parameter <b>--keep-old-blank-lines=0</b> and rerunning. Then the unwanted blank lines will be gone. However, this will cause all old blank lines to be ignored, perhaps even some that were added by hand to improve formatting. So please be cautious when using these parameters.</p>
+<p>If necessary, it is possible to approximately undo these and other blank line controls with the parameter <b>--keep-old-blank-lines-exceptions=s</b> described below.</p>
 
 </dd>
 <dt id="mbl-n---maximum-consecutive-blank-lines-n"><b>-mbl=n</b> <b>--maximum-consecutive-blank-lines=n</b></dt>
@@ -4040,10 +4059,57 @@
 <p>The possible values of <b>n</b> are:</p>
 
 <pre><code> n=0 ignore all old blank lines
- n=1 stable: keep old blanks, but limited by the B&lt;-mbl=n&gt; flag
+ n=1 stable: keep old blanks, but limited by the B&lt;-mbl=n&gt; flag, but
+     remove existing blanks matching the B&lt;--kblx=s&gt; flag (next section)
  n=2 keep all old blank lines, regardless of the B&lt;-mbl=n&gt; flag</code></pre>
 
-<p>The default is <b>n=1</b>.</p>
+<p>The default and recommended setting is <b>n=1</b>. With this option, you may selectively filter out selected blank lines from the input stream before formatting begins using the parameter described in the next section.</p>
+
+<p>The setting <b>n=0</b> should be used with caution because it will remove all blank lines, including lines which might be essential for controlling vertical alignment, and for preventing unwanted hanging side comments.</p>
+
+</dd>
+<dt id="kblx-s---keep-old-blank-lines-exceptions-s"><b>-kblx=s</b>, <b>--keep-old-blank-lines-exceptions=s</b></dt>
+<dd>
+
+<p>Most of the blank line controls described above specify a minimum number of blank lines, rather than a maximum, so they cannot be used remove lines. This parameter allows blank lines to be removed by selectively ignoring them in the input stream. It operates when <b>--keep-old-blank-lines=1</b>, which is the default as described above. The selection of blank lines to exclude is made with a string with one or more of the following special values:</p>
+
+<pre><code>   &#39;b{&#39; &#39;b}&#39; &#39;{b&#39; &#39;}b&#39; &#39;bp&#39; &#39;bs&#39; &#39;bc&#39; &#39;cb&#39;</code></pre>
+
+<p>In these symbols, the character <b>b</b> indicates the location of <b>blank lines</b> with respect to the next or previous token type. The token types <b>{</b> and <b>}</b> are opening and closing <b>code blocks</b>, the character <b>p</b> is a <b>package</b> statement, <b>s</b> is a <b>sub</b> definition, and <b>c</b> is a block <b>comment</b>.</p>
+
+<p>So for example <b>bs</b> means one or more <b>blank lines before a sub</b> will be ignored in the input stream. Note that this is approximately the opposite of the parameter <b>-blanks-before-subs</b> described above.</p>
+
+<p>In fact, these parameters provide approximate inverses to all of the previously described blank line options. To simplify things, the block types to which the <code>{</code> and <code>}</code> operators apply are the same as the corresponding operator which adds blank lines, described above. The following table shows these relationships:</p>
+
+<pre><code>   kblx=   Inverse  Applies to block types
+   b{      -bbb      if unless while until for foreach
+   b}      -blbc=i  -blbcl=s [default = sub]
+   {b      -blao=i  -blaol=s [default = sub]
+   }b      [none]   -blaol=s
+   bp      -blbp=n
+   bs      -blbs=n
+   bc      -bbc
+   cb      [none - comments before blanks]</code></pre>
+
+<p>So, for example, the table indicates that to approximately remove the blank lines introduced by a <b>-blao</b> operation we could use <b>-kblx=&#39;{b&#39;</b>.</p>
+
+<p>Some notes on using this parameter:</p>
+
+<ul>
+
+<li><p>The parameter string may contain multiple operators provided that they are space-separated.</p>
+
+</li>
+<li><p>The comment deletion controls will keep at least one blank line between groups of comments, and between a side comment and following line comment.</p>
+
+</li>
+<li><p>These operations occur on the input stream, before other blank line operations, so they may be used in the same run as other blank line controls. So it can happen that these controls will remove blanks from the input stream while other controls add blank lines back.</p>
+
+</li>
+<li><p>These operations will normally only be needed occasionally to correct some problems, or undo an unwanted operation.</p>
+
+</li>
+</ul>
 
 </dd>
 <dt id="sob---swallow-optional-blank-lines"><b>-sob</b>, <b>--swallow-optional-blank-lines</b></dt>
@@ -4776,11 +4842,15 @@
 
 <p>where <b>newword</b> is the abbreviation, and <b>opt1</b>, etc, are existing parameters <i>or other abbreviations</i>. The main syntax requirement is that the new abbreviation along with its opening curly brace must begin on a new line. Space before and after the curly braces is optional.</p>
 
-<p>For a specific example, the following line</p>
+<p>For a specific example, the following definition</p>
 
-<pre><code>  oneliner { --maximum-line-length=0 --noadd-newlines --noadd-terminal-newline}</code></pre>
+<pre><code>  oneliner {
+    --maximum-line-length=0
+    --noadd-newlines
+    --noadd-terminal-newline
+  }</code></pre>
 
-<p>or equivalently with abbreviations</p>
+<p>or equivalently, with abbreviations,</p>
 
 <pre><code>  oneliner { -l=0 -nanl -natnl }</code></pre>
 
@@ -4963,11 +5033,6 @@
 <pre><code>    perltidy -dbs -dbt=&#39;sub package&#39; somefile.pl &gt;blocks.csv</code></pre>
 
 </li>
-<li><p>This selects block types <code>sub for foreach while</code> with 10 or more code lines.</p>
-
-<pre><code>    perltidy -dbs -dbl=10 -dbt=&#39;sub for foreach while&#39; somefile.pl &gt;blocks.csv</code></pre>
-
-</li>
 <li><p>This selects blocks with 2 or more code lines which are type <code>sub</code> or which are inner loops.</p>
 
 <pre><code>    perltidy -dbs -dbl=2 -dbt=&#39;sub +&#39; somefile.pl &gt;blocks.csv</code></pre>
@@ -5114,9 +5179,29 @@
 
 <pre><code>   perltidy -duk File.pm &gt;output.txt</code></pre>
 
-<p>The lines in the output file list each unique key and its line number. Typically, most of the listed keys listed will be perfectly valid keys needed, for example, for communication with other modules or for future development. But the list might also include something unexpected, such as a misspelled key.</p>
+<p>The lines in the output file list unique keys and line numbers.</p>
+
+<p>Many programs contain sets of hash keys which are largely unique to that program but which are used for communication with other programs. A filter is used to avoid listing such keys. This filter is described in the next section.</p>
 
 <p>A program <code>dump_unique_keys.pl</code> at <a href="https://github.com/perltidy/perltidy/tree/master/examples">https://github.com/perltidy/perltidy/tree/master/examples</a> can run perltidy with <b>-duk</b> on multiple files, and then remove any common keys from the list.</p>
+
+</dd>
+<dt id="Use---warn-unique-keys-cutoff-N-or--wukc-N-to-adjust-the-unique-keys-filter"><b>Use --warn-unique-keys-cutoff=N</b>, or <b>-wukc=N</b>, to adjust the unique keys filter.</dt>
+<dd>
+
+<p>This parameter controls the filter used by both <b>--dump-unique-keys</b> and its counterpart <b>--warn-unique-keys</b>, described below. The filter works as follows: if a related set of keys has more than <b>N</b> unique keys, then none of them are listed. The default value is <b>N=1</b>, which causes the minimum number of keys to be reported. Increasing <b>N</b> above 1 will allow more unique keys to be reported.</p>
+
+<p>Thus, a value <b>N=1</b> will catch up to 1 error per set of related keys. A value <b>N=2</b> will catch up to two errors per set, but at the same time may produce more unwanted warnings.</p>
+
+<p>For the special case <b>N=1</b> some extra filtering is done to minimize unwanted warnings. For examples, unique keys in ALL CAPS are not reported for <b>N=1</b>.</p>
+
+</dd>
+<dt id="Use---warn-unique-keys-to-warn-of-possible-misspelled-hash-keys"><b>Use --warn-unique-keys</b> to warn of possible misspelled hash keys</dt>
+<dd>
+
+<p>The parameter <b>--warn-unique-keys</b>, or <b>-wuk</b>, can be used to produce a warning of a possible misspelled hash key during normal processing. It works like the previous <b>-dump</b> version but writes to the standard error output if unique keys are found during normal formatting.</p>
+
+<p>For some scripts, this will produce unwanted warnings for a few keys, even though the filter described above attempts to avoid this. A way to avoid warnings for specific keys is to list them somewhere in the program in a <b>qw</b> list. This will be seen during the key scan, and the then keys will not be considered unique.</p>
 
 </dd>
 <dt id="Use---dump-mixed-call-parens-to-find-functions-called-both-with-and-without-parens"><b>Use --dump-mixed-call-parens to find functions called both with and without parens</b></dt>
@@ -5375,9 +5460,9 @@
 
 <p>To restrict the checking, set the string equal to the letter(s) of that warning, any <b>x</b>, <b>y</b>, <b>o</b>, <b>u</b>, or <b>s</b>. For example</p>
 
-<pre><code>   perltidy -wmrt=&#39;x o s&#39; somefile.pl</code></pre>
+<pre><code>   perltidy -wmr -wmrt=&#39;x o s&#39; somefile.pl</code></pre>
 
-<p>will format <i>somefile.pl</i> and report issue types <b>x</b>, <b>o</b>, and <b>s</b> but not types <b>u</b> and <b>y</b>. All checks may be requested with <b>-wmrt=&#39;*&#39;</b> or <b>-wmrt=1</b>. This is the default.</p>
+<p>will format <i>somefile.pl</i> and report issue types <b>x</b>, <b>o</b>, and <b>s</b> but not types <b>u</b> and <b>y</b>. All checks may be requested with <b>-wmrt=&#39;*&#39;</b> or <b>-wmrt=1</b>. This is the default if this parameter is not specified.</p>
 
 </li>
 <li><p><b>--warn-mismatched-return-exclusion-list</b>, or <b>-wmrxl=string</b>, can be given to skip the warning checks for a list of subroutine names, entered as a quoted string of space- or comma-separated names, without a package prefix. All subs with those names will be skipped, regardless of package. A leading and/or trailing <b>*</b> on a name may be used to indicate a partial string match.</p>
@@ -5622,7 +5707,7 @@
  skp    sob    sobb   sohb   sop    sosb   sot    ssc    st     sts
  t      tac    tbc    toc    tp     tqw    trp    ts     tsc    tso
  vbc    vc     viu    vmll   vsc    vsn    vwe    w      wfc    wia
- wma    wme    wmr    wn     x      xbt    xci    xlp    xs</code></pre>
+ wma    wme    wmr    wn     wuk    x      xbt    xci    xlp    xs</code></pre>
 
 <p>Equivalently, the prefix &#39;no&#39; or &#39;no-&#39; on the corresponding long names may be used.</p>
 
@@ -5700,7 +5785,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20250105</p>
+<p>This man page documents perltidy version 20250105.04</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 
