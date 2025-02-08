@@ -9154,6 +9154,9 @@ sub scan_unique_keys {
     );
 
     # Keys of some known modules
+    # Note that ExtUtils::MakeMaker has a large number of keys
+    # but they are not included here because they will typically
+    # be removed with the filter
     my %known_module_keys = (
 
         # Common core modules
@@ -9166,13 +9169,10 @@ sub scan_unique_keys {
             )
         ],
         'Test::More' => [qw( tests skip_all import )],
+        'Test::EOL'  => [qw( trailing_whitespace all_reasons )],
         'Test'       => [qw( tests onfail   todo )],
         'warnings'   => [qw( FATAL NONFATAL )],
-        'open'       => [qw( IN OUT IO )],
-
-        # Note that ExtUtils::MakeMaker has a large number of keys
-        # but they are not included here because they will typically
-        # be removed with the filter
+        'open'       => [qw( IN    OUT IO )],
 
         'Unicode::Collate' => [
             qw(
@@ -9214,8 +9214,16 @@ sub scan_unique_keys {
         'Memoize'        => [qw( NORMALIZER INSTALL SCALAR_CACHE LIST_CACHE )],
 
         # Other common modules
-        'DateTime' =>
-          [qw( year month day hour minute second nanosecond time_zone )],
+        'DateTime' => [
+            qw(
+              year      month       week         day
+              hour      minute      second       nanosecond
+              years     months      weeks        days
+              hours     minutes     seconds      nanoseconds
+              time_zone epoch       name         object
+              to        day_of_year end_of_month formatter
+            )
+        ],
         'Moo' => [
             qw(
               builder  clearer coerce   default handles   init_arg
@@ -9859,7 +9867,7 @@ EOM
                 # Delete key if it is not contained in a list
                 # i.e. use overload 'xx' => ...
                 my $hash_id = $rhash_key_trove->{$key}->{hash_id};
-                if ( !$hash_id ) {
+                if ( !$hash_id || $hash_id eq '1' ) {
                     delete $K_unique_key{$key};
                     next;
                 }

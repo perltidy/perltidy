@@ -319,8 +319,9 @@ sub make_manifest {
     my $fdiff  = "tmp/manifest.diff";
     my $result = sys_command("make manifest >$fout 2>$fout");
     post_result($fout);
-    $result = sys_command("diff MANIFEST.bak MANIFEST >$fdiff");
-    if ( !$result ) {
+    if ( -e $fdiff ) { unlink $fdiff }
+    $result = system("diff MANIFEST.bak MANIFEST >$fdiff");
+    if ( !-e $fdiff ) {
         query("No changes to MANIFEST; hit <cr>\n");
     }
     else {
@@ -1198,7 +1199,7 @@ EOM
 
         print <<EOM;
 Since you changed Tidy.pm, you should add it and other unstaged files
-to the repository, then do a 'git commit' and then tag. Something like 
+to the repository, then do a 'git commit' and then tag. Something like
 
 git status
 git add -A  [or whatever]
@@ -1209,7 +1210,7 @@ You should also push any new tags:
 
 git push origin --tags
 
-To avoid error, I put this last command in a script $runme 
+To avoid error, I put this last command in a script $runme
 EOM
         hitcr();
     }
@@ -1562,7 +1563,7 @@ my $DEBIAN;  # undefined, no longer doing debian
 system ("less CHECKLIST");
 print STDOUT "Continue? [Y/N]\n";
 my $ans=<STDIN>;
-exit -1 unless ($ans =~ /^[Yy]/); 
+exit -1 unless ($ans =~ /^[Yy]/);
 open LOGFILE, "> makedist.out";
 
 # -----------------------------------------------------------------------
