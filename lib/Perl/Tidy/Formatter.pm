@@ -9662,14 +9662,14 @@ EOM
         return;
     }; ## end $push_KK_last_nb = sub
 
-    my $getopt_subword = sub {
+    my $delete_getopt_subword = sub {
 
         my ($word_in) = @_;
 
         # Given:
         #   $word= a string which may or may not be a key to Getopts::Long,
         # Return:
-        #   the corresponding hash key
+        #   Find any corresponding hash key and remove from the unique key list
 
         # Input:               Output:
         # 'func-mask|M=s'      'func-mask'
@@ -9678,7 +9678,7 @@ EOM
 
         # split on pipe symbols; the first word is the key
         my @parts = split /\|/, $word;
-        return $word_in if ( !@parts );
+        return if ( !@parts );
         $word = $parts[0];
 
         # remove one or two optional leading dashes
@@ -9689,13 +9689,16 @@ EOM
             $word =~ s/^([\w_\-]+)(?:[\!|\+]|=s|:s|=i|:i|=f|:f)/$1/;
         }
 
-        # revert if the possible key name does not look reasonable
+        # give up if the possible key name does not look reasonable
         if ( !$word || $word !~ /^[\w\-]+$/ ) {
-            $word = $word_in;
+            return;
         }
 
-        return $word;
-    }; ## end $getopt_subword = sub
+        if ( $K_unique_key{$word} ) {
+            delete $K_unique_key{$word};
+        }
+        return;
+    }; ## end $delete_getopt_subword = sub
 
     my $dubious_key = sub {
 
@@ -9917,10 +9920,7 @@ EOM
             }
 
             if ( $missing_GetOptions_keys && $word !~ /\s/ ) {
-                my $subword = $getopt_subword->($word);
-                if ( $K_unique_key{$subword} ) {
-                    delete $K_unique_key{$subword};
-                }
+                $delete_getopt_subword->($word);
             }
         }
         return;
@@ -9965,6 +9965,12 @@ EOM
         }
         return;
     }; ## end $is_static_hash_key = sub
+
+    # Optimization
+    my %is_special_check_type;
+    @q = qw(=> Q q k U w h);
+    push @q, ',';
+    @is_special_check_type{@q} = (1) x scalar(@q);
 
     #----------------------------------------------------------------
     # PHASE 1: loop over all tokens to find hash keys and save quotes
@@ -10035,45 +10041,14 @@ EOM
                 ## ternary
             }
         }
-        else {
-            if ( $type eq '=>' ) {
-                my $parent_seqno = $self->parent_seqno_by_K($KK);
-                if ( $is_GetOptions_call_by_seqno{$parent_seqno} ) {
-                    push @GetOptions_keys, $KK_last_nb;
-                }
-                else {
-                    $push_KK_last_nb->($parent_seqno);
-                }
-            }
-            elsif ( $type eq ',' ) {
+        elsif ( $is_special_check_type{$type} ) {
+            if ( $type eq ',' ) {
 
                 # in a slice?
                 if ( @stack && $stack[-1]->{_slice_name} ) {
                     if ( $is_static_hash_key->() ) {
                         $push_KK_last_nb->();
                     }
-                }
-            }
-            elsif ( $type eq 'Q' ) {
-
-                # Find the entire range in case of multiline quotes.
-                my $KK_end_Q = $KK;
-                while ($KK_end_Q < $Klimit
-                    && $rLL->[ $KK_end_Q + 1 ]->[_TYPE_] eq 'Q' )
-                {
-                    $KK_end_Q++;
-                }
-
-                # Save for later comparison with hash keys.
-                my $seqno_Q = @stack ? $stack[-1]->{_seqno} : undef;
-                push @Q_list, [ $KK, $KK_end_Q, $seqno_Q ];
-                $KK = $KK_end_Q;
-            }
-            elsif ( $type eq 'q' ) {
-                if ( !defined($KK_last_nb)
-                    || $rLL->[$KK_last_nb]->[_TYPE_] ne 'q' )
-                {
-                    push @K_start_qw_list, $KK;
                 }
             }
             elsif ( $type eq 'k' ) {
@@ -10113,6 +10088,28 @@ EOM
                         # skip a single constant definition
                         $K_end_skip = $Kn + 1;
                     }
+                }
+            }
+            elsif ( $type eq 'Q' ) {
+
+                # Find the entire range in case of multiline quotes.
+                my $KK_end_Q = $KK;
+                while ($KK_end_Q < $Klimit
+                    && $rLL->[ $KK_end_Q + 1 ]->[_TYPE_] eq 'Q' )
+                {
+                    $KK_end_Q++;
+                }
+
+                # Save for later comparison with hash keys.
+                my $seqno_Q = @stack ? $stack[-1]->{_seqno} : undef;
+                push @Q_list, [ $KK, $KK_end_Q, $seqno_Q ];
+                $KK = $KK_end_Q;
+            }
+            elsif ( $type eq 'q' ) {
+                if ( !defined($KK_last_nb)
+                    || $rLL->[$KK_last_nb]->[_TYPE_] ne 'q' )
+                {
+                    push @K_start_qw_list, $KK;
                 }
             }
             elsif ( $type eq 'U' || $type eq 'w' ) {
@@ -10170,6 +10167,15 @@ EOM
                     ## no other special checks
                 }
             }
+            elsif ( $type eq '=>' ) {
+                my $parent_seqno = $self->parent_seqno_by_K($KK);
+                if ( $is_GetOptions_call_by_seqno{$parent_seqno} ) {
+                    push @GetOptions_keys, $KK_last_nb;
+                }
+                else {
+                    $push_KK_last_nb->($parent_seqno);
+                }
+            }
 
             # a here doc - look for interpolated hash keys
             elsif ( $type eq 'h' ) {
@@ -10190,8 +10196,11 @@ EOM
                 }
             }
             else {
-                # continue search
+                DEVEL_MODE && Fault("missing code for type $type\n");
             }
+        }
+        else {
+            ## no special check
         }
     } ## end while ( ++$KK <= $Klimit )
 
@@ -10323,9 +10332,10 @@ EOM
         }
 
         # remove any optional flag and retry
-        my $subword = $getopt_subword->($word);
-        if ( $K_unique_key{$subword} ) {
-            delete $K_unique_key{$subword};
+        if (   $word !~ /^\w[\w\-]*$/
+            && $word !~ /\s/ )
+        {
+            $delete_getopt_subword->($word);
         }
     }
 

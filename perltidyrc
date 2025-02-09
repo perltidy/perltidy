@@ -23,7 +23,7 @@
 #    my @unique_hash_keys_uu = qw( maximum_line_length );
 # The name '@unique_hash_keys_uu' is arbitrary but should end in _uu
 # to be itself excluded from warnings, as noted above.
-# The cutoff number N is set at the default 1
+# The cutoff number N is set at the default 1 except when -debug is used
 --warn-unique-keys
 --warn-unique-keys-cutoff=1
 
@@ -59,3 +59,9 @@
 # Use 'perltidy -dmcp filename' to find mixed call paren usage.
 # Prefer call parens for these keywords:
 --want-call-parens='open unlink substr defined ref scalar int'
+
+# This defines a new option which is invoked with -debug on the command line.
+# It overrides any of the settings above.
+debug {
+   --warn-unique-keys-cutoff=2
+}

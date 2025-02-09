@@ -4,6 +4,7 @@ use warnings;
 use Perl::Tidy;
 use File::Copy;
 use File::Temp qw(tempfile);
+use File::Basename;
 use English;
 
 use constant EMPTY_STRING => q{};
@@ -368,9 +369,17 @@ sub make_dist {
     }
 
     query(<<EOM);
-Remember to do a test install on perl-5.8.1:
-  perlbrew
-  use perl-5.8.1
+Next Steps:
+- Untar and examine the contents of the .tar.gz file in /tmp
+- Do a test install on perl-5.8.1 with these commands:
+   perlbrew
+   use perl-5.8.1
+   perl Makefile.pl
+   ...
+- Start random testing with the new version
+- Compare results on a variety of test cases with previous CPAN release
+- Use NYTProf to check the efficiency of any new coding
+hit <cr> to continue
 EOM
 
     if (
@@ -1260,30 +1269,37 @@ EOM
     my @files_with_END;
     my @files_with_DATA;
     my @files_with_FIXME;
+    my @files_with_TODO;
     while ( my $source_file = shift @sources ) {
         next unless ( $source_file =~ /\.pm$/ );
+        my $basename = basename($source_file);
         my $result = qx/grep "^=cut" $source_file/;
         if ($result) {
-            push @files_with_pod, $source_file;
+            push @files_with_pod, $basename;
         }
         $result = qx/grep "^__END__" $source_file/;
         if ($result) {
-            push @files_with_END, $source_file;
+            push @files_with_END, $basename;
         }
         $result = qx/grep "^__DATA__" $source_file/;
         if ($result) {
-            push @files_with_DATA, $source_file;
+            push @files_with_DATA, $basename;
         }
         $result = qx/grep "FIXME" $source_file/;
         if ($result) {
-            push @files_with_FIXME, $source_file;
+            push @files_with_FIXME, $basename;
+        }
+        $result = qx/grep "TODO" $source_file/;
+        if ($result) {
+            push @files_with_TODO, $basename;
         }
     } ## end while ( my $source_file =...)
 
-    my $saw_FIXME = @files_with_FIXME;
     my $saw_pod   = @files_with_pod;
     my $saw_END   = @files_with_END;
     my $saw_DATA  = @files_with_DATA;
+    my $saw_FIXME = @files_with_FIXME;
+    my $saw_TODO  = @files_with_TODO;
 
     my $saw_problem;
     print <<EOM;
@@ -1327,6 +1343,14 @@ EOM
 Found $saw_DATA files with __DATA__: (@files_with_DATA);
 The convention in perltidy is not to have an __DATA__ section in '.pm' files.
 Please remove the __DATA__ text before continuing, hit <cr> to continue.
+-------------------------------------------------------------------
+EOM
+    }
+    if ($saw_TODO) {
+        local $" = ') (';
+        query(<<EOM);
+Found $saw_TODO files with 'TODO': (@files_with_TODO);
+These are ok but should be checked.
 -------------------------------------------------------------------
 EOM
     }
