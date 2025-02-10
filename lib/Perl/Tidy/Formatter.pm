@@ -9110,10 +9110,6 @@ sub scan_unique_keys {
     # stack holds keys _seqno, _KK, _KK_last_nb, _is_slice
     my @stack;
 
-    my $KK_last_nb;
-
-    my $K_end_skip = -1;
-
     my $rhash_key_trove = {};
     my %K_unique_key;
     my @Q_list;
@@ -9370,7 +9366,7 @@ sub scan_unique_keys {
         #  a name for the slice, or
         #  undef if not a slice
 
-        my $Ktest = $KK_last_nb;
+        my ($Ktest) = @_;
         my $token = $rLL->[$Ktest]->[_TOKEN_];
 
         # walk back to find a '$'
@@ -9555,15 +9551,13 @@ EOM
 
         # If the previous nonblank token was a hash key of type
         # 'Q' or 'w', then update its count
-        my ( ($parent_seqno) ) = @_;
+        my ( $KK_last_nb, ($parent_seqno) ) = @_;
 
         # Given:
+        #   $KK_last_nb = index of a hash key token
         #   $parent_seqno = sequence number of container:
         #    - required for a key followed by '=>'
         #    - not required for a key in hash braces
-
-        # We are ignoring constant definitions
-        if ( $KK_last_nb < $K_end_skip ) { return }
 
         my $type_last  = $rLL->[$KK_last_nb]->[_TYPE_];
         my $token_last = $rLL->[$KK_last_nb]->[_TOKEN_];
@@ -9929,11 +9923,12 @@ EOM
 
     my $is_static_hash_key = sub {
 
+        my ($Ktest) = @_;
+
         # Return:
-        #   true if $KK_last_nb is a simple fixed quote-like hash key
+        #   true if $Ktest is a simple fixed quote-like hash key
         #   false otherwise
-        my $Ktest = $KK_last_nb;
-        return unless defined($Ktest);
+        return if ( !defined($Ktest) );
         my $type = $rLL->[$Ktest]->[_TYPE_];
 
         # This is just for barewords and quoted text
@@ -9967,23 +9962,28 @@ EOM
         return;
     }; ## end $is_static_hash_key = sub
 
-    # Optimization
+    # Optimization: we just need to look at these non-blank types
     my %is_special_check_type = ( %is_opening_type, %is_closing_type );
-    @q = qw(=> Q q k U w h);
+    @q = qw( => Q q k U w h );
     push @q, ',';
     @is_special_check_type{@q} = (1) x scalar(@q);
 
     #----------------------------------------------------------------
     # PHASE 1: loop over all tokens to find hash keys and save quotes
     #----------------------------------------------------------------
-    my $KK = -1;
+    my $KK         = -1;
+    my $K_end_skip = -1;    # allow skipping hash definitions in code sections
+    my $KK_last_nb;         # previous non-blank, non-comment value of $KK
+    my $type;
     while ( ++$KK <= $Klimit ) {
 
-        my $type;
-        if    ( ( $type = $rLL->[$KK]->[_TYPE_] ) eq 'b' ) { next }
-        elsif ( $type eq '#' )                             { next }
+        # Skip a blank token
+        if ( ( $type = $rLL->[$KK]->[_TYPE_] ) eq 'b' ) { next }
+
+        # Skip token types which do not need to be examined
         elsif ( !$is_special_check_type{$type} ) {
-            ## skipped types
+            $KK_last_nb = $KK if ( $type ne '#' );
+            next;
         }
 
         #-----------------------------------------------------------
@@ -10018,7 +10018,7 @@ EOM
                 # check for a slice
                 my $rtype_count = $rtype_count_by_seqno->{$seqno};
                 if ( $rtype_count->{','} ) {
-                    $slice_name = $is_hash_slice->();
+                    $slice_name = $is_hash_slice->($KK_last_nb);
                 }
             }
             push @stack,
@@ -10038,8 +10038,9 @@ EOM
                 next;
             }
             if ( $type eq 'R' ) {
-                if ( $is_static_hash_key->() ) {
-                    $push_KK_last_nb->();
+                if ( $is_static_hash_key->($KK_last_nb) ) {
+                    $push_KK_last_nb->($KK_last_nb)
+                      if ( $KK_last_nb > $K_end_skip );
                 }
             }
             my $item = pop @stack;
@@ -10060,8 +10061,9 @@ EOM
 
             # in a slice?
             if ( @stack && $stack[-1]->{_slice_name} ) {
-                if ( $is_static_hash_key->() ) {
-                    $push_KK_last_nb->();
+                if ( $is_static_hash_key->($KK_last_nb) ) {
+                    $push_KK_last_nb->($KK_last_nb)
+                      if ( $KK_last_nb > $K_end_skip );
                 }
             }
         }
@@ -10196,7 +10198,8 @@ EOM
                 push @GetOptions_keys, $KK_last_nb;
             }
             else {
-                $push_KK_last_nb->($parent_seqno);
+                $push_KK_last_nb->( $KK_last_nb, $parent_seqno )
+                  if ( $KK_last_nb > $K_end_skip );
             }
         }
 
@@ -10404,19 +10407,20 @@ EOM
     foreach my $Kqw (@K_start_qw_list) {
         my ( $K_last_q_uu, $rlist ) = $self->get_qw_list($Kqw);
         if ( !defined($rlist) ) {
-            ## must be a bad index $Kqw in @K_start_qw_list
-            my ( $lno, $type, $token ) = qw ( undef undef undef );
+            ## shouldn't happen: must be a bad index $Kqw in @K_start_qw_list
+            my ( $lno, $type_qw, $token_qw ) = qw ( undef undef undef );
             if (   defined($Kqw)
                 && $Kqw >= 0
                 && $Kqw <= $Klimit )
             {
-                $lno   = $rLL->[$Kqw]->[_LINE_INDEX_] + 1;
-                $type  = $rLL->[$Kqw]->[_TYPE_];
-                $token = $rLL->[$Kqw]->[_TOKEN_];
+                $lno      = $rLL->[$Kqw]->[_LINE_INDEX_] + 1;
+                $type_qw  = $rLL->[$Kqw]->[_TYPE_];
+                $token_qw = $rLL->[$Kqw]->[_TOKEN_];
             }
             DEVEL_MODE
               && Fault(
-                "$lno: Empty return for K=$Kqw type='$type' token='$token'\n");
+"$lno: Empty return for K=$Kqw type='$type_qw' token='$token_qw'\n"
+              );
             next;
         }
 
@@ -42198,7 +42202,7 @@ sub set_vertical_tightness_flags {
     my $ibeg = $ri_first->[$nline];
     my $iend = $ri_last->[$nline];
 
-    # Fix for b1503-b1506
+    # Fix for b1503
     my $is_under_stress = $levels_to_go[$ibeg] > $high_stress_level;
 
     # Define these values for each vertical tightness type:
