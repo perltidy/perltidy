@@ -9103,10 +9103,6 @@ sub scan_unique_keys {
 
     return if ( !defined($Klimit) || $Klimit < 1 );
 
-    my $Getopt_Std_hash_id;    # name of option hash for 'use Getopt::Std'
-    my $ix_HERE_END = -1;      # the line index of the last here target read
-    my @keys_in_HERE_docs;
-
     # stack holds keys _seqno, _KK, _KK_last_nb, _is_slice
     my @stack;
 
@@ -9114,17 +9110,10 @@ sub scan_unique_keys {
     my %K_unique_key;
     my @Q_list;
     my @mw_list;
-    my @K_start_qw_list;
-    my @GetOptions_keys;
     my @Q_getopts;
-    my %is_GetOptions_call_by_seqno;
     my %first_key_by_id;
-    my $missing_GetOptions_keys;
 
     my @q;
-    my %is_GetOptions_call;
-    @q = qw( GetOptions GetOptionsFromArray GetOptionsFromString );
-    @is_GetOptions_call{@q} = (1) x scalar(@q);
 
     # See https://perldoc.perl.org/perlref
     my %is_typeglob_slot_key;
@@ -9896,10 +9885,12 @@ EOM
 
     my $delete_unique_quoted_words = sub {
 
-        my ($rlist) = @_;
+        my ( $rlist, $missing_GetOptions_keys ) = @_;
 
         # Given:
         #  $rlist = ref to list of words seen in quotes, or a single word
+        #  $missing_GetOptions_keys = true if we saw 'use Getopt::Long'
+        #    but did not see its control hash
         # Task:
         #  remove matches to the current list of unique words
 
@@ -9967,6 +9958,17 @@ EOM
     @q = qw( => Q q k U w h );
     push @q, ',';
     @is_special_check_type{@q} = (1) x scalar(@q);
+
+    # Values defined during token scan:
+    my @K_start_qw_list;
+    my $Getopt_Std_hash_id;    # name of option hash for 'use Getopt::Std'
+    my $ix_HERE_END = -1;      # the line index of the last here target read
+    my @keys_in_HERE_docs;
+    my @GetOptions_keys;
+    my %is_GetOptions_call_by_seqno;
+    my %is_GetOptions_call;
+    @q = qw( GetOptions GetOptionsFromArray GetOptionsFromString );
+    @is_GetOptions_call{@q} = (1) x scalar(@q);
 
     #----------------------------------------------------------------
     # PHASE 1: loop over all tokens to find hash keys and save quotes
@@ -10230,7 +10232,7 @@ EOM
     # Make a list of keys known to any modules which have been seen
     $set_known_module_keys->();
 
-    $missing_GetOptions_keys =
+    my $missing_GetOptions_keys =
          $saw_Getopt_Long
       && %is_GetOptions_call_by_seqno
       && !@GetOptions_keys;
@@ -10314,7 +10316,8 @@ EOM
 
             # Ignore multiline quotes for the remaining checks
             if ( !$is_multiline ) {
-                $delete_unique_quoted_words->($word);
+                $delete_unique_quoted_words->( $word,
+                    $missing_GetOptions_keys );
             }
         }
     }
@@ -10424,7 +10427,7 @@ EOM
             next;
         }
 
-        $delete_unique_quoted_words->($rlist);
+        $delete_unique_quoted_words->( $rlist, $missing_GetOptions_keys );
     }
 
     return if ( !%K_unique_key );
