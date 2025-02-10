@@ -12572,6 +12572,18 @@ my $species =
 --continuation-indentation=9
 --paren-vertical-tightness=1
 
+==> b1504.in <==
+    my $FH = $self->_fh();
+
+    while (<$FH>) {
+        if ( $_ !~ /\w/ ) { next }
+    }
+
+==> b1504.par <==
+--keyword-group-blanks-size='0'
+--keyword-group-blanks-after=2
+--keep-old-blank-lines-exceptions='bp bc b{ {b'
+
 ==> b156.in <==
 # State 1
 {

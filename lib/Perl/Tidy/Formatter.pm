@@ -25107,9 +25107,12 @@ sub keep_old_blank_lines_exclusions {
         if ($delete_blanks) {
 
             # A negative $delete_blanks flag indicates to keep 1 essential blank
+            # See b1504 for example of conflict with kgb logic
             if ( $delete_blanks < 0 ) { $i_first_blank++ }
             foreach my $ii ( $i_first_blank .. $i_last_blank ) {
-                $rwant_blank_line_after->{$ii} = 2;
+                if ( !defined( $rwant_blank_line_after->{$ii} ) ) {
+                    $rwant_blank_line_after->{$ii} = 2;
+                }
             }
         }
 

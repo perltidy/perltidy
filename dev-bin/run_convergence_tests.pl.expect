@@ -8512,6 +8512,13 @@ my $species =
                   die
 "can't open $MEMINFO: $!";
 
+==> b1504 <==
+    my $FH = $self->_fh();
+
+    while (<$FH>) {
+        if ( $_ !~ /\w/ ) { next }
+    }
+
 ==> b156 <==
 # State 1
 {
