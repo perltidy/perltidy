@@ -9110,9 +9110,7 @@ sub scan_unique_keys {
     # stack holds keys _seqno, _KK, _KK_last_nb, _is_slice
     my @stack;
 
-    my $KK = -1;
     my $KK_last_nb;
-    my $KK_this_nb = 0;
 
     my $K_end_skip = -1;
 
@@ -9625,6 +9623,7 @@ EOM
             }
         }
         else {
+
             # not a quote - possibly identifier
             return;
         }
@@ -9918,8 +9917,10 @@ EOM
             if ( $K_unique_key{$word} ) {
                 delete $K_unique_key{$word};
             }
-
-            if ( $missing_GetOptions_keys && $word !~ /\s/ ) {
+            if (   $missing_GetOptions_keys
+                && $word !~ /^\w[\w\-]*$/
+                && $word !~ /\s/ )
+            {
                 $delete_getopt_subword->($word);
             }
         }
@@ -9967,7 +9968,7 @@ EOM
     }; ## end $is_static_hash_key = sub
 
     # Optimization
-    my %is_special_check_type;
+    my %is_special_check_type = ( %is_opening_type, %is_closing_type );
     @q = qw(=> Q q k U w h);
     push @q, ',';
     @is_special_check_type{@q} = (1) x scalar(@q);
@@ -9975,233 +9976,252 @@ EOM
     #----------------------------------------------------------------
     # PHASE 1: loop over all tokens to find hash keys and save quotes
     #----------------------------------------------------------------
+    my $KK = -1;
     while ( ++$KK <= $Klimit ) {
 
-        my $type = $rLL->[$KK]->[_TYPE_];
-        next if ( $type eq 'b' );
-        next if ( $type eq '#' );
-        $KK_last_nb = $KK_this_nb;
-        $KK_this_nb = $KK;
-        my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
-        if ($seqno) {
-            if ( $is_opening_type{$type} ) {
+        my $type;
+        if    ( ( $type = $rLL->[$KK]->[_TYPE_] ) eq 'b' ) { next }
+        elsif ( $type eq '#' )                             { next }
+        elsif ( !$is_special_check_type{$type} ) {
+            ## skipped types
+        }
 
-                my $slice_name;
-                if ( $type eq 'L' ) {
-
-                    # Skip past something like ${word}
-                    my $type_last =
-                      defined($KK_last_nb)
-                      ? $rLL->[$KK_last_nb]->[_TYPE_]
-                      : 'b';
-                    if ( $type_last eq 't' ) {
-                        my $Kc = $K_closing_container->{$seqno};
-                        my $Kn = $self->K_next_code($KK);
-                        $Kn = $self->K_next_code($Kn);
-                        if ( $Kn && $Kc && $Kn == $Kc && $Kc > $K_end_skip ) {
-                            $K_end_skip = $Kc;
-                        }
-                    }
-
-                    # check for a slice
-                    my $rtype_count = $rtype_count_by_seqno->{$seqno};
-                    if ( $rtype_count->{','} ) {
-                        $slice_name = $is_hash_slice->();
-                    }
-                }
-                push @stack,
-                  {
-                    _seqno      => $seqno,
-                    _KK         => $KK,
-                    _KK_last_nb => $KK_last_nb,
-                    _slice_name => $slice_name,
-                  };
+        #-----------------------------------------------------------
+        # NOTE: update $KK_last_nb before any 'next' out of the loop
+        #-----------------------------------------------------------
+        elsif ( $is_opening_type{$type} ) {
+            my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+            if ( !$seqno ) {
+                ## tokenization error - shouldn't happen
+                DEVEL_MODE && Fault("no sequence number for type $type\n");
+                $KK_last_nb = $KK;
+                next;
             }
-            elsif ( $is_closing_type{$type} ) {
-                if ( $type eq 'R' ) {
-                    if ( $is_static_hash_key->() ) {
-                        $push_KK_last_nb->();
+
+            my $slice_name;
+            if ( $type eq 'L' ) {
+
+                # Skip past something like ${word}
+                my $type_last =
+                  defined($KK_last_nb)
+                  ? $rLL->[$KK_last_nb]->[_TYPE_]
+                  : 'b';
+                if ( $type_last eq 't' ) {
+                    my $Kc = $K_closing_container->{$seqno};
+                    my $Kn = $self->K_next_code($KK);
+                    $Kn = $self->K_next_code($Kn);
+                    if ( $Kn && $Kc && $Kn == $Kc && $Kc > $K_end_skip ) {
+                        $K_end_skip = $Kc;
                     }
                 }
-                my $item = pop @stack;
-                if ( !$item || $item->{_seqno} != $seqno ) {
-                    if (DEVEL_MODE) {
 
-                        # shouldn't happen for a balanced file
-                        my $num = @stack;
-                        my $got = $num ? $item->{_seqno} : 'undef';
-                        my $lno = $rLL->[$KK]->[_LINE_INDEX_];
-                        Fault <<EOM;
+                # check for a slice
+                my $rtype_count = $rtype_count_by_seqno->{$seqno};
+                if ( $rtype_count->{','} ) {
+                    $slice_name = $is_hash_slice->();
+                }
+            }
+            push @stack,
+              {
+                _seqno      => $seqno,
+                _KK         => $KK,
+                _KK_last_nb => $KK_last_nb,
+                _slice_name => $slice_name,
+              };
+        }
+        elsif ( $is_closing_type{$type} ) {
+            my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+            if ( !$seqno ) {
+                ## tokenization error - shouldn't happen
+                DEVEL_MODE && Fault("no sequence number for type $type\n");
+                $KK_last_nb = $KK;
+                next;
+            }
+            if ( $type eq 'R' ) {
+                if ( $is_static_hash_key->() ) {
+                    $push_KK_last_nb->();
+                }
+            }
+            my $item = pop @stack;
+            if ( !$item || $item->{_seqno} != $seqno ) {
+                if (DEVEL_MODE) {
+
+                    # shouldn't happen for a balanced file
+                    my $num = @stack;
+                    my $got = $num ? $item->{_seqno} : 'undef';
+                    my $lno = $rLL->[$KK]->[_LINE_INDEX_];
+                    Fault <<EOM;
 stack error at seqno=$seqno type=$type num=$num got seqno=$got lno=$lno
 EOM
-                    }
                 }
-            }
-            else {
-                ## ternary
             }
         }
-        elsif ( $is_special_check_type{$type} ) {
-            if ( $type eq ',' ) {
+        elsif ( $type eq ',' ) {
 
-                # in a slice?
-                if ( @stack && $stack[-1]->{_slice_name} ) {
-                    if ( $is_static_hash_key->() ) {
-                        $push_KK_last_nb->();
-                    }
+            # in a slice?
+            if ( @stack && $stack[-1]->{_slice_name} ) {
+                if ( $is_static_hash_key->() ) {
+                    $push_KK_last_nb->();
                 }
             }
-            elsif ( $type eq 'k' ) {
+        }
+        elsif ( $type eq 'k' ) {
 
-                # Look for 'use constant' and define its ending token
-                my $token = $rLL->[$KK]->[_TOKEN_];
-                if ( $token eq 'use' || $token eq 'require' ) {
-                    my $Kn = $self->K_next_code($KK);
-                    next if ( !defined($Kn) );
-                    my $token_n = $rLL->[$Kn]->[_TOKEN_];
+            # Look for 'use constant' and define its ending token
+            my $token = $rLL->[$KK]->[_TOKEN_];
+            if ( $token eq 'use' || $token eq 'require' ) {
+                my $Kn = $self->K_next_code($KK);
+                if ( !defined($Kn) ) {
+                    $KK_last_nb = $KK;
+                    next;
+                }
+                my $token_n = $rLL->[$Kn]->[_TOKEN_];
 
-                    $saw_use_module{$token_n} = $Kn;
+                $saw_use_module{$token_n} = $Kn;
 
-                    if ( $token_n ne 'constant' || $token ne 'use' ) {
-                        next;
-                    }
+                if ( $token_n ne 'constant' || $token ne 'use' ) {
+                    $KK_last_nb = $KK;
+                    next;
+                }
 
-                    # Handle 'use constant' ... we will skip these hash keys.
-                    # For example, we do not want to mark '_mode_' and '_uid_'
-                    # here as unique hash keys since they become subs:
-                    #     use constant { _mode_  => 2, _uid_ => 4 }
-                    $Kn = $self->K_next_code($Kn);
-                    next if ( !defined($Kn) );
-                    my $seqno_n = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
-                    if ($seqno_n) {
+                # Handle 'use constant' ... we will skip these hash keys.
+                # For example, we do not want to mark '_mode_' and '_uid_'
+                # here as unique hash keys since they become subs:
+                #     use constant { _mode_  => 2, _uid_ => 4 }
+                $Kn = $self->K_next_code($Kn);
+                if ( !defined($Kn) ) {
+                    $KK_last_nb = $KK;
+                    next;
+                }
+                my $seqno_n = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
+                if ($seqno_n) {
 
-                        # Set flag to skip over a block of constant definitions.
-                        if ( $rLL->[$Kn]->[_TOKEN_] eq '{' ) {
-                            $K_end_skip = $K_closing_container->{$seqno_n};
-                        }
-                        else {
-                            ## unexpected format, skip
-                        }
+                    # Set flag to skip over a block of constant definitions.
+                    if ( $rLL->[$Kn]->[_TOKEN_] eq '{' ) {
+                        $K_end_skip = $K_closing_container->{$seqno_n};
                     }
                     else {
-
-                        # skip a single constant definition
-                        $K_end_skip = $Kn + 1;
+                        ## unexpected format, skip
                     }
-                }
-            }
-            elsif ( $type eq 'Q' ) {
-
-                # Find the entire range in case of multiline quotes.
-                my $KK_end_Q = $KK;
-                while ($KK_end_Q < $Klimit
-                    && $rLL->[ $KK_end_Q + 1 ]->[_TYPE_] eq 'Q' )
-                {
-                    $KK_end_Q++;
-                }
-
-                # Save for later comparison with hash keys.
-                my $seqno_Q = @stack ? $stack[-1]->{_seqno} : undef;
-                push @Q_list, [ $KK, $KK_end_Q, $seqno_Q ];
-                $KK = $KK_end_Q;
-            }
-            elsif ( $type eq 'q' ) {
-                if ( !defined($KK_last_nb)
-                    || $rLL->[$KK_last_nb]->[_TYPE_] ne 'q' )
-                {
-                    push @K_start_qw_list, $KK;
-                }
-            }
-            elsif ( $type eq 'U' || $type eq 'w' ) {
-
-                # 'GetOptions(' will marked be type 'U'
-                # 'GetOptions (' will be marked type 'w' # has space '('
-                my $token = $rLL->[$KK]->[_TOKEN_];
-
-                # Look GetOptions call (Getopt::Long, for example:
-                #    GetOptions ("length=i" => \$length,
-                #                "file=s"   => \$data)
-                if ( $is_GetOptions_call{$token} ) {
-                    my $Kn = $self->K_next_nonblank($KK);
-                    if ( $Kn && $rLL->[$Kn]->[_TOKEN_] eq '(' ) {
-                        my $seqno_n = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
-                        $is_GetOptions_call_by_seqno{$seqno_n} = 1;
-                    }
-                }
-
-                # Look getopts call (Getopt::Std), for example:
-                #    getopts('oif:')
-                #    getopts('oif:', \my %opts);
-                #    getopt('oDI:', \my %opts);
-                elsif ( $token eq 'getopts' || $token eq 'getopt' ) {
-                    my $Kn = $self->K_next_nonblank($KK);
-                    if ( $Kn && $rLL->[$Kn]->[_TOKEN_] eq '(' ) {
-
-                        # Look for the first arg as a quoted string
-                        my $seqno_n = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
-                        $Kn = $self->K_next_nonblank($Kn);
-                        if ( $Kn && $rLL->[$Kn]->[_TYPE_] eq 'Q' ) {
-                            push @Q_getopts, $Kn;
-                        }
-
-                        # Look for hash name if two-arg call
-                        $Kn = $self->K_next_nonblank($Kn);
-                        if ( $Kn && $rLL->[$Kn]->[_TYPE_] eq ',' ) {
-                            my $Kc = $K_closing_container->{$seqno_n};
-                            $Kn = $self->K_previous_code($Kc);
-                            my $id = $rLL->[$Kn]->[_TOKEN_];
-                            $id =~ s/^\%/\$/;
-                            $Getopt_Std_hash_id = $id;
-                        }
-                    }
-                }
-
-                # check for -word
-                elsif ($KK > 0
-                    && $rLL->[ $KK - 1 ]->[_TOKEN_] eq '-'
-                    && $rLL->[ $KK - 1 ]->[_TYPE_] eq 'm' )
-                {
-                    push @mw_list, $KK;
                 }
                 else {
-                    ## no other special checks
+
+                    # skip a single constant definition
+                    $K_end_skip = $Kn + 1;
                 }
             }
-            elsif ( $type eq '=>' ) {
-                my $parent_seqno = $self->parent_seqno_by_K($KK);
-                if ( $is_GetOptions_call_by_seqno{$parent_seqno} ) {
-                    push @GetOptions_keys, $KK_last_nb;
-                }
-                else {
-                    $push_KK_last_nb->($parent_seqno);
+        }
+        elsif ( $type eq 'Q' ) {
+
+            # Find the entire range in case of multiline quotes.
+            my $KK_end_Q = $KK;
+            while ($KK_end_Q < $Klimit
+                && $rLL->[ $KK_end_Q + 1 ]->[_TYPE_] eq 'Q' )
+            {
+                $KK_end_Q++;
+            }
+
+            # Save for later comparison with hash keys.
+            my $seqno_Q = @stack ? $stack[-1]->{_seqno} : undef;
+            push @Q_list, [ $KK, $KK_end_Q, $seqno_Q ];
+
+            # Move loop index to the end of this quote
+            $KK = $KK_end_Q;
+        }
+        elsif ( $type eq 'q' ) {
+            if ( !defined($KK_last_nb)
+                || $rLL->[$KK_last_nb]->[_TYPE_] ne 'q' )
+            {
+                push @K_start_qw_list, $KK;
+            }
+        }
+        elsif ( $type eq 'U' || $type eq 'w' ) {
+
+            # 'GetOptions(' will marked be type 'U'
+            # 'GetOptions (' will be marked type 'w' # has space '('
+            my $token = $rLL->[$KK]->[_TOKEN_];
+
+            # Look GetOptions call (Getopt::Long, for example:
+            #    GetOptions ("length=i" => \$length,
+            #                "file=s"   => \$data)
+            if ( $is_GetOptions_call{$token} ) {
+                my $Kn = $self->K_next_nonblank($KK);
+                if ( $Kn && $rLL->[$Kn]->[_TOKEN_] eq '(' ) {
+                    my $seqno_n = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
+                    $is_GetOptions_call_by_seqno{$seqno_n} = 1;
                 }
             }
 
-            # a here doc - look for interpolated hash keys
-            elsif ( $type eq 'h' ) {
-                my $ix_line = $rLL->[$KK]->[_LINE_INDEX_];
-                my $ix_HERE = max( $ix_HERE_END, $ix_line );
+            # Look getopts call (Getopt::Std), for example:
+            #    getopts('oif:')
+            #    getopts('oif:', \my %opts);
+            #    getopt('oDI:', \my %opts);
+            elsif ( $token eq 'getopts' || $token eq 'getopt' ) {
+                my $Kn = $self->K_next_nonblank($KK);
+                if ( $Kn && $rLL->[$Kn]->[_TOKEN_] eq '(' ) {
 
-                # collect the here doc text
-                ( $ix_HERE_END, my $here_text ) =
-                  $self->get_here_text($ix_HERE);
+                    # Look for the first arg as a quoted string
+                    my $seqno_n = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
+                    $Kn = $self->K_next_nonblank($Kn);
+                    if ( $Kn && $rLL->[$Kn]->[_TYPE_] eq 'Q' ) {
+                        push @Q_getopts, $Kn;
+                    }
 
-                # Any found keys are saved for checking against keys found
-                # in the text, but they are not entered as candidates for
-                # unique keys.
-                my $token = $rLL->[$KK]->[_TOKEN_];
-                if ( is_interpolated_here_doc($token) ) {
-                    my $rkeys = get_interpolated_hash_keys($here_text);
-                    push @keys_in_HERE_docs, @{$rkeys};
+                    # Look for hash name if two-arg call
+                    $Kn = $self->K_next_nonblank($Kn);
+                    if ( $Kn && $rLL->[$Kn]->[_TYPE_] eq ',' ) {
+                        my $Kc = $K_closing_container->{$seqno_n};
+                        $Kn = $self->K_previous_code($Kc);
+                        my $id = $rLL->[$Kn]->[_TOKEN_];
+                        $id =~ s/^\%/\$/;
+                        $Getopt_Std_hash_id = $id;
+                    }
                 }
+            }
+
+            # check for -word
+            elsif ($KK > 0
+                && $rLL->[ $KK - 1 ]->[_TOKEN_] eq '-'
+                && $rLL->[ $KK - 1 ]->[_TYPE_] eq 'm' )
+            {
+                push @mw_list, $KK;
             }
             else {
-                DEVEL_MODE && Fault("missing code for type $type\n");
+                ## no other special checks
+            }
+        }
+        elsif ( $type eq '=>' ) {
+            my $parent_seqno = $self->parent_seqno_by_K($KK);
+            if ( $is_GetOptions_call_by_seqno{$parent_seqno} ) {
+                push @GetOptions_keys, $KK_last_nb;
+            }
+            else {
+                $push_KK_last_nb->($parent_seqno);
+            }
+        }
+
+        # a here doc - look for interpolated hash keys
+        elsif ( $type eq 'h' ) {
+            my $ix_line = $rLL->[$KK]->[_LINE_INDEX_];
+            my $ix_HERE = max( $ix_HERE_END, $ix_line );
+
+            # collect the here doc text
+            ( $ix_HERE_END, my $here_text ) = $self->get_here_text($ix_HERE);
+
+            # Any found keys are saved for checking against keys found
+            # in the text, but they are not entered as candidates for
+            # unique keys.
+            my $token = $rLL->[$KK]->[_TOKEN_];
+            if ( is_interpolated_here_doc($token) ) {
+                my $rkeys = get_interpolated_hash_keys($here_text);
+                push @keys_in_HERE_docs, @{$rkeys};
             }
         }
         else {
-            ## no special check
+            DEVEL_MODE && Fault("missing code for type $type\n");
         }
+        $KK_last_nb = $KK;
+
     } ## end while ( ++$KK <= $Klimit )
 
     # Make a list of keys known to any modules which have been seen
