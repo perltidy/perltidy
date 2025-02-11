@@ -9104,20 +9104,19 @@ sub scan_unique_keys {
     return if ( !defined($Klimit) || $Klimit < 1 );
 
     # stack holds keys _seqno, _KK, _KK_last_nb, _is_slice
-    my @stack;
-
-    my $rhash_key_trove = {};
-    my %K_unique_key;
-    my @Q_list;
-    my @mw_list;
-    my @Q_getopts;
-    my %first_key_by_id;
-
-    my @q;
+    my @stack;                   # token stack during PHASE 1 scan
+    my $rhash_key_trove = {};    # all hash keys found in PHASE 1
+    my %K_unique_key;            # token index of the unique hash keys
+    my @Q_list;                  # list of type Q quote tokens in PHASE 1
+    my @mw_list;                 # list of type Q quotes associated with -qwaf
+    my @Q_getopts;               # list of any quote args to a sub getopts
+    my %first_key_by_id;         # debug info
+    my %saw_use_module;          # modules used; updated during main loop scan
+    my %is_known_module_key;     # set by sub $set_known_module_keys after scan
 
     # See https://perldoc.perl.org/perlref
     my %is_typeglob_slot_key;
-    @q = qw( SCALAR ARRAY HASH CODE IO FILEHANDLE GLOB FORMAT NAME PACKAGE );
+    my @q = qw( SCALAR ARRAY HASH CODE IO FILEHANDLE GLOB FORMAT NAME PACKAGE );
     @is_typeglob_slot_key{@q} = (1) x scalar(@q);
 
     # Table of keys of hashes which are always available
@@ -9255,11 +9254,6 @@ sub scan_unique_keys {
     $add_known_keys->( \%ENV,   '$ENV' );
     $add_known_keys->( \%ERRNO, '$!' );
 
-    my %saw_use_module;         # updated during main loop scan
-    my %is_known_module_key;    # set by the following sub after scan
-    my $saw_Getopt_Long;        # for 'use Getopt::Long'
-    my $saw_Getopt_Std;         # for 'use Getopt::Std'
-
     my $set_known_module_keys = sub {
 
         # Look through the hash of 'use module' statements and populate
@@ -9267,16 +9261,6 @@ sub scan_unique_keys {
         # modules are used.  This is called just after we have finished
         # scanning the file to help remove known keys.
         foreach my $module_seen ( keys %saw_use_module ) {
-
-            # Check for certain module names requiring special processing
-            if ( index( $module_seen, 'Getopt::Std' ) == 0 ) {
-                $saw_Getopt_Std = 1;
-                next;
-            }
-            if ( index( $module_seen, 'Getopt::Long' ) == 0 ) {
-                $saw_Getopt_Long = 1;
-                next;
-            }
 
             # Add keys for this module if known
             my $rkeys = $known_module_keys{$module_seen};
@@ -9965,6 +9949,8 @@ EOM
     my $ix_HERE_END = -1;      # the line index of the last here target read
     my @keys_in_HERE_docs;
     my @GetOptions_keys;
+    my $saw_Getopt_Long;       # for 'use Getopt::Long'
+    my $saw_Getopt_Std;        # for 'use Getopt::Std'
     my %is_GetOptions_call_by_seqno;
     my %is_GetOptions_call;
     @q = qw( GetOptions GetOptionsFromArray GetOptionsFromString );
@@ -10080,38 +10066,45 @@ EOM
                     next;
                 }
                 my $token_n = $rLL->[$Kn]->[_TOKEN_];
-
                 $saw_use_module{$token_n} = $Kn;
 
-                if ( $token_n ne 'constant' || $token ne 'use' ) {
-                    $KK_last_nb = $KK;
-                    next;
+                # Check for some specific modules
+                if ( index( $token_n, 'Getopt::Std' ) == 0 ) {
+                    $saw_Getopt_Std = 1;
                 }
-
-                # Handle 'use constant' ... we will skip these hash keys.
-                # For example, we do not want to mark '_mode_' and '_uid_'
-                # here as unique hash keys since they become subs:
-                #     use constant { _mode_  => 2, _uid_ => 4 }
-                $Kn = $self->K_next_code($Kn);
-                if ( !defined($Kn) ) {
-                    $KK_last_nb = $KK;
-                    next;
+                elsif ( index( $token_n, 'Getopt::Long' ) == 0 ) {
+                    $saw_Getopt_Long = 1;
                 }
-                my $seqno_n = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
-                if ($seqno_n) {
+                elsif ( $token_n eq 'constant' && $token eq 'use' ) {
 
-                    # Set flag to skip over a block of constant definitions.
-                    if ( $rLL->[$Kn]->[_TOKEN_] eq '{' ) {
-                        $K_end_skip = $K_closing_container->{$seqno_n};
+                    # Handle 'use constant' ... we will skip these hash keys.
+                    # For example, we do not want to mark '_mode_' and '_uid_'
+                    # here as unique hash keys since they become subs:
+                    #     use constant { _mode_  => 2, _uid_ => 4 }
+                    $Kn = $self->K_next_code($Kn);
+                    if ( !defined($Kn) ) {
+                        $KK_last_nb = $KK;
+                        next;
+                    }
+                    my $seqno_n = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
+                    if ($seqno_n) {
+
+                        # Set flag to skip over a block of constant definitions.
+                        if ( $rLL->[$Kn]->[_TOKEN_] eq '{' ) {
+                            $K_end_skip = $K_closing_container->{$seqno_n};
+                        }
+                        else {
+                            ## unexpected format, skip
+                        }
                     }
                     else {
-                        ## unexpected format, skip
+
+                        # skip a single constant definition
+                        $K_end_skip = $Kn + 1;
                     }
                 }
                 else {
-
-                    # skip a single constant definition
-                    $K_end_skip = $Kn + 1;
+                    ## not special
                 }
             }
         }
