@@ -136,7 +136,7 @@ BEGIN {
     # then the Release version must be bumped, and it is probably past time for
     # a release anyway.
 
-    $VERSION = '20250105.04';
+    $VERSION = '20250214';
 } ## end BEGIN
 
 {

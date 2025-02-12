@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2025 01 05.04
+## 2025 02 14
 
     - A new option --keep-old-blank-lines-exceptions=s, or --kblx=s,
       allows selected blank lines to be ignored when an input stream
