@@ -361,7 +361,7 @@ sub complain {
         $self->{_complaint_count}++;
         if ($msg_line_number) {
 
-            # TODO: consider using same prefix as warning()
+            # NOTE: consider using same prefix as warning()
             $msg = $msg_line_number . ':' . $msg;
         }
         $self->write_logfile_entry($msg);

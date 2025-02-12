@@ -3389,10 +3389,10 @@ sub match_line_pairs {
     #   $saw_signed_number = true if a field has a signed number
     #                        (needed for --valign-signed-numbers)
 
-    # TODO:
-    # Maybe change: imax_pair => pair_match_info = ref to array
-    #  = [$imax_align, $rMsg, ... ]
-    #  This may eventually have multi-level match info
+    # NOTE: A possible future generalization would be to change
+    #   imax_pair => $imax_align  into a ref with additional information:
+    #   imax_pair => [$imax_align, $rMsg, ... ]
+    #  This could eventually hold multi-level match info
 
     # Previous line vars
     my ( $line_m, $rtokens_m, $rpatterns_m, $rfield_lengths_m, $imax_m,

@@ -91,7 +91,7 @@ Perltidy Build Main Menu - Case Insensitive
 -------------------------------------------
 
 chk      - view release CHecKlist          status: $rstatus->{'CHK'}
-scan     - scan for bad characters         status: $rstatus->{'SCAN'}
+scan     - scan text for problems          status: $rstatus->{'SCAN'}
 man      - check man pages                 status: $rstatus->{'MAN'}
 v        - check/update Version Number     status: $rstatus->{'V'}
 year     - check/update copyright Year     status: $rstatus->{'YEAR'}
@@ -1347,9 +1347,9 @@ Please remove the __DATA__ text before continuing, hit <cr> to continue.
 EOM
     }
     if ($saw_TODO) {
-        local $" = ') (';
+        local $" = ', ';
         query(<<EOM);
-Found $saw_TODO files with 'TODO': (@files_with_TODO);
+Found $saw_TODO files with 'TODO': @files_with_TODO;
 These are ok but should be checked.
 -------------------------------------------------------------------
 EOM
