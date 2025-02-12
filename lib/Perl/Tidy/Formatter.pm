@@ -23088,7 +23088,8 @@ sub break_before_list_opening_containers {
         next unless ($break_option);
 
         # Do not use -bbx under stress for stability ... fixes b1300
-        # TODO: review this; do we also need to look at stress_level_lalpha?
+        # NOTE: Testing in v20240501 showed that this check is no longer
+        # needed for stability, but there is little point in removing it.
         my $level = $rLL->[$KK]->[_LEVEL_];
         if ( $level >= $stress_level_beta ) {
             DEBUG_BBX
@@ -23572,7 +23573,8 @@ sub extended_ci {
 
         # Fix for b1197 b1198 b1199 b1200 b1201 b1202
         # Do not apply -xci if we are running out of space
-        # TODO: review this; do we also need to look at stress_level_alpha?
+        # NOTE: Testing in v20240501 showed that this check is no longer
+        # needed for stability, but there is little point in removing it.
         if ( $level >= $stress_level_beta ) {
             DEBUG_XCI
               && print
@@ -34653,7 +34655,8 @@ EOM
 
             # This option fixes b1240 but not b1235, b1237 with new -lp,
             # but this gives better formatting than the previous option.
-            # TODO: see if stress_level_alpha should also be considered
+            # NOTE: Testing in v20240501 showed that this check is no longer
+            # needed for stability, but there is little point in removing it.
             $do_not_break_apart ||=
               $levels_to_go[$i_opening] > $stress_level_beta;
         }
