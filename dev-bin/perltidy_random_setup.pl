@@ -25,7 +25,23 @@ my $PROFILES_file = "PROFILES.txt";
 my $perltidy      = "./perltidy.pl";
 my $rprofiles     = [];
 
+check_if_empty();
 main();
+
+sub check_if_empty {
+    my @files = glob('*');
+    my $num   = @files;
+    return if ( !$num );
+    my $dir_count;
+    foreach my $file (@files) {
+        if ( -d $file ) { $dir_count++ }
+    }
+    if ( ifyes(<<EOM) ) { exit 1 }
+WARNING: There are $num files here, including $dir_count directories
+You should start in an empty directory. Quit? Y/N
+EOM
+    return;
+}
 
 sub main {
 
@@ -1079,6 +1095,7 @@ EOM
 
                 # skip all dump options; they dump to stdout and exit
                 next if ( $name =~ /^dump-/ );
+                next if ( $name =~ /^stylesheet/ );
 
                 # Skip all pattern lists
                 if ( $flag =~ /s$/ ) {
