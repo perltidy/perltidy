@@ -180,10 +180,6 @@ or B<--nooutdent-long-quotes> or B<--no-outdent-long-quotes>.
 Options may not be bundled together.  In other words, options B<-q> and
 B<-g> may NOT be entered as B<-qg>.
 
-Option names may be terminated early as long as they are uniquely identified.
-For example, instead of B<--dump-token-types>, it would be sufficient to enter
-B<--dump-tok>, or even B<--dump-t>, to uniquely identify this command.
-
 =head2 I/O Control
 
 The following parameters concern the files which are read and written.

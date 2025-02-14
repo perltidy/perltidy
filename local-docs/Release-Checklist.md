@@ -19,7 +19,7 @@
     files.
       - compare results of the current version with previous version
 
-- Basic steps for a new version:
+- Steps to create a new version:
   - review tickets at [rt.cpan.org](https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy)
   - review the issues at [github](https://github.com/perltidy/perltidy/issues/)
   - compare formatting with the proposed new version with previous version on all files in test area
@@ -48,10 +48,13 @@
     - make test
     - make dist
   - run 'cpants-lint.pl' on the .tar.gz and check results (build.pl does this)
+
+- Steps to release a version
   - *IMPORTANT:* Now untar the file (in /tmp) and take a look at the
     contents.  Be sure it does not have unwanted files.
     - If necessary, remove MANIFEST, fix MANIFEST.SKIP and run make manifest again
   - commit to github and check test results
+  - Do test install with perlbrew use perl-5.8.1
   - Install and test on several systems if possible
   - be sure RPerl still works:
     - build and install the latest Perl::Tidy on development machine
