@@ -322,7 +322,7 @@ sub make_manifest {
     post_result($fout);
     if ( -e $fdiff ) { unlink $fdiff }
     $result = system("diff MANIFEST.bak MANIFEST >$fdiff");
-    if ( !-e $fdiff || !-z $fdiff) {
+    if ( !-e $fdiff || -z $fdiff) {
         query("No changes to MANIFEST; hit <cr>\n");
     }
     else {

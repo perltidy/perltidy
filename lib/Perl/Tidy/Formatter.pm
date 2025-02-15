@@ -23611,14 +23611,7 @@ sub extended_ci {
         # have it for this option.  These include anonymous subs and
         #     do sort map grep eval
         my $block_type = $rblock_type_of_seqno->{$seqno};
-        if (
-               $block_type
-            && $is_block_with_ci{$block_type}
-            ## check flag set by sub set_ci:
-            && (   !$rno_closing_ci_by_seqno->{$seqno}
-                || !$is_closing_token{ $rLL->[$KK]->[_TOKEN_] } )
-          )
-        {
+        if ( $block_type && $is_block_with_ci{$block_type} ) {
             $rLL->[$KK]->[_CI_LEVEL_] = 1;
             if ($seqno_top) {
                 $rseqno_controlling_my_ci->{$KK} = $seqno_top;
@@ -23707,6 +23700,13 @@ sub extended_ci {
         push @seqno_stack, $seqno_top if ($seqno_top);
         $seqno_top = $seqno;
     }
+
+    # undo ending ci if requested by sub set_ci:
+    foreach my $seqno ( keys %{$rno_closing_ci_by_seqno} ) {
+        my $Kc = $K_closing_container->{$seqno};
+        $rLL->[$Kc]->[_CI_LEVEL_] = 0;
+    }
+
     return;
 } ## end sub extended_ci
 
