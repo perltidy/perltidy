@@ -1,5 +1,10 @@
 # Perltidy Change Log
 
+## 2025 02 14.01
+
+    - Fix git #181, remove continuation indentation from closing brace
+      of an anonymous sub which terminates an input stream.
+
 ## 2025 02 14
 
     - A new option --keep-old-blank-lines-exceptions=s, or --kblx=s,
