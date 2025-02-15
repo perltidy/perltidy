@@ -584,6 +584,7 @@ BEGIN {
         _rlp_object_by_seqno_       => $i++,
         _rwant_reduced_ci_          => $i++,
         _rno_xci_by_seqno_          => $i++,
+        _rno_closing_ci_by_seqno_   => $i++,
         _rbrace_left_               => $i++,
         _ris_bli_container_         => $i++,
         _rparent_of_seqno_          => $i++,
@@ -1116,6 +1117,7 @@ sub new {
     $self->[_rlp_object_by_seqno_]       = {};
     $self->[_rwant_reduced_ci_]          = {};
     $self->[_rno_xci_by_seqno_]          = {};
+    $self->[_rno_closing_ci_by_seqno_]   = {};
     $self->[_rbrace_left_]               = {};
     $self->[_ris_bli_container_]         = {};
     $self->[_rparent_of_seqno_]          = {};
@@ -6441,9 +6443,9 @@ EOM
                   if ( $types_to_go[ $i_next_nonblank + 1 ] eq 'n' );
             }
 
-            # Do not break before a phantom comma because it will confuse
+            # Do not break before a phantom token because it will confuse
             # the convergence test (STRANGE message is emitted)
-            elsif ( $next_nonblank_type eq ',' ) {
+            elsif ( $next_nonblank_type eq ',' || $next_nonblank_type eq ';' ) {
                 if ( !length($next_nonblank_token) ) {
                     $bond_str = NO_BREAK;
                 }
@@ -10742,6 +10744,46 @@ sub set_ci {
         return;
     }; ## end $redo_preceding_comment_ci = sub
 
+    my $undo_ending_block_ci = sub {
+
+        # This is called after the main loop to undo the final ci value(s)
+        # if the last code token in this input stream is a closing block
+        # brace with ci>0
+
+        # Check that last code type is correct
+        if (   $ci_last == 0
+            || $last_token ne '}'
+            || $last_type ne '}' )
+        {
+            return;
+        }
+
+        # Backup past any comments to the last code token
+        my $KK_last = $Klimit;
+        if ( $rLL->[$KK_last]->[_TOKEN_] ne $last_token ) {
+            $KK_last = $self->K_previous_code($KK_last);
+            return if ( !$KK_last );
+            if ( $rLL->[$KK_last]->[_TOKEN_] ne $last_token ) {
+                ## shouldn't happen - give up
+                DEVEL_MODE && Fault("couldn't find last_token=$last_token\n");
+                return;
+            }
+        }
+
+        # This is only for block types taking ci
+        my $seqno = $rLL->[$KK_last]->[_TYPE_SEQUENCE_];
+        return if ( !$seqno );
+        my $block_type = $rblock_type_of_seqno->{$seqno};
+        if ( $block_type && $is_block_with_ci{$block_type} ) {
+            foreach my $Kx ( $KK_last .. $Klimit ) {
+                $rLL->[$Kx]->[_CI_LEVEL_] = 0;
+            }
+            ## Set flag to prevent sub extended_ci from adding ci
+            $self->[_rno_closing_ci_by_seqno_]->{$seqno} = 1;
+        }
+        return;
+    }; ## end $undo_ending_block_ci = sub
+
     # Definitions of the sequence of ci_values being maintained:
     # $ci_last      = the ci value of the previous non-blank, non-comment token
     # $ci_this      = the ci value to be stored for this token at index $KK
@@ -11342,6 +11384,11 @@ EOM
     #----------------------
     # Post-loop operations:
     #----------------------
+
+    # undo the ci of a closing block brace at end of file (see git #181)
+    if ( $ci_last > 0 && $last_token eq '}' && $last_type eq '}' ) {
+        $undo_ending_block_ci->();
+    }
 
     if (DEBUG_SET_CI) {
         my @output_lines;
@@ -15048,9 +15095,10 @@ sub respace_tokens_inner_loop {
                     # if not preceded by a ';' ..
                     if ( $last_nonblank_code_type ne ';' ) {
 
-                        # tentatively insert a semicolon if appropriate
-                        $self->add_phantom_semicolon($KK)
-                          if $rOpts->{'add-semicolons'};
+                        # Tentatively insert a semicolon if appropriate.
+                        # It will be turned into a real semicolon later by
+                        # sub unmask_phantom_tokens.
+                        $self->add_phantom_semicolon($KK);
                     }
 
                     if (   $ris_sub_block->{$type_sequence}
@@ -23446,6 +23494,7 @@ sub extended_ci {
     my $ris_seqno_controlling_ci = $self->[_ris_seqno_controlling_ci_];
     my $rseqno_controlling_my_ci = $self->[_rseqno_controlling_my_ci_];
     my $rno_xci_by_seqno         = $self->[_rno_xci_by_seqno_];
+    my $rno_closing_ci_by_seqno  = $self->[_rno_closing_ci_by_seqno_];
     my $ris_bli_container        = $self->[_ris_bli_container_];
     my $rblock_type_of_seqno     = $self->[_rblock_type_of_seqno_];
 
@@ -23509,7 +23558,14 @@ sub extended_ci {
         # have it for this option.  These include anonymous subs and
         #     do sort map grep eval
         my $block_type = $rblock_type_of_seqno->{$seqno};
-        if ( $block_type && $is_block_with_ci{$block_type} ) {
+        if (
+               $block_type
+            && $is_block_with_ci{$block_type}
+            ## check flag set by sub set_ci:
+            && (   !$rno_closing_ci_by_seqno->{$seqno}
+                || !$is_closing_token{ $rLL->[$KK]->[_TOKEN_] } )
+          )
+        {
             $rLL->[$KK]->[_CI_LEVEL_] = 1;
             if ($seqno_top) {
                 $rseqno_controlling_my_ci->{$KK} = $seqno_top;
@@ -29091,9 +29147,12 @@ EOM
                 $ri_last )
               if ( %break_before_container_types && $max_index_to_go > 0 );
 
-            # Check for a phantom semicolon at the end of the batch
+            # Check for a phantom semicolon at the end of the batch which
+            # were added by sub add_phantom_semicolon.  We leave the phantom
+            # if --noadd-semicolons is set.
             if ( !$token_lengths_to_go[$imax] && $types_to_go[$imax] eq ';' ) {
-                $self->unmask_phantom_token($imax);
+                $self->unmask_phantom_token($imax)
+                  if ( $rOpts->{'add-semicolons'} );
             }
 
             if ( $rOpts_one_line_block_semicolons == 0 ) {

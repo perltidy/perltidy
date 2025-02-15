@@ -1,0 +1,7 @@
+on develop => sub {
+    requires 'Template'           => '0';
+    requires 'Test::Perl::Critic' => '0';
+    requires 'Test::Pod'          => '1.26';
+}
+
+# end

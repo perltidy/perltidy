@@ -3024,7 +3024,8 @@ EOM
                         # was not detected by the Formatter.  This is not
                         # critical but should be investigated.  It happened
                         # once when a line break was placed before a phantom
-                        # comma under -qwaf, and has been fixed.
+                        # comma under -qwaf, and a semicolon under -nasc,
+                        # and has been fixed (search for 'STRANGE').
                         print {*STDERR}
 "STRANGE no conv in $display_name: stopping on it=$iter, but not converged in formatter\n";
                     }
