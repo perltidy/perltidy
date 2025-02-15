@@ -8335,6 +8335,11 @@ EOM
           if ( $self->[_logger_object_] );
     }
 
+    if ( $rOpts->{'dump-hash-keys'} ) {
+        $self->dump_hash_keys();
+        Exit(0);
+    }
+
     # Dump any requested block summary data
     if ( $rOpts->{'dump-block-summary'} ) {
         $self->dump_block_summary();
@@ -9064,10 +9069,16 @@ sub get_interpolated_hash_keys {
     return \@keys;
 } ## end sub get_interpolated_hash_keys
 
-sub scan_unique_keys {
-    my ($self) = @_;
+sub scan_hash_keys {
+    my ( $self, $caller ) = @_;
 
-    # Scan for hash keys needed to implement --dump-unique-keys, -duk
+    # Scan for hash keys
+
+    # Given: $caller=
+    #   'dhk' for --dump-hash-keys, -dhk
+    #   'duk' for --dump-unique-keys, -duk
+    #   'wuk' for --warn-unique-keys, -wuk
+    # Returns an output string for caller to print
     use constant DEBUG_WUK => 0;
 
     # There are the main phases of the operation:
@@ -9079,6 +9090,8 @@ sub scan_unique_keys {
     #     a slice like @hash{word1, word2};
     # During this scan we save pointers to all quotes and here docs,
     # for use in the second phase.
+
+    # End here for --dump-hash-keys, otherwise keep going:
 
     # PHASE 2: We find the keys which occur just once, and store their
     # index in the hash %K_unique_key. Then we compare all quoted text
@@ -10224,6 +10237,24 @@ EOM
 
     } ## end while ( ++$KK <= $Klimit )
 
+    # End here for --dump-hash-keys
+    if ( $caller && $caller eq 'dhk' ) {
+        my $output_string = EMPTY_STRING;
+        my @list;
+        foreach my $word ( keys %{$rhash_key_trove} ) {
+            my $count = $rhash_key_trove->{$word}->{count};
+            push @list, [ $word, $count ];
+        }
+        @list = sort { $a->[1] <=> $b->[1] || $a->[0] cmp $b->[0] } @list;
+        foreach my $item (@list) {
+            my ( $word, $count ) = @{$item};
+            $output_string .= "$word,$count\n";
+        }
+        return $output_string;
+    }
+
+    # Continue for --dump-unique-keys and --warn-unique-keys ...
+
     # Make a list of keys known to any modules which have been seen
     $set_known_module_keys->();
 
@@ -10451,7 +10482,7 @@ EOM
     }
     return $output_string;
 
-} ## end sub scan_unique_keys
+} ## end sub scan_hash_keys
 
 sub dump_unique_keys {
     my ($self) = @_;
@@ -10459,7 +10490,7 @@ sub dump_unique_keys {
     # Dump a list of hash keys used just one time to STDOUT
     # This sub is called when
     #   --dump-unique-keys (-duk) is set.
-    my $output_string = $self->scan_unique_keys();
+    my $output_string = $self->scan_hash_keys('duk');
     if ($output_string) {
         my $input_stream_name = get_input_stream_name();
         chomp $output_string;
@@ -10478,7 +10509,7 @@ sub warn_unique_keys {
 
     my $wuk_key       = 'warn-unique-keys';
     my $wukc_key      = 'warn-unique-keys-cutoff';
-    my $output_string = $self->scan_unique_keys();
+    my $output_string = $self->scan_hash_keys('wuk');
     if ($output_string) {
         my $message =
 "Begin scan for --$wuk_key using --$wukc_key=$rOpts_warn_unique_keys_cutoff\n";
@@ -10488,6 +10519,24 @@ sub warn_unique_keys {
     }
     return;
 } ## end sub warn_unique_keys
+
+sub dump_hash_keys {
+    my ($self) = @_;
+
+    # Dump a list of hash keys time to STDOUT
+    # This sub is called when
+    #   --dump-hash-keys (-dhk) is set.
+    my $output_string = $self->scan_hash_keys('dhk');
+    if ($output_string) {
+        my $input_stream_name = get_input_stream_name();
+        chomp $output_string;
+        print {*STDOUT} <<EOM;
+==> $input_stream_name <==
+$output_string
+EOM
+    }
+    return;
+} ## end sub dump_hash_keys
 
 sub dump_block_summary {
     my ($self) = @_;
