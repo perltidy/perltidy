@@ -204,6 +204,7 @@ my (
     # short-cut option variables
     # INITIALIZER: sub initialize_global_option_vars
     $rOpts_add_newlines,
+    $rOpts_add_semicolons,
     $rOpts_add_whitespace,
     $rOpts_add_trailing_commas,
     $rOpts_add_lone_trailing_commas,
@@ -3450,6 +3451,7 @@ sub initialize_global_option_vars {
     #------------------------------------------------------------
 
     $rOpts_add_newlines             = $rOpts->{'add-newlines'};
+    $rOpts_add_semicolons           = $rOpts->{'add-semicolons'};
     $rOpts_add_trailing_commas      = $rOpts->{'add-trailing-commas'};
     $rOpts_add_lone_trailing_commas = $rOpts->{'add-lone-trailing-commas'};
     $rOpts_add_whitespace           = $rOpts->{'add-whitespace'};
@@ -6445,7 +6447,9 @@ EOM
 
             # Do not break before a phantom token because it will confuse
             # the convergence test (STRANGE message is emitted)
-            elsif ( $next_nonblank_type eq ',' || $next_nonblank_type eq ';' ) {
+            elsif ( $next_nonblank_type eq ','
+                || ( $next_nonblank_type eq ';' && !$rOpts_add_semicolons ) )
+            {
                 if ( !length($next_nonblank_token) ) {
                     $bond_str = NO_BREAK;
                 }
@@ -29201,7 +29205,7 @@ EOM
             # if --noadd-semicolons is set.
             if ( !$token_lengths_to_go[$imax] && $types_to_go[$imax] eq ';' ) {
                 $self->unmask_phantom_token($imax)
-                  if ( $rOpts->{'add-semicolons'} );
+                  if ($rOpts_add_semicolons);
             }
 
             if ( $rOpts_one_line_block_semicolons == 0 ) {
