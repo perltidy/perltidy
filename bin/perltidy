@@ -6386,11 +6386,16 @@ parameters:
   depth        - nesting depth of the opening block brace
   max_change   - change in depth to the most deeply nested code block
   block_count  - total number of code blocks nested in this block
-  mccabe_count - McCabe complexity measure of this code block
+  mccabe1      - McCabe complexity measure of this code block
+  mccabe2      - modified complexity: subs have anonymous sub complexity removed
 
 This feature was developed to help identify complex sections of code as an aid
-in refactoring.  The McCabe complexity measure follows the definition used by
-Perl::Critic.  By default the table contains these values for subroutines, but
+in refactoring.  The McCabe complexity measure, 'mccabe1', follows the
+definition used by Perl::Critic. The alternate complexity value, 'mccabe2', is
+the same except that for subroutines, the complexity of any contained anonymous
+subs is removed.
+
+By default the table contains these values for subroutines, but
 the user may request them for any or all blocks of code or packages.  For
 blocks which are loops nested within loops, a postfix '+' to the C<type> is
 added to indicate possible code complexity.  Although the table does not

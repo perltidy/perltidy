@@ -8856,6 +8856,7 @@ EOM
             level       => $level,
             max_change  => $max_change,
             block_count => $block_count,
+            seqno       => $seqno,
           };
     }    ## END loop to get info for selected blocks
     return \@selected_blocks;
@@ -9043,6 +9044,7 @@ sub follow_if_chain {
         level       => $level,
         max_change  => $max_change,
         block_count => $block_count,
+        seqno       => $seqno_if,
     };
 
     return $rchain;
@@ -10598,8 +10600,10 @@ sub dump_block_summary {
 
     my $rLL = $self->[_rLL_];
 
-    # add various counts, filter and print to STDOUT
-    my $routput_lines = [];
+    # add various counts
+    my %asub_mccabe_count_by_parent_seqno;
+    my $rparent_of_seqno = $self->[_rparent_of_seqno_];
+    my $routput_lines    = [];
     foreach my $item (@all_blocks) {
 
         my $K_opening = $item->{K_opening};
@@ -10618,11 +10622,6 @@ sub dump_block_summary {
             $code_lines = $code_lines_close - $code_lines_open + 1;
         }
 
-        # filter out blocks below the selected code line limit
-        if ( $code_lines < $rOpts_dump_block_minimum_lines ) {
-            next;
-        }
-
         # add mccabe_count for this block
         my $mccabe_closing = $rmccabe_count_sum->{ $K_closing + 1 };
         my $mccabe_opening = $rmccabe_count_sum->{$K_opening};
@@ -10631,21 +10630,55 @@ sub dump_block_summary {
             $mccabe_count += $mccabe_closing - $mccabe_opening;
         }
 
+        # save mccabe counts of asubs
+        if ( substr( $item->{type}, 0, 4 ) eq 'asub' ) {
+            my $seqno        = $item->{seqno};
+            my $parent_seqno = $rparent_of_seqno->{$seqno};
+            $asub_mccabe_count_by_parent_seqno{$parent_seqno} += $mccabe_count;
+        }
+
+        $item->{line_count}   = $line_count;
+        $item->{code_lines}   = $code_lines;
+        $item->{mccabe_count} = $mccabe_count;
+    }
+
+    foreach my $item (@all_blocks) {
+
+        my $code_lines = $item->{code_lines};
+
+        # filter out blocks below the selected code line limit
+        if ( $code_lines < $rOpts_dump_block_minimum_lines ) {
+            next;
+        }
+
+        my $mccabe1 = $item->{mccabe_count};
+        my $mccabe2 = $mccabe1;
+
+        # compute mccabe2 of subs by subtracting any asub counts
+        if ( substr( $item->{type}, 0, 3 ) eq 'sub' ) {
+            my $seqno      = $item->{seqno};
+            my $asub_count = $asub_mccabe_count_by_parent_seqno{$seqno};
+            if ($asub_count) {
+                $mccabe2 -= $asub_count;
+            }
+        }
+
         # Store the final set of print variables
         # Note: K_opening is added for sorting but deleted before printing
         push @{$routput_lines}, [
 
             $input_stream_name,
             $item->{line_start},
-            $line_count,
-            $code_lines,
+            $item->{line_count},
+            $item->{code_lines},
             $item->{type},
             $item->{name},
             $item->{level},
             $item->{max_change},
             $item->{block_count},
-            $mccabe_count,
-            $K_opening,
+            $mccabe1,
+            $mccabe2,
+            $item->{K_opening},
 
         ];
     }
@@ -10656,7 +10689,7 @@ sub dump_block_summary {
     my @sorted_lines = sort { $a->[-1] <=> $b->[-1] } @{$routput_lines};
 
     print {*STDOUT}
-"file,line,line_count,code_lines,type,name,level,max_change,block_count,mccabe_count\n";
+"file,line,line_count,code_lines,type,name,level,max_change,block_count,mccabe1,mccabe2 \n";
 
     foreach my $rline_vars (@sorted_lines) {
 
@@ -17805,6 +17838,7 @@ sub package_info_maker {
         is_block    => 0,
         max_change  => 0,
         block_count => 0,
+        seqno       => undef,
       };
 
     my @package_stack;
@@ -17912,6 +17946,7 @@ sub package_info_maker {
             is_block    => $is_block,
             max_change  => 0,
             block_count => 0,
+            seqno       => undef,
           };
     }
 
