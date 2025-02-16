@@ -938,9 +938,11 @@ EOM
         dump-mismatched-args
         dump-mismatched-returns
         dump-unique-keys
+        dump-hash-keys
         )
       )
     {
+
         if ( $rOpts->{$opt_name} ) {
             $self->[_dump_to_stdout_] = 1;
             if ( $num_files != 1 ) {
@@ -3853,6 +3855,7 @@ sub generate_options {
     $add_option->( 'dump-block-types',                'dbt',   '=s' );
     $add_option->( 'dump-cuddled-block-list',         'dcbl',  '!' );
     $add_option->( 'dump-defaults',                   'ddf',   '!' );
+    $add_option->( 'dump-hash-keys',                  'dhk',   '!' );
     $add_option->( 'dump-integer-option-range',       'dior',  '!' );
     $add_option->( 'dump-long-names',                 'dln',   '!' );
     $add_option->( 'dump-mismatched-args',            'dma',   '!' );
