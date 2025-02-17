@@ -38,7 +38,7 @@ my $usage = <<EOM;
 EOM
 use Getopt::Std;
 my %my_opts;
-my $cmdline = $0 . " " . join " ", @ARGV;
+my $cmdline_uu = $0 . " " . join " ", @ARGV;
 getopts( 'hdsq', \%my_opts ) or die "$usage";
 if ( $my_opts{h} ) { die "$usage" }
 
@@ -48,12 +48,12 @@ if ( !@files ) { @files = glob('*.par') }
 # Get a list of all options, their sections and abbreviations
 # Also get the list of defaults
 my (
-    $error_message,  $rGetopt_flags, $rsections,
-    $rabbreviations, $rOpts_default
+    $error_message_g,   $rGetopt_flags, $rsections_uu,
+    $rabbreviations_uu, $rOpts_default
 ) = get_perltidy_options();
 
-if ($error_message) {
-    die "$error_message\n";
+if ($error_message_g) {
+    die "$error_message_g\n";
 }
 
 # Keep a list of the values of parameters that we see
@@ -111,8 +111,9 @@ foreach my $long_name ( keys %{$rGetopt_flags} ) {
         $rsaw_values->{$long_name} = \@sorted;
         my $options_flag = $rGetopt_flags->{$long_name};
 
-        # Consider switches with just one value as not seen
-        if ( $options_flag eq '!' && @sorted < 2 ) {
+        # Old: Consider switches with just one value as not seen
+        # New: No longer doing this - the default provides the other value
+        if ( 0 && $options_flag eq '!' && @sorted < 2 ) {
             push @not_seen, $long_name;
         }
         else {
@@ -139,7 +140,7 @@ foreach my $long_name (@not_seen) {
     $fh->print("$long_name\n");
 }
 $fh->close();
-print "wrote $fnot_seen\n";
+print {*STDOUT} "wrote $fnot_seen\n";
 
 # Dump complete summary
 #print Data::Dumper->Dump($rsaw_values);
@@ -147,203 +148,9 @@ my $fseen = "coverage_values.txt";
 open( $fh, ">", $fseen ) || die "can open $fseen: $!\n";
 $fh->print( Dumper($rsaw_values) );
 $fh->close();
-print "wrote $fseen\n";
+print {*STDOUT} "wrote $fseen\n";
 
-=pod
-
-# Notes for future: print missing coverage by section
-
-# Optional: minimize the perltidyrc file length by deleting long_names
-# in $rOpts which are also in $rOpts_default and have the same value.
-# This would be useful if a perltidyrc file has been constructed from a
-# full parameter dump, for example.
-if ( $my_opts{d} ) {
-    foreach my $long_name ( keys %{$rOpts} ) {
-        delete $rOpts->{$long_name} if $equals_default{$long_name};
-    }
-}
-
-# find user-defined abbreviations
-my %abbreviations_user;
-foreach my $key ( keys %$rabbreviations ) {
-    unless ( $rabbreviations_default->{$key} ) {
-        $abbreviations_user{$key} = $rabbreviations->{$key};
-    }
-}
-
-# dump the options, if any
-if ( %$rOpts || %abbreviations_user ) {
-    dump_options( $cmdline, \%my_opts, $rOpts, $rGetopt_flags, $rsections,
-        $rabbreviations, \%equals_default, \%abbreviations_user );
-}
-else {
-    if ($config_file) {
-        print STDERR <<EOM;
-No configuration parameters seen in file: $config_file
-EOM
-    }
-    else {
-        print STDERR <<EOM;
-No .perltidyrc file found, use perltidy -dpro to see locations checked.
-EOM
-    }
-}
-
-=cut
-
-sub uniq { my %seen; grep !$seen{$_}++, @_ }
-
-sub dump_options {
-
-    # write the options back out as a valid .perltidyrc file
-    # This version writes long names by sections
-    my ( $cmdline, $rmy_opts, $rOpts, $rGetopt_flags, $rsections,
-        $rabbreviations, $requals_default, $rabbreviations_user )
-      = @_;
-
-    # $rOpts is a reference to the hash returned by Getopt::Long
-    # $rGetopt_flags are the flags passed to Getopt::Long
-    # $rsections is a hash giving manual section {long_name}
-
-    # build a hash giving section->long_name->parameter_value
-    # so that we can write parameters by section
-    my %section_and_name;
-    my $rsection_name_value = \%section_and_name;
-    my %saw_section;
-    foreach my $long_name ( keys %{$rOpts} ) {
-        my $section = $rsections->{$long_name};
-        $section = "UNKNOWN" unless ($section);    # shouldn't happen
-
-        # build a hash giving section->long_name->parameter_value
-        $rsection_name_value->{$section}->{$long_name} = $rOpts->{$long_name};
-
-        # remember what sections are in this hash
-        $saw_section{$section}++;
-    }
-
-    # build a table for long_name->short_name abbreviations
-    my %short_name;
-    foreach my $abbrev ( keys %{$rabbreviations} ) {
-        foreach my $abbrev ( sort keys %$rabbreviations ) {
-            my @list = @{ $$rabbreviations{$abbrev} };
-
-            # an abbreviation may expand into one or more other words,
-            # but only those that expand to a single word (which must be
-            # one of the long names) are the short names that we want
-            # here.
-            next unless @list == 1;
-            my $long_name = $list[0];
-            $short_name{$long_name} = $abbrev;
-        }
-    }
-
-    unless ( $rmy_opts->{q} ) {
-        my $date = localtime();
-        print "# perltidy configuration file created $date\n";
-        print "# using: $cmdline\n";
-    }
-
-    # loop to write section-by-section
-    foreach my $section ( sort keys %saw_section ) {
-        unless ( $rmy_opts->{q} ) {
-            print "\n";
-
-            # remove leading section number, which is there
-            # for sorting, i.e.,
-            # 1. Basic formatting options -> Basic formatting options
-            my $trimmed_section = $section;
-            $trimmed_section =~ s/^\d+\. //;
-            print "# $trimmed_section\n";
-        }
-
-        # loop over all long names for this section
-        my $rname_value = $rsection_name_value->{$section};
-        foreach my $long_name ( sort keys %{$rname_value} ) {
-
-            # pull out getopt flag and actual parameter value
-            my $flag  = $rGetopt_flags->{$long_name};
-            my $value = $rname_value->{$long_name};
-
-            # turn this it back into a parameter
-            my $prefix       = '--';
-            my $short_prefix = '-';
-            my $suffix       = "";
-            if ($flag) {
-                if ( $flag =~ /^=/ ) {
-                    if ( $value !~ /^\d+$/ ) { $value = '"' . $value . '"' }
-                    $suffix = "=" . $value;
-                }
-                elsif ( $flag =~ /^!/ ) {
-                    $prefix       .= "no" unless ($value);
-                    $short_prefix .= "n"  unless ($value);
-                }
-                elsif ( $flag =~ /^:/ ) {
-                    if ( $value !~ /^\d+$/ ) { $value = '"' . $value . '"' }
-                    $suffix = "=" . $value;
-                }
-                else {
-
-                    # shouldn't happen
-                    print
-"# ERROR in dump_options: unrecognized flag $flag for $long_name\n";
-                }
-            }
-
-=pod
-    # These long option names have no abbreviations or are treated specially
-    @option_string = qw(
-      html!
-      noprofile
-      no-profile
-      npro
-      recombine!
-      valign!
-      notidy
-    );
-=cut
-
-            # print the long version of the parameter
-            # with the short version as a side comment
-            my $short_name  = $short_name{$long_name};
-            my $long_option = $prefix . $long_name . $suffix;
-
-            # A few options do not have a short abbreviation
-            # so we will make it the same as the long option
-            # These include 'recombine' and 'valign', which are mainly
-            # for debugging.
-            my $short_option = $long_option;
-            if ($short_name) {
-                $short_option = $short_prefix . $short_name . $suffix;
-            }
-
-            my $note = $requals_default->{$long_name} ? "  [=default]" : "";
-            if ( $rmy_opts->{s} ) {
-                print $short_option. "\n";
-            }
-            else {
-                my $side_comment = "";
-                unless ( $rmy_opts->{q} ) {
-                    my $spaces = 40 - length($long_option);
-                    $spaces = 2 if ( $spaces < 2 );
-                    $side_comment =
-                      ' ' x $spaces . '# ' . $short_option . $note;
-                }
-                print $long_option . $side_comment . "\n";
-            }
-        }
-    }
-
-    if ( %{$rabbreviations_user} ) {
-        unless ( $rmy_opts->{q} ) {
-            print "\n";
-            print "# Abbreviations\n";
-        }
-        foreach my $key ( keys %$rabbreviations_user ) {
-            my @vals = @{ $rabbreviations_user->{$key} };
-            print $key. ' {' . join( ' ', @vals ) . '}' . "\n";
-        }
-    }
-}
+sub uniq { my %saw; grep !$saw{$_}++, @_ }
 
 sub get_perltidy_options {
 
@@ -379,18 +186,18 @@ sub get_perltidy_options {
     # debug: show how everything is stored by printing it out
     my $DEBUG = 0;
     if ($DEBUG) {
-        print "---Getopt Parameters---\n";
+        print {*STDOUT} "---Getopt Parameters---\n";
         foreach my $key ( sort keys %Getopt_flags ) {
-            print "$key$Getopt_flags{$key}\n";
+            print {*STDOUT} "$key$Getopt_flags{$key}\n";
         }
-        print "---Manual Sections---\n";
+        print {*STDOUT} "---Manual Sections---\n";
         foreach my $key ( sort keys %sections ) {
-            print "$key -> $sections{$key}\n";
+            print {*STDOUT} "$key -> $sections{$key}\n";
         }
-        print "---Abbreviations---\n";
+        print {*STDOUT} "---Abbreviations---\n";
         foreach my $key ( sort keys %abbreviations ) {
             my @names = @{ $abbreviations{$key} };
-            print "$key -> {@names}\n";
+            print {*STDOUT} "$key -> {@names}\n";
         }
     }
 
@@ -398,7 +205,7 @@ sub get_perltidy_options {
         $error_message,  \%Getopt_flags, \%sections,
         \%abbreviations, \%Opts_default,
     );
-}
+} ## end sub get_perltidy_options
 
 sub read_perltidyrc {
 
@@ -436,12 +243,202 @@ sub read_perltidyrc {
     # debug: show how everything is stored by printing it out
     my $DEBUG = 0;
     if ($DEBUG) {
-        print "---Opts---\n";
+        print {*STDOUT} "---Opts---\n";
         foreach my $key ( sort keys %Opts ) {
-            print "$key -> $Opts{$key}\n";
+            print {*STDOUT} "$key -> $Opts{$key}\n";
         }
     }
     return ( $error_message, \%Opts );
+} ## end sub read_perltidyrc
+
+__END__
+
+# Notes for future: print missing coverage by section
+
+# Optional: minimize the perltidyrc file length by deleting long_names
+# in $rOpts which are also in $rOpts_default and have the same value.
+# This would be useful if a perltidyrc file has been constructed from a
+# full parameter dump, for example.
+if ( $my_opts{d} ) {
+    foreach my $long_name ( keys %{$rOpts} ) {
+        delete $rOpts->{$long_name} if $equals_default{$long_name};
+    }
+}
+
+# find user-defined abbreviations
+my %abbreviations_user;
+foreach my $key ( keys %$rabbreviations ) {
+    unless ( $rabbreviations_default->{$key} ) {
+        $abbreviations_user{$key} = $rabbreviations->{$key};
+    }
+}
+
+# dump the options, if any
+if ( %$rOpts || %abbreviations_user ) {
+    dump_options( $cmdline, \%my_opts, $rOpts, $rGetopt_flags, $rsections,
+        $rabbreviations, \%equals_default, \%abbreviations_user );
+}
+else {
+    if ($config_file) {
+        print {*STDERR} <<EOM;
+No configuration parameters seen in file: $config_file
+EOM
+    }
+    else {
+        print {*STDERR} <<EOM;
+No .perltidyrc file found, use perltidy -dpro to see locations checked.
+EOM
+    }
+}
+
+sub dump_options {
+
+    # write the options back out as a valid .perltidyrc file
+    # This version writes long names by sections
+    my ( $cmdline, $rmy_opts, $rOpts, $rGetopt_flags, $rsections,
+        $rabbreviations, $requals_default, $rabbreviations_user )
+      = @_;
+
+    # $rOpts is a reference to the hash returned by Getopt::Long
+    # $rGetopt_flags are the flags passed to Getopt::Long
+    # $rsections is a hash giving manual section {long_name}
+
+    # build a hash giving section->long_name->parameter_value
+    # so that we can write parameters by section
+    my %section_and_name;
+    my $rsection_name_value = \%section_and_name;
+    my %saw_section;
+    foreach my $long_name ( keys %{$rOpts} ) {
+        my $section = $rsections->{$long_name};
+        $section = "UNKNOWN" unless ($section);    # shouldn't happen
+
+        # build a hash giving section->long_name->parameter_value
+        $rsection_name_value->{$section}->{$long_name} = $rOpts->{$long_name};
+
+        # remember what sections are in this hash
+        $saw_section{$section}++;
+    }
+
+    # build a table for long_name->short_name abbreviations
+    my %short_name;
+    foreach my $abbrev ( keys %{$rabbreviations} ) {
+        ##foreach my $abbrev ( sort keys %$rabbreviations ) {
+            my @list = @{ $$rabbreviations{$abbrev} };
+
+            # an abbreviation may expand into one or more other words,
+            # but only those that expand to a single word (which must be
+            # one of the long names) are the short names that we want
+            # here.
+            next unless @list == 1;
+            my $long_name = $list[0];
+            $short_name{$long_name} = $abbrev;
+        ##}
+    }
+
+    unless ( $rmy_opts->{q} ) {
+        my $date = localtime();
+        print {*STDOUT} "# perltidy configuration file created $date\n";
+        print {*STDOUT} "# using: $cmdline\n";
+    }
+
+    # loop to write section-by-section
+    foreach my $section ( sort keys %saw_section ) {
+        unless ( $rmy_opts->{q} ) {
+            print {*STDOUT} "\n";
+
+            # remove leading section number, which is there
+            # for sorting, i.e.,
+            # 1. Basic formatting options -> Basic formatting options
+            my $trimmed_section = $section;
+            $trimmed_section =~ s/^\d+\. //;
+            print {*STDOUT} "# $trimmed_section\n";
+        }
+
+        # loop over all long names for this section
+        my $rname_value = $rsection_name_value->{$section};
+        foreach my $long_name ( sort keys %{$rname_value} ) {
+
+            # pull out getopt flag and actual parameter value
+            my $flag  = $rGetopt_flags->{$long_name};
+            my $value = $rname_value->{$long_name};
+
+            # turn this it back into a parameter
+            my $prefix       = '--';
+            my $short_prefix = '-';
+            my $suffix       = "";
+            if ($flag) {
+                if ( $flag =~ /^=/ ) {
+                    if ( $value !~ /^\d+$/ ) { $value = '"' . $value . '"' }
+                    $suffix = "=" . $value;
+                }
+                elsif ( $flag =~ /^!/ ) {
+                    $prefix       .= "no" unless ($value);
+                    $short_prefix .= "n"  unless ($value);
+                }
+                elsif ( $flag =~ /^:/ ) {
+                    if ( $value !~ /^\d+$/ ) { $value = '"' . $value . '"' }
+                    $suffix = "=" . $value;
+                }
+                else {
+
+                    # shouldn't happen
+                    print {*STDOUT}
+"# ERROR in dump_options: unrecognized flag $flag for $long_name\n";
+                }
+            }
+
+##    # These long option names have no abbreviations or are treated specially
+##    @option_string = qw(
+##      html!
+##      noprofile
+##      no-profile
+##      npro
+##      recombine!
+##      valign!
+##      notidy
+##    );
+
+            # print the long version of the parameter
+            # with the short version as a side comment
+            my $short_name  = $short_name{$long_name};
+            my $long_option = $prefix . $long_name . $suffix;
+
+            # A few options do not have a short abbreviation
+            # so we will make it the same as the long option
+            # These include 'recombine' and 'valign', which are mainly
+            # for debugging.
+            my $short_option = $long_option;
+            if ($short_name) {
+                $short_option = $short_prefix . $short_name . $suffix;
+            }
+
+            my $note = $requals_default->{$long_name} ? "  [=default]" : "";
+            if ( $rmy_opts->{s} ) {
+                print {*STDOUT} $short_option. "\n";
+            }
+            else {
+                my $side_comment = "";
+                unless ( $rmy_opts->{q} ) {
+                    my $spaces = 40 - length($long_option);
+                    $spaces = 2 if ( $spaces < 2 );
+                    $side_comment =
+                      ' ' x $spaces . '# ' . $short_option . $note;
+                }
+                print {*STDOUT} $long_option . $side_comment . "\n";
+            }
+        }
+    }
+
+    if ( %{$rabbreviations_user} ) {
+        unless ( $rmy_opts->{q} ) {
+            print {*STDOUT} "\n";
+            print {*STDOUT} "# Abbreviations\n";
+        }
+        foreach my $key ( keys %$rabbreviations_user ) {
+            my @vals = @{ $rabbreviations_user->{$key} };
+            print {*STDOUT} $key. ' {' . join( ' ', @vals ) . '}' . "\n";
+        }
+    }
 }
 
 sub xx_read_perltidyrc {
@@ -519,20 +516,20 @@ sub xx_read_perltidyrc {
     # debug: show how everything is stored by printing it out
     my $DEBUG = 1;
     if ($DEBUG) {
-        print "---Getopt Parameters---\n";
+        print {*STDOUT} "---Getopt Parameters---\n";
         foreach my $key ( sort keys %Getopt_flags ) {
-            print "$key$Getopt_flags{$key}\n";
+            print {*STDOUT} "$key$Getopt_flags{$key}\n";
         }
-        print "---Manual Sections---\n";
+        print {*STDOUT} "---Manual Sections---\n";
         foreach my $key ( sort keys %sections ) {
-            print "$key -> $sections{$key}\n";
+            print {*STDOUT} "$key -> $sections{$key}\n";
         }
-        print "---Abbreviations---\n";
+        print {*STDOUT} "---Abbreviations---\n";
         foreach my $key ( sort keys %abbreviations ) {
             my @names = @{ $abbreviations{$key} };
-            print "$key -> {@names}\n";
+            print {*STDOUT} "$key -> {@names}\n";
             unless ( $abbreviations_default{$key} ) {
-                print "NOTE: $key is user defined\n";
+                print {*STDOUT} "NOTE: $key is user defined\n";
             }
         }
     }
