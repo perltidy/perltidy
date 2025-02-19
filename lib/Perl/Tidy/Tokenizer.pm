@@ -1139,11 +1139,23 @@ sub show_indentation_table {
         }
     }
 
-    # skip if the table does not have at least 2 points to pinpoint an error
+    # Skip if the table does not have at least 2 points to pinpoint an error
     return if ( $num_his <= 1 );
 
-    # skip if first point shows a level error - the analysis may not be valid
+    # Skip if first point shows a level error - the analysis may not be valid
     return if ( $rhistory_level_diff->[0] );
+
+    # Remove table points which return from negative to zero; they follow
+    # an error and may not be correct. c448.
+    my $min_lev = $rhistory_level_diff->[0];
+    foreach my $ii ( 1 .. $num_his - 1 ) {
+        my $lev = $rhistory_level_diff->[$ii];
+        if ( $lev < $min_lev ) { $min_lev = $lev; next }
+        if ( $min_lev < 0 && $lev >= 0 ) {
+            $num_his = $ii;
+            last;
+        }
+    }
 
     # Since the table could be arbitrarily large, we will limit the table to N
     # lines.  If there are more lines than that, we will show N-3 lines, then
@@ -1164,7 +1176,7 @@ sub show_indentation_table {
 
     my @output_lines;
     push @output_lines, <<EOM;
-Table of nesting level differences at closing braces.
+Table of initial nesting level differences at closing braces.
 This might help localize brace errors if the file was previously formatted.
 line: error=[new brace level]-[old indentation level]
 EOM
