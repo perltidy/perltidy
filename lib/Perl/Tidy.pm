@@ -939,6 +939,7 @@ EOM
         dump-mismatched-returns
         dump-unique-keys
         dump-hash-keys
+        dump-similar-keys
         )
       )
     {
@@ -3864,6 +3865,7 @@ sub generate_options {
     $add_option->( 'dump-options',                    'dop',   '!' );
     $add_option->( 'dump-profile',                    'dpro',  '!' );
     $add_option->( 'dump-short-names',                'dsn',   '!' );
+    $add_option->( 'dump-similar-keys',               'dsk',   '!' );
     $add_option->( 'dump-token-types',                'dtt',   '!' );
     $add_option->( 'dump-unusual-variables',          'duv',   '!' );
     $add_option->( 'dump-unique-keys',                'duk',   '!' );
@@ -3881,6 +3883,9 @@ sub generate_options {
     $add_option->( 'maximum-level-errors',            'maxle', '=i' );
     $add_option->( 'maximum-unexpected-errors',       'maxue', '=i' );
     $add_option->( 'integer-range-check',             'irc',   '=i' );
+
+    $add_option->( 'similar-keys-maximum-differences', 'skmd', '!' );
+    $add_option->( 'similar-keys-minimum-length',      'skml', '!' );
 
     #---------------------------------------------------------------------
 

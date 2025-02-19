@@ -6696,6 +6696,22 @@ warnings for specific keys is to list them somewhere in the program in a B<qw>
 list. This will be seen during the key scan, and the then keys will not be
 considered unique.
 
+=item B<Use --dump-hash-keys> to dump a list of hash keys
+
+The parameter B<--dump-hash-keys>, or B<-dhk>, dumps a list of all hash keys
+found by perltidy to the standard output and exits.
+For example:
+
+   perltidy -dhk File.pm >output.txt
+
+The lines in the output file list the keys and number of occurances.
+
+A program C<dump_similar_keys.pl> at
+L<https://github.com/perltidy/perltidy/tree/master/examples> can run perltidy
+with B<-dhk> on one or more files, and then display pairs of hash keys which
+are similar but different. This can help check for problems such as
+misspelled hash keys.
+
 =item B<Use --dump-mixed-call-parens to find functions called both with and without parens>
 
 The parameter B<--dump-mixed-call-parens>, or B<-dmcp>, provides information on

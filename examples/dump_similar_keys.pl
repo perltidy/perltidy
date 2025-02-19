@@ -4,18 +4,18 @@
 # hash keys which are very similar but different.
 
 # This is one of the perltidy example files; the latest should be at:
-# The latest version of this file should be at:
 # https://github.com/perltidy/perltidy/blob/master/examples/dump_similar_keys.pl
 
 use strict;
 use warnings;
 use File::Temp qw{ tempfile };
 use Getopt::Long;
+use constant SPACE => q{ };
 
 # Defaults:
 # - ignore keys with length < $minimum_length
 # - do not report key pairs whose differences exceed $maximum_differences
-my $minimum_length      = 3;
+my $minimum_length      = 4;
 my $maximum_differences = 1;
 
 my $usage = <<EOM;
@@ -25,13 +25,13 @@ Usage:
   If no files are given, look for MANIFEST and use files lib/.../*.pm
 
   [args] are optional control parameters [defaults shown]:
-   -h or --help                    :this help message
-   -l=n or --minimum_length=n      :ignore keys with less than n chars [l=3]
-   -m=n or --maximum_differences=n :n=max differences for similarity [-m=1]
+  -h or --help                 :this help message
+  -l=n or --minimum_length=n   :ignore keys with less than n chars [default 4]
+  -m=n or --maximum_differences=n :n=max differences for similarity [default 1]
 
   Notes:
    Keys consisting of pure punctuation are ignored
-   Keys with a different first letter are considered dissimilar, 
+   Keys with a different first letter are considered dissimilar,
      where the first letter ignores case and any preceding _ or punctuation
    Transposed characters count as 1 difference
 EOM
@@ -61,12 +61,7 @@ main();
 
 sub main {
 
-    my @files;
-    my @args;
-    foreach my $str (@ARGV) {
-        if   ( substr( $str, 0, 1 ) eq '-' ) { push @args,  $str }
-        else                                 { push @files, $str }
-    }
+    my @files = @ARGV;
 
     if ( !@files ) {
         my $MANIFEST = "MANIFEST";
@@ -79,8 +74,6 @@ sub main {
     }
 
     if ( !@files ) { die $usage }
-
-    # TODO: @args not yet used
 
     foreach my $file (@files) {
         if ( !-e $file ) { die "file '$file' not found\n" }
@@ -109,7 +102,7 @@ sub main {
         die "cannot open my temp file '$tmpfile': $!\n";
     }
 
-    # read the captured output and update the counts
+    # Read the captured output and update the counts
     my %word_info;
     foreach my $line (<$fh>) {
         if ( $line =~ /^(.*),(\d+)\s*$/ ) {
@@ -118,11 +111,12 @@ sub main {
             my $string_length = length($word);
             next if ( $string_length < $minimum_length );
             if ( !defined( $word_info{$word} ) ) {
-                if ( $word =~ /([^\W_])/ ) {
+                if ( $word =~ /([^\W_])/g ) {
                     $word_info{$word} = {
                         count         => $count,
-                        first_letter  => $1,
+                        first_letter  => lc($1),
                         string_length => $string_length,
+                        offset        => pos($word) - 1,
                     };
                 }
             }
@@ -133,18 +127,19 @@ sub main {
     }
     $fh->close();
 
-    # Keys with a different 'first_letter' are considered dissimilar here,
-    # where the first letter ignores case and preceding _ or punctuation
     my @sorted_words = sort {
              $word_info{$a}->{first_letter} cmp $word_info{$b}->{first_letter}
           || $word_info{$a}->{string_length} <=> $word_info{$b}->{string_length}
+          || $a cmp $b
     } ( keys %word_info );
 
+    # Loop to find pairs of similar hash keys
     my @word_pairs;
   WORD:
     while (@sorted_words) {
         my $word         = shift @sorted_words;
         my $first_letter = $word_info{$word}->{first_letter};
+        my $offset       = $word_info{$word}->{offset};
         my $word_length  = $word_info{$word}->{string_length};
         foreach my $word2 (@sorted_words) {
 
@@ -155,10 +150,22 @@ sub main {
               if ( $word_info{$word2}->{string_length} - $word_length >
                 $maximum_differences );
 
-            if ( string_approximate_match( $word, $word2, $maximum_differences )
+            my $offset2 = $word_info{$word2}->{offset};
+            if (
+                string_approximate_match(
+                    $word, $word2, $offset, $offset2, $maximum_differences
+                )
               )
             {
-                push @word_pairs, [ $word, $word2 ];
+                my $w1     = $word;
+                my $w2     = $word2;
+                my $count1 = $word_info{$w1}->{count};
+                my $count2 = $word_info{$w2}->{count};
+                if ( $count2 < $count1 ) {
+                    ( $w1,     $w2 )     = ( $w2,     $w1 );
+                    ( $count1, $count2 ) = ( $count2, $count1 );
+                }
+                push @word_pairs, [ $w1, $w2, $count1, $count2 ];
             }
         }
     } ## end WORD: while (@sorted_words)
@@ -166,13 +173,7 @@ sub main {
     if (@word_pairs) {
         print "key1,key2,count1,count2\n";
         foreach my $pair (@word_pairs) {
-            my ( $w1, $w2 ) = @{$pair};
-            my $count1 = $word_info{$w1}->{count};
-            my $count2 = $word_info{$w2}->{count};
-            if ( $count2 < $count1 ) {
-                ( $w1,     $w2 )     = ( $w2,     $w1 );
-                ( $count1, $count2 ) = ( $count2, $count1 );
-            }
+            my ( $w1, $w2, $count1, $count2 ) = @{$pair};
             print "$w1,$w2,$count1,$count2\n";
         }
     }
@@ -199,53 +200,134 @@ sub read_MANIFEST {
 } ## end sub read_MANIFEST
 
 sub string_approximate_match {
-    my ( $s1, $s2, $max_diff ) = @_;
+    my ( $s1, $s2, $o1, $o2, $max_diff ) = @_;
 
-    # Given two strings $s1 and $s2
+    # Given
+    #   $s1 and $s2 = 2 strings
+    #   $o1 and $o2 = their offsets to leading alphanumeric character
     # Return:
     #   true if the number of differences is <= $max_diff
     #   false otherwise
 
-    my $len1 = length($s1);
-    my $len2 = length($s2);
-    my $diff_count;
-    if ( $len1 > $len2 ) {
-        $diff_count = $len1 - $len2;
-        return if ( $diff_count > $max_diff );
-        $s1 = substr( $s1, 0, $len2 );
+    # Basic rules for calculating the number of differences:
+    #  1. transposed characters            = 1 difference
+    #  2. a missing or extra character     = 1 difference
+    #  3. repeated same-character changes  = 1 difference
+    #  4. otherwise, different characters  = 1 difference
+    my $s1_in = $s1;
+    my $s2_in = $s2;
+
+    # Pad with leading spaces to get alignment at first alphanumeric character
+    my $odiff = $o2 - $o1;
+    if ( $odiff > 0 ) {
+        $s1 = ( SPACE x $odiff ) . $s1;
     }
-    elsif ( $len2 > $len1 ) {
-        $diff_count = $len2 - $len1;
-        return if ( $diff_count > $max_diff );
-        $s2 = substr( $s2, 0, $len1 );
+    elsif ( $odiff < 0 ) {
+        $s2 = ( SPACE x -$odiff ) . $s2;
     }
     else {
-        $diff_count = 0;
+        ## words align at first char
     }
+
+    # Pad with spaces on right to get equal lengths.
+    # If we find missing characters, we will move them to those locations.
+    my $len1 = length($s1);
+    my $len2 = length($s2);
+    my $pad1 = 0;
+    my $pad2 = 0;
+    if ( $len1 > $len2 ) {
+        $pad2 = $len1 - $len2;
+        $s2 .= SPACE x $pad2;
+    }
+    elsif ( $len2 > $len1 ) {
+        $pad1 = $len2 - $len1;
+        $s1 .= SPACE x $pad1;
+    }
+    else {
+        ## equal lengths
+    }
+
+    # Loop to count character differences, which are at null characters in the
+    # xor mask. Give up if the max diff count is exceeded.
+    my %saw_change;
+    my $diff_count = 0;
     my $posm;
     my $mask = $s1 ^ $s2;
     while ( $mask =~ /[^\0]/g ) {
-        $diff_count++;
 
-        # Count a transposition as just 1 diff
         my $pos = pos($mask);
+        if ( $posm && $pos < $posm ) {
+            ## shouldn't happen unless the pos was incorrectly set
+            print STDERR "Infinite loop detected for s1=$s1_in s2=$s2_in\n";
+            return;
+        }
+
+        # Special checks for two differences in a row..
+        # we may have to reduce the difference count
+        my $diff_inc = 1;
+        my $c1p      = substr( $s1, $pos - 1, 1 );
+        my $c2p      = substr( $s2, $pos - 1, 1 );
         if ( $posm && $posm + 1 == $pos ) {
-            my $l11 = substr( $s1, $posm - 1, 1 );
-            my $l22 = substr( $s2, $pos - 1,  1 );
-            if ( $l11 eq $l22 ) {
-                my $l12 = substr( $s1, $pos - 1,  1 );
-                my $l21 = substr( $s2, $posm - 1, 1 );
-                if ( $l12 eq $l21 ) {
-                    $diff_count--;
+            my $c1m = substr( $s1, $posm - 1, 1 );
+            my $c2m = substr( $s2, $posm - 1, 1 );
+            if ( $c1m eq $c2p ) {
+
+                # Transposition: just count as one difference
+                if ( $c1p eq $c2m ) {
+                    $diff_inc = 0;
+                }
+
+                # Check for a missing character in $s1 (or extra in $s2)
+                else {
+                    if ( $pad1 > 0 && $c1p eq substr( $s2, $pos, 1 ) ) {
+
+                        # Missing character: remove the ending space,
+                        # then rotate it back into the missing character spot
+                        $s1 = substr( $s1, 0, -1 );
+                        substr( $s1, $posm - 1, 0, SPACE );
+                        $pad1 -= 1;
+
+                        # Update the mask and fix the count.
+                        $mask = $s1 ^ $s2;
+                        pos($mask) = $pos;
+                        $diff_inc = 0;
+                    }
+                }
+            }
+
+            # Check for a missing character in $s2 (or extra in $s1)
+            else {
+
+                if (   $c1p eq $c2m
+                    && $pad2 > 0
+                    && $c2p eq substr( $s1, $pos, 1 ) )
+                {
+
+                    # Missing character: remove the ending space,
+                    # then rotate it back into the missing character spot
+                    $s2 = substr( $s2, 0, -1 );
+                    substr( $s2, $posm - 1, 0, SPACE );
+                    $pad2 -= 1;
+
+                    # Update the mask and fix the count.
+                    $mask = $s1 ^ $s2;
+                    pos($mask) = $pos;
+                    $diff_inc = 0;
                 }
             }
         }
         $posm = $pos;
 
+        # count repeated single character changes just 1 time
+        if ( $diff_inc && $saw_change{ $c1p . $c2p }++ ) { $diff_inc = 0 }
+
+        if ($diff_inc) { $diff_count += $diff_inc }
         if ( $diff_count > $max_diff ) {
             return;
         }
     } ## end while ( $mask =~ /[^\0]/g)
+
+    # match
     return 1;
 } ## end sub string_approximate_match
 

@@ -8339,6 +8339,11 @@ EOM
           if ( $self->[_logger_object_] );
     }
 
+    if ( $rOpts->{'dump-similar-keys'} ) {
+        $self->dump_similar_keys();
+        Exit(0);
+    }
+
     if ( $rOpts->{'dump-hash-keys'} ) {
         $self->dump_hash_keys();
         Exit(0);
@@ -9097,7 +9102,7 @@ sub scan_hash_keys {
     # During this scan we save pointers to all quotes and here docs,
     # for use in the second phase.
 
-    # End here for --dump-hash-keys, otherwise keep going:
+    # End here for -dhk, otherwise keep going:
 
     # PHASE 2: We find the keys which occur just once, and store their
     # index in the hash %K_unique_key. Then we compare all quoted text
@@ -10525,6 +10530,260 @@ sub warn_unique_keys {
     }
     return;
 } ## end sub warn_unique_keys
+
+sub string_approximate_match {
+    my ( $s1, $s2, $o1, $o2, $max_diff ) = @_;
+
+    # Given
+    #   $s1 and $s2 = 2 strings
+    #   $o1 and $o2 = their offsets to leading alphanumeric character
+    # Return:
+    #   true if the number of differences is <= $max_diff
+    #   false otherwise
+
+    # Basic rules for calculating the number of differences:
+    #  1. transposed characters            = 1 difference
+    #  2. a missing or extra character     = 1 difference
+    #  3. repeated same-character changes  = 1 difference
+    #  4. otherwise, different characters  = 1 difference
+    my $s1_in = $s1;
+    my $s2_in = $s2;
+
+    # Pad with leading spaces to get alignment at first alphanumeric character
+    my $odiff = $o2 - $o1;
+    if ( $odiff > 0 ) {
+        $s1 = ( SPACE x $odiff ) . $s1;
+    }
+    elsif ( $odiff < 0 ) {
+        $s2 = ( SPACE x -$odiff ) . $s2;
+    }
+    else {
+        ## words align at first char
+    }
+
+    # Pad with spaces on right to get equal lengths.
+    # If we find missing characters, we will move them to those locations.
+    my $len1 = length($s1);
+    my $len2 = length($s2);
+    my $pad1 = 0;
+    my $pad2 = 0;
+    if ( $len1 > $len2 ) {
+        $pad2 = $len1 - $len2;
+        $s2 .= SPACE x $pad2;
+    }
+    elsif ( $len2 > $len1 ) {
+        $pad1 = $len2 - $len1;
+        $s1 .= SPACE x $pad1;
+    }
+    else {
+        ## equal lengths
+    }
+
+    # Loop to count character differences, which are at null characters in the
+    # xor mask. Give up if the max diff count is exceeded.
+    my %saw_change;
+    my $diff_count = 0;
+    my $posm;
+    my $mask = $s1 ^ $s2;
+    while ( $mask =~ /[^\0]/g ) {
+
+        my $pos = pos($mask);
+        if ( $posm && $pos < $posm ) {
+            ## shouldn't happen unless the pos was incorrectly set
+            print STDERR "Infinite loop detected for s1=$s1_in s2=$s2_in\n";
+            return;
+        }
+
+        # Special checks for two differences in a row..
+        # we may have to reduce the difference count
+        my $diff_inc = 1;
+        my $c1p      = substr( $s1, $pos - 1, 1 );
+        my $c2p      = substr( $s2, $pos - 1, 1 );
+        if ( $posm && $posm + 1 == $pos ) {
+            my $c1m = substr( $s1, $posm - 1, 1 );
+            my $c2m = substr( $s2, $posm - 1, 1 );
+            if ( $c1m eq $c2p ) {
+
+                # Transposition: just count as one difference
+                if ( $c1p eq $c2m ) {
+                    $diff_inc = 0;
+                }
+
+                # Check for a missing character in $s1 (or extra in $s2)
+                else {
+                    if ( $pad1 > 0 && $c1p eq substr( $s2, $pos, 1 ) ) {
+
+                        # Missing character: remove the ending space,
+                        # then rotate it back into the missing character spot
+                        $s1 = substr( $s1, 0, -1 );
+                        substr( $s1, $posm - 1, 0, SPACE );
+                        $pad1 -= 1;
+
+                        # Update the mask and fix the count.
+                        $mask = $s1 ^ $s2;
+                        pos($mask) = $pos;
+                        $diff_inc = 0;
+                    }
+                }
+            }
+
+            # Check for a missing character in $s2 (or extra in $s1)
+            else {
+
+                if (   $c1p eq $c2m
+                    && $pad2 > 0
+                    && $c2p eq substr( $s1, $pos, 1 ) )
+                {
+
+                    # Missing character: remove the ending space,
+                    # then rotate it back into the missing character spot
+                    $s2 = substr( $s2, 0, -1 );
+                    substr( $s2, $posm - 1, 0, SPACE );
+                    $pad2 -= 1;
+
+                    # Update the mask and fix the count.
+                    $mask = $s1 ^ $s2;
+                    pos($mask) = $pos;
+                    $diff_inc = 0;
+                }
+            }
+        }
+        $posm = $pos;
+
+        # count repeated single character changes just 1 time
+        if ( $diff_inc && $saw_change{ $c1p . $c2p }++ ) { $diff_inc = 0 }
+
+        if ($diff_inc) { $diff_count += $diff_inc }
+        if ( $diff_count > $max_diff ) {
+            return;
+        }
+    } ## end while ( $mask =~ /[^\0]/g)
+
+    # match
+    return 1;
+} ## end sub string_approximate_match
+
+sub find_similar_keys {
+    my ( $input_string, $max_diff, $min_len ) = @_;
+
+    # Called by --dump-similar-keys
+
+    # Given:
+    #   $input_string = list of all hash keys and their counts, from -dhk
+    #   $max_diff: do not report key pairs whose differences exceed
+    #       this value
+    #   $min_len: ignore keys with length < $min_len
+    # Return:
+    #   $output_string = printable string of results, if any
+    # NOTES:
+    #  -This version receives the results of -dhk as a string. It could
+    #   also receive a data structure instead.
+    #  -This code also exists in examples/dump_similar_keys.pl
+    #  -The main simplifying assumption is that when checking for similarity
+    #   of word pairs we align them at their first alphanumeric character.
+
+    return if ( !$input_string );
+    my @lines = split /^/, $input_string;
+    my %word_info;
+    foreach my $line (@lines) {
+        if ( $line =~ /^(.*),(\d+)\s*$/ ) {
+            my $word          = $1;
+            my $count         = $2;
+            my $string_length = length($word);
+            next if ( $string_length < $min_len );
+            if ( !defined( $word_info{$word} ) ) {
+                if ( $word =~ /([^\W_])/g ) {
+                    $word_info{$word} = {
+                        count         => $count,
+                        first_letter  => lc($1),
+                        string_length => $string_length,
+                        offset        => pos($word) - 1,
+                    };
+                }
+            }
+            else {
+                $word_info{$word}->{count} += $count;
+            }
+        }
+    }
+
+    my @sorted_words = sort {
+             $word_info{$a}->{first_letter} cmp $word_info{$b}->{first_letter}
+          || $word_info{$a}->{string_length} <=> $word_info{$b}->{string_length}
+          || $a cmp $b
+    } ( keys %word_info );
+
+    # Loop to find pairs of similar hash keys
+    my @word_pairs;
+  WORD:
+    while (@sorted_words) {
+        my $word         = shift @sorted_words;
+        my $first_letter = $word_info{$word}->{first_letter};
+        my $offset       = $word_info{$word}->{offset};
+        my $word_length  = $word_info{$word}->{string_length};
+        foreach my $word2 (@sorted_words) {
+
+            # sorted order allows us to bail out as soon as possible
+            next WORD
+              if ( $first_letter ne $word_info{$word2}->{first_letter} );
+            next WORD
+              if ( $word_info{$word2}->{string_length} - $word_length >
+                $max_diff );
+
+            my $offset2 = $word_info{$word2}->{offset};
+            if (
+                string_approximate_match(
+                    $word, $word2, $offset, $offset2, $max_diff
+                )
+              )
+            {
+                my $w1     = $word;
+                my $w2     = $word2;
+                my $count1 = $word_info{$w1}->{count};
+                my $count2 = $word_info{$w2}->{count};
+                if ( $count2 < $count1 ) {
+                    ( $w1,     $w2 )     = ( $w2,     $w1 );
+                    ( $count1, $count2 ) = ( $count2, $count1 );
+                }
+                push @word_pairs, [ $w1, $w2, $count1, $count2 ];
+            }
+        }
+    } ## end WORD: while (@sorted_words)
+
+    my $output_string = EMPTY_STRING;
+    if (@word_pairs) {
+        $output_string .= "key1,key2,count1,count2\n";
+        foreach my $pair (@word_pairs) {
+            my ( $w1, $w2, $count1, $count2 ) = @{$pair};
+            $output_string .= "$w1,$w2,$count1,$count2\n";
+        }
+    }
+    return $output_string;
+} ## end sub find_similar_keys
+
+sub dump_similar_keys {
+    my ($self) = @_;
+
+    # Dump pairs of similar hash keys to STDOUT for
+    #   --dump-similar-keys (-dsk)
+
+    my $max_diff = $rOpts->{'similar-keys-maximum-differences'};
+    my $min_len  = $rOpts->{'similar-keys-minimum-length'};
+    $max_diff = 1 if ( !defined($max_diff) || $max_diff < 1 );
+    $min_len  = 4 if ( !defined($min_len)  || $min_len < 1 );
+
+    my $output_string = $self->scan_hash_keys('dhk');
+    $output_string = find_similar_keys( $output_string, $max_diff, $min_len );
+    if ($output_string) {
+        my $input_stream_name = get_input_stream_name();
+        chomp $output_string;
+        print {*STDOUT} <<EOM;
+==> $input_stream_name <==
+$output_string
+EOM
+    }
+    return;
+} ## end sub dump_similar_keys
 
 sub dump_hash_keys {
     my ($self) = @_;

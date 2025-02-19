@@ -2,6 +2,16 @@
 
 ## 2025 02 14.01
 
+    - A new optiion --dump-hash-keys will dump all hash keys found by
+      perltidy to standard output. A new script in the examples folder,
+      dump-sumilar-keys.pl, uses this option to locate keys which
+      are similar but different, possibly due to misspelling.
+
+    - The output table for --dump-block-summary has an additional field.
+      It is an alternate McCabe complexity count which is the same as
+      the previous count except for subs. For subs, the complexity number
+      is reduced by the values for any contained anonymous subs.
+
     - Fix git #181, remove continuation indentation from closing brace
       of an anonymous sub which terminates an input stream.
 
