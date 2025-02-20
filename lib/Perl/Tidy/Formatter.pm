@@ -9662,7 +9662,23 @@ EOM
             }
         }
         else {
-##FIXME: check for redefinition of a key in same list
+            if ($seqno_if_list) {
+                my $seqno_if_list_t =
+                  $rhash_key_trove->{$word}->{seqno_if_list};
+                if ( $seqno_if_list_t && $seqno_if_list_t eq $seqno_if_list ) {
+                    my $lno     = $rLL->[$KK_last_nb]->[_LINE_INDEX_] + 1;
+                    my $Kx      = $rhash_key_trove->{$word}->{K};
+                    my $lnx     = $rLL->[$Kx]->[_LINE_INDEX_] + 1;
+                    my $message = <<EOM;
+$lno: note that hash key '$word' is reused in this list, see line $lnx
+EOM
+
+                    # This is not necessarily an error, but might be.
+                    # This warning will only go out if hash keys are being
+                    # checked with one of the hash key dumps or warnings.
+                    warning($message);
+                }
+            }
             $rhash_key_trove->{$word}->{count}++;
         }
         return;
