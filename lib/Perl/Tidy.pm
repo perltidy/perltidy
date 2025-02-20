@@ -3840,6 +3840,7 @@ sub generate_options {
     $add_option->( 'warn-mismatched-returns',               'wmr',   '!' );
     $add_option->( 'warn-mismatched-return-types',          'wmrt',  '=s' );
     $add_option->( 'warn-mismatched-return-exclusion-list', 'wmrxl', '=s' );
+    $add_option->( 'warn-similar-keys',                     'wsk',   '!' );
 
     $add_option->( 'add-interbracket-arrows',       'aia', '!' );
     $add_option->( 'delete-interbracket-arrows',    'dia', '!' );
@@ -3884,7 +3885,7 @@ sub generate_options {
     $add_option->( 'maximum-unexpected-errors',       'maxue', '=i' );
     $add_option->( 'integer-range-check',             'irc',   '=i' );
 
-    $add_option->( 'similar-keys-maximum-differences', 'skmd', '!' );
+    $add_option->( 'similar-keys-maximum-difference', 'skmd', '!' );
     $add_option->( 'similar-keys-minimum-length',      'skml', '!' );
 
     #---------------------------------------------------------------------

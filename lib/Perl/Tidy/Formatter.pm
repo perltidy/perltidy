@@ -8344,6 +8344,11 @@ EOM
         Exit(0);
     }
 
+    if ( $rOpts->{'warn-similar-keys'} ) {
+        $self->warn_similar_keys()
+          if ( $self->[_logger_object_] );
+    }
+
     if ( $rOpts->{'dump-hash-keys'} ) {
         $self->dump_hash_keys();
         Exit(0);
@@ -9086,11 +9091,13 @@ sub scan_hash_keys {
     # Scan for hash keys
 
     # Given: $caller=
-    #   'dhk' for --dump-hash-keys, -dhk
-    #   'duk' for --dump-unique-keys, -duk
-    #   'wuk' for --warn-unique-keys, -wuk
+    #   'dsk' for --dump-similar-keys
+    #   'dhk' for --dump-hash-keys,
+    #   'duk' for --dump-unique-keys
+    #   'wuk' for --warn-unique-keys
     # Returns an output string for caller to print
     use constant DEBUG_WUK => 0;
+    $caller = EMPTY_STRING if ( !defined($caller) );
 
     # There are the main phases of the operation:
 
@@ -9622,6 +9629,11 @@ EOM
         }
         return unless ($word);
 
+        my $seqno_if_list;
+        if ( $parent_seqno && $ris_list_by_seqno->{$parent_seqno} ) {
+            $seqno_if_list = $parent_seqno;
+        }
+
         # Bump count of known keys by 1 so that they will not appear as unique
         if ( !defined( $rhash_key_trove->{$word} ) ) {
 
@@ -9637,10 +9649,11 @@ EOM
                 $id = $get_ancestor_seqno->($parent_seqno);
             }
             $rhash_key_trove->{$word} = {
-                count    => 1,
-                hash_id  => $id,
-                K        => $KK_last_nb,
-                is_known => 0,
+                count         => 1,
+                hash_id       => $id,
+                K             => $KK_last_nb,
+                is_known      => 0,
+                seqno_if_list => $seqno_if_list,
             };
 
             # save debug info
@@ -9649,6 +9662,7 @@ EOM
             }
         }
         else {
+##FIXME: check for redefinition of a key in same list
             $rhash_key_trove->{$word}->{count}++;
         }
         return;
@@ -10249,7 +10263,7 @@ EOM
     } ## end while ( ++$KK <= $Klimit )
 
     # End here for --dump-hash-keys
-    if ( $caller && $caller eq 'dhk' ) {
+    if ( $caller eq 'dhk' ) {
         my $output_string = EMPTY_STRING;
         my @list;
         foreach my $word ( keys %{$rhash_key_trove} ) {
@@ -10262,6 +10276,10 @@ EOM
             $output_string .= "$word,$count\n";
         }
         return $output_string;
+    }
+
+    if ( $caller eq 'dsk' ) {
+        return $rhash_key_trove;
     }
 
     # Continue for --dump-unique-keys and --warn-unique-keys ...
@@ -10664,12 +10682,12 @@ sub string_approximate_match {
 } ## end sub string_approximate_match
 
 sub find_similar_keys {
-    my ( $input_string, $max_diff, $min_len ) = @_;
+    my ( $rhash_key_trove, $max_diff, $min_len ) = @_;
 
     # Called by --dump-similar-keys
 
     # Given:
-    #   $input_string = list of all hash keys and their counts, from -dhk
+    #   $rhash_key_trove = all hash keys and their counts
     #   $max_diff: do not report key pairs whose differences exceed
     #       this value
     #   $min_len: ignore keys with length < $min_len
@@ -10681,29 +10699,39 @@ sub find_similar_keys {
     #  -This code also exists in examples/dump_similar_keys.pl
     #  -The main simplifying assumption is that when checking for similarity
     #   of word pairs we align them at their first alphanumeric character.
+    #  -It would be possible to add another iteration in which we reverse
+    #   the words and do the same checks.
 
-    return if ( !$input_string );
-    my @lines = split /^/, $input_string;
+    return if ( !$rhash_key_trove );
+
     my %word_info;
-    foreach my $line (@lines) {
-        if ( $line =~ /^(.*),(\d+)\s*$/ ) {
-            my $word          = $1;
-            my $count         = $2;
-            my $string_length = length($word);
-            next if ( $string_length < $min_len );
-            if ( !defined( $word_info{$word} ) ) {
-                if ( $word =~ /([^\W_])/g ) {
-                    $word_info{$word} = {
-                        count         => $count,
-                        first_letter  => lc($1),
-                        string_length => $string_length,
-                        offset        => pos($word) - 1,
-                    };
-                }
+    foreach my $word ( keys %{$rhash_key_trove} ) {
+        my $count         = $rhash_key_trove->{$word}->{count};
+        my $string_length = length($word);
+
+        # Apply minimum length requirement.  NOTE: an alternative would be to
+        # require both words of a match pair below the min
+        next if ( $string_length < $min_len );
+
+        if ( $word =~ /([^\W_])/g ) {
+
+            my $first_letter = lc($1);
+            my $offset       = pos($word) - 1;
+
+            # Save list sequence numbers if defined. We will
+            # skip hash keys with the same positive id.
+            my $seqno_if_list = $rhash_key_trove->{$word}->{seqno_if_list};
+            if ( !defined($seqno_if_list) ) {
+                $seqno_if_list = EMPTY_STRING;
             }
-            else {
-                $word_info{$word}->{count} += $count;
-            }
+
+            $word_info{$word} = {
+                count         => $count,
+                first_letter  => $first_letter,
+                string_length => $string_length,
+                offset        => $offset,
+                seqno_if_list => $seqno_if_list,
+            };
         }
     }
 
@@ -10717,10 +10745,11 @@ sub find_similar_keys {
     my @word_pairs;
   WORD:
     while (@sorted_words) {
-        my $word         = shift @sorted_words;
-        my $first_letter = $word_info{$word}->{first_letter};
-        my $offset       = $word_info{$word}->{offset};
-        my $word_length  = $word_info{$word}->{string_length};
+        my $word          = shift @sorted_words;
+        my $first_letter  = $word_info{$word}->{first_letter};
+        my $offset        = $word_info{$word}->{offset};
+        my $word_length   = $word_info{$word}->{string_length};
+        my $seqno_if_list = $word_info{$word}->{seqno_if_list};
         foreach my $word2 (@sorted_words) {
 
             # sorted order allows us to bail out as soon as possible
@@ -10729,6 +10758,13 @@ sub find_similar_keys {
             next WORD
               if ( $word_info{$word2}->{string_length} - $word_length >
                 $max_diff );
+
+            # Skip keys defined in the same data structure
+            if ($seqno_if_list) {
+                my $seqno_if_list2 = $word_info{$word2}->{seqno_if_list};
+                next
+                  if ( $seqno_if_list2 && $seqno_if_list2 == $seqno_if_list );
+            }
 
             my $offset2 = $word_info{$word2}->{offset};
             if (
@@ -10764,16 +10800,16 @@ sub find_similar_keys {
 sub dump_similar_keys {
     my ($self) = @_;
 
-    # Dump pairs of similar hash keys to STDOUT for
-    #   --dump-similar-keys (-dsk)
+    # process a --dump-similar-keys (-dsk) command
 
-    my $max_diff = $rOpts->{'similar-keys-maximum-differences'};
+    my $max_diff = $rOpts->{'similar-keys-maximum-difference'};
     my $min_len  = $rOpts->{'similar-keys-minimum-length'};
     $max_diff = 1 if ( !defined($max_diff) || $max_diff < 1 );
     $min_len  = 4 if ( !defined($min_len)  || $min_len < 1 );
 
-    my $output_string = $self->scan_hash_keys('dhk');
-    $output_string = find_similar_keys( $output_string, $max_diff, $min_len );
+    my $rhash_key_trove = $self->scan_hash_keys('dsk');
+    my $output_string =
+      find_similar_keys( $rhash_key_trove, $max_diff, $min_len );
     if ($output_string) {
         my $input_stream_name = get_input_stream_name();
         chomp $output_string;
@@ -10784,6 +10820,30 @@ EOM
     }
     return;
 } ## end sub dump_similar_keys
+
+sub warn_similar_keys {
+    my ($self) = @_;
+
+    # process a --warn-similar-keys (-wsk) command
+
+    my $max_diff = $rOpts->{'similar-keys-maximum-difference'};
+    my $min_len  = $rOpts->{'similar-keys-minimum-length'};
+    $max_diff = 1 if ( !defined($max_diff) || $max_diff < 1 );
+    $min_len  = 4 if ( !defined($min_len)  || $min_len < 1 );
+
+    my $rhash_key_trove = $self->scan_hash_keys('dsk');
+    my $output_string =
+      find_similar_keys( $rhash_key_trove, $max_diff, $min_len );
+    if ($output_string) {
+        my $wsk_key = 'warn-similar-keys';
+        my $message =
+"Begin scan for --$wsk_key with -skmd=$max_diff(max diff) and -skml=$min_len(min len)\n";
+        $message .= $output_string;
+        $message .= "End scan for --$wsk_key\n";
+        warning($message);
+    }
+    return;
+} ## end sub warn_similar_keys
 
 sub dump_hash_keys {
     my ($self) = @_;
