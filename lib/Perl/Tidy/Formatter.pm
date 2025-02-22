@@ -9133,6 +9133,7 @@ sub scan_hash_keys {
     my $K_closing_container  = $self->[_K_closing_container_];
     my $ris_qwaf_by_seqno    = $self->[_ris_qwaf_by_seqno_];
     my $rtype_count_by_seqno = $self->[_rtype_count_by_seqno_];
+    my $rparent_of_seqno     = $self->[_rparent_of_seqno_];
 
     return if ( !defined($Klimit) || $Klimit < 1 );
 
@@ -9146,6 +9147,9 @@ sub scan_hash_keys {
     my %first_key_by_id;         # debug info
     my %saw_use_module;          # modules used; updated during main loop scan
     my %is_known_module_key;     # set by sub $set_known_module_keys after scan
+    my $semicolon_count = 0;     # for creating unique birth_id's
+    my %birth_id_info;           # for creating unique birth_id's
+    my $output_string = EMPTY_STRING;
 
     # See https://perldoc.perl.org/perlref
     my %is_typeglob_slot_key;
@@ -9438,7 +9442,6 @@ sub scan_hash_keys {
         my $seqno_out = $seqno_in;
 
         # Loop upward..
-        my $rparent_of_seqno = $self->[_rparent_of_seqno_];
         while ( my $seqno = $rparent_of_seqno->{$seqno_out} ) {
             last if ( $seqno == SEQ_ROOT );
             if ( $seqno >= $seqno_out || $seqno < SEQ_ROOT ) {
@@ -9557,10 +9560,12 @@ EOM
 
         # If the previous nonblank token was a hash key of type
         # 'Q' or 'w', then update its count
-        my ( $KK_last_nb, ($parent_seqno) ) = @_;
+        my ( $KK, $type_KK, $KK_last_nb, ($parent_seqno) ) = @_;
 
         # Given:
-        #   $KK_last_nb = index of a hash key token
+        #   $KK = index of current token
+        #   $type_KK = type of token $KK
+        #   $KK_last_nb = index of a hash key token before $KK
         #   $parent_seqno = sequence number of container:
         #    - required for a key followed by '=>'
         #    - not required for a key in hash braces
@@ -9629,9 +9634,17 @@ EOM
         }
         return unless ($word);
 
-        my $seqno_if_list;
+        # We will not check for similarity of keys with the same $birth_id,
+        # $birth_id is a unique identifier of a set keys initialized together
+        # For keys before '=>' the id is the sequence number of their contaier
+        my $birth_id;
         if ( $parent_seqno && $ris_list_by_seqno->{$parent_seqno} ) {
-            $seqno_if_list = $parent_seqno;
+            $birth_id = $parent_seqno;
+            my $Ko      = $K_opening_container->{$parent_seqno};
+            my $token_o = $rLL->[$Ko]->[_TOKEN_];
+
+            # return if we are in a list ref, not a hash
+            if ( $token_o eq '[' ) { return }
         }
 
         # Bump count of known keys by 1 so that they will not appear as unique
@@ -9643,17 +9656,46 @@ EOM
                 $id = $slice_name;
             }
             elsif ( !$id ) {
+
+                # try to find the name of the hash
                 $id = $get_hash_name->();
+                if ( $id && $type_KK eq 'R' ) {
+
+                    # label sequential statements with the same birth id
+                    # to avoid checking them for similarity.
+                    my $rinfo        = $birth_id_info{$id};
+                    my $group_number = 1;
+                    if ( defined($rinfo) ) {
+
+                        # Require an '=' or ',' after the closing brace
+                        # and one semicolon to keep the same group.
+                        my $Kn     = $self->K_next_nonblank($KK);
+                        my $type_n = $Kn ? $rLL->[$Kn]->[_TYPE_] : 'b';
+
+                        $group_number = $rinfo->{group_number};
+                        if (
+                            ( $type_n ne '=' && $type_n ne ',' )
+                            || ( $rinfo->{semicolon_count} !=
+                                $semicolon_count - 1 )
+                          )
+                        {
+                            $group_number++;
+                        }
+                    }
+                    $birth_id_info{$id}->{semicolon_count} = $semicolon_count;
+                    $birth_id_info{$id}->{group_number}    = $group_number;
+                    $birth_id = $id . $group_number;
+                }
             }
             else {
                 $id = $get_ancestor_seqno->($parent_seqno);
             }
             $rhash_key_trove->{$word} = {
-                count         => 1,
-                hash_id       => $id,
-                K             => $KK_last_nb,
-                is_known      => 0,
-                seqno_if_list => $seqno_if_list,
+                count    => 1,
+                hash_id  => $id,
+                K        => $KK_last_nb,
+                is_known => 0,
+                birth_id => $birth_id,
             };
 
             # save debug info
@@ -9662,10 +9704,9 @@ EOM
             }
         }
         else {
-            if ($seqno_if_list) {
-                my $seqno_if_list_t =
-                  $rhash_key_trove->{$word}->{seqno_if_list};
-                if ( $seqno_if_list_t && $seqno_if_list_t eq $seqno_if_list ) {
+            if ($birth_id) {
+                my $birth_id_t = $rhash_key_trove->{$word}->{birth_id};
+                if ( $birth_id_t && $birth_id_t eq $birth_id ) {
                     my $lno     = $rLL->[$KK_last_nb]->[_LINE_INDEX_] + 1;
                     my $Kx      = $rhash_key_trove->{$word}->{K};
                     my $lnx     = $rLL->[$Kx]->[_LINE_INDEX_] + 1;
@@ -9676,7 +9717,7 @@ EOM
                     # This is not necessarily an error, but might be.
                     # This warning will only go out if hash keys are being
                     # checked with one of the hash key dumps or warnings.
-                    warning($message);
+                    $output_string .= $message;
                 }
             }
             $rhash_key_trove->{$word}->{count}++;
@@ -9995,7 +10036,7 @@ EOM
 
     # Optimization: we just need to look at these non-blank types
     my %is_special_check_type = ( %is_opening_type, %is_closing_type );
-    @q = qw( => Q q k U w h );
+    @q = qw( => Q q k U w h ; );
     push @q, ',';
     @is_special_check_type{@q} = (1) x scalar(@q);
 
@@ -10083,7 +10124,7 @@ EOM
             }
             if ( $type eq 'R' ) {
                 if ( $is_static_hash_key->($KK_last_nb) ) {
-                    $push_KK_last_nb->($KK_last_nb)
+                    $push_KK_last_nb->( $KK, $type, $KK_last_nb )
                       if ( $KK_last_nb > $K_end_skip );
                 }
             }
@@ -10106,7 +10147,7 @@ EOM
             # in a slice?
             if ( @stack && $stack[-1]->{_slice_name} ) {
                 if ( $is_static_hash_key->($KK_last_nb) ) {
-                    $push_KK_last_nb->($KK_last_nb)
+                    $push_KK_last_nb->( $KK, $type, $KK_last_nb )
                       if ( $KK_last_nb > $K_end_skip );
                 }
             }
@@ -10249,7 +10290,7 @@ EOM
                 push @GetOptions_keys, $KK_last_nb;
             }
             else {
-                $push_KK_last_nb->( $KK_last_nb, $parent_seqno )
+                $push_KK_last_nb->( $KK, $type, $KK_last_nb, $parent_seqno )
                   if ( $KK_last_nb > $K_end_skip );
             }
         }
@@ -10271,6 +10312,9 @@ EOM
                 push @keys_in_HERE_docs, @{$rkeys};
             }
         }
+        elsif ( $type eq ';' ) {
+            $semicolon_count++;
+        }
         else {
             DEVEL_MODE && Fault("missing code for type $type\n");
         }
@@ -10280,7 +10324,6 @@ EOM
 
     # End here for --dump-hash-keys
     if ( $caller eq 'dhk' ) {
-        my $output_string = EMPTY_STRING;
         my @list;
         foreach my $word ( keys %{$rhash_key_trove} ) {
             my $count = $rhash_key_trove->{$word}->{count};
@@ -10295,7 +10338,7 @@ EOM
     }
 
     if ( $caller eq 'dsk' ) {
-        return $rhash_key_trove;
+        return ( $output_string, $rhash_key_trove );
     }
 
     # Continue for --dump-unique-keys and --warn-unique-keys ...
@@ -10327,7 +10370,7 @@ EOM
         $K_unique_key{$key} = $K;
     }
 
-    return if ( !%K_unique_key );
+    return $output_string if ( !%K_unique_key );
 
     # Now go back and look for these keys in any saved quotes ...
 
@@ -10392,7 +10435,7 @@ EOM
             }
         }
     }
-    return if ( !%K_unique_key );
+    return $output_string if ( !%K_unique_key );
 
     # Check list of barewords quoted with a leading dash
     if (@mw_list) {
@@ -10404,7 +10447,7 @@ EOM
         }
     }
 
-    return if ( !%K_unique_key );
+    return $output_string if ( !%K_unique_key );
 
     # Check words against any hash keys in here docs
     foreach my $key (@keys_in_HERE_docs) {
@@ -10413,7 +10456,7 @@ EOM
         }
     }
 
-    return if ( !%K_unique_key );
+    return $output_string if ( !%K_unique_key );
 
     # Check words against any option keys passed to GetOptions
     foreach my $Kopt (@GetOptions_keys) {
@@ -10436,7 +10479,7 @@ EOM
         }
     }
 
-    return if ( !%K_unique_key );
+    return $output_string if ( !%K_unique_key );
 
     # For two-arg call to Getopt::Std ...
     if ( $Getopt_Std_hash_id && $saw_Getopt_Std ) {
@@ -10475,7 +10518,7 @@ EOM
         }
     }
 
-    return if ( !%K_unique_key );
+    return $output_string if ( !%K_unique_key );
 
     # Remove any keys which are also in a qw list
     foreach my $Kqw (@K_start_qw_list) {
@@ -10501,19 +10544,18 @@ EOM
         $delete_unique_quoted_words->( $rlist, $missing_GetOptions_keys );
     }
 
-    return if ( !%K_unique_key );
+    return $output_string if ( !%K_unique_key );
 
     #------------------------------------------------------------------
     # PHASE 3: filter out multiple related keys which are mostly unique
     #------------------------------------------------------------------
     $filter_out_large_sets->();
 
-    return if ( !%K_unique_key );
+    return $output_string if ( !%K_unique_key );
 
     #-------------------------------------------
     # PHASE 4: Report any remaining unique words
     #-------------------------------------------
-    my $output_string = EMPTY_STRING;
     my @list;
     foreach my $word ( keys %K_unique_key ) {
         my $K   = $K_unique_key{$word};
@@ -10694,7 +10736,7 @@ sub string_approximate_match {
     } ## end while ( $mask =~ /[^\0]/g)
 
     # match
-    return 1;
+    return $diff_count;
 } ## end sub string_approximate_match
 
 sub find_similar_keys {
@@ -10736,9 +10778,9 @@ sub find_similar_keys {
 
             # Save list sequence numbers if defined. We will
             # skip hash keys with the same positive id.
-            my $seqno_if_list = $rhash_key_trove->{$word}->{seqno_if_list};
-            if ( !defined($seqno_if_list) ) {
-                $seqno_if_list = EMPTY_STRING;
+            my $birth_id = $rhash_key_trove->{$word}->{birth_id};
+            if ( !defined($birth_id) ) {
+                $birth_id = EMPTY_STRING;
             }
 
             $word_info{$word} = {
@@ -10746,7 +10788,7 @@ sub find_similar_keys {
                 first_letter  => $first_letter,
                 string_length => $string_length,
                 offset        => $offset,
-                seqno_if_list => $seqno_if_list,
+                birth_id      => $birth_id,
             };
         }
     }
@@ -10761,11 +10803,11 @@ sub find_similar_keys {
     my @word_pairs;
   WORD:
     while (@sorted_words) {
-        my $word          = shift @sorted_words;
-        my $first_letter  = $word_info{$word}->{first_letter};
-        my $offset        = $word_info{$word}->{offset};
-        my $word_length   = $word_info{$word}->{string_length};
-        my $seqno_if_list = $word_info{$word}->{seqno_if_list};
+        my $word         = shift @sorted_words;
+        my $first_letter = $word_info{$word}->{first_letter};
+        my $offset       = $word_info{$word}->{offset};
+        my $word_length  = $word_info{$word}->{string_length};
+        my $birth_id     = $word_info{$word}->{birth_id};
         foreach my $word2 (@sorted_words) {
 
             # sorted order allows us to bail out as soon as possible
@@ -10776,19 +10818,17 @@ sub find_similar_keys {
                 $max_diff );
 
             # Skip keys defined in the same data structure
-            if ($seqno_if_list) {
-                my $seqno_if_list2 = $word_info{$word2}->{seqno_if_list};
+            if ($birth_id) {
+                my $birth_id2 = $word_info{$word2}->{birth_id};
                 next
-                  if ( $seqno_if_list2 && $seqno_if_list2 == $seqno_if_list );
+                  if ( $birth_id2 && $birth_id2 eq $birth_id );
             }
 
             my $offset2 = $word_info{$word2}->{offset};
-            if (
-                string_approximate_match(
-                    $word, $word2, $offset, $offset2, $max_diff
-                )
-              )
-            {
+            my $diff_count =
+              string_approximate_match( $word, $word2, $offset, $offset2,
+                $max_diff );
+            if ($diff_count) {
                 my $w1     = $word;
                 my $w2     = $word2;
                 my $count1 = $word_info{$w1}->{count};
@@ -10797,16 +10837,24 @@ sub find_similar_keys {
                     ( $w1,     $w2 )     = ( $w2,     $w1 );
                     ( $count1, $count2 ) = ( $count2, $count1 );
                 }
-                push @word_pairs, [ $w1, $w2, $count1, $count2 ];
+                push @word_pairs, [ $w1, $w2, $count1, $count2, $diff_count ];
             }
         }
     } ## end WORD: while (@sorted_words)
 
+    # FIXME: The maximum number of pairs can be huge (N^2/2) if the user sets
+    # the maximum number of allowed differences very high. To handle this, the
+    # following additional steps need to be taken:
+    # - Limit to N output pairs
+    # - Allow at least 1 output per word (for N output pairs max)
+    # - Prioritize output on diff_count (low diffs go out before high diffs)
+    # - Truncate the rest with a note of the number left out for each word.
+    # This will keep the number of reported pairs to a maximum of N.
     my $output_string = EMPTY_STRING;
     if (@word_pairs) {
         $output_string .= "key1,key2,count1,count2\n";
         foreach my $pair (@word_pairs) {
-            my ( $w1, $w2, $count1, $count2 ) = @{$pair};
+            my ( $w1, $w2, $count1, $count2, $diff_count_uu ) = @{$pair};
             $output_string .= "$w1,$w2,$count1,$count2\n";
         }
     }
@@ -10823,8 +10871,8 @@ sub dump_similar_keys {
     $max_diff = 1 if ( !defined($max_diff) || $max_diff < 1 );
     $min_len  = 4 if ( !defined($min_len)  || $min_len < 1 );
 
-    my $rhash_key_trove = $self->scan_hash_keys('dsk');
-    my $output_string =
+    my ( $output_string, $rhash_key_trove ) = $self->scan_hash_keys('dsk');
+    $output_string .=
       find_similar_keys( $rhash_key_trove, $max_diff, $min_len );
     if ($output_string) {
         my $input_stream_name = get_input_stream_name();
@@ -10847,8 +10895,8 @@ sub warn_similar_keys {
     $max_diff = 1 if ( !defined($max_diff) || $max_diff < 1 );
     $min_len  = 4 if ( !defined($min_len)  || $min_len < 1 );
 
-    my $rhash_key_trove = $self->scan_hash_keys('dsk');
-    my $output_string =
+    my ( $output_string, $rhash_key_trove ) = $self->scan_hash_keys('dsk');
+    $output_string .=
       find_similar_keys( $rhash_key_trove, $max_diff, $min_len );
     if ($output_string) {
         my $wsk_key = 'warn-similar-keys';

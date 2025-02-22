@@ -6166,25 +6166,25 @@ Space before and after the curly braces is optional.
 
 For a specific example, the following definition
 
-  oneliner {
-    --maximum-line-length=0
-    --noadd-newlines
-    --noadd-terminal-newline
+  debug {
+     --warn-similar-keys
+     --warn-unique-keys
   }
 
 or equivalently, with abbreviations,
 
-  oneliner { -l=0 -nanl -natnl }
+  debug { -wsk -wuk }
 
-could be placed in a F<.perltidyrc> file to temporarily override the maximum
-line length with a large value, to temporarily prevent new line breaks from
-being added, and to prevent an extra newline character from being added the
-file.  All other settings in the F<.perltidyrc> file still apply.  Thus it
-provides a way to format a long 'one liner' when perltidy is invoked with
+could be placed in a F<.perltidyrc> file.  The new name, in this case C<debug>,
+is arbitrary provided that it does not conflict with an existing parameter.
+The extra warning checks defined with this new parameter will be ignored unless
+the new parameter B<-debug> is added to the command line.  All other settings
+in the F<.perltidyrc> file still apply.  Thus it provides a way to do some
+extra checking when perltidy is invoked with
 
-        perltidy --oneliner ...
+        perltidy -debug ...
 
-(Either C<-oneliner> or C<--oneliner> may be used).
+(Either C<-debug> or C<--debug> may be used).
 
 =item Skipping leading non-perl commands with B<-x> or B<--look-for-hash-bang>
 
@@ -6696,6 +6696,60 @@ warnings for specific keys is to list them somewhere in the program in a B<qw>
 list. This will be seen during the key scan, and the then keys will not be
 considered unique.
 
+=item B<Use --dump-similar-keys> to help locate misspelled hash keys
+
+The parameter B<--dump-similar-keys>, or B<-dsk>, dumps a list of
+hash keys which are very similar. For example:
+
+   perltidy -dsk File.pm >output.txt
+
+The lines in the output file contain pairs of similar keys, and the number of
+times each was found in the file. For example, the following line from an
+actual script indicates that the key C<recieve> (a spelling error) occurs 2
+times and the correct key C<receive> occurs 6 times:
+
+   recieve,receive,2,6
+
+Two parameters, described next, are available to control the degree of
+similarity and the minimum lengths of the keys which are checked.
+
+=item B<Use --similar-keys-maximum-difference=n>, or B<-skmd=n>, to specify the maximum difference between two keys for similarity.
+
+The integer B<n> gives the maximum difference to use when checking
+for similarity of hash keys with B<--dump-similar-keys> or
+B<--warn-similar-keys>.  The default is B<n=1>. One difference is counted for
+each of the following conditions:
+
+=over 4
+
+=item * two transposed characters
+
+=item * a missing or extra character
+
+=item * a repeated same-character change
+
+=item * otherwise, different characters in the same position
+
+=back
+
+=item B<Use --similar-keys-minimum-length=n>, or B<-skml=n>, to specify a minimum hash key length.
+
+Hash keys with fewer than B<n> characters will be ignored when checking for
+similar keys.  The default is B<n=4>.
+
+=item B<Use --warn-similar-keys>, or B<-wsk>, to warn of hash keys which are
+similar but different.
+
+This is the like the B<--dump-similar-keys> option but
+writes to the error output file durning normal formatting.
+
+The similarity can be controlled by the controls mentioned above,
+B<-skmd=n> and B<-skml=n>.
+
+In most cases, the warnings will be for perfectly valid hash keys. So this
+parameter is probably most useful for occasional debugging.  See L<"Creating a
+new abbreviation"> for a convenient way to include it in a F<.perltidyrc>. 
+
 =item B<Use --dump-hash-keys> to dump a list of hash keys
 
 The parameter B<--dump-hash-keys>, or B<-dhk>, dumps a list of all hash keys
@@ -6705,12 +6759,6 @@ For example:
    perltidy -dhk File.pm >output.txt
 
 The lines in the output file list the keys and number of occurances.
-
-A program C<dump_similar_keys.pl> at
-L<https://github.com/perltidy/perltidy/tree/master/examples> can run perltidy
-with B<-dhk> on one or more files, and then display pairs of hash keys which
-are similar but different. This can help check for problems such as
-misspelled hash keys.
 
 =item B<Use --dump-mixed-call-parens to find functions called both with and without parens>
 

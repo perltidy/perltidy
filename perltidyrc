@@ -63,5 +63,7 @@
 # This defines a new option which is invoked with -debug on the command line.
 # It overrides any of the settings above.
 debug {
+   --warn-similar-keys
+   --warn-unique-keys
    --warn-unique-keys-cutoff=2
 }

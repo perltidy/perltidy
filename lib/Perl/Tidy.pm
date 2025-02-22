@@ -3885,8 +3885,8 @@ sub generate_options {
     $add_option->( 'maximum-unexpected-errors',       'maxue', '=i' );
     $add_option->( 'integer-range-check',             'irc',   '=i' );
 
-    $add_option->( 'similar-keys-maximum-difference', 'skmd', '!' );
-    $add_option->( 'similar-keys-minimum-length',      'skml', '!' );
+    $add_option->( 'similar-keys-maximum-difference', 'skmd', '=i' );
+    $add_option->( 'similar-keys-minimum-length',     'skml', '=i' );
 
     #---------------------------------------------------------------------
 
