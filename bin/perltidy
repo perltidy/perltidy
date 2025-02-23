@@ -6710,45 +6710,52 @@ times and the correct key C<receive> occurs 6 times:
 
    recieve,receive,2,6
 
-Two parameters, described next, are available to control the degree of
-similarity and the minimum lengths of the keys which are checked.
-
-=item B<Use --similar-keys-maximum-difference=n>, or B<-skmd=n>, to specify the maximum difference between two keys for similarity.
-
-The integer B<n> gives the maximum difference to use when checking
-for similarity of hash keys with B<--dump-similar-keys> or
-B<--warn-similar-keys>.  The default is B<n=1>. One difference is counted for
-each of the following conditions:
-
-=over 4
-
-=item * two transposed characters
-
-=item * a missing or extra character
-
-=item * a repeated same-character change
-
-=item * otherwise, different characters in the same position
-
-=back
-
-=item B<Use --similar-keys-minimum-length=n>, or B<-skml=n>, to specify a minimum hash key length.
-
-Hash keys with fewer than B<n> characters will be ignored when checking for
-similar keys.  The default is B<n=4>.
-
 =item B<Use --warn-similar-keys>, or B<-wsk>, to warn of hash keys which are
 similar but different.
 
 This is the like the B<--dump-similar-keys> option but
-writes to the error output file durning normal formatting.
-
-The similarity can be controlled by the controls mentioned above,
-B<-skmd=n> and B<-skml=n>.
+writes to the error output file during normal formatting.
 
 In most cases, the warnings will be for perfectly valid hash keys. So this
 parameter is probably most useful for occasional debugging.  See L<"Creating a
-new abbreviation"> for a convenient way to include it in a F<.perltidyrc>. 
+new abbreviation"> for a convenient way to include it in a F<.perltidyrc>.
+
+=item B<Controls for --dump-similar keys and --warn-similar-keys>
+
+The default parameters which control the search for similar keys should be
+normally be adequate, but they can be modified if necessary.  They are as
+follows:
+
+=over 4
+
+=item B<--similar-keys-maximum-difference=n>, or B<-skmd=n>, specifies the maximum difference between two keys for similarity.
+
+The integer B<n> gives the maximum difference to use when checking
+for hash key similarity.  The default is B<n=1>. One difference is counted for
+each of the following conditions:
+
+=over 4
+
+=item * two transposed characters, such as C<recieve, receive>
+
+=item * a missing or extra character, such as C<color, colour> or C<color, _color>
+
+=item * a repeated same-character change, such as C<if-elsif-else, if_elsif_else>
+
+=item * otherwise, different characters in the same position, such as C<Minimum, minimum>
+
+=back
+
+=item B<--similar-keys-minimum-length=n>, or B<-skml=n>, defines a minimum hash key length.
+
+Hash keys with fewer than B<n> characters will be ignored when checking for
+similar keys.  The default is B<n=4>.
+
+=item B<--similar-keys-maximum-pairs=n>, or B<-skmp=n>, defines the maximum number of similar pairs to display
+
+Each similar pair found is displayed on one line of output, so this is equivalent to the maximum number of output lines. The default is 25.
+
+=back
 
 =item B<Use --dump-hash-keys> to dump a list of hash keys
 

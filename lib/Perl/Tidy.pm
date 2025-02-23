@@ -3887,6 +3887,7 @@ sub generate_options {
 
     $add_option->( 'similar-keys-maximum-difference', 'skmd', '=i' );
     $add_option->( 'similar-keys-minimum-length',     'skml', '=i' );
+    $add_option->( 'similar-keys-maximum-pairs',      'skmp', '=i' );
 
     #---------------------------------------------------------------------
 
@@ -4170,6 +4171,9 @@ sub generate_options {
         'paren-vertical-tightness'                  => [ 0, 2 ],
         'paren-vertical-tightness-closing'          => [ 0, 3 ],
         'short-concatenation-item-length'           => [ 0, undef ],
+        'similar-keys-maximum-difference'           => [ 1, undef ],
+        'similar-keys-minimum-length'               => [ 1, undef ],
+        'similar-keys-maximum-pairs'                => [ 1, undef ],
         'space-backslash-quote'                     => [ 0, 2 ],
         'space-prototype-paren'                     => [ 0, 2 ],
         'space-signature-paren'                     => [ 0, 2 ],

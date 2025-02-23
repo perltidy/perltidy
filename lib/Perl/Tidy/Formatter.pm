@@ -10337,8 +10337,9 @@ EOM
         return $output_string;
     }
 
-    if ( $caller eq 'dsk' ) {
-        return ( $output_string, $rhash_key_trove );
+    if ( $caller eq 'dsk' || $caller eq 'wsk' ) {
+        $output_string .= find_similar_keys($rhash_key_trove);
+        return ($output_string);
     }
 
     # Continue for --dump-unique-keys and --warn-unique-keys ...
@@ -10740,15 +10741,12 @@ sub string_approximate_match {
 } ## end sub string_approximate_match
 
 sub find_similar_keys {
-    my ( $rhash_key_trove, $max_diff, $min_len ) = @_;
+    my ($rhash_key_trove) = @_;
 
     # Called by --dump-similar-keys
 
     # Given:
     #   $rhash_key_trove = all hash keys and their counts
-    #   $max_diff: do not report key pairs whose differences exceed
-    #       this value
-    #   $min_len: ignore keys with length < $min_len
     # Return:
     #   $output_string = printable string of results, if any
     # NOTES:
@@ -10759,16 +10757,24 @@ sub find_similar_keys {
     #   of word pairs we align them at their first alphanumeric character.
     #  -It would be possible to add another iteration in which we reverse
     #   the words and do the same checks.
+    my $output_string = EMPTY_STRING;
 
-    return if ( !$rhash_key_trove );
+    return $output_string if ( !$rhash_key_trove );
+
+    # Controls for both --dump-similar-keys and --warn-similar-keys
+    # $max_diff:  do not report key pairs whose differences exceed this value
+    # $min_len:   ignore keys with length < $min_len
+    # $max_pairs: maximum number of similar word pairs to report (one per line)
+    my $max_diff  = $rOpts->{'similar-keys-maximum-difference'} || 1;
+    my $min_len   = $rOpts->{'similar-keys-minimum-length'}     || 4;
+    my $max_pairs = $rOpts->{'similar-keys-maximum-pairs'}      || 25;
 
     my %word_info;
     foreach my $word ( keys %{$rhash_key_trove} ) {
         my $count         = $rhash_key_trove->{$word}->{count};
         my $string_length = length($word);
 
-        # Apply minimum length requirement.  NOTE: an alternative would be to
-        # require both words of a match pair below the min
+        # Skip words with lengths below the minimum length requirement
         next if ( $string_length < $min_len );
 
         if ( $word =~ /([^\W_])/g ) {
@@ -10837,20 +10843,49 @@ sub find_similar_keys {
                     ( $w1,     $w2 )     = ( $w2,     $w1 );
                     ( $count1, $count2 ) = ( $count2, $count1 );
                 }
-                push @word_pairs, [ $w1, $w2, $count1, $count2, $diff_count ];
+                my $npair = @word_pairs + 1;
+                push @word_pairs,
+                  [ $w1, $w2, $count1, $count2, $diff_count, $npair ];
+                ##    0    1        2        3            4       5
             }
         }
     } ## end WORD: while (@sorted_words)
 
-    # FIXME: The maximum number of pairs can be huge (N^2/2) if the user sets
-    # the maximum number of allowed differences very high. To handle this, the
-    # following additional steps need to be taken:
-    # - Limit to N output pairs
-    # - Allow at least 1 output per word (for N output pairs max)
-    # - Prioritize output on diff_count (low diffs go out before high diffs)
-    # - Truncate the rest with a note of the number left out for each word.
-    # This will keep the number of reported pairs to a maximum of N.
-    my $output_string = EMPTY_STRING;
+    return $output_string if ( !@word_pairs );
+
+    # - Output will be in the current sorted order, but if the number of
+    #   output pairs must be limited, then we select pairs based on:
+    #  1. Top priority is diff_count (low diffs go out before high diffs)
+    #  2. Next priority is uniform distribution of output words
+
+    my $num_pairs   = @word_pairs;
+    my $num_skipped = $num_pairs - $max_pairs;
+    if ( $num_skipped > 0 ) {
+
+        # sort by diff count, then by the original order
+        my @sorted_pairs =
+          sort { $a->[4] <=> $b->[4] || $a->[5] <=> $b->[5] } @word_pairs;
+
+        # resort by diff count, min occurances so far, then by the start order
+        my %word_count;
+        foreach my $pair (@sorted_pairs) {
+            my ( $w1, $w2 ) = @{$pair};
+            my $min_count = min( ++$word_count{$w1}, ++$word_count{$w2} );
+            $pair->[6] = $min_count;
+        }
+        @sorted_pairs =
+          sort {
+            $a->[4] <=> $b->[4] || $a->[6] <=> $b->[6] || $a->[5] <=> $b->[5]
+          } @sorted_pairs;
+
+        # Truncate the list and resort on the original order
+        $#sorted_pairs = $max_pairs - 1;
+        @word_pairs    = sort { $a->[5] <=> $b->[5] } @sorted_pairs;
+
+        $output_string .=
+"Note: showing $max_pairs of $num_pairs pairs; increase -skmp to show more\n";
+    }
+
     if (@word_pairs) {
         $output_string .= "key1,key2,count1,count2\n";
         foreach my $pair (@word_pairs) {
@@ -10866,14 +10901,7 @@ sub dump_similar_keys {
 
     # process a --dump-similar-keys (-dsk) command
 
-    my $max_diff = $rOpts->{'similar-keys-maximum-difference'};
-    my $min_len  = $rOpts->{'similar-keys-minimum-length'};
-    $max_diff = 1 if ( !defined($max_diff) || $max_diff < 1 );
-    $min_len  = 4 if ( !defined($min_len)  || $min_len < 1 );
-
-    my ( $output_string, $rhash_key_trove ) = $self->scan_hash_keys('dsk');
-    $output_string .=
-      find_similar_keys( $rhash_key_trove, $max_diff, $min_len );
+    my ($output_string) = $self->scan_hash_keys('dsk');
     if ($output_string) {
         my $input_stream_name = get_input_stream_name();
         chomp $output_string;
@@ -10889,19 +10917,10 @@ sub warn_similar_keys {
     my ($self) = @_;
 
     # process a --warn-similar-keys (-wsk) command
-
-    my $max_diff = $rOpts->{'similar-keys-maximum-difference'};
-    my $min_len  = $rOpts->{'similar-keys-minimum-length'};
-    $max_diff = 1 if ( !defined($max_diff) || $max_diff < 1 );
-    $min_len  = 4 if ( !defined($min_len)  || $min_len < 1 );
-
-    my ( $output_string, $rhash_key_trove ) = $self->scan_hash_keys('dsk');
-    $output_string .=
-      find_similar_keys( $rhash_key_trove, $max_diff, $min_len );
+    my ($output_string) = $self->scan_hash_keys('dsk');
     if ($output_string) {
         my $wsk_key = 'warn-similar-keys';
-        my $message =
-"Begin scan for --$wsk_key with -skmd=$max_diff(max diff) and -skml=$min_len(min len)\n";
+        my $message = "Begin scan for --$wsk_key\n";
         $message .= $output_string;
         $message .= "End scan for --$wsk_key\n";
         warning($message);
