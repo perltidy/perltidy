@@ -483,6 +483,8 @@
 ../snippets32.t	kblx.kblx6
 ../snippets32.t	kblx.kblx7
 ../snippets32.t	kblx.kblx8
+../snippets32.t	git181.def
+../snippets32.t	git181.git181
 ../snippets4.t	gnu1.gnu
 ../snippets4.t	gnu2.def
 ../snippets4.t	gnu2.gnu
@@ -603,5 +605,4 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets32.t	git181.def
-../snippets32.t	git181.git181
+../snippets32.t	git32.def

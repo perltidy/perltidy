@@ -6800,6 +6800,10 @@ sub operator_expected {
     # Section 2E: bareword
     if ( $last_nonblank_type eq 'w' ) {
 
+        # It is safest to return UNKNOWN if a pattern may follow (git #32)
+        # and let the guess algorithm handle it
+        if ( $tok eq '?' || $tok eq '/' ) { return UNKNOWN }
+
         # see if this has been seen in the role of a function taking args
         my $rinfo = $self->[_rbareword_info_]->{$current_package};
         if ($rinfo) {
@@ -7742,7 +7746,7 @@ sub guess_if_pattern_or_conditional {
     }
     if ( $s_quote % 2 || $d_quote % 2 || $colons ) {
         $is_pattern = 0;
-        $msg .= "found ending ? but unbalanced quote chars\n";
+        $msg .= "conditional: found ending ? but unbalanced quote chars\n";
         return ( $is_pattern, $msg );
     }
     if ( $self->pattern_expected( $i, $rtokens, $max_token_index ) >= 0 ) {

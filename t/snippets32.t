@@ -6,6 +6,7 @@
 #3 kblx.kblx8
 #4 git181.def
 #5 git181.git181
+#6 git32.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -67,6 +68,14 @@ on develop => sub {
 }
 
 # end
+----------
+
+        'git32' => <<'----------',
+use Foo qw(myfunction);
+sub run {
+    myfunction('x');
+    my $res = myfunction ? 'X' : 'Y';  print ' ?';
+}
 ----------
 
         'kblx' => <<'----------',
@@ -264,6 +273,20 @@ on develop => sub {
 
 # end
 #5...........
+        },
+
+        'git32.def' => {
+            source => "git32",
+            params => "def",
+            expect => <<'#6...........',
+use Foo qw(myfunction);
+
+sub run {
+    myfunction('x');
+    my $res = myfunction ? 'X' : 'Y';
+    print ' ?';
+}
+#6...........
         },
     };
 

@@ -1,0 +1,7 @@
+use Foo qw(myfunction);
+
+sub run {
+    myfunction('x');
+    my $res = myfunction ? 'X' : 'Y';
+    print ' ?';
+}
