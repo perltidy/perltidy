@@ -135,7 +135,7 @@ my $todaysdate =
     ) ;
 }
 
-# State 2 
+# State 2
 
 {
     my $warningdate = DateCalc( $borrower->{'expiry'},
@@ -1155,7 +1155,7 @@ my $rows =
 ==> b090.par <==
 --break-before-hash-brace-and-indent=1
 --break-before-hash-brace=3
---comma-arrow-breakpoints=2  # Why?? 
+--comma-arrow-breakpoints=2  # Why??
 
 ==> b1002.in <==
                   @cmd=
@@ -1622,7 +1622,7 @@ foreach my $table
     'items',
     'biblio',
     'biblioitems'
-         )) 
+         ))
 __END__
 # S2
 foreach my $table(
@@ -12584,6 +12584,38 @@ my $species =
 --keyword-group-blanks-after=2
 --keep-old-blank-lines-exceptions='bp bc b{ {b'
 
+==> b1508.in <==
+open(FIND,
+        "find $fslist $xdev -type f \\( -perm -04000 -o -perm -02000 \\) -print|"
+);
+
+open(FIND,"find $fslist $xdev -type f \\( -perm -04000 -o -perm -02000 \\) -print|",
+);
+
+==> b1508.par <==
+--maximum-line-length=84
+--indent-columns=8
+--noadd-whitespace
+--extended-continuation-indentation
+--break-before-paren=3
+--break-before-paren-and-indent=2
+--add-trailing-commas
+--want-trailing-commas='i'
+--delete-trailing-commas
+--break-at-trailing-comma-types='m'
+
+==> b1509.in <==
+eval {
+    $formatter->parse_from_file ( $file, $out_fh )
+} ;
+eval { $formatter->parse_from_file ( $file, $out_fh ) };
+
+==> b1509.par <==
+--maximum-line-length=55
+--space-function-paren
+--space-terminal-semicolon
+--noadd-semicolons
+
 ==> b156.in <==
 # State 1
 {
@@ -15498,11 +15530,11 @@ has 'baz' => (
 --variable-maximum-line-length
 
 ==> b746.in <==
-# State 1 : 
+# State 1 :
 @eigenvalues= eigenvalue( [
    [ 3, 4 ], [ 4, -3 ] ] );
 
-# State 2 : 
+# State 2 :
 @eigenvalues=
   eigenvalue(
      [
@@ -18323,7 +18355,7 @@ $mult=
           ->[$i])/
   (6*$delta);
 
-# State 2 
+# State 2
 
 $mult=(
         $coeffs->[$i]/

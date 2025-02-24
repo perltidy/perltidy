@@ -6,7 +6,7 @@
       similar but slightly different to standard output and then exit.
       A related option --warn-similar-keys will report keys with are similar
       to the error output while formatting. Both of these can be controlled
-      by two parameters which are described in the input manual.
+      by parameters which are described in the input manual.
 
     - A new optiion --dump-hash-keys will dump all hash keys found by
       perltidy to standard output.

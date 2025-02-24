@@ -2948,15 +2948,19 @@ sub initialize_line_up_parentheses {
 
     if ( $rOpts->{'line-up-parentheses'} ) {
 
-        if (   $rOpts->{'indent-only'}
+        # Included add-whitespace as simple fix for b1507
+        if (
+            $rOpts->{'indent-only'}
             || !$rOpts->{'add-newlines'}
-            || !$rOpts->{'delete-old-newlines'} )
+## TBD:     || !$rOpts->{'add-whitespace'}
+            || !$rOpts->{'delete-old-newlines'}
+          )
         {
             Warn(<<EOM);
 -----------------------------------------------------------------------
-Conflict: -lp  conflicts with -io, -fnl, -nanl, or -ndnl; ignoring -lp
+Conflict: -lp  conflicts with -io, -naws, -fnl, -nanl, or -ndnl; ignoring -lp
 
-The -lp indentation logic requires that perltidy be able to coordinate
+The -lp and -xlp indentation logic requires that perltidy be able to coordinate
 arbitrarily large numbers of line breakpoints.  This isn't possible
 with these flags.
 -----------------------------------------------------------------------
@@ -6361,22 +6365,26 @@ EOM
                 $bond_str = NO_BREAK;
             }
 
-            # OLD COMMENT: In older version of perl, use strict can cause
+            # Original note: In older version of perl, use strict can cause
             # problems with breaks before bare words following opening parens.
             # For example, this will fail under older versions if a break is
             # made between '(' and 'MAIL':
 
             # use strict; open( MAIL, "a long filename or command"); close MAIL;
 
-            # NEW COMMENT: Third fix for b1213:
+            # Update 1: Third fix for b1213:
             # This option does not seem to be needed any longer, and it can
             # cause instabilities.  It can be turned off, but to minimize
             # changes to existing formatting it is retained only in the case
             # where the previous token was 'open' and there was no line break.
             # Even this could eventually be removed if it causes instability.
+
             if ( $type eq '{' ) {
 
-                if (   $token eq '('
+                # Update 2: Deactivated to fix b1508, where the 'open' case was
+                # a problem
+                if (   0
+                    && $token eq '('
                     && $next_nonblank_type eq 'w'
                     && $last_nonblank_type eq 'k'
                     && $last_nonblank_token eq 'open'
@@ -27714,6 +27722,13 @@ EOM
                         && $next_nonblank_token_type eq '#' )
                     {
                         $added_length = 1 + $rLL->[$K_last]->[_TOKEN_LENGTH_];
+                    }
+
+                    # Fix b1509: include the length to any terminal semicolon
+                    if ( $next_nonblank_token_type eq ';'
+                        && !$is_block_without_semicolon{$block_type} )
+                    {
+                        $added_length += $Knnb - $Ktoken_vars - 1;
                     }
 
                     # we have to terminate it if..
