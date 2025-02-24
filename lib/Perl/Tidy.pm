@@ -4033,6 +4033,9 @@ sub generate_options {
       valign-signed-numbers
       valign-signed-numbers-limit=20
       short-concatenation-item-length=8
+      similar-keys-maximum-difference=1
+      similar-keys-maximum-pairs=25
+      similar-keys-minimum-length=4
       space-for-semicolon
       space-backslash-quote=1
       space-prototype-paren=1
