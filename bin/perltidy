@@ -5113,7 +5113,7 @@ The possible values of B<n> are:
 
  n=0 ignore all old blank lines
  n=1 stable: keep old blanks, but limited by the B<-mbl=n> flag, but
-     remove existing blanks matching the B<--kblx=s> flag (next section)
+     remove existing blanks matching the B<--kblx=s> flag (see below)
  n=2 keep all old blank lines, regardless of the B<-mbl=n> flag
 
 The default and recommended setting is B<n=1>. With this option, you may
@@ -6387,7 +6387,7 @@ parameters:
   max_change   - change in depth to the most deeply nested code block
   block_count  - total number of code blocks nested in this block
   mccabe1      - McCabe complexity measure of this code block
-  mccabe2      - modified complexity: subs have anonymous sub complexity removed
+  mccabe2      - modified: subs have anonymous sub complexity removed
 
 This feature was developed to help identify complex sections of code as an aid
 in refactoring.  The McCabe complexity measure, 'mccabe1', follows the
@@ -7424,22 +7424,23 @@ The following list shows all short parameter names which allow a prefix
  atnl   aws    b      baa    baao   bar    bbao   bbb    bbc    bbs
  bl     bli    boa    boc    bok    bol    bom    bos    bot    cblx
  ce     conv   cpb    cs     csc    cscb   cscw   dac    dbc    dbs
- dcbl   dcsc   ddf    dia    dior   dln    dltc   dma    dmcp   dmr
- dnl    dop    dp     dpro   drc    dsc    dsm    dsn    dtc    dtco
- dtt    duk    duv    dwic   dwls   dwrs   dws    eos    f      fpva
- frm    fs     fso    gcs    hbc    hbcm   hbco   hbh    hbhh   hbi
- hbj    hbk    hbm    hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc
- hbv    hbw    hent   hic    hicm   hico   hih    hihh   hii    hij
- hik    him    hin    hip    hipd   hipu   hiq    his    hisc   hiv
- hiw    hsc    html   ibc    icb    icp    ils    iob    ipc    isbc
- iscl   kgb    kgbd   kgbi   kis    lal    log    lop    lp     lsl
- mci    mem    nib    ohbr   okw    ola    olc    oll    olq    opr
- opt    osbc   osbr   otr    ple    pod    pvl    q      qwaf   sac
- sbc    sbl    scbb   schb   scp    scsb   sct    se     sfp    sfs
- skp    sob    sobb   sohb   sop    sosb   sot    ssc    st     sts
- t      tac    tbc    toc    tp     tqw    trp    ts     tsc    tso
- vbc    vc     viu    vmll   vsc    vsn    vwe    w      wfc    wia
- wma    wme    wmr    wn     wuk    x      xbt    xci    xlp    xs
+ dcbl   dcsc   ddf    dhk    dia    dior   dln    dltc   dma    dmcp
+ dmr    dnl    dop    dp     dpro   drc    dsc    dsk    dsm    dsn
+ dtc    dtco   dtt    duk    duv    dwic   dwls   dwrs   dws    eos
+ f      fpva   frm    fs     fso    gcs    hbc    hbcm   hbco   hbh
+ hbhh   hbi    hbj    hbk    hbm    hbn    hbp    hbpd   hbpu   hbq
+ hbs    hbsc   hbv    hbw    hent   hic    hicm   hico   hih    hihh
+ hii    hij    hik    him    hin    hip    hipd   hipu   hiq    his
+ hisc   hiv    hiw    hsc    html   ibc    icb    icp    ils    iob
+ ipc    isbc   iscl   kgb    kgbd   kgbi   kis    lal    log    lop
+ lp     lsl    mci    mem    nib    ohbr   okw    ola    olc    oll
+ olq    opr    opt    osbc   osbr   otr    ple    pod    pvl    q
+ qwaf   sac    sbc    sbl    scbb   schb   scp    scsb   sct    se
+ sfp    sfs    skp    sob    sobb   sohb   sop    sosb   sot    ssc
+ st     sts    t      tac    tbc    toc    tp     tqw    trp    ts
+ tsc    tso    vbc    vc     viu    vmll   vsc    vsn    vwe    w
+ wfc    wia    wma    wme    wmr    wn     wsk    wuk    x      xbt
+ xci    xlp    xs
 
 Equivalently, the prefix 'no' or 'no-' on the corresponding long names may be
 used.
@@ -7538,7 +7539,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20250214.01
+This man page documents perltidy version 20250214.02
 
 =head1 BUG REPORTS
 

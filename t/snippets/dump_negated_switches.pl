@@ -104,6 +104,7 @@ EOM
     print "$line\n";
 
     print <<EOM;
+
 Equivalently, the prefix 'no' or 'no-' on the corresponding long names may be
 used.
 

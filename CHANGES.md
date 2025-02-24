@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2025 02 14.01
+## 2025 02 14.02
 
     - A new option --dump-similar-keys will dump hash keys which are
       similar but slightly different to standard output and then exit.
