@@ -2949,16 +2949,13 @@ sub initialize_line_up_parentheses {
     if ( $rOpts->{'line-up-parentheses'} ) {
 
         # Included add-whitespace as simple fix for b1507
-        if (
-            $rOpts->{'indent-only'}
+        if (   $rOpts->{'indent-only'}
             || !$rOpts->{'add-newlines'}
-## TBD:     || !$rOpts->{'add-whitespace'}
-            || !$rOpts->{'delete-old-newlines'}
-          )
+            || !$rOpts->{'delete-old-newlines'} )
         {
             Warn(<<EOM);
 -----------------------------------------------------------------------
-Conflict: -lp  conflicts with -io, -naws, -fnl, -nanl, or -ndnl; ignoring -lp
+Conflict: -lp  conflicts with -io, -fnl, -nanl, or -ndnl; ignoring -lp
 
 The -lp and -xlp indentation logic requires that perltidy be able to coordinate
 arbitrarily large numbers of line breakpoints.  This isn't possible
@@ -2967,6 +2964,29 @@ with these flags.
 EOM
             $rOpts->{'line-up-parentheses'}          = 0;
             $rOpts->{'extended-line-up-parentheses'} = 0;
+        }
+
+        #------------------------------------------------------------
+        # The combination -xlp -xci and -naws can be unstable (b1507)
+        #------------------------------------------------------------
+        if (  !$rOpts->{'add-whitespace'}
+            && $rOpts->{'extended-line-up-parentheses'}
+            && $rOpts->{'extended-continuation-indentation'} )
+        {
+            $rOpts->{'extended-continuation-indentation'} = 0;
+            ## NOTE: turn off -xci and skip warning for now
+        }
+
+        #------------------------------------------------------------
+        # The combination -xlp -xci and -naws can be unstable (b1507)
+        #------------------------------------------------------------
+        if (  !$rOpts->{'add-whitespace'}
+            && $rOpts->{'extended-line-up-parentheses'}
+            && $rOpts->{'extended-continuation-indentation'} )
+        {
+            # we need to turn off -xlp or -xci
+            $rOpts->{'extended-continuation-indentation'} = 0;
+            ## NOTE: SKIP WARNING FOR NOW TO AVOID TESTING MESSAGES
         }
 
         if ( $rOpts->{'whitespace-cycle'} ) {

@@ -6508,8 +6508,7 @@ my $parser =
 ==> b1325 <==
 WriteMakefile(
    PREREQ_PM    => {
-      'Tk'            =>
-            '800.025',
+      'Tk'            =>'800.025',
       'Tk::DiffText'  => 0,
       'Perl::Tidy'    => 0
       , # comes in the perltidy application
@@ -6521,8 +6520,7 @@ WriteMakefile(
 
 WriteMakefile(
    PREREQ_PM    => {
-      'Tk'            =>
-            '800.025',
+      'Tk'            =>'800.025',
       'Tk::DiffText'  => 0,
       'Perl::Tidy'    => 0
       , # comes in the perltidy application
@@ -7903,8 +7901,7 @@ BEGIN {
                                     qw( *_RemoteIPAddr V_SessionType )
                   ],
                   0x93 => [
-                           ConfigStat =>
-                                    qw( Z16_DeviceName V_StationUserID
+                           ConfigStat =>qw( Z16_DeviceName V_StationUserID
                                     V_StationUserInstance
                                     Z16_UserName Z16_ServerName
                                     V_NumberLines V_NumberSpeedDials )
@@ -7919,8 +7916,7 @@ BEGIN {
                                     qw( *_RemoteIPAddr V_SessionType )
                   ],
                   0x93 => [
-                           ConfigStat =>
-                                    qw( Z16_DeviceName V_StationUserID
+                           ConfigStat =>qw( Z16_DeviceName V_StationUserID
                                     V_StationUserInstance
                                     Z16_UserName Z16_ServerName
                                     V_NumberLines V_NumberSpeedDials )
@@ -7958,8 +7954,8 @@ my @pics=
     &&$_ ne $FOOTER
     &&
 
-    $_ ne$opt->{
-      'captions'},
+    $_ ne
+    $opt->{'captions'},
    @dir ) ;
 
 #S2
@@ -7979,8 +7975,8 @@ my @pics=
     &&$_ ne $FOOTER
     &&
 
-    $_ ne$opt->{
-      'captions'},
+    $_ ne
+    $opt->{'captions'},
    @dir ) ;
 
 
@@ -8115,8 +8111,8 @@ sub new{
                               while(($k,$v,)=each(%{$_[3]})){
                                    if($k eq"email_"){
                                         if(
-                                                   defined$groups{$_[1]}
-                                                   ->{"email_work"})
+                                            defined$groups{$_[1]}
+                                            ->{"email_work"})
                                         {
                                              $k="email_home";
                                         }
@@ -8174,8 +8170,7 @@ sub new{
                [
                     'addressparts',
                     5,
-                    sub{{"address",$_[1],"address2",$_[3],"street",$_[5],
-                    }},
+                    sub{{"address",$_[1],"address2",$_[3],"street",$_[5],}},
                ],
           ],
           @_,
@@ -8520,6 +8515,20 @@ my $species =
     while (<$FH>) {
         if ( $_ !~ /\w/ ) { next }
     }
+
+==> b1507 <==
+         while(($char=substr($t->{line},$t->{line_cursor}+1,1,))=~
+               /[^\W\d_]/)
+         {
+                  ...;
+         }
+
+         while(($char=substr($t->{line},$t->{line_cursor}+1,1,))=~
+               /[^\W\d_]/)
+         {
+                  ...;
+         }
+
 
 ==> b1508 <==
 open(

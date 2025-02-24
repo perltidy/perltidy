@@ -12584,6 +12584,41 @@ my $species =
 --keyword-group-blanks-after=2
 --keep-old-blank-lines-exceptions='bp bc b{ {b'
 
+==> b1507.in <==
+         while(
+                  (
+                           $char=substr(
+                                    $t->{line},
+                                    $t->{line_cursor}+1,1,
+                           )
+                  )=~/[^\W\d_]/
+                  )
+         {
+                  ...;
+         }
+
+         while(
+                  (
+                           $char=substr(
+                                    $t->{line},
+                                    $t->{line_cursor}+1,1,
+                           )
+                  )=~/[^\W\d_]/
+                  )
+         {
+                  ...;
+         }
+
+
+==> b1507.par <==
+--maximum-line-length=74
+--indent-columns=9
+--continuation-indentation=9
+--noadd-whitespace
+--extended-continuation-indentation
+--ignore-old-breakpoints
+--extended-line-up-parentheses
+
 ==> b1508.in <==
 open(FIND,
         "find $fslist $xdev -type f \\( -perm -04000 -o -perm -02000 \\) -print|"
