@@ -2,7 +2,7 @@
 
 ## 2025 02 14.02
 
-    - An unusual tokenization error has been fixed (git #32).
+    - Fig git #32, a tokenization error.
 
     - A new option --dump-similar-keys will dump hash keys which are
       similar but slightly different to standard output and then exit.
@@ -10,7 +10,7 @@
       to the error output while formatting. Both of these can be controlled
       by parameters which are described in the input manual.
 
-    - A new optiion --dump-hash-keys will dump all hash keys found by
+    - A new option --dump-hash-keys will dump all hash keys found by
       perltidy to standard output.
 
     - The output table for --dump-block-summary has an additional field.
