@@ -2,6 +2,8 @@
 
 ## 2025 02 14.02
 
+    - An unusual tokenization error has been fixed (git #32).
+
     - A new option --dump-similar-keys will dump hash keys which are
       similar but slightly different to standard output and then exit.
       A related option --warn-similar-keys will report keys with are similar

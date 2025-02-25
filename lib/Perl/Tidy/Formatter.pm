@@ -2977,18 +2977,6 @@ EOM
             ## NOTE: turn off -xci and skip warning for now
         }
 
-        #------------------------------------------------------------
-        # The combination -xlp -xci and -naws can be unstable (b1507)
-        #------------------------------------------------------------
-        if (  !$rOpts->{'add-whitespace'}
-            && $rOpts->{'extended-line-up-parentheses'}
-            && $rOpts->{'extended-continuation-indentation'} )
-        {
-            # we need to turn off -xlp or -xci
-            $rOpts->{'extended-continuation-indentation'} = 0;
-            ## NOTE: SKIP WARNING FOR NOW TO AVOID TESTING MESSAGES
-        }
-
         if ( $rOpts->{'whitespace-cycle'} ) {
             Warn(<<EOM);
 Conflict: -wc cannot currently be used with the -lp option; ignoring -wc
