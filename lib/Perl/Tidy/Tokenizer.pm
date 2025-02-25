@@ -6800,9 +6800,9 @@ sub operator_expected {
     # Section 2E: bareword
     if ( $last_nonblank_type eq 'w' ) {
 
-        # It is safest to return UNKNOWN if a pattern may follow (git #32)
-        # and let the guess algorithm handle it
-        if ( $tok eq '?' || $tok eq '/' ) { return UNKNOWN }
+        # It is safest to return UNKNOWN if a possible ? pattern delimiter may
+        # follow (git #32, c469) and let the guess algorithm handle it.
+        if ( $tok eq '?' ) { return UNKNOWN }
 
         # see if this has been seen in the role of a function taking args
         my $rinfo = $self->[_rbareword_info_]->{$current_package};
@@ -7754,7 +7754,13 @@ sub guess_if_pattern_or_conditional {
         $msg .= "pattern (found ending ? and pattern expected)\n";
         return ( $is_pattern, $msg );
     }
-    $msg .= "pattern (uncertain, but found ending ?)\n";
+
+    # NOTE: An ultimate decision could be made on version, since ? is a ternary
+    # after version 5.22. But we may be formatting an ancient script with a
+    # newer perl, and it might run on an older perl, so we cannot be certain.
+    # if ($] >=5.022)  {$is_pattern=0} else { ... not sure
+
+    $msg .= "conditional (but uncertain)\n";
     return ( $is_pattern, $msg );
 } ## end sub guess_if_pattern_or_conditional
 
