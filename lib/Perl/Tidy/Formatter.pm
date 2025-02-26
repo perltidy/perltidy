@@ -8350,18 +8350,15 @@ EOM
         Exit(0);
     }
 
-    if ( $rOpts->{'warn-unique-keys'} ) {
-        $self->warn_unique_keys()
-          if ( $self->[_logger_object_] );
-    }
-
     if ( $rOpts->{'dump-similar-keys'} ) {
         $self->dump_similar_keys();
         Exit(0);
     }
 
-    if ( $rOpts->{'warn-similar-keys'} ) {
-        $self->warn_similar_keys()
+    if (   $rOpts->{'warn-unique-keys'}
+        || $rOpts->{'warn-similar-keys'} )
+    {
+        $self->warn_unique_or_similar_keys()
           if ( $self->[_logger_object_] );
     }
 
@@ -9102,18 +9099,32 @@ sub get_interpolated_hash_keys {
 } ## end sub get_interpolated_hash_keys
 
 sub scan_hash_keys {
-    my ( $self, $caller ) = @_;
+    my ( $self, $rcall_type ) = @_;
 
-    # Scan for hash keys
+    # Scan hash keys for certain key types.
+    # Given:
+    #   $rcall_type = hash ref with requested analysis type
+    # Updates:
+    #   $rcall_type->{..} = output string for each requested type
 
-    # Given: $caller=
-    #   'dsk' for --dump-similar-keys
-    #   'dhk' for --dump-hash-keys,
-    #   'duk' for --dump-unique-keys
-    #   'wuk' for --warn-unique-keys
-    # Returns an output string for caller to print
+    # Any combination of the following analysis types may be requested:
+    #   unique  = unique keys
+    #   similar = similar keys
+    #   all     = all hash keys
+
+    # Check input..
+    my %is_valid_call_type = ( unique => 1, similar => 1, all => 1 );
+    my $valid_count        = 0;
+    foreach my $key ( keys %{$rcall_type} ) {
+        if ( !$is_valid_call_type{$key} ) {
+            DEVEL_MODE && Fault("invalid call type: $key");
+            next;
+        }
+        $valid_count++;
+    }
+    return if ( !$valid_count );
+
     use constant DEBUG_WUK => 0;
-    $caller = EMPTY_STRING if ( !defined($caller) );
 
     # There are the main phases of the operation:
 
@@ -9125,7 +9136,8 @@ sub scan_hash_keys {
     # During this scan we save pointers to all quotes and here docs,
     # for use in the second phase.
 
-    # End here for -dhk, otherwise keep going:
+    # Analysis for 'similar' and 'all' keys is complete at this point.
+    # We continue to find 'unique' keys.
 
     # PHASE 2: We find the keys which occur just once, and store their
     # index in the hash %K_unique_key. Then we compare all quoted text
@@ -9165,7 +9177,7 @@ sub scan_hash_keys {
     my %is_known_module_key;     # set by sub $set_known_module_keys after scan
     my $semicolon_count = 0;     # for creating unique birth_id's
     my %birth_id_info;           # for creating unique birth_id's
-    my $output_string = EMPTY_STRING;
+    my $message_string = EMPTY_STRING;
 
     # See https://perldoc.perl.org/perlref
     my %is_typeglob_slot_key;
@@ -9733,7 +9745,7 @@ EOM
                     # This is not necessarily an error, but might be.
                     # This warning will only go out if hash keys are being
                     # checked with one of the hash key dumps or warnings.
-                    $output_string .= $message;
+                    $message_string .= $message;
                 }
             }
             $rhash_key_trove->{$word}->{count}++;
@@ -10339,26 +10351,33 @@ EOM
     } ## end while ( ++$KK <= $Klimit )
 
     # End here for --dump-hash-keys
-    if ( $caller eq 'dhk' ) {
+    if ( $rcall_type->{all} ) {
         my @list;
         foreach my $word ( keys %{$rhash_key_trove} ) {
             my $count = $rhash_key_trove->{$word}->{count};
             push @list, [ $word, $count ];
         }
         @list = sort { $a->[1] <=> $b->[1] || $a->[0] cmp $b->[0] } @list;
+        my $output_string = $message_string;
         foreach my $item (@list) {
             my ( $word, $count ) = @{$item};
             $output_string .= "$word,$count\n";
         }
-        return $output_string;
+        $rcall_type->{all} = $output_string;
+        $message_string = EMPTY_STRING;
     }
 
-    if ( $caller eq 'dsk' || $caller eq 'wsk' ) {
+    if ( $rcall_type->{similar} ) {
+        my $output_string = $message_string;
         $output_string .= find_similar_keys($rhash_key_trove);
-        return ($output_string);
+        $rcall_type->{similar} = $output_string;
+        $message_string = EMPTY_STRING;
     }
+
+    return if ( !$rcall_type->{unique} );
 
     # Continue for --dump-unique-keys and --warn-unique-keys ...
+    $rcall_type->{unique} = $message_string;
 
     # Make a list of keys known to any modules which have been seen
     $set_known_module_keys->();
@@ -10387,7 +10406,7 @@ EOM
         $K_unique_key{$key} = $K;
     }
 
-    return $output_string if ( !%K_unique_key );
+    return if ( !%K_unique_key );
 
     # Now go back and look for these keys in any saved quotes ...
 
@@ -10452,7 +10471,7 @@ EOM
             }
         }
     }
-    return $output_string if ( !%K_unique_key );
+    return if ( !%K_unique_key );
 
     # Check list of barewords quoted with a leading dash
     if (@mw_list) {
@@ -10464,7 +10483,7 @@ EOM
         }
     }
 
-    return $output_string if ( !%K_unique_key );
+    return if ( !%K_unique_key );
 
     # Check words against any hash keys in here docs
     foreach my $key (@keys_in_HERE_docs) {
@@ -10473,7 +10492,7 @@ EOM
         }
     }
 
-    return $output_string if ( !%K_unique_key );
+    return if ( !%K_unique_key );
 
     # Check words against any option keys passed to GetOptions
     foreach my $Kopt (@GetOptions_keys) {
@@ -10496,7 +10515,7 @@ EOM
         }
     }
 
-    return $output_string if ( !%K_unique_key );
+    return if ( !%K_unique_key );
 
     # For two-arg call to Getopt::Std ...
     if ( $Getopt_Std_hash_id && $saw_Getopt_Std ) {
@@ -10535,7 +10554,7 @@ EOM
         }
     }
 
-    return $output_string if ( !%K_unique_key );
+    return if ( !%K_unique_key );
 
     # Remove any keys which are also in a qw list
     foreach my $Kqw (@K_start_qw_list) {
@@ -10561,14 +10580,14 @@ EOM
         $delete_unique_quoted_words->( $rlist, $missing_GetOptions_keys );
     }
 
-    return $output_string if ( !%K_unique_key );
+    return if ( !%K_unique_key );
 
     #------------------------------------------------------------------
     # PHASE 3: filter out multiple related keys which are mostly unique
     #------------------------------------------------------------------
     $filter_out_large_sets->();
 
-    return $output_string if ( !%K_unique_key );
+    return if ( !%K_unique_key );
 
     #-------------------------------------------
     # PHASE 4: Report any remaining unique words
@@ -10580,11 +10599,13 @@ EOM
         push @list, [ $word, $lno ];
     }
     @list = sort { $a->[1] <=> $b->[1] || $a->[0] cmp $b->[0] } @list;
+    my $output_string = $message_string;
     foreach my $item (@list) {
         my ( $word, $lno ) = @{$item};
         $output_string .= "$word,$lno\n";
     }
-    return $output_string;
+    $rcall_type->{unique} = $output_string;
+    return;
 
 } ## end sub scan_hash_keys
 
@@ -10594,7 +10615,9 @@ sub dump_unique_keys {
     # Dump a list of hash keys used just one time to STDOUT
     # This sub is called when
     #   --dump-unique-keys (-duk) is set.
-    my $output_string = $self->scan_hash_keys('duk');
+    my $rhash = { unique => 1 };
+    $self->scan_hash_keys($rhash);
+    my $output_string = $rhash->{unique};
     if ($output_string) {
         my $input_stream_name = get_input_stream_name();
         chomp $output_string;
@@ -10606,23 +10629,45 @@ EOM
     return;
 } ## end sub dump_unique_keys
 
-sub warn_unique_keys {
+sub warn_unique_or_similar_keys {
+
     my ($self) = @_;
 
-    # process a --warn-unique-keys command
+    # process -wsk and -wuk together because they both call scan_hash_keys
+    # and may both be used in the same run
 
-    my $wuk_key       = 'warn-unique-keys';
-    my $wukc_key      = 'warn-unique-keys-cutoff';
-    my $output_string = $self->scan_hash_keys('wuk');
+    my $wsk_key = 'warn-similar-keys';
+    my $wuk_key = 'warn-unique-keys';
+
+    my $rhash = {};
+    $rhash->{similar} = 1 if ( $rOpts->{$wsk_key} );
+    $rhash->{unique}  = 1 if ( $rOpts->{$wuk_key} );
+    $self->scan_hash_keys($rhash);
+
+    my $output_string;
+
+    $output_string = $rhash->{unique};
     if ($output_string) {
+        my $wukc_key = 'warn-unique-keys-cutoff';
         my $message =
 "Begin scan for --$wuk_key using --$wukc_key=$rOpts_warn_unique_keys_cutoff\n";
         $message .= $output_string;
         $message .= "End scan for --$wuk_key\n";
+        $message .= "\n";
         warning($message);
     }
+
+    $output_string = $rhash->{similar};
+    if ($output_string) {
+        my $message = "Begin scan for --$wsk_key\n";
+        $message .= $output_string;
+        $message .= "End scan for --$wsk_key\n";
+        warning($message);
+    }
+
+
     return;
-} ## end sub warn_unique_keys
+} ## end sub warn_unique_or_similar_keys
 
 sub string_approximate_match {
     my ( $s1, $s2, $o1, $o2, $max_diff ) = @_;
@@ -10917,7 +10962,9 @@ sub dump_similar_keys {
 
     # process a --dump-similar-keys (-dsk) command
 
-    my ($output_string) = $self->scan_hash_keys('dsk');
+    my $rhash = { similar => 1 };
+    $self->scan_hash_keys($rhash);
+    my $output_string = $rhash->{similar};
     if ($output_string) {
         my $input_stream_name = get_input_stream_name();
         chomp $output_string;
@@ -10929,28 +10976,15 @@ EOM
     return;
 } ## end sub dump_similar_keys
 
-sub warn_similar_keys {
-    my ($self) = @_;
-
-    # process a --warn-similar-keys (-wsk) command
-    my ($output_string) = $self->scan_hash_keys('dsk');
-    if ($output_string) {
-        my $wsk_key = 'warn-similar-keys';
-        my $message = "Begin scan for --$wsk_key\n";
-        $message .= $output_string;
-        $message .= "End scan for --$wsk_key\n";
-        warning($message);
-    }
-    return;
-} ## end sub warn_similar_keys
-
 sub dump_hash_keys {
     my ($self) = @_;
 
     # Dump a list of hash keys time to STDOUT
     # This sub is called when
     #   --dump-hash-keys (-dhk) is set.
-    my $output_string = $self->scan_hash_keys('dhk');
+    my $rhash = { all => 1 };
+    $self->scan_hash_keys($rhash);
+    my $output_string = $rhash->{all};
     if ($output_string) {
         my $input_stream_name = get_input_stream_name();
         chomp $output_string;
