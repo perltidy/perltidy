@@ -3916,11 +3916,14 @@ sub generate_options {
         }
     }
 
-    #------------------------------------------------------------------
-    # DEFAULTS: Assign default values to the above options here, except
-    # for 'outfile' and 'help'.
-    # These settings should approximate the perlstyle(1) suggestions.
-    #------------------------------------------------------------------
+    #----------------------------------------------------------------------
+    # NON-INTEGER DEFAULTS: Assign default values to the above options here
+    # except for integers, 'outfile' and 'help'
+    # NOTES:
+    # - Enter integer options in %integer_option_range, NOT HERE
+    # - 'keyword-group-blanks-size=5' is ok here: the arg is a string
+    # - These settings should approximate the perlstyle(1) suggestions.
+    #----------------------------------------------------------------------
     my @defaults = qw(
       add-lone-trailing-commas
       add-newlines
@@ -3929,51 +3932,23 @@ sub generate_options {
       add-whitespace
       blanks-before-blocks
       blanks-before-comments
-      blank-lines-before-subs=1
-      blank-lines-before-packages=1
 
       keyword-group-blanks-size=5
-      keyword-group-blanks-repeat-count=0
-      keyword-group-blanks-before=1
-      keyword-group-blanks-after=1
       nokeyword-group-blanks-inside
       nokeyword-group-blanks-delete
 
-      block-brace-tightness=0
-      block-brace-vertical-tightness=0
-      brace-follower-vertical-tightness=1
-      brace-tightness=1
-      brace-vertical-tightness-closing=0
-      brace-vertical-tightness=0
-      break-after-labels=0
       break-at-old-logical-breakpoints
       break-at-old-ternary-breakpoints
       break-at-old-attribute-breakpoints
       break-at-old-keyword-breakpoints
-      break-before-hash-brace=0
-      break-before-hash-brace-and-indent=0
-      break-before-square-bracket=0
-      break-before-square-bracket-and-indent=0
-      break-before-paren=0
-      break-before-paren-and-indent=0
-      comma-arrow-breakpoints=5
       nocheck-syntax
       character-encoding=guess
-      closing-side-comment-interval=6
-      closing-side-comment-maximum-text=20
-      closing-side-comment-else-flag=0
       closing-side-comments-balanced
-      closing-paren-indentation=0
-      closing-brace-indentation=0
-      closing-square-bracket-indentation=0
-      continuation-indentation=2
       noextended-continuation-indentation
-      cuddled-break-option=1
       delete-old-newlines
       delete-repeated-commas
       delete-lone-trailing-commas
       delete-semicolons
-      dump-block-minimum-lines=20
       dump-block-types=sub
       extended-syntax
       encode-output-strings
@@ -3982,28 +3957,11 @@ sub generate_options {
       fuzzy-line-length
       hanging-side-comments
       indent-block-comments
-      indent-columns=4
       indent-leading-semicolon
-      integer-range-check=2
-      interbracket-arrow-complexity=1
-      iterations=1
-      keep-old-blank-lines=1
-      keyword-paren-inner-tightness=1
       logical-padding
-      long-block-line-count=8
       look-for-autoloader
       look-for-selfloader
-      maximum-consecutive-blank-lines=1
-      maximum-fields-per-table=0
-      maximum-line-length=80
-      maximum-file-size-mb=10
-      maximum-level-errors=1
-      maximum-unexpected-errors=0
       memoize
-      minimum-space-to-comment=4
-      warn-mismatched-arg-undercount-cutoff=4
-      warn-mismatched-arg-overcount-cutoff=1
-      warn-unique-keys-cutoff=1
       nobrace-left-and-indent
       nocuddled-else
       nodelete-old-whitespace
@@ -4015,14 +3973,9 @@ sub generate_options {
       nostatic-side-comments
       notabs
       nowarning-output
-      one-line-block-semicolons=1
-      one-line-block-nesting=0
       outdent-labels
       outdent-long-quotes
       outdent-long-comments
-      paren-tightness=1
-      paren-vertical-tightness-closing=0
-      paren-vertical-tightness=0
       pass-version-line
       noweld-nested-containers
       recombine
@@ -4031,18 +3984,7 @@ sub generate_options {
       valign-block-comments
       valign-side-comments
       valign-signed-numbers
-      valign-signed-numbers-limit=20
-      short-concatenation-item-length=8
-      similar-keys-maximum-difference=1
-      similar-keys-maximum-pairs=25
-      similar-keys-minimum-length=4
       space-for-semicolon
-      space-backslash-quote=1
-      space-prototype-paren=1
-      space-signature-paren=1
-      square-bracket-tightness=1
-      square-bracket-vertical-tightness-closing=0
-      square-bracket-vertical-tightness=0
       static-block-comments
       timestamp
       trim-qw
@@ -4051,13 +3993,6 @@ sub generate_options {
       backup-file-extension=bak
       code-skipping
       format-skipping
-      default-tabsize=8
-      timeout-in-seconds=10
-
-      whitespace-cycle=0
-      entab-leading-whitespace=0
-      blank-lines-before-closing-block=0
-      blank-lines-after-opening-block=0
 
       pod2html
       html-table-of-contents
@@ -4115,111 +4050,95 @@ sub generate_options {
         'break-after-labels'    => [ 0, 2 ],
     );
 
-    # Valid [min,max] ranges of all integer options (type '=i').  This hash is
-    # replacing %option_range, above, for use by sub 'check_options'
+    # Ranges and defaults of all integer options (type '=i').
+    # NOTES:
+    # 1. ALl integer options must be in this table, not in @defaults
+    # 2. This replaces %option_range, above, for use by sub 'check_options'
+    # 3. 'closing-token-indentation' (cti), 'vertical-tightness' (vt),
+    #   and 'vertical-tightness-closing' (vtc) are aliases which are included
+    #   to work around an old problem with msdos (see note in check_options).
+    # 4. Use -dior to dump this table.
+
+    # 'option-name' => [min, max, default]
     %integer_option_range = (
-        'blank-lines-after-opening-block'           => [ 0, undef ],
-        'blank-lines-before-closing-block'          => [ 0, undef ],
-        'blank-lines-before-packages'               => [ 0, undef ],
-        'blank-lines-before-subs'                   => [ 0, undef ],
-        'block-brace-tightness'                     => [ 0, 2 ],
-        'block-brace-vertical-tightness'            => [ 0, 2 ],
-        'brace-follower-vertical-tightness'         => [ 0, 2 ],
-        'brace-tightness'                           => [ 0, 2 ],
-        'brace-vertical-tightness'                  => [ 0, 2 ],
-        'brace-vertical-tightness-closing'          => [ 0, 3 ],
-        'break-after-labels'                        => [ 0, 2 ],
-        'break-before-hash-brace'                   => [ 0, 3 ],
-        'break-before-hash-brace-and-indent'        => [ 0, 2 ],
-        'break-before-paren'                        => [ 0, 3 ],
-        'break-before-paren-and-indent'             => [ 0, 2 ],
-        'break-before-square-bracket'               => [ 0, 3 ],
-        'break-before-square-bracket-and-indent'    => [ 0, 2 ],
-        'closing-brace-indentation'                 => [ 0, 3 ],
-        'closing-paren-indentation'                 => [ 0, 3 ],
-        'closing-side-comment-else-flag'            => [ 0, 2 ],
-        'closing-side-comment-interval'             => [ 0, undef ],
-        'closing-side-comment-maximum-text'         => [ 0, undef ],
-        'closing-square-bracket-indentation'        => [ 0, 3 ],
-        'closing-token-indentation'                 => [ 0, 3 ],
-        'comma-arrow-breakpoints'                   => [ 0, 5 ],
-        'continuation-indentation'                  => [ 0, undef ],
-        'cuddled-break-option'                      => [ 0, 2 ],
-        'default-tabsize'                           => [ 0, undef ],
-        'dump-block-minimum-lines'                  => [ 0, undef ],
-        'entab-leading-whitespace'                  => [ 0, undef ],
-        'fixed-position-side-comment'               => [ 0, undef ],
-        'indent-columns'                            => [ 0, undef ],
-        'interbracket-arrow-complexity'             => [ 0, 2 ],
-        'integer-range-check'                       => [ 0, 3 ],
-        'iterations'                                => [ 0, undef ],
-        'keep-old-blank-lines'                      => [ 0, 2 ],
-        'keyword-group-blanks-after'                => [ 0, 2 ],
-        'keyword-group-blanks-before'               => [ 0, 2 ],
-        'keyword-group-blanks-repeat-count'         => [ 0, undef ],
-        'keyword-paren-inner-tightness'             => [ 0, 2 ],
-        'long-block-line-count'                     => [ 0, undef ],
-        'maximum-consecutive-blank-lines'           => [ 0, undef ],
-        'maximum-fields-per-table'                  => [ 0, undef ],
-        'maximum-file-size-mb'                      => [ 0, undef ],
-        'maximum-level-errors'                      => [ 0, undef ],
-        'maximum-line-length'                       => [ 0, undef ],
-        'maximum-unexpected-errors'                 => [ 0, undef ],
-        'minimum-space-to-comment'                  => [ 0, undef ],
-        'warn-mismatched-arg-undercount-cutoff'     => [ 0, undef ],
-        'warn-mismatched-arg-overcount-cutoff'      => [ 0, undef ],
-        'one-line-block-nesting'                    => [ 0, 1 ],
-        'one-line-block-semicolons'                 => [ 0, 2 ],
-        'paren-tightness'                           => [ 0, 2 ],
-        'paren-vertical-tightness'                  => [ 0, 2 ],
-        'paren-vertical-tightness-closing'          => [ 0, 3 ],
-        'short-concatenation-item-length'           => [ 0, undef ],
-        'similar-keys-maximum-difference'           => [ 1, undef ],
-        'similar-keys-minimum-length'               => [ 1, undef ],
-        'similar-keys-maximum-pairs'                => [ 1, undef ],
-        'space-backslash-quote'                     => [ 0, 2 ],
-        'space-prototype-paren'                     => [ 0, 2 ],
-        'space-signature-paren'                     => [ 0, 2 ],
-        'square-bracket-tightness'                  => [ 0, 2 ],
-        'square-bracket-vertical-tightness'         => [ 0, 2 ],
-        'square-bracket-vertical-tightness-closing' => [ 0, 3 ],
-        'starting-indentation-level'                => [ 0, undef ],
-        'timeout-in-seconds'                        => [ 0, undef ],
-        'valign-signed-numbers-limit'               => [ 0, undef ],
-        'vertical-tightness'                        => [ 0, 2 ],
-        'vertical-tightness-closing'                => [ 0, 3 ],
-        'warn-unique-keys-cutoff'                   => [ 1, undef ],
-        'whitespace-cycle'                          => [ 0, undef ],
+        'blank-lines-after-opening-block'           => [ 0, undef, 0 ],
+        'blank-lines-before-closing-block'          => [ 0, undef, 0 ],
+        'blank-lines-before-packages'               => [ 0, undef, 1 ],
+        'blank-lines-before-subs'                   => [ 0, undef, 1 ],
+        'block-brace-tightness'                     => [ 0, 2,     0 ],
+        'block-brace-vertical-tightness'            => [ 0, 2,     0 ],
+        'brace-follower-vertical-tightness'         => [ 0, 2,     1 ],
+        'brace-tightness'                           => [ 0, 2,     1 ],
+        'brace-vertical-tightness'                  => [ 0, 2,     0 ],
+        'brace-vertical-tightness-closing'          => [ 0, 3,     0 ],
+        'break-after-labels'                        => [ 0, 2,     0 ],
+        'break-before-hash-brace'                   => [ 0, 3,     0 ],
+        'break-before-hash-brace-and-indent'        => [ 0, 2,     0 ],
+        'break-before-paren'                        => [ 0, 3,     0 ],
+        'break-before-paren-and-indent'             => [ 0, 2,     0 ],
+        'break-before-square-bracket'               => [ 0, 3,     0 ],
+        'break-before-square-bracket-and-indent'    => [ 0, 2,     0 ],
+        'closing-brace-indentation'                 => [ 0, 3,     0 ],
+        'closing-paren-indentation'                 => [ 0, 3,     0 ],
+        'closing-side-comment-else-flag'            => [ 0, 2,     0 ],
+        'closing-side-comment-interval'             => [ 0, undef, 6 ],
+        'closing-side-comment-maximum-text'         => [ 0, undef, 20 ],
+        'closing-square-bracket-indentation'        => [ 0, 3,     0 ],
+        'closing-token-indentation'                 => [ 0, 3,     undef ],
+        'comma-arrow-breakpoints'                   => [ 0, 5,     5 ],
+        'continuation-indentation'                  => [ 0, undef, 2 ],
+        'cuddled-break-option'                      => [ 0, 2,     1 ],
+        'default-tabsize'                           => [ 0, undef, 8 ],
+        'dump-block-minimum-lines'                  => [ 0, undef, 20 ],
+        'entab-leading-whitespace'                  => [ 0, undef, 0 ],
+        'fixed-position-side-comment'               => [ 0, undef, undef ],
+        'indent-columns'                            => [ 0, undef, 4 ],
+        'integer-range-check'                       => [ 0, 3,     2 ],
+        'interbracket-arrow-complexity'             => [ 0, 2,     1 ],
+        'iterations'                                => [ 0, undef, 1 ],
+        'keep-old-blank-lines'                      => [ 0, 2,     1 ],
+        'keyword-group-blanks-after'                => [ 0, 2,     1 ],
+        'keyword-group-blanks-before'               => [ 0, 2,     1 ],
+        'keyword-group-blanks-repeat-count'         => [ 0, undef, 0 ],
+        'keyword-paren-inner-tightness'             => [ 0, 2,     1 ],
+        'long-block-line-count'                     => [ 0, undef, 8 ],
+        'maximum-consecutive-blank-lines'           => [ 0, undef, 1 ],
+        'maximum-fields-per-table'                  => [ 0, undef, 0 ],
+        'maximum-file-size-mb'                      => [ 0, undef, 10 ],
+        'maximum-level-errors'                      => [ 0, undef, 1 ],
+        'maximum-line-length'                       => [ 0, undef, 80 ],
+        'maximum-unexpected-errors'                 => [ 0, undef, 0 ],
+        'minimum-space-to-comment'                  => [ 0, undef, 4 ],
+        'one-line-block-nesting'                    => [ 0, 1,     0 ],
+        'one-line-block-semicolons'                 => [ 0, 2,     1 ],
+        'paren-tightness'                           => [ 0, 2,     1 ],
+        'paren-vertical-tightness'                  => [ 0, 2,     0 ],
+        'paren-vertical-tightness-closing'          => [ 0, 3,     0 ],
+        'short-concatenation-item-length'           => [ 0, undef, 8 ],
+        'similar-keys-maximum-difference'           => [ 1, undef, 1 ],
+        'similar-keys-maximum-pairs'                => [ 1, undef, 25 ],
+        'similar-keys-minimum-length'               => [ 1, undef, 4 ],
+        'space-backslash-quote'                     => [ 0, 2,     1 ],
+        'space-prototype-paren'                     => [ 0, 2,     1 ],
+        'space-signature-paren'                     => [ 0, 2,     1 ],
+        'square-bracket-tightness'                  => [ 0, 2,     1 ],
+        'square-bracket-vertical-tightness'         => [ 0, 2,     0 ],
+        'square-bracket-vertical-tightness-closing' => [ 0, 3,     0 ],
+        'starting-indentation-level'                => [ 0, undef, undef ],
+        'timeout-in-seconds'                        => [ 0, undef, 10 ],
+        'valign-signed-numbers-limit'               => [ 0, undef, 20 ],
+        'vertical-tightness'                        => [ 0, 2,     undef ],
+        'vertical-tightness-closing'                => [ 0, 3,     undef ],
+        'warn-mismatched-arg-overcount-cutoff'      => [ 0, undef, 1 ],
+        'warn-mismatched-arg-undercount-cutoff'     => [ 0, undef, 4 ],
+        'warn-unique-keys-cutoff'                   => [ 1, undef, 1 ],
+        'whitespace-cycle'                          => [ 0, undef, 0 ],
     );
 
-    # Enter default values into the integer option range table
-    foreach my $opt (@defaults) {
-        if ( $opt =~ /^(.*)=(\d+)$/ ) {
-            my $key = $1;
-            my $def = $2;
-            if ( defined( $integer_option_range{$key} ) ) {
-                $integer_option_range{$key}->[2] = $def;
-            }
-        }
-    }
-
-    # Enter special values which have undef as the default.
-    # Note that cti, vt, and vtc are aliases which are included to work
-    # around an old problem with msdos (see note in check_options).
-    foreach my $key (
-        qw(
-        closing-token-indentation
-        vertical-tightness
-        vertical-tightness-closing
-        fixed-position-side-comment
-        starting-indentation-level
-        )
-      )
-    {
-        if ( defined( $integer_option_range{$key} )
-            && @{ $integer_option_range{$key} } < 3 )
-        {
-            $integer_option_range{$key}->[2] = undef;
+    foreach my $key ( keys %integer_option_range ) {
+        my $val = $integer_option_range{$key}->[2];
+        if ( defined($val) ) {
+            push @defaults, "$key=$val";
         }
     }
 
