@@ -9791,32 +9791,6 @@ EOM
         return;
     }; ## end $delete_getopt_subword = sub
 
-    my $dubious_key = sub {
-
-        my ($key) = @_;
-
-        # Given:
-        #   $key = a key which is unique and about to be filtered out
-        # Return:
-        #   true if we should not filter it out for some reason
-        #   false if it is ok to filter it out
-
-        # Do not remove a key with mixed interior underscores and dashes,
-        # such as 'encode-output_strings', since this is a common typo.
-        my $len            = length($key);
-        my $pos_dash       = index( $key, '-', 1 );
-        my $pos_underscore = index( $key, '_', 1 );
-        my $interior_dash  = $pos_dash > 0 && $pos_dash < $len - 1;
-        my $interior_underscore =
-          $pos_underscore > 0 && $pos_underscore < $len - 1;
-        if ( $interior_dash && $interior_underscore ) { return 1 }
-
-        # additonal checks can go here
-
-        # ok to filter this key out
-        return;
-    }; ## end $dubious_key = sub
-
     my $delete_key_if_saw_call = sub {
         my ( $key, $subname ) = @_;
 
@@ -9906,27 +9880,11 @@ EOM
             }
         }
 
-        # locate keys to be deleted
-        my %mark_as_non_unique;
-        my %is_dubious_key;
-        my $dubious_count = 0;
+        # Remove keys to be deleted from further consideration
         foreach my $key ( keys %{$rhash_key_trove} ) {
             my $hash_id = $rhash_key_trove->{$key}->{hash_id};
             next if ( !$hash_id );
             next if ( !$delete_this_id{$hash_id} );
-            if ( $dubious_key->($key) ) {
-                $is_dubious_key{$key} = 1;
-                $dubious_count++;
-            }
-            $mark_as_non_unique{$key} = 1;
-        }
-
-        # Remove keys to be deleted from further consideration
-        foreach my $key ( keys %mark_as_non_unique ) {
-
-            # but keep dubious keys if there is just 1
-            if ( $is_dubious_key{$key} && $dubious_count == 1 ) { next }
-
             if ( $K_unique_key{$key} ) { delete $K_unique_key{$key} }
         }
 
@@ -10664,7 +10622,6 @@ sub warn_unique_or_similar_keys {
         $message .= "End scan for --$wsk_key\n";
         warning($message);
     }
-
 
     return;
 } ## end sub warn_unique_or_similar_keys
