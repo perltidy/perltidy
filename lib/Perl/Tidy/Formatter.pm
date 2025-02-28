@@ -10632,6 +10632,7 @@ sub string_approximate_match {
     # Given
     #   $s1 and $s2 = 2 strings
     #   $o1 and $o2 = their offsets to leading alphanumeric character
+    #   $max_diff   = maximum differences allowed for similarity
     # Return:
     #   true if the number of differences is <= $max_diff
     #   false otherwise
@@ -10758,6 +10759,82 @@ sub string_approximate_match {
     return $diff_count;
 } ## end sub string_approximate_match
 
+sub sweep_similar_pairs {
+
+    my ( $rword_info, $max_diff, $reverse ) = @_;
+
+    # Make a single sweep in search of similar words
+    # Given:
+    #   $rword_info = hash of info for words (which are the keys)
+    #   $max_diff = maximum number of differences for similarity
+    #   $reverse = 1 if this is a reverse sweep, 0 if forward
+    # Return:
+    #   ref to list of similar pairs
+
+    my @sorted_words = sort {
+        $rword_info->{$a}->{first_letter} cmp $rword_info->{$b}->{first_letter}
+          || $rword_info->{$a}->{string_length}
+          <=> $rword_info->{$b}->{string_length}
+          || $a cmp $b
+    } ( keys %{$rword_info} );
+
+    # Loop to find pairs of similar hash keys
+    my @word_pairs;
+    while (@sorted_words) {
+        my $word1        = shift @sorted_words;
+        my $first_letter = $rword_info->{$word1}->{first_letter};
+        my $offset1      = $rword_info->{$word1}->{offset};
+        my $word_length  = $rword_info->{$word1}->{string_length};
+        my $birth_id1    = $rword_info->{$word1}->{birth_id};
+        my $true_first_letter =
+          $reverse ? $rword_info->{$word1}->{true_first_letter} : $first_letter;
+        foreach my $word2 (@sorted_words) {
+
+            # sorted order allows us to bail out as soon as possible
+            last
+              if ( $first_letter ne $rword_info->{$word2}->{first_letter} );
+            last
+              if ( $rword_info->{$word2}->{string_length} - $word_length >
+                $max_diff );
+
+            # in reverse mode, words with same first letter have already been
+            # compared
+            if ($reverse) {
+                next
+                  if ( $true_first_letter eq
+                    $rword_info->{$word2}->{true_first_letter} );
+            }
+
+            # Skip keys defined in the same data structure
+            if ($birth_id1) {
+                my $birth_id2 = $rword_info->{$word2}->{birth_id};
+                next
+                  if ( $birth_id2 && $birth_id2 eq $birth_id1 );
+            }
+
+            my $offset2 = $rword_info->{$word2}->{offset};
+            my $diff_count =
+              string_approximate_match( $word1, $word2, $offset1, $offset2,
+                $max_diff );
+            if ($diff_count) {
+                my $count1 = $rword_info->{$word1}->{count};
+                my $count2 = $rword_info->{$word2}->{count};
+                my $w1     = $reverse ? reverse($word1) : $word1;
+                my $w2     = $reverse ? reverse($word2) : $word2;
+                if ( $count2 < $count1 ) {
+                    ( $w1,     $w2 )     = ( $w2,     $w1 );
+                    ( $count1, $count2 ) = ( $count2, $count1 );
+                }
+                push @word_pairs,
+                  [ $w1, $w2, $count1, $count2, $diff_count + $reverse ];
+                ##    0    1        2        3            4
+            }
+        }
+    } ## end while (@sorted_words)
+
+    return \@word_pairs;
+} ## end sub sweep_similar_pairs
+
 sub find_similar_keys {
     my ($rhash_key_trove) = @_;
 
@@ -10788,6 +10865,7 @@ sub find_similar_keys {
     my $max_pairs = $rOpts->{'similar-keys-maximum-pairs'}      || 25;
 
     my %word_info;
+    my %drow_info;
     foreach my $word ( keys %{$rhash_key_trove} ) {
         my $count         = $rhash_key_trove->{$word}->{count};
         my $string_length = length($word);
@@ -10795,18 +10873,15 @@ sub find_similar_keys {
         # Skip words with lengths below the minimum length requirement
         next if ( $string_length < $min_len );
 
-        if ( $word =~ /([^\W_])/g ) {
+        my $birth_id = $rhash_key_trove->{$word}->{birth_id};
+        if ( !defined($birth_id) ) {
+            $birth_id = EMPTY_STRING;
+        }
 
+        # hash for forward scan
+        if ( $word =~ /([^\W_])/g ) {
             my $first_letter = lc($1);
             my $offset       = pos($word) - 1;
-
-            # Save list sequence numbers if defined. We will
-            # skip hash keys with the same positive id.
-            my $birth_id = $rhash_key_trove->{$word}->{birth_id};
-            if ( !defined($birth_id) ) {
-                $birth_id = EMPTY_STRING;
-            }
-
             $word_info{$word} = {
                 count         => $count,
                 first_letter  => $first_letter,
@@ -10814,73 +10889,60 @@ sub find_similar_keys {
                 offset        => $offset,
                 birth_id      => $birth_id,
             };
+
+            # hash for reverse scan
+            my $drow = reverse($word);
+            if ( $drow =~ /([^\W_])/g ) {
+                my $true_first_letter = $first_letter;
+                $first_letter     = lc($1);
+                $offset           = pos($drow) - 1;
+                $drow_info{$drow} = {
+                    count             => $count,
+                    true_first_letter => $true_first_letter,
+                    first_letter      => $first_letter,
+                    string_length     => $string_length,
+                    offset            => $offset,
+                    birth_id          => $birth_id,
+                };
+            }
         }
     }
 
-    my @sorted_words = sort {
-             $word_info{$a}->{first_letter} cmp $word_info{$b}->{first_letter}
-          || $word_info{$a}->{string_length} <=> $word_info{$b}->{string_length}
-          || $a cmp $b
-    } ( keys %word_info );
+    # Forward sweep
+    my $rword_pairs = sweep_similar_pairs( \%word_info, $max_diff, 0 );
 
-    # Loop to find pairs of similar hash keys
-    my @word_pairs;
-  WORD:
-    while (@sorted_words) {
-        my $word         = shift @sorted_words;
-        my $first_letter = $word_info{$word}->{first_letter};
-        my $offset       = $word_info{$word}->{offset};
-        my $word_length  = $word_info{$word}->{string_length};
-        my $birth_id     = $word_info{$word}->{birth_id};
-        foreach my $word2 (@sorted_words) {
+    # Reverse sweep.  Reverse mode counts as 1 differences by itself because
+    # this type of difference, as an error, is quite rare in code, and we do
+    # not want to burden the user with a lot of useless matches. For example,
+    # 'xmin' and 'ymin' are similar, with different first letters, but probably
+    # not an error. So the default value of max_diff=1 will ignore this.
+    if ( $max_diff > 1 ) {
+        my $rdrow_pairs = sweep_similar_pairs( \%drow_info, $max_diff - 1, 1 );
+        push @{$rword_pairs}, @{$rdrow_pairs};
+    }
 
-            # sorted order allows us to bail out as soon as possible
-            next WORD
-              if ( $first_letter ne $word_info{$word2}->{first_letter} );
-            next WORD
-              if ( $word_info{$word2}->{string_length} - $word_length >
-                $max_diff );
-
-            # Skip keys defined in the same data structure
-            if ($birth_id) {
-                my $birth_id2 = $word_info{$word2}->{birth_id};
-                next
-                  if ( $birth_id2 && $birth_id2 eq $birth_id );
-            }
-
-            my $offset2 = $word_info{$word2}->{offset};
-            my $diff_count =
-              string_approximate_match( $word, $word2, $offset, $offset2,
-                $max_diff );
-            if ($diff_count) {
-                my $w1     = $word;
-                my $w2     = $word2;
-                my $count1 = $word_info{$w1}->{count};
-                my $count2 = $word_info{$w2}->{count};
-                if ( $count2 < $count1 ) {
-                    ( $w1,     $w2 )     = ( $w2,     $w1 );
-                    ( $count1, $count2 ) = ( $count2, $count1 );
-                }
-                my $npair = @word_pairs + 1;
-                push @word_pairs,
-                  [ $w1, $w2, $count1, $count2, $diff_count, $npair ];
-                ##    0    1        2        3            4       5
-            }
-        }
-    } ## end WORD: while (@sorted_words)
-
-    return $output_string if ( !@word_pairs );
+    my @word_pairs = @{$rword_pairs};
+    my $num_pairs  = @word_pairs;
 
     # - Output will be in the current sorted order, but if the number of
     #   output pairs must be limited, then we select pairs based on:
     #  1. Top priority is diff_count (low diffs go out before high diffs)
     #  2. Next priority is uniform distribution of output words
 
-    my $num_pairs   = @word_pairs;
+    # Handle case of too many pairs
     my $num_skipped = $num_pairs - $max_pairs;
     if ( $num_skipped > 0 ) {
 
-        # sort by diff count, then by the original order
+        # [ $w1, $w2, $count1, $count2, $diff_count ];
+        #    0    1        2        3            4
+
+        # remember the order
+        my $n = 0;
+        foreach (@word_pairs) {
+            $_->[5] = ++$n;
+        }
+
+        # sort by diff count, then by order
         my @sorted_pairs =
           sort { $a->[4] <=> $b->[4] || $a->[5] <=> $b->[5] } @word_pairs;
 
@@ -10896,7 +10958,7 @@ sub find_similar_keys {
             $a->[4] <=> $b->[4] || $a->[6] <=> $b->[6] || $a->[5] <=> $b->[5]
           } @sorted_pairs;
 
-        # Truncate the list and resort on the original order
+        # Truncate the list and resort alphabetically
         $#sorted_pairs = $max_pairs - 1;
         @word_pairs    = sort { $a->[5] <=> $b->[5] } @sorted_pairs;
 
