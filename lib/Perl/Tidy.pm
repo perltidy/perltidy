@@ -565,7 +565,6 @@ sub perltidy {
         dump_options_type     => undef,
         dump_getopt_flags     => undef,
         dump_options_category => undef,
-        dump_options_range    => undef,
         dump_abbreviations    => undef,
         prefilter             => undef,
         postfilter            => undef,
@@ -750,7 +749,6 @@ EOM
     my $dump_getopt_flags     = $get_hash_ref->('dump_getopt_flags');
     my $dump_options_category = $get_hash_ref->('dump_options_category');
     my $dump_abbreviations    = $get_hash_ref->('dump_abbreviations');
-    my $dump_options_range    = $get_hash_ref->('dump_options_range');
 
     # validate dump_options_type
     if ( defined($dump_options) ) {
@@ -852,7 +850,7 @@ EOM
     # get command line options
     #-------------------------
     my ( $rOpts, $config_file, $rraw_options, $roption_string,
-        $rexpansion, $roption_category, $roption_range, $rinteger_option_range )
+        $rexpansion, $roption_category, $rinteger_option_range )
       = process_command_line(
         $perltidyrc_stream,  $is_Windows, $Windows_type,
         $rpending_complaint, $dump_options_type,
@@ -897,11 +895,6 @@ EOM
     if ( defined($dump_options_category) ) {
         $quit_now = 1;
         %{$dump_options_category} = %{$roption_category};
-    }
-
-    if ( defined($dump_options_range) ) {
-        $quit_now = 1;
-        %{$dump_options_range} = %{$roption_range};
     }
 
     if ( defined($dump_abbreviations) ) {
@@ -3415,7 +3408,7 @@ sub generate_options {
     #  @defaults - the list of default options
     #  %expansion - a hash showing how all abbreviations are expanded
     #  %category - a hash giving the general category of each option
-    #  %option_range - a hash giving the valid ranges of certain options
+    #  %integer_option_range - valid ranges of certain options
 
     # Note: a few options are not documented in the man page and usage
     # message. This is because these are deprecated, experimental or debug
@@ -3448,7 +3441,6 @@ sub generate_options {
     my @option_string   = ();
     my %expansion       = ();
     my %option_category = ();
-    my %option_range    = ();
     my %integer_option_range;
 
     # names of categories in manual
@@ -3999,65 +3991,13 @@ sub generate_options {
       html-entities
     );
 
-    #---------------------------------------
-    # Assign valid ranges to certain options
-    #---------------------------------------
-    # In the future, these may be used to make preliminary checks
-    # hash keys are long names
-    # If key or value is undefined:
-    #   strings may have any value
-    #   integer ranges are >=0
-    # If value is defined:
-    #   value is [qw(any valid words)] for strings
-    #   value is [min, max] for integers
-    #   if min is undefined, there is no lower limit
-    #   if max is undefined, there is no upper limit
-    # Parameters not listed here have defaults
-    %option_range = (
-        'format'                        => [ 'tidy', 'html', 'user' ],
-        'output-line-ending'            => [ 'dos',  'win',  'mac', 'unix' ],
-        'space-backslash-quote'         => [ 0,      2 ],
-        'block-brace-tightness'         => [ 0,      2 ],
-        'keyword-paren-inner-tightness' => [ 0,      2 ],
-        'brace-tightness'               => [ 0,      2 ],
-        'paren-tightness'               => [ 0,      2 ],
-        'square-bracket-tightness'      => [ 0,      2 ],
-
-        'block-brace-vertical-tightness'            => [ 0, 2 ],
-        'brace-follower-vertical-tightness'         => [ 0, 2 ],
-        'brace-vertical-tightness'                  => [ 0, 2 ],
-        'brace-vertical-tightness-closing'          => [ 0, 3 ],
-        'paren-vertical-tightness'                  => [ 0, 2 ],
-        'paren-vertical-tightness-closing'          => [ 0, 3 ],
-        'square-bracket-vertical-tightness'         => [ 0, 2 ],
-        'square-bracket-vertical-tightness-closing' => [ 0, 3 ],
-        'vertical-tightness'                        => [ 0, 2 ],
-        'vertical-tightness-closing'                => [ 0, 3 ],
-
-        'closing-brace-indentation'          => [ 0, 3 ],
-        'closing-paren-indentation'          => [ 0, 3 ],
-        'closing-square-bracket-indentation' => [ 0, 3 ],
-        'closing-token-indentation'          => [ 0, 3 ],
-
-        'closing-side-comment-else-flag' => [ 0, 2 ],
-        'comma-arrow-breakpoints'        => [ 0, 5 ],
-
-        'keyword-group-blanks-before' => [ 0, 2 ],
-        'keyword-group-blanks-after'  => [ 0, 2 ],
-
-        'space-prototype-paren' => [ 0, 2 ],
-        'space-signature-paren' => [ 0, 2 ],
-        'break-after-labels'    => [ 0, 2 ],
-    );
-
     # Ranges and defaults of all integer options (type '=i').
     # NOTES:
     # 1. ALl integer options must be in this table, not in @defaults
-    # 2. This replaces %option_range, above, for use by sub 'check_options'
-    # 3. 'closing-token-indentation' (cti), 'vertical-tightness' (vt),
+    # 2. 'closing-token-indentation' (cti), 'vertical-tightness' (vt),
     #   and 'vertical-tightness-closing' (vtc) are aliases which are included
     #   to work around an old problem with msdos (see note in check_options).
-    # 4. Use -dior to dump this table.
+    # 3. Use -dior to dump this table.
 
     # 'option-name' => [min, max, default]
     %integer_option_range = (
@@ -4417,7 +4357,7 @@ q(wbb=% + - * / x != == >= <= =~ !~ < > | & = **= += *= &= <<= &&= -= /= |= >>= 
     # Uncomment next line to dump all expansions for debugging:
     # dump_short_names(\%expansion);
     return ( \@option_string, \@defaults, \%expansion, \%option_category,
-        \%option_range, \%integer_option_range );
+        \%integer_option_range );
 
 } ## end sub generate_options
 
@@ -4487,7 +4427,7 @@ sub _process_command_line {
     else { $glc = undef }
 
     my ( $roption_string, $rdefaults, $rexpansion,
-        $roption_category, $roption_range, $rinteger_option_range )
+        $roption_category, $rinteger_option_range )
       = generate_options();
 
     #--------------------------------------------------------------
@@ -4786,8 +4726,7 @@ EOM
     }
 
     return ( \%Opts, $config_file, \@raw_options, $roption_string,
-        $rexpansion, $roption_category, $roption_range,
-        $rinteger_option_range );
+        $rexpansion, $roption_category, $rinteger_option_range );
 } ## end sub _process_command_line
 
 sub make_grep_alias_string {
