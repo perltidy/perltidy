@@ -9113,19 +9113,16 @@ sub scan_hash_keys {
     #   all     = all hash keys
 
     # Check input..
-    my %is_valid_call_type = ( unique => 1, similar => 1, all => 1 );
-    my $valid_count        = 0;
-    foreach my $key ( keys %{$rcall_type} ) {
-        if ( !$is_valid_call_type{$key} ) {
-            DEVEL_MODE && Fault("invalid call type: $key");
-            next;
-        }
-        $valid_count++;
+    my @valid_call_types = qw( unique similar all );
+    my $valid_call_count = 0;
+    foreach my $key (@valid_call_types) {
+        next if ( !defined( $rcall_type->{$key} ) );
+        $valid_call_count++;
 
-        # Set the return value to undef in case we return early
-        $rcall_type->{$key} = undef;
+        # Set a return value in case we return early
+        $rcall_type->{$key} = EMPTY_STRING;
     }
-    return if ( !$valid_count );
+    return if ( !$valid_call_count );
 
     use constant DEBUG_WUK => 0;
 
@@ -10312,7 +10309,7 @@ EOM
     } ## end while ( ++$KK <= $Klimit )
 
     # End here for --dump-hash-keys
-    if ( $rcall_type->{all} ) {
+    if ( defined( $rcall_type->{all} ) ) {
         my @list;
         foreach my $word ( keys %{$rhash_key_trove} ) {
             my $count = $rhash_key_trove->{$word}->{count};
@@ -10328,14 +10325,14 @@ EOM
         $message_string = EMPTY_STRING;
     }
 
-    if ( $rcall_type->{similar} ) {
+    if ( defined( $rcall_type->{similar} ) ) {
         my $output_string = $message_string;
         $output_string .= find_similar_keys($rhash_key_trove);
         $rcall_type->{similar} = $output_string;
         $message_string = EMPTY_STRING;
     }
 
-    return if ( !$rcall_type->{unique} );
+    return if ( !defined( $rcall_type->{unique} ) );
 
     # Continue for --dump-unique-keys and --warn-unique-keys ...
     $rcall_type->{unique} = $message_string;
