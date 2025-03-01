@@ -9121,6 +9121,9 @@ sub scan_hash_keys {
             next;
         }
         $valid_count++;
+
+        # Set the return value to undef in case we return early
+        $rcall_type->{$key} = undef;
     }
     return if ( !$valid_count );
 
@@ -10958,7 +10961,7 @@ sub find_similar_keys {
             $a->[4] <=> $b->[4] || $a->[6] <=> $b->[6] || $a->[5] <=> $b->[5]
           } @sorted_pairs;
 
-        # Truncate the list and resort alphabetically
+        # Truncate the list and resort
         $#sorted_pairs = $max_pairs - 1;
         @word_pairs    = sort { $a->[5] <=> $b->[5] } @sorted_pairs;
 
