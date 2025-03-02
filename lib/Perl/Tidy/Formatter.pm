@@ -10608,7 +10608,7 @@ sub warn_unique_or_similar_keys {
     if ($output_string) {
         my $wukc_key = 'warn-unique-keys-cutoff';
         my $message =
-"Begin scan for --$wuk_key using --$wukc_key=$rOpts_warn_unique_keys_cutoff\n";
+"\nBegin scan for --$wuk_key using --$wukc_key=$rOpts_warn_unique_keys_cutoff\n";
         $message .= $output_string;
         $message .= "End scan for --$wuk_key\n";
         $message .= "\n";
@@ -10617,7 +10617,7 @@ sub warn_unique_or_similar_keys {
 
     $output_string = $rhash->{similar};
     if ($output_string) {
-        my $message = "Begin scan for --$wsk_key\n";
+        my $message = "\nBegin scan for --$wsk_key\n";
         $message .= $output_string;
         $message .= "End scan for --$wsk_key\n";
         warning($message);
@@ -14422,7 +14422,7 @@ sub warn_variable_types {
     }
 
     if ($message_middle) {
-        my $message = "Begin scan for --$wv_key=$wv_option\n";
+        my $message = "\nBegin scan for --$wv_key=$wv_option\n";
         $message .= <<EOM;
 $issue_type_string
 Line:Issue: Var: note
@@ -14661,7 +14661,7 @@ sub scan_call_parens {
 
     # Report any warnings
     if ( @{$rwarnings} ) {
-        my $message = "Begin scan for --$opt_name\n";
+        my $message = "\nBegin scan for --$opt_name\n";
         $message .= <<EOM;
 Line:text:
 EOM
@@ -21233,6 +21233,7 @@ sub warn_mismatched {
         if ($output_lines) {
             chomp $output_lines;
             warning(<<EOM);
+
 Begin scan for --$wma_key
 $output_lines
 End scan for --$wma_key
@@ -21246,6 +21247,7 @@ EOM
         if ($output_lines) {
             chomp $output_lines;
             warning(<<EOM);
+
 Begin scan for --$wmr_key
 $output_lines
 End scan for --$wmr_key

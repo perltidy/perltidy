@@ -510,6 +510,45 @@ sub get_iteration_count {
     return $rstatus->{iteration_count};
 }
 
+my %is_known_markup_word;
+
+BEGIN {
+    my @q = qw( ?xml !doctype !-- html meta );
+    @is_known_markup_word{@q} = (1) x scalar(@q);
+}
+
+sub is_not_perl {
+
+    my ( $rinput_string, $input_file, $is_named_file ) = @_;
+
+    # Given:
+    #  $rinput_string = ref to the string of text being processed
+    #  $input_file    = the name of the input stream
+    #  $is_named_file = true if $input_file is a named file
+    # Return:
+    #  true if this is clearly not a perl script
+    #  false otherwise
+    # Note:
+    #  This sub is called when the first character of a file is '<' in order
+    #  to catch the obvious cases of some kind of markup language.
+    #  See also some related code in 'find_angle_operator_termination which
+    #  will catch some markup syntax which gets past this preliminary check.
+
+    my $text;
+    if ( ${$rinput_string} =~ m/\s*\<\s*([\?\!]?[\-\w]+)/ ) { $text = $1 }
+    else                                                    { return }
+
+    return 1 if ( $is_known_markup_word{ lc($text) } );
+
+    # require a named file with known extension for other markup words
+    return if ( !$is_named_file );
+
+    # check filename
+    return 1 if ( $input_file =~ /html?$/i );
+
+    return;
+} ## end sub is_not_perl
+
 BEGIN {
 
     # Array index names for $self.
@@ -1161,8 +1200,9 @@ EOM
     #--------------------------
     $self->process_all_files(
         {
-            rinput_hash => \%input_hash,
-            rfiles      => \@Arg_files,
+            rinput_hash        => \%input_hash,
+            rfiles             => \@Arg_files,
+            line_range_clipped => $line_range_clipped,
 
             # filename stuff...
             source_stream             => $source_stream,
@@ -2047,6 +2087,7 @@ sub process_all_files {
 
     my $rinput_hash               = $rcall_hash->{rinput_hash};
     my $rfiles                    = $rcall_hash->{rfiles};
+    my $line_range_clipped        = $rcall_hash->{line_range_clipped};
     my $source_stream             = $rcall_hash->{source_stream};
     my $output_extension          = $rcall_hash->{output_extension};
     my $forbidden_file_extensions = $rcall_hash->{forbidden_file_extensions};
@@ -2213,6 +2254,20 @@ EOM
 
         # Skip this file on any error
         next if ( !defined($rinput_string) );
+
+        # If we are formatting a named file, skip if it looks like a markup
+        # language.  Do not do this for a non-named file (it could be a glob
+        # from an editor).
+        # Examples of valid perl starting text: '<<END' '<>' '<<>>'
+        if ( ${$rinput_string} =~ /^\s*<[^<>]/ ) {
+            my $is_named_file = $number_of_files > 0 && !$line_range_clipped;
+            if ( is_not_perl( $rinput_string, $input_file, $is_named_file ) ) {
+                Warn(
+                    "skipping file: $input_file: does not look like Perl code\n"
+                );
+                next;
+            }
+        }
 
         # Register this file name with the Diagnostics package, if any.
         $diagnostics_object->set_input_file($input_file)

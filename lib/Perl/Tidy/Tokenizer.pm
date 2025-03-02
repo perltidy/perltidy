@@ -10024,6 +10024,11 @@ sub find_angle_operator_termination {
     my $type = '<';
     pos($input_line) = 1 + $rtoken_map->[$i];
 
+    # The token sequence '><' implies a markup language
+    if ( $last_nonblank_token eq '>' ) {
+        $self->[_html_tag_count_]++;
+    }
+
     my $filter;
 
     my $expecting_TERM = $expecting == TERM;
