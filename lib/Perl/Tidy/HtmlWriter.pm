@@ -268,7 +268,7 @@ TOC_END
 
     # append '-1', '-2', etc if necessary to make unique; this will
     # be unique because subs and packages cannot have a '-'
-    if ( my $count = $rtoc_name_count->{ lc $unique_name }++ ) {
+    if ( my $count = $rtoc_name_count->{ lc($unique_name) }++ ) {
         $unique_name .= "-$count";
     }
 

@@ -2,7 +2,12 @@
 
 ## 2025 02 14.02
 
-    - Fig git #32, a tokenization error.
+    - The options --want-call-parens and --nowant-call-parens were accidentally
+      being skipped in version 20250214. This has been fixed.
+
+    - Fixed git #32, a tokenization error with message "hit EOF seeking end of
+      quote/pattern" for a function call without paren or arg before a
+      ternary operator.
 
     - A new option --dump-similar-keys will dump hash keys which are
       similar but slightly different to standard output and then exit.

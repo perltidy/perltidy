@@ -2402,7 +2402,7 @@ sub sweep_left_to_right {
         ( $i, $ng_end, $tok ) = @{$item};
         my $ng_beg = $ng_end - 1;
         if ( defined($ng_last) && $ng_beg == $ng_last && $i == $i_last ) {
-            my $var = pop(@todo);
+            my $var = pop @todo;
             $ng_beg = $var->[1];
         }
         my ( $raw_tok, $lev, $tag_uu, $tok_count_uu ) =

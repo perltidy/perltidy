@@ -2243,6 +2243,9 @@ sub check_options {
 
     initialize_missing_else_comment();
 
+    # Note: this call was missing in version 20240214
+    initialize_call_paren_style();
+
     initialize_warn_variable_types( $wvt_in_args, $num_files,
         $line_range_clipped );
 
@@ -10122,7 +10125,7 @@ EOM
                     my $num = @stack;
                     my $got = $num ? $item->{_seqno} : 'undef';
                     my $lno = $rLL->[$KK]->[_LINE_INDEX_];
-                    Fault <<EOM;
+                    Fault(<<EOM);
 stack error at seqno=$seqno type=$type num=$num got seqno=$got lno=$lno
 EOM
                 }
@@ -14535,8 +14538,10 @@ sub dump_mixed_call_parens {
 
     # sort on lc of type so that user sub type 'U' will come after 'k'
     my @sorted =
-      sort { lc $a->{type} cmp lc $b->{type} || $a->{name} cmp $b->{name} }
-      @mixed_counts;
+      sort {
+        lc( $a->{type} ) cmp lc( $b->{type} )
+          || $a->{name} cmp $b->{name}
+      } @mixed_counts;
 
     my $input_stream_name = get_input_stream_name();
     my $output_string     = <<EOM;
@@ -23562,7 +23567,7 @@ sub whitespace_cycle_adjustment {
             my $level_abs = $radjusted_levels->[$KK];
             my $level     = $level_abs;
             if ( $level_abs < $whitespace_last_level ) {
-                pop(@whitespace_level_stack);
+                pop @whitespace_level_stack;
             }
             if ( !@whitespace_level_stack ) {
                 push @whitespace_level_stack, $level_abs;
@@ -30992,7 +30997,8 @@ EOM
         } ## end while (1)
 
         if (DEBUG_RECOMBINE) {
-            my $ratio = sprintf "%0.3f", $rhash->{_num_compares} / $num_pairs;
+            my $ratio =
+              sprintf( "%0.3f", $rhash->{_num_compares} / $num_pairs );
             print {*STDOUT}
 "exiting recombine_inner_loop with $nmax_last lines, opt=$rhash->{_optimization_on}, starting pairs=$num_pairs, num_compares=$rhash->{_num_compares}, ratio=$ratio\n";
         }

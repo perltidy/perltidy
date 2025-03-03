@@ -1688,7 +1688,7 @@ sub set_output_file_permissions {
     if ( !chmod( $output_file_permissions, $output_file ) ) {
 
         # couldn't change file permissions
-        my $operm = sprintf "%04o", $output_file_permissions;
+        my $operm = sprintf( "%04o", $output_file_permissions );
         Warn(
 "Unable to set permissions for output file '$output_file' to $operm\n"
         );
@@ -1960,7 +1960,7 @@ sub get_line_separator_default {
             unix => $LF,
         );
 
-        $line_separator_default = $endings{ lc $ole };
+        $line_separator_default = $endings{ lc($ole) };
 
         if ( !$line_separator_default ) {
             my $str = join SPACE, keys %endings;
