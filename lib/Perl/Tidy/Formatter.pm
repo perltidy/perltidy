@@ -10689,7 +10689,7 @@ sub string_approximate_match {
         my $pos = pos($mask);
         if ( $posm && $pos < $posm ) {
             ## shouldn't happen unless the pos was incorrectly set
-            print STDERR "Infinite loop detected for s1=$s1_in s2=$s2_in\n";
+            print {*STDERR} "Infinite loop detected for s1=$s1_in s2=$s2_in\n";
             return;
         }
 
