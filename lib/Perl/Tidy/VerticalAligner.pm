@@ -700,7 +700,7 @@ sub valign_input {
       ( $jmax == 1 && $rtokens->[0] eq '#' && $rfields->[0] =~ /^\s*$/ );
 
     # Undo outdented flag for a hanging side comment
-    $is_outdented = 0 if $is_hanging_side_comment;
+    $is_outdented = 0 if ($is_hanging_side_comment);
 
     # Identify a block comment.
     my $is_block_comment = $jmax == 0 && substr( $rfields->[0], 0, 1 ) eq '#';
@@ -1256,8 +1256,8 @@ sub fix_terminal_ternary {
             unshift( @patterns, @{$rpatterns_old}[ 0 .. $jquestion ] );
 
             # insert appropriate number of empty fields
-            splice( @fields,        1, 0, (EMPTY_STRING) x $jadd ) if $jadd;
-            splice( @field_lengths, 1, 0, (0) x $jadd )            if $jadd;
+            splice( @fields,        1, 0, (EMPTY_STRING) x $jadd ) if ($jadd);
+            splice( @field_lengths, 1, 0, (0) x $jadd )            if ($jadd);
         }
 
         # handle sub-case of first field just equal to leading colon.
@@ -1280,8 +1280,8 @@ sub fix_terminal_ternary {
             # leading token and inserting appropriate number of empty fields
             splice( @tokens,   0, 1, @{$rtokens_old}[ 0 .. $jquestion ] );
             splice( @patterns, 1, 0, @{$rpatterns_old}[ 1 .. $jquestion ] );
-            splice( @fields,        1, 0, (EMPTY_STRING) x $jadd ) if $jadd;
-            splice( @field_lengths, 1, 0, (0) x $jadd )            if $jadd;
+            splice( @fields,        1, 0, (EMPTY_STRING) x $jadd ) if ($jadd);
+            splice( @field_lengths, 1, 0, (0) x $jadd )            if ($jadd);
         }
     }
 
@@ -1300,8 +1300,8 @@ sub fix_terminal_ternary {
         $jadd             = $jquestion + 1;
         $fields[0]        = $pad . $fields[0];
         $field_lengths[0] = $pad_length + $field_lengths[0];
-        splice( @fields,        0, 0, (EMPTY_STRING) x $jadd ) if $jadd;
-        splice( @field_lengths, 0, 0, (0) x $jadd )            if $jadd;
+        splice( @fields,        0, 0, (EMPTY_STRING) x $jadd ) if ($jadd);
+        splice( @field_lengths, 0, 0, (0) x $jadd )            if ($jadd);
     }
 
     EXPLAIN_TERNARY && do {

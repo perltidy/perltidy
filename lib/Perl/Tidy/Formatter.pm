@@ -2645,9 +2645,9 @@ sub initialize_line_up_parentheses_control_hash {
         my ( $flag1, $key, $flag2 );
         if ( $item =~ /^ ([^\(\[\{]*)?  ([\(\{\[])  (\d)? $/x ) {
             ##             $flag1          $key     $flag2
-            $flag1 = $1 if $1;
-            $key   = $2 if $2;
-            $flag2 = $3 if defined($3);
+            $flag1 = $1 if ($1);
+            $key   = $2 if ($2);
+            $flag2 = $3 if ( defined($3) );
         }
         else {
             $msg1 .= " '$item_save'";
@@ -2927,13 +2927,13 @@ sub initialize_token_break_preferences {
     # That allows a quick check to be made later.
     %break_before_container_types = ();
     for ( $rOpts->{'break-before-hash-brace'} ) {
-        $break_before_container_types{'{'} = $_ if $_ && $_ > 0;
+        $break_before_container_types{'{'} = $_ if ( $_ && $_ > 0 );
     }
     for ( $rOpts->{'break-before-square-bracket'} ) {
-        $break_before_container_types{'['} = $_ if $_ && $_ > 0;
+        $break_before_container_types{'['} = $_ if ( $_ && $_ > 0 );
     }
     for ( $rOpts->{'break-before-paren'} ) {
-        $break_before_container_types{'('} = $_ if $_ && $_ > 0;
+        $break_before_container_types{'('} = $_ if ( $_ && $_ > 0 );
     }
 
     # Note: a fix for b1266 previously here is now covered by the
@@ -4626,7 +4626,7 @@ sub set_whitespace_flags {
             }
 
             $ws_4 = $ws_3 = $ws_2 = $ws_1 = $ws
-              if DEBUG_WHITE;
+              if (DEBUG_WHITE);
 
         } ## end setting space flag inside opening tokens
 
@@ -4696,7 +4696,7 @@ sub set_whitespace_flags {
 
             # retain any space between '-' and bare word
             elsif ( $type eq 'w' || $type eq 'C' ) {
-                $ws = WS_OPTIONAL if $last_type eq '-';
+                $ws = WS_OPTIONAL if ( $last_type eq '-' );
             }
 
             # retain any space between '-' and bare word; for example
@@ -4756,7 +4756,7 @@ sub set_whitespace_flags {
             if ( defined($tseq) ) { $ws = $tseq > 0 ? WS_NO : WS_YES }
 
             $ws_4 = $ws_3 = $ws_2 = $ws
-              if DEBUG_WHITE;
+              if (DEBUG_WHITE);
         } ## end setting space flag inside closing tokens
 
         #---------------------------------------------------------------
@@ -4941,7 +4941,7 @@ sub set_whitespace_flags {
         }
 
         $ws_4 = $ws_3 = $ws
-          if DEBUG_WHITE;
+          if (DEBUG_WHITE);
 
         if ( !defined($ws) ) {
 
@@ -4951,7 +4951,7 @@ sub set_whitespace_flags {
             #---------------------------------------------------------------
             if ( defined( $binary_ws_rules{$last_type}{$type} ) ) {
                 $ws   = $binary_ws_rules{$last_type}{$type};
-                $ws_4 = $ws if DEBUG_WHITE;
+                $ws_4 = $ws if (DEBUG_WHITE);
             }
 
             #---------------------------------------------------------------
@@ -7239,7 +7239,7 @@ sub make_block_pattern {
     my %seen;
     for my $i (@list) {
         if ( $i eq '*' ) { my $pattern = '^.*'; return $pattern }
-        next if $seen{$i};
+        next if ( $seen{$i} );
         $seen{$i} = 1;
         if ( $i eq 'sub' ) {
         }
@@ -12530,7 +12530,7 @@ sub is_complete_script {
             }
         }
 
-        return 1 if $is_standard_file_extension{ lc($file_extension) };
+        return 1 if ( $is_standard_file_extension{ lc($file_extension) } );
     }
 
     #-------------------------------------------------------------
@@ -12544,7 +12544,7 @@ sub is_complete_script {
     #------------------------------------
     # TEST 3: look for a complete package
     #------------------------------------
-    return 1 if $self->has_complete_package();
+    return 1 if ( $self->has_complete_package() );
 
     #----------------------------
     # TEST 4: examine other clues
@@ -12561,8 +12561,8 @@ sub is_complete_script {
     my $saw_package     = defined($rK_package_list) && @{$rK_package_list};
     my $sub_count       = +keys %{ $self->[_ris_sub_block_] };
     my $use_count       = 0;
-    $use_count += $rkeyword_count->{use}     if $rkeyword_count->{use};
-    $use_count += $rkeyword_count->{require} if $rkeyword_count->{require};
+    $use_count += $rkeyword_count->{use}     if ( $rkeyword_count->{use} );
+    $use_count += $rkeyword_count->{require} if ( $rkeyword_count->{require} );
 
     # Make a guess using the available clues. No single clue is conclusive.
     my $score = 0;
@@ -12593,10 +12593,10 @@ sub is_complete_script {
         if ( $rkeyword_count->{$_} ) { $score += 50; last; }
     }
 
-    $score += 50 if $rline_type_count->{POD};
+    $score += 50 if ( $rline_type_count->{POD} );
 
     # ending indicator
-    $score += 50 if $self->[_saw_END_or_DATA_];
+    $score += 50 if ( $self->[_saw_END_or_DATA_] );
 
     if ( $score >= 100 ) { return 1 }
     return;
@@ -21842,7 +21842,7 @@ sub find_nested_pairs {
             #  ic oc
 
             next if ( !$inner_blocktype || $inner_blocktype ne 'sub' );
-            next if $rLL->[$K_io_check]->[_TOKEN_] ne '(';
+            next if ( $rLL->[$K_io_check]->[_TOKEN_] ne '(' );
             my $seqno_signature = $rLL->[$K_io_check]->[_TYPE_SEQUENCE_];
             next unless defined($seqno_signature);
             my $K_signature_closing = $K_closing_container->{$seqno_signature};
@@ -22016,9 +22016,9 @@ sub match_paren_control_flag {
     $rLL = $self->[_rLL_] unless ( defined($rLL) );
 
     return 0 unless ( defined($flag) );
-    return 0 if $flag eq '0';
-    return 1 if $flag eq '1';
-    return 1 if $flag eq '*';
+    return 0 if ( $flag eq '0' );
+    return 1 if ( $flag eq '1' );
+    return 1 if ( $flag eq '*' );
     return 0 unless ($seqno);
     my $K_opening = $self->[_K_opening_container_]->{$seqno};
     return unless ( defined($K_opening) );
@@ -22070,7 +22070,7 @@ sub is_excluded_weld {
     return 0 unless ( defined($rflags) );
     my $flag = $is_leading ? $rflags->[0] : $rflags->[1];
     return 0 unless ( defined($flag) );
-    return 1 if $flag eq '*';
+    return 1 if ( $flag eq '*' );
     my $seqno = $rtoken_vars->[_TYPE_SEQUENCE_];
     return $self->match_paren_control_flag( $seqno, $flag );
 } ## end sub is_excluded_weld
@@ -23297,7 +23297,7 @@ sub mark_short_nested_blocks {
     # The flag which is set here will be checked in two places:
     # 'sub process_line_of_CODE' and 'sub starting_one_line_block'
 
-    return if $rOpts->{'indent-only'};
+    return if ( $rOpts->{'indent-only'} );
 
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
@@ -29704,7 +29704,7 @@ EOM
                     && !$pack_operator_types{'->'} );
 
                 $self->break_equals( $ri_first, $ri_last )
-                  if @{$ri_first} >= 3;
+                  if ( @{$ri_first} >= 3 );
 
                 # now we do a correction step to clean this up a bit
                 # (The only time we would not do this is for debugging)
@@ -30241,9 +30241,9 @@ sub break_all_chain_tokens {
 
             # loop over all left end tokens of same type
             if ( $left_chain_type{$key} ) {
-                next if $nobreak_to_go[ $itest - 1 ];
+                next if ( $nobreak_to_go[ $itest - 1 ] );
                 foreach my $i ( @{ $left_chain_type{$key} } ) {
-                    next unless $self->in_same_container_i( $i, $itest );
+                    next unless ( $self->in_same_container_i( $i, $itest ) );
                     push @insert_list, $itest - 1;
 
                     # Break at matching ? if this : is at a different level.
@@ -30268,7 +30268,7 @@ sub break_all_chain_tokens {
 
             # loop over all right end tokens of same type
             if ( $right_chain_type{$key} ) {
-                next if $nobreak_to_go[$itest];
+                next if ( $nobreak_to_go[$itest] );
                 foreach my $i ( @{ $right_chain_type{$key} } ) {
                     next unless $self->in_same_container_i( $i, $itest );
                     push @insert_list, $itest;
@@ -31403,10 +31403,10 @@ EOM
                 # do not join at a colon unless it disobeys the
                 # break request
                 if ( $itok eq $iend_1 ) {
-                    return unless $want_break_before{$type};
+                    return unless ( $want_break_before{$type} );
                 }
                 else {
-                    return if $want_break_before{$type};
+                    return if ( $want_break_before{$type} );
                 }
             } ## end if ':'
 
@@ -31810,7 +31810,7 @@ EOM
                         last;
                     }
                 }
-                return if $saw_paren;
+                return if ($saw_paren);
             }
         }
 
@@ -32148,7 +32148,7 @@ EOM
                 && $nesting_depth_to_go[$ibeg_2] ==
                 $nesting_depth_to_go[$ibeg_1] );
 
-            return if !$ok && $want_break_before{$type_ibeg_2};
+            return if ( !$ok && $want_break_before{$type_ibeg_2} );
             $forced_breakpoint_to_go[$iend_1] = 0;
 
             # tweak the bond strength to give this joint priority
@@ -32181,9 +32181,9 @@ EOM
                 my $local_count = 0;
                 foreach my $ii ( $ibeg_0, $ibeg_1, $ibeg_3, $ibeg_4 ) {
                     $local_count++
-                      if $ii >= 0
-                      && $types_to_go[$ii] eq ':'
-                      && $levels_to_go[$ii] == $lev;
+                      if ( $ii >= 0
+                        && $types_to_go[$ii] eq ':'
+                        && $levels_to_go[$ii] == $lev );
                 }
                 return if ( $local_count <= 1 );
             }
@@ -34075,7 +34075,7 @@ sub do_colon_breaks {
                     }
                 );
                 $bp_count           = $forced_breakpoint_count - $fbc;
-                $do_not_break_apart = 0 if $must_break_open;
+                $do_not_break_apart = 0 if ($must_break_open);
             }
             else {
                 ## no real commas, nothing to do
@@ -34639,7 +34639,7 @@ EOM
             # handle comma-arrow
             elsif ( $type eq '=>' ) {
                 next if ( $last_nonblank_type eq '=>' );
-                next if $rOpts_break_at_old_comma_breakpoints;
+                next if ($rOpts_break_at_old_comma_breakpoints);
                 next
                   if ( $rOpts_comma_arrow_breakpoints == 3
                     && !defined( $override_cab3[$depth] ) );
@@ -35970,7 +35970,7 @@ EOM
             {
                 $is_simple_next_term = 1;
             }
-            next if $j == 0;
+            next if ( $j == 0 );
             if (   $is_simple_last_term
                 && $is_simple_next_term
                 && $skipped_count < $max_skipped_count )
@@ -37344,7 +37344,7 @@ sub excess_line_length {
         && !$ignore_right_weld )
     {
         my $wr = $self->[_rweld_len_right_at_K_]->{ $K_to_go[$iend] };
-        $excess += $wr if defined($wr);
+        $excess += $wr if ( defined($wr) );
     }
 
     # ... then add the net token length, minus the maximum length
@@ -40450,7 +40450,7 @@ sub undo_contained_ci {
                 if ( $line > 0 ) {
 
                     # and we have leading operator..
-                    next if $has_leading_op;
+                    next if ($has_leading_op);
 
                     # Introduce padding if..
                     # 1. the previous line is at lesser depth, or
@@ -40517,7 +40517,7 @@ sub undo_contained_ci {
 
                     # WARNING: Never indent if first line is starting in a
                     # continued quote, which would change the quote.
-                    next if $starting_in_quote;
+                    next if ($starting_in_quote);
 
                     # if this is text after closing '}'
                     # then look for an interior token to pad
@@ -40597,7 +40597,7 @@ sub undo_contained_ci {
 
                     # find next nonblank token to pad
                     $ipad = $inext_to_go[$i];
-                    last if $ipad;
+                    last if ($ipad);
                 }
                 last if ( !$ipad || $ipad > $iend );
             }
@@ -40736,7 +40736,7 @@ sub undo_contained_ci {
                     my $i2 = $ri_last->[$l];
                     if ( $types_to_go[$i2] eq '#' ) {
                         my $i1 = $ri_first->[$l];
-                        next if terminal_type_i( $i1, $i2 ) eq ',';
+                        next if ( terminal_type_i( $i1, $i2 ) eq ',' );
                     }
                 }
 
@@ -40758,7 +40758,7 @@ sub undo_contained_ci {
                 #        -accelerator => "Meta+$_"
                 #    ];
                 if ( $types_to_go[$ibeg_next] eq 'm' ) {
-                    $ok_to_pad = 0 if $types_to_go[$ibeg] eq 'Q';
+                    $ok_to_pad = 0 if ( $types_to_go[$ibeg] eq 'Q' );
                 }
 
                 next unless $ok_to_pad;
@@ -41364,7 +41364,7 @@ sub xlp_tweak {
                 elsif ( $is_closing_token{$token} ) {
                     $i_depth_prev = $i;
                     $depth_prev   = $depth;
-                    $depth-- if $depth > 0;
+                    $depth-- if ( $depth > 0 );
                 }
                 else {
                     ## must be ternary
@@ -43416,7 +43416,7 @@ sub set_vertical_tightness_flags {
         {
 
             my $added_length = $token_lengths_to_go[$i];
-            $added_length += 1 if $i == 0;
+            $added_length += 1 if ( $i == 0 );
             my $new_line_length =
               $leading_block_text_line_length + $added_length;
 
@@ -43945,7 +43945,7 @@ sub add_closing_side_comment {
         }
 
         $token = balance_csc_text($token)
-          if $rOpts->{'closing-side-comments-balanced'};
+          if ( $rOpts->{'closing-side-comments-balanced'} );
 
         $token =~ s/\s+$//;    # trim any trailing whitespace
 

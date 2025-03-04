@@ -6091,7 +6091,7 @@ EOM
             my $code = $tokenization_code->{$tok};
             if ($code) {
                 $code->($self);
-                redo if $in_quote;
+                redo if ($in_quote);
             }
         }    ## End main tokenizer loop
 
@@ -7168,7 +7168,7 @@ sub decide_if_code_block {
         push @pre_types, '}';
 
         my $jbeg = 0;
-        $jbeg = 1 if $pre_types[0] eq 'b';
+        $jbeg = 1 if ( $pre_types[0] eq 'b' );
 
         # first look for one of these
         #  - bareword
@@ -7201,7 +7201,7 @@ sub decide_if_code_block {
         }
         if ( $j > $jbeg ) {
 
-            $j++ if $pre_types[$j] eq 'b';
+            $j++ if ( $pre_types[$j] eq 'b' );
 
             # Patched for RT #95708
             if (

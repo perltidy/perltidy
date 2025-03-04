@@ -58,7 +58,7 @@
 
 # Use 'perltidy -dmcp filename' to find mixed call paren usage.
 # Prefer call parens for these keywords:
---want-call-parens='open unlink substr defined ref scalar int uc lc sprintf'
+--want-call-parens='open unlink substr defined ref scalar int uc lc sprintf if'
 
 # This defines a new option which is invoked with -debug on the command line.
 # It overrides any of the settings above.

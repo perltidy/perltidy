@@ -764,7 +764,7 @@ sub pod_to_html {
         # Must clean up if pod2html dies (it can);
         # Be careful not to overwrite callers __DIE__ routine
         local $SIG{__DIE__} = sub {
-            unlink($tmpfile) if -e $tmpfile;
+            unlink($tmpfile) if ( -e $tmpfile );
             Perl::Tidy::Die( $_[0] );
         };
 
@@ -813,7 +813,7 @@ sub pod_to_html {
         # Copy the perltidy css, if any, after <body> tag
         elsif ( $line =~ /^\s*<body.*>\s*$/i ) {
             $saw_body = 1;
-            $html_print->($css_string) if $css_string;
+            $html_print->($css_string) if ($css_string);
             $html_print->($line);
 
             # add a top anchor and heading
@@ -837,7 +837,7 @@ sub pod_to_html {
             # contents panel is confusing, so don't print it
             $no_print = $rOpts->{'frames'}
               || !$rOpts->{'html-table-of-contents'};
-            $html_print->("<h2>Doc Index:</h2>\n") if $rOpts->{'frames'};
+            $html_print->("<h2>Doc Index:</h2>\n") if ( $rOpts->{'frames'} );
             $html_print->($line);
         }
 
@@ -854,7 +854,7 @@ sub pod_to_html {
             # contents panel is confusing, so don't print it
             $no_print = $rOpts->{'frames'}
               || !$rOpts->{'html-table-of-contents'};
-            $html_print->("<h2>Doc Index:</h2>\n") if $rOpts->{'frames'};
+            $html_print->("<h2>Doc Index:</h2>\n") if ( $rOpts->{'frames'} );
             $html_print->($line);
         }
 
@@ -865,7 +865,7 @@ sub pod_to_html {
 
             # Copy the perltidy toc, if any, after the Pod::Html toc
             if ($toc_string) {
-                $html_print->("<hr />\n") if $rOpts->{'frames'};
+                $html_print->("<hr />\n") if ( $rOpts->{'frames'} );
                 $html_print->("<h2>Code Index:</h2>\n");
                 my @toc_st = split /^/, $toc_string;
                 $html_print->(@toc_st);
@@ -889,7 +889,7 @@ sub pod_to_html {
             if ( $ul_level <= 0 ) {
                 $saw_index = 1;
                 if ($toc_string) {
-                    $html_print->("<hr />\n") if $rOpts->{'frames'};
+                    $html_print->("<hr />\n") if ( $rOpts->{'frames'} );
                     $html_print->("<h2>Code Index:</h2>\n");
                     my @toc_st = split /^/, $toc_string;
                     $html_print->(@toc_st);
@@ -903,7 +903,7 @@ sub pod_to_html {
         # Copy one perltidy section after each marker
         elsif ( $line =~ /^(.*)<!-- pERLTIDY sECTION -->(.*)$/ ) {
             $line = $2;
-            $html_print->($1) if $1;
+            $html_print->($1) if ($1);
 
             # Intermingle code and pod sections if we saw multiple =cut's.
             if ( $self->{_pod_cut_count} > 1 ) {

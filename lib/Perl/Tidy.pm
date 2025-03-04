@@ -2271,7 +2271,7 @@ EOM
 
         # Register this file name with the Diagnostics package, if any.
         $diagnostics_object->set_input_file($input_file)
-          if $diagnostics_object;
+          if ($diagnostics_object);
 
         # The (possibly decoded) input is now in string ref $rinput_string.
         # Now prepare the output stream and error logger.
@@ -2396,7 +2396,7 @@ EOM
         );
         $logger_object->write_logfile_entry($logfile_header);
         $logger_object->write_logfile_entry($encoding_log_message)
-          if $encoding_log_message;
+          if ($encoding_log_message);
 
         # Now we can add any pending messages to the log
         if ( ${$rpending_logfile_message} ) {
@@ -2444,7 +2444,7 @@ EOM
         }
 
         $logger_object->finish()
-          if $logger_object;
+          if ($logger_object);
     } ## end loop over files
 
     return;
@@ -3037,7 +3037,7 @@ EOM
                           && print {*STDERR} $convergence_log_message;
                         $diagnostics_object->write_diagnostics(
                             $convergence_log_message)
-                          if $diagnostics_object;
+                          if ($diagnostics_object);
 
 # Uncomment to search for blinking states
 # Warn( "$display_name: blinking; iter $iter same as for $saw_md5{$digest}\n" );
@@ -3049,7 +3049,7 @@ Converged.  Output for iteration $iter same as for iter $iterm.
 EOM
                         $diagnostics_object->write_diagnostics(
                             $convergence_log_message)
-                          if $diagnostics_object && $iterm > 2;
+                          if ( $diagnostics_object && $iterm > 2 );
                         $rstatus->{'converged'} = 1;
                     }
                 }
@@ -3092,7 +3092,7 @@ EOM
     } ## end loop over iterations for one source file
 
     $debugger_object->close_debug_file()
-      if $debugger_object;
+      if ($debugger_object);
 
     if (   $fh_tee
         && $fh_tee->can('close')
@@ -3106,7 +3106,7 @@ EOM
     # leave logger object open for additional messages
     $logger_object = $logger_object_final;
     $logger_object->write_logfile_entry($convergence_log_message)
-      if $convergence_log_message;
+      if ($convergence_log_message);
 
     return $routput_string;
 
@@ -4446,7 +4446,7 @@ sub process_command_line {
         else {
             my @retvals = _process_command_line(@q);
             $process_command_line_cache{$cache_key} = [ \@ARGV, @retvals ]
-              if $retvals[0]->{'memoize'};
+              if ( $retvals[0]->{'memoize'} );
             return @retvals;
         }
     }
@@ -4537,7 +4537,7 @@ sub _process_command_line {
                 if ( my ( $start_dir, $search_file ) =
                     ( $config_file =~ m{^(.*)\.\.\./(.*)$} ) )
                 {
-                    $start_dir = '.' if !$start_dir;
+                    $start_dir = '.' if ( !$start_dir );
                     $start_dir = Cwd::realpath($start_dir);
                     my $found_file =
                       find_file_upwards( $start_dir, $search_file );
@@ -5450,7 +5450,7 @@ sub look_for_Windows {
     my $rpending_complaint = shift;
     my $is_Windows         = ( $OSNAME =~ /win32|dos/i );
     my $Windows_type;
-    $Windows_type = Win_OS_Type($rpending_complaint) if $is_Windows;
+    $Windows_type = Win_OS_Type($rpending_complaint) if ($is_Windows);
     return ( $is_Windows, $Windows_type );
 } ## end sub look_for_Windows
 
@@ -5489,7 +5489,7 @@ sub find_config_file {
             {
                 ${$rconfig_file_chatter} .=
                   "# Searching Upward: $config_file\n";
-                $start_dir = '.' if !$start_dir;
+                $start_dir = '.' if ( !$start_dir );
                 $start_dir = Cwd::realpath($start_dir);
                 my $found_file = find_file_upwards( $start_dir, $search_file );
                 if ( defined($found_file) ) {
@@ -5505,10 +5505,10 @@ sub find_config_file {
 
     # look in current directory first
     $config_file = ".perltidyrc";
-    return $config_file if $exists_config_file->($config_file);
+    return $config_file if ( $exists_config_file->($config_file) );
     if ($is_Windows) {
         $config_file = "perltidy.ini";
-        return $config_file if $exists_config_file->($config_file);
+        return $config_file if ( $exists_config_file->($config_file) );
     }
 
     # Default environment vars.
@@ -5516,7 +5516,7 @@ sub find_config_file {
 
     # Check the NT/2k/XP locations, first a local machine def, then a
     # network def
-    push @envs, qw( USERPROFILE HOMESHARE ) if $OSNAME =~ /win32/i;
+    push @envs, qw( USERPROFILE HOMESHARE ) if ( $OSNAME =~ /win32/i );
 
     # Now go through the environment ...
     foreach my $var (@envs) {
@@ -5528,19 +5528,19 @@ sub find_config_file {
             if ( $var eq 'PERLTIDY' ) {
                 $config_file = "$ENV{$var}";
                 $config_file = $resolve_config_file->($config_file);
-                return $config_file if $exists_config_file->($config_file);
+                return $config_file if ( $exists_config_file->($config_file) );
             }
 
             # test ENV as directory:
             $config_file = File::Spec->catfile( $ENV{$var}, ".perltidyrc" );
             $config_file = $resolve_config_file->($config_file);
-            return $config_file if $exists_config_file->($config_file);
+            return $config_file if ( $exists_config_file->($config_file) );
 
             if ($is_Windows) {
                 $config_file =
                   File::Spec->catfile( $ENV{$var}, "perltidy.ini" );
                 $config_file = $resolve_config_file->($config_file);
-                return $config_file if $exists_config_file->($config_file);
+                return $config_file if ( $exists_config_file->($config_file) );
             }
         }
         else {
@@ -5561,20 +5561,20 @@ sub find_config_file {
             if ($allusers) {
 
                 $config_file = File::Spec->catfile( $allusers, ".perltidyrc" );
-                return $config_file if $exists_config_file->($config_file);
+                return $config_file if ( $exists_config_file->($config_file) );
 
                 $config_file = File::Spec->catfile( $allusers, "perltidy.ini" );
-                return $config_file if $exists_config_file->($config_file);
+                return $config_file if ( $exists_config_file->($config_file) );
             }
 
             # Check system directory.
             # retain old code in case someone has been able to create
             # a file with a leading period.
             $config_file = File::Spec->catfile( $system, ".perltidyrc" );
-            return $config_file if $exists_config_file->($config_file);
+            return $config_file if ( $exists_config_file->($config_file) );
 
             $config_file = File::Spec->catfile( $system, "perltidy.ini" );
-            return $config_file if $exists_config_file->($config_file);
+            return $config_file if ( $exists_config_file->($config_file) );
         }
     }
 
@@ -5590,10 +5590,10 @@ sub find_config_file {
     else {
 
         $config_file = "/usr/local/etc/perltidyrc";
-        return $config_file if $exists_config_file->($config_file);
+        return $config_file if ( $exists_config_file->($config_file) );
 
         $config_file = "/etc/perltidyrc";
-        return $config_file if $exists_config_file->($config_file);
+        return $config_file if ( $exists_config_file->($config_file) );
     }
 
     # Couldn't find a config file
