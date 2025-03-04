@@ -12651,6 +12651,68 @@ eval { $formatter->parse_from_file ( $file, $out_fh ) };
 --space-terminal-semicolon
 --noadd-semicolons
 
+==> b1510.in <==
+plan skip_all =>
+    'no threads.pm'
+    unless
+    eval { require threads } ;
+
+plan skip_all =>
+    'no threads.pm'
+    unless eval {
+    require threads
+    } ;
+
+==> b1510.par <==
+--maximum-line-length=29
+--continuation-indentation=4
+--space-terminal-semicolon
+--noadd-semicolons
+
+==> b1511.in <==
+@returns = eval {
+    some_sub ( 1 )
+} ;
+@returns
+    = eval { some_sub ( 1 ) } ;
+
+==> b1511.par <==
+--maximum-line-length=30
+--continuation-indentation=4
+--space-function-paren
+--space-terminal-semicolon
+--paren-tightness=0
+--want-break-before='='
+--noadd-semicolons
+
+==> b1512.in <==
+eval { require Tie::IxHash } ;
+eval {
+    require Tie::IxHash
+} ;
+
+
+==> b1512.par <==
+--maximum-line-length=29
+--space-terminal-semicolon
+--noadd-semicolons
+
+==> b1513.in <==
+                            else
+                            {   }  #L2hos->Unlink("$psname.ps") unless $DEBUG }
+##                          else {
+##                              }  #L2hos->Unlink("$psname.ps") unless $DEBUG }
+
+==> b1513.par <==
+--maximum-line-length=8
+--variable-maximum-line-length
+--space-terminal-semicolon
+--block-brace-vertical-tightness=2
+--indent-closing-brace
+--opening-brace-on-new-line
+--ignore-side-comment-lengths
+--noadd-semicolons
+
 ==> b156.in <==
 # State 1
 {

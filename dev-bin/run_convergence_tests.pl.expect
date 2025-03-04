@@ -8549,6 +8549,41 @@ eval {
     $formatter->parse_from_file ( $file, $out_fh )
 } ;
 
+==> b1510 <==
+plan skip_all =>
+    'no threads.pm'
+    unless eval {
+    require threads
+    } ;
+
+plan skip_all =>
+    'no threads.pm'
+    unless eval {
+    require threads
+    } ;
+
+==> b1511 <==
+@returns = eval {
+    some_sub ( 1 )
+} ;
+@returns = eval {
+    some_sub ( 1 )
+} ;
+
+==> b1512 <==
+eval {
+    require Tie::IxHash
+} ;
+eval {
+    require Tie::IxHash
+} ;
+
+
+==> b1513 <==
+                            else { } #L2hos->Unlink("$psname.ps") unless $DEBUG }
+##                          else {
+##                              }  #L2hos->Unlink("$psname.ps") unless $DEBUG }
+
 ==> b156 <==
 # State 1
 {

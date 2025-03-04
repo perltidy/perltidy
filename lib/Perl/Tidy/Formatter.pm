@@ -263,6 +263,7 @@ my (
     $rOpts_short_concatenation_item_length,
     $rOpts_space_prototype_paren,
     $rOpts_space_signature_paren,
+    $rOpts_space_terminal_semicolon,
     $rOpts_stack_closing_block_brace,
     $rOpts_static_block_comments,
     $rOpts_add_missing_else,
@@ -3550,6 +3551,7 @@ sub initialize_global_option_vars {
       $rOpts->{'short-concatenation-item-length'};
     $rOpts_space_prototype_paren     = $rOpts->{'space-prototype-paren'};
     $rOpts_space_signature_paren     = $rOpts->{'space-signature-paren'};
+    $rOpts_space_terminal_semicolon  = $rOpts->{'space-terminal-semicolon'};
     $rOpts_stack_closing_block_brace = $rOpts->{'stack-closing-block-brace'};
     $rOpts_static_block_comments     = $rOpts->{'static-block-comments'};
     $rOpts_add_missing_else          = $rOpts->{'add-missing-else'};
@@ -4353,6 +4355,8 @@ sub initialize_whitespace_hashes {
         $want_left_space{'f'} = -1;
     }
 
+    ## NOTE: cannot use the following because $rOpts_ vars not initialized
+    ## if ($rOpts_space_terminal_semicolon) {
     if ( $rOpts->{'space-terminal-semicolon'} ) {
         $want_left_space{';'} = 1;
     }
@@ -27799,6 +27803,17 @@ EOM
                         $added_length += $Knnb - $Ktoken_vars - 1;
                     }
 
+                    # Allow for preceding spaced semicolon
+                    # b1510 b1511 b1512 b1513 b1514
+                    if ( $rOpts_space_terminal_semicolon
+                        && !$rOpts_add_semicolons )
+                    {
+                        my $Km = $self->K_previous_nonblank($Ktoken_vars);
+                        if ( $Km && $rLL->[$Km]->[_TYPE_] eq ';' ) {
+                            $added_length += 1;
+                        }
+                    }
+
                     # we have to terminate it if..
                     if (
 
@@ -29724,8 +29739,19 @@ EOM
             # were added by sub add_phantom_semicolon.  We leave the phantom
             # if --noadd-semicolons is set.
             if ( !$token_lengths_to_go[$imax] && $types_to_go[$imax] eq ';' ) {
-                $self->unmask_phantom_token($imax)
-                  if ($rOpts_add_semicolons);
+                if ($rOpts_add_semicolons) {
+                    $self->unmask_phantom_token($imax);
+                }
+
+                # Remove any previous space; b1510 b1511 b1512
+                else {
+                    if (   $rOpts_space_terminal_semicolon
+                        && $imax > 0
+                        && $types_to_go[ $imax - 1 ] eq 'b' )
+                    {
+                        $tokens_to_go[ $imax - 1 ] = EMPTY_STRING;
+                    }
+                }
             }
 
             if ( $rOpts_one_line_block_semicolons == 0 ) {
