@@ -54,7 +54,7 @@ sub new {
 sub get_column {
     my ( $self, $j ) = @_;
     my $alignment = $self->{ralignments}->[$j];
-    return unless defined($alignment);
+    return unless ( defined($alignment) );
     return $alignment->get_column();
 } ## end sub get_column
 

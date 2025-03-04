@@ -931,8 +931,8 @@ sub report_tokenization_errors {
 
     my $maxle = $rOpts_maximum_level_errors;
     my $maxue = $rOpts_maximum_unexpected_errors;
-    $maxle = 1 unless defined($maxle);
-    $maxue = 0 unless defined($maxue);
+    $maxle = 1 unless ( defined($maxle) );
+    $maxue = 0 unless ( defined($maxue) );
 
     my $level = get_indentation_level();
     if ( $level != $self->[_starting_level_] ) {
@@ -6357,7 +6357,7 @@ EOM
                 # programming note: it seems most efficient to 'next' out of
                 # a critical loop like this as early as possible. So instead
                 # of 'if ( DEVEL_MODE && $numc < 0 )' we write:
-                next unless DEVEL_MODE;
+                next unless (DEVEL_MODE);
                 next if ( $numc > 0 );
 
                 # Should not happen unless @{$rtoken_map} is corrupted
@@ -9751,7 +9751,7 @@ EOM
                     #   warning and suggest turning off --use-feature=class
                 }
                 else {
-                    $subname = EMPTY_STRING unless defined($subname);
+                    $subname = EMPTY_STRING unless ( defined($subname) );
                     $self->warning(
 "expecting ':' or ';' or '{' after definition or declaration of sub '$subname' but saw '$next_nonblank_token'\n"
                     );
@@ -9824,7 +9824,7 @@ sub find_next_nonblank_token {
       )
     {
         $next_nonblank_token = $rtokens->[ ++$i ];
-        return ( SPACE, $i ) unless defined($next_nonblank_token);
+        return ( SPACE, $i ) unless ( defined($next_nonblank_token) );
     }
 
     # We should be at a nonblank now

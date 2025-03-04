@@ -258,7 +258,8 @@ sub make_line_information_string {
 
         my $structural_indentation_level = $line_of_tokens->{_level_0};
 
-        $self->write_column_headings() unless $self->{_wrote_column_headings};
+        $self->write_column_headings()
+          unless ( $self->{_wrote_column_headings} );
 
         # keep logfile columns aligned for scripts up to 999 lines;
         # for longer scripts it doesn't really matter
@@ -397,7 +398,7 @@ sub warning {
                 Perl::Tidy::Die("couldn't open warning file '$warning_file'\n");
             }
             Perl::Tidy::Warn_msg("## Please see file $warning_file\n")
-              unless ref($warning_file);
+              unless ( ref($warning_file) );
             $self->{_fh_warnings} = $fh_warnings;
             $fh_warnings->print("Perltidy version is $Perl::Tidy::VERSION\n");
         }

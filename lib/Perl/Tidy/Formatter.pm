@@ -1259,7 +1259,7 @@ sub check_rLL {
         # by making calls to this routine at different locations in
         # sub 'finish_formatting'.
         $Klimit = 'undef' if ( !defined($Klimit) );
-        $msg    = EMPTY_STRING unless $msg;
+        $msg    = EMPTY_STRING unless ($msg);
         Fault("$msg ERROR: rLL has num=$num but Klimit='$Klimit'\n");
     }
     return;
@@ -1314,7 +1314,7 @@ sub check_token_array {
         if ( $nvars != _NVARS ) {
             my $NVARS = _NVARS;
             my $type  = $rLL->[$KK]->[_TYPE_];
-            $type = '*' unless defined($type);
+            $type = '*' unless ( defined($type) );
 
             # The number of variables per token node is _NVARS and was set when
             # the array indexes were generated. So if the number of variables
@@ -1589,10 +1589,10 @@ sub split_words {
     # Given: a string containing words separated by whitespace,
     # Return: the corresponding list of words
     my ($str) = @_;
-    return unless defined($str);
+    return unless ( defined($str) );
     $str =~ s/\s+$//;
     $str =~ s/^\s+//;
-    return unless length($str);
+    return unless ( length($str) );
     return split /\s+/, $str;
 } ## end sub split_words
 
@@ -1745,7 +1745,7 @@ sub K_first_code {
 
     $rLL = $self->[_rLL_] unless ( defined($rLL) );
 
-    return unless @{$rLL};
+    return unless ( @{$rLL} );
     my $KK   = 0;
     my $type = $rLL->[$KK]->[_TYPE_];
     if ( $type ne 'b' && $type ne '#' ) { return $KK }
@@ -1764,7 +1764,7 @@ sub K_last_code {
 
     $rLL = $self->[_rLL_] unless ( defined($rLL) );
 
-    return unless @{$rLL};
+    return unless ( @{$rLL} );
     my $KK   = @{$rLL} - 1;
     my $type = $rLL->[$KK]->[_TYPE_];
     if ( $type ne 'b' && $type ne '#' ) { return $KK }
@@ -1906,7 +1906,7 @@ sub parent_sub_seqno {
     # Returns:
     #  $seqno of the sub, or
     #  nothing if no sub found
-    return unless defined($seqno_paren);
+    return unless ( defined($seqno_paren) );
 
     # Search upward
     my $seqno      = $seqno_paren;
@@ -1942,7 +1942,7 @@ sub parent_sub_seqno_by_K {
     #  $seqno of the sub, or
     #  nothing if no sub found
 
-    return unless defined($KK);
+    return unless ( defined($KK) );
 
     my $seqno_sub;
     my $parent_seqno = $self->parent_seqno_by_K($KK);
@@ -2008,7 +2008,7 @@ sub is_list_by_seqno {
     # Return true if the immediate contents of a container appears to be a
     # list.
     my ( $self, $seqno ) = @_;
-    return unless defined($seqno);
+    return unless ( defined($seqno) );
     return $self->[_ris_list_by_seqno_]->{$seqno};
 } ## end sub is_list_by_seqno
 
@@ -3231,7 +3231,7 @@ sub initialize_keep_old_breakpoints {
     my ( $str, $short_name, $rkeep_break_hash ) = @_;
 
     # 0 will be treated same as not defined
-    return unless $str;
+    return unless ($str);
 
     my %flags = ();
     my @list  = split_words($str);
@@ -4133,11 +4133,11 @@ Cannot use both --$name_add and --$name_delete
 EOM
     }
 
-    return unless defined($opt_style);
+    return unless ( defined($opt_style) );
     $opt_style =~ tr/,/ /;
     $opt_style =~ s/^\s+//;
     $opt_style =~ s/\s+$//;
-    return unless length($opt_style);
+    return unless ( length($opt_style) );
 
     if    ( $opt_style eq '0' ) { $opt_style = ']  [ ]  { }  [ }  {' }
     elsif ( $opt_style eq '1' ) { $opt_style = ']->[ ]->{ }->[ }->{' }
@@ -6758,7 +6758,7 @@ sub bad_pattern {
         # process each dash-separated string...
         my $string_count = 0;
         foreach my $string (@cuddled_strings) {
-            next unless $string;
+            next unless ($string);
             my @words = split /-+/, $string;    # allow multiple dashes
 
             # we could look for and report possible errors here...
@@ -6782,7 +6782,7 @@ sub bad_pattern {
             $string_count++;
             my $word_count = 0;
             foreach my $word (@words) {
-                next unless $word;
+                next unless ($word);
                 if ( $no_cuddle{$word} ) {
                     Warn(
 "## Ignoring keyword '$word' in -cbl; does not seem right\n"
@@ -6833,7 +6833,7 @@ sub dump_cuddled_block_list {
     # easier to manage.
 
     my $cuddled_string = $rOpts->{'cuddled-block-list'};
-    $cuddled_string = EMPTY_STRING unless $cuddled_string;
+    $cuddled_string = EMPTY_STRING unless ($cuddled_string);
 
     my $flags = EMPTY_STRING;
     $flags .= "-ce" if ( $rOpts->{'cuddled-else'} );
@@ -8997,7 +8997,7 @@ sub follow_if_chain {
         # Look at the token following the closing brace
         my $Kc  = $K_closing_container->{$seqno};
         my $K_k = $self->K_next_code($Kc);
-        last unless defined($K_k);
+        last unless ( defined($K_k) );
         my $type_k  = $rLL->[$K_k]->[_TYPE_];
         my $token_k = $rLL->[$K_k]->[_TOKEN_];
 
@@ -9015,7 +9015,7 @@ sub follow_if_chain {
             #        K_k Ko
 
             my $Ko = $self->K_next_code($K_k);
-            last unless defined($Ko);
+            last unless ( defined($Ko) );
             $seqno = $rLL->[$Ko]->[_TYPE_SEQUENCE_];
             if ( $seqno && $rblock_type_of_seqno->{$seqno} eq 'else' ) {
                 next;
@@ -9034,15 +9034,15 @@ sub follow_if_chain {
 
         # hop over the elsif parens
         my $kpo = $self->K_next_code($K_k);
-        last unless defined($kpo);
+        last unless ( defined($kpo) );
         my $seqno_p = $rLL->[$kpo]->[_TYPE_SEQUENCE_];
         last unless ( $seqno_p && $rLL->[$kpo]->[_TOKEN_] eq '(' );
         my $Kpc = $K_closing_container->{$seqno_p};
-        last unless defined($Kpc);
+        last unless ( defined($Kpc) );
 
         # should be at the opening elsif brace
         my $Ko = $self->K_next_code($Kpc);
-        last unless defined($Ko);
+        last unless ( defined($Ko) );
         $seqno = $rLL->[$Ko]->[_TYPE_SEQUENCE_];
         if ( $seqno && $rblock_type_of_seqno->{$seqno} eq 'elsif' ) {
             next;
@@ -11157,7 +11157,7 @@ sub dump_block_summary {
         ];
     }
 
-    return unless @{$routput_lines};
+    return unless ( @{$routput_lines} );
 
     # Sort blocks and packages on starting line number
     my @sorted_lines = sort { $a->[-1] <=> $b->[-1] } @{$routput_lines};
@@ -11221,7 +11221,7 @@ sub set_ci {
 
     my $rLL    = $self->[_rLL_];
     my $Klimit = $self->[_Klimit_];
-    return unless defined($Klimit);
+    return unless ( defined($Klimit) );
 
     my $token        = ';';
     my $type         = ';';
@@ -11267,17 +11267,17 @@ sub set_ci {
         # of container $seqno
         my ($seqno) = @_;
         my $Kc = $K_closing_container->{$seqno};
-        return unless defined($Kc);
+        return unless ( defined($Kc) );
 
         # Skip past keyword
         my $Kcn = $self->K_next_code($Kc);
-        return unless defined($Kcn);
+        return unless ( defined($Kcn) );
         my $seqno_n = $rLL->[$Kcn]->[_TYPE_SEQUENCE_];
         return if ($seqno_n);
 
         # Look for opening block brace
         my $Knn = $self->K_next_code($Kcn);
-        return unless defined($Knn);
+        return unless ( defined($Knn) );
         my $seqno_nn = $rLL->[$Knn]->[_TYPE_SEQUENCE_];
         return unless ($seqno_nn);
         my $K_nno = $K_opening_container->{$seqno_nn};
@@ -11685,7 +11685,7 @@ sub set_ci {
                             my $Km = $self->K_previous_code($KK);
                             foreach ( 0 .. 2 ) {
                                 $Km = $self->K_previous_code($Km);
-                                last unless defined($Km);
+                                last unless ( defined($Km) );
                                 last unless ( $rLL->[$Km]->[_TYPE_] eq 'k' );
                                 my $tok = $rLL->[$Km]->[_TOKEN_];
                                 next if ( $tok eq 'my' );
@@ -12347,7 +12347,7 @@ sub block_seqno_of_paren_keyword {
 
     # look ahead for an opening paren
     my $K_paren = $self->[_rK_next_seqno_by_K_]->[$KK];
-    return unless defined($K_paren);
+    return unless ( defined($K_paren) );
     my $token_paren = $rLL->[$K_paren]->[_TOKEN_];
     return unless ( $token_paren eq '(' );
 
@@ -12356,7 +12356,7 @@ sub block_seqno_of_paren_keyword {
 
     # see if this opening paren immediately follows the keyword
     my $K_n = $self->K_next_code($KK);
-    return unless $K_n;
+    return unless ($K_n);
 
     # is it the next token? this is the common case
     my $K_end_iterator;
@@ -12407,7 +12407,7 @@ sub block_seqno_of_paren_keyword {
         if ( !$saw_my ) { $K_end_iterator = $K_brace }
         my $seqno_test = $rLL->[$K_brace]->[_TYPE_SEQUENCE_];
         my $K_test     = $self->[_K_closing_container_]->{$seqno_test};
-        return unless $K_test;
+        return unless ($K_test);
         $K_brace = $self->K_next_code($K_test);
         return unless ($K_brace);
     }
@@ -12438,7 +12438,7 @@ sub has_complete_package {
     # return true if this file appears to contain at least one complete package
 
     my $Klast = $self->K_last_code();
-    return unless defined($Klast);
+    return unless ( defined($Klast) );
 
     my $rLL = $self->[_rLL_];
 
@@ -12614,7 +12614,7 @@ sub get_qw_list {
     #  nothing if error
 
     my $rLL = $self->[_rLL_];
-    return unless defined($Kn);
+    return unless ( defined($Kn) );
     my $type_n = $rLL->[$Kn]->[_TYPE_];
     return unless ( $type_n eq 'q' );
     my $token_n  = $rLL->[$Kn]->[_TOKEN_];
@@ -12651,7 +12651,7 @@ sub expand_quoted_word_list {
     #   ref to list if found words
     #   undef if not successful, or non-constant list item encountered
     my $rLL = $self->[_rLL_];
-    return unless defined($Kbeg);
+    return unless ( defined($Kbeg) );
     my $Klimit = @{$rLL} - 1;
     my @list;
     my $Kn = $Kbeg - 1;
@@ -12784,7 +12784,7 @@ sub scan_variable_usage {
     my $K_closing_container  = $self->[_K_closing_container_];
 
     # check for file without code (could be all pod or comments)
-    return unless defined( $self->K_first_code() );
+    return unless ( defined( $self->K_first_code() ) );
 
     # issues are indicated by these names:
     my %unusual_variable_issue_note = (
@@ -12803,7 +12803,7 @@ sub scan_variable_usage {
     }
 
     my $issue_type_string = "Issue types are";
-    foreach my $letter ( reverse sort keys %unusual_variable_issue_note ) {
+    foreach my $letter ( reverse( sort keys %unusual_variable_issue_note ) ) {
         next if ( !$roption->{$letter} );
         my $txt = $unusual_variable_issue_note{$letter};
         $issue_type_string .= " '$letter'=$txt";
@@ -13215,9 +13215,9 @@ sub scan_variable_usage {
         # use constant { '_meth3_',3, '_meth4_',4};
         elsif ( $type_n eq '{' && $token_n eq '{' ) {
             my $seqno_n = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
-            return unless $seqno_n;
+            return unless ($seqno_n);
             my $Kc = $self->[_K_closing_container_]->{$seqno_n};
-            return unless $Kc;
+            return unless ($Kc);
 
             # loop to collect constants in hash ref
             my $Knn               = $self->K_next_code($Kn);
@@ -13513,7 +13513,7 @@ sub scan_variable_usage {
         }
 
         my ( $Kfirst, $Klast ) = @{ $line_of_tokens->{_rK_range} };
-        next unless defined($Kfirst);
+        next unless ( defined($Kfirst) );
 
         #----------------------------------
         # Loop over all tokens on this line
@@ -14459,7 +14459,7 @@ sub block_seqno_of_paren_seqno {
     #     |   K_closing_paren
     #     $seqno_paren = seqno of this paren pair
 
-    return unless $seqno_paren;
+    return unless ($seqno_paren);
     my $K_closing_paren = $self->[_K_closing_container_]->{$seqno_paren};
     return unless ($K_closing_paren);
     my $K_opening_brace = $self->K_next_code($K_closing_paren);
@@ -14479,7 +14479,7 @@ sub dump_mixed_call_parens {
     # Implent --dump-mixed-call-parens
 
     my $opt_name = 'dump-mixed-call-parens';
-    return unless $rOpts->{$opt_name};
+    return unless ( $rOpts->{$opt_name} );
 
     my $rLL = $self->[_rLL_];
 
@@ -14500,7 +14500,7 @@ sub dump_mixed_call_parens {
         if ( $type eq 'k' && $skip_keywords{$token} ) { next }
 
         my $Kn = $self->K_next_code($KK);
-        next unless defined($Kn);
+        next unless ( defined($Kn) );
         my $token_Kn = $rLL->[$Kn]->[_TOKEN_];
         my $have_paren;
         if    ( $token_Kn eq '=>' ) { next }
@@ -14570,7 +14570,7 @@ sub initialize_call_paren_style {
     foreach my $opt_name ( 'nowant-call-parens', 'want-call-parens' ) {
         $iter++;
         my $opt = $rOpts->{$opt_name};
-        next unless defined($opt);
+        next unless ( defined($opt) );
 
         # allow comma separators
         $opt =~ s/,/ /g;
@@ -14630,11 +14630,11 @@ sub scan_call_parens {
               : $type eq 'U' ? $call_paren_style{'&'}
               :                undef;
         }
-        next unless defined($want_paren);
+        next unless ( defined($want_paren) );
 
         # This is a selected word. Look for a '(' at the next token.
         my $Kn = $self->K_next_code($KK);
-        next unless defined($Kn);
+        next unless ( defined($Kn) );
 
         my $token_Kn = $rLL->[$Kn]->[_TOKEN_];
         if    ( $token_Kn eq '=>' ) { next }
@@ -14961,7 +14961,7 @@ sub interbracket_arrow_check {
         if ( !$complexity ) {
             my $count = 0;
             my $Ko_mm = $K_opening_container->{$seqno_mm};
-            next unless defined($Ko_mm);
+            next unless ( defined($Ko_mm) );
             foreach my $KK ( $Ko_mm + 1 .. $K_mm - 2 ) {
                 next if ( $rLL->[$KK]->[_TYPE_] eq 'b' );
                 $count++;
@@ -15447,7 +15447,7 @@ sub respace_tokens {
 
         my $rK_range = $line_of_tokens->{_rK_range};
         my ( $Kfirst, $Klast ) = @{$rK_range};
-        next unless defined($Kfirst);
+        next unless ( defined($Kfirst) );
         ( $Kfirst_old, $Klast_old ) = ( $Kfirst, $Klast );
         $Klast_old_code = $Klast_old;
 
@@ -16301,11 +16301,11 @@ EOM
     # Find and remember lists by sequence number
     foreach my $seqno ( keys %{$K_opening_container} ) {
         my $K_opening = $K_opening_container->{$seqno};
-        next unless defined($K_opening);
+        next unless ( defined($K_opening) );
 
         # code errors may leave undefined closing tokens
         my $K_closing = $K_closing_container->{$seqno};
-        next unless defined($K_closing);
+        next unless ( defined($K_closing) );
 
         my $lx_open   = $rLL_new->[$K_opening]->[_LINE_INDEX_];
         my $lx_close  = $rLL_new->[$K_closing]->[_LINE_INDEX_];
@@ -16730,7 +16730,7 @@ sub store_token {
                 }
 
                 my $seqno_parent = $seqno_stack{ $depth_next - 1 };
-                $seqno_parent = SEQ_ROOT unless defined($seqno_parent);
+                $seqno_parent = SEQ_ROOT unless ( defined($seqno_parent) );
                 push @{ $rchildren_of_seqno->{$seqno_parent} }, $type_sequence;
                 $rparent_of_seqno->{$type_sequence}     = $seqno_parent;
                 $seqno_stack{$depth_next}               = $type_sequence;
@@ -16807,7 +16807,7 @@ EOM
 
                 # For ternary, note parent but do not include as child
                 my $seqno_parent = $seqno_stack{ $depth_next - 1 };
-                $seqno_parent = SEQ_ROOT unless defined($seqno_parent);
+                $seqno_parent = SEQ_ROOT unless ( defined($seqno_parent) );
                 $rparent_of_seqno->{$type_sequence} = $seqno_parent;
 
                 # These are not yet used but could be useful
@@ -17458,9 +17458,9 @@ sub is_list_assignment {
     #   true if this is a list assignment of the form '@xxx = ('
     #   false otherwise
 
-    return unless defined($K_opening);
+    return unless ( defined($K_opening) );
     my $Km = $self->K_previous_nonblank( $K_opening, $rLL_new );
-    return unless defined($Km);
+    return unless ( defined($Km) );
     my $type_m = $rLL_new->[$Km]->[_TYPE_];
 
     # Look for list assignment like '@list = (' or '@{$ref} = ('
@@ -17468,7 +17468,7 @@ sub is_list_assignment {
     if ( $type_m eq '=' ) {
         my $token_m = $rLL_new->[$Km]->[_TOKEN_];
         $Km = $self->K_previous_nonblank( $Km, $rLL_new );
-        return unless defined($Km);
+        return unless ( defined($Km) );
         $type_m  = $rLL_new->[$Km]->[_TYPE_];
         $token_m = $rLL_new->[$Km]->[_TOKEN_];
 
@@ -17477,9 +17477,9 @@ sub is_list_assignment {
             my $seqno_m = $rLL_new->[$Km]->[_TYPE_SEQUENCE_];
             return unless ($seqno_m);
             my $K_opening_m = $self->[_K_opening_container_]->{$seqno_m};
-            return unless defined($K_opening_m);
+            return unless ( defined($K_opening_m) );
             $Km = $self->K_previous_nonblank( $K_opening_m, $rLL_new );
-            return unless defined($Km);
+            return unless ( defined($Km) );
             $type_m  = $rLL_new->[$Km]->[_TYPE_];
             $token_m = $rLL_new->[$Km]->[_TOKEN_];
         }
@@ -17675,7 +17675,7 @@ sub match_trailing_comma_rule {
             }
 
             my $K_opening_pp = $self->[_K_opening_container_]->{$seqno_pp};
-            return unless defined($K_opening_pp);
+            return unless ( defined($K_opening_pp) );
             my $iline_o = $rLL_new->[$K_opening_pp]->[_LINE_INDEX_];
             my $iline_c = $rLL_new->[$Kpp]->[_LINE_INDEX_];
 
@@ -18869,7 +18869,7 @@ sub count_list_elements {
 
             # Certain subsequent tokens prevent problems
             my $Kn = $self->K_next_code($KK);
-            next unless defined($Kn);
+            next unless ( defined($Kn) );
             my $token_Kn = $rLL->[$Kn]->[_TOKEN_];
             my $type_Kn  = $rLL->[$Kn]->[_TYPE_];
             next
@@ -18975,7 +18975,7 @@ sub count_prototype_args {
         elsif ( $is_scalar_sigil{$ch} ) { $bump_count->(); }
         elsif ( $ch eq q{\\} ) {
             $ch = shift @chars;
-            last unless defined($ch);
+            last unless ( defined($ch) );
             $bump_count->();
         }
         else { next }
@@ -19077,7 +19077,7 @@ sub count_default_sub_args {
     # The token before the opening must be a ',' or '('
     my $K_o    = $self->[_K_opening_container_]->{$seqno};
     my $K_test = $self->K_previous_code($K_o);
-    return unless defined($K_test);
+    return unless ( defined($K_test) );
     my $token_test = $rLL->[$K_test]->[_TOKEN_];
     return if ( $token_test ne ',' && $token_test ne '(' );
 
@@ -19293,7 +19293,7 @@ sub count_sub_input_args {
     my $seqno     = $seqno_block;
     my $K_opening = $self->[_K_opening_container_]->{$seqno};
     my $K_closing = $self->[_K_closing_container_]->{$seqno};
-    return unless defined($K_closing);
+    return unless ( defined($K_closing) );
 
     my $level_opening = $rLL->[$K_opening]->[_LEVEL_];
 
@@ -19342,13 +19342,13 @@ sub count_sub_input_args {
 
                 # Look back for ' = @_'
                 my $K_m = $self->K_previous_code($KK);
-                return unless defined($K_m);
+                return unless ( defined($K_m) );
                 my $type_m = $rLL->[$K_m]->[_TYPE_];
                 return unless ( $type_m eq '=' );
 
                 # Look back for ' ) = @_'
                 my $K_mm = $self->K_previous_code($K_m);
-                return unless defined($K_mm);
+                return unless ( defined($K_mm) );
                 my $token_mm = $rLL->[$K_mm]->[_TOKEN_];
                 my $seqno_mm = $rLL->[$K_mm]->[_TYPE_SEQUENCE_];
 
@@ -19428,7 +19428,7 @@ sub count_sub_input_args {
 
                 # look for 'shift;' and count as 1 arg
                 my $Kp = $self->K_next_code($KK);
-                return unless defined($Kp);
+                return unless ( defined($Kp) );
                 my $type_p  = $rLL->[$Kp]->[_TYPE_];
                 my $token_p = $rLL->[$Kp]->[_TOKEN_];
 
@@ -19443,7 +19443,7 @@ sub count_sub_input_args {
                 if ( $token_p eq '(' ) {
                     $in_parens = 1;
                     $Kp        = $self->K_next_code($Kp);
-                    return unless defined($Kp);
+                    return unless ( defined($Kp) );
                     $type_p  = $rLL->[$Kp]->[_TYPE_];
                     $token_p = $rLL->[$Kp]->[_TOKEN_];
                 }
@@ -19455,7 +19455,7 @@ sub count_sub_input_args {
                     next if ( $token_p ne '@_' );
 
                     $Kp = $self->K_next_code($Kp);
-                    return unless defined($Kp);
+                    return unless ( defined($Kp) );
                     $type_p  = $rLL->[$Kp]->[_TYPE_];
                     $token_p = $rLL->[$Kp]->[_TOKEN_];
                 }
@@ -19463,7 +19463,7 @@ sub count_sub_input_args {
                 # remove any closing paren
                 if ( $in_parens && $token_p eq ')' ) {
                     $Kp = $self->K_next_code($Kp);
-                    return unless defined($Kp);
+                    return unless ( defined($Kp) );
                     $type_p  = $rLL->[$Kp]->[_TYPE_];
                     $token_p = $rLL->[$Kp]->[_TOKEN_];
                 }
@@ -19508,7 +19508,7 @@ sub count_sub_input_args {
                         if ( $type_m eq '=' ) {
 
                             my $K_mm = $self->K_previous_code($K_m);
-                            return unless defined($K_mm);
+                            return unless ( defined($K_mm) );
 
                             my $type_mm  = $rLL->[$K_mm]->[_TYPE_];
                             my $token_mm = $rLL->[$K_mm]->[_TOKEN_];
@@ -19600,7 +19600,7 @@ sub count_sub_input_args {
         elsif ( $type eq 'Q' ) {
 
             my $K_last_code = $self->K_previous_code($KK);
-            next unless defined($K_last_code);
+            next unless ( defined($K_last_code) );
             my $K_last_type = $rLL->[$K_last_code]->[_TYPE_];
             if ( $K_last_type eq 'Q' ) {
 
@@ -19763,8 +19763,8 @@ sub count_sub_return_args {
     if ( DEBUG_RETURN_COUNT > 1 ) {
         my $min = $item->{return_count_min};
         my $max = $item->{return_count_max};
-        $min = '*' unless defined($min);
-        $max = '*' unless defined($max);
+        $min = '*' unless ( defined($min) );
+        $max = '*' unless ( defined($max) );
         print "DEBUG_RETURN: returning min=$min max=$max\n";
     }
     return;
@@ -19798,7 +19798,7 @@ sub count_return_values_wanted {
             $ok ||= $is_if_unless{$token_n};
             $ok ||= $is_and_or{$token_n};
         }
-        return unless $ok;
+        return unless ($ok);
     }
 
     my $Ko   = $self->[_K_opening_container_]->{$seqno_list};
@@ -19822,7 +19822,7 @@ sub count_return_values_wanted {
     elsif ( $type_m eq 'i' && $type_mm eq '->' ) {
         my $K_mmm = $self->K_previous_code($K_mm);
         my $K_mm4 = $self->K_previous_code($K_mmm);
-        return unless defined($K_mm4);
+        return unless ( defined($K_mm4) );
         my $type_mmm = $rLL->[$K_mmm]->[_TYPE_];
 
         # something like '$self->function('
@@ -19884,15 +19884,15 @@ sub count_return_values_wanted {
             my $seqno_c = $rLL->[$K_c]->[_TYPE_SEQUENCE_];
             return if ( !$seqno_c );
             my $Ko_c = $self->[_K_opening_container_]->{$seqno_c};
-            return unless defined($Ko_c);
+            return unless ( defined($Ko_c) );
             my $K_c_new = $self->K_previous_code($Ko_c);
-            return unless defined($K_c_new);
+            return unless ( defined($K_c_new) );
             $type_c  = $rLL->[$K_c_new]->[_TYPE_];
             $token_c = $rLL->[$K_c_new]->[_TOKEN_];
 
             if ( $type_c eq '->' ) {
                 $K_c_new = $self->K_previous_code($K_c_new);
-                return unless defined($K_c_new);
+                return unless ( defined($K_c_new) );
                 $type_c  = $rLL->[$K_c_new]->[_TYPE_];
                 $token_c = $rLL->[$K_c_new]->[_TOKEN_];
             }
@@ -20075,7 +20075,7 @@ sub update_sub_call_paren_info {
         my $seqno = $rLL->[$K_closing_bracket]->[_TYPE_SEQUENCE_];
         return unless ($seqno);
         my $Ko = $K_opening_container->{$seqno};
-        return unless defined($Ko);
+        return unless ( defined($Ko) );
         my $Knum = $self->K_next_code($Ko);
         return unless ( $Knum && $rLL->[$Knum]->[_TOKEN_] eq '0' );
         my $Kc = $self->K_next_code($Knum);
@@ -20413,7 +20413,7 @@ sub cross_check_sub_calls {
         my $arg_count = $rcall_item->{arg_count};
         my $key       = $package . '::' . $name;
 
-        next unless defined($arg_count);
+        next unless ( defined($arg_count) );
         if ( $call_type eq '->' ) {
             $arg_count += 1;
 ##          $upper_bound_call_info{$key}->{method_call_count}++;
@@ -20506,7 +20506,7 @@ sub cross_check_sub_calls {
                 #---------------------------------------------------------
                 if ( !$is_self_call ) {
                     my $item_self = $item->{self_name};
-                    $item_self = 'undef' unless $item_self;
+                    $item_self = 'undef' unless ($item_self);
                     my $rK_bless_list =
                       $rK_bless_by_sub_seqno->{$seqno_sub_parent};
                     if ($rK_bless_list) {
@@ -20934,7 +20934,7 @@ sub cross_check_sub_calls {
 
         # Check for mixed method/direct calls:
         my $rsub_item = $item->{rsub_item};
-        next unless defined($rsub_item);
+        next unless ( defined($rsub_item) );
 
         $name = $rsub_item->{name};
         $lno  = $rsub_item->{line_number};
@@ -20965,7 +20965,7 @@ sub cross_check_sub_calls {
             $want_count_min,   $want_count_max,
           )
         {
-            $_ = '*' unless defined($_);
+            $_ = '*' unless ( defined($_) );
         }
 
         #-----------------------------------------------------------------
@@ -21661,7 +21661,7 @@ sub weld_cuddled_blocks {
 
                 # patch for unrecognized block types which may not be labeled
                 my $Kp = $self->K_previous_code($KK);
-                next unless $Kp;
+                next unless ($Kp);
                 $block_type = $rLL->[$Kp]->[_TOKEN_];
             }
             if ( $in_chain{$level} ) {
@@ -21728,7 +21728,7 @@ sub weld_cuddled_blocks {
                 # We are in a chain at a closing brace.  See if this chain
                 # continues..
                 my $Knn = $self->K_next_code($KK);
-                next unless $Knn;
+                next unless ($Knn);
 
                 my $chain_type          = $in_chain{$level}->[0];
                 my $next_nonblank_token = $rLL->[$Knn]->[_TOKEN_];
@@ -21822,7 +21822,7 @@ sub find_nested_pairs {
         # Verify that the inner opening token is the next container after the
         # outer opening token.
         my $K_io_check = $rK_next_seqno_by_K->[$K_outer_opening];
-        next unless defined($K_io_check);
+        next unless ( defined($K_io_check) );
         if ( $K_io_check != $K_inner_opening ) {
 
             # The inner opening container does not immediately follow the outer
@@ -21844,9 +21844,9 @@ sub find_nested_pairs {
             next if ( !$inner_blocktype || $inner_blocktype ne 'sub' );
             next if ( $rLL->[$K_io_check]->[_TOKEN_] ne '(' );
             my $seqno_signature = $rLL->[$K_io_check]->[_TYPE_SEQUENCE_];
-            next unless defined($seqno_signature);
+            next unless ( defined($seqno_signature) );
             my $K_signature_closing = $K_closing_container->{$seqno_signature};
-            next unless defined($K_signature_closing);
+            next unless ( defined($K_signature_closing) );
             my $K_test = $rK_next_seqno_by_K->[$K_signature_closing];
             next
               unless ( defined($K_test) && $K_test == $K_inner_opening );
@@ -22472,7 +22472,7 @@ sub weld_nested_containers {
         # token is a heredoc (so we know there will be multiple lines)
         if ( $Kinner_closing - $Kinner_opening <= 4 ) {
             my $Knext_nonblank = $self->K_next_nonblank($Kinner_opening);
-            next unless defined($Knext_nonblank);
+            next unless ( defined($Knext_nonblank) );
             my $type = $rLL->[$Knext_nonblank]->[_TYPE_];
             next unless ( $type eq 'h' );
         }
@@ -22547,9 +22547,9 @@ sub weld_nested_containers {
 
             foreach my $iline ( $iline_oo + 1 .. $iline_io ) {
                 my $rK_range = $rlines->[$iline]->{_rK_range};
-                next unless defined($rK_range);
+                next unless ( defined($rK_range) );
                 my ( $Kfirst, $Klast_uu ) = @{$rK_range};
-                next unless defined($Kfirst);
+                next unless ( defined($Kfirst) );
                 if ( $rLL->[$Kfirst]->[_TYPE_] eq '->' ) {
                     $do_not_weld_rule = 7;
                     last;
@@ -23268,7 +23268,7 @@ sub is_welded_at_seqno {
     #   false otherwise
     return unless ( $total_weld_count && defined($seqno) );
     my $KK_o = $self->[_K_opening_container_]->{$seqno};
-    return unless defined($KK_o);
+    return unless ( defined($KK_o) );
     return defined( $self->[_rK_weld_left_]->{$KK_o} )
       || defined( $self->[_rK_weld_right_]->{$KK_o} );
 } ## end sub is_welded_at_seqno
@@ -23625,7 +23625,7 @@ sub break_before_list_opening_containers {
     # --break-before-hash-brace-and-indent and similar -bbxi=n
 
     # Nothing to do if none of the -bbx=n parameters has been set
-    return unless %break_before_container_types;
+    return unless (%break_before_container_types);
 
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
@@ -24151,7 +24151,7 @@ sub extended_ci {
         # Make sure there is a corresponding closing container
         # (could be missing if the script has a brace error)
         my $K_closing = $K_closing_container->{$seqno};
-        next unless defined($K_closing);
+        next unless ( defined($K_closing) );
 
         # Skip if requested by -bbx to avoid blinkers
         next if ( $rno_xci_by_seqno->{$seqno} );
@@ -25383,7 +25383,7 @@ sub set_excluded_lp_containers {
         next if ( $rblock_type_of_seqno->{$seqno} );
 
         my $KK = $K_opening_container->{$seqno};
-        next unless defined($KK);
+        next unless ( defined($KK) );
 
         # see if a user exclusion rule turns off -lp for this container
         if ( $self->is_excluded_lp($KK) ) {
@@ -26982,7 +26982,7 @@ EOM
                 $nesting_depth_to_go[$max_index_to_go] = $slevel;
 
                 my $parent_seqno = $rparent_of_seqno->{$seqno};
-                $parent_seqno = SEQ_ROOT unless defined($parent_seqno);
+                $parent_seqno = SEQ_ROOT unless ( defined($parent_seqno) );
                 $parent_seqno_to_go[$max_index_to_go] = $parent_seqno;
                 $next_parent_seqno                    = $parent_seqno;
 
@@ -28147,7 +28147,7 @@ sub tight_paren_follows {
     # do blocks it can be preferable to keep the code compact
     # by returning a 'true' value.
 
-    return unless defined($K_ic);
+    return unless ( defined($K_ic) );
     my $rLL = $self->[_rLL_];
 
     # we should only be called at a closing block
@@ -28156,7 +28156,7 @@ sub tight_paren_follows {
 
     # This only applies if the next nonblank is a ')'
     my $K_oc = $self->K_next_nonblank($K_ic);
-    return unless defined($K_oc);
+    return unless ( defined($K_oc) );
     my $token_next = $rLL->[$K_oc]->[_TOKEN_];
     return unless ( $token_next eq ')' );
 
@@ -28357,7 +28357,7 @@ sub starting_one_line_block {
 
             # Find the opening paren
             my $K_start = $K_to_go[$i_start];
-            return unless defined($K_start);
+            return unless ( defined($K_start) );
             my $seqno = $type_sequence_to_go[$i_start];
             return unless ($seqno);
             my $K_opening = $K_opening_container->{$seqno};
@@ -28847,7 +28847,7 @@ sub compare_indentation_levels {
             my $msg =
 "FORCE $forced_breakpoint_count after call from $pkg $lno with i=$i max=$max_index_to_go";
             if ( !defined($i_nonblank) ) {
-                $i = EMPTY_STRING unless defined($i);
+                $i = EMPTY_STRING unless ( defined($i) );
                 $msg .= " but could not set break after i='$i'\n";
             }
             else {
@@ -29127,7 +29127,7 @@ EOM
 
             $KK = $K_to_go[$ii];
             if ( !defined($KK) || $KK < 0 || $KK > $Klimit ) {
-                $KK = '(undef)' unless defined($KK);
+                $KK = '(undef)' unless ( defined($KK) );
                 Fault(<<EOM);
 at batch index at i=$ii, the value of K_to_go[$ii] = '$KK' is out of the valid range (0 - $Klimit)
 EOM
@@ -30197,7 +30197,7 @@ sub break_all_chain_tokens {
         }
     }
 
-    return unless $end_count;
+    return unless ($end_count);
 
     # now look for any interior tokens of the same types
     my $interior_count = 0;
@@ -30217,7 +30217,7 @@ sub break_all_chain_tokens {
             }
         }
     }
-    return unless $interior_count;
+    return unless ($interior_count);
 
     my @keys = keys %saw_chain_type;
 
@@ -30270,7 +30270,7 @@ sub break_all_chain_tokens {
             if ( $right_chain_type{$key} ) {
                 next if ( $nobreak_to_go[$itest] );
                 foreach my $i ( @{ $right_chain_type{$key} } ) {
-                    next unless $self->in_same_container_i( $i, $itest );
+                    next unless ( $self->in_same_container_i( $i, $itest ) );
                     push @insert_list, $itest;
 
                     # break at matching ? if this : is at a different level
@@ -30643,7 +30643,7 @@ sub break_equals {
 
             # ...and preceded by a semicolon on the same line
             my $K_semicolon = $self->K_previous_nonblank($K_end);
-            next unless defined($K_semicolon);
+            next unless ( defined($K_semicolon) );
             my $i_semicolon = $i_beg + ( $K_semicolon - $K_beg );
             next if ( $i_semicolon <= $i_beg );
             next unless ( $rLL->[$K_semicolon]->[_TYPE_] eq ';' );
@@ -30815,7 +30815,7 @@ EOM
         # Loop over all sub-sections.  Note that we have to work backwards
         # from the end of the batch since the sections use original line
         # numbers, and the line numbers change as we go.
-        foreach my $section ( reverse @{$rsections} ) {
+        foreach my $section ( reverse( @{$rsections} ) ) {
             my ( $nbeg, $nend ) = @{$section};
             $self->recombine_section_loop(
                 {
@@ -31945,7 +31945,7 @@ EOM
 
             if ( $is_and_or{ $tokens_to_go[$iend_1] } ) {
                 return
-                  unless $want_break_before{ $tokens_to_go[$iend_1] };
+                  unless ( $want_break_before{ $tokens_to_go[$iend_1] } );
             }
         }
         elsif ( $type_iend_1 eq '.' ) {
@@ -32471,7 +32471,7 @@ sub insert_breaks_before_list_opening_containers {
     #   $ri_right = ref to array with token indexes of the right line ends
 
     # Nothing to do if none of these parameters has been set
-    return unless %break_before_container_types;
+    return unless (%break_before_container_types);
 
     my $nmax = @{$ri_right} - 1;
     return if ( $nmax < 0 );
@@ -32496,7 +32496,7 @@ sub insert_breaks_before_list_opening_containers {
         # Backup before any side comment
         if ( $type_end eq '#' ) {
             $Kend = $self->K_previous_nonblank($Kr);
-            next unless defined($Kend);
+            next unless ( defined($Kend) );
             $type_end = $rLL->[$Kend]->[_TYPE_];
         }
 
@@ -35980,7 +35980,7 @@ EOM
             else {
                 $skipped_count = 0;
                 my $i_tc = $ri_term_comma->[ $j - 1 ];
-                last unless defined($i_tc);
+                last unless ( defined($i_tc) );
                 $self->set_forced_breakpoint($i_tc);
             }
         }
@@ -36080,7 +36080,7 @@ EOM
         elsif ($long_last_term) {
 
             $self->set_forced_breakpoint($i_last_comma);
-            ${$rdo_not_break_apart} = 1 unless $must_break_open;
+            ${$rdo_not_break_apart} = 1 unless ($must_break_open);
         }
         elsif ($long_first_term) {
 
@@ -39205,7 +39205,7 @@ sub check_batch_summed_lengths {
     # Debug routine for summed lengths
     #   $msg = optional debug message
 
-    $msg = EMPTY_STRING unless defined($msg);
+    $msg = EMPTY_STRING unless ( defined($msg) );
     my $rLL = $self->[_rLL_];
 
     # Verify that the summed lengths are correct. We want to be sure that
@@ -39230,7 +39230,7 @@ sub check_batch_summed_lengths {
             || defined($len_tok_K) && $len_by_sum != $len_tok_K )
         {
             my $lno = defined($KK) ? $rLL->[$KK]->[_LINE_INDEX_] + 1 : "undef";
-            $KK = 'undef' unless defined($KK);
+            $KK = 'undef' unless ( defined($KK) );
             my $tok  = $tokens_to_go[$i];
             my $type = $types_to_go[$i];
             Fault(<<EOM);
@@ -40095,7 +40095,7 @@ sub undo_contained_ci {
         # of this routine from 30 seconds to 169 milliseconds.
         my @i_controlling_ci;
         if ( $rix_seqno_controlling_ci && @{$rix_seqno_controlling_ci} ) {
-            my @tmp     = reverse @{$rix_seqno_controlling_ci};
+            my @tmp     = reverse( @{$rix_seqno_controlling_ci} );
             my $ix_next = pop @tmp;
             foreach my $line ( 0 .. $max_line ) {
                 my $iend = $ri_last->[$line];
@@ -40761,7 +40761,7 @@ sub undo_contained_ci {
                     $ok_to_pad = 0 if ( $types_to_go[$ibeg] eq 'Q' );
                 }
 
-                next unless $ok_to_pad;
+                next unless ($ok_to_pad);
 
                 #----------------------end special check---------------
 

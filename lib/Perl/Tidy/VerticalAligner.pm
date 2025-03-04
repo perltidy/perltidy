@@ -1164,7 +1164,7 @@ sub fix_terminal_ternary {
 
     if (%valign_control_hash) {
         my $align_ok = $valign_control_hash{'?'};
-        $align_ok = $valign_control_default unless defined($align_ok);
+        $align_ok = $valign_control_default unless ( defined($align_ok) );
         return if ( !$align_ok );
     }
 
@@ -1346,7 +1346,7 @@ sub fix_terminal_else {
 
     if (%valign_control_hash) {
         my $align_ok = $valign_control_hash{'{'};
-        $align_ok = $valign_control_default unless defined($align_ok);
+        $align_ok = $valign_control_default unless ( defined($align_ok) );
         return if ( !$align_ok );
     }
 
@@ -1986,7 +1986,7 @@ sub _flush_group_lines {
         $grp_level  = $group_level;
         $rgroups    = [];
         initialize_for_new_rgroup();
-        return unless @{$rlines};    # shouldn't happen
+        return unless ( @{$rlines} );    # shouldn't happen
 
         # Unset the _end_group flag for the last line if it it set because it
         # is not needed and can causes problems for -lp formatting
@@ -2033,7 +2033,7 @@ EOM
                 # Ignore an undefined value as a defensive step; shouldn't
                 # normally happen.
                 $col_matching_terminal = 0
-                  unless defined($col_matching_terminal);
+                  unless ( defined($col_matching_terminal) );
             }
 
             # -------------------------------------------------------------
@@ -2132,7 +2132,7 @@ EOM
 
                     # Ignore an undefined value as a defensive step; shouldn't
                     # normally happen.
-                    $col_now = 0 unless defined($col_now);
+                    $col_now = 0 unless ( defined($col_now) );
 
                     my $pad = $col_matching_terminal - $col_now;
                     my $padding_available =
@@ -2379,7 +2379,7 @@ sub sweep_left_to_right {
             }
         }
     }
-    return unless @icommon;
+    return unless (@icommon);
 
     #----------------------------------------------------------
     # Step 2: Reorder and consolidate the list into a task list
@@ -2924,7 +2924,7 @@ sub delete_unmatched_tokens {
     my $saw_signed_number = 0;    # used to avoid a call for -vsn
 
     # Handle no lines -- shouldn't happen
-    return unless @{$rlines};
+    return unless ( @{$rlines} );
 
     # Handle a single line
     if ( @{$rlines} == 1 ) {
@@ -3243,7 +3243,7 @@ sub delete_unmatched_tokens_main_loop {
                 if (%valign_control_hash) {
                     $align_ok = $valign_control_hash{$raw_tok};
                     $align_ok = $valign_control_default
-                      unless defined($align_ok);
+                      unless ( defined($align_ok) );
                     $delete_me ||= !$align_ok;
                 }
 
@@ -4112,7 +4112,7 @@ sub prune_alignment_tree {
     # $nc_end) of each parent with two additional indexes in the original array.
     # These will be undef if no children.
     foreach my $depth ( reverse( 1 .. $MAX_DEPTH ) ) {
-        next unless defined( $match_tree[$depth] );
+        next unless ( defined( $match_tree[$depth] ) );
         my $nc_max = @{ $match_tree[$depth] } - 1;
         my $np_now;
         foreach my $nc ( 0 .. $nc_max ) {
@@ -4164,7 +4164,7 @@ sub prune_alignment_tree {
             my $nlines_p = $jend_p - $jbeg_p + 1;
 
             # nothing to do if no children
-            next unless defined($nc_beg_p);
+            next unless ( defined($nc_beg_p) );
 
             # Define the number of lines to either keep or delete a child node.
             # This is the key decision we have to make.  We want to delete
@@ -4246,7 +4246,7 @@ sub Dump_tree_groups {
     local $LIST_SEPARATOR = ')(';
     foreach my $item ( @{$rgroup} ) {
         my @fix = @{$item};
-        foreach my $val (@fix) { $val = "undef" unless defined($val); }
+        foreach my $val (@fix) { $val = "undef" unless ( defined($val) ); }
         $fix[4] = "...";
         print "(@fix)\n";
     }
@@ -4363,7 +4363,7 @@ sub is_marginal_match {
             $saw_good_alignment = 1;
         }
         else {
-            $jfirst_bad = $j unless defined($jfirst_bad);
+            $jfirst_bad = $j unless ( defined($jfirst_bad) );
         }
         my $pat_0 = $rpatterns_0->[$j];
         my $pat_1 = $rpatterns_1->[$j];
@@ -4802,7 +4802,7 @@ sub align_side_comments {
     }
 
     # done if no groups with side comments
-    return unless @todo;
+    return unless (@todo);
 
     # Count $num5 = number of comments in the 5 lines after the first comment
     # This is an important factor in a decision formula

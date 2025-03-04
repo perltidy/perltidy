@@ -1114,7 +1114,7 @@ EOM
 
         # No special treatment for source stream which is a filename.
         # This will enable checks for binary files and other bad stuff.
-        $source_stream = undef unless ref($source_stream);
+        $source_stream = undef unless ( ref($source_stream) );
     }
 
     # use stdin by default if no source array and no args
@@ -1259,14 +1259,14 @@ sub make_file_extension {
     # Return:
     #  $extension = the actual file extension
 
-    $extension = EMPTY_STRING unless defined($extension);
+    $extension = EMPTY_STRING unless ( defined($extension) );
     $extension =~ s/^\s+//;
     $extension =~ s/\s+$//;
 
     # Use default extension if nothing remains of the first choice
     if ( length($extension) == 0 ) {
         $extension = $default;
-        $extension = EMPTY_STRING unless defined($extension);
+        $extension = EMPTY_STRING unless ( defined($extension) );
         $extension =~ s/^\s+//;
         $extension =~ s/\s+$//;
     }
@@ -4935,7 +4935,7 @@ EOM
         my $Error_message;
         foreach my $opt ( keys %{$rinteger_option_range} ) {
             my $range = $rinteger_option_range->{$opt};
-            next unless defined($range);
+            next unless ( defined($range) );
             my ( $min, $max, $default ) = @{$range};
 
             my $val = $rOpts->{$opt};
@@ -5261,7 +5261,7 @@ sub expand_command_abbreviations {
                     # stuff all of the words that it expands to into the
                     # new arg list for the next pass
                     foreach my $abbrev ( @{ $rexpansion->{$abr} } ) {
-                        next unless $abbrev;    # for safety; shouldn't happen
+                        next unless ($abbrev);    # for safety; shouldn't happen
                         push( @new_argv, '--' . $abbrev . $flags );
                     }
                 }
@@ -5408,9 +5408,9 @@ sub Win_OS_Type {
     #    Windows XP             2      5       1
     #    Windows Server 2003    2      5       2
 
-    return "win32s" unless $id;    # If id==0 then its a win32s box.
-    $os = {                        # Magic numbers from MSDN
-                                   # documentation of GetOSVersion
+    return "win32s" unless ($id);    # If id==0 then its a win32s box.
+    $os = {                          # Magic numbers from MSDN
+                                     # documentation of GetOSVersion
         1 => {
             0  => "95",
             10 => "98",
@@ -5473,7 +5473,7 @@ sub find_config_file {
     # sub to check file existence and record all tests
     my $exists_config_file = sub {
         my $config_file = shift;
-        return 0 unless defined($config_file);
+        return 0 unless ( defined($config_file) );
         ${$rconfig_file_chatter} .= "# Testing: $config_file\n";
         return -f $config_file;
     }; ## end $exists_config_file = sub
@@ -5610,7 +5610,7 @@ sub Win_Config_Locs {
     my ( $rpending_complaint, $os ) = @_;
     if ( !$os ) { $os = Win_OS_Type($rpending_complaint) }
 
-    return unless $os;
+    return unless ($os);
 
     my $system   = EMPTY_STRING;
     my $allusers = EMPTY_STRING;
@@ -6060,7 +6060,7 @@ sub dump_integer_option_range {
     foreach my $key ( sort keys %{$rinteger_option_range} ) {
         my ( $min, $max, $default ) = @{ $rinteger_option_range->{$key} };
         foreach ( $min, $max, $default ) {
-            $_ = 'undef' unless defined($_);
+            $_ = 'undef' unless ( defined($_) );
         }
         print {*STDOUT} "$key, $min, $max, $default\n";
     }
