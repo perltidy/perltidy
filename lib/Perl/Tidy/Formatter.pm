@@ -43047,6 +43047,19 @@ sub set_vertical_tightness_flags {
                 $cvt = 0;
             }
 
+            # Fix c473, in which a qwaf paren joined a backslash, like this:
+            # qw(
+            #   //.\/./\
+            #  );
+            # So turn off vertical tightness if the ')' follows a backslash
+            if (   $cvt
+                && $self->[_ris_qwaf_by_seqno_]->{$seqno}
+                && defined( $self->[_rtightness_override_by_seqno_]->{$seqno} )
+              )
+            {
+                $cvt = 0;
+            }
+
             if (
 
                 # Never append a trailing line like   ')->pack(' because it

@@ -19300,3 +19300,21 @@ Readonly::Array my @PATTERNS => (  # requires this side comment
 --extended-line-up-parentheses
 --maximum-line-length=12
 --variable-maximum-line-length
+
+==> c473.in <==
+push @paths, qw(
+    ../\
+    c:.\\../\
+    c:/\..//
+    c://.\/./\
+    \\.\\../\
+    //\..//
+    //.\/./\
+);
+
+==> c473.par <==
+# pvt is the problem - do not allow for a qwaf paren
+--qw-as-function
+--paren-tightness=2
+--paren-vertical-tightness-closing=2
+--maximum-line-length=50
