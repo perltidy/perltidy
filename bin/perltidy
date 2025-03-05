@@ -6731,20 +6731,34 @@ follows:
 =item B<--similar-keys-maximum-difference=n>, or B<-skmd=n>, specifies the maximum difference between two keys for similarity.
 
 The integer B<n> gives the maximum difference to use when checking
-for hash key similarity.  The default is B<n=1>. One difference is counted for
-each of the following conditions:
+for hash key similarity.  The default is B<n=1>. The basic rule is
+that one difference is counted for each of the following conditions:
 
 =over 4
 
-=item * two transposed characters, such as C<recieve, receive>
+=item * a change in case of a letter, any number of times, such as C<LENGTH, length>
+
+=item * one or more same-character changes, such as C<number-of-lines, number_of_lines>
+
+=item * transposed characters, such as C<recieve, receive>
 
 =item * a missing or extra character, such as C<color, colour> or C<color, _color>
-
-=item * a repeated same-character change, such as C<if-elsif-else, if_elsif_else>
 
 =item * otherwise, different characters in the same position, such as C<Minimum, minimum>
 
 =back
+
+In addition, one extra difference is counted if the leading letters are
+different, ignoring case.  These rules were developed based common hash key
+errors.
+
+The default value B<-skmd=1> will catch most common errors without producing
+excessive output. For a more thorough check the value could be increased to 2,
+which should be high enough for most purposes.
+
+For example, the pair of keys C<TwigHandlers, twig_handlers> has a difference of
+2, one for the case change and one for the extra underscore character. So it
+would require B<-skmd=2> to be shown as a match.
 
 =item B<--similar-keys-minimum-length=n>, or B<-skml=n>, defines a minimum hash key length.
 

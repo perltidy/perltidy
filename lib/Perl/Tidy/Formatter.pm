@@ -10639,16 +10639,31 @@ sub string_approximate_match {
     # Given
     #   $s1 and $s2 = 2 strings
     #   $o1 and $o2 = their offsets to leading alphanumeric character
-    #   $max_diff   = maximum differences allowed for similarity
+    #   $max_diff   = maximum differences allowed for similarity, >=1
     # Return:
-    #   true if the number of differences is <= $max_diff
+    #   $diff_count = the number of differences if <= $max_diff
     #   false otherwise
 
     # Basic rules for calculating the number of differences:
-    #  1. transposed characters            = 1 difference
-    #  2. a missing or extra character     = 1 difference
-    #  3. repeated same-character changes  = 1 difference
-    #  4. otherwise, different characters  = 1 difference
+    #  1. different 1st letter (ignore case)   = 1 difference
+    #  2. any number of case changes           = 1 difference
+    #  3. any number of same-character changes = 1 difference
+    #  4. transposed characters                = 1 difference
+    #  5. a missing or extra character         = 1 difference
+    #  6. otherwise, different characters      = 1 difference
+
+    if ( $max_diff <= 0 ) {
+        ## shouldn't happen because -skmd is checked on input to be >= 1
+        DEVEL_MODE && Fault("received bad value of max_diff = $max_diff\n");
+        return;
+    }
+
+    # Quick check for a match if case is ignored
+    if ( lc($s1) eq lc($s2) ) {
+        return 1;
+    }
+
+    # Save input strings for error messages
     my $s1_in = $s1;
     my $s2_in = $s2;
 
@@ -10668,6 +10683,7 @@ sub string_approximate_match {
     # If we find missing characters, we will move them to those locations.
     my $len1 = length($s1);
     my $len2 = length($s2);
+
     my $pad1 = 0;
     my $pad2 = 0;
     if ( $len1 > $len2 ) {
@@ -10685,11 +10701,13 @@ sub string_approximate_match {
     # Loop to count character differences, which are at null characters in the
     # xor mask. Give up if the max diff count is exceeded.
     my %saw_change;
+    my $saw_case_change;
     my $diff_count = 0;
     my $posm;
     my $mask = $s1 ^ $s2;
     while ( $mask =~ /[^\0]/g ) {
 
+        # Safety check
         my $pos = pos($mask);
         if ( $posm && $pos < $posm ) {
             ## shouldn't happen unless the pos was incorrectly set
@@ -10697,11 +10715,12 @@ sub string_approximate_match {
             return;
         }
 
-        # Special checks for two differences in a row..
-        # we may have to reduce the difference count
+        # Special checks: we may have to reduce the difference count
         my $diff_inc = 1;
         my $c1p      = substr( $s1, $pos - 1, 1 );
         my $c2p      = substr( $s2, $pos - 1, 1 );
+
+        # Special checks for transposition
         if ( $posm && $posm + 1 == $pos ) {
             my $c1m = substr( $s1, $posm - 1, 1 );
             my $c2m = substr( $s2, $posm - 1, 1 );
@@ -10753,8 +10772,17 @@ sub string_approximate_match {
         }
         $posm = $pos;
 
-        # count repeated single character changes just 1 time
+        # Count repeated single character changes just 1 time
         if ( $diff_inc && $saw_change{ $c1p . $c2p }++ ) { $diff_inc = 0 }
+
+        # Switch to lower case comparisons upon hitting a difference in case
+        if ( !$saw_case_change && lc($c1p) eq lc($c2p) ) {
+            $saw_case_change = 1;
+            $s1              = lc($s1);
+            $s2              = lc($s2);
+            $mask            = $s1 ^ $s2;
+            pos($mask) = $pos;
+        }
 
         if ($diff_inc) { $diff_count += $diff_inc }
         if ( $diff_count > $max_diff ) {
@@ -10793,8 +10821,8 @@ sub sweep_similar_pairs {
         my $offset1      = $rword_info->{$word1}->{offset};
         my $word_length  = $rword_info->{$word1}->{string_length};
         my $birth_id1    = $rword_info->{$word1}->{birth_id};
-        my $true_first_letter =
-          $reverse ? $rword_info->{$word1}->{true_first_letter} : $first_letter;
+        my $last_letter =
+          $reverse ? $rword_info->{$word1}->{last_letter} : $first_letter;
         foreach my $word2 (@sorted_words) {
 
             # sorted order allows us to bail out as soon as possible
@@ -10808,8 +10836,7 @@ sub sweep_similar_pairs {
             # compared
             if ($reverse) {
                 next
-                  if ( $true_first_letter eq
-                    $rword_info->{$word2}->{true_first_letter} );
+                  if ( $last_letter eq $rword_info->{$word2}->{last_letter} );
             }
 
             # Skip keys defined in the same data structure
@@ -10892,6 +10919,7 @@ sub find_similar_keys {
             $word_info{$word} = {
                 count         => $count,
                 first_letter  => $first_letter,
+                last_letter   => $first_letter,
                 string_length => $string_length,
                 offset        => $offset,
                 birth_id      => $birth_id,
@@ -10900,17 +10928,18 @@ sub find_similar_keys {
             # hash for reverse scan
             my $drow = reverse($word);
             if ( $drow =~ /([^\W_])/g ) {
-                my $true_first_letter = $first_letter;
+                my $last_letter = $first_letter;
                 $first_letter     = lc($1);
                 $offset           = pos($drow) - 1;
                 $drow_info{$drow} = {
-                    count             => $count,
-                    true_first_letter => $true_first_letter,
-                    first_letter      => $first_letter,
-                    string_length     => $string_length,
-                    offset            => $offset,
-                    birth_id          => $birth_id,
+                    count         => $count,
+                    last_letter   => $last_letter,
+                    first_letter  => $first_letter,
+                    string_length => $string_length,
+                    offset        => $offset,
+                    birth_id      => $birth_id,
                 };
+                $word_info{$word}->{last_letter} = $first_letter;
             }
         }
     }
