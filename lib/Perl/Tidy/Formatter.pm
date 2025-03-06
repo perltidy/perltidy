@@ -4304,51 +4304,51 @@ sub initialize_whitespace_hashes {
     #
     # hash type information must stay tightly bound
     # as in :  ${xxxx}
-    $binary_ws_rules{'i'}{'L'} = WS_NO;
-    $binary_ws_rules{'i'}{'{'} = WS_YES;
-    $binary_ws_rules{'k'}{'{'} = WS_YES;
-    $binary_ws_rules{'U'}{'{'} = WS_YES;
-    $binary_ws_rules{'i'}{'['} = WS_NO;
-    $binary_ws_rules{'R'}{'L'} = WS_NO;
-    $binary_ws_rules{'R'}{'{'} = WS_NO;
-    $binary_ws_rules{'t'}{'L'} = WS_NO;
-    $binary_ws_rules{'t'}{'{'} = WS_NO;
-    $binary_ws_rules{'t'}{'='} = WS_OPTIONAL;    # for signatures; fixes b1123
-    $binary_ws_rules{'}'}{'L'} = WS_NO;
-    $binary_ws_rules{'}'}{'{'} = WS_OPTIONAL;    # RT#129850; was WS_NO
-    $binary_ws_rules{'$'}{'L'} = WS_NO;
-    $binary_ws_rules{'$'}{'{'} = WS_NO;
-    $binary_ws_rules{'@'}{'L'} = WS_NO;
-    $binary_ws_rules{'@'}{'{'} = WS_NO;
-    $binary_ws_rules{'='}{'L'} = WS_YES;
-    $binary_ws_rules{'J'}{'J'} = WS_YES;
+    $binary_ws_rules{'i'}->{'L'} = WS_NO;
+    $binary_ws_rules{'i'}->{'{'} = WS_YES;
+    $binary_ws_rules{'k'}->{'{'} = WS_YES;
+    $binary_ws_rules{'U'}->{'{'} = WS_YES;
+    $binary_ws_rules{'i'}->{'['} = WS_NO;
+    $binary_ws_rules{'R'}->{'L'} = WS_NO;
+    $binary_ws_rules{'R'}->{'{'} = WS_NO;
+    $binary_ws_rules{'t'}->{'L'} = WS_NO;
+    $binary_ws_rules{'t'}->{'{'} = WS_NO;
+    $binary_ws_rules{'t'}->{'='} = WS_OPTIONAL;    # for signatures; fixes b1123
+    $binary_ws_rules{'}'}->{'L'} = WS_NO;
+    $binary_ws_rules{'}'}->{'{'} = WS_OPTIONAL;    # RT#129850; was WS_NO
+    $binary_ws_rules{'$'}->{'L'} = WS_NO;
+    $binary_ws_rules{'$'}->{'{'} = WS_NO;
+    $binary_ws_rules{'@'}->{'L'} = WS_NO;
+    $binary_ws_rules{'@'}->{'{'} = WS_NO;
+    $binary_ws_rules{'='}->{'L'} = WS_YES;
+    $binary_ws_rules{'J'}->{'J'} = WS_YES;
 
     # the following includes ') {'
     # as in :    if ( xxx ) { yyy }
-    $binary_ws_rules{']'}{'L'} = WS_NO;
-    $binary_ws_rules{']'}{'{'} = WS_NO;
-    $binary_ws_rules{')'}{'{'} = WS_YES;
-    $binary_ws_rules{')'}{'['} = WS_NO;
-    $binary_ws_rules{']'}{'['} = WS_NO;
-    $binary_ws_rules{']'}{'{'} = WS_NO;
-    $binary_ws_rules{'}'}{'['} = WS_NO;
-    $binary_ws_rules{'R'}{'['} = WS_NO;
+    $binary_ws_rules{']'}->{'L'} = WS_NO;
+    $binary_ws_rules{']'}->{'{'} = WS_NO;
+    $binary_ws_rules{')'}->{'{'} = WS_YES;
+    $binary_ws_rules{')'}->{'['} = WS_NO;
+    $binary_ws_rules{']'}->{'['} = WS_NO;
+    $binary_ws_rules{']'}->{'{'} = WS_NO;
+    $binary_ws_rules{'}'}->{'['} = WS_NO;
+    $binary_ws_rules{'R'}->{'['} = WS_NO;
 
-    $binary_ws_rules{']'}{'++'} = WS_NO;
-    $binary_ws_rules{']'}{'--'} = WS_NO;
-    $binary_ws_rules{')'}{'++'} = WS_NO;
-    $binary_ws_rules{')'}{'--'} = WS_NO;
+    $binary_ws_rules{']'}->{'++'} = WS_NO;
+    $binary_ws_rules{']'}->{'--'} = WS_NO;
+    $binary_ws_rules{')'}->{'++'} = WS_NO;
+    $binary_ws_rules{')'}->{'--'} = WS_NO;
 
-    $binary_ws_rules{'R'}{'++'} = WS_NO;
-    $binary_ws_rules{'R'}{'--'} = WS_NO;
+    $binary_ws_rules{'R'}->{'++'} = WS_NO;
+    $binary_ws_rules{'R'}->{'--'} = WS_NO;
 
-    $binary_ws_rules{'i'}{'Q'} = WS_YES;
-    $binary_ws_rules{'n'}{'('} = WS_YES;    # occurs in 'use package n ()'
+    $binary_ws_rules{'i'}->{'Q'} = WS_YES;
+    $binary_ws_rules{'n'}->{'('} = WS_YES;    # occurs in 'use package n ()'
 
-    $binary_ws_rules{'i'}{'('} = WS_NO;
+    $binary_ws_rules{'i'}->{'('} = WS_NO;
 
-    $binary_ws_rules{'w'}{'('} = WS_NO;
-    $binary_ws_rules{'w'}{'{'} = WS_YES;
+    $binary_ws_rules{'w'}->{'('} = WS_NO;
+    $binary_ws_rules{'w'}->{'{'} = WS_YES;
 
     # user controls
     if ( !$rOpts->{'space-for-semicolon'} ) {
@@ -4953,8 +4953,8 @@ sub set_whitespace_flags {
             # Whitespace Rules Section 4:
             # Use the binary rule table.
             #---------------------------------------------------------------
-            if ( defined( $binary_ws_rules{$last_type}{$type} ) ) {
-                $ws   = $binary_ws_rules{$last_type}{$type};
+            if ( defined( $binary_ws_rules{$last_type}->{$type} ) ) {
+                $ws   = $binary_ws_rules{$last_type}->{$type};
                 $ws_4 = $ws if (DEBUG_WHITE);
             }
 
@@ -5985,95 +5985,95 @@ EOM
         #
         # Otherwise, the line before the { tends to be too short.
 
-        $binary_bond_strength{'))'}{'{{'} = VERY_WEAK + 0.03;
-        $binary_bond_strength{'(('}{'{{'} = NOMINAL;
+        $binary_bond_strength{'))'}->{'{{'} = VERY_WEAK + 0.03;
+        $binary_bond_strength{'(('}->{'{{'} = NOMINAL;
 
         # break on something like '} (', but keep this stronger than a ','
         # example is in 'howe.pl'
-        $binary_bond_strength{'R}'}{'(('} = 0.8 * VERY_WEAK + 0.2 * WEAK;
-        $binary_bond_strength{'}}'}{'(('} = 0.8 * VERY_WEAK + 0.2 * WEAK;
+        $binary_bond_strength{'R}'}->{'(('} = 0.8 * VERY_WEAK + 0.2 * WEAK;
+        $binary_bond_strength{'}}'}->{'(('} = 0.8 * VERY_WEAK + 0.2 * WEAK;
 
         # keep matrix and hash indices together
         # but make them a little below STRONG to allow breaking open
         # something like {'some-word'}{'some-very-long-word'} at the }{
         # (bracebrk.t)
-        $binary_bond_strength{']]'}{'[['} = 0.9 * STRONG + 0.1 * NOMINAL;
-        $binary_bond_strength{']]'}{'L{'} = 0.9 * STRONG + 0.1 * NOMINAL;
-        $binary_bond_strength{'R}'}{'[['} = 0.9 * STRONG + 0.1 * NOMINAL;
-        $binary_bond_strength{'R}'}{'L{'} = 0.9 * STRONG + 0.1 * NOMINAL;
+        $binary_bond_strength{']]'}->{'[['} = 0.9 * STRONG + 0.1 * NOMINAL;
+        $binary_bond_strength{']]'}->{'L{'} = 0.9 * STRONG + 0.1 * NOMINAL;
+        $binary_bond_strength{'R}'}->{'[['} = 0.9 * STRONG + 0.1 * NOMINAL;
+        $binary_bond_strength{'R}'}->{'L{'} = 0.9 * STRONG + 0.1 * NOMINAL;
 
         # increase strength to the point where a break in the following
         # will be after the opening paren rather than at the arrow:
         #    $a->$b($c);
-        $binary_bond_strength{'i'}{'->'} = 1.45 * STRONG;
+        $binary_bond_strength{'i'}->{'->'} = 1.45 * STRONG;
 
         # Added for c140 to make 'w ->' and 'i ->' behave the same
-        $binary_bond_strength{'w'}{'->'} = 1.45 * STRONG;
+        $binary_bond_strength{'w'}->{'->'} = 1.45 * STRONG;
 
         # Note that the following alternative strength would make the break at
         # the '->' rather than opening the '('.  Both have advantages and
         # disadvantages.
         # $binary_bond_strength{'i'}{'->'} = 0.5*STRONG + 0.5 * NOMINAL; #
 
-        $binary_bond_strength{'))'}{'->'} = 0.1 * STRONG + 0.9 * NOMINAL;
-        $binary_bond_strength{']]'}{'->'} = 0.1 * STRONG + 0.9 * NOMINAL;
-        $binary_bond_strength{'})'}{'->'} = 0.1 * STRONG + 0.9 * NOMINAL;
-        $binary_bond_strength{'}]'}{'->'} = 0.1 * STRONG + 0.9 * NOMINAL;
-        $binary_bond_strength{'}}'}{'->'} = 0.1 * STRONG + 0.9 * NOMINAL;
-        $binary_bond_strength{'R}'}{'->'} = 0.1 * STRONG + 0.9 * NOMINAL;
+        $binary_bond_strength{'))'}->{'->'} = 0.1 * STRONG + 0.9 * NOMINAL;
+        $binary_bond_strength{']]'}->{'->'} = 0.1 * STRONG + 0.9 * NOMINAL;
+        $binary_bond_strength{'})'}->{'->'} = 0.1 * STRONG + 0.9 * NOMINAL;
+        $binary_bond_strength{'}]'}->{'->'} = 0.1 * STRONG + 0.9 * NOMINAL;
+        $binary_bond_strength{'}}'}->{'->'} = 0.1 * STRONG + 0.9 * NOMINAL;
+        $binary_bond_strength{'R}'}->{'->'} = 0.1 * STRONG + 0.9 * NOMINAL;
 
-        $binary_bond_strength{'))'}{'[['} = 0.2 * STRONG + 0.8 * NOMINAL;
-        $binary_bond_strength{'})'}{'[['} = 0.2 * STRONG + 0.8 * NOMINAL;
-        $binary_bond_strength{'))'}{'{['} = 0.2 * STRONG + 0.8 * NOMINAL;
-        $binary_bond_strength{'})'}{'{['} = 0.2 * STRONG + 0.8 * NOMINAL;
+        $binary_bond_strength{'))'}->{'[['} = 0.2 * STRONG + 0.8 * NOMINAL;
+        $binary_bond_strength{'})'}->{'[['} = 0.2 * STRONG + 0.8 * NOMINAL;
+        $binary_bond_strength{'))'}->{'{['} = 0.2 * STRONG + 0.8 * NOMINAL;
+        $binary_bond_strength{'})'}->{'{['} = 0.2 * STRONG + 0.8 * NOMINAL;
 
         #---------------------------------------------------------------
         # Binary NO_BREAK rules
         #---------------------------------------------------------------
 
         # use strict requires that bare word and => not be separated
-        $binary_bond_strength{'C'}{'=>'} = NO_BREAK;
-        $binary_bond_strength{'U'}{'=>'} = NO_BREAK;
+        $binary_bond_strength{'C'}->{'=>'} = NO_BREAK;
+        $binary_bond_strength{'U'}->{'=>'} = NO_BREAK;
 
         # Never break between a bareword and a following paren because
         # perl may give an error.  For example, if a break is placed
         # between 'to_filehandle' and its '(' the following line will
         # give a syntax error [Carp.pm]: my( $no) =fileno(
         # to_filehandle( $in)) ;
-        $binary_bond_strength{'C'}{'(('} = NO_BREAK;
-        $binary_bond_strength{'C'}{'{('} = NO_BREAK;
-        $binary_bond_strength{'U'}{'(('} = NO_BREAK;
-        $binary_bond_strength{'U'}{'{('} = NO_BREAK;
+        $binary_bond_strength{'C'}->{'(('} = NO_BREAK;
+        $binary_bond_strength{'C'}->{'{('} = NO_BREAK;
+        $binary_bond_strength{'U'}->{'(('} = NO_BREAK;
+        $binary_bond_strength{'U'}->{'{('} = NO_BREAK;
 
         # use strict requires that bare word within braces not start new
         # line
-        $binary_bond_strength{'L{'}{'w'} = NO_BREAK;
+        $binary_bond_strength{'L{'}->{'w'} = NO_BREAK;
 
-        $binary_bond_strength{'w'}{'R}'} = NO_BREAK;
+        $binary_bond_strength{'w'}->{'R}'} = NO_BREAK;
 
         # The following two rules prevent a syntax error caused by breaking up
         # a construction like '{-y}'.  The '-' quotes the 'y' and prevents
         # it from being taken as a transliteration. We have to keep
         # token types 'L m w' together to prevent this error.
-        $binary_bond_strength{'L{'}{'m'}        = NO_BREAK;
-        $binary_bond_strength_nospace{'m'}{'w'} = NO_BREAK;
+        $binary_bond_strength{'L{'}->{'m'}        = NO_BREAK;
+        $binary_bond_strength_nospace{'m'}->{'w'} = NO_BREAK;
 
         # keep 'bareword-' together, but only if there is no space between
         # the word and dash. Do not keep together if there is a space.
         # example 'use perl6-alpha'
-        $binary_bond_strength_nospace{'w'}{'m'} = NO_BREAK;
+        $binary_bond_strength_nospace{'w'}->{'m'} = NO_BREAK;
 
         # use strict requires that bare word and => not be separated
-        $binary_bond_strength{'w'}{'=>'} = NO_BREAK;
+        $binary_bond_strength{'w'}->{'=>'} = NO_BREAK;
 
         # use strict does not allow separating type info from trailing { }
         # testfile is readmail.pl
-        $binary_bond_strength{'t'}{'L{'} = NO_BREAK;
-        $binary_bond_strength{'i'}{'L{'} = NO_BREAK;
+        $binary_bond_strength{'t'}->{'L{'} = NO_BREAK;
+        $binary_bond_strength{'i'}->{'L{'} = NO_BREAK;
 
         # Fix for c250: set strength for new 'S' to be same as 'i'
         # testfile is test11/Hub.pm
-        $binary_bond_strength{'S'}{'L{'} = NO_BREAK;
+        $binary_bond_strength{'S'}->{'L{'} = NO_BREAK;
 
         # As a defensive measure, do not break between a '(' and a
         # filehandle.  In some cases, this can cause an error.  For
@@ -6093,15 +6093,15 @@ EOM
         #    );
         #
         # This is normally only a problem with the 'extrude' option
-        $binary_bond_strength{'(('}{'Y'} = NO_BREAK;
-        $binary_bond_strength{'{('}{'Y'} = NO_BREAK;
+        $binary_bond_strength{'(('}->{'Y'} = NO_BREAK;
+        $binary_bond_strength{'{('}->{'Y'} = NO_BREAK;
 
         # never break between sub name and opening paren
-        $binary_bond_strength{'w'}{'(('} = NO_BREAK;
-        $binary_bond_strength{'w'}{'{('} = NO_BREAK;
+        $binary_bond_strength{'w'}->{'(('} = NO_BREAK;
+        $binary_bond_strength{'w'}->{'{('} = NO_BREAK;
 
         # keep '}' together with ';'
-        $binary_bond_strength{'}}'}{';'} = NO_BREAK;
+        $binary_bond_strength{'}}'}->{';'} = NO_BREAK;
 
         # Breaking before a ++ can cause perl to guess wrong. For
         # example the following line will cause a syntax error
@@ -6521,14 +6521,14 @@ EOM
             }
 
             # apply binary rules which apply regardless of space between tokens
-            if ( $binary_bond_strength{$ltype}{$rtype} ) {
-                $bond_str           = $binary_bond_strength{$ltype}{$rtype};
+            if ( $binary_bond_strength{$ltype}->{$rtype} ) {
+                $bond_str           = $binary_bond_strength{$ltype}->{$rtype};
                 $tabulated_bond_str = $bond_str;
             }
 
             # apply binary rules which apply only if no space between tokens
-            if ( $binary_bond_strength_nospace{$ltype}{$next_type} ) {
-                $bond_str           = $binary_bond_strength{$ltype}{$next_type};
+            if ( $binary_bond_strength_nospace{$ltype}->{$next_type} ) {
+                $bond_str = $binary_bond_strength{$ltype}->{$next_type};
                 $tabulated_bond_str = $bond_str;
             }
 
@@ -34364,13 +34364,13 @@ EOM
             # 0   1    2   3
             # or  and  ||  &&
             foreach my $ii ( 0 .. 3 ) {
-                if ( $rand_or_list[$dd][$ii] ) {
-                    foreach ( @{ $rand_or_list[$dd][$ii] } ) {
+                if ( $rand_or_list[$dd]->[$ii] ) {
+                    foreach ( @{ $rand_or_list[$dd]->[$ii] } ) {
                         $self->set_forced_breakpoint($_);
                     }
 
                     # break at any 'if' and 'unless' too
-                    foreach ( @{ $rand_or_list[$dd][4] } ) {
+                    foreach ( @{ $rand_or_list[$dd]->[4] } ) {
                         $self->set_forced_breakpoint($_);
                     }
                     $rand_or_list[$dd] = [];
@@ -34547,13 +34547,13 @@ EOM
             # decide this is a long logical expression.
             if ( $quick_filter_A{$type} ) {
                 if ( $type eq '||' ) {
-                    push @{ $rand_or_list[$depth][2] }, $i;
+                    push @{ $rand_or_list[$depth]->[2] }, $i;
                     ++$has_old_logical_breakpoints[$depth]
                       if ( ( $i == $i_line_start || $i == $i_line_end )
                         && $rOpts_break_at_old_logical_breakpoints );
                 }
                 elsif ( $type eq '&&' ) {
-                    push @{ $rand_or_list[$depth][3] }, $i;
+                    push @{ $rand_or_list[$depth]->[3] }, $i;
                     ++$has_old_logical_breakpoints[$depth]
                       if ( ( $i == $i_line_start || $i == $i_line_end )
                         && $rOpts_break_at_old_logical_breakpoints );
@@ -34563,7 +34563,7 @@ EOM
                 }
                 elsif ( $type eq 'k' ) {
                     if ( $token eq 'and' ) {
-                        push @{ $rand_or_list[$depth][1] }, $i;
+                        push @{ $rand_or_list[$depth]->[1] }, $i;
                         ++$has_old_logical_breakpoints[$depth]
                           if ( ( $i == $i_line_start || $i == $i_line_end )
                             && $rOpts_break_at_old_logical_breakpoints );
@@ -34574,7 +34574,7 @@ EOM
                     # below so that they do not add to the
                     # forced_breakpoint_count
                     elsif ( $token eq 'or' ) {
-                        push @{ $rand_or_list[$depth][0] }, $i;
+                        push @{ $rand_or_list[$depth]->[0] }, $i;
                         ++$has_old_logical_breakpoints[$depth]
                           if ( ( $i == $i_line_start || $i == $i_line_end )
                             && $rOpts_break_at_old_logical_breakpoints );
@@ -34596,7 +34596,7 @@ EOM
                         }
                     }
                     elsif ( $token eq 'if' || $token eq 'unless' ) {
-                        push @{ $rand_or_list[$depth][4] }, $i;
+                        push @{ $rand_or_list[$depth]->[4] }, $i;
                         if ( ( $i == $i_line_start || $i == $i_line_end )
                             && $rOpts_break_at_old_logical_breakpoints )
                         {
@@ -34883,7 +34883,7 @@ EOM
             }
         }
 
-        $comma_index[$depth][$item_count] = $i;
+        $comma_index[$depth]->[$item_count] = $i;
         ++$item_count_stack[$depth];
         if ( $last_nonblank_type =~ /^[iR\]]$/ ) {
             $identifier_count_stack[$depth]++;

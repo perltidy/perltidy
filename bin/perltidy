@@ -6748,16 +6748,18 @@ that one difference is counted for each of the following conditions:
 
 =back
 
-In addition, one extra difference is counted if the leading letters are
-different, ignoring case.  These rules were developed based common hash key
-errors.
+An additional rule is that one extra difference is counted if the leading
+letters are different when we ignore their case.  For example, the pair
+C<_getattr_handler, _setattr_handler> has just one different letter, but it is
+the first letter so the total difference score is 2.  So it will not show up
+with B<-skmd=1>, and in fact it is probably not a misspelling.
 
 The default value B<-skmd=1> will catch most common errors without producing
 excessive output. For a more thorough check the value could be increased to 2,
 which should be high enough for most purposes.
 
 For example, the pair of keys C<TwigHandlers, twig_handlers> has a difference of
-2, one for the case change and one for the extra underscore character. So it
+2, one for the case changes and one for the extra underscore character. So it
 would require B<-skmd=2> to be shown as a match.
 
 =item B<--similar-keys-minimum-length=n>, or B<-skml=n>, defines a minimum hash key length.

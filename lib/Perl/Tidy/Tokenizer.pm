@@ -1898,11 +1898,11 @@ sub dump_functions {
 
         foreach my $sub ( keys %{ $ris_user_function->{$pkg} } ) {
             my $msg = EMPTY_STRING;
-            if ( $ris_block_list_function->{$pkg}{$sub} ) {
+            if ( $ris_block_list_function->{$pkg}->{$sub} ) {
                 $msg = 'block_list';
             }
 
-            if ( $ris_block_function->{$pkg}{$sub} ) {
+            if ( $ris_block_function->{$pkg}->{$sub} ) {
                 $msg = 'block';
             }
             $fh->print("$sub $msg\n");
@@ -3370,9 +3370,9 @@ EOM
             #
             #    for (sort {strcoll($a,$b);} keys %investments) {
 
-            if (   $brace_depth == $rdepth_array->[PAREN][BRACE][$paren_depth]
+            if ( $brace_depth == $rdepth_array->[PAREN]->[BRACE]->[$paren_depth]
                 && $square_bracket_depth ==
-                $rdepth_array->[PAREN][SQUARE_BRACKET][$paren_depth] )
+                $rdepth_array->[PAREN]->[SQUARE_BRACKET]->[$paren_depth] )
             {
 
                 $type = 'f';
@@ -4496,7 +4496,7 @@ EOM
             }
 
             else {
-                $ris_constant->{$current_package}{$next_nonblank_tok2} = 1;
+                $ris_constant->{$current_package}->{$next_nonblank_tok2} = 1;
             }
         }
         return;
@@ -7390,7 +7390,7 @@ sub increase_nesting_depth {
     # $rstarting_line_of_current_depth, $statement_type
     my $cd_aa = ++$rcurrent_depth->[$aa];
     $total_depth++;
-    $rtotal_depth->[$aa][$cd_aa] = $total_depth;
+    $rtotal_depth->[$aa]->[$cd_aa] = $total_depth;
     my $input_line_number = $self->[_last_line_number_];
     my $input_line        = $self->[_line_of_text_];
 
@@ -7401,14 +7401,14 @@ sub increase_nesting_depth {
     # make a new unique sequence number
     my $seqno = $next_sequence_number++;
 
-    $rcurrent_sequence_number->[$aa][$cd_aa] = $seqno;
+    $rcurrent_sequence_number->[$aa]->[$cd_aa] = $seqno;
 
-    $rstarting_line_of_current_depth->[$aa][$cd_aa] =
+    $rstarting_line_of_current_depth->[$aa]->[$cd_aa] =
       [ $input_line_number, $input_line, $pos ];
 
     for my $bb ( 0 .. @closing_brace_names - 1 ) {
         next if ( $bb == $aa );
-        $rdepth_array->[$aa][$bb][$cd_aa] = $rcurrent_depth->[$bb];
+        $rdepth_array->[$aa]->[$bb]->[$cd_aa] = $rcurrent_depth->[$bb];
     }
 
     # set a flag for indenting a nested ternary statement
@@ -7417,7 +7417,7 @@ sub increase_nesting_depth {
         $rnested_ternary_flag->[$cd_aa] = 0;
         if ( $cd_aa > 1 ) {
             if ( $rnested_ternary_flag->[ $cd_aa - 1 ] == 0 ) {
-                my $pdepth = $rtotal_depth->[$aa][ $cd_aa - 1 ];
+                my $pdepth = $rtotal_depth->[$aa]->[ $cd_aa - 1 ];
                 if ( $pdepth == $total_depth - 1 ) {
                     $indent = 1;
                     $rnested_ternary_flag->[ $cd_aa - 1 ] = -1;
@@ -7427,7 +7427,7 @@ sub increase_nesting_depth {
     }
 
     # Fix part #1 for git82: save last token type for propagation of type 'Z'
-    $rnested_statement_type->[$aa][$cd_aa] =
+    $rnested_statement_type->[$aa]->[$cd_aa] =
       [ $statement_type, $last_nonblank_type, $last_nonblank_token ];
     $statement_type = EMPTY_STRING;
     return ( $seqno, $indent );
@@ -7450,7 +7450,8 @@ sub is_balanced_closing_container {
     for my $bb ( 0 .. @closing_brace_names - 1 ) {
         next if ( $bb == $aa );
         return
-          if ( $rdepth_array->[$aa][$bb][$cd_aa] != $rcurrent_depth->[$bb] );
+          if (
+            $rdepth_array->[$aa]->[$bb]->[$cd_aa] != $rcurrent_depth->[$bb] );
     }
 
     # OK, everything will be balanced
@@ -7478,7 +7479,7 @@ sub decrease_nesting_depth {
     if ( $cd_aa > 0 ) {
 
         # set a flag for un-indenting after seeing a nested ternary statement
-        $seqno = $rcurrent_sequence_number->[$aa][$cd_aa];
+        $seqno = $rcurrent_sequence_number->[$aa]->[$cd_aa];
         if ( $aa == QUESTION_COLON ) {
             $outdent = $rnested_ternary_flag->[$cd_aa];
         }
@@ -7487,7 +7488,7 @@ sub decrease_nesting_depth {
         # through type L-R braces.  Perl seems to allow ${bareword}
         # as an indirect object, but nothing much more complex than that.
         ( $statement_type, my $saved_type, my $saved_token_uu ) =
-          @{ $rnested_statement_type->[$aa][ $rcurrent_depth->[$aa] ] };
+          @{ $rnested_statement_type->[$aa]->[ $rcurrent_depth->[$aa] ] };
         if (   $aa == BRACE
             && $saved_type eq 'Z'
             && $last_nonblank_type eq 'w'
@@ -7500,9 +7501,12 @@ sub decrease_nesting_depth {
         for my $bb ( 0 .. @closing_brace_names - 1 ) {
             next if ( $bb == $aa );
 
-            if ( $rdepth_array->[$aa][$bb][$cd_aa] != $rcurrent_depth->[$bb] ) {
+            if ( $rdepth_array->[$aa]->[$bb]->[$cd_aa] !=
+                $rcurrent_depth->[$bb] )
+            {
                 my $diff =
-                  $rcurrent_depth->[$bb] - $rdepth_array->[$aa][$bb][$cd_aa];
+                  $rcurrent_depth->[$bb] -
+                  $rdepth_array->[$aa]->[$bb]->[$cd_aa];
 
                 # don't whine too many times
                 my $saw_brace_error = $self->get_saw_brace_error();
@@ -7515,7 +7519,7 @@ sub decrease_nesting_depth {
                   )
                 {
                     $self->interrupt_logfile();
-                    my $rsl = $rstarting_line_of_current_depth->[$aa][$cd_aa];
+                    my $rsl = $rstarting_line_of_current_depth->[$aa]->[$cd_aa];
                     my $sl  = $rsl->[0];
                     my $rel = [ $input_line_number, $input_line, $pos ];
                     my $el  = $rel->[0];
@@ -7539,7 +7543,7 @@ EOM
                     if ( $diff > 0 ) {
                         my $rml =
                           $rstarting_line_of_current_depth->[$bb]
-                          [ $rcurrent_depth->[$bb] ];
+                          ->[ $rcurrent_depth->[$bb] ];
                         my $ml = $rml->[0];
                         $msg .=
 "    The most recent un-matched $bname is on line $ml\n";
@@ -7584,7 +7588,7 @@ sub check_final_nesting_depths {
 
         my $cd_aa = $rcurrent_depth->[$aa];
         if ($cd_aa) {
-            my $rsl = $rstarting_line_of_current_depth->[$aa][$cd_aa];
+            my $rsl = $rstarting_line_of_current_depth->[$aa]->[$cd_aa];
             my $sl  = $rsl->[0];
             my $msg = <<"EOM";
 Final nesting depth of $opening_brace_names[$aa]s is $cd_aa
@@ -7970,7 +7974,7 @@ sub guess_if_here_doc {
         }
         else {                          # still unsure..taking a wild guess
 
-            if ( !$ris_constant->{$current_package}{$next_token} ) {
+            if ( !$ris_constant->{$current_package}->{$next_token} ) {
                 $here_doc_expected = 1;
                 $msg .=
                   " -- guessing it's a here-doc ($next_token not a constant)\n";
@@ -8108,7 +8112,7 @@ sub scan_bare_identifier_do {
 
             # issue c382: this elsif statement moved from above because
             # previous check for type 'Z' after sort has priority.
-            elsif ( $ris_constant->{$package}{$sub_name} ) {
+            elsif ( $ris_constant->{$package}->{$sub_name} ) {
                 $type = 'C';
             }
 
@@ -8126,15 +8130,15 @@ sub scan_bare_identifier_do {
             #}
             # TODO: This could become a separate type to allow for different
             # future behavior:
-            elsif ( $ris_block_function->{$package}{$sub_name} ) {
+            elsif ( $ris_block_function->{$package}->{$sub_name} ) {
                 $type = 'G';
             }
-            elsif ( $ris_block_list_function->{$package}{$sub_name} ) {
+            elsif ( $ris_block_list_function->{$package}->{$sub_name} ) {
                 $type = 'G';
             }
-            elsif ( $ris_user_function->{$package}{$sub_name} ) {
+            elsif ( $ris_user_function->{$package}->{$sub_name} ) {
                 $type      = 'U';
-                $prototype = $ruser_function_prototype->{$package}{$sub_name};
+                $prototype = $ruser_function_prototype->{$package}->{$sub_name};
             }
 
             # check for indirect object
@@ -8381,8 +8385,8 @@ sub check_prototype {
         $proto =~ s/^\s*\(\s*//;
         $proto =~ s/\s*\)$//;
         if ($proto) {
-            $ris_user_function->{$package}{$subname}        = 1;
-            $ruser_function_prototype->{$package}{$subname} = "($proto)";
+            $ris_user_function->{$package}->{$subname}        = 1;
+            $ruser_function_prototype->{$package}->{$subname} = "($proto)";
 
             # prototypes containing '&' must be treated specially..
             if ( $proto =~ /\&/ ) {
@@ -8390,22 +8394,22 @@ sub check_prototype {
                 # right curly braces of prototypes ending in
                 # '&' may be followed by an operator
                 if ( $proto =~ /\&$/ ) {
-                    $ris_block_function->{$package}{$subname} = 1;
+                    $ris_block_function->{$package}->{$subname} = 1;
                 }
 
                 # right curly braces of prototypes NOT ending in
                 # '&' may NOT be followed by an operator
                 else {
-                    $ris_block_list_function->{$package}{$subname} = 1;
+                    $ris_block_list_function->{$package}->{$subname} = 1;
                 }
             }
         }
         else {
-            $ris_constant->{$package}{$subname} = 1;
+            $ris_constant->{$package}->{$subname} = 1;
         }
     }
     else {
-        $ris_user_function->{$package}{$subname} = 1;
+        $ris_user_function->{$package}->{$subname} = 1;
     }
     return;
 } ## end sub check_prototype
@@ -9529,7 +9533,7 @@ EOM
                 # lexical subs use the block sequence number as a package name
                 my $seqno =
                   $rcurrent_sequence_number->[BRACE]
-                  [ $rcurrent_depth->[BRACE] ];
+                  ->[ $rcurrent_depth->[BRACE] ];
                 $seqno   = 1 if ( !defined($seqno) );
                 $package = $seqno;
                 if ( $warn_if_lexical{$subname} ) {
@@ -9679,11 +9683,11 @@ EOM
                     # Check for multiple definitions of a sub, but
                     # it is ok to have multiple sub BEGIN, etc,
                     # so we do not complain if name is all caps
-                    if (   $rsaw_function_definition->{$subname}{$package}
+                    if (   $rsaw_function_definition->{$subname}->{$package}
                         && $subname !~ /^[A-Z]+$/ )
                     {
                         my $lno =
-                          $rsaw_function_definition->{$subname}{$package};
+                          $rsaw_function_definition->{$subname}->{$package};
                         if ( $package =~ /^\d/ ) {
                             $self->warning(
 "already saw definition of lexical 'sub $subname' at line $lno\n"
@@ -9698,7 +9702,7 @@ EOM
                             }
                         }
                     }
-                    $rsaw_function_definition->{$subname}{$package} =
+                    $rsaw_function_definition->{$subname}->{$package} =
                       $self->[_last_line_number_];
                 }
             }
