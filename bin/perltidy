@@ -6175,7 +6175,7 @@ or equivalently, with abbreviations,
 
   debug { -wsk -wuk }
 
-could be placed in a F<.perltidyrc> file.  The new name, in this case C<debug>,
+could be placed in a F<.perltidyrc> file.  The new name, in this case B<debug>,
 is arbitrary provided that it does not conflict with an existing parameter.
 The extra warning checks defined with this new parameter will be ignored unless
 the new parameter B<-debug> is added to the command line.  All other settings
@@ -6184,7 +6184,7 @@ extra checking when perltidy is invoked with
 
         perltidy -debug ...
 
-(Either C<-debug> or C<--debug> may be used).
+(Either B<-debug> or B<--debug> may be used).
 
 =item Skipping leading non-perl commands with B<-x> or B<--look-for-hash-bang>
 
@@ -6698,17 +6698,25 @@ considered unique.
 
 =item B<Use --dump-similar-keys> to help locate misspelled hash keys
 
-The parameter B<--dump-similar-keys>, or B<-dsk>, dumps a list of
-hash keys which are very similar. For example:
+The parameter B<--dump-similar-keys>, or B<-dsk>, provides another way to help
+locate errors in hash keys. It dumps a list of hash keys which are very similar
+but different. For example:
 
    perltidy -dsk File.pm >output.txt
 
 The lines in the output file contain pairs of similar keys, and the number of
-times each was found in the file. For example, the following line from an
-actual script indicates that the key C<recieve> (a spelling error) occurs 2
-times and the correct key C<receive> occurs 6 times:
+times each was found in the file. For example, the following line is from an
+actual script:
 
    recieve,receive,2,6
+
+This tells us that the key C<recieve> (a spelling error) occurs 2 times and the
+correct key C<receive> occurs 6 times:
+
+Note that if this error had occurred just once then it could have also been
+found with B<--dump-unique-keys> or B<--warn-unique-keys>. But since it occurs
+more than once, the B<--dump-similar-keys> option or its B<--warn-> version is
+needed to locate it.
 
 =item B<Use --warn-similar-keys>, or B<-wsk>, to warn of hash keys which are
 similar but different.
@@ -6730,37 +6738,48 @@ follows:
 
 =item B<--similar-keys-maximum-difference=n>, or B<-skmd=n>, specifies the maximum difference between two keys for similarity.
 
-The integer B<n> gives the maximum difference to use when checking
-for hash key similarity.  The default is B<n=1>. The basic rule is
-that one difference is counted for each of the following conditions:
+The integer B<n> gives the maximum number of differences to use when checking
+for hash key similarity.  The default is B<n=1>. The basic rules are that one
+difference is counted for each of the following conditions:
 
 =over 4
 
-=item * a change in case of a letter, any number of times, such as C<LENGTH, length>
+=item * a change in case of a letter, any number of times, such as C<LENGTH,
+length>. This is implemented by making comparisons with lower case copies of
+the strings if any case change is detected.
 
-=item * one or more same-character changes, such as C<number-of-lines, number_of_lines>
+=item * one or more same-character changes, such as C<number-of-lines,
+number_of_lines>. This is implemented by remembering any change such as
+B<-> to B<_> in this example, and counting it just once.
 
 =item * transposed characters, such as C<recieve, receive>
 
 =item * a missing or extra character, such as C<color, colour> or C<color, _color>
 
-=item * otherwise, different characters in the same position, such as C<Minimum, minimum>
+=item * any other character difference, such as C<transparent, transparant>
 
 =back
 
-An additional rule is that one extra difference is counted if the leading
-letters are different when we ignore their case.  For example, the pair
-C<_getattr_handler, _setattr_handler> has just one different letter, but it is
-the first letter so the total difference score is 2.  So it will not show up
-with B<-skmd=1>, and in fact it is probably not a misspelling.
+To help filter out unwanted matches, an additional rule is that one extra
+difference is counted if the B<leading> letters are different when we ignore their
+case.
 
-The default value B<-skmd=1> will catch most common errors without producing
-excessive output. For a more thorough check the value could be increased to 2,
-which should be high enough for most purposes.
+For example, C<_xmin, _Xmin> has a difference of one because of the case
+change, but the first letter is the same except for the case change. So the
+difference is one and this pair will be reported with the default setting
+B<n=1>.
 
-For example, the pair of keys C<TwigHandlers, twig_handlers> has a difference of
-2, one for the case changes and one for the extra underscore character. So it
-would require B<-skmd=2> to be shown as a match.
+On the other hand, the pair C<_xmin, _ymin> has a different first letter which
+is not due to a case change, so the total difference score is 2, and it will
+not be reported with the default setting B<n=1>. And this type of difference is
+unlikely to be an error.
+
+So the default value B<-skmd=1> will catch most common errors without producing
+excessive output, but for a more thorough check it can be increased to B<n=2>.
+
+Values greater than 2 can produce a large amount output, so rather than use
+higher values, it might be better to dump all of the keys and examine them with
+the B<--dump-hash-keys> parameter described below.
 
 =item B<--similar-keys-minimum-length=n>, or B<-skml=n>, defines a minimum hash key length.
 
@@ -6776,8 +6795,9 @@ Each similar pair found is displayed on one line of output, so this is equivalen
 =item B<Use --dump-hash-keys> to dump a list of hash keys
 
 The parameter B<--dump-hash-keys>, or B<-dhk>, dumps a list of all hash keys
-found by perltidy to the standard output and exits.
-For example:
+found by perltidy to the standard output and exits. It can produce a lot of
+output, but it might be useful as a last resort when searching for a hash key
+problem. For example:
 
    perltidy -dhk File.pm >output.txt
 
