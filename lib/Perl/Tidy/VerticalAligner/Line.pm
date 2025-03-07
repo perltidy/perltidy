@@ -10,7 +10,7 @@ package Perl::Tidy::VerticalAligner::Line;
 use strict;
 use warnings;
 
-our $VERSION = '20250214.03';
+our $VERSION = '20250311';
 use English qw( -no_match_vars );
 
 {

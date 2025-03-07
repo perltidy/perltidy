@@ -4851,11 +4851,11 @@
 
 <pre><code>  debug { -wsk -wuk }</code></pre>
 
-<p>could be placed in a <i>.perltidyrc</i> file. The new name, in this case <code>debug</code>, is arbitrary provided that it does not conflict with an existing parameter. The extra warning checks defined with this new parameter will be ignored unless the new parameter <b>-debug</b> is added to the command line. All other settings in the <i>.perltidyrc</i> file still apply. Thus it provides a way to do some extra checking when perltidy is invoked with</p>
+<p>could be placed in a <i>.perltidyrc</i> file. The new name, in this case <b>debug</b>, is arbitrary provided that it does not conflict with an existing parameter. The extra warning checks defined with this new parameter will be ignored unless the new parameter <b>-debug</b> is added to the command line. All other settings in the <i>.perltidyrc</i> file still apply. Thus it provides a way to do some extra checking when perltidy is invoked with</p>
 
 <pre><code>        perltidy -debug ...</code></pre>
 
-<p>(Either <code>-debug</code> or <code>--debug</code> may be used).</p>
+<p>(Either <b>-debug</b> or <b>--debug</b> may be used).</p>
 
 </dd>
 <dt id="Skipping-leading-non-perl-commands-with--x-or---look-for-hash-bang">Skipping leading non-perl commands with <b>-x</b> or <b>--look-for-hash-bang</b></dt>
@@ -5207,13 +5207,17 @@
 <dt id="Use---dump-similar-keys-to-help-locate-misspelled-hash-keys"><b>Use --dump-similar-keys</b> to help locate misspelled hash keys</dt>
 <dd>
 
-<p>The parameter <b>--dump-similar-keys</b>, or <b>-dsk</b>, dumps a list of hash keys which are very similar. For example:</p>
+<p>The parameter <b>--dump-similar-keys</b>, or <b>-dsk</b>, provides another way to help locate errors in hash keys. It dumps a list of hash keys which are very similar but different. For example:</p>
 
 <pre><code>   perltidy -dsk File.pm &gt;output.txt</code></pre>
 
-<p>The lines in the output file contain pairs of similar keys, and the number of times each was found in the file. For example, the following line from an actual script indicates that the key <code>recieve</code> (a spelling error) occurs 2 times and the correct key <code>receive</code> occurs 6 times:</p>
+<p>The lines in the output file contain pairs of similar keys, and the number of times each was found in the file. For example, the following line is from an actual script:</p>
 
 <pre><code>   recieve,receive,2,6</code></pre>
+
+<p>This tells us that the key <code>recieve</code> (a spelling error) occurs 2 times and the correct key <code>receive</code> occurs 6 times:</p>
+
+<p>Note that if this error had occurred just once then it could have also been found with <b>--dump-unique-keys</b> or <b>--warn-unique-keys</b>. But since it occurs more than once, the <b>--dump-similar-keys</b> option or its <b>--warn-</b> version is needed to locate it.</p>
 
 </dd>
 <dt id="Use---warn-similar-keys-or--wsk-to-warn-of-hash-keys-which-are-similar-but-different"><b>Use --warn-similar-keys</b>, or <b>-wsk</b>, to warn of hash keys which are similar but different.</dt>
@@ -5234,23 +5238,36 @@
 <dt id="similar-keys-maximum-difference-n-or--skmd-n-specifies-the-maximum-difference-between-two-keys-for-similarity"><b>--similar-keys-maximum-difference=n</b>, or <b>-skmd=n</b>, specifies the maximum difference between two keys for similarity.</dt>
 <dd>
 
-<p>The integer <b>n</b> gives the maximum difference to use when checking for hash key similarity. The default is <b>n=1</b>. One difference is counted for each of the following conditions:</p>
+<p>The integer <b>n</b> gives the maximum number of differences to use when checking for hash key similarity. The default is <b>n=1</b>. The basic rules are that one difference is counted for each of the following conditions:</p>
 
 <ul>
 
-<li><p>two transposed characters, such as <code>recieve, receive</code></p>
+<li><p>a change in case of a letter, any number of times, such as <code>LENGTH, length</code>. This is implemented by making comparisons with lower case copies of the strings if any case change is detected.</p>
+
+</li>
+<li><p>one or more same-character changes, such as <code>number-of-lines, number_of_lines</code>. This is implemented by remembering any change such as <b>-</b> to <b>_</b> in this example, and counting it just once.</p>
+
+</li>
+<li><p>transposed characters, such as <code>recieve, receive</code></p>
 
 </li>
 <li><p>a missing or extra character, such as <code>color, colour</code> or <code>color, _color</code></p>
 
 </li>
-<li><p>a repeated same-character change, such as <code>if-elsif-else, if_elsif_else</code></p>
-
-</li>
-<li><p>otherwise, different characters in the same position, such as <code>Minimum, minimum</code></p>
+<li><p>any other character difference, such as <code>transparent, transparant</code></p>
 
 </li>
 </ul>
+
+<p>To help filter out unwanted matches, an additional rule is that one extra difference is counted if the <b>leading</b> letters are different when we ignore their case.</p>
+
+<p>For example, <code>_xmin, _Xmin</code> has a difference of one because of the case change, but the first letter is the same except for the case change. So the difference is one and this pair will be reported with the default setting <b>n=1</b>.</p>
+
+<p>On the other hand, the pair <code>_xmin, _ymin</code> has a different first letter which is not due to a case change, so the total difference score is 2, and it will not be reported with the default setting <b>n=1</b>. And this type of difference is unlikely to be an error.</p>
+
+<p>So the default value <b>-skmd=1</b> will catch most common errors without producing excessive output, but for a more thorough check it can be increased to <b>n=2</b>.</p>
+
+<p>Values greater than 2 can produce a large amount output, so rather than use higher values, it might be better to dump all of the keys and examine them with the <b>--dump-hash-keys</b> parameter described below.</p>
 
 </dd>
 <dt id="similar-keys-minimum-length-n-or--skml-n-defines-a-minimum-hash-key-length"><b>--similar-keys-minimum-length=n</b>, or <b>-skml=n</b>, defines a minimum hash key length.</dt>
@@ -5271,7 +5288,7 @@
 <dt id="Use---dump-hash-keys-to-dump-a-list-of-hash-keys"><b>Use --dump-hash-keys</b> to dump a list of hash keys</dt>
 <dd>
 
-<p>The parameter <b>--dump-hash-keys</b>, or <b>-dhk</b>, dumps a list of all hash keys found by perltidy to the standard output and exits. For example:</p>
+<p>The parameter <b>--dump-hash-keys</b>, or <b>-dhk</b>, dumps a list of all hash keys found by perltidy to the standard output and exits. It can produce a lot of output, but it might be useful as a last resort when searching for a hash key problem. For example:</p>
 
 <pre><code>   perltidy -dhk File.pm &gt;output.txt</code></pre>
 
@@ -5860,7 +5877,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20250214.02</p>
+<p>This man page documents perltidy version 20250311</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

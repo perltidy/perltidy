@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2025 02 14.03
+## 2025 03 11
 
     - The options --want-call-parens and --nowant-call-parens were accidentally
       being skipped in version 20250214. This has been fixed.

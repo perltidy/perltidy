@@ -1,14 +1,21 @@
 <h1>Perltidy Change Log</h1>
 
-<h2>2025 02 14.02</h2>
+<h2>2025 03 11</h2>
 
-<pre><code>- A new option --dump-similar-keys will dump hash keys which are
+<pre><code>- The options --want-call-parens and --nowant-call-parens were accidentally
+  being skipped in version 20250214. This has been fixed.
+
+- Fixed git #32, a tokenization error with message "hit EOF seeking end of
+  quote/pattern" for a function call without paren or arg before a
+  ternary operator.
+
+- A new option --dump-similar-keys will dump hash keys which are
   similar but slightly different to standard output and then exit.
   A related option --warn-similar-keys will report keys with are similar
   to the error output while formatting. Both of these can be controlled
   by parameters which are described in the input manual.
 
-- A new optiion --dump-hash-keys will dump all hash keys found by
+- A new option --dump-hash-keys will dump all hash keys found by
   perltidy to standard output.
 
 - The output table for --dump-block-summary has an additional field.

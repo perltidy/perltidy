@@ -6390,10 +6390,13 @@ parameters:
   mccabe2      - modified: subs have anonymous sub complexity removed
 
 This feature was developed to help identify complex sections of code as an aid
-in refactoring.  The McCabe complexity measure, 'mccabe1', follows the
+in refactoring.  The McCabe complexity measure, 'mccabe1', matches the
 definition used by Perl::Critic. The alternate complexity value, 'mccabe2', is
 the same except that for subroutines, the complexity of any contained anonymous
-subs is removed.
+subs is removed and shown separately. This alternate value can be more
+representative of the actual complexity, and sometimes much lower. For example,
+in one of the subs in perltidy the two values are 77 and 6. The difference is
+shared by the anonymous subs which it contains, of which the maximum is 36.
 
 By default the table contains these values for subroutines, but
 the user may request them for any or all blocks of code or packages.  For
@@ -7575,7 +7578,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20250214.03
+This man page documents perltidy version 20250311
 
 =head1 BUG REPORTS
 
