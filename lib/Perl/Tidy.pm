@@ -4048,7 +4048,7 @@ sub generate_options {
 
     # Ranges and defaults of all integer options (type '=i').
     # NOTES:
-    # 1. ALl integer options must be in this table, not in @defaults
+    # 1. All integer options must be in this table, not in @defaults
     # 2. 'closing-token-indentation' (cti), 'vertical-tightness' (vt),
     #   and 'vertical-tightness-closing' (vtc) are aliases which are included
     #   to work around an old problem with msdos (see note in check_options).
@@ -5351,7 +5351,7 @@ sub check_vms_filename {
     # remove explicit ; version
     $base =~ s/;-?\d*$//
 
-      # remove explicit . version ie two dots in filename NB ^ escapes a dot
+      # remove explicit . version, i.e. two dots in filename NB ^ escapes a dot
       or $base =~ s{(          # begin capture $1
                   (?:^|[^^])\. # match a dot not preceded by a caret
                   (?:          # followed by nothing

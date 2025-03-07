@@ -5326,7 +5326,7 @@ sub split_field {
     #   $field   = corresponding text field
     #   $pattern = full pattern
     # Return:
-    #   $pos_start_number = positiion in $field where the number should start
+    #   $pos_start_number = position in $field where the number should start
     #                     = 0 if cannot find
     #   $char_end_part1 = the character preceding $pos_start_number
     #   $ch_opening     = the preceding opening container character, if any
@@ -5527,7 +5527,7 @@ sub pad_signed_number_columns {
     # which have been broken into patterns which are convenient for the
     # vertical aligner, but we no longer have the original tokenization
     # which would have indicated the precise bounds of numbers.  So we
-    # have to procede very carefully with lots of checks. There are
+    # have to proceed very carefully with lots of checks. There are
     # more checks than really necessary now because originally numbers
     # and quotes were both indicated with pattern 'Q'. But now numbers are
     # uniquely marked as pattern 'n', so there is less risk of an error.
@@ -5928,7 +5928,7 @@ EOM
                 }
 
                 # remember the previous line in case we have to go back and
-                # increasse its width
+                # increase its width
                 push @previous_linked_lines, $current_line;
             }
             $current_alignment = $alignment;

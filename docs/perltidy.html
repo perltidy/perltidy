@@ -1018,7 +1018,7 @@
 
 <p>To review, the tightness controls described in the previous section have three possible integer values: 0, 1, and 2, where <b>n=0</b> always adds a space, and <b>n=2</b> never adds a space.</p>
 
-<p>The default value <b>n=1</b> adds space only if the container holds multiple tokens. Some perltidy tokens may be rather long, and it can be preferable to space some of them as if they were multple tokens. This can be done with this paramter.</p>
+<p>The default value <b>n=1</b> adds space only if the container holds multiple tokens. Some perltidy tokens may be rather long, and it can be preferable to space some of them as if they were multiple tokens. This can be done with this parameter.</p>
 
 <p>For example, in the following expression the <code>qw</code> list is a single token and therefore there the default formatting does not put spaces within the square brackets:</p>
 
@@ -3685,7 +3685,7 @@
 
 <h2 id="Controlling-Breaks-at-Certain-Chain-Operators">Controlling Breaks at Certain Chain Operators</h2>
 
-<p>For a statment which consists of a chain of certain binary operators, the default line break logic is: (1) if a statement fits on one line, then it is formatted as one line, or (2) if the statement requires multiple lines, then a break is made at all of the chain operators. Additional rules apply, but this is the basic one.</p>
+<p>For a statement which consists of a chain of certain binary operators, the default line break logic is: (1) if a statement fits on one line, then it is formatted as one line, or (2) if the statement requires multiple lines, then a break is made at all of the chain operators. Additional rules apply, but this is the basic one.</p>
 
 <p>The parameter <b>--pack-operator-types=s</b>, or <b>-pot=s</b>, can be used to change this for certain operators which may be specified with the string <b>s</b>. These are the concatenation operator <b>s=&#39;.&#39;</b> and the method call arrow <b>s=&#39;-&gt;&#39;</b>. When this parameter is selected for an operator, no special breaks are made, so there will be a minimal number of line breaks. For example, here is the default formatting for a method call chain:</p>
 
@@ -4979,7 +4979,7 @@
 <dt id="Use---dump-block-summary-to-make-a-table-of-information-on-code-blocks"><b>Use --dump-block-summary to make a table of information on code blocks</b></dt>
 <dd>
 
-<p>A table listing information about the blocks of code in a file can be made with <b>--dump-block-summary</b>, or <b>-dbs</b>. This causes perltidy to read and parse the file, write a table of comma-separated values for selected code blocks to the standard output, and then exit. This parameter must be on the command line, not in a <i>.perlticyrc</i> file, and it requires a single file name on the command line. For example</p>
+<p>A table listing information about the blocks of code in a file can be made with <b>--dump-block-summary</b>, or <b>-dbs</b>. This causes perltidy to read and parse the file, write a table of comma-separated values for selected code blocks to the standard output, and then exit. This parameter must be on the command line, not in a <i>.perltidyrc</i> file, and it requires a single file name on the command line. For example</p>
 
 <pre><code>   perltidy -dbs somefile.pl &gt;blocks.csv</code></pre>
 
@@ -4997,7 +4997,7 @@
   mccabe1      - McCabe complexity measure of this code block
   mccabe2      - modified: subs have anonymous sub complexity removed</code></pre>
 
-<p>This feature was developed to help identify complex sections of code as an aid in refactoring. The McCabe complexity measure, &#39;mccabe1&#39;, follows the definition used by Perl::Critic. The alternate complexity value, &#39;mccabe2&#39;, is the same except that for subroutines, the complexity of any contained anonymous subs is removed.</p>
+<p>This feature was developed to help identify complex sections of code as an aid in refactoring. The McCabe complexity measure, &#39;mccabe1&#39;, matches the definition used by Perl::Critic. The alternate complexity value, &#39;mccabe2&#39;, is the same except that for subroutines, the complexity of any contained anonymous subs is removed and shown separately. This alternate value can be more representative of the actual complexity, and sometimes much lower. For example, in one of the subs in perltidy the two values are 77 and 6. The difference is shared by the anonymous subs which it contains, of which the maximum is 36.</p>
 
 <p>By default the table contains these values for subroutines, but the user may request them for any or all blocks of code or packages. For blocks which are loops nested within loops, a postfix &#39;+&#39; to the <code>type</code> is added to indicate possible code complexity. Although the table does not otherwise indicate which blocks are nested in other blocks, this can be determined by computing and comparing the block ending line numbers.</p>
 
@@ -5050,7 +5050,7 @@
 </li>
 <li><p>This selects every <code>while</code> block with 6 or more code lines</p>
 
-<pre><code>    perltidy -dbs -dbt=while -dbl=6 somfile.pl &gt;while.csv</code></pre>
+<pre><code>    perltidy -dbs -dbt=while -dbl=6 somefile.pl &gt;while.csv</code></pre>
 
 </li>
 </ul>
@@ -5292,7 +5292,7 @@
 
 <pre><code>   perltidy -dhk File.pm &gt;output.txt</code></pre>
 
-<p>The lines in the output file list the keys and number of occurances.</p>
+<p>The lines in the output file list the keys and number of occurrences.</p>
 
 </dd>
 <dt id="Use---dump-mixed-call-parens-to-find-functions-called-both-with-and-without-parens"><b>Use --dump-mixed-call-parens to find functions called both with and without parens</b></dt>

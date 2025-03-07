@@ -1323,8 +1323,8 @@ B<n=2> never adds a space.
 
 The default value B<n=1> adds space only if the container holds multiple
 tokens.  Some perltidy tokens may be rather long, and it can be
-preferable to space some of them as if they were multple tokens.  This can be
-done with this paramter.
+preferable to space some of them as if they were multiple tokens.  This can be
+done with this parameter.
 
 For example, in the following expression the C<qw> list is a single token and
 therefore there the default formatting does not put spaces within the square
@@ -4659,7 +4659,7 @@ improve code maintainability.
 
 =head2 Controlling Breaks at Certain Chain Operators
 
-For a statment which consists of a chain of certain binary operators, the
+For a statement which consists of a chain of certain binary operators, the
 default line break logic is: (1) if a statement fits on one line, then it is
 formatted as one line, or (2) if the statement requires multiple lines, then a
 break is made at all of the chain operators. Additional rules apply, but this
@@ -6369,7 +6369,7 @@ A table listing information about the blocks of code in a file can be made with
 B<--dump-block-summary>, or B<-dbs>.  This causes perltidy to read and parse
 the file, write a table of comma-separated values for selected code blocks to
 the standard output, and then exit.  This parameter must be on the command
-line, not in a F<.perlticyrc> file, and it requires a single file name on the
+line, not in a F<.perltidyrc> file, and it requires a single file name on the
 command line.  For example
 
    perltidy -dbs somefile.pl >blocks.csv
@@ -6479,7 +6479,7 @@ This selects every if-chain which contains 2 or more C<elsif> blocks:
 
 This selects every C<while> block with 6 or more code lines
 
-    perltidy -dbs -dbt=while -dbl=6 somfile.pl >while.csv
+    perltidy -dbs -dbt=while -dbl=6 somefile.pl >while.csv
 
 =back
 
@@ -6804,7 +6804,7 @@ problem. For example:
 
    perltidy -dhk File.pm >output.txt
 
-The lines in the output file list the keys and number of occurances.
+The lines in the output file list the keys and number of occurrences.
 
 =item B<Use --dump-mixed-call-parens to find functions called both with and without parens>
 

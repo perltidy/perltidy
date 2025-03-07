@@ -5600,7 +5600,7 @@ EOM
 
         # Implement --tight-secret-operators
         # Given:
-        #   $rwhitespace_flags = whitespase flags, to be updated
+        #   $rwhitespace_flags = whitespace flags, to be updated
 
         # Loop over all tokens in this line
         my $rLL  = $self->[_rLL_];
@@ -7383,7 +7383,7 @@ sub initialize_keep_old_blank_lines_hash {
 
     my @unknown_types;
 
-    # Table of translations to make thes closer to perltidy token types
+    # Table of translations to make these closer to perltidy token types
     # This must include all characters except 'b'
     my %translate = (
         'c' => '#',
@@ -8106,7 +8106,7 @@ EOM
                         # Store the block type with sequence number as hash key
                         $self->[_rblock_type_of_seqno_]->{$seqno} = $block_type;
 
-                        # and save anynymous subs and named subs in separate
+                        # and save anonymous subs and named subs in separate
                         # hashes to avoid future pattern tests
                         if ( $matches_ASUB{$block_type} ) {
                             $self->[_ris_asub_block_]->{$seqno} = 1;
@@ -9671,7 +9671,7 @@ EOM
 
         # We will not check for similarity of keys with the same $birth_id,
         # $birth_id is a unique identifier of a set keys initialized together
-        # For keys before '=>' the id is the sequence number of their contaier
+        # For keys before '=>' the id is the sequence number of their container
         my $birth_id;
         if ( $parent_seqno && $ris_list_by_seqno->{$parent_seqno} ) {
             $birth_id = $parent_seqno;
@@ -10982,7 +10982,7 @@ sub find_similar_keys {
         my @sorted_pairs =
           sort { $a->[4] <=> $b->[4] || $a->[5] <=> $b->[5] } @word_pairs;
 
-        # resort by diff count, min occurances so far, then by the start order
+        # resort by diff count, min occurrences so far, then by the start order
         my %word_count;
         foreach my $pair (@sorted_pairs) {
             my ( $w1, $w2 ) = @{$pair};
@@ -12898,7 +12898,7 @@ sub scan_variable_usage {
 
     $push_block_stack->(SEQ_ROOT);
 
-    # $rhash holds all lexecal variables defined within a given block:
+    # $rhash holds all lexical variables defined within a given block:
     #   $rhash->{
     #    $name => {
     #        count      => $count,
@@ -13034,9 +13034,9 @@ sub scan_variable_usage {
         return;
     }; ## end $check_for_overlapping_variables = sub
 
-    #--------------------------------
-    # sub to checkin a new identifier
-    #--------------------------------
+    #---------------------------------
+    # sub to check in a new identifier
+    #---------------------------------
     my $checkin_new_lexical = sub {
         my ($KK) = @_;
 
@@ -14396,7 +14396,7 @@ sub filter_excluded_names {
     # for an operation like --warn-variable-types
 
     # Given:
-    #   $rwarnigns = ref to list of warning info hashes
+    #   $rwarnings = ref to list of warning info hashes
     #   $rexcluded_name_hash = ref to hash with excluded names
     # Return updated $rwarnings with excluded names removed
     if ( @{$rwarnings} && $rexcluded_name_hash ) {
@@ -14488,7 +14488,7 @@ sub block_seqno_of_paren_seqno {
     #  if (...) { ...
     #     ^   ^ ^
     #     |   | |
-    #     |   | K_opening_brace => return sequno of this brace
+    #     |   | K_opening_brace => return seqno of this brace
     #     |   K_closing_paren
     #     $seqno_paren = seqno of this paren pair
 
@@ -14509,7 +14509,7 @@ sub block_seqno_of_paren_seqno {
 sub dump_mixed_call_parens {
     my ($self) = @_;
 
-    # Implent --dump-mixed-call-parens
+    # Implement --dump-mixed-call-parens
 
     my $opt_name = 'dump-mixed-call-parens';
     return unless ( $rOpts->{$opt_name} );
@@ -17137,7 +17137,7 @@ sub add_trailing_comma {
     #  $KK = index of closing token in old ($rLL) token list
     #        which starts a new line and is not preceded by a comma
     #  $Kfirst = index of first token on the current line of input tokens
-    #  $trailing_comma_add_rule = user control flags for adding trailng commas
+    #  $trailing_comma_add_rule = user control flags for adding trailing commas
 
     # For example, we might want to add a comma here:
 
@@ -19612,9 +19612,9 @@ sub count_sub_input_args {
 
                 my $seqno_test = $rLL->[$KK]->[_TYPE_SEQUENCE_];
 
-                #---------------------------------------------
-                # Skip past a sub declearation within this sub
-                #---------------------------------------------
+                #--------------------------------------------
+                # Skip past a sub declaration within this sub
+                #--------------------------------------------
                 if (   $self->[_ris_sub_block_]->{$seqno_test}
                     || $self->[_ris_asub_block_]->{$seqno_test} )
                 {
@@ -22842,7 +22842,7 @@ EOM
         # b1241.  Previously, the '$is_one_line_weld' flag was tested here
         # instead of -asbl, and this fixed most cases. But it turns out that
         # the real problem was the -asbl flag, and switching to this was
-        # necessary to fixe b1268.  This also fixes b1269, b1277, b1278.
+        # necessary to fix b1268.  This also fixes b1269, b1277, b1278.
         if (  !$do_not_weld_rule
             && $rOpts_line_up_parentheses
             && $rOpts_asbl
@@ -33569,7 +33569,7 @@ sub break_lines_inner_loop {
                 && ($next_nonblank_block_type)
                 && ( $next_nonblank_block_type ne $tokens_to_go[$i_begin] )
 
-                # RT #104427: Dont break before opening sub brace because
+                # RT #104427: Don't break before opening sub brace because
                 # sub block breaks handled at higher level, unless
                 # it looks like the preceding list is long and broken
                 && !(
@@ -35306,7 +35306,7 @@ EOM
 
         my $cab_flag = $rOpts_comma_arrow_breakpoints;
 
-        # replace -cab=3 if overriden
+        # replace -cab=3 if overridden
         if ( $cab_flag == 3 && $type_sequence ) {
             my $test_cab = $self->[_roverride_cab3_]->{$type_sequence};
             if ( defined($test_cab) ) { $cab_flag = $test_cab }
@@ -36867,7 +36867,7 @@ EOM
             $formatted_columns = $packed_columns;
         }
 
-        # Construce hash_B:
+        # Construct hash_B:
         return {
 
             # Updated variables
@@ -43044,7 +43044,7 @@ sub set_vertical_tightness_flags {
 
             # Avoid conflict of -bom and -pvt=1 or -pvt=2, fixes b977, b1303
             # See similar patch above for $ovt.
-            # NOTE: this is overriden by fix for b1498 above and can
+            # NOTE: this is overridden by fix for b1498 above and can
             # eventually be removed.
             if ( 0 && $cvt && $self->[_rbreak_container_]->{$seqno} ) {
                 $cvt = 0;
