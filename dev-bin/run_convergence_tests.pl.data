@@ -12713,6 +12713,22 @@ eval {
 --ignore-side-comment-lengths
 --noadd-semicolons
 
+==> b1515.in <==
+my $htmltext =
+          eval { Text::WikiFormat::format( $wikitext ) } ;
+
+my $htmltext = eval {
+    Text::WikiFormat::format( $wikitext )
+} ;
+
+
+==> b1515.par <==
+--maximum-line-length=58
+--continuation-indentation=10
+--space-terminal-semicolon
+--paren-tightness=0
+--noadd-semicolons
+
 ==> b156.in <==
 # State 1
 {

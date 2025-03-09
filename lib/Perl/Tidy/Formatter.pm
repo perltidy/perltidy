@@ -15690,10 +15690,25 @@ sub respace_tokens_inner_loop {
                     # if not preceded by a ';' ..
                     if ( $last_nonblank_code_type ne ';' ) {
 
+                        # If -nasc is set, any phantom we add will be removed.
+                        # But we may still want to add semicolons to help get
+                        # vertical alignment, as in git #181. So if -nasc is
+                        # set and there are other semicolons, we will add
+                        # a phantom, and otherwise not. This fixes b1515
+                        # and is a better fix for b1510 b1511 b1512 b1513 b1514
+                        # while also fixing git #181.
+                        my $add_phantom = 1;
+                        if ( !$rOpts_add_semicolons ) {
+                            my $rtype_count =
+                              $rtype_count_by_seqno->{$type_sequence};
+                            $add_phantom =
+                              defined($rtype_count) && $rtype_count->{';'};
+                        }
+
                         # Tentatively insert a semicolon if appropriate.
                         # It will be turned into a real semicolon later by
                         # sub unmask_phantom_tokens.
-                        $self->add_phantom_semicolon($KK);
+                        $self->add_phantom_semicolon($KK) if ($add_phantom);
                     }
 
                     if (   $ris_sub_block->{$type_sequence}
@@ -27834,6 +27849,9 @@ EOM
 
                     # Allow for preceding spaced semicolon
                     # b1510 b1511 b1512 b1513 b1514
+                    # NOTE: **This test can eventually be removed**
+                    # The fix for b1515 prevents a phantom semicolon for
+                    # a one-line block with -nasc, so this check has no effect.
                     if ( $rOpts_space_terminal_semicolon
                         && !$rOpts_add_semicolons )
                     {

@@ -8552,37 +8552,37 @@ eval {
 ==> b1510 <==
 plan skip_all =>
     'no threads.pm'
-    unless eval {
-    require threads
-    } ;
+    unless
+    eval { require threads } ;
 
 plan skip_all =>
     'no threads.pm'
-    unless eval {
-    require threads
-    } ;
+    unless
+    eval { require threads } ;
 
 ==> b1511 <==
-@returns = eval {
-    some_sub ( 1 )
-} ;
-@returns = eval {
-    some_sub ( 1 )
-} ;
+@returns
+    = eval { some_sub ( 1 ) } ;
+@returns
+    = eval { some_sub ( 1 ) } ;
 
 ==> b1512 <==
-eval {
-    require Tie::IxHash
-} ;
-eval {
-    require Tie::IxHash
-} ;
+eval { require Tie::IxHash } ;
+eval { require Tie::IxHash } ;
 
 
 ==> b1513 <==
                             else { } #L2hos->Unlink("$psname.ps") unless $DEBUG }
 ##                          else {
 ##                              }  #L2hos->Unlink("$psname.ps") unless $DEBUG }
+
+==> b1515 <==
+my $htmltext =
+          eval { Text::WikiFormat::format( $wikitext ) } ;
+
+my $htmltext =
+          eval { Text::WikiFormat::format( $wikitext ) } ;
+
 
 ==> b156 <==
 # State 1
