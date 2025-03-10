@@ -4705,7 +4705,7 @@ EOM
                     if ( $tok !~ /::$/ ) {
                         $self->complain(<<EOM);
 Expecting operator after '$last_nonblank_token' but found bare word '$tok'
-       Maybe indirectet object notation?
+       Maybe indirect object notation?
 EOM
                     }
                 }
@@ -6385,7 +6385,7 @@ EOM
 
                     # check '$rtoken_map' and '$routput_token_list'
                     $self->Fault(<<EOM);
-Reconstruted line difers from input; input_length=$len_input test_length=$len_test
+Reconstructed line difers from input; input_length=$len_input test_length=$len_test
 input:'$input_line'
 test :'$test_line'
 EOM
@@ -10134,7 +10134,7 @@ unexpected error condition returned by inverse_pretoken_map
 EOM
                 }
                 $self->warning(
-                    "Possible tokinization error..please check this line\n");
+                    "Possible tokenization error..please check this line\n");
             }
 
             # Check for accidental formatting of a markup language doc...

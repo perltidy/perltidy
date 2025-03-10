@@ -5630,7 +5630,7 @@ sub Win_Config_Locs {
         # This currently would only happen on a win32s computer.  I don't have
         # one to test, so I am unsure how to proceed.  Suggestions welcome!
         ${$rpending_complaint} .=
-"I dont know a sensible place to look for config files on an $os system.\n";
+"I don't know a sensible place to look for config files on an $os system.\n";
         return;
     }
     return ( $os, $system, $allusers );
