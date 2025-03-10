@@ -8584,6 +8584,12 @@ my $htmltext =
           eval { Text::WikiFormat::format( $wikitext ) } ;
 
 
+==> b1516 <==
+my@NameVirtualHost_lcl=
+    ([NAME_VHOST.':'.LISTEN_PORT]);
+my@NameVirtualHost_lcl=
+    ([NAME_VHOST.':'.LISTEN_PORT]);
+
 ==> b156 <==
 # State 1
 {

@@ -12729,6 +12729,22 @@ my $htmltext = eval {
 --paren-tightness=0
 --noadd-semicolons
 
+==> b1516.in <==
+my@NameVirtualHost_lcl=
+    ([NAME_VHOST.':'.LISTEN_PORT]);
+my@NameVirtualHost_lcl=([
+         NAME_VHOST.':'.LISTEN_PORT
+]);
+
+==> b1516.par <==
+--maximum-line-length=35
+--indent-columns=3
+--continuation-indentation=4
+--line-up-parentheses
+--weld-nested-containers
+--noadd-whitespace
+--paren-vertical-tightness-closing=2
+
 ==> b156.in <==
 # State 1
 {

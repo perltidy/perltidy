@@ -22436,6 +22436,8 @@ sub weld_nested_containers {
     my $rblock_type_of_seqno    = $self->[_rblock_type_of_seqno_];
     my $ris_asub_block          = $self->[_ris_asub_block_];
     my $rmax_vertical_tightness = $self->[_rmax_vertical_tightness_];
+    my $ris_list_by_seqno       = $self->[_ris_list_by_seqno_];
+    my $rhas_list               = $self->[_rhas_list_];
 
     my $rOpts_asbl = $rOpts->{'opening-anonymous-sub-brace-on-new-line'};
 
@@ -22751,6 +22753,23 @@ EOM
                 # Coding simplified here for case b1219.
                 # Increased tol from 0 to 1 when pvt>0 to fix b1284.
                 $is_one_line_weld = $excess <= $one_line_tol;
+
+                # Fix b1516: do not use -lp on a 1 line weld. If the container
+                # breaks apart under formatting, then -lp will be allowed
+                # on the next pass. So convergence may require 2 iterations.
+                # The two list checks are not necessary for stability, but
+                # are included to minimize formatting changes by this update.
+                if (
+                       $is_one_line_weld
+                    && $rOpts_line_up_parentheses
+
+                    # Optional checks to minimize formatting changes:
+                    && !$ris_list_by_seqno->{$inner_seqno}
+                    && !$rhas_list->{$inner_seqno}
+                  )
+                {
+                    $self->[_ris_excluded_lp_container_]->{$inner_seqno} = 1;
+                }
             }
 
             # DO-NOT-WELD RULE 1:
