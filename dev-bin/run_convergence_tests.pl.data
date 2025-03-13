@@ -12745,6 +12745,23 @@ my@NameVirtualHost_lcl=([
 --noadd-whitespace
 --paren-vertical-tightness-closing=2
 
+==> b1517.in <==
+$config =
+  { colors => {
+         default => "D0FFD0",
+  } };
+$config = {
+    colors => {
+         default => "D0FFD0",
+    }
+};
+
+==> b1517.par <==
+--maximum-line-length=21
+--line-up-parentheses
+--variable-maximum-line-length
+--break-at-trailing-comma-types='m'
+
 ==> b156.in <==
 # State 1
 {

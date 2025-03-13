@@ -37944,9 +37944,18 @@ sub get_available_spaces_to_go {
                 # if we might exceed the maximum line length
                 $lp_position_predictor + $len_increase > $mll
 
-                # if a -bbx flag WANTS a break before this opening token
+                # or if a -bbx flag WANTS a break before this opening token
                 || (   $seqno
                     && $self->[_rbreak_before_container_by_seqno_]->{$seqno} )
+
+                # or if a break is set and -vmll is used. Fixes b1517.
+                # The combination -vmll -lp is troublesome, and this removes
+                # the floating point length comparison as potential instability
+                # in this unusual edge case. In b1517 the break was set by
+                # the --break-at-trailing-comma-types flag.
+                || (   $rOpts_variable_maximum_line_length
+                    && $seqno
+                    && $self->[_rbreak_container_]->{$seqno} )
 
                 # or we are beyond the 1/4 point and there was an old
                 # break at an assignment (not '=>') [fix for b1035]

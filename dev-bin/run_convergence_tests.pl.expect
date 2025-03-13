@@ -8590,6 +8590,16 @@ my@NameVirtualHost_lcl=
 my@NameVirtualHost_lcl=
     ([NAME_VHOST.':'.LISTEN_PORT]);
 
+==> b1517 <==
+$config =
+  { colors => {
+         default => "D0FFD0",
+  } };
+$config =
+  { colors => {
+         default => "D0FFD0",
+  } };
+
 ==> b156 <==
 # State 1
 {
