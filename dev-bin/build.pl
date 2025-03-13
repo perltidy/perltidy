@@ -11,7 +11,8 @@ use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };
 $| = 1;
 
-# a script to help make a new version of perltidy
+# This is a script to help make a new version of perltidy.
+# See sub 'show_configuation_help' for notes on setting this up.
 
 # First cd to the git root directory, so that all paths are then given from the
 # git root
@@ -19,33 +20,15 @@ my $git_home = qx[git rev-parse --show-toplevel];
 chomp $git_home;
 chdir $git_home;
 
-# Here are the main packages I used to setup a Ubuntu 16.04 system
-# for Perl development:
-#
-#  sudo apt-get install openssh-server
-#  sudo apt-get install markdown
-#  sudo apt-get install ispell
-#
-#  # Perl Modules:
-#  sudo cpan -i App::cpanminus
-#  cpanm Perl::Critic
-#  cpanm Tidy::All
-#  cpanm Perl::::MinimumVersion  (has perlver)
-#  cpanm App::CPANTS::Lint       (has cpants_lint.pl)
-#  sudo cpan App::perlbrew
-#  perlbrew init
-#  sudo apt-get install git
-#  git config --global user.name "Steve Hancock"
-#  git config --global user.email perltidy@users.sourceforge.net
-
-# TODO:
-# add a perlver step
-# add a browse the tar file step
-
 my $logfile   = "dev-bin/build.log";
 my $changelog = "CHANGES.md";
 my $fh_log;
 my $source_VERSION = $Perl::Tidy::VERSION;
+
+my $cpants_lint;
+my $perlcritic = 'perlcritic';
+
+check_config();
 
 # These are the main steps, in approximate order, for making a new version
 # Note: Since perl critic is in the .tidyallrc, a separate 'PC' step is not
@@ -82,6 +65,69 @@ my $rcode = {
 open( $fh_log, ">", $logfile ) or die "cannot open log file $logfile: $!\n";
 main();
 $fh_log->close();
+
+sub show_configuration_help {
+
+    print(<<'EOM');
+Here are the main packages I used to setup a Ubuntu 16.04 system
+for Perl development.
+
+ sudo apt-get install openssh-server
+ sudo apt-get install markdown
+ sudo apt-get install ispell
+
+ # Perl Modules:
+ sudo cpan -i App::cpanminus
+ cpanm Perl::Critic
+ cpanm Tidy::All
+ cpanm Perl::::MinimumVersion  (has perlver)
+ cpanm App::CPANTS::Lint       (has cpants_lint.pl)
+ sudo cpan App::perlbrew
+ perlbrew init
+ sudo apt-get install git
+ git config --global user.name "My Name"
+ git config --global user.email me@users.sourceforge.net
+
+EOM
+    return;
+}
+
+sub check_config {
+
+    my @errors;
+
+    # Look for cpants_lint
+    my @cpants_lint_filenames = qw(cpants_lint cpants_lint.pl);
+    $cpants_lint = undef;
+    foreach my $name (@cpants_lint_filenames) {
+        my $which = `which $name`;
+        if ($which) {
+            $cpants_lint = $name;
+            last;
+        }
+    }
+    if ( !$cpants_lint ) {
+        local $" = ', ';
+        push @errors, <<EOM;
+Did not find cpants_lint as one of: @cpants_lint_filenames
+EOM
+    }
+    my $perlcritic_bin = `which $perlcritic`;
+    if ( !$perlcritic_bin ) {
+        $perlcritic = undef;
+        push @errors, <<EOM;
+Did not find 'perlcritic'
+EOM
+    }
+
+    if (@errors) {
+        print @errors;
+        if ( ifyes("Display help? [Y/N]\n") ) {
+            show_configuration_help();
+        }
+    }
+    return;
+}
 
 sub main {
     while (1) {
@@ -232,7 +278,7 @@ sub run_perl_critic {
     $rstatus->{'PC'} = 'TBD';
 
     # running with parameters in .perlcritic
-    my $cmd = "perlcritic lib/Perl/ >tmp/perlcritic.out";
+    my $cmd = "$perlcritic lib/Perl/ >tmp/perlcritic.out";
     system_echo($cmd);
     my $fh;
     if ( !open( $fh, '<', $pcoutput ) ) {
@@ -382,18 +428,17 @@ Next Steps:
 hit <cr> to continue
 EOM
 
-    if (
-        ifyes(
-            "run cpants_lint.pl to check $tar_gz_file? [Y/N], <cr>='Y'", "Y"
-        )
-      )
+    if ( $cpants_lint
+        && ifyes( "run $cpants_lint to check $tar_gz_file? [Y/N], <cr>='Y'",
+            "Y" ) )
     {
         my $fout = "tmp/cpants_lint.out";
         if ( -e $fout ) { unlink($fout) }
-        my $cmd = "cpants_lint.pl $tar_gz_file >$fout 2>$fout";
+        my $cmd = "$cpants_lint $tar_gz_file >$fout 2>$fout";
         system_echo($cmd);
         post_result($fout);
     }
+
     return;
 } ## end sub make_dist
 
