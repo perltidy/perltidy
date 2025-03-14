@@ -48,6 +48,7 @@
 \#$
 \b\.#
 \.bak$
+\.spell$
 \.ba1$
 \.tmp$
 \.log$

@@ -34,7 +34,7 @@ check_config();
 # Note: Since perl critic is in the .tidyallrc, a separate 'PC' step is not
 # needed
 my $rsteps =
-  [qw( CHK CONV TOK SCAN MAN V YEAR PC TIDY T CL DOCS MANIFEST DIST )];
+  [qw( CHK SPELL CONV TOK SCAN MAN V YEAR PC TIDY T CL DOCS MANIFEST DIST )];
 
 my $rstatus = {};
 foreach my $step ( @{$rsteps} ) { $rstatus->{$step} = 'TBD' }
@@ -42,7 +42,7 @@ foreach my $step ( @{$rsteps} ) { $rstatus->{$step} = 'TBD' }
 my $rcode = {
     'CHK' => sub {
         openurl("local-docs/Release-Checklist.md")
-          unless $rstatus->{CHK} eq 'OK';
+          unless ( $rstatus->{CHK} eq 'OK' );
         $rstatus->{CHK} = 'OK';
     },
     'SCAN'     => \&scan_for_bad_characters,
@@ -51,6 +51,7 @@ my $rcode = {
     'YEAR'     => \&update_copyright_date,
     'PC'       => \&run_perl_critic,
     'TIDY'     => \&run_tidyall,
+    'SPELL'    => \&run_spell_check,
     'CONV'     => \&run_convergence_tests,
     'TOK'      => \&run_tokenizer_tests,
     'MANIFEST' => \&make_manifest,
@@ -90,7 +91,7 @@ for Perl development.
 
 EOM
     return;
-}
+} ## end sub show_configuration_help
 
 sub check_config {
 
@@ -127,7 +128,7 @@ EOM
         }
     }
     return;
-}
+} ## end sub check_config
 
 sub main {
     while (1) {
@@ -143,6 +144,7 @@ v        - check/update Version Number     status: $rstatus->{'V'}
 year     - check/update copyright Year     status: $rstatus->{'YEAR'}
 tidy     - run tidyall (tidy & critic)     status: $rstatus->{'TIDY'}
 pc       - run PerlCritic (critic only)    status: $rstatus->{'PC'}
+spell    - run spell check                 status: $rstatus->{'SPELL'}
 conv     - run convergence tests           status: $rstatus->{'CONV'}
 tok      - run tokenizer tests             status: $rstatus->{'TOK'}
 manifest - make MANIFEST                   status: $rstatus->{'MANIFEST'}
@@ -218,6 +220,14 @@ sub run_tidyall {
     openurl("$fout");
     return;
 } ## end sub run_tidyall
+
+sub run_spell_check {
+    $rstatus->{'SPELL'} = 'TBD';
+    my $cmd = "./dev-bin/run_spell_check.pl";
+    system_echo($cmd);
+    $rstatus->{'SPELL'} = 'OK';
+    return;
+} ## end sub run_spell_check
 
 sub run_convergence_tests {
     my $fout = "tmp/run_convergence_tests.out";
@@ -366,9 +376,9 @@ sub make_manifest {
     my $fdiff  = "tmp/manifest.diff";
     my $result = sys_command("make manifest >$fout 2>$fout");
     post_result($fout);
-    if ( -e $fdiff ) { unlink $fdiff }
+    if ( -e $fdiff ) { unlink($fdiff) }
     $result = system("diff MANIFEST.bak MANIFEST >$fdiff");
-    if ( !-e $fdiff || -z $fdiff) {
+    if ( !-e $fdiff || -z $fdiff ) {
         query("No changes to MANIFEST; hit <cr>\n");
     }
     else {
@@ -887,8 +897,8 @@ sub get_new_release_version {
     my ( $day, $month, $year ) = (localtime)[ 3, 4, 5 ];
     $year  += 1900;
     $month += 1;
-    $month       = sprintf "%02d", $month;
-    $day         = sprintf "%02d", $day;
+    $month       = sprintf( "%02d", $month );
+    $day         = sprintf( "%02d", $day );
     $new_VERSION = "$year$month$day";
 
     if ( !ifyes("Suggest VERSION $new_VERSION, OK [Y/N]") ) {
@@ -998,7 +1008,7 @@ sub query {
 } ## end sub query
 
 sub queryu {
-    return uc query(@_);
+    return uc( query(@_) );
 }
 
 sub hitcr {
@@ -1318,7 +1328,7 @@ EOM
     while ( my $source_file = shift @sources ) {
         next unless ( $source_file =~ /\.pm$/ );
         my $basename = basename($source_file);
-        my $result = qx/grep "^=cut" $source_file/;
+        my $result   = qx/grep "^=cut" $source_file/;
         if ($result) {
             push @files_with_pod, $basename;
         }
