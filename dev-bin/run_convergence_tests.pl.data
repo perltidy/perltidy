@@ -12762,6 +12762,21 @@ $config = {
 --variable-maximum-line-length
 --break-at-trailing-comma-types='m'
 
+==> b1518.in <==
+$apple_encodings[1][$i] = { map ( { $_ => $count++ }
+                       @{ $apple_encodings[0][$i] } ) };
+
+$apple_encodings[1][$i] = {
+         map ( { $_ => $count++ } @{ $apple_encodings[0][$i] } )
+};
+
+==> b1518.par <==
+--maximum-line-length=56
+--indent-columns=8
+--line-up-parentheses
+--variable-maximum-line-length
+--square-bracket-vertical-tightness-closing=2
+
 ==> b156.in <==
 # State 1
 {

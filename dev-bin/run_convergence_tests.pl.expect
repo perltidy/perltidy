@@ -5047,9 +5047,8 @@ $bc[
 
 # S2
 $bc[
-  ord (
-            substr ( $P, $i, 1 ) ) ]
-  = $j--;
+  ord ( substr ( $P, $i, 1 ) )
+] = $j--;
 
 ==> b1210 <==
 # S1
@@ -8599,6 +8598,13 @@ $config =
   { colors => {
          default => "D0FFD0",
   } };
+
+==> b1518 <==
+$apple_encodings[1][$i] = { map ( { $_ => $count++ }
+                       @{ $apple_encodings[0][$i] } ) };
+
+$apple_encodings[1][$i] = { map ( { $_ => $count++ }
+                       @{ $apple_encodings[0][$i] } ) };
 
 ==> b156 <==
 # State 1

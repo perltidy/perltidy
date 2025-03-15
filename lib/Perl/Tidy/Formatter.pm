@@ -34034,16 +34034,8 @@ sub do_colon_breaks {
                 }
             }
 
-            # boost tol for combination -lp and any -vtc > 0, but only for
-            # non-list containers
-            else {
-                foreach ( keys %closing_vertical_tightness ) {
-                    next
-                      unless ( $closing_vertical_tightness{$_} );
-                    $lp_tol_boost = 1;    # Fixes B1193;
-                    last;
-                }
-            }
+            # Note: previously there was a fix for b1193 here, but it is
+            # no longer needed, and has been removed to fix b1518.
         }
 
         # Define a level where list formatting becomes highly stressed and
