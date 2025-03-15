@@ -20,6 +20,11 @@ use warnings;
 #  run_spell_check.pl
 #    if no args, cd's to perltidy git and spell checks files in MANIFEST
 
+# TODO:
+#  include all .pod and .pl files
+#  include .md files
+#  report repeated words
+
 use File::Copy;
 use File::Temp qw(tempfile);
 use Data::Dumper;
@@ -68,11 +73,15 @@ EOM
 
     if ( !@{$rfiles} ) { die $usage }
 
+    my $list_file_count = 0;
     foreach my $file ( @{$rfiles} ) {
         if ( !-e $file ) { print "$file does not exist\n"; next }
-        spell_check($file);
+        my $list_file_remains = spell_check($file);
+        $list_file_count += 1 if ($list_file_remains);
     }
-    query("Hit <cr> to continue\n");
+    query(
+"Spell check done.. $list_file_count '.tmp' files to be checked. Hit <cr>\n"
+    );
     return;
 } ## end sub main
 
@@ -159,6 +168,8 @@ sub find_git_home {
 sub spell_check {
     my ($source) = @_;
 
+    # return 1 if a tempfile was left for further work
+
     print "Checking $source..";
 
     if ( !-e $source ) {
@@ -188,7 +199,7 @@ sub spell_check {
     );
 
     if ( !@{$rdestination} ) {
-        print "..no new words found\n";
+        print "..OK\n";
     }
     else {
 
@@ -207,12 +218,14 @@ sub spell_check {
 
         # Decide what to do
         if ( !-e $list_file || -z $list_file ) {
-            print "..no unknown words found\n";
+            print "..OK\n";
+            if ( -e $list_file ) { unlink($list_file) }
             return;
         }
         else {
             print "\n";
             handle_unknown_words( $list_file, $dot_spell_file, $rwords );
+            if ( -e $list_file ) { return 1 }
         }
     }
     return;
@@ -440,33 +453,8 @@ sub openurl {
 #####################################################################
 #
 # The PerlSpell package is an interface to perltidy which accepts a
-# source filehandle and returns a 'masked' version of the source as
-# a string or array.  It can also optionally return the original file
-# as a string or array.
-#
-# It works by making a callback object with a write_line() method to
-# receive tokenized lines from perltidy.  This write_line method
-# selectively replaces tokens with either their original text or with a
-# benign masking character (such as '#' or 'Q').
-#
-# Usage:
-#
-#   PerlSpell::perlspell(
-#       _source         => $fh,             # required source
-#       _rmasked_file   => \$masked_file,   # required ref to ARRAY or SCALAR
-#       _roriginal_file => \$original_file, # optional ref to ARRAY or SCALAR
-#       _compression    => $opt_c           # optional
-#   );
-#
-# _source is any source that perltidy will accept, including a
-# filehandle or reference to SCALAR or ARRAY
-#
-# The compression flag may have these values:
-#  0 all mask file line numbers and character positions agree with
-#    original file (DEFAULT)
-#  1 line numbers agree and character positions agree within lines of code
-#  2 line numbers agree but character positions do not
-#  3 no correspondence between line numbers or character positions
+# source filehandle and returns list of words found in quotes, comments,
+# pod, and here-docs.
 #
 #####################################################################
 
@@ -485,7 +473,8 @@ my (
 
 sub store_text {
     my ($text) = @_;
-    my @words  = split /\s+/, $text;
+##  my @words  = split /\s+/, $text;
+    my @words = split /[\s\.\(\)\;\,\-\!\?\"\:]+/, $text;
     foreach my $word (@words) {
         next if ( $word !~ /^[A-Za-z]+$/ || length($word) < 2 );
         $word_hash{$word}++;

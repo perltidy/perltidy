@@ -4256,6 +4256,7 @@ sub generate_options {
         'nokeyword-group-blanks' => [qw(kgbb=1 nkgbi kgba=1)],
         'nkgb'                   => [qw(kgbb=1 nkgbi kgba=1)],
 
+        # allow spelling error 'trinary' vs 'ternary'
         'break-at-old-trinary-breakpoints' => [qw(bot)],
 
         'cti=0' => [qw(cpi=0 cbi=0 csbi=0)],
