@@ -499,7 +499,7 @@
 
         perltidy -wvt='r s' somefile.pl
 
-      will check for and warn if any variabls of type 'r', or 's' are seen,
+      will check for and warn if any variables of type 'r', or 's' are seen,
       but not 'p'. All possible checks may be indicated with a '*' or '1':
 
         perltidy -wvt='*' somefile.pl
@@ -1800,7 +1800,7 @@
 
     - RT #128280, added flag --one-line-block-semicolons=n (-olbs=n) 
       to control semicolons in one-line blocks.  The values of n are:
-        n=0 means no semicolons termininating simple one-line blocks
+        n=0 means no semicolons terminating simple one-line blocks
         n=1 means stable; do not change from input file [DEFAULT and current]
         n=2 means always add semicolons in one-line blocks
       The current behavior corresponds to the default n=1.
@@ -1829,7 +1829,7 @@
       sequences of selected keywords. This can be activated with the -kgb* 
       series of parameters described in the manual.
 
-    - Rewrote vertical algnment module.  It is better at finding
+    - Rewrote vertical alignment module.  It is better at finding
       patterns in complex code. For example,
 
 	OLD:
@@ -2134,7 +2134,7 @@
       Wittkowski.
 
     - Minor improvements to formatting, in which some additional vertical
-      aligmnemt is done. Thanks to Keith Neargarder.
+      alignmemt is done. Thanks to Keith Neargarder.
 
     - RT #119588.  Vertical alignment is no longer done for // operator.
 
@@ -2246,7 +2246,7 @@
        inadvertently introduced in previous bug fix RT #98902. 
 
      - Some common extensions to Perl syntax are handled better.
-       In particular, the following snippet is now foratted cleanly:
+       In particular, the following snippet is now formatted cleanly:
 
          method deposit( Num $amount) {
              $self->balance( $self->balance + $amount );
@@ -2267,7 +2267,7 @@
 
      - Fixed RT# 101547, misparse of // caused error message.  Also..
 
-     - Fixed RT# 102371, misparse of // caused unwated space in //=
+     - Fixed RT# 102371, misparse of // caused unwanted space in //=
 
      - Fixed RT# 100871, "silent failure of HTML Output on Windows". 
        Changed calls to tempfile() from:
@@ -3714,8 +3714,8 @@
      has been added to follow breaks at old keywords which return lists,
      such as sort and map.  This is the default.
 
-    -A new flag -bot (--break-at-old-trinary-breakpoints) has been added to
-     follow breaks at trinary (conditional) operators.  This is the default.
+    -A new flag -bot (--break-at-old-ternary-breakpoints) has been added to
+     follow breaks at ternary (conditional) operators.  This is the default.
 
     -A new flag -cab=n has been added to control breaks at commas after
      '=>' tokens.  The default is n=1, meaning break unless this breaks
@@ -4633,11 +4633,11 @@
            exists $self->{'build_dir'}
              and push @e, "Unwrapped into directory $self->{'build_dir'}";
 
-    -Fixed error of multiple use of abbreviatioin '-dsc'.  -dsc remains 
-    abbreviation for delete-side-comments; -dsm is new abbreviation for 
+    -Fixed error of multiple use of abbreviation '-dsc'.  -dsc remains
+    abbreviation for delete-side-comments; -dsm is new abbreviation for
     delete-semicolons.
 
-    -Corrected and updated 'usage' help routine.  Thanks to Slaven Rezic for 
+    -Corrected and updated 'usage' help routine.  Thanks to Slaven Rezic for
     noting an error.
 
     -The default for Windows is, for now, not to do a 'perl -c' syntax
@@ -4658,7 +4658,7 @@
                    print "Bye, bye baby!\n";
                    unlink $0;
            }
-           
+
     The new version will not let that happen.
 
     -I am contemplating (but have not yet implemented) making '-lp' the
@@ -4667,15 +4667,15 @@
     reason that '-lp' was not the original default is that the coding for
     it was complex and not ready for the initial release of perltidy.  If
     anyone has any strong feelings about this, I'd like to hear.  The
-    current default could always be recovered with the '-nlp' flag.  
+    current default could always be recovered with the '-nlp' flag.
 
-## 2001 09 03 
+## 2001 09 03
 
     -html updates:
-        - sub definition names are now specially colored, red by default.  
+        - sub definition names are now specially colored, red by default.
           The letter 'm' is used to identify them.
         - keyword 'sub' now has color of other keywords.
-        - restored html keyword color to __END__ and __DATA__, which was 
+        - restored html keyword color to __END__ and __DATA__, which was
           accidentally removed in the previous version.
 
     -A new -se (--standard-error-output) flag has been implemented and
@@ -4690,13 +4690,13 @@
      NOTE: This replaces an undocumented -w=0 or --warning-level flag
      which was tentatively introduced in the previous version to avoid some
      unwanted messages.  The new default is the same as the old -w=0, so
-     that is no longer needed. 
+     that is no longer needed.
 
      -Improved syntax checking and corrected tokenization of functions such
      as rand, srand, sqrt, ...  These can accept either an operator or a term
      to their right.  This has been corrected.
-    
-    -Corrected tokenization of semicolon: testing of the previous update showed 
+ 
+    -Corrected tokenization of semicolon: testing of the previous update showed
     that the semicolon in the following statement was being mis-tokenized.  That
     did no harm, other than adding an extra blank space, but has been corrected.
 
@@ -4705,7 +4705,7 @@
              }
 
     -New syntax check: after wasting 5 minutes trying to resolve a syntax
-     error in which I had an extra terminal ';' in a complex for (;;) statement, 
+     error in which I had an extra terminal ';' in a complex for (;;) statement,
      I spent a few more minutes adding a check for this in perltidy so it won't
      happen again.
 
@@ -4772,7 +4772,7 @@
                            $biblionumber, $constraint,
                            $bibitems
                            );
-    
+ 
     The updated version doesn't do this unless the space is really needed:
 
     new: my $fee = CalcReserveFee(
@@ -4802,10 +4802,10 @@
 
     -Made update to allow underscores in binary numbers, like '0b1100_0000'.
 
-    -Corrected problem with scanning certain module names; a blank space was 
+    -Corrected problem with scanning certain module names; a blank space was
     being inserted after 'warnings' in the following:
        use warnings::register;
-    The problem was that warnings (and a couple of other key modules) were 
+    The problem was that warnings (and a couple of other key modules) were
     being tokenized as keywords.  They should have just been identifiers.
 
     -Corrected tokenization of indirect objects after sort, system, and exec,
@@ -4814,7 +4814,7 @@
        print sort $sortsubref @list;
 
     -Corrected minor problem where a line after a format had unwanted
-    extra continuation indentation.  
+    extra continuation indentation.
 
     -Delete-block-comments (and -dac) now retain any leading hash-bang line
 
@@ -4827,7 +4827,7 @@
                         lastName  => undef,
                         hireDay   => $hireDay
                         };
-       
+
      new:  my $hireDay = new Date;
            my $self = {
                         firstName => undef,
@@ -4851,24 +4851,24 @@
 
                for ($i = 0 ; $i < length $key ; $i++ )
 
-    The formatting for this should be, and now is: 
+    The formatting for this should be, and now is:
 
                for ($i = 0 ; $i < length $key ; $i++)
 
     Thanks to Erik Thaysen for noting this.
 
-    -Discovered a new bug involving here-docs during testing!  See BUGS.html.  
+    -Discovered a new bug involving here-docs during testing!  See BUGS.html.
 
     -Finally fixed parsing of subroutine attributes (A Perl 5.6 feature).
     However, the attributes and prototypes must still be on the same line
     as the sub name.
 
-## 2001 07 31 
+## 2001 07 31
 
     -Corrected minor, uncommon bug found during routine testing, in which a
     blank got inserted between a function name and its opening paren after
     a file test operator, but only in the case that the function had not
-    been previously seen.  Perl uses the existence (or lack thereof) of 
+    been previously seen.  Perl uses the existence (or lack thereof) of
     the blank to guess if it is a function call.  That is,
        if (-l pid_filename()) {
     became
@@ -4876,8 +4876,8 @@
     which is a syntax error if pid_filename has not been seen by perl.
 
     -If the AutoLoader module is used, perltidy will continue formatting
-    code after seeing an __END__ line.  Use -nlal to deactivate this feature.  
-    Likewise, if the SelfLoader module is used, perltidy will continue 
+    code after seeing an __END__ line.  Use -nlal to deactivate this feature.
+    Likewise, if the SelfLoader module is used, perltidy will continue
     formatting code after seeing a __DATA__ line.  Use -nlsl to
     deactivate this feature.  Thanks to Slaven Rezic for this suggestion.
 
@@ -4892,7 +4892,7 @@
     given favorable results.  Thanks to Wolfgang Weisselberg for helpful
     examples.
 
-## 2001 07 23 
+## 2001 07 23
 
     -Fixed a very rare problem in which an unwanted semicolon was inserted
     due to misidentification of anonymous hash reference curly as a code
@@ -4902,7 +4902,7 @@
 
     -Added -icb (-indent-closing-brace) parameter to indent a brace which
     terminates a code block to the same level as the previous line.
-    Suggested by Andrew Cutler.  For example, 
+    Suggested by Andrew Cutler.  For example,
 
            if ($task) {
                yyy();
@@ -4921,13 +4921,13 @@
          elsif ( $something eq "hard" )    { &handle_hard }
     (Suggested by  Wolfgang Weisselberg).
 
-## 2001 07 02 
+## 2001 07 02
 
     -Eliminated all constants with leading underscores because perl 5.005_03
     does not support that.  For example, _SPACES changed to XX_SPACES.
     Thanks to kromJx for this update.
 
-## 2001 07 01 
+## 2001 07 01
 
     -the directory of test files has been moved to a separate distribution
     file because it is getting large but is of little interest to most users.
@@ -4935,7 +4935,7 @@
       perltidy-20010701.tgz        contains the source and docs for perltidy
       perltidy-20010701-test.tgz   contains the test files
 
-    -fixed bug where temporary file perltidy.TMPI was not being deleted 
+    -fixed bug where temporary file perltidy.TMPI was not being deleted
     when input was from stdin.
 
     -adjusted line break logic to not break after closing brace of an
@@ -4987,7 +4987,7 @@
     podchecker happy (Suggested by Manfred H. Winter).  This appears to be
     a glitch in podchecker, but it was annoying.
 
-## 2001 06 17  
+## 2001 06 17
 
     -Added -bli flag to give continuation indentation to braces, like this
 
@@ -5006,7 +5006,7 @@
     $^W =1 to BEGIN {$^W=1} to use warnings in compile phase, and corrected
     several unnecessary 'my' declarations. Many thanks to Wolfgang Weisselberg,
     2001-06-12, for catching these errors.
-    
+ 
     -A '-bar' flag has been added to require braces to always be on the
     right, even for multi-line if and foreach statements.  For example,
     the default formatting of a long if statement would be:
@@ -5030,14 +5030,14 @@
     -An '-lp' flag (--line-up-parentheses) has been added which causes lists
     to be indented with extra indentation in the manner sometimes
     associated with emacs or the GNU suggestions.  Thanks to Ian Stuart for
-    this suggestion and for extensive help in testing it. 
+    this suggestion and for extensive help in testing it.
 
     -Subroutine call parameter lists are now formatted as other lists.
     This should improve formatting of tables being passed via subroutine
     calls.  This will also cause full indentation ('-i=n, default n= 4) of
     continued parameter list lines rather than just the number of spaces
     given with -ci=n, default n=2.
-    
+ 
     -Added support for hanging side comments.  Perltidy identifies a hanging
     side comment as a comment immediately following a line with a side
     comment or another hanging side comment.  This should work in most
@@ -5045,14 +5045,14 @@
     The manual has been updated to discuss this.  Suggested by Brad
     Eisenberg some time ago, and finally implemented.
 
-## 2001 06 08  
+## 2001 06 08
 
     -fixed problem with parsing command parameters containing quoted
     strings in .perltidyrc files. (Reported by Roger Espel Llima 2001-06-07).
 
-    -added two command line flags, --want-break-after and 
+    -added two command line flags, --want-break-after and
     --want-break-before, which allow changing whether perltidy
-    breaks lines before or after any operators.  Please see the revised 
+    breaks lines before or after any operators.  Please see the revised
     man pages for details.
 
     -added system-wide configuration file capability.
@@ -5062,24 +5062,24 @@
     (Suggested by Roger Espel Llima 2001-05-31).
 
     -fixed problem in which spaces were trimmed from lines of a multi-line
-    quote. (Reported by Roger Espel Llima 2001-05-30).  This is an 
+    quote. (Reported by Roger Espel Llima 2001-05-30).  This is an
     uncommon situation, but serious, because it could conceivably change
     the proper function of a script.
 
-    -fixed problem in which a semicolon was incorrectly added within 
+    -fixed problem in which a semicolon was incorrectly added within
     an anonymous hash.  (Reported by A.C. Yardley, 2001-5-23).
     (You would know if this happened, because perl would give a syntax
     error for the resulting script).
 
     -fixed problem in which an incorrect error message was produced
-     after a version number on a 'use' line, like this ( Reported 
+     after a version number on a 'use' line, like this ( Reported
      by Andres Kroonmaa, 2001-5-14):
 
                  use CGI 2.42 qw(fatalsToBrowser);
 
      Other than the extraneous error message, this bug was harmless.
 
-## 2001 04 06 
+## 2001 04 06
 
     -fixed serious bug in which the last line of some multi-line quotes or
      patterns was given continuation indentation spaces.  This may make
@@ -5091,7 +5091,7 @@
      ** So, please check previously formatted scripts by running with -chk
      at least once **
 
-    -continuation indentation has been reprogrammed to be hierarchical, 
+    -continuation indentation has been reprogrammed to be hierarchical,
      which improves deeply nested structures.
 
     -fixed problem with undefined value in list formatting (reported by Michael
@@ -5108,7 +5108,7 @@
            $mw->Label(
              -text   => "perltidy",
              -relief => 'ridge')->pack;
-    
+ 
      the current default is:
 
            $mw->Label(
@@ -5116,33 +5116,33 @@
              -relief => 'ridge'
            )->pack;
 
-     (requested by Michael Langner 2001-03-31; in the future this could 
+     (requested by Michael Langner 2001-03-31; in the future this could
      be controlled by a command-line parameter).
 
     -revised list indentation logic, so that lists following an assignment
-     operator get one full indentation level, rather than just continuation 
-     indentation.  Also corrected some minor glitches in the continuation 
-     indentation logic. 
+     operator get one full indentation level, rather than just continuation
+     indentation.  Also corrected some minor glitches in the continuation
+     indentation logic.
 
-    -Fixed problem with unwanted continuation indentation after a blank line 
+    -Fixed problem with unwanted continuation indentation after a blank line
     (reported by Erik Thaysen 2001-03-28):
 
     -minor update to avoid stranding a single '(' on one line
 
 ## 2001 03 28:
 
-    -corrected serious error tokenizing filehandles, in which a sub call 
+    -corrected serious error tokenizing filehandles, in which a sub call
     after a print or printf, like this:
        print usage() and exit;
     became this:
        print usage () and exit;
     Unfortunately, this converts 'usage' to a filehandle.  To fix this, rerun
-    perltidy; it will look for this situation and issue a warning. 
+    perltidy; it will look for this situation and issue a warning.
 
     -fixed another cuddled-else formatting bug (Reported by Craig Bourne)
 
     -added several diagnostic --dump routines
-    
+ 
     -added token-level whitespace controls (suggested by Hans Ecke)
 
 ## 2001 03 23:
@@ -5162,14 +5162,14 @@
 
     -added missing -html documentation for comments (noted by Alex Izvorski)
 
-    -support for VMS added (thanks to Michael Cartmell for code patches and 
+    -support for VMS added (thanks to Michael Cartmell for code patches and
       testing)
 
     -v-strings implemented (noted by Hans Ecke and Michael Cartmell; extensive
       testing by Michael Cartmell)
 
-    -fixed problem where operand may be empty at line 3970 
-     (\b should be just b in lines 3970, 3973) (Thanks to Erik Thaysen, 
+    -fixed problem where operand may be empty at line 3970
+     (\b should be just b in lines 3970, 3973) (Thanks to Erik Thaysen,
      Keith Marshall for bug reports)
 
     -fixed -ce bug (cuddled else), where lines like '} else {' were indented

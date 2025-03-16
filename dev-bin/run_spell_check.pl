@@ -21,16 +21,14 @@ use warnings;
 #    if no args, cd's to perltidy git and spell checks files in MANIFEST
 
 # TODO:
-#  include all .pod and .pl files
-#  include .md files
+#  include .pod .md files not in MANIFEST
 #  report repeated words
+#  add 'Y-all' comment for new install
 
 use File::Copy;
 use File::Temp qw(tempfile);
 use Data::Dumper;
-use Cwd         qw(getcwd);
-use Digest::MD5 qw(md5_hex);
-use Encode      ();
+use Cwd qw(getcwd);
 
 use constant EMPTY_STRING => q{};
 $| = 1;
@@ -79,9 +77,11 @@ EOM
         my $list_file_remains = spell_check($file);
         $list_file_count += 1 if ($list_file_remains);
     }
-    query(
-"Spell check done.. $list_file_count '.tmp' files to be checked. Hit <cr>\n"
-    );
+    my $warning = EMPTY_STRING;
+    if ($list_file_count) {
+        $warning = "Note: $list_file_count .tmp files saved for checking.";
+    }
+    query("Spell check done.. $warning Hit <cr>");
     return;
 } ## end sub main
 
@@ -97,14 +97,14 @@ sub read_MANIFEST {
     foreach my $line (<$fh>) {
         chomp $line;
         next unless ($line);
-        my @parts = split '/', $line;
-        if ( $parts[0] eq 'bin' && $parts[-1] eq 'perltidy' ) {
-            push @files, $line;
+        my @parts    = split '/', $line;
+        my $basename = $parts[-1];
+        if ( ( $parts[0] eq 'bin' && $basename eq 'perltidy' )
+            || $basename =~ /\.(?:pm|pod|pl|md)$/ )
+        {
+            if ( -e $line ) { push @files, $line }
             next;
         }
-        if ( $parts[0] ne 'lib' )     { next }
-        if ( $parts[-1] !~ /\.pm$/i ) { next }
-        if ( -e $line )               { push @files, $line }
     }
     return \@files;
 } ## end sub read_MANIFEST
@@ -177,35 +177,24 @@ sub spell_check {
         return;
     }
 
-    # read a list of words for this file, if any
-    my $rwords         = [];
+    # Read a list of known words from the .spell for this file, if any
+    my $rknown_words   = [];
     my $dot_spell_file = "$source.spell";
     if ( -e $dot_spell_file ) {
-        $rwords = read_word_file($dot_spell_file);
+        $rknown_words = read_word_file($dot_spell_file);
     }
 
-    # This will hold the words
-    my $rdestination = [];
+    # Scan the source for words, and remove any in the .spell list
+    my $rfiltered_source = read_source_file( $source, $rknown_words );
 
-    # spell check $file
-    PerlSpell::perlspell(
-        _source         => $source,
-        _rdestination   => $rdestination,
-        _want_quotes    => 1,
-        _want_here_text => 1,
-        _want_pod       => 1,
-        _want_comments  => 1,
-        _rknown_words   => $rwords,
-    );
-
-    if ( !@{$rdestination} ) {
+    if ( !@{$rfiltered_source} ) {
         print "..OK\n";
     }
     else {
 
         # Make a temporary file of words not in the .spell dictionary
         my ( $fh_uu, $words_file ) = tempfile();
-        my $string = join "\n", @{$rdestination};
+        my $string = join "\n", @{$rfiltered_source};
         write_file( $words_file, $string );
 
         # This will be the file of words unknown to aspell
@@ -224,7 +213,7 @@ sub spell_check {
         }
         else {
             print "\n";
-            handle_unknown_words( $list_file, $dot_spell_file, $rwords );
+            handle_unknown_words( $list_file, $dot_spell_file, $rknown_words );
             if ( -e $list_file ) { return 1 }
         }
     }
@@ -251,21 +240,23 @@ sub handle_unknown_words {
 
     while (1) {
         print <<EOM;
-Found $num_new unknown words in $list_file. Please select an option:
-Please review this list and select one of these options:
+Found $num_new unknown words in $list_file. Please review this list.
+Are all words in the list spelled correctly? [Y/N]:
 
-M  - ALL OK:  Merge these new words into the '.spell' list for this file,
-              save a backup of the previous '.spell' file as '.spell.bak',
-              remove the file with new words '$list_file'. 
-X  - FIX LATER:
-              You can review the new words in '$list_file' later, and
-              fix any misspellings in the source, and
-              rerun this program and select 'M' if everything looks good.
-              NOTE: for suggestions, try 'aspell -c $list_file', answer 'i' 
-              to keep from adding words to the local aspell word list.
+Y - Yes all OK:
+      Merge these new words into the '.spell' list for this file,
+      save a backup of the previous '.spell' file as '.spell.bak',
+      remove the file with new words '$list_file'. 
+N - No, there are some mispellings
+      You can review the new words in '$list_file' later, and
+      fix any misspellings in the source, and
+      rerun this program and select 'Y' when everything looks good.
+      NOTE: for suggestions, try: 
+           'aspell -c $list_file'
+      answer 'i' to keep from adding words to the local aspell word list.
 EOM
         my $ans = queryu(":");
-        if ( $ans eq 'M' ) {
+        if ( $ans eq 'Y' ) {
             push @words, @{$rwords};
             foreach (@words) { chomp }
             @words = sort { $a cmp $b } @words;
@@ -277,7 +268,7 @@ EOM
             unlink($list_file);
             last;
         }
-        elsif ( $ans eq 'X' ) {
+        elsif ( $ans eq 'N' ) {
             last;
         }
         else {
@@ -308,6 +299,64 @@ sub read_word_file {
     }
     return \@words;
 } ## end sub read_word_file
+
+sub read_source_file {
+
+    my ( $source, $rknown_words ) = @_;
+
+    # Scan the source for words, and remove any in the .spell list
+
+    # This will hold the unknnown words
+    my $rdestination = [];
+
+    if ( $source =~ /\.md$/ ) {
+        $rdestination = scan_markdown_file( $source, $rknown_words );
+    }
+    else {
+
+        # perl file
+        PerlSpell::perlspell(
+            _source         => $source,
+            _rdestination   => $rdestination,
+            _want_quotes    => 1,
+            _want_here_text => 1,
+            _want_pod       => 1,
+            _want_comments  => 1,
+            _rknown_words   => $rknown_words,
+        );
+    }
+    return $rdestination;
+} ## end sub read_source_file
+
+sub scan_markdown_file {
+    my ( $source, $rknown_words ) = @_;
+    my $runknown_words = [];
+    if ( !-e $source ) {
+        return [];
+    }
+
+    my %is_known_word;
+    if ($rknown_words) {
+        @is_known_word{ @{$rknown_words} } = (1) x scalar( @{$rknown_words} );
+    }
+    my $string = slurp_file($source);
+
+    # TODO: filter out lines with fixed format blocks and reform string
+
+    my @words = split /[\s\*\_\.\(\)\;\,\-\!\?\"\:]+/, $string;
+
+    my %word_hash;
+    foreach my $word (@words) { 
+        next if ( $word !~ /^[A-Za-z]+$/ || length($word) < 2 );
+        next if ( $is_known_word{$word} );
+        $word_hash{$word}++ 
+    }
+
+    foreach my $word ( keys %word_hash ) {
+        push @{$runknown_words}, "$word, $word_hash{$word}";
+    }
+    return $runknown_words;
+} ## end sub scan_markdown_file
 
 sub write_file_with_backup {
     my ( $fname, $ostring ) = @_;
@@ -415,20 +464,6 @@ sub write_file {
     print STDERR "Wrote $fname\n" if ($msg);
     return;
 } ## end sub write_file
-
-sub digest_string {
-    my ($buf)  = @_;
-    my $octets = Encode::encode( "utf8", $buf );
-    my $digest = md5_hex($octets);
-    return $digest;
-} ## end sub digest_string
-
-sub digest_file {
-    my ($file) = @_;
-    my $buf    = slurp_file($file);
-    my $digest = digest_string($buf);
-    return $digest;
-} ## end sub digest_file
 
 sub openurl {
     my $url      = shift;

@@ -137,7 +137,7 @@ but it can lead to a large number of intermediate files being saved and it be
 hard to recreate a problem if intermediate files are not saved.
 
 Use the menu to make changes, then when everything looks ok enter ```W```. This
-will write a configuation file ```config.txt``` with this information.  You can
+will write a configuration file ```config.txt``` with this information.  You can
 edit this config file to make more changes, or you can rerun the setup script
 which will find it and read it.
 
