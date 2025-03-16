@@ -22,8 +22,8 @@ use warnings;
 
 # TODO:
 #  include .pod .md files not in MANIFEST
+#  allow wildcard file matches
 #  report repeated words
-#  add 'Y-all' comment for new install
 
 use File::Copy;
 use File::Temp qw(tempfile);
@@ -71,17 +71,19 @@ EOM
 
     if ( !@{$rfiles} ) { die $usage }
 
-    my $list_file_count = 0;
+    my @residual_tmp_files;
     foreach my $file ( @{$rfiles} ) {
         if ( !-e $file ) { print "$file does not exist\n"; next }
-        my $list_file_remains = spell_check($file);
-        $list_file_count += 1 if ($list_file_remains);
+        my $tmp_file = spell_check($file);
+        push @residual_tmp_files, $tmp_file if ($tmp_file);
     }
-    my $warning = EMPTY_STRING;
-    if ($list_file_count) {
-        $warning = "Note: $list_file_count .tmp files saved for checking.";
+    if (@residual_tmp_files) {
+        print "Please review these files and rerun..\n";
+        foreach my $file (@residual_tmp_files) {
+            print "$file\n";
+        }
     }
-    query("Spell check done.. $warning Hit <cr>");
+    query("Spell check done; Hit <cr>");
     return;
 } ## end sub main
 
@@ -214,7 +216,7 @@ sub spell_check {
         else {
             print "\n";
             handle_unknown_words( $list_file, $dot_spell_file, $rknown_words );
-            if ( -e $list_file ) { return 1 }
+            if ( -e $list_file ) { return $list_file }
         }
     }
     return;
@@ -346,10 +348,10 @@ sub scan_markdown_file {
     my @words = split /[\s\*\_\.\(\)\;\,\-\!\?\"\:]+/, $string;
 
     my %word_hash;
-    foreach my $word (@words) { 
+    foreach my $word (@words) {
         next if ( $word !~ /^[A-Za-z]+$/ || length($word) < 2 );
         next if ( $is_known_word{$word} );
-        $word_hash{$word}++ 
+        $word_hash{$word}++;
     }
 
     foreach my $word ( keys %word_hash ) {

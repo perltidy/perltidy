@@ -25,7 +25,7 @@ use Perl::Tidy;
 # Debugging hints:
 # 1. Try commenting out the postfilter and running with
 # the --notidy option to see what the prefilter alone is doing.
-# 2. Then run with both pre- and post ters with --notidy to be sure
+# 2. Then run with both pre- and post filters with --notidy to be sure
 # that the postfilter properly undoes the prefilter.
 
 my $arg_string = undef;

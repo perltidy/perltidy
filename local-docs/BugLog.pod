@@ -877,7 +877,7 @@ This fixes case b1183.
 =item B<Fix edge case of formatting instability, b1184>.
 
 Testing with random parameters produced a case of welding instability involving
-a tripple weld with parameters -wn, -vt=n, -lp. This update fixes the problem.
+a triple weld with parameters -wn, -vt=n, -lp. This update fixes the problem.
 
 This fixes case b1184.
 
@@ -897,7 +897,7 @@ This fixes case b1182.
 
 Random testing with random input parameters produced cases of formatting
 instability involving welding with unusual parameter settings. This update
-makes a small tolarance adjustment to fix it.
+makes a small tolerance adjustment to fix it.
 
 This fixes cases b1180 b1181.
 
@@ -1191,7 +1191,7 @@ So far, so good. But for the combination -bbsb=3 -wn we get
         "vendredi", "samedi", "dimanche"
     ] ];
 
-which is incorrect because it ignors the -bbsb flag.  The corrected result is
+which is incorrect because it ignores the -bbsb flag.  The corrected result is
 
     # NEW: OK
     # -sil=1 -bbsb=3 -wn
@@ -1273,7 +1273,7 @@ This is fixed in this update, case c038.
 
 =item B<Fix case b1172, a failure to converge>
 
-Random testing produced case b1172, a failure to converge with unusual parametrs.
+Random testing produced case b1172, a failure to converge with unusual parameters.
 This update fixes this case. There are no other known cases of instability
 at the present time but testing continues.
 
@@ -1343,7 +1343,7 @@ update, case c042.
 =item B<Fix problem caused by side comment after pointer, part 2>
 
 This is related to the previous issue, c037.  The following snippet was misparsed
-at the old style ' package separater due to the side comment following the
+at the old style ' package separator due to the side comment following the
 pointer.
 
     @ret
@@ -1527,7 +1527,7 @@ but automated testing runs continue to search for instabilities.
 
 =item B<Fixed use of uninitialized value>
 
-The previous Tokenizer update caused the use of an unitialized value when run on case b1053:
+The previous Tokenizer update caused the use of an uninitialized value when run on case b1053:
 
  Use of uninitialized value $next_nonblank_token in pattern match (m//) at /home/steve/bin/Perl/Tidy/Tokenizer.pm line 7589.
  Use of uninitialized value $nn_nonblank_token in pattern match (m//) at /home/steve/bin/Perl/Tidy/Tokenizer.pm line 3723.
@@ -1537,7 +1537,7 @@ This update fixes this.
 
 1 Jul 2021, ea139bd.
 
-=item B<Fix token type of colon introducing anonomyous sub attribute list>
+=item B<Fix token type of colon introducing anonymous sub attribute list>
 
 In the following example
 
@@ -1720,7 +1720,7 @@ This fixes an incorrect call which could cause an incorrect weld.
 
 Added a new option '--code-skipping', requested in git #65, in which code
 between comment lines '#<<V' and '#>>V' is passed verbatim to the output stream
-without error checking.  It is simmilar to --format skipping but there is no
+without error checking.  It is similar to --format skipping but there is no
 error checking, and is useful for skipping an extended syntax.
 
 16 Jun 2021, 99ec876.
@@ -1777,7 +1777,7 @@ and were fixed by refining a certain tolerance.  This fixes cases b1141, b1142.
 
 =item B<Remove incorrect warning at repeated function paren call>
 
-This update removes an incorrect error messagge at the construct ')('.  To illustrate,
+This update removes an incorrect error message at the construct ')('.  To illustrate,
 the following is a valid program:
 
     my @words = qw(To view this email as a web page go here);
@@ -1906,7 +1906,7 @@ This has been fixed. This fixes case c015.
 =item B<Added optional o in octal number definitions>
 
 An optional letter 'o' or 'O' in the octal representation of numbers, which was
-added in perl version 5.33.5, is now recogized.  The leading zero is still
+added in perl version 5.33.5, is now recognized.  The leading zero is still
 required.
 
 For example:
@@ -2349,7 +2349,7 @@ token is preceded by an '=' or '=>', and like n=1 otherwise.
 
 =item B<Fix vertical alignment issue in rt136416>
 
-This update fixes a problem with unwanted vertical alignment rasied in
+This update fixes a problem with unwanted vertical alignment raised in
 rt#136416.  The example is
 
     use File::Spec::Functions 'catfile', 'catdir';
@@ -2507,7 +2507,7 @@ using 'perl -cw' on this snippet gives a syntax error
     syntax error at /tmp/issues.t line 5, near "/( "
         (Might be a runaway multi-line // string starting on line 2)
 
-The error is due to perl's weird parsing rules near a possible indrect object.
+The error is due to perl's weird parsing rules near a possible indirect object.
 This is a situation where perltidy must ignore a user spacing and line break
 request.  This should have been done but in this case a flag to prevent this
 was not being propagated to later stages of formatting.  This has been fixed.
@@ -2630,7 +2630,7 @@ fixes case b1085.
 =item B<Unify coding for welded quotes and other welded containers>
 
 Random testing produced some cases where welded quotes were not converging.
-These were found to be due to the same problem previouly encountered and fixed
+These were found to be due to the same problem previously encountered and fixed
 for normal containers. The problem was fixed by moving the corrected coding
 to a new common sub.
 
@@ -2822,7 +2822,7 @@ This fixes case b1054.
 
 This is an correction to the update of 13 Mar 2021, 71adc77.  Random testing
 produced several additional problems with convergence involving the combination
--iob -lp.  This update fixes the problem by overriding -iob at some breakpoins
+-iob -lp.  This update fixes the problem by overriding -iob at some breakpoints
 which are essential to the -lp parameter.
 
 This update fixes these old cases: b1021 b1023
@@ -2855,7 +2855,7 @@ on each new call to perltidy.
 
 =item B<Fix rare problem with combination -lp -wn -naws>
 
-This update fixes case b1032 by includeing lines starting with 'if', 'or', and
+This update fixes case b1032 by including lines starting with 'if', 'or', and
 || among the stable breakpoints for welding when -lp -naws flags are also
 set.
 
@@ -3062,7 +3062,7 @@ Applying perltidy -pro=b990.pro to the following snippet gave two states
     print H
     ;
 
-The tokenizer was alternately parsing 'H' as either possble indirect object, 'Z',
+The tokenizer was alternately parsing 'H' as either possible indirect object, 'Z',
 or indirect object, 'Y'.  Two fixes were tested. The first was to modify
 the tokenizer to recognize a ';' as well as a space as a direct object
 terminator. An alternative fix is to not allowing a break before type 'Y'
@@ -3261,7 +3261,7 @@ This fixes case b977.
 
 =item B<Add weld rule to avoid conflict between -wn and -bom>
 
-Testing with ramdom input parameters produced states which were oscillating
+Testing with random input parameters produced states which were oscillating
 because of a conflict between the -wn and -bom parameters.  The problem
 was resolved by giving the -bom parameter priority over -wn.
 
@@ -3412,7 +3412,7 @@ fixes cases b434 b903.
 Random testing produced a case where a blank line after an =cut
 was alternately being deleted and added due to a conflict with
 the flag setting -keep-old-blank-lines=0.  This was resolved by giving
-prioritiy to the essential blank line after the =cut line.
+priority to the essential blank line after the =cut line.
 
 This fixes case b860. 11 Feb 2021, 8c13609.
 
@@ -4180,7 +4180,7 @@ a better result:
             );    # eps,p/e,div,yld,cap
         }
 
-The following exampel shows an unexpected alignment in the cascade of trailing
+The following example shows an unexpected alignment in the cascade of trailing
 comments which are aligned but slowly separating from their closing containers:
 
     # OLD:
@@ -4835,7 +4835,7 @@ be converted to be a hanging side comment.  For example:
         ...
     }
 
-For the following specific contitions the block comment in line 2 could be
+For the following specific conditions the block comment in line 2 could be
 converted into a hanging side comment, which is undesirable:
 
    1. The line contains nothing except for a '#' with no leading space
@@ -4855,7 +4855,7 @@ prevents it from becoming a hanging side comment. This fix was made 23 Nov
 A better test for convergence has been added. When iterations are requested,
 the new test will stop after the first pass if no changes in line break
 locations are made.  Previously, at least two passes were required to verify
-convergnece unless the output stream had the same checksum as the input stream.
+convergence unless the output stream had the same checksum as the input stream.
 Extensive testing has been made to verify the correctness of the new test.
 This update was made 23 Nov 2020, 29efb63.
 
@@ -4977,7 +4977,7 @@ In stress testing perltidy with the -extrude option, the following test snippet
 
   use perl6-alpha;
 
-was broken into sepate lines
+was broken into separate lines
 
   use
   perl6
@@ -5405,7 +5405,7 @@ The following message was generated when running perltidy on random text:
  Use of uninitialized value $cti in numeric eq (==) at /home/steve/bin/Perl/Tidy/Formatter.pm line 11936.
  Use of uninitialized value $cti in numeric eq (==) at /home/steve/bin/Perl/Tidy/Formatter.pm line 11944.
 
-This was fixed 13 Sep 2020 in 'fixed unitialized variable problem ', adb2096.
+This was fixed 13 Sep 2020 in 'fixed uninitialized variable problem ', adb2096.
 
 =item B<fixed uninitialized value reference>
 
@@ -5414,7 +5414,7 @@ The following message was generated when running perltidy on random text:
  substr outside of string at /home/steve/bin/Perl/Tidy/Tokenizer.pm line 7362.
  Use of uninitialized value in concatenation (.) or string at /home/steve/bin/Perl/Tidy/Tokenizer.pm line 7362.
 
-This was fixed 13 Sep 2020 in 'fixed unitialized variable problem', 5bf49a3.
+This was fixed 13 Sep 2020 in 'fixed uninitialized variable problem', 5bf49a3.
 
 =item B<fixed uninitialized value reference>
 
@@ -5442,7 +5442,7 @@ and 'improved hash-bang warning filter', fa84904.
 
 =item B<uninitialized index referenced>
 
-An unitialized index was referenced when running on a file of randomly generated text:
+An uninitialized index was referenced when running on a file of randomly generated text:
 
   Use of uninitialized value $K_oo in subtraction (-) at /home/steve/bin/Perl/Tidy/Formatter.pm line 7259.
 
@@ -5487,7 +5487,7 @@ This triggered the message:
  ==============================================================================
 
 The deletion of the extra, spaced, comma had created an extra space in the token array which
-had not been forseen in the original programming. It was fixed 10 Sep 2020 in
+had not been foreseen in the original programming. It was fixed 10 Sep 2020 in
 "fixed very rare fault found with automated testing", eb1b1d9.
 
 =item B<Error parsing deprecated $# variable>
@@ -5565,7 +5565,7 @@ Fixed 8 Sep 2020 in 'fixed rare problem with stored index values for -lp option'
 =item B<Line order switched at start of quoted text>
 
 This problem arose in several scripts involving the parameter
---line-up-parentheses pluse one or more of the vertical tightness flags.
+--line-up-parentheses plus one or more of the vertical tightness flags.
 It can be illustrated with the following snippet:
 
     perltidy --line-up-parentheses --paren-vertical-tightness=1
@@ -5656,7 +5656,7 @@ was corrected to be
 
 =item B<uninitialized value message, found 7 Sep 2020>
 
-Unitialized values were referenced.  An index was not being tested.
+Uninitialized values were referenced.  An index was not being tested.
 Fixed 8 Sep 2020 in "fix undefined variable", 9729965.
 
  Use of uninitialized value $Kon in array element at /home/steve/bin/Perl/Tidy/Formatter.pm line 4022.
@@ -5719,7 +5719,7 @@ Perl knows the prototype of the 'ok' function, which is called here without pare
 so the last comma marks the last arg and is needed to keep the || from attaching
 to the last arg.
 
-Full support of peren-less calls will probably never be implemented in perltidy
+Full support of paren-less calls will probably never be implemented in perltidy
 because it would require that it parse all of the modules used to find the
 prototypes.  This would make it impossible to run perltidy on small snippets of code
 from within an editor.

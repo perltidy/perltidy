@@ -242,7 +242,7 @@ sub read_perltidyrc {
     #   if not defined, Perl::Tidy will try to find the user's .perltidyrc
     # output parameters -
     #   $error_message will be blank unless an error occurs
-    #   $rOpts - reference to the hash of options in the .perlticyrc
+    #   $rOpts - reference to the hash of options in the .perltidyrc
     # NOTE:
     #   Perl::Tidy will croak or die on certain severe errors
 

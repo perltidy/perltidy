@@ -27,14 +27,19 @@ my $source_VERSION = $Perl::Tidy::VERSION;
 
 my $cpants_lint;
 my $perlcritic = 'perlcritic';
+my $perlver    = 'perlver';
 
 check_config();
 
 # These are the main steps, in approximate order, for making a new version
 # Note: Since perl critic is in the .tidyallrc, a separate 'PC' step is not
 # needed
-my $rsteps =
-  [qw( CHK SPELL CONV TOK SCAN MAN V YEAR PC TIDY T CL DOCS MANIFEST DIST )];
+my $rsteps = [
+    qw(
+        CHK SPELL CONV TOK SCAN MAN V YEAR PC TIDY T CL DOCS PERLVER MANIFEST
+        DIST
+    )
+];
 
 my $rstatus = {};
 foreach my $step ( @{$rsteps} ) { $rstatus->{$step} = 'TBD' }
@@ -49,6 +54,7 @@ my $rcode = {
     'MAN'      => \&check_man_pages,
     'V'        => \&update_version_number,
     'YEAR'     => \&update_copyright_date,
+    'PERLVER'  => \&run_perlver,
     'PC'       => \&run_perl_critic,
     'TIDY'     => \&run_tidyall,
     'SPELL'    => \&run_spell_check,
@@ -120,6 +126,13 @@ EOM
 Did not find 'perlcritic'
 EOM
     }
+    my $perlver_bin = `which $perlver`;
+    if ( !$perlver_bin ) {
+        $perlver = undef;
+        push @errors, <<EOM;
+Did not find 'perlver'
+EOM
+    }
 
     if (@errors) {
         print @errors;
@@ -147,6 +160,7 @@ pc       - run PerlCritic (critic only)    status: $rstatus->{'PC'}
 spell    - run spell check                 status: $rstatus->{'SPELL'}
 conv     - run convergence tests           status: $rstatus->{'CONV'}
 tok      - run tokenizer tests             status: $rstatus->{'TOK'}
+perlver  - run perlver                     status: $rstatus->{'PERLVER'}
 manifest - make MANIFEST                   status: $rstatus->{'MANIFEST'}
 t        - make Tests			   status: $rstatus->{'T'}
 cl       - review/edit CHANGES.md          status: $rstatus->{'CL'}
@@ -283,7 +297,33 @@ sub run_tokenizer_tests {
     return;
 } ## end sub run_tokenizer_tests
 
+sub run_perlver {
+
+    if ( !$perlver ) {
+        hitcr("'perlver' command not found, hit <cr>");
+        return;
+    }
+    my $pvoutput = "tmp/perlver.out";
+    $rstatus->{'PERLVER'} = 'TBD';
+
+    # running with parameters in .perlcritic
+    my $cmd = "$perlver lib/Perl/ >$pvoutput";
+    system_echo($cmd);
+
+    if ( !-e $pvoutput ) {
+        hitcr("Strange: cannot open '$pvoutput': $!.");
+        return;
+    }
+    $rstatus->{'PERVER'} = 'OK';
+    openurl("$pvoutput");
+    return;
+} ## end sub run_perlver
+
 sub run_perl_critic {
+    if ( !$perlcritic ) {
+        hitcr("'perlcritic' command not found, hit <cr>");
+        return;
+    }
     my $pcoutput = "tmp/perlcritic.out";
     $rstatus->{'PC'} = 'TBD';
 

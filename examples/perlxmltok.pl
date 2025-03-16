@@ -50,7 +50,7 @@ EOM
         'formatter'   => $formatter,     # callback object
         'source'      => $source,
         'destination' => \$dest,         # not really needed
-        'argv'        => "-npro -se",    # dont need .perltidyrc
+        'argv'        => "-npro -se",    # don't need .perltidyrc
                                          # errors to STDOUT
     );
     if ($err) {

@@ -77,7 +77,7 @@ sub autoformat_file {
     my $err = perltidy(
         'formatter' => $formatter,     # callback object
         'source'    => $fh,
-        'argv'      => "-npro -se",    # dont need .perltidyrc
+        'argv'      => "-npro -se",    # don't need .perltidyrc
                                        # errors to STDOUT
     );
     if ($err) {
