@@ -27871,7 +27871,7 @@ EOM
                     # NOTE: **This test can eventually be removed**
                     # The fix for b1515 prevents a phantom semicolon for
                     # a one-line block with -nasc, so this check has no effect.
-                    if ( $rOpts_space_terminal_semicolon
+                    if ( 0 && $rOpts_space_terminal_semicolon
                         && !$rOpts_add_semicolons )
                     {
                         my $Km = $self->K_previous_nonblank($Ktoken_vars);
