@@ -1173,7 +1173,7 @@
       -block-left-list=s, or -bll=s, and --block-left-exclusion-list=s,
       or -blxl=s.  Previously the -bl flag was 'hardwired' to apply to
       nearly all blocks. The default values of the new parameters
-      retain the the old default behavior but allow it to be changed.
+      retain the old default behavior but allow it to be changed.
 
     - The default behavior of the -bli (-brace-left-and-indent) flag has changed
       slightly.  Previously, if you set -bli, then the -bl flag would also
@@ -1269,7 +1269,7 @@
       with a newline character, regardless of whether or not the input stream
       was terminated with a newline character.  This is the default.
       If this flag is negated, with -natnl, then perltidy will add a terminal
-      newline character to the the output stream only if the input
+      newline character to the output stream only if the input
       stream is terminated with a newline.
 
     - Some nested structures formatted with the -lp indentation option may have
@@ -1904,7 +1904,7 @@
       to test this feature in an installation test.
 
     - Fixed bug with the entab option, -et=8, in which the leading space of
-      some lines was was not entabbed.  This happened in code which was adjusted
+      some lines was not entabbed.  This happened in code which was adjusted
       for vertical alignment and in hanging side comments. Thanks to Glenn.
 
     - Fixed RT #127633, undesirable line break after return when -baao flag is set
@@ -2460,7 +2460,7 @@
       The most common of these are 0 +  and + 0 which become 0+ and +0.  The
       operators currently modified by this flag are: 
            =( )=  0+  +0  ()x!! ~~<>  ,=>
-      Suggested by by Philippe Bruhat. See https://metacpan.org/module/perlsecret
+      Suggested by Philippe Bruhat. See https://metacpan.org/module/perlsecret
       This flag is off by default.
       
     - New flag -vmll (--variable-maximum-line-length) makes the maximum
@@ -4219,7 +4219,7 @@
     -Static block comments:  to provide a way to display commented code
      better, the convention is used that comments with a leading '##' should
      not be formatted as usual.  Please see '-sbc' (or '--static-block-comment')
-     for documentation.  It can be deactivated with with -nsbc, but
+     for documentation.  It can be deactivated with -nsbc, but
      should not normally be necessary. Thanks to Peter Masiar for this 
      suggestion.
 

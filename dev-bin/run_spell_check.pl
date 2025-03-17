@@ -2,15 +2,18 @@
 use strict;
 use warnings;
 
-# Spell check perltidy files:
-#   - Keep a list of previously found unique words for a file in filename.spell
+# Spell check perltidy files. How this works:
+#   - Keep a list of previously found unique words for each file in filename.spell
 #     and a backup of this in filename.spell.bak
-#   - These are local files, excluded from git and MANIFEST
+#   - These .spell files are excluded from git and MANIFEST
 #   - Find all words with the help of perltidy (quotes, comments, pod, here-docs)
 #   - Remove any of these already in the .spell file list
 #   - Run the remainder through aspell in list mode to find new unknown words
-#   - Fix any spelling errors
+#   - Ask user which of these need to be fixed
 #   - When no errors remain, add the new words to filename.spell
+
+# After an initial spell check, spell-checking all files takes only a few seconds
+# unless new spelling errors need to be corrected.
 
 # Requires 'aspell'
 
@@ -21,17 +24,19 @@ use warnings;
 #    if no args, cd's to perltidy git and spell checks files in MANIFEST
 
 # TODO:
-#  include .pod .md files not in MANIFEST
-#  allow wildcard file matches
-#  report repeated words
+#  improve search for doubled words
 
 use File::Copy;
 use File::Temp qw(tempfile);
 use Data::Dumper;
 use Cwd qw(getcwd);
 
-use constant EMPTY_STRING => q{};
 $| = 1;
+use constant EMPTY_STRING => q{};
+
+# This can be turned on for occasional checks for double words.
+# It works but still finds too many unwanted doubles.
+use constant FIND_DOUBLE_WORDS => 0;
 
 main();
 
@@ -58,18 +63,18 @@ EOM
     else {
         chomp $git_home;
         chdir $git_home;
-        my $MANIFEST = "MANIFEST";
-        if ( -e $MANIFEST && -f $MANIFEST ) {
-            $rfiles = read_MANIFEST($MANIFEST);
-            my $num = @{$rfiles};
-            print STDERR "Reading $MANIFEST...found $num files\n";
-            if ( ifyes("Do you want to select specific files? [Y/N]") ) {
-                $rfiles = select_files($rfiles);
-            }
+        $rfiles = find_perltidy_files();
+        my $num = @{$rfiles};
+        print STDERR "found $num files\n";
+        if ( ifyes("Do you want to select specific files? [Y/N]") ) {
+            $rfiles = select_files($rfiles);
         }
     }
 
-    if ( !@{$rfiles} ) { die $usage }
+    if ( !@{$rfiles} ) {
+        query("No files selected, hit <cr>");
+        die $usage;
+    }
 
     my @residual_tmp_files;
     foreach my $file ( @{$rfiles} ) {
@@ -86,6 +91,17 @@ EOM
     query("Spell check done; Hit <cr>");
     return;
 } ## end sub main
+
+sub find_perltidy_files {
+    my $MANIFEST = "MANIFEST";
+    my $rfiles   = [];
+    if ( -e $MANIFEST && -f $MANIFEST ) {
+        $rfiles = read_MANIFEST($MANIFEST);
+    }
+    my @more_files = glob('*.md local-docs/*.md local-docs/*.pod');
+    push @{$rfiles}, @more_files;
+    return $rfiles;
+} ## end sub find_perltidy_files
 
 sub read_MANIFEST {
     my ($MANIFEST) = @_;
@@ -113,17 +129,40 @@ sub read_MANIFEST {
 
 sub select_files {
     my ($rfiles) = @_;
+
+    # allow selection of a subset of all possible files
     my $imax = -1;
     foreach my $file ( @{$rfiles} ) {
         $imax++;
         print "$imax $file\n";
     }
+    my %want_file;
     my @ilist;
-    my $ans = query("Enter the number(s) of the files to process\n");
+    print <<EOM;
+Select files by any combination of above numbers and/or wildcard file extension, i.e.:
+*.md *.pm 1-10 12 13..20
+EOM
+    my $ans = query("Your selection:\n");
     $ans =~ s/,/ /g;
     $ans =~ s/\.\./-/g;
     my @parts = split /\s+/, $ans;
+
     foreach my $part (@parts) {
+
+        # handle a wildcard file extension like *.pm
+        if ( $part =~ /\*\.([A-Za-z]+)$/ ) {
+            my $ext_want = $1;
+            foreach my $file ( @{$rfiles} ) {
+                my $pos = rindex( $file, '.' );
+                next if ( $pos < 0 );
+                my $ext = substr( $file, $pos + 1 );
+                next if ( $ext ne $ext_want );
+                $want_file{$file} = 1;
+            }
+            next;
+        }
+
+        # handle selection by number
         if ( index( $part, '-' ) >= 0 ) {
             my @list = split /-/, $part;
             if ( @list != 2 ) {
@@ -147,13 +186,15 @@ sub select_files {
             return;
         }
     }
+
     my @selected;
     foreach my $ix ( 0 .. $imax ) {
-        if ( $ilist[$ix] ) {
-            push @selected, $rfiles->[$ix];
-            print "selected $ix\n";
+        my $file = $rfiles->[$ix];
+        if ( $ilist[$ix] || $want_file{$file} ) {
+            push @selected, $file;
         }
     }
+
     return \@selected;
 } ## end sub select_files
 
@@ -245,11 +286,11 @@ sub handle_unknown_words {
 Found $num_new unknown words in $list_file. Please review this list.
 Are all words in the list spelled correctly? [Y/N]:
 
-Y - Yes all OK:
+A - Accept: no spelling errors
       Merge these new words into the '.spell' list for this file,
       save a backup of the previous '.spell' file as '.spell.bak',
       remove the file with new words '$list_file'. 
-N - No, there are some mispellings
+C - Continue and fix later, there are some mispellings
       You can review the new words in '$list_file' later, and
       fix any misspellings in the source, and
       rerun this program and select 'Y' when everything looks good.
@@ -258,7 +299,7 @@ N - No, there are some mispellings
       answer 'i' to keep from adding words to the local aspell word list.
 EOM
         my $ans = queryu(":");
-        if ( $ans eq 'Y' ) {
+        if ( $ans eq 'A' ) {
             push @words, @{$rwords};
             foreach (@words) { chomp }
             @words = sort { $a cmp $b } @words;
@@ -270,11 +311,11 @@ EOM
             unlink($list_file);
             last;
         }
-        elsif ( $ans eq 'N' ) {
+        elsif ( $ans eq 'C' ) {
             last;
         }
         else {
-            print "Unknown response: '$ans', try again\n";
+            queryu("Unknown response: '$ans', hit <cr> to try again:\n");
         }
     } ## end while (1)
     return;
@@ -324,6 +365,7 @@ sub read_source_file {
             _want_here_text => 1,
             _want_pod       => 1,
             _want_comments  => 1,
+            _want_doubles   => FIND_DOUBLE_WORDS,
             _rknown_words   => $rknown_words,
         );
     }
@@ -346,12 +388,33 @@ sub scan_markdown_file {
     # TODO: filter out lines with fixed format blocks and reform string
 
     my @words = split /[\s\*\_\.\(\)\;\,\-\!\?\"\:]+/, $string;
-
     my %word_hash;
     foreach my $word (@words) {
-        next if ( $word !~ /^[A-Za-z]+$/ || length($word) < 2 );
+
+        # Try to find repeated words and mark with a dash
+        next if ( $word !~ /^[A-Za-z]+$/ );
+        next if ( length($word) < 2 );
         next if ( $is_known_word{$word} );
         $word_hash{$word}++;
+    }
+
+    # look for double words
+    if (FIND_DOUBLE_WORDS) {
+        while (
+            $string =~ m{
+             \b    # start at a word boundary (begin letters)
+             (\S+) # find a chunk of non-whitespace
+             \b    # until another word boundary (end letters)
+             (
+                \s+  # separated by some whitespace
+                \1   # and that very same chunk again
+                \b   # until another word boundary
+             ) +   # one or more sets of those
+           }xig
+          )
+        {
+            $word_hash{ $1 . "DOUBLE" }++;
+        } ## end while ( $string =~ m{ ) (})
     }
 
     foreach my $word ( keys %word_hash ) {
@@ -506,6 +569,7 @@ my (
     $want_here_text,
     $want_pod,
     $want_comments,
+    $want_doubles,
 );
 
 sub store_text {
@@ -513,8 +577,28 @@ sub store_text {
 ##  my @words  = split /\s+/, $text;
     my @words = split /[\s\.\(\)\;\,\-\!\?\"\:]+/, $text;
     foreach my $word (@words) {
-        next if ( $word !~ /^[A-Za-z]+$/ || length($word) < 2 );
+        next if ( $word !~ /^[A-Za-z]+$/ );
+        next if ( length($word) < 2 );
         $word_hash{$word}++;
+    }
+
+    # look for double words if requested
+    if ($want_doubles) {
+        while (
+            $text =~ m{
+             \b    # start at a word boundary (begin letters)
+             (\S+) # find a chunk of non-whitespace
+             \b    # until another word boundary (end letters)
+             (
+                \s+  # separated by some whitespace
+                \1   # and that very same chunk again
+                \b   # until another word boundary
+             ) +   # one or more sets of those
+           }xig
+          )
+        {
+            $word_hash{ $1 . "DOUBLE" }++;
+        } ## end while ( $text =~ m{ ) (})
     }
     return;
 } ## end sub store_text
@@ -546,6 +630,7 @@ sub perlspell {
     $want_here_text = $args{_want_here_text};
     $want_pod       = $args{_want_pod};
     $want_comments  = $args{_want_comments};
+    $want_doubles   = $args{_want_doubles};
     %word_hash      = ();
 
     # run perltidy, which will call $formatter's write_line() for each line

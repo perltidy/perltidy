@@ -539,7 +539,7 @@ controls set as desired without tabs, particularly the two parameters B<--indent
 
 The value of the integer B<n> can be any value but can be coordinated with the
 number of spaces used for indentation. For example, B<-et=4 -ci=4 -i=4> will
-produce one tab for each indentation level and and one for each continuation
+produce one tab for each indentation level and one for each continuation
 indentation level.  You may want to coordinate the value of B<n> with what your
 display software assumes for the spacing of a tab.
 
@@ -721,7 +721,7 @@ revert to the default behavior of using the line ending of the host system.
 This flag, which is enabled by default, allows perltidy to terminate the last
 line of the output stream with a newline character, regardless of whether or
 not the input stream was terminated with a newline character.  If this flag is
-negated, with B<-natnl>, then perltidy will add a terminal newline to the the
+negated, with B<-natnl>, then perltidy will add a terminal newline to the
 output stream only if the input stream is terminated with a newline.
 
 Negating this flag may be useful for manipulating one-line scripts intended for
@@ -4882,7 +4882,7 @@ parameters):
  'w' matches if either 'k' or 'f' match.
  'W' matches if 'w' does not.
 
-So for example the the following parameter will keep breaks after opening function call
+So for example the following parameter will keep breaks after opening function call
 parens:
 
    perltidy -kba='f('
@@ -5324,7 +5324,7 @@ subgroup and the others. In the example above this happened between the
 B<use> and B<my> statements.
 
 B<-kgbd> or B<--keyword-group-blanks-delete> controls the deletion of any
-blank lines that exist in the the group when it is first scanned.  When
+blank lines that exist in the group when it is first scanned.  When
 statements are initially scanned, any existing blank lines are included in the
 collection.  Any such original blank lines will be deleted before any other
 insertions are made when the parameter B<-kgbd> is set.  The default is not to
@@ -6542,7 +6542,7 @@ one of the variables.
 
 These are lexical variables which are declared in one package and still visible
 in subroutines of a different package in the same file.  This can be confusing,
-and it might cause the program to run differently, or fail, if the the packages
+and it might cause the program to run differently, or fail, if the packages
 were ever split into separate files. This issue can usually be avoided by
 placing code in block braces of some type.  For example, this issue is often
 found in test code and can sometimes be fixed by using the structure
@@ -6810,7 +6810,7 @@ The lines in the output file list the keys and number of occurrences.
 
 The parameter B<--dump-mixed-call-parens>, or B<-dmcp>, provides information on
 the use of call parens within a program.  It produces a list of keywords and sub
-names which occur both both with and without parens.  In other words, with
+names which occur both with and without parens.  In other words, with
 a mixed style.  This might be useful if one is working to standardize the
 call style for some particular keyword or function. For example,
 
@@ -6839,7 +6839,7 @@ next section.
 
 =item B<Use --want-call-parens=s and --nowant-call-parens=s to warn about specific missing or extra call parens>
 
-The parameter B<--want-call-parens=s>, or B<-wcp=s>, can be used to to produce
+The parameter B<--want-call-parens=s>, or B<-wcp=s>, can be used to produce
 a warning message if call parens are missing from selected functions.
 Likewise, B<--nowant-call-parens=s>, or B<-nwcp=s>, can warn if call parens
 exist for selected functions.  When either of these parameters are set,
@@ -7100,7 +7100,7 @@ These issue types are illustrated with the following code
     $name   = wimp();  # 's' (want scalar but 2 values returned)
 
 This analysis works by scanning all call statements and all sub return
-statements, and comparing the the number of items wanted with the possible
+statements, and comparing the number of items wanted with the possible
 number of items returned.  If a specific value for either of these numbers
 cannot be determined for a call then it cannot be checked.
 
@@ -7562,7 +7562,7 @@ standard error output will indicate the cause of any problem.  If perltidy
 terminates prematurely then no output files will be produced.
 
 An exit value of 2 indicates that perltidy was able to run to completion but
-there there are (1) warning messages in the standard error output related to
+there are (1) warning messages in the standard error output related to
 parameter errors or problems and/or (2) warning messages in the perltidy error
 file(s) relating to possible syntax errors in one or more of the source
 script(s) being tidied.  When multiple files are being processed, an error

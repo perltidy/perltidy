@@ -844,7 +844,7 @@ EOM
             my ( $rargv_str, $msg ) = parse_args($argv);
             if ($msg) {
                 Die(<<EOM);
-Error parsing this string passed to to perltidy with 'argv':
+Error parsing this string passed to perltidy with 'argv':
 $msg
 EOM
             }

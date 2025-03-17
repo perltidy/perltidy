@@ -1988,7 +1988,7 @@ sub _flush_group_lines {
         initialize_for_new_rgroup();
         return unless ( @{$rlines} );    # shouldn't happen
 
-        # Unset the _end_group flag for the last line if it it set because it
+        # Unset the _end_group flag for the last line if it set because it
         # is not needed and can causes problems for -lp formatting
         $rall_lines->[-1]->{'end_group'} = 0;
 
@@ -3940,7 +3940,7 @@ sub prune_alignment_tree {
     #   ];
 
     # We can work to any depth, but there is little advantage to working
-    # to a a depth greater than 2
+    # to a depth greater than 2
     my $MAX_DEPTH = 2;
 
     # This arrays will hold the tree of alignment tokens at different depths

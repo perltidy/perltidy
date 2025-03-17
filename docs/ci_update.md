@@ -325,7 +325,7 @@ given the same indentation.  For example
             );
 ```
 
-Previously, there were a a number of situations where this could not be
+Previously, there were a number of situations where this could not be
 achieved. As an example, if the above example had side comments then the
 formatting would be
 

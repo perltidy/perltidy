@@ -36,7 +36,6 @@
    - perlbrew install perl-5.8.1 [install perl-5.8.1, may need to force]
    - perlbrew use perl-5.8.1     [switch to 5.8.1 in current shell]
   - run podchecker on all .pod files
-  - run ispell on all .pod files
   - Be sure builds at github and Appveyor are clean for all version of perl
   - update VERSION numbers in all modules and some docs (build.pl can do this):
   - make manifest

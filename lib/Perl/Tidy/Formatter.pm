@@ -2158,7 +2158,7 @@ sub Q_spy {
     #                  i.e. one of the above hash keys.
     # Note:
     #    - The number $nch is the minimum number; but it could be more
-    #      if there are spaces before before the leading '(' or other delimiter,
+    #      if there are spaces before the leading '(' or other delimiter,
     #    - This call works for multiline quotes provided that this sub is
     #      called with the first Q token in the string, not an intermediate one.
     #    - For efficiency, caller can handle common cases of leading ' or "
@@ -3006,7 +3006,7 @@ EOM
     # The combination -lp -vmll -atc -dtc can be unstable
     #-----------------------------------------------------------
     # This fixes b1386 b1387 b1388 which had -wtc='b'
-    # Updated to to include any -wtc to fix b1426
+    # Updated to include any -wtc to fix b1426
     if (   $rOpts->{'variable-maximum-line-length'}
         && $rOpts->{'line-up-parentheses'}
         && $rOpts->{'add-trailing-commas'}
@@ -3259,7 +3259,7 @@ Bad call arg - received short name '$short_name' but expecting 'kbb' or 'kba'
 EOM
     }
 
-    # pull out any any leading container code, like f( or *{
+    # pull out any leading container code, like f( or *{
     # For example: 'f(' becomes flags hash entry '(' => 'f'
     foreach my $item (@list) {
         if ( $item =~ /^( [ \w\* ] )( [ \{\(\[\}\)\] ] )$/x ) {
@@ -10731,11 +10731,11 @@ sub string_approximate_match {
                     $diff_inc = 0;
                 }
 
-                # Check for a missing character in $s1 (or extra in $s2)
+                # Check for a missing character in $s1 (extra char in $s2)
                 else {
                     if ( $pad1 > 0 && $c1p eq substr( $s2, $pos, 1 ) ) {
 
-                        # Missing character: remove the ending space,
+                        # $c2m is missing in $s1 : remove the ending space,
                         # then rotate it back into the missing character spot
                         $s1 = substr( $s1, 0, -1 );
                         substr( $s1, $posm - 1, 0, SPACE );
@@ -10749,7 +10749,7 @@ sub string_approximate_match {
                 }
             }
 
-            # Check for a missing character in $s2 (or extra in $s1)
+            # Check for a missing character in $s2 (extra in $s1)
             else {
 
                 if (   $c1p eq $c2m
@@ -10757,7 +10757,7 @@ sub string_approximate_match {
                     && $c2p eq substr( $s1, $pos, 1 ) )
                 {
 
-                    # Missing character: remove the ending space,
+                    # $c1m is missing in $s2 : remove the ending space,
                     # then rotate it back into the missing character spot
                     $s2 = substr( $s2, 0, -1 );
                     substr( $s2, $posm - 1, 0, SPACE );
@@ -16949,7 +16949,7 @@ sub add_phantom_semicolon {
 
     # The token at old index $KK is a closing block brace, and not preceded
     # by a semicolon. Before we push it onto the new token list, we may
-    # want to add a phantom semicolon which can be activated if the the
+    # want to add a phantom semicolon which can be activated if the
     # block is broken on output.
 
     # We are only adding semicolons for certain block types
@@ -17927,7 +17927,7 @@ sub match_trailing_comma_rule {
         {
 
             # but comma count (including trailer) and fat comma count must
-            # differ by by no more than 1. This allows for some small
+            # differ by no more than 1. This allows for some small
             # variations.
             my $comma_diff = $new_comma_count - $fat_comma_count;
             $match = ( $comma_diff >= -1 && $comma_diff <= 1 );
@@ -21786,7 +21786,7 @@ sub weld_cuddled_blocks {
                 {
 
                     # Note that we do not weld yet because we must wait until
-                    # we we are sure that an opening brace for this follows.
+                    # we are sure that an opening brace for this follows.
                     $in_chain{$level}->[1] = $type_sequence;
                 }
                 else { $in_chain{$level} = undef }
@@ -24822,7 +24822,7 @@ sub is_fragile_block_type {
                       $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
 
                     # We may have to add the spaces of one level or ci level
-                    # ...  it depends depends on the -xci flag, the -wn flag,
+                    # ...  it depends on the -xci flag, the -wn flag,
                     # and if the qw uses a container token as the quote
                     # delimiter.
 
@@ -26288,7 +26288,7 @@ EOM
             $iend = $ibl;
         }
 
-        # now mark mark interior blank lines for deletion if requested
+        # now mark interior blank lines for deletion if requested
         return unless ($rOpts_kgb_delete);
 
         while (@iblanks) {
@@ -26475,7 +26475,7 @@ EOM
         # selected keywords.  Example keywords are 'my', 'our', 'local', ... but
         # they may be anything.  We will set flags requesting that blanks be
         # inserted around and within them according to input parameters.  Note
-        # that we are scanning the lines as they came in in the input stream, so
+        # that we are scanning the lines as they came in the input stream, so
         # they are not necessarily well formatted.
 
         # Returns:
@@ -26665,7 +26665,7 @@ EOM
                     next;
                 }
 
-                # - continue if if we are within in a container which started
+                # - continue if we are within in a container which started
                 # with the line of the previous keyword.
                 if ( defined($K_closing) && $K_first <= $K_closing ) {
 
@@ -26715,7 +26715,7 @@ EOM
     # The routines in this closure receive lines of code and combine them into
     # 'batches' and send them along. A 'batch' is the unit of code which can be
     # processed further as a unit. It has the property that it is the largest
-    # amount of code into which which perltidy is free to place one or more
+    # amount of code into which perltidy is free to place one or more
     # line breaks within it without violating any constraints.
 
     # When a new batch is formed it is sent to sub 'grind_batch_of_code'.
@@ -27871,7 +27871,8 @@ EOM
                     # NOTE: **This test can eventually be removed**
                     # The fix for b1515 prevents a phantom semicolon for
                     # a one-line block with -nasc, so this check has no effect.
-                    if ( 0 && $rOpts_space_terminal_semicolon
+                    if (   0
+                        && $rOpts_space_terminal_semicolon
                         && !$rOpts_add_semicolons )
                     {
                         my $Km = $self->K_previous_nonblank($Ktoken_vars);
@@ -32773,7 +32774,7 @@ sub correct_lp_indentation {
 
             if ( $i == $ibeg ) {
 
-                # Case 1: token is first character of of batch - table lookup
+                # Case 1: token is first character of batch - table lookup
                 if ( $line == 0 ) {
 
                     $actual_pos = $predicted_pos;
@@ -38618,7 +38619,7 @@ sub set_forced_lp_break {
       if ( $i_begin_line < 0
         || $i_begin_line > $max_index_to_go );
 
-    # Handle request to put a break break immediately before this token.
+    # Handle request to put a break immediately before this token.
     # We may not want to do that since we are also breaking after it.
     if ( $i_begin_line == $i_opening ) {
 
@@ -40341,7 +40342,7 @@ sub undo_contained_ci {
 
             # Note that sub get_final_indentation will be called later to
             # actually do this, but for now we will tentatively mark cuddled
-            # lines with ci=0 so that the the -xci loop which follows will be
+            # lines with ci=0 so that the -xci loop which follows will be
             # correct at cuddles.
             if (
                 $types_to_go[$ibeg] eq '}'
@@ -42638,7 +42639,7 @@ sub make_paren_name {
                         $cti = $closing_token_indentation{')'};
 
                         # But for now, do not outdent non-container qw
-                        # delimiters because it would would change existing
+                        # delimiters because it would change existing
                         # formatting.
                         if ( $tok ne '>' ) { $cti = 3 }
                     }

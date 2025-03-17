@@ -2959,7 +2959,7 @@ EOM
             )
           )
         {
-            # Let let full scanner handle multi-digit integers beginning with
+            # Let the full scanner handle multi-digit integers beginning with
             # '0' because there could be error messages.  For example, '009' is
             # not a valid number.
 
@@ -9143,7 +9143,7 @@ sub do_scan_package {
         # current id_scan_state and token, and returns an updated
         # id_scan_state and the next index after the identifier.
 
-        # This routine now serves a a backup for sub scan_simple_identifier
+        # This routine now serves a backup for sub scan_simple_identifier
         # which handles most identifiers.
 
         # Note that $self must be a 'my' variable and not be a closure
@@ -9572,7 +9572,7 @@ EOM
 
         # NOTE: We only want to parse PROTOTYPES here. If we see anything that
         # does not look like a prototype, we assume it is a SIGNATURE and we
-        # will stop and let the the standard tokenizer handle it.  In
+        # will stop and let the standard tokenizer handle it.  In
         # particular, we stop if we see any nested parens, braces, or commas.
         # Also note, a valid prototype cannot contain any alphabetic character
         #  -- see https://perldoc.perl.org/perlsub

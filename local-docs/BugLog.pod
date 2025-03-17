@@ -649,7 +649,7 @@ This update corrects this to give
 
 =item B<Fix error check caused by -wn -iscl, case c058>
 
-Testing with random parameters triggered an an internal error check.  This was
+Testing with random parameters triggered an internal error check.  This was
 caused by a recent coding change which allowed a weld across a side comment.
 The problem was in the development version, not in the latest released version,
 and is fixed with this update.  This closes issue c058.
@@ -783,7 +783,7 @@ This fixes case c053.
 Testing with random parameters produced a case of unstable formatting involving
 welding with parameter -notrim-qw.  The problem was that the -notrim-qw flag
 converts a qw quote into a quote with fixed leading whitespace.
-The lines of these types of quotes which have no other code are are output early
+The lines of these types of quotes which have no other code are output early
 in the formatting process, since they have a fixed format, so welding does not work.
 In particular, the closing tokens cannot be welded if they are on a separate line.
 This also holds for all types of non-qw quotes.  So welding can only be done
@@ -1647,7 +1647,7 @@ b1168.
 This flag, which is enabled by default, allows perltidy to terminate the last
 line of the output stream with a newline character, regardless of whether or
 not the input stream was terminated with a newline character.  If this flag is
-negated, with B<-natnl>, then perltidy will add a terminal newline to the the
+negated, with B<-natnl>, then perltidy will add a terminal newline to the
 output stream only if the input stream is terminated with a newline.
 
 Negating this flag may be useful for manipulating one-line scripts intended for
@@ -3081,7 +3081,7 @@ This fixes case b990.
 Perltidy does final formatting in discrete batches of tokens, where a batch is
 a continuous section of the total token list.  A batch begins a new line and
 will be broken into one or more lines.  If a batch starts with a blank token it
-will simply be skipped on on output. However, some rare problems have been
+will simply be skipped on output. However, some rare problems have been
 found in random testing which can occur if a batch starts with a blank.  An 
 example is case b984 which has the following parameters:
 
@@ -3162,7 +3162,7 @@ set, so a check was added to verify this.  This fixes case b935.
 =item B<Restrict previous update to just -vmll>
 
 The previous update was found to occasionally needlessly change existing
-formatting with very long long lines.  So it is restricted to just when -vmll
+formatting with very long lines.  So it is restricted to just when -vmll
 is set.  For example, it is ok to keep the long quote following the opening
 paren in the following case.
 
@@ -3419,7 +3419,7 @@ This fixes case b860. 11 Feb 2021, 8c13609.
 =item B<Do not break one-line block at here target>
 
 A blinking state produced by random testing was traced to a line of coding
-which which unnecessarily prevented one-line blocks from being formed when a
+which unnecessarily prevented one-line blocks from being formed when a
 here-target was encountered.  This has been fixed.
 
 For example, the code block in the following contains a here target and was being

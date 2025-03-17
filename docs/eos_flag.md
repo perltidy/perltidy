@@ -41,7 +41,7 @@ are more common.
 ## How has the problem been fixed?
 
 A fix was phased in over a couple of steps. The first step was to
-introduce a new flag in in version 20220217.  The new flag is
+introduce a new flag in version 20220217.  The new flag is
 **--encode-output-strings**, or **-eos**.  When this is set, perltidy will fix
 the specific problem mentioned above by doing an encoding before returning.
 So perltidy will behave well as a filter when **-eos** is set.
