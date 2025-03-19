@@ -1798,7 +1798,7 @@
       Ron Ivy. This update prevents automatic conversion to 'DOS' CRLF line
       endings.  Also, Windows system testing at the appveyor site is working again.
 
-    - RT #128280, added flag --one-line-block-semicolons=n (-olbs=n) 
+    - RT #128280, added flag --one-line-block-semicolons=n (-olbs=n)
       to control semicolons in one-line blocks.  The values of n are:
         n=0 means no semicolons terminating simple one-line blocks
         n=1 means stable; do not change from input file [DEFAULT and current]
@@ -2080,7 +2080,7 @@
 
     - RT #123749, partial fix.  "Continuation indentation" is removed from lines 
       with leading closing parens which are part of a call chain. 
-      For example, the call to pack() is is now outdented to the starting 
+      For example, the call to pack() is now outdented to the starting 
       indentation in the following expression:
 
           # OLD
@@ -2417,7 +2417,7 @@
         n=1 stable: break at all commas after => if container is open,
             EXCEPT FOR one-line containers
         n=2 break at all commas after =>, BUT try to form the maximum
-            maximum one-line container lengths
+            one-line container lengths
         n=3 do not treat commas after => specially at all 
         n=4 break everything: like n=0 but also break a short container with
             a => not followed by a comma
@@ -5142,7 +5142,7 @@
     -fixed another cuddled-else formatting bug (Reported by Craig Bourne)
 
     -added several diagnostic --dump routines
- 
+
     -added token-level whitespace controls (suggested by Hans Ecke)
 
 ## 2001 03 23:

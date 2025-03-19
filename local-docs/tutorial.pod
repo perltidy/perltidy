@@ -446,7 +446,7 @@ with a blank line to prevent perltidy from changing it:
         ) = $self->get_decoded_string_buffer($input_file);
 
 An easy way to switch to a single column list such as this is to select the
-list from within an editor and reformat with with --maximum-fields-per-table=1,
+list from within an editor and reformat with --maximum-fields-per-table=1,
 or -mft=1.  This will format the list in a single column.  Then insert a
 blank line to keep this format.
 

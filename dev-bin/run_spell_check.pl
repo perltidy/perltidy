@@ -23,9 +23,6 @@ use warnings;
 #  run_spell_check.pl
 #    if no args, cd's to perltidy git and spell checks files in MANIFEST
 
-# TODO:
-#  improve search for doubled words
-
 use File::Copy;
 use File::Temp qw(tempfile);
 use Data::Dumper;
@@ -34,9 +31,8 @@ use Cwd qw(getcwd);
 $| = 1;
 use constant EMPTY_STRING => q{};
 
-# This can be turned on for occasional checks for double words.
-# It works but still finds too many unwanted doubles.
-use constant FIND_DOUBLE_WORDS => 0;
+# This can be turned on to check for double words.
+use constant FIND_DOUBLE_WORDS => 1;
 
 main();
 
@@ -47,7 +43,7 @@ Spell check perltidy files
 Usage:
   $0 file1 [ file2 [...
      spell check selected files
-  $0 
+  $0
      If no files are given, change directory to the perltidy git head
      and look for MANIFEST and use files lib/.../*.pm
      Ask which of these to process
@@ -100,6 +96,7 @@ sub find_perltidy_files {
     }
     my @more_files = glob('*.md local-docs/*.md local-docs/*.pod');
     push @{$rfiles}, @more_files;
+    @{$rfiles} = uniq( @{$rfiles} );
     return $rfiles;
 } ## end sub find_perltidy_files
 
@@ -289,12 +286,12 @@ Are all words in the list spelled correctly? [Y/N]:
 A - Accept: no spelling errors
       Merge these new words into the '.spell' list for this file,
       save a backup of the previous '.spell' file as '.spell.bak',
-      remove the file with new words '$list_file'. 
+      remove the file with new words '$list_file'.
 C - Continue and fix later, there are some mispellings
       You can review the new words in '$list_file' later, and
       fix any misspellings in the source, and
       rerun this program and select 'Y' when everything looks good.
-      NOTE: for suggestions, try: 
+      NOTE: for suggestions, try:
            'aspell -c $list_file'
       answer 'i' to keep from adding words to the local aspell word list.
 EOM
@@ -410,10 +407,18 @@ sub scan_markdown_file {
                 \1   # and that very same chunk again
                 \b   # until another word boundary
              ) +   # one or more sets of those
-           }xig
+           }xg
           )
         {
-            $word_hash{ $1 . "DOUBLE" }++;
+            # skip words containing '.' like 'myfile.pl'
+            my $word     = $1;
+            my $len_diff = length($2) - length($word);
+            if (   ( $len_diff == 1 || $len_diff == 2 && $2 !~ /^\n\n/ )
+                && $word =~ /^[A-Za-z]$/
+                && ( length($word) > 1 || $word eq 'a' ) )
+            {
+                $word_hash{ $word . "DOUBLE" }++;
+            }
         } ## end while ( $string =~ m{ ) (})
     }
 
@@ -594,10 +599,18 @@ sub store_text {
                 \1   # and that very same chunk again
                 \b   # until another word boundary
              ) +   # one or more sets of those
-           }xig
+           }xg
           )
         {
-            $word_hash{ $1 . "DOUBLE" }++;
+            # skip words containing '.' like 'myfile.pl'
+            my $word     = $1;
+            my $len_diff = length($2) - length($word);
+            if (   ( $len_diff == 1 || $len_diff == 2 && $2 !~ /^\n\n/ )
+                && $word =~ /^[A-Za-z]$/
+                && ( length($word) > 1 || $word eq 'a' ) )
+            {
+                $word_hash{ $word . "DOUBLE" }++;
+            }
         } ## end while ( $text =~ m{ ) (})
     }
     return;

@@ -11224,7 +11224,7 @@ sub set_ci {
     # programs but is useful for testing.
     use constant SET_CI_OPTION_0 => 1;
 
-    # This is slightly different from the hash in in break_lists
+    # This is slightly different from the hash in break_lists
     # with a similar name (removed '?' and ':' to fix t007 and others)
     my %is_logical_container_for_ci;
     my @q = qw# if elsif unless while and or err not && | || ! #;

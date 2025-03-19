@@ -2280,7 +2280,7 @@ last line contains text, the last line is still outdented:
                      May June July August
     September October November December) )[$mon];
 
-This is difficult to fix.  The best solution is to place the closing qw qw
+This is difficult to fix.  The best solution is to place the closing qw
 containers on a separate line.
 
 This fix is for case c002.
