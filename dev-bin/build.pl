@@ -36,8 +36,8 @@ check_config();
 # needed
 my $rsteps = [
     qw(
-        CHK SPELL CONV TOK SCAN MAN V YEAR PC TIDY T CL DOCS PERLVER MANIFEST
-        DIST
+      PRE SPELL CONV TOK SCAN MAN V YEAR PC TIDY T CL DOCS PERLVER MANIFEST
+      DIST POST
     )
 ];
 
@@ -45,10 +45,10 @@ my $rstatus = {};
 foreach my $step ( @{$rsteps} ) { $rstatus->{$step} = 'TBD' }
 
 my $rcode = {
-    'CHK' => sub {
+    'PRE' => sub {
         openurl("local-docs/Release-Checklist.md")
-          unless ( $rstatus->{CHK} eq 'OK' );
-        $rstatus->{CHK} = 'OK';
+          unless ( $rstatus->{PRE} eq 'OK' );
+        $rstatus->{PRE} = 'OK';
     },
     'SCAN'     => \&scan_for_bad_characters,
     'MAN'      => \&check_man_pages,
@@ -64,6 +64,7 @@ my $rcode = {
     'T'        => \&make_tests,
     'DOCS'     => \&make_docs,
     'DIST'     => \&make_dist,
+    'POST'     => \&show_post_build_checklist,
     'CL'       => sub { openurl($changelog);        $rstatus->{CL}   = 'OK' },
     'LOG'      => sub { openurl($logfile);          $rstatus->{LOG}  = 'OK' },
     'HTML'     => sub { openurl("docs/index.html"); $rstatus->{HTML} = 'OK' },
@@ -94,6 +95,14 @@ for Perl development.
  sudo apt-get install git
  git config --global user.name "My Name"
  git config --global user.email me@users.sourceforge.net
+
+ # perlbrew setup
+ use perlbrew to do local checks and debugging on earlier versions of perl:
+   - perlbrew list               [show installed versions]
+   - perlbrew available --all    [show all available versions]
+   - or see https://www.cpan.org/src/README.html
+   - perlbrew install perl-5.8.1 [install perl-5.8.1, may need to force]
+   - perlbrew use perl-5.8.1     [switch to 5.8.1 in current shell]
 
 EOM
     return;
@@ -150,7 +159,7 @@ sub main {
 Perltidy Build Main Menu - Case Insensitive
 -------------------------------------------
 
-chk      - view release CHecKlist          status: $rstatus->{'CHK'}
+pre      - view pre-build checklist        status: $rstatus->{'PRE'}
 scan     - scan text for problems          status: $rstatus->{'SCAN'}
 man      - check man pages                 status: $rstatus->{'MAN'}
 v        - check/update Version Number     status: $rstatus->{'V'}
@@ -166,6 +175,7 @@ t        - make Tests			   status: $rstatus->{'T'}
 cl       - review/edit CHANGES.md          status: $rstatus->{'CL'}
 docs     - check and process POD & html    status: $rstatus->{'DOCS'}
 dist     - make a Distribution tar.gz      status: $rstatus->{'DIST'}
+post     - view post-build checklist       status: $rstatus->{'POST'}
 log      - view Log file
 html     - view html files
 
@@ -234,6 +244,14 @@ sub run_tidyall {
     openurl("$fout");
     return;
 } ## end sub run_tidyall
+
+sub show_post_build_checklist {
+    if ( $rstatus->{'POST'} ne 'OK' ) {
+        openurl("local-docs/post-build-checklist.md");
+        $rstatus->{'POST'} = 'OK';
+    }
+    return;
+} ## end sub show_post_build_checklist
 
 sub run_spell_check {
     $rstatus->{'SPELL'} = 'TBD';
@@ -463,18 +481,9 @@ sub make_dist {
     if ( ifyes( "OK. Make a .zip too? [Y/N], <cr>=$default", $default ) ) {
         make_zip($tar_gz_file);
     }
-
+    show_post_build_checklist();
     query(<<EOM);
-Next Steps:
-- Untar and examine the contents of the .tar.gz file in /tmp
-- Do a test install on perl-5.8.1 with these commands:
-   perlbrew
-   use perl-5.8.1
-   perl Makefile.pl
-   ...
-- Start random testing with the new version
-- Compare results on a variety of test cases with previous CPAN release
-- Use NYTProf to check the efficiency of any new coding
+Review the notes in 'post-build-checklist.md'
 hit <cr> to continue
 EOM
 
@@ -1755,25 +1764,11 @@ $result  = sys_command("$command");
 # -----------------------------------------------------------------------
 # make the .zip file
 # -----------------------------------------------------------------------
-#
-##?# OLD: change line endings for windows
-##?# $command .= " flipall $dir_name -m; cd $dir_name;";
-##?# my @dirs = qw( bin lib docs t examples);
-##?# TESTING foreach (@dirs) { $command .= " flipall $_ -m;" }
-##?
-##?# this works
-##?# perl -Mopen=OUT,:crlf -pi.bak -e0 filename
-##?# $command .= " cd .. ; zip -r -y -m -T -9 $zip_name $dir_name ; ";
 
 # zip it up
 my $zip_name = $dir_name . ".zip";
 $command = "(cd /tmp; zip -r -y -m -T -9 $zip_name $dir_name ;)";
 $result = sys_command($command);
-
-###$command = " (cd /tmp ; zip -r -y -m -T -9 $zip_name $dir_name ; ";
-##3#$command .= ")";
-##print STDERR "$command", "\n";
-##exit 1;
 
 # -----------------------------------------------------------------------
 # Make the debian package
