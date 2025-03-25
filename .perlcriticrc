@@ -27,10 +27,6 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 # Tidy.pm exports 'perltidy'. Changing this could break existing scripts.
 [-Modules::ProhibitAutomaticExportation]
 
-# Nested subs are currently needed for error handling in Tidy.pm. I'm not
-# sure if this can be avoided.
-[-Subroutines::ProhibitNestedSubs]
-
 # Make an exception for very short time-critical subs.
 [Subroutines::RequireArgUnpacking]
 short_subroutine_statements = 2

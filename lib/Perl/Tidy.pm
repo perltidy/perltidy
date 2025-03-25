@@ -463,6 +463,49 @@ sub Warn_msg { my $msg = shift; $fh_stderr->print($msg); return }
 # Output Warn message and bump Warn count
 sub Warn { my $msg = shift; $fh_stderr->print($msg); $Warn_count++; return }
 
+sub Exit {
+    my $flag = shift;
+    if   ($flag) { goto ERROR_EXIT }
+    else         { goto NORMAL_EXIT }
+    croak "unexpected return to sub Exit";
+} ## end sub Exit
+
+sub Die {
+    my $msg = shift;
+    Warn($msg);
+    Exit(1);
+    croak "unexpected return from sub Exit";
+} ## end sub Die
+
+sub Fault {
+    my ($msg) = @_;
+
+    # This routine is called for errors that really should not occur
+    # except if there has been a bug introduced by a recent program change.
+    # Please add comments at calls to Fault to explain why the call
+    # should not occur, and where to look to fix it.
+    my ( $package0_uu, $filename0_uu, $line0,    $subroutine0_uu ) = caller(0);
+    my ( $package1_uu, $filename1,    $line1,    $subroutine1 )    = caller(1);
+    my ( $package2_uu, $filename2_uu, $line2_uu, $subroutine2 )    = caller(2);
+    my $pkg = __PACKAGE__;
+
+    my $input_stream_name = $rstatus->{'input_name'};
+    $input_stream_name = '(unknown)' unless ($input_stream_name);
+    Die(<<EOM);
+==============================================================================
+While operating on input stream with name: '$input_stream_name'
+A fault was detected at line $line0 of sub '$subroutine1'
+in file '$filename1'
+which was called from line $line1 of sub '$subroutine2'
+Message: '$msg'
+This is probably an error introduced by a recent programming change.
+$pkg reports VERSION='$VERSION'.
+==============================================================================
+EOM
+
+    croak "unexpected return from sub Die";
+} ## end sub Fault
+
 sub is_char_mode {
 
     my ($string) = @_;
@@ -738,49 +781,6 @@ EOM
 
     my $self = [];
     bless $self, __PACKAGE__;
-
-    sub Exit {
-        my $flag = shift;
-        if   ($flag) { goto ERROR_EXIT }
-        else         { goto NORMAL_EXIT }
-        croak "unexpected return to sub Exit";
-    } ## end sub Exit
-
-    sub Die {
-        my $msg = shift;
-        Warn($msg);
-        Exit(1);
-        croak "unexpected return from sub Exit";
-    } ## end sub Die
-
-    sub Fault {
-        my ($msg) = @_;
-
-        # This routine is called for errors that really should not occur
-        # except if there has been a bug introduced by a recent program change.
-        # Please add comments at calls to Fault to explain why the call
-        # should not occur, and where to look to fix it.
-        my ( $package0_uu, $filename0_uu, $line0, $subroutine0_uu ) = caller(0);
-        my ( $package1_uu, $filename1,    $line1, $subroutine1 )    = caller(1);
-        my ( $package2_uu, $filename2_uu, $line2_uu, $subroutine2 ) = caller(2);
-        my $pkg = __PACKAGE__;
-
-        my $input_stream_name = $rstatus->{'input_name'};
-        $input_stream_name = '(unknown)' unless ($input_stream_name);
-        Die(<<EOM);
-==============================================================================
-While operating on input stream with name: '$input_stream_name'
-A fault was detected at line $line0 of sub '$subroutine1'
-in file '$filename1'
-which was called from line $line1 of sub '$subroutine2'
-Message: '$msg'
-This is probably an error introduced by a recent programming change.
-$pkg reports VERSION='$VERSION'.
-==============================================================================
-EOM
-
-        croak "unexpected return from sub Die";
-    } ## end sub Fault
 
     # extract various dump parameters
     my $dump_options_type     = $input_hash{'dump_options_type'};
