@@ -457,7 +457,7 @@ sub check_options {
     $is_my_our_state{'field'} = $use_feature_class;
 
     # 'ADJUST' - added as a keyword and works like 'BEGIN'
-    # TODO: if ADJUST gets a paren list, this will need to be updated
+    # See update git #182 for 'ADJUST :params'
     $is_keyword{'ADJUST'}          = $use_feature_class;
     $is_code_block_token{'ADJUST'} = $use_feature_class;
 
@@ -4901,6 +4901,23 @@ EOM
               $self->find_next_nonblank_token( $i, $rtokens, $max_token_index );
         }
 
+        # Fix for git #182: If --use-feature=class is set, then
+        # a colon between words 'ADJUST' and 'params', and on the same line,
+        # does not form the label 'ADJUST:'. It will get marked as type 'A'.
+        my $is_not_label;
+        if (   $tok eq 'ADJUST'
+            && $is_code_block_token{$tok}
+            && $rtokens->[$i_next] eq ':'
+            && $i_next < $max_token_index )
+        {
+            my $i_next2 =
+              $rtoken_type->[ $i_next + 1 ] eq 'b' ? $i_next + 2 : $i_next + 1;
+            $is_not_label =
+              (      $i_next2 <= $max_token_index
+                  && $rtoken_type->[$i_next2] eq 'w'
+                  && $rtokens->[$i_next2] eq 'params' );
+        }
+
         # a bare word immediately followed by :: is not a keyword;
         # use $tok_kw when testing for keywords to avoid a mistake
         my $tok_kw = $tok;
@@ -5100,6 +5117,7 @@ EOM
         # check for a statement label
         elsif (
                ( $next_nonblank_token eq ':' )
+            && !$is_not_label
             && ( $rtokens->[ $i_next + 1 ] ne ':' )
             && ( $i_next <= $max_token_index )    # colon on same line
 

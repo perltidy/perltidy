@@ -1,0 +1,5 @@
+class Thing {
+    ADJUST :params (:$thingy, :$stuff) {
+        ...;    #doing things
+    };
+}

@@ -7,6 +7,8 @@
 #4 git181.def
 #5 git181.git181
 #6 git32.def
+#7 git182.def
+#8 git182.git182
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -26,7 +28,10 @@ BEGIN {
     $rparams = {
         'def'    => "",
         'git181' => "-nasc",
-        'kblx6'  => <<'----------',
+        'git182' => <<'----------',
+-nwrs='A'
+----------
+        'kblx6' => <<'----------',
 -nbbc
 -blbs=0
 -blbp=0
@@ -68,6 +73,14 @@ on develop => sub {
 }
 
 # end
+----------
+
+        'git182' => <<'----------',
+class Thing {
+    ADJUST :params (:$thingy, :$stuff) {
+        ...;    #doing things
+    };
+}
 ----------
 
         'git32' => <<'----------',
@@ -287,6 +300,30 @@ sub run {
     print ' ?';
 }
 #6...........
+        },
+
+        'git182.def' => {
+            source => "git182",
+            params => "def",
+            expect => <<'#7...........',
+class Thing {
+    ADJUST : params (:$thingy, :$stuff) {
+        ...;    #doing things
+    };
+}
+#7...........
+        },
+
+        'git182.git182' => {
+            source => "git182",
+            params => "git182",
+            expect => <<'#8...........',
+class Thing {
+    ADJUST :params (:$thingy, :$stuff) {
+        ...;    #doing things
+    };
+}
+#8...........
         },
     };
 
