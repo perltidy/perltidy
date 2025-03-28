@@ -76,7 +76,7 @@ use constant BACKSLASH    => q{\\};
 use Carp;
 use English    qw( -no_match_vars );
 use List::Util qw( min max first );    # min, max first are in Perl 5.8
-our $VERSION = '20250311';
+our $VERSION = '20250311.02';
 
 # List of hash keys to prevent -duk from listing them.
 # 'break-open-compact-parens' is an unimplemented option.
@@ -23074,7 +23074,7 @@ EOM
             }
         }
 
-        # After welding, reduce the indentation level if all intermediate tokens
+        # After welding, reduce the indentation level of all intermediate tokens
         my $dlevel = $outer_opening->[_LEVEL_] - $inner_opening->[_LEVEL_];
         if ( $dlevel != 0 ) {
             my $Kstart = $Kinner_opening;

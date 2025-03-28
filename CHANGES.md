@@ -1,5 +1,9 @@
 # Perltidy Change Log
 
+## 2025 03 11.02
+
+    - Fixed git #182, Support Object::Pad phasers.
+
 ## 2025 03 11
 
     - The options --want-call-parens and --nowant-call-parens were accidentally
