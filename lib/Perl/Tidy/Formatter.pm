@@ -23020,6 +23020,20 @@ EOM
             # This rule will mainly be needed for test scripts, since typical
             # welds have fewer than about 4 welded tokens.
             if ( !@welds || @{ $welds[-1] } < 4 ) { next }
+
+            # Note for b1519: the above rule caused an instability which
+            # is most easily fixed by replacing the above if test with
+            # simply 'next;'. This eliminates the somewhat arbitrary constant
+            # '4'. But for now, to minimize changes to test cases, the
+            # instability b1519 can be fixed with the following test:
+            if (   $rLL->[$Kouter_opening]->[_TOKEN_] ne '{'
+                || $rLL->[$Kouter_opening]->[_CI_LEVEL_] )
+            {
+                next;
+            }
+
+            # If this ever causes a problem in the future, the whole issue
+            # can be fixed by just using 'next' here for all cases.
         }
 
         # otherwise start new weld ...

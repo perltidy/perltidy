@@ -8606,6 +8606,18 @@ $apple_encodings[1][$i] = { map ( { $_ => $count++ }
 $apple_encodings[1][$i] = { map ( { $_ => $count++ }
                        @{ $apple_encodings[0][$i] } ) };
 
+==> b1519 <==
+{ { { {
+   $contents .= join(
+      (  ( $USING_STYLES && $image_style ) ? " CLASS=\"$image_style\"" : '' ) );
+} } } }
+
+{ { { {
+   $contents .= join(
+      (  ( $USING_STYLES && $image_style ) ? " CLASS=\"$image_style\"" : '' ) );
+} } } }
+
+
 ==> b156 <==
 # State 1
 {

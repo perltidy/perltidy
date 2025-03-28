@@ -12777,6 +12777,27 @@ $apple_encodings[1][$i] = {
 --variable-maximum-line-length
 --square-bracket-vertical-tightness-closing=2
 
+==> b1519.in <==
+{ { { {
+   $contents .= join(
+          (
+      ( $USING_STYLES && $image_style ) ? " CLASS=\"$image_style\"" : '' ) );
+} } } }
+
+{ { { {
+   $contents .= join(
+      (  ( $USING_STYLES && $image_style ) ? " CLASS=\"$image_style\"" : '' ) );
+} } } }
+
+
+
+==> b1519.par <==
+--indent-columns=3
+--continuation-indentation=7
+--weld-nested-containers
+--paren-vertical-tightness=1
+--paren-vertical-tightness-closing=2
+
 ==> b156.in <==
 # State 1
 {
