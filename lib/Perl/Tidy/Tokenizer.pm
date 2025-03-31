@@ -2435,9 +2435,6 @@ EOM
     # in the form:
     # keyword ( .... ) { BLOCK }
     # patch for SWITCH/CASE: added 'switch' 'case' 'given' 'when'
-    # NOTE for --use-feature=class: if ADJUST blocks eventually take a
-    # parameter list, then ADJUST might need to be added to this list (see
-    # perlclass.pod)
     my %is_blocktype_with_paren;
     @q =
       qw(if elsif unless while until for foreach switch case given when catch);
@@ -3582,9 +3579,19 @@ EOM
         # curly braces we have: hash index container, anonymous
         # hash reference, or code block.
 
+        # Patch for Object::Pad "field $var BLOCK"
+        if (   $statement_type eq 'field'
+            && $last_last_nonblank_token eq 'field'
+            && $last_nonblank_type eq 'i'
+            && $last_last_nonblank_type eq 'k' )
+        {
+            $type       = '{';
+            $block_type = $statement_type;
+        }
+
         # non-structural (hash index) curly brace pair
         # get marked 'L' and 'R'
-        if ( is_non_structural_brace() ) {
+        elsif ( is_non_structural_brace() ) {
             $type = 'L';
 
             # patch for SWITCH/CASE:
@@ -5141,7 +5148,14 @@ EOM
             # Update for --use-feature=class (rt145706):
             # We have to be extra careful to avoid misparsing other uses of
             # 'method' in older scripts.
-            if ( $tok_kw eq 'method' && $guess_if_method ) {
+            if (
+                   $tok_kw eq 'method'
+                && $guess_if_method
+
+                # Patch for Object::Pad lexical method like 'method $var {'
+                && !( $next_nonblank_token eq '$' && new_statement_ok() )
+              )
+            {
                 if (   $expecting == OPERATOR
                     || $next_nonblank_token !~ /^[\w\:]/
                     || !$self->method_ok_here() )
@@ -6971,7 +6985,7 @@ sub code_block_type {
 
     # handle case of multiple '{'s
 
-# print "BLOCK_TYPE EXAMINING: type=$last_nonblank_type tok=$last_nonblank_token\n";
+#print "BLOCK_TYPE EXAMINING: type=$last_nonblank_type tok=$last_nonblank_token\n";
 
     if (   $last_nonblank_token eq '{'
         && $last_nonblank_type eq $last_nonblank_token )
@@ -8308,6 +8322,7 @@ sub scan_id_do {
     # find $i_beg = index of next nonblank token,
     # and handle empty lines
     my $blank_line          = 0;
+    my $is_lexical_method   = 0;
     my $next_nonblank_token = $rtokens->[$i_beg];
     if ( $i_beg > $max_token_index ) {
         $blank_line = 1;
@@ -8329,6 +8344,18 @@ sub scan_id_do {
                 $blank_line = 1;
             }
         }
+
+        # Patch for Object::Pad lexical method like 'method $var {':
+        # Skip past a '$'
+        if (  !$blank_line
+            && $next_nonblank_token eq '$'
+            && $id_scan_state eq 'method' )
+        {
+            ( $next_nonblank_token, $i_beg ) =
+              find_next_nonblank_token_on_this_line( $i_beg, $rtokens,
+                $max_token_index );
+            $is_lexical_method = 1;
+        }
     }
 
     # handle non-blank line; identifier, if any, must follow
@@ -8337,15 +8364,16 @@ sub scan_id_do {
         if ( $is_sub{$id_scan_state} ) {
             ( $i, $tok, $type, $id_scan_state ) = $self->do_scan_sub(
                 {
-                    input_line      => $input_line,
-                    i               => $i,
-                    i_beg           => $i_beg,
-                    tok             => $tok,
-                    type            => $type,
-                    rtokens         => $rtokens,
-                    rtoken_map      => $rtoken_map,
-                    id_scan_state   => $id_scan_state,
-                    max_token_index => $max_token_index,
+                    input_line        => $input_line,
+                    i                 => $i,
+                    i_beg             => $i_beg,
+                    tok               => $tok,
+                    type              => $type,
+                    rtokens           => $rtokens,
+                    rtoken_map        => $rtoken_map,
+                    id_scan_state     => $id_scan_state,
+                    max_token_index   => $max_token_index,
+                    is_lexical_method => $is_lexical_method,
                 }
             );
         }
@@ -9466,6 +9494,8 @@ EOM
         my $id_scan_state   = $rcall_hash->{id_scan_state};
         my $max_token_index = $rcall_hash->{max_token_index};
 
+        my $id_prefix = $rcall_hash->{is_lexical_method} ? '$' : EMPTY_STRING;
+
         # Parse a sub name and prototype.
 
         # At present there are three basic CALL TYPES which are
@@ -9573,7 +9603,7 @@ EOM
 
             my $pos  = pos($input_line);
             my $numc = $pos - $pos_beg;
-            $tok  = 'sub ' . substr( $input_line, $pos_beg, $numc );
+            $tok = 'sub ' . $id_prefix . substr( $input_line, $pos_beg, $numc );
             $type = 'S';    ## Fix for c250, was 'i';
 
             # remember the sub name in case another call is needed to

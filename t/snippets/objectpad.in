@@ -1,0 +1,13 @@
+# Some tests of Object::Pad syntax
+class BClass {
+    field $data :param;
+    method $priv { "data<$data>" }
+    method m     { return $self->$priv }
+}
+
+class AllTheTypesByBlock {
+    field $scalar  { "one" }
+    field @array   { "two", "three" }
+    field %hash    { four => "five" }
+    field $__dummy { $class_in_fieldblock = __CLASS__ }
+}

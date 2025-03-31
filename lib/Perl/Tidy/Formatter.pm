@@ -4907,7 +4907,10 @@ sub set_whitespace_flags {
 
                 # avoid any space before the brace or bracket in something like
                 #  @opts{'a','b',...}
-                if ( $last_type eq 'i' && $last_token =~ /^\@/ ) {
+                my $seqno      = $rtokh->[_TYPE_SEQUENCE_];
+                my $block_type = $rblock_type_of_seqno->{$seqno};
+                if ( !$block_type && $last_type eq 'i' && $last_token =~ /^\@/ )
+                {
                     $ws = WS_NO;
                 }
             }
@@ -28428,6 +28431,7 @@ sub starting_one_line_block {
         ##|| $block_type =~ /^[\{\}\;\:]$/
         || $is_brace_semicolon_colon{$block_type}
         || substr( $block_type, 0, 7 ) eq 'package'
+        || $block_type eq 'field'
       )
     {
         $i_start = $max_index_to_go;

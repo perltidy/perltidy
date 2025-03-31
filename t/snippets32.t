@@ -9,6 +9,8 @@
 #6 git32.def
 #7 git182.def
 #8 git182.git182
+#9 objectpad.def
+#10 objectpad.objectpad
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -57,6 +59,9 @@ BEGIN {
 -blao=0
 -blbc=0
 -kblx='cb' # not an inverse
+----------
+        'objectpad' => <<'----------',
+-nwrs='A'
 ----------
     };
 
@@ -128,6 +133,22 @@ sub dump_verbatim {
 # coment before side comment
 
 # comment after blank and comment
+----------
+
+        'objectpad' => <<'----------',
+# Some tests of Object::Pad syntax
+class BClass {
+    field $data :param;
+    method $priv { "data<$data>" }
+    method m     { return $self->$priv }
+}
+
+class AllTheTypesByBlock {
+    field $scalar  { "one" }
+    field @array   { "two", "three" }
+    field %hash    { four => "five" }
+    field $__dummy { $class_in_fieldblock = __CLASS__ }
+}
 ----------
     };
 
@@ -324,6 +345,46 @@ class Thing {
     };
 }
 #8...........
+        },
+
+        'objectpad.def' => {
+            source => "objectpad",
+            params => "def",
+            expect => <<'#9...........',
+# Some tests of Object::Pad syntax
+class BClass {
+    field $data : param;
+    method $priv { "data<$data>" }
+    method m     { return $self->$priv }
+}
+
+class AllTheTypesByBlock {
+    field $scalar  { "one" }
+    field @array   { "two", "three" }
+    field %hash    { four => "five" }
+    field $__dummy { $class_in_fieldblock = __CLASS__ }
+}
+#9...........
+        },
+
+        'objectpad.objectpad' => {
+            source => "objectpad",
+            params => "objectpad",
+            expect => <<'#10...........',
+# Some tests of Object::Pad syntax
+class BClass {
+    field $data :param;
+    method $priv { "data<$data>" }
+    method m     { return $self->$priv }
+}
+
+class AllTheTypesByBlock {
+    field $scalar  { "one" }
+    field @array   { "two", "three" }
+    field %hash    { four => "five" }
+    field $__dummy { $class_in_fieldblock = __CLASS__ }
+}
+#10...........
         },
     };
 
