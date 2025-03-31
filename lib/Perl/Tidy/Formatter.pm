@@ -564,6 +564,7 @@ BEGIN {
         _rblock_type_of_seqno_      => $i++,
         _ris_asub_block_            => $i++,
         _ris_sub_block_             => $i++,
+        _ris_method_block_          => $i++,
         _K_opening_container_       => $i++,
         _K_closing_container_       => $i++,
         _K_opening_ternary_         => $i++,
@@ -1084,6 +1085,7 @@ sub new {
     $self->[_rblock_type_of_seqno_]    = {};
     $self->[_ris_asub_block_]          = {};
     $self->[_ris_sub_block_]           = {};
+    $self->[_ris_method_block_]        = {};
 
     # Variables for --warn-mismatched-args and
     #               --dump-mismatched-args
@@ -8738,6 +8740,7 @@ sub find_selected_blocks {
     my $K_closing_container  = $self->[_K_closing_container_];
     my $ris_asub_block       = $self->[_ris_asub_block_];
     my $ris_sub_block        = $self->[_ris_sub_block_];
+    my $ris_method_block     = $self->[_ris_method_block_];
 
     my $dump_all_types = $rdump_block_types->{'*'};
 
@@ -8830,6 +8833,7 @@ EOM
         elsif ( $ris_sub_block->{$seqno}
             && ( $dump_all_types || $rdump_block_types->{'sub'} ) )
         {
+
             $type = 'sub';
 
             # what we want:
@@ -8839,6 +8843,11 @@ EOM
             my @parts = split /\s+/, $block_type;
             $name = $parts[1];
             $name =~ s/\(.*$//;
+
+            # Patch to count lexical methods as asubs, c481
+            if ( substr( $name, 0, 1 ) eq '$' && $ris_method_block->{$seqno} ) {
+                $type = 'asub';
+            }
 
             my $rarg = { seqno => $seqno };
             $self->count_sub_input_args($rarg);
@@ -11067,6 +11076,7 @@ sub dump_block_summary {
     #  --dump-block-minimum-lines=n (-dbml=n), where n is the minimum
     #    number of lines for a block to be included; default is 20.
 
+    my $ris_method_block       = $self->[_ris_method_block_];
     my $rOpts_dump_block_types = $rOpts->{'dump-block-types'};
     if ( !defined($rOpts_dump_block_types) ) { $rOpts_dump_block_types = 'sub' }
     $rOpts_dump_block_types =~ s/^\s+//;
@@ -11165,12 +11175,19 @@ sub dump_block_summary {
         my $mccabe2 = $mccabe1;
 
         # compute mccabe2 of subs by subtracting any asub counts
+        my $seqno = $item->{seqno};
         if ( substr( $item->{type}, 0, 3 ) eq 'sub' ) {
-            my $seqno      = $item->{seqno};
             my $asub_count = $asub_mccabe_count_by_parent_seqno{$seqno};
             if ($asub_count) {
                 $mccabe2 -= $asub_count;
             }
+        }
+
+        # NOTE: lexical methods stay marked as 'asub' for now.
+        # Something like 'lexical method' would be too long.
+        my $display_type = $item->{type};
+        if ( $ris_method_block->{$seqno} ) {
+            $display_type =~ s/^sub/method/;
         }
 
         # Store the final set of print variables
@@ -11181,7 +11198,7 @@ sub dump_block_summary {
             $item->{line_start},
             $item->{line_count},
             $item->{code_lines},
-            $item->{type},
+            $display_type,
             $item->{name},
             $item->{level},
             $item->{max_change},
@@ -13041,12 +13058,16 @@ sub scan_variable_usage {
     # sub to check in a new identifier
     #---------------------------------
     my $checkin_new_lexical = sub {
-        my ($KK) = @_;
+        my ( $KK, ($true_name) ) = @_;
 
         # Store the new identifier at index $KK
+        # Given:
+        #   $KK = index of this token
+        #   $true_name = the name to use for lexical methods
 
         my $name       = $rLL->[$KK]->[_TOKEN_];
         my $line_index = $rLL->[$KK]->[_LINE_INDEX_];
+        if ($true_name) { $name = $true_name }
 
         # Special checks for signature variables
         if ($in_signature_seqno) {
@@ -13828,6 +13849,12 @@ EOM
             # a sub statement
             #----------------
             elsif ( $type eq 'S' ) {
+
+                # Special check for lexical method (c481)
+                # with a token like 'method $var'
+                if ( $token =~ /^method (\$.+)/ ) {
+                    $checkin_new_lexical->( $KK, $1 );
+                }
                 $check_sub_signature->($KK);
             }
 
@@ -15241,6 +15268,7 @@ my $rblock_type_of_seqno;
 my $rwant_arrow_before_seqno;
 my $ris_sub_block;
 my $ris_asub_block;
+my $ris_method_block;
 my $rseqno_arrow_call_chain_start;
 my $rarrow_call_chain;
 
@@ -15258,6 +15286,7 @@ my $last_last_nonblank_code_type;
 my $last_last_nonblank_code_token;
 my $K_last_S;
 my $K_last_S_is_my;
+my $last_S_is_method;
 
 my %seqno_stack;
 my %K_old_opening_by_seqno;
@@ -15336,6 +15365,7 @@ sub initialize_respace_tokens_closure {
     $rwant_arrow_before_seqno  = $self->[_rwant_arrow_before_seqno_];
     $ris_sub_block             = $self->[_ris_sub_block_];
     $ris_asub_block            = $self->[_ris_asub_block_];
+    $ris_method_block          = $self->[_ris_method_block_];
 
     $rK_package_list               = $self->[_rK_package_list_];
     $rK_AT_underscore_by_sub_seqno = $self->[_rK_AT_underscore_by_sub_seqno_];
@@ -15360,6 +15390,7 @@ sub initialize_respace_tokens_closure {
     $last_last_nonblank_code_token = ';';
     $K_last_S                      = 1;
     $K_last_S_is_my                = undef;
+    $last_S_is_method              = undef;
 
     %seqno_stack            = ();
     %K_old_opening_by_seqno = ();    # Note: old K index
@@ -15850,6 +15881,9 @@ sub respace_tokens_inner_loop {
 
                 # At a sub block, save info to cross check arg counts
                 elsif ( $ris_sub_block->{$type_sequence} ) {
+                    if ($last_S_is_method) {
+                        $ris_method_block->{$type_sequence} = 1;
+                    }
                     $rK_sub_by_seqno->{$type_sequence} = $K_last_S;
                     if ($K_last_S_is_my) {
                         $ris_my_sub_by_seqno->{$type_sequence} = 1;
@@ -15858,6 +15892,9 @@ sub respace_tokens_inner_loop {
                     $current_sub_seqno = $type_sequence;
                 }
                 elsif ( $ris_asub_block->{$type_sequence} ) {
+                    if ($last_S_is_method) {
+                        $ris_method_block->{$type_sequence} = 1;
+                    }
                     push @sub_seqno_stack, $current_sub_seqno;
                     $current_sub_seqno = $type_sequence;
                 }
@@ -16256,6 +16293,9 @@ EOM
             $rtoken_vars->[_TOKEN_] = $token;
 
             $self->[_ris_special_identifier_token_]->{$token} = 'sub';
+
+            # set flag for marking method blocks
+            $last_S_is_method = substr( $token, 0, 6 ) eq 'method';
         }
 
         # and trim spaces in package statements (added for c250)
