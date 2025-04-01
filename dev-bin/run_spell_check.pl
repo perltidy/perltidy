@@ -287,7 +287,7 @@ A - Accept: no spelling errors
       Merge these new words into the '.spell' list for this file,
       save a backup of the previous '.spell' file as '.spell.bak',
       remove the file with new words '$list_file'.
-C - Continue and fix later, there are some mispellings
+C - Continue and fix later, there are some misspellings
       You can review the new words in '$list_file' later, and
       fix any misspellings in the source, and
       rerun this program and select 'Y' when everything looks good.
@@ -303,7 +303,9 @@ EOM
             @words = uniq(@words);
             my $num     = @words;
             my $ostring = join "\n", @words;
-            write_file_with_backup( $dot_spell_file, $ostring );
+            $ostring .= "\n";
+            ##write_file_with_backup( $dot_spell_file, $ostring );
+            write_file( $dot_spell_file, $ostring );
             print "Wrote $num words to $dot_spell_file\n";
             unlink($list_file);
             last;
@@ -346,7 +348,7 @@ sub read_source_file {
 
     # Scan the source for words, and remove any in the .spell list
 
-    # This will hold the unknnown words
+    # This will hold the unknown words
     my $rdestination = [];
 
     if ( $source =~ /\.md$/ ) {

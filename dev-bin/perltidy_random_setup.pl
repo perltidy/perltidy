@@ -976,7 +976,7 @@ EOM
             #'keyword-group-blanks-list=s
             'keyword-group-blanks-size' => [ 0, 2, 4, 7, 10, 2.8, 1.8 ],
 
-            # TODO: FILL thESE with multiple random keywords
+            # TODO: FILL THESE with multiple random keywords
             'space-after-keyword'   => \@keywords,
             'nospace-after-keyword' => \@keywords,
 

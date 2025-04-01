@@ -288,7 +288,7 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
             }
 
             # Check for an unexpectedly very small file size...
-            # NOTE: file sizes can often be unexpectly small when operating on
+            # NOTE: file sizes can be unexpectedly small when operating on
             # random text.  For example, if a random line begins with an '='
             # then when a --delete-pod parameter is set, everything from there
             # on gets deleted.
@@ -645,7 +645,7 @@ sub save_blinker_info {
     my $blink_dir = "$BLINKDIR/Blinker-" . "$runname";
     if ( !-d $blink_dir ) {
         unless ( mkdir $blink_dir ) {
-            print STDERR "unable to crreate $blink_dir\n";
+            print STDERR "unable to create $blink_dir\n";
             return;
         }
         return unless ( -d $blink_dir );

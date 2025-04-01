@@ -481,7 +481,7 @@ sub profile_simplify_inner_loop {
     # - Start with the parameters sorted so that the most likely to cause
     #   blinking occur at the end of the list.  We know this from past work.
     # - Testing is done by removing chunks of parameters and testing if
-    #   blinking stops.  Keep testing until we have tested all parametes:
+    #   blinking stops.  Keep testing until we have tested all parameters:
     # - On the first test, use the full set to verify blinking;
     #   - exit with error if not blinking.
     #   - otherwise, switch to maximum chunk size and continue.
