@@ -2,26 +2,30 @@
 use strict;
 use warnings;
 
-# Spell check perltidy files. How this works:
-#   - Keep a list of previously found unique words for each file in filename.spell
-#     and a backup of this in filename.spell.bak
-#   - These .spell files are excluded from git and MANIFEST
-#   - Find all words with the help of perltidy (quotes, comments, pod, here-docs)
+# This is a spell checker for perltidy files. How this works:
+#   - Keep a list of previously found unique words for each file in
+#     'filename.spell'
+#   - These .spell files must be excluded from MANIFEST and git
+#   - Find all words with the help of perltidy where necessary
+#          (quotes, comments, pod, here-docs)
 #   - Remove any of these already in the .spell file list
 #   - Run the remainder through aspell in list mode to find new unknown words
 #   - Ask user which of these need to be fixed
 #   - When no errors remain, add the new words to filename.spell
 
-# After an initial spell check, spell-checking all files takes only a few seconds
-# unless new spelling errors need to be corrected.
+# After an initial spell check, spell-checking all files takes only a few
+# seconds unless possible new spelling errors need to be checked.
+
+# FIXME: the following file type assumptions work for perltidy but should
+#   be generalized:
+# - files ending in .md and .txt are treated as simple text files
+# - all other files are assumed to be perl (or pod) text
 
 # Requires 'aspell'
 
 # Usage:
 #  run_spell_check.pl [file1 [file2 ...
-#    if args given, checks spelling of the listed files
-#  run_spell_check.pl
-#    if no args, cd's to perltidy git and spell checks files in MANIFEST
+#    checks spelling of the listed files
 
 use File::Copy;
 use File::Temp qw(tempfile);
@@ -29,7 +33,8 @@ use Data::Dumper;
 use Cwd qw(getcwd);
 
 $| = 1;
-use constant EMPTY_STRING => q{};
+
+#use constant EMPTY_STRING => q{};
 
 # This can be turned on to check for double words.
 use constant FIND_DOUBLE_WORDS => 1;
@@ -39,43 +44,26 @@ main();
 sub main {
 
     my $usage = <<EOM;
-Spell check perltidy files
+Spell check selected files, with special handling of perl files
 Usage:
   $0 file1 [ file2 [...
      spell check selected files
-  $0
-     If no files are given, change directory to the perltidy git head
-     and look for MANIFEST and use files lib/.../*.pm
-     Ask which of these to process
 EOM
 
-    my $git_home    = find_git_home();
-    my $rfiles      = [];
-    my $file_string = EMPTY_STRING;
-    if (@ARGV) {
-        $rfiles      = \@ARGV;
-        $file_string = join ', ', @{$rfiles};
-    }
-    else {
-        chomp $git_home;
-        chdir $git_home;
-        $rfiles = find_perltidy_files();
-        my $num = @{$rfiles};
-        print STDERR "found $num files\n";
-        if ( ifyes("Do you want to select specific files? [Y/N]") ) {
-            $rfiles = select_files($rfiles);
-        }
-    }
-
-    if ( !@{$rfiles} ) {
-        query("No files selected, hit <cr>");
+    my @files     = uniq(@ARGV);
+    my $num_files = @files;
+    print "$num_files files selected ...\n";
+    if ( !@files ) {
         die $usage;
     }
 
     my @residual_tmp_files;
-    foreach my $file ( @{$rfiles} ) {
-        if ( !-e $file ) { print "$file does not exist\n"; next }
-        my $tmp_file = spell_check($file);
+    my $count = 0;
+    foreach my $file (@files) {
+        $count++;
+        if ( !-e $file ) { print "$file does not exist\n";               next }
+        if ( !-T $file ) { print "skipping $file: reported as binary\n"; next }
+        my $tmp_file = spell_check( $file, $count, $num_files );
         push @residual_tmp_files, $tmp_file if ($tmp_file);
     }
     if (@residual_tmp_files) {
@@ -88,129 +76,12 @@ EOM
     return;
 } ## end sub main
 
-sub find_perltidy_files {
-    my $MANIFEST = "MANIFEST";
-    my $rfiles   = [];
-    if ( -e $MANIFEST && -f $MANIFEST ) {
-        $rfiles = read_MANIFEST($MANIFEST);
-    }
-    my @more_files = glob('*.md local-docs/*.md local-docs/*.pod');
-    push @{$rfiles}, @more_files;
-    @{$rfiles} = uniq( @{$rfiles} );
-    return $rfiles;
-} ## end sub find_perltidy_files
-
-sub read_MANIFEST {
-    my ($MANIFEST) = @_;
-
-    # scan MANIFEST for existing files of the form 'lib/.../*.pm'
-    my $fh;
-    if ( !open( $fh, '<', $MANIFEST ) ) {
-        die "cannot open '$MANIFEST': $!\n";
-    }
-    my @files;
-    foreach my $line (<$fh>) {
-        chomp $line;
-        next unless ($line);
-        my @parts    = split '/', $line;
-        my $basename = $parts[-1];
-        if ( ( $parts[0] eq 'bin' && $basename eq 'perltidy' )
-            || $basename =~ /\.(?:pm|pod|pl|md)$/ )
-        {
-            if ( -e $line ) { push @files, $line }
-            next;
-        }
-    }
-    return \@files;
-} ## end sub read_MANIFEST
-
-sub select_files {
-    my ($rfiles) = @_;
-
-    # allow selection of a subset of all possible files
-    my $imax = -1;
-    foreach my $file ( @{$rfiles} ) {
-        $imax++;
-        print "$imax $file\n";
-    }
-    my %want_file;
-    my @ilist;
-    print <<EOM;
-Select files by any combination of above numbers and/or wildcard file extension, i.e.:
-*.md *.pm 1-10 12 13..20
-EOM
-    my $ans = query("Your selection:\n");
-    $ans =~ s/,/ /g;
-    $ans =~ s/\.\./-/g;
-    my @parts = split /\s+/, $ans;
-
-    foreach my $part (@parts) {
-
-        # handle a wildcard file extension like *.pm
-        if ( $part =~ /\*\.([A-Za-z]+)$/ ) {
-            my $ext_want = $1;
-            foreach my $file ( @{$rfiles} ) {
-                my $pos = rindex( $file, '.' );
-                next if ( $pos < 0 );
-                my $ext = substr( $file, $pos + 1 );
-                next if ( $ext ne $ext_want );
-                $want_file{$file} = 1;
-            }
-            next;
-        }
-
-        # handle selection by number
-        if ( index( $part, '-' ) >= 0 ) {
-            my @list = split /-/, $part;
-            if ( @list != 2 ) {
-                query("Error processing '$part', hit <cr>\n");
-                return;
-            }
-            my $i1 = $list[0];
-            my $i2 = $list[1];
-            if ( $i1 < 0 || $i2 > $imax || $i2 < $i1 ) {
-                query("Error processing '$part', hit <cr>\n");
-                return;
-            }
-            foreach my $ix ( $i1 .. $i2 ) { $ilist[$ix] = 1 }
-            next;
-        }
-        if ( $part =~ /^\d+$/ && $part >= 0 && $part <= $imax ) {
-            $ilist[$part] = 1;
-        }
-        else {
-            query("Error processing '$part' with imax=$imax, hit <cr>\n");
-            return;
-        }
-    }
-
-    my @selected;
-    foreach my $ix ( 0 .. $imax ) {
-        my $file = $rfiles->[$ix];
-        if ( $ilist[$ix] || $want_file{$file} ) {
-            push @selected, $file;
-        }
-    }
-
-    return \@selected;
-} ## end sub select_files
-
-sub find_git_home {
-    my ( $fh_uu, $err_file ) = File::Temp::tempfile();
-
-    # See if we are within the perltidy git
-    my $git_home = qx[git rev-parse --show-toplevel 2>$err_file];
-    chomp $git_home;
-    if ( -e $err_file ) { unlink($err_file) }
-    return $git_home;
-} ## end sub find_git_home
-
 sub spell_check {
-    my ($source) = @_;
+    my ( $source, $count, $num_files ) = @_;
 
     # return 1 if a tempfile was left for further work
 
-    print "Checking $source..";
+    print "Checking file $count of $num_files: $source..";
 
     if ( !-e $source ) {
         print "file '$source' does not exist; hit <cr>\n";
@@ -260,6 +131,9 @@ sub spell_check {
     return;
 } ## end sub spell_check
 
+{ #<<<
+my $AOK;
+
 sub handle_unknown_words {
 
     my ( $list_file, $dot_spell_file, $rwords ) = @_;
@@ -273,8 +147,29 @@ sub handle_unknown_words {
     #     - add the new words to the dictionary if all ok, or
     #     - continue and fix later
 
-    my $string  = slurp_file($list_file);
-    my @words   = split /^/, $string;
+    my $string = slurp_file($list_file);
+    my @words  = split /^/, $string;
+
+    my $add_words = sub {
+        push @words, @{$rwords};
+        foreach (@words) { chomp }
+        @words = sort { $a cmp $b } @words;
+        @words = uniq(@words);
+        my $num     = @words;
+        my $ostring = join "\n", @words;
+        $ostring .= "\n";
+        ##write_file_with_backup( $dot_spell_file, $ostring );
+        write_file( $dot_spell_file, $ostring );
+        print "Wrote $num words to $dot_spell_file\n";
+        unlink($list_file);
+        return;
+    }; ## end $add_words = sub
+
+    if ($AOK) {
+        $add_words->();
+        return;
+    }
+
     my $num_new = @words;
     openurl($list_file);
 
@@ -294,24 +189,53 @@ C - Continue and fix later, there are some misspellings
       NOTE: for suggestions, try:
            'aspell -c $list_file'
       answer 'i' to keep from adding words to the local aspell word list.
+AOK - Answer 'A" to all files. This is only for a new installation.
+H - Help
+Q - QUIT immediately
 EOM
         my $ans = queryu(":");
-        if ( $ans eq 'A' ) {
-            push @words, @{$rwords};
-            foreach (@words) { chomp }
-            @words = sort { $a cmp $b } @words;
-            @words = uniq(@words);
-            my $num     = @words;
-            my $ostring = join "\n", @words;
-            $ostring .= "\n";
-            ##write_file_with_backup( $dot_spell_file, $ostring );
-            write_file( $dot_spell_file, $ostring );
-            print "Wrote $num words to $dot_spell_file\n";
-            unlink($list_file);
+        if ( $ans eq 'H' ) {
+            cls();
+            print <<EOM;
+How this works:
+ - We keep a list of previously found unique words for each file in
+   'filename.spell'
+ - We make a list of all words in a file
+ - We remove any of these already in the .spell list for this file
+ - Remaining words are run 'aspell' to find new unknown words
+ - The user is asked if any of these need to be fixed:
+   - Answer 'A' if you do not see any errors. In this case, the words will
+     be added to the .spell list for this file
+   - Answer 'C' if you see any errors. In this case, you should separately
+     find and fix the errors, and then rerun this program.
+   - Answer 'AOK' only if you are doing a new installation and are sure
+     that there are no errors.  The program will create all new .spell
+     files without further input.
+ - Note: you can always start over for a file by deleting its .spell file.
+EOM
+            queryu("Hit <cr> to continue\n");
+        }
+        elsif ( $ans eq 'A' ) {
+            $add_words->();
             last;
+        }
+        elsif ( $ans eq 'AOK' ) {
+            if ( ifyes(<<EOM) ) {
+This is for a new installation where all spelling is known to be OK.
+Are you sure? (Y/N)
+EOM
+                $AOK = 1;
+                $add_words->();
+                last;
+            }
         }
         elsif ( $ans eq 'C' ) {
             last;
+        }
+        elsif ( $ans eq 'Q' ) {
+            if ( ifyes("Quit without finishing, are you sure? [Y/N]") ) {
+                exit 1;
+            }
         }
         else {
             queryu("Unknown response: '$ans', hit <cr> to try again:\n");
@@ -319,6 +243,7 @@ EOM
     } ## end while (1)
     return;
 } ## end sub handle_unknown_words
+}
 
 sub read_word_file {
     my ($fname) = @_;
@@ -351,7 +276,7 @@ sub read_source_file {
     # This will hold the unknown words
     my $rdestination = [];
 
-    if ( $source =~ /\.md$/ ) {
+    if ( $source =~ /\.(md|txt)$/ ) {
         $rdestination = scan_markdown_file( $source, $rknown_words );
     }
     else {
@@ -462,14 +387,19 @@ sub write_file_with_backup {
     return;
 } ## end sub write_file_with_backup
 
+#########################################################
+# utils
+#########################################################
+
+sub cls {
+    print "\033[2J";      #clear the screen
+    print "\033[0;0H";    #jump to 0,0
+}
+
 sub uniq {
     my %seen;
     return grep { !$seen{$_}++ } @_;
 }
-
-#########################################################
-# utils
-#########################################################
 
 sub query {
     my ($msg) = @_;
@@ -581,8 +511,7 @@ my (
 
 sub store_text {
     my ($text) = @_;
-##  my @words  = split /\s+/, $text;
-    my @words = split /[\s\.\(\)\;\,\-\!\?\"\:]+/, $text;
+    my @words  = split /[\s\.\(\)\;\,\-\!\?\"\:]+/, $text;
     foreach my $word (@words) {
         next if ( $word !~ /^[A-Za-z]+$/ );
         next if ( length($word) < 2 );
@@ -666,8 +595,7 @@ sub write_line {
     # This is called from perltidy line-by-line
     my ( $self, $line_of_tokens ) = @_;
 
-    my $line_type = $line_of_tokens->{_line_type};
-##  my $input_line_number = $line_of_tokens->{_line_number};
+    my $line_type   = $line_of_tokens->{_line_type};
     my $input_line  = $line_of_tokens->{_line_text};
     my $rtoken_type = $line_of_tokens->{_rtoken_type};
     my $rtokens     = $line_of_tokens->{_rtokens};
@@ -714,7 +642,6 @@ sub write_line {
             }
         }
 
-        #
         else {
             next;
         }
