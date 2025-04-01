@@ -146,6 +146,7 @@ my (
     # GLOBAL VARIABLES which are constant after being configured.
     # INITIALIZER: BEGIN block and modified by sub check_options
     %is_code_block_token,
+    %is_zero_continuation_block_type,
     %is_keyword,
     %is_my_our_state,
     %is_package,
@@ -453,13 +454,19 @@ sub check_options {
     }
 
     # 'field'  - added as a keyword, and works like 'my'
-    $is_keyword{'field'}      = $use_feature_class;
-    $is_my_our_state{'field'} = $use_feature_class;
+    # Setting zero_continuation_block_type allows inclusion in table of level
+    # differences in case of a missing or extra brace (see sub wrapup).
+    $is_keyword{'field'}                      = $use_feature_class;
+    $is_my_our_state{'field'}                 = $use_feature_class;
+    $is_zero_continuation_block_type{'field'} = $use_feature_class;
 
     # 'ADJUST' - added as a keyword and works like 'BEGIN'
     # See update git #182 for 'ADJUST :params'
-    $is_keyword{'ADJUST'}          = $use_feature_class;
-    $is_code_block_token{'ADJUST'} = $use_feature_class;
+    # Setting zero_continuation_block_type allows inclusion in table of level
+    # differences in case of a missing or extra brace (see sub wrapup).
+    $is_keyword{'ADJUST'}                      = $use_feature_class;
+    $is_code_block_token{'ADJUST'}             = $use_feature_class;
+    $is_zero_continuation_block_type{'ADJUST'} = $use_feature_class;
 
     %is_grep_alias = ();
     if ( $rOpts->{'grep-alias-list'} ) {
@@ -1204,11 +1211,11 @@ EOM
     my $ln_1         = $rhistory_line_number->[1];
     if ( $level_diff_1 < 0 ) {
         push @output_lines,
-          "There may be an extra '}' between lines $ln_0 and $ln_1\n";
+"There may be an extra '}' or missing '{' between lines $ln_0 and $ln_1\n";
     }
     elsif ( $level_diff_1 > 0 ) {
         push @output_lines,
-          "There may be a missing '}' between lines $ln_0 and $ln_1\n";
+"There may be a missing '}' or extra '{' between lines $ln_0 and $ln_1\n";
     }
     else {
         ## two leading zeros in the table - probably can't happen - no hint
@@ -2353,14 +2360,7 @@ EOM
 
     my %matching_start_token = ( '}' => '{', ']' => '[', ')' => '(' );
 
-    # These block types terminate statements and do not need a trailing
-    # semicolon
-    # patched for SWITCH/CASE/
-    my %is_zero_continuation_block_type;
     my @q;
-    @q = qw( } { BEGIN END CHECK INIT AUTOLOAD DESTROY UNITCHECK continue ;
-      if elsif else unless while until for foreach switch case given when );
-    @is_zero_continuation_block_type{@q} = (1) x scalar(@q);
 
     my %is_logical_container;
     @q = qw( if elsif unless while and or err not && ! || for foreach );
@@ -11332,6 +11332,13 @@ BEGIN {
       when      default  catch try    finally
     );
     @is_code_block_token{@q} = (1) x scalar(@q);
+
+    # These block types terminate statements and do not need a trailing
+    # semicolon; patched for SWITCH/CASE/;  This may be updated in sub
+    # check_options.
+    @q = qw( } { BEGIN END CHECK INIT AUTOLOAD DESTROY UNITCHECK continue ;
+      if elsif else unless while until for foreach switch case given when );
+    @is_zero_continuation_block_type{@q} = (1) x scalar(@q);
 
     # Note: this hash was formerly named '%is_not_zero_continuation_block_type'
     # to contrast it with the block types in '%is_zero_continuation_block_type'
