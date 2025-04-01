@@ -5693,6 +5693,11 @@ below.
 
 =item B<Controlling side comment alignment with --valign-side-comments or -vsc>
 
+The basic rule for side comment alignment is that side comments on a sequence
+of lines with the same leading indentation will be aligned if space allows.
+Side comments on lines with different leading indentations will generally not
+be aligned.
+
 The B<-vsc> flag enables alignment of side comments and is enabled by default.  If side
 comment alignment is disabled with B<-nvsc> they will appear at a fixed space from the
 preceding code token.  The default is B<-vsc>
