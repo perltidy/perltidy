@@ -35037,7 +35037,9 @@ EOM
 
         # Also ignore any high stress level breaks; fixes b1395
         $poor_break ||= $levels_to_go[$i] >= $high_stress_level;
-        if ($poor_break) { goto RETURN }
+        if ($poor_break) {
+            return ( $i_want_previous_break, $i_old_assignment_break );
+        }
 
         #--------------------------------------------
         # Not a poor break, so continue to examine it
@@ -35101,7 +35103,6 @@ EOM
             ## not old assignment break
         }
 
-      RETURN:
         return ( $i_want_previous_break, $i_old_assignment_break );
     } ## end sub examine_old_breakpoint
 
@@ -39443,6 +39444,10 @@ EOM
         # This routine looks at all output lines of a batch for certain tokens
         # which can serve as vertical alignment markers (such as an '=').
 
+        # Returns:
+        #  $ralignment_type_to_go - ref to array of alignment types
+        #  $ralignment_counts     - ref to array of alignment counts
+
         # $ri_first = ref to list of starting line indexes in _to_go arrays
         # $ri_last  = ref to list of ending line indexes in _to_go arrays
         my $this_batch = $self->[_this_batch_];
@@ -39472,7 +39477,7 @@ EOM
         #    - and nothing to do if we aren't allowed to change whitespace.
         # -----------------------------------------------------------------
         if ( $max_i <= 0 || !$rOpts_add_whitespace ) {
-            goto RETURN;
+            return ( $ralignment_type_to_go, $ralignment_counts );
         }
 
         # -------------------------------
@@ -39548,7 +39553,7 @@ EOM
         # Nothing more to do on this line if -nvc is set
         # ----------------------------------------------
         if ( !$rOpts_valign_code ) {
-            goto RETURN;
+            return ( $ralignment_type_to_go, $ralignment_counts );
         }
 
         # -------------------------------------
@@ -39571,8 +39576,6 @@ EOM
             $self->set_vertical_alignment_markers_token_loop( $nline, $ibeg,
                 $iend );
         }
-
-      RETURN:
         return ( $ralignment_type_to_go, $ralignment_counts );
     } ## end sub set_vertical_alignment_markers
 

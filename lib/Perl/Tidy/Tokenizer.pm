@@ -6221,11 +6221,13 @@ EOM
                 # it could also be bug introduced by programming change.  Perl
                 # silently accepts a 032 (^Z) and takes it as the end
                 elsif ( !$is_valid_token_type{$type_i} ) {
-                    my $val = ord($type_i);
-                    $self->warning(
+                    if ( !$self->[_in_error_] ) {
+                        my $val = ord($type_i);
+                        $self->warning(
 "unexpected character decimal $val ($type_i) in script\n"
-                    );
-                    $self->[_in_error_] = 1;
+                        );
+                        $self->[_in_error_] = 1;
+                    }
                 }
                 else {
                     # valid token type other than ; and t

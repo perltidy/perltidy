@@ -213,8 +213,6 @@ Found $num_new unknown words in $list_file. Please review this list.
 Choose one of these options:
 A - Accept: looks ok, no spelling errors
       Merge these new words into the '.spell' list for this file,
-      save a backup of the previous '.spell' file as '.spell.bak',
-      remove the file with new words '$list_file'.
 C - Continue and fix later, there are some misspellings
       You can review the new words in '$list_file' later, and
       fix any misspellings in the source, and
