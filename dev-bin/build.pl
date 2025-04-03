@@ -260,9 +260,6 @@ sub run_spell_check {
     my $rfiles = find_perltidy_files();
     my $num    = @{$rfiles};
     print STDERR "found $num files\n";
-    if ( ifyes("Do you want to select specific files? [Y/N]") ) {
-        $rfiles = select_files($rfiles);
-    }
     if ( @{$rfiles} ) {
         my $list = join " ", @{$rfiles};
         my $cmd  = "./dev-bin/run_spell_check.pl $list";
@@ -307,77 +304,6 @@ sub read_MANIFEST {
     }
     return \@files;
 } ## end sub read_MANIFEST
-
-sub select_files {
-    my ($rfiles) = @_;
-
-    # allow selection of a subset of all possible files
-    my $imax = -1;
-    foreach my $file ( @{$rfiles} ) {
-        $imax++;
-        print "$imax $file\n";
-    }
-    my %want_file;
-    my @ilist;
-    print <<EOM;
-Select files by any combination of above numbers and/or wildcard file extension, i.e.:
-*.md *.pm 1-10 12 13..20
-EOM
-    my $ans = query("Your selection:\n");
-    $ans =~ s/,/ /g;
-    $ans =~ s/\.\./-/g;
-    my @parts = split /\s+/, $ans;
-
-    foreach my $part (@parts) {
-
-        # handle a wildcard file extension like *.pm
-        if ( $part =~ /\*\.([A-Za-z]+)$/ ) {
-            my $ext_want = $1;
-            foreach my $file ( @{$rfiles} ) {
-                my $pos = rindex( $file, '.' );
-                next if ( $pos < 0 );
-                my $ext = substr( $file, $pos + 1 );
-                next if ( $ext ne $ext_want );
-                $want_file{$file} = 1;
-            }
-            next;
-        }
-
-        # handle selection by number
-        if ( index( $part, '-' ) >= 0 ) {
-            my @list = split /-/, $part;
-            if ( @list != 2 ) {
-                query("Error processing '$part', hit <cr>\n");
-                return;
-            }
-            my $i1 = $list[0];
-            my $i2 = $list[1];
-            if ( $i1 < 0 || $i2 > $imax || $i2 < $i1 ) {
-                query("Error processing '$part', hit <cr>\n");
-                return;
-            }
-            foreach my $ix ( $i1 .. $i2 ) { $ilist[$ix] = 1 }
-            next;
-        }
-        if ( $part =~ /^\d+$/ && $part >= 0 && $part <= $imax ) {
-            $ilist[$part] = 1;
-        }
-        else {
-            query("Error processing '$part' with imax=$imax, hit <cr>\n");
-            return;
-        }
-    }
-
-    my @selected;
-    foreach my $ix ( 0 .. $imax ) {
-        my $file = $rfiles->[$ix];
-        if ( $ilist[$ix] || $want_file{$file} ) {
-            push @selected, $file;
-        }
-    }
-
-    return \@selected;
-} ## end sub select_files
 
 sub run_convergence_tests {
     my $fout = "tmp/run_convergence_tests.out";
@@ -1165,6 +1091,11 @@ sub spew_string_to_file {
     $ftmp->close();
     return;
 } ## end sub spew_string_to_file
+
+sub cls {
+    print "\033[2J";      # clear the screen
+    print "\033[0;0H";    # jump to 0,0
+}
 
 sub uniq {
     my %seen;

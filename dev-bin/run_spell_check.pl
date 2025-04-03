@@ -2,30 +2,28 @@
 use strict;
 use warnings;
 
-# This is a spell checker for perltidy files. How this works:
-#   - Keep a list of previously found unique words for each file in
-#     'filename.spell'
-#   - These .spell files must be excluded from MANIFEST and git
-#   - Find all words with the help of perltidy where necessary
-#          (quotes, comments, pod, here-docs)
-#   - Remove any of these already in the .spell file list
-#   - Run the remainder through aspell in list mode to find new unknown words
-#   - Ask user which of these need to be fixed
-#   - When no errors remain, add the new words to filename.spell
-
-# After an initial spell check, spell-checking all files takes only a few
-# seconds unless possible new spelling errors need to be checked.
-
-# FIXME: the following file type assumptions work for perltidy but should
-#   be generalized:
-# - files ending in .md and .txt are treated as simple text files
-# - all other files are assumed to be perl (or pod) text
-
-# Requires 'aspell'
+# This script is one of the scripts used to build Perl::Tidy.  It
+# checks spelling in perl and markdown files.
 
 # Usage:
 #  run_spell_check.pl [file1 [file2 ...
 #    checks spelling of the listed files
+
+# How it works for some file named 'filename':
+#   - A list of previously found unique words is kept for each file in
+#     'filename.spell'
+#   - These .spell files are excluded from MANIFEST and git
+#   - A list of words is found with help of perltidy where necessary
+#          (quotes, comments, pod, here-docs)
+#   - Any of these words already in the .spell file list are excluded.
+#   - The remaining words are through the utility 'aspell' in list mode to find
+#     new unknown words
+#   - The user is asked which, if any, of these need to be fixed
+#   - When no errors remain, the new words are added to filename.spell
+
+# After an initial spell check, spell-checking all files takes only a few
+# seconds unless possible new spelling errors are found which need to be
+# checked.
 
 use File::Copy;
 use File::Temp qw(tempfile);
@@ -36,7 +34,7 @@ $| = 1;
 
 #use constant EMPTY_STRING => q{};
 
-# This can be turned on to check for double words.
+# This turns on the check for double words.
 use constant FIND_DOUBLE_WORDS => 1;
 
 main();
@@ -75,6 +73,41 @@ EOM
     query("Spell check done; Hit <cr>");
     return;
 } ## end sub main
+
+sub is_perl_script {
+    my ($filename) = @_;
+
+    # Given:
+    #   $filename = the name of a file
+    # Return
+    #   true if '$filename' looks like perl code
+    #   false otherwise
+
+    return 0 unless ( -f $filename );
+
+    # first check for known file extensions .pl, .pm, .t, .plx
+    if ( $filename =~ /\.(t|p[lm]|plx|pod)$/i ) {
+        return 1;
+    }
+
+    # then look for hashbang as first line
+    my $fh;
+    if ( open( $fh, '<', $filename ) ) {
+        my $line = <$fh>;
+        return 0 unless ($line);
+
+        # normal hashbang
+        if ( $line =~ /^\#\!.*perl\b/ ) {
+            return 1;
+        }
+
+        # autoconf macro
+        if ( $line =~ /^\#\!.*\@PERL\@/ ) {
+            return 1;
+        }
+    }
+    return 0;
+} ## end sub is_perl_script
 
 sub spell_check {
     my ( $source, $count, $num_files ) = @_;
@@ -176,9 +209,9 @@ sub handle_unknown_words {
     while (1) {
         print <<EOM;
 Found $num_new unknown words in $list_file. Please review this list.
-Are all words in the list spelled correctly? [Y/N]:
 
-A - Accept: no spelling errors
+Choose one of these options:
+A - Accept: looks ok, no spelling errors
       Merge these new words into the '.spell' list for this file,
       save a backup of the previous '.spell' file as '.spell.bak',
       remove the file with new words '$list_file'.
@@ -276,12 +309,7 @@ sub read_source_file {
     # This will hold the unknown words
     my $rdestination = [];
 
-    if ( $source =~ /\.(md|txt)$/ ) {
-        $rdestination = scan_markdown_file( $source, $rknown_words );
-    }
-    else {
-
-        # perl file
+    if ( is_perl_script($source) ) {
         PerlSpell::perlspell(
             _source         => $source,
             _rdestination   => $rdestination,
@@ -292,6 +320,9 @@ sub read_source_file {
             _want_doubles   => FIND_DOUBLE_WORDS,
             _rknown_words   => $rknown_words,
         );
+    }
+    else {
+        $rdestination = scan_markdown_file( $source, $rknown_words );
     }
     return $rdestination;
 } ## end sub read_source_file
@@ -392,8 +423,8 @@ sub write_file_with_backup {
 #########################################################
 
 sub cls {
-    print "\033[2J";      #clear the screen
-    print "\033[0;0H";    #jump to 0,0
+    print "\033[2J";      # clear the screen
+    print "\033[0;0H";    # jump to 0,0
 }
 
 sub uniq {
