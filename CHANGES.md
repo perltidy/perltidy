@@ -1,6 +1,11 @@
 # Perltidy Change Log
 
 ## 2025 03 11.02
+    - New option -m added to --dump-mismatched-returns and
+      --warn-mismatched-returns. This checks for multiple array
+      return sizes. A warning occurs when a sub has multiple returns
+      of finite lists with different counts greater than 1, and
+      not all of them are matched with calls.
 
     - Fixed git #182, Support Object::Pad phasers.
 

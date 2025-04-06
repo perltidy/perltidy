@@ -19829,8 +19829,9 @@ sub count_sub_return_args {
         }
 
         # new count?
-        if ( !$rK_return_count_hash->{$count} ) {
-            $rK_return_count_hash->{$count} = $K_return;
+        if ( !defined( $rK_return_count_hash->{$count} ) ) {
+            $rK_return_count_hash->{$count} =
+              { K_return_first => $K_return, call_count => 0 };
         }
 
         # retain old vars during transition phase
@@ -20440,6 +20441,7 @@ sub cross_check_sub_calls {
         o => "want array with excess count",
         u => "want array with count not matched by sub",
         s => "want scalar but sub only returns arrays with count >1",
+        m => "multiple array return sizes",
     );
     my %do_mismatched_return_type           = %return_issue_note;
     my $ris_mismatched_return_excluded_name = {};
@@ -20528,6 +20530,13 @@ sub cross_check_sub_calls {
     my ( $rsub_info_by_seqno, $rsub_seqno_by_key ) =
       $self->sub_def_info_maker( $rpackage_lookup_list,
         \%upper_bound_call_info );
+
+    # invert hash seqno=>key
+    my $rsub_key_by_seqno = {};
+    foreach my $key ( keys %{$rsub_seqno_by_key} ) {
+        my $seqno = $rsub_seqno_by_key->{$key};
+        $rsub_key_by_seqno->{$seqno} = $key;
+    }
 
     # Hash to hold combined info for subs and calls
     my %common_hash;
@@ -20815,7 +20824,7 @@ sub cross_check_sub_calls {
 
         my ( $shift_count_min,  $shift_count_max,  $self_name );
         my ( $return_count_min, $return_count_max, $return_count_indefinite );
-        my ($rK_return_count_hash);
+        my $rreturn_info;
 
         # look for the sub ..
         my $seqno_sub = $rsub_seqno_by_key->{$key};
@@ -20830,9 +20839,9 @@ sub cross_check_sub_calls {
             # skip 'my' subs for now, they need special treatment. If
             # anonymous subs are added, 'my' subs could also be added then.
             if ( !$ris_my_sub_by_seqno->{$seqno_sub} ) {
-                $common_hash{$key}->{rsub_item} = $rsub_item;
-                $shift_count_min                = $rsub_item->{shift_count_min};
-                $shift_count_max                = $rsub_item->{shift_count_max};
+##              $common_hash{$key}->{rsub_item} = $rsub_item;
+                $shift_count_min = $rsub_item->{shift_count_min};
+                $shift_count_max = $rsub_item->{shift_count_max};
                 if ( $call_type eq '&' && $rsub_item->{prototype} ) {
                     $shift_count_max = $rsub_item->{shift_count_max_amp};
                 }
@@ -20844,7 +20853,13 @@ sub cross_check_sub_calls {
                 $rK_return_list =
                   $self->[_rK_return_by_sub_seqno_]->{$seqno_sub};
 ##              $common_hash{$key}->{rK_return_list} = $rK_return_list;
-                $rK_return_count_hash = $rsub_item->{rK_return_count_hash};
+                my $rK_return_count_hash = $rsub_item->{rK_return_count_hash};
+                if (   defined($return_count_wanted)
+                    && defined($rK_return_count_hash) )
+                {
+                    $rreturn_info =
+                      $rK_return_count_hash->{$return_count_wanted};
+                }
             }
         }
 
@@ -20924,6 +20939,7 @@ sub cross_check_sub_calls {
 
         # check for exact match
         elsif ( $return_count_wanted == $return_count_max ) {
+            if ( defined($rreturn_info) ) { $rreturn_info->{call_count}++; }
             ## ok
         }
 
@@ -20941,22 +20957,22 @@ sub cross_check_sub_calls {
 
             # issue 'u': want array for an unmatched count less than max
             # issue 's': want scalar but all return counts are >1
-            if ( defined($rK_return_count_hash) ) {
-                my $K_return = $rK_return_count_hash->{$return_count_wanted};
-                if ( !defined($K_return) ) {
-                    if ($want_scalar) {
-                        push @{ $common_hash{$key}->{return_issues}->{s} },
-                          $rcall_item;
-                    }
-                    else {
-                        push @{ $common_hash{$key}->{return_issues}->{u} },
-                          $rcall_item;
-                    }
-                }
+            if ( defined($rreturn_info) ) {
+
+                # matched call request
+                $rreturn_info->{call_count}++;
             }
             else {
-                ## safety check, shouldn't happen
-                DEVEL_MODE && Fault("return count hash not defined\n");
+
+                # unmatched call request...
+                if ($want_scalar) {
+                    push @{ $common_hash{$key}->{return_issues}->{s} },
+                      $rcall_item;
+                }
+                else {
+                    push @{ $common_hash{$key}->{return_issues}->{u} },
+                      $rcall_item;
+                }
             }
         }
     }
@@ -21020,32 +21036,79 @@ sub cross_check_sub_calls {
     #-------------------
     # Loop over each sub
     #-------------------
-    foreach my $key ( keys %common_hash ) {
-        my $item = $common_hash{$key};
+    foreach my $seqno_sub ( keys %{$rsub_key_by_seqno} ) {
 
-        # Check for mixed method/direct calls:
-        my $rsub_item = $item->{rsub_item};
-        next unless ( defined($rsub_item) );
+        my $rsub_item = $rsub_info_by_seqno->{$seqno_sub};
 
-        $name = $rsub_item->{name};
-        $lno  = $rsub_item->{line_number};
-##      my $rK_return_list = $item->{rK_return_list};
-        my $rself_calls   = $item->{self_calls};
-        my $rdirect_calls = $item->{direct_calls};
-        my $num_self      = defined($rself_calls)   ? @{$rself_calls}   : 0;
-        my $num_direct    = defined($rdirect_calls) ? @{$rdirect_calls} : 0;
-
-##      my $K_return_count_min = $rsub_item->{K_return_count_min};
-        my $K_return_count_max = $rsub_item->{K_return_count_max};
-
+        $name             = $rsub_item->{name};
+        $lno              = $rsub_item->{line_number};
         $shift_count_min  = $rsub_item->{shift_count_min};
         $shift_count_max  = $rsub_item->{shift_count_max};
         $return_count_min = $rsub_item->{return_count_min};
         $return_count_max = $rsub_item->{return_count_max};
-        $min_arg_count    = $item->{min_arg_count};
-        $max_arg_count    = $item->{max_arg_count};
-        $want_count_min   = $item->{want_count_min};
-        $want_count_max   = $item->{want_count_max};
+
+##      my $K_return_count_min   = $rsub_item->{K_return_count_min};
+        my $K_return_count_max   = $rsub_item->{K_return_count_max};
+        my $rK_return_count_hash = $rsub_item->{rK_return_count_hash};
+
+        # get call info
+        my $key  = $rsub_key_by_seqno->{$seqno_sub};
+        my $item = $common_hash{$key};
+
+        my ( $rself_calls, $rdirect_calls, $return_issues );
+        my ( $rover_count, $runder_count );
+
+        if ( defined($item) ) {
+
+            $rself_calls   = $item->{self_calls};
+            $rdirect_calls = $item->{direct_calls};
+            $return_issues = $item->{return_issues};
+            $rover_count   = $item->{over_count};
+            $runder_count  = $item->{under_count};
+
+            $min_arg_count  = $item->{min_arg_count};
+            $max_arg_count  = $item->{max_arg_count};
+            $want_count_min = $item->{want_count_min};
+            $want_count_max = $item->{want_count_max};
+        }
+        else {
+            $min_arg_count  = undef;
+            $max_arg_count  = undef;
+            $want_count_min = undef;
+            $want_count_max = undef;
+        }
+
+        my $num_self        = defined($rself_calls)   ? @{$rself_calls}   : 0;
+        my $num_direct      = defined($rdirect_calls) ? @{$rdirect_calls} : 0;
+        my $num_over_count  = defined($rover_count)   ? @{$rover_count}   : 0;
+        my $num_under_count = defined($runder_count)  ? @{$runder_count}  : 0;
+
+        # Check for 'm': multiple array return counts
+        # The previous loop matched calls and returns
+        if ( defined($rK_return_count_hash) ) {
+
+            # Step 1: find subs with return lists with different counts
+            my $all_matched = 1;
+            my @K_multi_returns;
+            foreach my $return_count ( keys %{$rK_return_count_hash} ) {
+                next if ( $return_count <= 1 );
+                my $K_return_first =
+                  $rK_return_count_hash->{$return_count}->{K_return_first};
+                my $call_count =
+                  $rK_return_count_hash->{$return_count}->{call_count};
+                push @K_multi_returns, $K_return_first;
+                $all_matched &&= $call_count;
+            }
+
+            # Step 2: report an error unless they are all matched with calls
+            if ( @K_multi_returns > 1 && !$all_matched ) {
+                @K_multi_returns = sort { $a <=> $b } @K_multi_returns;
+                foreach my $KK (@K_multi_returns) {
+                    my $lnK = $rLL->[$KK]->[_LINE_INDEX_] + 1;
+                    push @{ $return_issues->{m} }, { line_number => $lnK };
+                }
+            }
+        }
 
         # change undefs to '*' for the output text
         foreach (
@@ -21059,14 +21122,7 @@ sub cross_check_sub_calls {
             $_ = '*' unless ( defined($_) );
         }
 
-        #-----------------------------------------------------------------
         # Make a one-line message for each mismatch call issue of this sub
-        #-----------------------------------------------------------------
-
-        my $rover_count     = $item->{over_count};
-        my $runder_count    = $item->{under_count};
-        my $num_over_count  = defined($rover_count)  ? @{$rover_count}  : 0;
-        my $num_under_count = defined($runder_count) ? @{$runder_count} : 0;
 
         #--------------------------------------------------
         # issue 'a': subs with both self-> and direct calls
@@ -21163,7 +21219,6 @@ sub cross_check_sub_calls {
         #-------------------------------------------------------------------
         # Make a one-line message for each mismatch return issue of this sub
         #-------------------------------------------------------------------
-        my $return_issues = $item->{return_issues};
         if ($return_issues) {
             foreach my $letter ( keys %return_issue_note ) {
                 next if ( !$do_mismatched_return_type{$letter} );
@@ -21275,7 +21330,7 @@ sub stringify_line_range {
     #   $string = single line of text with just the line range
 
     my $string = EMPTY_STRING;
-    if ( $rcalls && @{$rcalls} ) {
+    if ( $rcalls && ref($rcalls) && @{$rcalls} ) {
         my @sorted =
           sort { $a->{line_number} <=> $b->{line_number} } @{$rcalls};
         my $num     = @sorted;
@@ -21299,6 +21354,8 @@ sub initialize_warn_mismatched {
     #  a - mismatched arrow operator calls
     #  o - overcount
     #  u - undercount
+    # Note: issue 'i' (indeterminate) is skipped here and handled specially
+    # because it only applies for --dump, not for --warn.
     $rwarn_mismatched_arg_types =
       initialize_warn_hash( 'warn-mismatched-arg-types', 1, [qw( a o u )] );
     $ris_warn_mismatched_arg_excluded_name =
@@ -21309,9 +21366,10 @@ sub initialize_warn_mismatched {
     #  u - want array with unmatched count
     #  y - want scalar but no return seen
     #  s - want scalar but only arrays with count > 1 returned
+    #  m - multiple array sizes returned
     $rwarn_mismatched_return_types =
       initialize_warn_hash( 'warn-mismatched-return-types',
-        1, [qw( x o u y s )] );
+        1, [qw( x o u y s m )] );
     $ris_warn_mismatched_return_excluded_name =
       make_excluded_name_hash('warn-mismatched-return-exclusion-list');
     return;
