@@ -3158,7 +3158,7 @@ sub copy_buffer_to_external_ref {
         $destination_buffer = ${$routput};
     }
     else {
-        Fatal(
+        Fault(
             "'copy_buffer_to_external_ref' expecting ref to ARRAY or SCALAR\n");
     }
 
