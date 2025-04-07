@@ -20400,7 +20400,8 @@ sub update_sub_call_paren_info {
     } ## end sub self_call_check
 }
 
-use constant DEBUG_SELF => 0;
+use constant DEBUG_SELF      => 0;
+use constant DEBUG_SUB_CALLS => 0;
 
 sub cross_check_sub_calls {
 
@@ -20807,12 +20808,17 @@ sub cross_check_sub_calls {
     #--------------------------------------------------------------
     # Loop over all sub calls to compare call and return arg counts
     #--------------------------------------------------------------
+    my @external_simple_call_seqno;
+    my @unknown_object_call_seqno;
     foreach my $seqno ( keys %{$rsub_call_paren_info_by_seqno} ) {
 
         my $rcall_item = $rsub_call_paren_info_by_seqno->{$seqno};
 
         # Skip method calls by unknown objects
-        next if ( $rcall_item->{is_unknown_object_call} );
+        if ( $rcall_item->{is_unknown_object_call} ) {
+            push @unknown_object_call_seqno, $seqno;
+            next;
+        }
 
         my $arg_count           = $rcall_item->{arg_count};
         my $return_count_wanted = $rcall_item->{return_count_wanted};
@@ -20861,6 +20867,9 @@ sub cross_check_sub_calls {
                       $rK_return_count_hash->{$return_count_wanted};
                 }
             }
+        }
+        else {
+            push @external_simple_call_seqno, $seqno;
         }
 
         #------------------------------------
@@ -21036,6 +21045,7 @@ sub cross_check_sub_calls {
     #-------------------
     # Loop over each sub
     #-------------------
+    my @no_calls_to_seqno_sub;
     foreach my $seqno_sub ( keys %{$rsub_key_by_seqno} ) {
 
         my $rsub_item = $rsub_info_by_seqno->{$seqno_sub};
@@ -21072,6 +21082,7 @@ sub cross_check_sub_calls {
             $want_count_max = $item->{want_count_max};
         }
         else {
+            push @no_calls_to_seqno_sub, $seqno_sub;
             $min_arg_count  = undef;
             $max_arg_count  = undef;
             $want_count_min = undef;
@@ -21291,6 +21302,35 @@ Line:Issue:Sub:#Returned:Min_wanted:Max_wanted: note
 EOM
         foreach ( @{$rreturn_warnings} ) {
             $return_warning_output .= $_->{output_line};
+        }
+    }
+
+    if (DEBUG_SUB_CALLS) {
+        foreach my $seqno ( sort { $a <=> $b } @external_simple_call_seqno ) {
+            my $rcall_item  = $rsub_call_paren_info_by_seqno->{$seqno};
+            my $line_number = $rcall_item->{line_number};
+            my $sub_name    = $rcall_item->{name};
+            my $package     = $rcall_item->{package};
+            my $key         = $package . '::' . $sub_name;
+            $return_warning_output .=
+              "$line_number: external sub,$sub_name,$key\n";
+        }
+        foreach my $seqno ( sort { $a <=> $b } @unknown_object_call_seqno ) {
+            my $rcall_item  = $rsub_call_paren_info_by_seqno->{$seqno};
+            my $line_number = $rcall_item->{line_number};
+            my $sub_name    = $rcall_item->{name};
+            my $package     = $rcall_item->{package};
+            my $key         = $package . '::' . $sub_name;
+            $return_warning_output .=
+              "$line_number: unknown obj call,$sub_name,$key\n";
+        }
+        foreach my $seqno_sub ( sort { $a <=> $b } @no_calls_to_seqno_sub ) {
+            my $rsub_item   = $rsub_info_by_seqno->{$seqno_sub};
+            my $line_number = $rsub_item->{line_number};
+            my $sub_name    = $rsub_item->{name};
+            my $key         = $rsub_key_by_seqno->{$seqno_sub};
+            $return_warning_output .=
+              "$line_number: call not found,$sub_name,$key\n";
         }
     }
 
