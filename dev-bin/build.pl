@@ -36,7 +36,7 @@ check_config();
 # needed
 my $rsteps = [
     qw(
-      PRE SPELL CONV TOK SCAN MAN V YEAR PC TIDY T CL DOCS PERLVER MANIFEST
+      PRE SPELL CONV TOK SCAN MAN V YEAR PC TIDY T CL POD HTML PERLVER MANIFEST
       DIST POST
     )
 ];
@@ -52,22 +52,23 @@ my $rcode = {
     },
     'SCAN'     => \&scan_for_bad_characters,
     'MAN'      => \&check_man_pages,
+    'POD'      => \&check_pod,
+    'SPELL'    => \&run_spell_check,
     'V'        => \&update_version_number,
     'YEAR'     => \&update_copyright_date,
     'PERLVER'  => \&run_perlver,
     'PC'       => \&run_perl_critic,
     'TIDY'     => \&run_tidyall,
-    'SPELL'    => \&run_spell_check,
     'CONV'     => \&run_convergence_tests,
     'TOK'      => \&run_tokenizer_tests,
     'MANIFEST' => \&make_manifest,
     'T'        => \&make_tests,
-    'DOCS'     => \&make_docs,
+    'HTML'     => \&make_html,
     'DIST'     => \&make_dist,
     'POST'     => \&show_post_build_checklist,
     'CL'       => sub { openurl($changelog);        $rstatus->{CL}   = 'OK' },
     'LOG'      => sub { openurl($logfile);          $rstatus->{LOG}  = 'OK' },
-    'HTML'     => sub { openurl("docs/index.html"); $rstatus->{HTML} = 'OK' },
+    'VIEW'     => sub { openurl("docs/index.html"); $rstatus->{VIEW} = 'OK' },
 };
 
 open( $fh_log, ">", $logfile ) or die "cannot open log file $logfile: $!\n";
@@ -154,33 +155,31 @@ EOM
 
 sub main {
     while (1) {
+        cls();
         print <<EOM;
--------------------------------------------
 Perltidy Build Main Menu - Case Insensitive
 -------------------------------------------
-
 pre      - view pre-build checklist        status: $rstatus->{'PRE'}
 scan     - scan text for problems          status: $rstatus->{'SCAN'}
 man      - check man pages                 status: $rstatus->{'MAN'}
+pod      - check POD                       status: $rstatus->{'POD'}
+cl       - review/edit CHANGES.md          status: $rstatus->{'CL'}
+spell    - run spell check                 status: $rstatus->{'SPELL'}
 v        - check/update Version Number     status: $rstatus->{'V'}
 year     - check/update copyright Year     status: $rstatus->{'YEAR'}
 tidy     - run tidyall (tidy & critic)     status: $rstatus->{'TIDY'}
 pc       - run PerlCritic (critic only)    status: $rstatus->{'PC'}
-spell    - run spell check                 status: $rstatus->{'SPELL'}
 conv     - run convergence tests           status: $rstatus->{'CONV'}
 tok      - run tokenizer tests             status: $rstatus->{'TOK'}
 perlver  - run perlver                     status: $rstatus->{'PERLVER'}
 manifest - make MANIFEST                   status: $rstatus->{'MANIFEST'}
 t        - make Tests			   status: $rstatus->{'T'}
-cl       - review/edit CHANGES.md          status: $rstatus->{'CL'}
-docs     - check and process POD & html    status: $rstatus->{'DOCS'}
+html     - make html                       status: $rstatus->{'HTML'}
 dist     - make a Distribution tar.gz      status: $rstatus->{'DIST'}
 post     - view post-build checklist       status: $rstatus->{'POST'}
 log      - view Log file
-html     - view html files
-
-q,x   - eXit
-
+view     - view html files
+q,x      - eXit
 EOM
         my $ans = queryu(":");
         if ( defined( $rcode->{$ans} ) ) {
@@ -424,11 +423,7 @@ sub make_tests {
     return $rstatus->{'T'};
 } ## end sub make_tests
 
-sub make_docs {
-
-# Need to figure out if make fails.  For now I'm looking for 'Stop' as in
-# this error:
-# make: *** No rule to make target 'tutorial.pod', needed by 'tutorial.html'.  Stop.
+sub check_pod {
 
     my @errors;
     foreach my $file (
@@ -459,18 +454,23 @@ sub make_docs {
         local $" = ') (';
         print "These file(s) had errors: (@errors)\n";
         hitcr("See the log file");
-        $rstatus->{'DOCS'} = 'TBD';
+        $rstatus->{'POD'} = 'TBD';
         return;
     }
+    $rstatus->{'POD'} = 'OK';
+    hitcr();
+    return;
+} ## end sub check_pod
 
-    # finish up
+sub make_html {
+
     my $result = sys_command("(cd docs; make)");
     print $result;
     my $status = $result =~ /Stop\./i ? 'TBD' : 'OK';
-    $rstatus->{'DOCS'} = $status;
+    $rstatus->{'HTML'} = $status;
     hitcr();
     return;
-} ## end sub make_docs
+} ## end sub make_html
 
 sub make_manifest {
 
@@ -849,7 +849,7 @@ sub check_man_pages {
         check_man_page_width($file);
     }
     update_table_of_negated_switches($man1);
-    query("Man page scan complete, hit <cr>\n");
+    queryu("Man page scan complete\n");
     $rstatus->{'MAN'} = 'OK';
     return;
 } ## end sub check_man_pages
@@ -1461,7 +1461,6 @@ EOM
 
     my $saw_problem;
     print <<EOM;
--------------------------------------------------------------------
 Scanning .pm files for ##FIXME pod __END__  and __DATA__ ...
 EOM
     if ($saw_FIXME) {
@@ -1470,7 +1469,6 @@ EOM
         query(<<EOM);
 Found $saw_FIXME files with 'FIXME': (@files_with_FIXME);
 These should be fixed if possible.
--------------------------------------------------------------------
 EOM
     }
 
@@ -1481,7 +1479,6 @@ EOM
 Found $saw_pod files with pod text: (@files_with_pod);
 The convention in perltidy is not to have pod code in '.pm' files.
 Please remove the pod text before continuing, hit <cr> to continue.
--------------------------------------------------------------------
 EOM
     }
     if ($saw_END) {
@@ -1491,7 +1488,6 @@ EOM
 Found $saw_END files with __END__: (@files_with_END);
 The convention in perltidy is not to have an __END__ section in '.pm' files.
 Please remove the __END__ text before continuing, hit <cr> to continue.
--------------------------------------------------------------------
 EOM
     }
     if ($saw_DATA) {
@@ -1501,15 +1497,13 @@ EOM
 Found $saw_DATA files with __DATA__: (@files_with_DATA);
 The convention in perltidy is not to have an __DATA__ section in '.pm' files.
 Please remove the __DATA__ text before continuing, hit <cr> to continue.
--------------------------------------------------------------------
 EOM
     }
     if ($saw_TODO) {
         local $" = ', ';
-        query(<<EOM);
-Found $saw_TODO files with 'TODO': @files_with_TODO;
+        print(<<EOM);
+NOTE: Found $saw_TODO files with 'TODO': @files_with_TODO;
 These are ok but should be checked.
--------------------------------------------------------------------
 EOM
     }
     if ( !$saw_problem ) {

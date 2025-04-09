@@ -70,6 +70,4 @@ are mainly for older systems but also tell how to use perltidy without doing an 
 
 ## FEEDBACK / BUG REPORTS
 
-The best place to report bugs and issues is [GitHub](https://github.com/perltidy/perltidy/issues)
-
-Bugs and issues can also be reported at the CPAN site [https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy](https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy)
+Bugs and issues can be reported at [GitHub](https://github.com/perltidy/perltidy/issues)
