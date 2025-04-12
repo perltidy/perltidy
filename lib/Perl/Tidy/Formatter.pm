@@ -2996,7 +2996,9 @@ EOM
     #-----------------------------------------------------------
     # The -vmll and -lp parameters do not really work well together.
     # This is a very crude fix for an unusual parameter combination.
-    if (   $rOpts->{'variable-maximum-line-length'}
+    # DEACTIVATED with b1520: no longer needed, but retain for history
+    if (   0
+        && $rOpts->{'variable-maximum-line-length'}
         && $rOpts->{'line-up-parentheses'}
         && $rOpts->{'continuation-indentation'} < 2 )
     {
@@ -3719,8 +3721,13 @@ sub initialize_line_length_vars {
     }
 
     # This is a combined level which works well for turning off formatting
-    # features in most cases:
-    $high_stress_level = min( $stress_level_alpha, $stress_level_beta + 2 );
+    # features in most cases.
+    # Patched for b1520: reduce the beta constant from 2 to 1 for the
+    # combination -vmll and -lp (or -xlp), which adds stress.
+    my $const_beta = $rOpts->{'variable-maximum-line-length'}
+      && $rOpts->{'line-up-parentheses'} ? 1 : 2;
+    $high_stress_level =
+      min( $stress_level_alpha, $stress_level_beta + $const_beta );
 
     return;
 } ## end sub initialize_line_length_vars
@@ -37673,7 +37680,11 @@ sub get_available_spaces_to_go {
         }
 
         # fix for b1465: -vmll adds stress for -xlp
-        if ( $high_stress_level <= 2 && $rOpts_variable_maximum_line_length ) {
+        # DEACTIVATED with b1520, which fixes b1465 in a more general way.
+        if (   0
+            && $high_stress_level <= 2
+            && $rOpts_variable_maximum_line_length )
+        {
             $rOpts_extended_line_up_parentheses = 0;
         }
 

@@ -286,7 +286,7 @@ if ( @{$rexpect_cases_to_update} ) {
 }
 
 exit 1;
-}
+} ## end sub main
 
 sub run_test_cases {
     my ( $rdata_files, $rexpect_files, $rcases ) = @_;
@@ -357,7 +357,7 @@ sub run_test_cases {
         my $str       = $opath . $sname . ".[0-9]";
         my @tmp_files = glob("$str");
         if (@tmp_files) {
-            my $num = unlink @tmp_files;
+            my $num = unlink(@tmp_files);
             print "unlinked $num old files for case $sname\n";
         }
 
@@ -508,10 +508,11 @@ EOM
         # Write first few differences
         my $count = 0;
         my $msg = "See the .in .par .new and .exp files in the ./tmp directory";
+        my $LIM = 20;
         foreach my $sname (@expect_differences) {
             $count++;
-            if ( $count > 5 ) {
-                $msg .= " for the first 5 cases";
+            if ( $count > $LIM ) {
+                $msg .= " for the first $LIM cases";
                 last;
             }
             my $sfile = $opath . $sname . ".in";
@@ -530,7 +531,7 @@ DIFFERENCES: these cases gave unexpected output; use -e to update .expect:
 EOM
     }
     return ( \@expect_cases_to_update );
-}
+} ## end sub run_test_cases
 
 sub read_data_to_hash {
     my ($db_fname) = @_;
@@ -572,7 +573,7 @@ sub read_data_to_hash {
         $rdata_files->{$fname} = $string;
     }
     return $rdata_files;
-}
+} ## end sub read_data_to_hash
 
 sub unpack_data {
 
@@ -601,7 +602,7 @@ sub unpack_data {
     }
     print "Wrote $count files to '$tmp_dir'\n";
     return;
-}
+} ## end sub unpack_data
 
 sub merge_data {
     my ( $db_fname, $rold_data, $rfiles ) = @_;
@@ -632,7 +633,7 @@ EOM
 
     write_hash_to_data_file( $db_fname, $rold_data );
     return;
-}
+} ## end sub merge_data
 
 sub dump_parameter_frequency {
     my ($rdata_files) = @_;
@@ -667,14 +668,14 @@ sub dump_parameter_frequency {
     print Dumper($rcount);
 
     return;
-}
+} ## end sub dump_parameter_frequency
 
 sub pack_data {
     my ( $db_fname, $rfiles ) = @_;
     my $rdata = read_files_to_hash($rfiles);
     write_hash_to_data_file( $db_fname, $rdata );
     return;
-}
+} ## end sub pack_data
 
 sub read_files_to_hash {
     my ($rfiles) = @_;
@@ -685,7 +686,7 @@ sub read_files_to_hash {
         $rdata->{$file} = $string;
     }
     return $rdata;
-}
+} ## end sub read_files_to_hash
 
 sub write_hash_to_data_file {
     my ( $db_fname, $rdata ) = @_;
@@ -733,16 +734,17 @@ sub write_hash_to_data_file {
     write_file( $db_fname, $ostring );
     print "Wrote $count files to $db_fname\n";
     return;
-}
+} ## end sub write_hash_to_data_file
 
 sub get_string {
     my ($file) = @_;
-    open my $fh, '<', $file or die "cannot open $file: $!\n";
+    my $fh;
+    open( $fh, '<', $file ) or die "cannot open $file: $!\n";
     local $/ = undef;
     my $string = <$fh>;
     close $fh;
     return $string;
-}
+} ## end sub get_string
 
 sub make_tmp_dir {
     if ( !-d $tmp_dir ) {
@@ -755,13 +757,14 @@ sub make_tmp_dir {
             exit 1;
         }
     }
-}
+} ## end sub make_tmp_dir
 
 sub write_file {
-    my ( $fname, $string, $msg ) = @_;
-    open my $fh, '>', $fname or die "cannot open $fname: $!\n";
+    my ( $fname, $string, ($msg) ) = @_;
+    my $fh;
+    open( $fh, '>', $fname ) or die "cannot open $fname: $!\n";
     $fh->print($string);
     $fh->close();
     print STDERR "Wrote $fname\n" if ($msg);
     return;
-}
+} ## end sub write_file

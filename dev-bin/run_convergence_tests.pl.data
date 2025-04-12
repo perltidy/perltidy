@@ -12798,6 +12798,28 @@ $apple_encodings[1][$i] = {
 --paren-vertical-tightness=1
 --paren-vertical-tightness-closing=2
 
+==> b1520.in <==
+my$varstr=
+  PDL::Char->new([
+      ["longstring","def","ghi"],
+      ["jkl","mno",'pqr']
+    ] );
+
+my$varstr=PDL::Char->new([
+    ["longstring","def","ghi"],
+    ["jkl","mno",'pqr']
+]);
+
+==> b1520.par <==
+--maximum-line-length=27
+--weld-nested-containers
+--variable-maximum-line-length
+--noadd-whitespace
+--extended-line-up-parentheses
+--paren-vertical-tightness-closing=1
+--delete-old-whitespace
+--stack-opening-square-bracket
+
 ==> b156.in <==
 # State 1
 {

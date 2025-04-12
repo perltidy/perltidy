@@ -405,15 +405,13 @@ my %fielddefinitions = (
 # state 1
 my @frames
    = (
-       0, 1, 2
-   );
+ 0, 1, 2 );
 
 # state 2
 
 my @frames
    = (
-       0, 1, 2
-   );
+ 0, 1, 2 );
 
 
 ==> b036 <==
@@ -1489,33 +1487,33 @@ my @cases =
 ==> b1039 <==
 # S1
 Moose::Exporter
-  ->setup_import_methods
-  (
+ ->setup_import_methods
+ (
        as_is=>[qw(
-                type subtype class_type role_type maybe_type duck_type
-                as where message inline_as
-                coerce from via
-                enum union
-                find_type_constraint
-                register_type_constraint
-                match_on_type )
+               type subtype class_type role_type maybe_type duck_type
+               as where message inline_as
+               coerce from via
+               enum union
+               find_type_constraint
+               register_type_constraint
+               match_on_type )
        ],
-  );
+ );
 
 # S2
 Moose::Exporter
-  ->setup_import_methods
-  (
+ ->setup_import_methods
+ (
        as_is=>[qw(
-                type subtype class_type role_type maybe_type duck_type
-                as where message inline_as
-                coerce from via
-                enum union
-                find_type_constraint
-                register_type_constraint
-                match_on_type )
+               type subtype class_type role_type maybe_type duck_type
+               as where message inline_as
+               coerce from via
+               enum union
+               find_type_constraint
+               register_type_constraint
+               match_on_type )
        ],
-  );
+ );
 
 ==> b1040 <==
       # S1
@@ -2235,16 +2233,16 @@ my @testsubs =
 
 ==> b1070 <==
        # S1
-       my $res = [
+       my $res =
+            [
               _process_typemaps(
-                     [@local_tmaps], '.' )
-       ];
+                     [@local_tmaps], '.' ) ];
 
        # S2
-       my $res = [
+       my $res =
+            [
               _process_typemaps(
-                     [@local_tmaps], '.' )
-       ];
+                     [@local_tmaps], '.' ) ];
 
 ==> b1071 <==
     # S1
@@ -2888,20 +2886,20 @@ __END__
 
 ==> b1096 <==
    use Moose -traits =>
-     [
-       'My::Trait' =>{
-                      -alias => {reversed_name => 'reversed',},
-                      -excludes => 'reversed_name',
-       },
-     ];
+    [
+      'My::Trait' =>{
+                     -alias => {reversed_name => 'reversed',},
+                     -excludes => 'reversed_name',
+      },
+    ];
 
    use Moose -traits =>
-     [
-       'My::Trait' =>{
-                      -alias => {reversed_name => 'reversed',},
-                      -excludes => 'reversed_name',
-       },
-     ];
+    [
+      'My::Trait' =>{
+                     -alias => {reversed_name => 'reversed',},
+                     -excludes => 'reversed_name',
+      },
+    ];
 
 
 ==> b1097 <==
@@ -3759,21 +3757,19 @@ Could not fork '$html_converter $saved_file': $!});
       grep {
         File::Spec->can(
           $_) !=
-          File::Spec::Unix
-          ->can($_)
-        } @{
-        $udeps{$meth}}
-      )
+         File::Spec::Unix
+         ->can($_)
+      } @{$udeps{$meth}}
+     )
 
-      if !(
+     if !(
       grep {
         File::Spec->can(
           $_) !=
-          File::Spec::Unix
-          ->can($_)
-        } @{
-        $udeps{$meth}}
-      )
+         File::Spec::Unix
+         ->can($_)
+      } @{$udeps{$meth}}
+     )
 
 ==> b1139 <==
 # the first line is required to cause this
@@ -3860,34 +3856,32 @@ my @schedule = (
 ==> b1143 <==
     {
         $crc =
-          ( $crc >> 8 )
-          ^ autodin_ii_table
-          ->[ (
-              $crc ^ $byte )
-          & 0xff ];
+         ( $crc >> 8 )
+         ^ autodin_ii_table
+         ->[ (
+             $crc ^ $byte ) &
+         0xff ];
     }
 
     {
         $crc =
-          ( $crc >> 8 )
-          ^ autodin_ii_table
-          ->[ (
-              $crc ^ $byte )
-          & 0xff ];
+         ( $crc >> 8 )
+         ^ autodin_ii_table
+         ->[ (
+             $crc ^ $byte ) &
+         0xff ];
     }
 
 
 ==> b1144 <==
-  my @tests = (
-    [ 1,
+  my @tests = ( [ 1,
       {'AB' => ''} =>
         [
         [ 'AB' => '' ] ]
     ],
   );
 
-  my @tests = (
-    [ 1,
+  my @tests = ( [ 1,
       {'AB' => ''} =>
         [
         [ 'AB' => '' ] ]
@@ -3992,21 +3986,23 @@ version => 2,
 );
 
 ==> b1151 <==
-  my %tag_cache = (
+  my %tag_cache =
+   (
     'all' =>
-      [
+     [
       map { "CORE::$_" }
-        @{$TAGS{':all'}}
-      ],
-  );
+       @{$TAGS{':all'}}
+     ],
+   );
 
-  my %tag_cache = (
+  my %tag_cache =
+   (
     'all' =>
-      [
+     [
       map { "CORE::$_" }
-        @{$TAGS{':all'}}
-      ],
-  );
+       @{$TAGS{':all'}}
+     ],
+   );
 
 
 ==> b1152 <==
@@ -5053,16 +5049,16 @@ $bc[
 ==> b1210 <==
 # S1
 @mo = (
-        Jan, Feb, Mar, Apr,
-        May, Jun, Jul, Aug,
-        Sep, Oct, Nov, Dec
+       Jan, Feb, Mar, Apr,
+       May, Jun, Jul, Aug,
+       Sep, Oct, Nov, Dec
 );
 
 # S2
 @mo = (
-        Jan, Feb, Mar, Apr,
-        May, Jun, Jul, Aug,
-        Sep, Oct, Nov, Dec
+       Jan, Feb, Mar, Apr,
+       May, Jun, Jul, Aug,
+       Sep, Oct, Nov, Dec
 );
 
 
@@ -5460,7 +5456,7 @@ is(
 ==> b1243 <==
 # S1
 use
-  ExtUtils::MakeMaker;
+ ExtUtils::MakeMaker;
 WriteMakefile(
  NAME =>
 "PDL::Opt::Simplex",
@@ -5469,14 +5465,14 @@ WriteMakefile(
    (
     $_ =>
 '$(INST_LIBDIR)/'
-      . $_ )
+     . $_ )
   } <*.pm>
  }
 );
 
 # S2
 use
-  ExtUtils::MakeMaker;
+ ExtUtils::MakeMaker;
 WriteMakefile(
  NAME =>
 "PDL::Opt::Simplex",
@@ -5485,7 +5481,7 @@ WriteMakefile(
    (
     $_ =>
 '$(INST_LIBDIR)/'
-      . $_ )
+     . $_ )
   } <*.pm>
  }
 );
@@ -5679,29 +5675,23 @@ printf
 ==> b1264 <==
 #S1
 function(
-          'objectclass'=>[
-                         'top','person',
-                         'organizationalPerson',
-                         'inetOrgperson'
-          ],
+          'objectclass'=>
+            ['top','person',
+                    'organizationalPerson','inetOrgperson'],
 );
 
 # S2
 function(
-          'objectclass'=>[
-                         'top','person',
-                         'organizationalPerson',
-                         'inetOrgperson'
-          ],
+          'objectclass'=>
+            ['top','person','organizationalPerson',
+                    'inetOrgperson'],
 );
 
 # S3
 function(
-          'objectclass'=>[
-                         'top','person',
-                         'organizationalPerson',
-                         'inetOrgperson'
-          ],
+          'objectclass'=>
+            ['top','person','organizationalPerson',
+                    'inetOrgperson'],
 );
 
 ==> b1266 <==
@@ -5726,21 +5716,19 @@ function(
     foreach (
         grep
         ( $self->{_unique_nodes}->{$_}
-              > 1,
+            > 1,
             keys
-              %{ $self->{_unique_nodes} }
-        )
-      )
+            %{ $self->{_unique_nodes} } )
+    )
 
-      # S2
-      foreach (
+    # S2
+    foreach (
         grep
         ( $self->{_unique_nodes}->{$_}
-              > 1,
+            > 1,
             keys
-              %{ $self->{_unique_nodes} }
-        )
-      )
+            %{ $self->{_unique_nodes} } )
+    )
 
 ==> b1268 <==
 $|||=sub
@@ -7011,14 +6999,13 @@ open(
 
 ==> b1387 <==
 unlink(
-       Bio::Root::IO->catfile(
-                    "t", "gcg.out"
-       )
+    Bio::Root::IO->catfile(
+        "t", "gcg.out" )
 );
 
 unlink(
-       Bio::Root::IO->catfile(
-           "t", "gcg.out", )
+    Bio::Root::IO->catfile(
+        "t", "gcg.out", )
 );
 
 ==> b1390 <==
@@ -7140,9 +7127,11 @@ SOAP::Transport::HTTP::Daemon->new (LocalAddr => $host,
 
 ==> b1399 <==
 use constant GRAPH_SIZE => 100;
-for ( my $i = 0 ;
-      $i < @$data ;
-      $i++ )
+for (
+     my $i = 0 ;
+     $i < @$data ;
+     $i++
+  )
   {
      $polygon->addPt(
           ORIGIN_X_COORD
@@ -7156,9 +7145,11 @@ for ( my $i = 0 ;
      );
   } ## end for ( my $i = 0; $i < ...)
 
-for ( my $i = 0 ;
-      $i < @$data ;
-      $i++ )
+for (
+     my $i = 0 ;
+     $i < @$data ;
+     $i++
+  )
   {
      $polygon->addPt(
           ORIGIN_X_COORD
@@ -7826,14 +7817,12 @@ my %distance_pref =
 
 ==> b1453 <==
 my $foo =
-          decode_json( {
-              foo => 'bar' }
-          );
+          decode_json(
+   { foo => 'bar' } );
 
 my $foo =
-          decode_json( {
-              foo => 'bar' }
-          );
+          decode_json(
+   { foo => 'bar' } );
 
 ==> b1454 <==
 my $red_color =
@@ -8075,17 +8064,16 @@ while ( $^O !~ /Win32/ and
 my @pics =
          grep ( -f "$dir/$_"
                   && -s "$dir/$_"
-                  &&              # Not zero byte file
+                  &&    # Not zero byte file
                   !-f "$dir/$_$NO_ALBUM"
-                  &&              # Don't show these
+                  &&    # Don't show these
                   !/\Q$NOT_IMG\E$/
-                  &&              # The not_img files themselves
+                  &&    # The not_img files themselves
                   !/\Q$NO_ALBUM\E$/
-                  &&              # The not_img files themselves
-                  !/\.txt$/ &&    # Per image captions
-                  !/\.htaccess$/
-                  &&              # httpd security files
-                  !/~$/ &&        # Emacs backup files
+                  &&    # The not_img files themselves
+                  !/\.txt$/      &&  # Per image captions
+                  !/\.htaccess$/ &&  # httpd security files
+                  !/~$/          &&  # Emacs backup files
                   $_ ne
 "$opt->{'index'}$HTML"
                   &&                 # Index html
@@ -8592,11 +8580,11 @@ my@NameVirtualHost_lcl=
 ==> b1517 <==
 $config =
   { colors => {
-         default => "D0FFD0",
+        default => "D0FFD0",
   } };
 $config =
   { colors => {
-         default => "D0FFD0",
+        default => "D0FFD0",
   } };
 
 ==> b1518 <==
@@ -8617,6 +8605,17 @@ $apple_encodings[1][$i] = { map ( { $_ => $count++ }
       (  ( $USING_STYLES && $image_style ) ? " CLASS=\"$image_style\"" : '' ) );
 } } } }
 
+
+==> b1520 <==
+my$varstr=PDL::Char->new([
+        ["longstring","def","ghi"],
+        ["jkl","mno",'pqr']
+    ] );
+
+my$varstr=PDL::Char->new([
+        ["longstring","def","ghi"],
+        ["jkl","mno",'pqr']
+    ] );
 
 ==> b156 <==
 # State 1
@@ -11589,32 +11588,32 @@ my (
 ==> b972 <==
           # 3 cycle
           $rev_order =
-            (
+           (
                     $exons[0]->end() <$exons[1]->start()
                     ? 0
                     : 1) ;
 
           $rev_order =
-            (
+           (
                     $exons[0]->end() <$exons[1]->start()
                     ? 0
                     : 1) ;
 
           $rev_order =
-            (
+           (
                     $exons[0]->end() <$exons[1]->start()
                     ? 0
                     : 1) ;
 
           $rev_order =
-            (
+           (
                     $exons[0]->end() <$exons[1]->start()
                     ? 0
                     : 1) ;
 
           # Stable
           $rev_order =
-            (
+           (
                     $exons[0]->end() <$exons[1]->start()
                     ? 0
                     : 1) ;
@@ -12021,22 +12020,18 @@ dtend =>
 Readonly::Array
    my @PATTERNS
    => ( # requires this side comment
-[
-  'A-Z',
-  'a-z',
-  '0-9',
-  '_'
-] => [
-      '\\w',
-      '\\W'
-],
-[
-  'A-Z',
-  'a-z'
-] => [
+[ 'A-Z',
+'a-z',
+'0-9',
+'_' ] =>
+   [ '\\w',
+'\\W' ],
+[ 'A-Z',
+'a-z' ] =>
+   [
 '[[:alpha:]]',
 '[[:^alpha:]]'
-],
+   ],
    );
 
 ==> c473 <==
