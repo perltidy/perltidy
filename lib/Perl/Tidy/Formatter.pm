@@ -2954,7 +2954,7 @@ sub initialize_line_up_parentheses {
 
     if ( $rOpts->{'line-up-parentheses'} ) {
 
-        # Included add-whitespace as simple fix for b1507
+        # b1507, Option 1: included add-whitespace here for a simple fix
         if (   $rOpts->{'indent-only'}
             || !$rOpts->{'add-newlines'}
             || !$rOpts->{'delete-old-newlines'} )
@@ -2972,15 +2972,13 @@ EOM
             $rOpts->{'extended-line-up-parentheses'} = 0;
         }
 
-        #------------------------------------------------------------
-        # The combination -xlp -xci and -naws can be unstable (b1507)
-        #------------------------------------------------------------
+        # b1507, Option 2: -xlp -xci -naws can be unstable: turn off -xci
+        # This is currently the preferred fix for b1507.
         if (  !$rOpts->{'add-whitespace'}
             && $rOpts->{'extended-line-up-parentheses'}
             && $rOpts->{'extended-continuation-indentation'} )
         {
             $rOpts->{'extended-continuation-indentation'} = 0;
-            ## NOTE: turn off -xci and skip warning for now
         }
 
         if ( $rOpts->{'whitespace-cycle'} ) {
@@ -24418,7 +24416,7 @@ sub extended_ci {
         # Fix for b1197 b1198 b1199 b1200 b1201 b1202
         # Do not apply -xci if we are running out of space
         # NOTE: Testing in v20240501 showed that this check is no longer
-        # needed for stability, but there is little point in removing it.
+        # needed for stability, but this check helps improve formatting.
         if ( $level >= $stress_level_beta ) {
             DEBUG_XCI
               && print
@@ -29098,8 +29096,10 @@ sub compare_indentation_levels {
             else {
                 my $nobr = $nobreak_to_go[$i_nonblank];
                 $nobr = 0 if ( !defined($nobr) );
+                my $seqno = $type_sequence_to_go[$i_nonblank];
+                $seqno = EMPTY_STRING if ( !$seqno );
                 $msg .= <<EOM;
-set break after $i_nonblank: tok=$tokens_to_go[$i_nonblank] type=$types_to_go[$i_nonblank] nobr=$nobr
+set break after $i_nonblank: tok=$tokens_to_go[$i_nonblank] type=$types_to_go[$i_nonblank] seqno=$seqno nobr=$nobr
 EOM
                 if ( defined($set_closing) ) {
                     $msg .=
@@ -35602,6 +35602,16 @@ EOM
             {
                 $tol += $rOpts_continuation_indentation;
             }
+
+            # b1507, Option 3: a minimal fix by increasing tol by -ci
+            elsif ( 0
+                && !$rOpts_add_whitespace
+                && $rOpts_extended_line_up_parentheses
+                && $rOpts_extended_continuation_indentation )
+            {
+                $tol += $rOpts_continuation_indentation;
+            }
+            else { }
 
             $is_long_term = $excess + $tol > 0;
 
