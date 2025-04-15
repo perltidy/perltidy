@@ -2954,7 +2954,7 @@ sub initialize_line_up_parentheses {
 
     if ( $rOpts->{'line-up-parentheses'} ) {
 
-        # b1507, Option 1: included add-whitespace here for a simple fix
+        # b1507 fix, Option 1: included add-whitespace here for a simple fix
         if (   $rOpts->{'indent-only'}
             || !$rOpts->{'add-newlines'}
             || !$rOpts->{'delete-old-newlines'} )
@@ -2972,8 +2972,10 @@ EOM
             $rOpts->{'extended-line-up-parentheses'} = 0;
         }
 
-        # b1507, Option 2: -xlp -xci -naws can be unstable: turn off -xci
-        # This is currently the preferred fix for b1507.
+        # b1507 fix, Option 2: -xlp -xci -naws can be unstable: turn off -xci
+        # This is not needed if b1507 Option 4 is set, but it improves
+        # formatting in some marginal cases (see b1466) so it is retained for
+        # now.
         if (  !$rOpts->{'add-whitespace'}
             && $rOpts->{'extended-line-up-parentheses'}
             && $rOpts->{'extended-continuation-indentation'} )
@@ -36025,8 +36027,11 @@ sub find_token_starting_list {
         $iprev_nb -= 1;
         $type_prev_nb = $types_to_go[$iprev_nb];
     }
+    if ( $levels_to_go[$iprev_nb] < $levels_to_go[$i_opening_paren] ) {
 
-    if ( $type_prev_nb eq ',' ) {
+        # b1507, Option 4 fix: do not go past a decrease in level
+    }
+    elsif ( $type_prev_nb eq ',' ) {
 
         # a previous comma is a good break point
         # $i_opening_minus = $i_opening_paren;

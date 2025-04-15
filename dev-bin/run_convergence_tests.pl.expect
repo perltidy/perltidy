@@ -5066,14 +5066,22 @@ $bc[
  # S1
  my$d=
    \substr(
-        (state$tb=$thunderbirds[$x]),
-        $x,1);
+           (
+            state$tb=
+              $thunderbirds[$x]
+           ),
+           $x,1
+   );
 
  # S2
  my$d=
    \substr(
-        (state$tb=$thunderbirds[$x]),
-        $x,1);
+           (
+            state$tb=
+              $thunderbirds[$x]
+           ),
+           $x,1
+   );
 
 
 ==> b1212 <==
@@ -5309,13 +5317,21 @@ $obj= {
 ==> b1232 <==
         # S1
         $method.="AdminMode"
-          if( (defined($context->{args}->{admin_mode}))
+          if(
+              (
+                defined($context->{args}->{admin_mode}
+                )
+              )
               &&($context->{args}->{admin_mode}eq"yes")
           );
 
         # S2
         $method.="AdminMode"
-          if( (defined($context->{args}->{admin_mode}))
+          if(
+              (
+                defined($context->{args}->{admin_mode}
+                )
+              )
               &&($context->{args}->{admin_mode}eq"yes")
           );
 
@@ -5800,15 +5816,13 @@ use overload
 
 ==> b1273 <==
                      if (
-                            ( $n =
-                                   index( $trial,
+                            ( $n = index( $trial,
                                           $frag ) ) >=
                             $[
                      );
 
                      if (
-                            ( $n =
-                                   index( $trial,
+                            ( $n = index( $trial,
                                           $frag ) ) >=
                             $[
                      );
@@ -5937,9 +5951,10 @@ use overload
 ==> b1283 <==
        $_=join(
               '',$_,
-              (      ($MAX_SPLIT_DEPTH<=
-                              $section_commands{$outermost_level})?
-                       "\n<HR>\n":''
+              (
+                     (      $MAX_SPLIT_DEPTH<=$section_commands{
+                                   $outermost_level}
+                     )?"\n<HR>\n":''
               ),
               "\\$outermost_level",
               "*",
@@ -5949,9 +5964,10 @@ use overload
 
        $_=join(
               '',$_,
-              (      ($MAX_SPLIT_DEPTH<=
-                              $section_commands{$outermost_level})?
-                       "\n<HR>\n":''
+              (
+                     (      $MAX_SPLIT_DEPTH<=$section_commands{
+                                   $outermost_level}
+                     )?"\n<HR>\n":''
               ),
               "\\$outermost_level",
               "*",
@@ -8958,9 +8974,7 @@ Readonly::Scalar
         {
             if(
                 $IDXSIZE
-                &&(
-                    (   $i=(        $#MListOrder+1)-$IDXSIZE)>
-                    0 )
+                &&(($i=(        $#MListOrder+1)-$IDXSIZE)>0)
               )
             {
                 ...;
