@@ -11,6 +11,8 @@
 #8 git182.git182
 #9 objectpad.def
 #10 objectpad.objectpad
+#11 git183.def
+#12 git183.git183
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -33,7 +35,8 @@ BEGIN {
         'git182' => <<'----------',
 -nwrs='A'
 ----------
-        'kblx6' => <<'----------',
+        'git183' => "-lp -l=200 -sfei=L1000",
+        'kblx6'  => <<'----------',
 -nbbc
 -blbs=0
 -blbp=0
@@ -86,6 +89,26 @@ class Thing {
         ...;    #doing things
     };
 }
+----------
+
+        'git183' => <<'----------',
+my @options = (
+    'bin-count|bins=i' => \$binn =>
+      'Valuation histogram: Number of bins',
+    'parcel-classifications|p=s' => \@classes =>
+      'File of parcel classifications',
+    'help|h' => \$help => 'This help ',
+);
+
+#<<< id=L1000
+my @options = (
+    'bin-count|bins=i' => \$binn =>
+      'Valuation histogram: Number of bins',
+    'parcel-classifications|p=s' => \@classes =>
+      'File of parcel classifications',
+    'help|h' => \$help => 'This help ',
+);
+#>>>
 ----------
 
         'git32' => <<'----------',
@@ -385,6 +408,51 @@ class AllTheTypesByBlock {
     field $__dummy { $class_in_fieldblock = __CLASS__ }
 }
 #10...........
+        },
+
+        'git183.def' => {
+            source => "git183",
+            params => "def",
+            expect => <<'#11...........',
+my @options = (
+    'bin-count|bins=i' => \$binn => 'Valuation histogram: Number of bins',
+    'parcel-classifications|p=s' => \@classes =>
+      'File of parcel classifications',
+    'help|h' => \$help => 'This help ',
+);
+
+#<<< id=L1000
+my @options = (
+    'bin-count|bins=i' => \$binn =>
+      'Valuation histogram: Number of bins',
+    'parcel-classifications|p=s' => \@classes =>
+      'File of parcel classifications',
+    'help|h' => \$help => 'This help ',
+);
+#>>>
+#11...........
+        },
+
+        'git183.git183' => {
+            source => "git183",
+            params => "git183",
+            expect => <<'#12...........',
+my @options = (
+    'bin-count|bins=i' => \$binn =>
+      'Valuation histogram: Number of bins',
+    'parcel-classifications|p=s' => \@classes =>
+      'File of parcel classifications',
+    'help|h' => \$help => 'This help ',
+);
+
+#<<< id=L1000
+my @options = (
+                'bin-count|bins=i'           => \$binn    => 'Valuation histogram: Number of bins',
+                'parcel-classifications|p=s' => \@classes => 'File of parcel classifications',
+                'help|h'                     => \$help    => 'This help ',
+);
+#>>>
+#12...........
         },
     };
 

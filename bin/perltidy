@@ -2480,6 +2480,57 @@ The default is equivalent to -cse='#>>V'.
 
 =back
 
+=head2 Formatting Only Tagged Sections of Code
+
+A command B<--skip-formatting-except-id=tag>, or B<-sfei=tag>, is available to
+cause perltidy to B<only> format sections of code which are labeled with the
+selected tag on C<format-skipping> comments.
+
+For example, the tagged sections might contain tables which are best formatted
+with special values of the C<--maximum-line-length> parameter
+
+The tag name is introduced with the added text B<id=NAME> after one or more
+spaces on the opening format-skipping comment. The tag B<NAME> can be any
+combination of letters and numbers. For example
+
+ #<<< id=Table27
+   ...
+ #>>>
+
+The code in this section will be treated like any other format skipping section
+unless the parameter B<--skip-formatting-except-id=Table27> is entered.
+In that case, it will be formatted.
+
+Here are some points regarding this option:
+
+=over 4
+
+=item *
+
+The special option B<--skip-formatting-except-id='-'>, or B<-sfei='-', means
+skip all formatting (since a tag named '-' does not exist).  This will allow
+the code to be scanned for problems, but the formatting will not be changed.
+
+=item *
+
+The sections which are being skipped or formatted can be checked by
+dumping a log file with the B<-g> parameter.
+
+=item *
+
+When this option is used, the starting indentation is still guessed from
+the first code in the file, even if it is not being formatted.  If this
+results in an unwanted indentation of the tagged section, then the
+parameter B<--starting-indentation-level=n>, or B<-sil=n>, can be used
+to set the desired indentation.
+
+=item *
+
+This feature was suggested in issue git#183 at
+L<https://github.com/perltidy/perltidy/issues/183>, which discusses an example.
+
+=back
+
 =head2 Formatting a Limited Range of Lines
 
 A command B<--line-range-tidy=n1:n2> is available to process just a selected

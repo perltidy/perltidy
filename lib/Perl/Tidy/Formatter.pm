@@ -2288,6 +2288,8 @@ sub check_options {
         }
     }
 
+    check_skip_formatting_except_id();
+
     initialize_line_up_parentheses();
 
     initialize_pack_operator_types();
@@ -2363,6 +2365,25 @@ EOM
 
     return;
 } ## end sub check_options
+
+sub check_skip_formatting_except_id {
+
+    # Check for valid --skip-formatting-except-id
+    my $opt_name = 'skip-formatting-except-id';
+    my $opt      = $rOpts->{$opt_name};
+    return if ( !defined($opt) );
+
+    # Option should match \w except -sfei='-' which means skip everything
+    if ( $opt =~ /\W/g && $opt ne '-' ) {
+        my $pos = pos($opt);
+        my $msg = <<EOM;
+--$opt_name='$opt'   : expecting only letters and digits
+EOM
+        $msg .= ' ' x ( length($opt_name) + 3 + $pos ) . '^---' . "\n";
+        die($msg);
+    }
+    return;
+} ## end sub check_skip_formatting_except_id
 
 use constant ALIGN_GREP_ALIASES => 0;
 
@@ -12053,11 +12074,13 @@ sub set_CODE_type {
     my $rOpts_format_skipping_end   = $rOpts->{'format-skipping-end'};
     my $rOpts_static_block_comment_prefix =
       $rOpts->{'static-block-comment-prefix'};
+    my $rOpts_skip_formatting_except_id = $rOpts->{'skip-formatting-except-id'};
+    my $Inverted_skip_mode = defined($rOpts_skip_formatting_except_id);
 
     # Remember indexes of lines with side comments
     my @ix_side_comments;
 
-    my $In_format_skipping_section = 0;
+    my $In_format_skipping_section = $Inverted_skip_mode ? 1 : 0;
     my $Saw_VERSION_in_this_file   = 0;
     my $has_side_comment           = 0;
     my $last_line_had_side_comment = 0;
@@ -12111,50 +12134,109 @@ sub set_CODE_type {
             else                { $has_side_comment = 1 }
         }
 
-        #-----------------------------------------------------------
-        # Write line verbatim if we are in a formatting skip section
-        #-----------------------------------------------------------
-        if ($In_format_skipping_section) {
+        #-----------------------------------------------------
+        # See if entering or exiting a format skipping section
+        #-----------------------------------------------------
+        if ($is_block_comment) {
 
-            # Note: extra space appended to comment simplifies pattern matching
+            # check for format-skipping start marker, normally #<<<
             if (
-                $is_block_comment
 
                 # optional fast pre-check
-                && ( substr( $rLL->[$Kfirst]->[_TOKEN_], 0, 4 ) eq '#>>>'
-                    || $rOpts_format_skipping_end )
-
-                && ( $rLL->[$Kfirst]->[_TOKEN_] . SPACE ) =~
-                /$format_skipping_pattern_end/
-              )
-            {
-                $In_format_skipping_section = 0;
-                my $input_line_no = $line_of_tokens->{_line_number};
-                write_logfile_entry(
-                    "Line $input_line_no: Exiting format-skipping section\n");
-            }
-            elsif (
-                $is_block_comment
-
-                # optional fast pre-check
-                && ( substr( $rLL->[$Kfirst]->[_TOKEN_], 0, 4 ) eq '#<<<'
-                    || $rOpts_format_skipping_begin )
-
+                (
+                    substr( $rLL->[$Kfirst]->[_TOKEN_], 0, 4 ) eq '#<<<'
+                    || $rOpts_format_skipping_begin
+                )
                 && $rOpts_format_skipping
                 && ( $rLL->[$Kfirst]->[_TOKEN_] . SPACE ) =~
                 /$format_skipping_pattern_begin/
               )
             {
-                # warn of duplicate starting comment lines, git #118
                 my $input_line_no = $line_of_tokens->{_line_number};
-                warning(
+                if ( !$In_format_skipping_section ) {
+
+                    # Start format skipping at #<<< in normal mode
+                    if ( !$Inverted_skip_mode ) {
+                        $In_format_skipping_section = $input_line_no;
+                        write_logfile_entry(
+"Line $input_line_no: Entering format-skipping section\n"
+                        );
+                    }
+                    else {
+                        # unexpected second start marker in inverted mode
+                        # ignore; let warning occur in normal mode
+                    }
+                }
+                else {
+                    if ($Inverted_skip_mode) {
+
+                        # We are at a '#<<<' in format skipping inverted mode;
+                        # start formatting (stop format skipping) if id matches
+                        my $token = $rLL->[$Kfirst]->[_TOKEN_];
+                        if (   $token =~ /\s+id=(\w+)/
+                            && $1 eq $rOpts_skip_formatting_except_id )
+                        {
+                            $In_format_skipping_section = 0;
+                            write_logfile_entry(
+"Line $input_line_no: Entering selected format section $rOpts_skip_formatting_except_id\n"
+                            );
+                        }
+                    }
+                    else {
+
+                        # warn of duplicate starting comment lines, git #118
+                        warning(
 "Already in format-skipping section which started at line $In_format_skipping_section\n",
-                    $input_line_no
-                );
+                            $input_line_no
+                        );
+                    }
+                }
+            }
+
+            # check for format-skipping end marker, normally #>>>
+            elsif (
+                (
+                    substr( $rLL->[$Kfirst]->[_TOKEN_], 0, 4 ) eq '#>>>'
+                    || $rOpts_format_skipping_end
+                )
+                && ( $rLL->[$Kfirst]->[_TOKEN_] . SPACE ) =~
+                /$format_skipping_pattern_end/
+              )
+            {
+                my $input_line_no = $line_of_tokens->{_line_number};
+                if ($In_format_skipping_section) {
+                    if ( !$Inverted_skip_mode ) {
+
+                        # End skipping at a #<<< in normal mode
+                        $In_format_skipping_section = 0;
+                        write_logfile_entry(
+"Line $input_line_no: Exiting format-skipping section\n"
+                        );
+                        $CODE_type = 'FS';
+                        next;
+                    }
+                    else {
+                        ## ignore useless #>>> not following #<<<
+                    }
+                }
+                else {
+                    if ($Inverted_skip_mode) {
+                        $In_format_skipping_section = $input_line_no;
+                        write_logfile_entry(
+"Line $input_line_no: Exiting selected format section $rOpts_skip_formatting_except_id\n"
+                        );
+                    }
+                    else {
+                        ## ignore useless #>>> not following #<<<
+                    }
+                }
             }
             else {
                 # not at a format skipping control line
             }
+        }
+
+        if ($In_format_skipping_section) {
             $CODE_type = 'FS';
             next;
         }
@@ -12174,29 +12256,6 @@ sub set_CODE_type {
                 $CODE_type = 'VB';
                 next;
             }
-        }
-
-        #-------------------------------------------------
-        # See if we are entering a formatting skip section
-        #-------------------------------------------------
-        if (
-            $is_block_comment
-
-            # optional fast pre-check
-            && ( substr( $rLL->[$Kfirst]->[_TOKEN_], 0, 4 ) eq '#<<<'
-                || $rOpts_format_skipping_begin )
-
-            && $rOpts_format_skipping
-            && ( $rLL->[$Kfirst]->[_TOKEN_] . SPACE ) =~
-            /$format_skipping_pattern_begin/
-          )
-        {
-            my $input_line_no = $line_of_tokens->{_line_number};
-            $In_format_skipping_section = $input_line_no;
-            write_logfile_entry(
-                "Line $input_line_no: Entering format-skipping section\n");
-            $CODE_type = 'FS';
-            next;
         }
 
         # ignore trailing blank tokens (they will get deleted later)

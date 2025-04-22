@@ -3735,6 +3735,7 @@ sub generate_options {
     $add_option->( 'non-indenting-brace-prefix',          'nibp',  '=s' );
     $add_option->( 'outdent-long-comments',               'olc',   '!' );
     $add_option->( 'outdent-static-block-comments',       'osbc',  '!' );
+    $add_option->( 'skip-formatting-except-id',           'sfei',  '=s' );
     $add_option->( 'static-block-comment-prefix',         'sbcp',  '=s' );
     $add_option->( 'static-block-comments',               'sbc',   '!' );
     $add_option->( 'static-side-comment-prefix',          'sscp',  '=s' );

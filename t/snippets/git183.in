@@ -1,0 +1,17 @@
+my @options = (
+    'bin-count|bins=i' => \$binn =>
+      'Valuation histogram: Number of bins',
+    'parcel-classifications|p=s' => \@classes =>
+      'File of parcel classifications',
+    'help|h' => \$help => 'This help ',
+);
+
+#<<< id=L1000
+my @options = (
+    'bin-count|bins=i' => \$binn =>
+      'Valuation histogram: Number of bins',
+    'parcel-classifications|p=s' => \@classes =>
+      'File of parcel classifications',
+    'help|h' => \$help => 'This help ',
+);
+#>>>
