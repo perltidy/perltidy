@@ -1068,6 +1068,7 @@ EOM
           code-skipping-end
           line-range-tidy
           show-options
+          skip-formatting-except-id
 
           vertical-tightness
           vertical-tightness-closing

@@ -2995,9 +2995,10 @@ EOM
 
         # b1507 fix, Option 2: -xlp -xci -naws can be unstable: turn off -xci
         # This is not needed if b1507 Option 4 is set, but it improves
-        # formatting in some marginal cases (see b1466) so it is retained for
-        # now.
-        if (  !$rOpts->{'add-whitespace'}
+        # formatting in some marginal cases (see b1466). This is deactivated
+        # with c486.
+        if (   0
+            && !$rOpts->{'add-whitespace'}
             && $rOpts->{'extended-line-up-parentheses'}
             && $rOpts->{'extended-continuation-indentation'} )
         {
@@ -24341,6 +24342,9 @@ sub extended_ci {
 
     # The operations to remove unwanted CI are done in sub 'undo_ci'.
 
+    # Temporary constant for testing update c486
+    use constant C486 => 0;
+
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
 
@@ -24411,8 +24415,46 @@ sub extended_ci {
         # Certain block types arrive from the tokenizer without CI but should
         # have it for this option.  These include anonymous subs and
         #     do sort map grep eval
-        my $block_type = $rblock_type_of_seqno->{$seqno};
-        if ( $block_type && $is_block_with_ci{$block_type} ) {
+        my $block_type    = $rblock_type_of_seqno->{$seqno};
+        my $block_with_ci = $block_type && $is_block_with_ci{$block_type};
+
+        # Fix for c486 (b1466): sub undo_ci cannot undo ci for -lp sections,
+        # so we will avoid letting ci enter blocks which most likely will not
+        # need it.
+        if (   $block_with_ci
+            && $rOpts_line_up_parentheses
+            && $KK == $K_opening_container->{$seqno}
+            && C486 )
+        {
+            my $Kprev = $self->K_previous_nonblank($KK);
+            $Kprev = $self->K_previous_nonblank($Kprev);
+            my $type_prev = $Kprev ? $rLL->[$Kprev]->[_TYPE_] : 'b';
+            if ( $type_prev eq '=' || $type_prev eq ';' ) {
+                $block_with_ci = 0;
+            }
+            elsif ( $type_prev eq ',' ) {
+                my $parent_seqno = $self->[_rparent_of_seqno_]->{$seqno};
+                if ( $self->[_ris_list_by_seqno_]->{$parent_seqno} ) {
+                    $block_with_ci = 0;
+                }
+            }
+            elsif ( $type_prev eq '{' ) {
+                my $seqno_prev = $rLL->[$Kprev]->[_TYPE_SEQUENCE_];
+                if ($seqno_prev) {
+                    my $token_prev = $rLL->[$Kprev]->[_TOKEN_];
+                    if (   $token_prev ne '('
+                        || $self->[_ris_list_by_seqno_]->{$seqno} )
+                    {
+                        $block_with_ci = 0;
+                    }
+                }
+            }
+            else {
+                ## no other special cases
+            }
+        }
+
+        if ($block_with_ci) {
             $rLL->[$KK]->[_CI_LEVEL_] = 1;
             if ($seqno_top) {
                 $rseqno_controlling_my_ci->{$KK} = $seqno_top;
