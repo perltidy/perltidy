@@ -2487,7 +2487,7 @@ cause perltidy to B<only> format sections of code which are labeled with the
 selected tag on C<format-skipping> comments.
 
 For example, the tagged sections might contain tables which are best formatted
-with special values of the C<--maximum-line-length> parameter
+with special values of the C<--maximum-line-length> parameter.
 
 The tag name is introduced with the added text B<id=NAME> after one or more
 spaces on the opening format-skipping comment. The tag B<NAME> can be any
@@ -2526,7 +2526,7 @@ to set the desired indentation.
 
 =item *
 
-This feature was suggested in issue git#183 at
+This feature was suggested in issue git #183 at
 L<https://github.com/perltidy/perltidy/issues/183>, which discusses an example.
 
 =back
