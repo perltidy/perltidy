@@ -2,6 +2,13 @@
 
 ## 2025 03 11.03
 
+    - Add option --skip-formatting-except-id=NAME discussed in git #183. This allows
+      formatting to apply only to lines taged with #<<< id=NAME, where NAME
+      is a user-defined tag.
+
+    - A relatively rare problem with the formatting combination -xci and -lp or -xlp
+      has been fixed.  Some lines had more leading spaces that intended.
+
     - New option -m added to --dump-mismatched-returns and
       --warn-mismatched-returns. This checks for multiple array
       return sizes. A warning occurs when a sub has multiple returns

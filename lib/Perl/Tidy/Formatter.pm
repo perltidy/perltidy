@@ -24342,8 +24342,8 @@ sub extended_ci {
 
     # The operations to remove unwanted CI are done in sub 'undo_ci'.
 
-    # Temporary constant for testing update c486
-    use constant C486 => 0;
+    # Temporary constant for switching update c486 on and off
+    use constant C486 => 1;
 
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
