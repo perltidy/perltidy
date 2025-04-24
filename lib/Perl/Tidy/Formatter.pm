@@ -2379,8 +2379,8 @@ sub check_skip_formatting_except_id {
         my $msg = <<EOM;
 --$opt_name='$opt'   : expecting only letters and digits
 EOM
-        $msg .= ' ' x ( length($opt_name) + 3 + $pos ) . '^---' . "\n";
-        die($msg);
+        $msg .= SPACE x ( length($opt_name) + 3 + $pos ) . '^---' . "\n";
+        Die($msg);
     }
     return;
 } ## end sub check_skip_formatting_except_id
@@ -24342,9 +24342,6 @@ sub extended_ci {
 
     # The operations to remove unwanted CI are done in sub 'undo_ci'.
 
-    # Temporary constant for switching update c486 on and off
-    use constant C486 => 1;
-
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
 
@@ -24423,8 +24420,7 @@ sub extended_ci {
         # need it.
         if (   $block_with_ci
             && $rOpts_line_up_parentheses
-            && $KK == $K_opening_container->{$seqno}
-            && C486 )
+            && $KK == $K_opening_container->{$seqno} )
         {
             my $Kprev = $self->K_previous_nonblank($KK);
             $Kprev = $self->K_previous_nonblank($Kprev);
