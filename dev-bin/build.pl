@@ -160,7 +160,7 @@ sub main {
 Perltidy Build Main Menu - Case Insensitive
 -------------------------------------------
 pre      - view pre-build checklist        status: $rstatus->{'PRE'}
-scan     - scan text for problems          status: $rstatus->{'SCAN'}
+scan     - scan for simple text problems   status: $rstatus->{'SCAN'}
 man      - check man pages                 status: $rstatus->{'MAN'}
 pod      - check POD                       status: $rstatus->{'POD'}
 cl       - review/edit CHANGES.md          status: $rstatus->{'CL'}
@@ -208,7 +208,7 @@ sub post_result {
     foreach my $line (@lines) { $fh_log->print($line) }
     $fh->close();
     openurl("$fout");
-    hitcr();
+##  hitcr();
     return;
 } ## end sub post_result
 
@@ -477,7 +477,7 @@ sub make_manifest {
     my $fout   = "tmp/manifest.out";
     my $fdiff  = "tmp/manifest.diff";
     my $result = sys_command("make manifest >$fout 2>$fout");
-    post_result($fout);
+    ##post_result($fout);
     if ( -e $fdiff ) { unlink($fdiff) }
     $result = system("diff MANIFEST.bak MANIFEST >$fdiff");
     if ( !-e $fdiff || -z $fdiff ) {
@@ -540,6 +540,7 @@ EOM
         my $cmd = "$cpants_lint $tar_gz_file >$fout 2>$fout";
         system_echo($cmd);
         post_result($fout);
+        hitcr();
     }
 
     return;

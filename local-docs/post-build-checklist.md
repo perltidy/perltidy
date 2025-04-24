@@ -12,19 +12,19 @@
     - perl Makefile.PL, make, make test - should complete ok
   - Commit to github and check test results
   - Install and test on several systems if possible
-  - Review the suggestions in Release::Checklist
-     https://metacpan.org/pod/Release::Checklist
-    and the Berlin consensus
-     https://github.com/Perl-Toolchain-Gang/toolchain-site/blob/master/berlin-consensus.md
+
   - Upload Release to CPAN
     - Select a time when you will be available for a few days in a problem is reported
   - Upload release to sourceforge
   - Update web site
   - Update any relevant git # issues
-  - Be sure to run the RUNME.sh file to tag this version and also push the tags to github. Check that the tags are uploaded at:
+  - Run the RUNME.sh file to tag this version and also push the tags to github. Check that the tags are uploaded at:
+    https://github.com/perltidy/perltidy/tags
 
-   https://github.com/perltidy/perltidy/tags
-
-  - If you forget, or need to modify tags, see the directions in the book:
-
-   https://git-scm.com/book/en/v2/Git-Basics-Tagging
+  - Some References:
+   - Release::Checklist
+     https://metacpan.org/pod/Release::Checklist
+   - Berlin consensus
+     https://github.com/Perl-Toolchain-Gang/toolchain-site/blob/master/berlin-consensus.md
+   - Git book
+     https://git-scm.com/book/en/v2/Git-Basics-Tagging

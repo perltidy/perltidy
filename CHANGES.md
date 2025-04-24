@@ -3,7 +3,7 @@
 ## 2025 03 11.03
 
     - Add option --skip-formatting-except-id=NAME discussed in git #183. This allows
-      formatting to apply only to lines taged with #<<< id=NAME, where NAME
+      formatting to apply only to lines tagged with #<<< id=NAME, where NAME
       is a user-defined tag.
 
     - A relatively rare problem with the formatting combination -xci and -lp or -xlp

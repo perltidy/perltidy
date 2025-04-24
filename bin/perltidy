@@ -2507,7 +2507,7 @@ Here are some points regarding this option:
 
 =item *
 
-The special option B<--skip-formatting-except-id='-'>, or B<-sfei='-', means
+The special option B<--skip-formatting-except-id='-'>, or B<-sfei='-'>, means
 skip all formatting (since a tag named '-' does not exist).  This will allow
 the code to be scanned for problems, but the formatting will not be changed.
 
