@@ -1,11 +1,13 @@
 # Checklist for preparing a commit, new version, or release a new distribution
 
-- Basic quality control for all **commit** candidates:
-  - 'make test' successful
-  - run ``devbin/run_convergence_tests.pl``
+[build.pl commands shown in brackets]
+
+- Basic quality control for **all commit** candidates:
+  - [t] 'make test' successful
+  - [conv] run ``devbin/run_convergence_tests.pl``
   - be sure code is tidied (you can run tidyall -a to do this)
     - note that I have tidyall set to also run perlcritic right now
-  - run perlcritic
+  - [pc] run perlcritic
   - run NYTProf and check the activity and performance of any changed code
 ```
     perl -d:NYTProf perltidy.pl -pbp -nst -nse -wn -xci perltidy.pl
@@ -20,29 +22,29 @@
    - 3 cpu hours for a **commit** candidate
    - 24 cpu hours for a +0.01 **version bump** candidate
    - 100 cpu hours for a new integer **release candidate** for CPAN
-
-- Steps to build a new **version** (use build.pl):
-  - review/update the CHANGES.md file
-  - check/update copyright date (build.pl can do this): perltidy and Tidy.pm (2 places)
-  - review code, especially any ## commented out sections and "FIXME's"
-  - run podchecker on all .pod files
-  - run spell checker on all files
   - review tickets at [rt.cpan.org](https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy)
   - review the issues at [github](https://github.com/perltidy/perltidy/issues/)
   - be sure builds at github and Appveyor are clean for all version of perl
-  - update VERSION numbers in all modules and some docs (build.pl can do this):
-  - run perlver on all modules to check minimum version; should be 5.8.1
+
+- Basic tteps to build a **new version**
+  - [cl] review/update the CHANGES.md file
+  - [scan, man] review code, especially any ## commented out sections and "FIXME's"
+  - [pod] run podchecker on all .pod files
+  - [spell] run spell checker on all files
+  - [v] update VERSION numbers in all modules and some docs
+  - [year] check/update copyright date: perltidy and Tidy.pm (2 places)
+  - [perlver] run perlver on all modules to check minimum version; should be 5.8.1
     - The first line in Tidy.pm has the required version of Perl
     - This must agree with the version in Makefile.PL
-  - make manifest
+  - [manifest] make manifest
     - check MANIFEST over very carefully
     - sometimes it is necessary to remove MANIFEST and then do "make manifest"
-  - make the .tar.gz
+  - [t, dist] make the .tar.gz
     - perl Makefile.PL
     - make
     - make test
     - make dist
-  - run 'cpants-lint.pl' on the .tar.gz and check results (build.pl does this)
+  - [dist does this] run 'cpants-lint.pl' on the .tar.gz and check results
 
 - Steps to release a new **distribution** after making a ``.tar.gz`` file:
   - See file ``post-build-checklist.md`` (option ``POST`` in build menu)
