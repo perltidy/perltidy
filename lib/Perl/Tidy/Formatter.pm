@@ -3287,10 +3287,12 @@ EOM
 
     # pull out any leading container code, like f( or *{
     # For example: 'f(' becomes flags hash entry '(' => 'f'
+    # Concatenate multiple entries catch error below (see git #78).
     foreach my $item (@list) {
         if ( $item =~ /^( [ \w\* ] )( [ \{\(\[\}\)\] ] )$/x ) {
             $item = $2;
-            $flags{$2} = $1;
+            if ( defined( $flags{$2} ) ) { $flags{$2} .= $1 }
+            else                         { $flags{$2} = $1 }
         }
     }
 
@@ -3305,7 +3307,7 @@ EOM
         my $num = @unknown_types;
         local $LIST_SEPARATOR = SPACE;
         Warn(<<EOM);
-$num unrecognized token types were input with --$short_name :
+$num unrecognized token types were input with -$short_name :
 @unknown_types
 EOM
     }
@@ -3316,18 +3318,19 @@ EOM
         my $flag = $flags{$key};
 
         if ( length($flag) != 1 ) {
+            my $txt = join( ',', split //, $flag );
             Warn(<<EOM);
-Multiple entries given for '$key' in '$short_name'
+Multiple entries '$txt' given for '$key' in '-$short_name'; only 1 is possible
 EOM
         }
         elsif ( ( $key eq '(' || $key eq ')' ) && $flag !~ /^[kKfFwW\*]$/ ) {
             Warn(<<EOM);
-Unknown flag '$flag' given for '$key' in '$short_name'
+Unknown flag '$flag' given for '$key' in '-$short_name'
 EOM
         }
         elsif ( ( $key eq '}' || $key eq '}' ) && $flag !~ /^[bB\*]$/ ) {
             Warn(<<EOM);
-Unknown flag '$flag' given for '$key' in '$short_name'
+Unknown flag '$flag' given for '$key' in '-$short_name'
 EOM
         }
         else {
