@@ -2022,8 +2022,13 @@ sub prepare_for_a_new_file {
 
     # TV3: SCALARS for quote variables.  These are initialized with a
     # subroutine call and continually updated as lines are processed.
-    my ( $in_quote, $quote_type, $quote_character, $quote_pos, $quote_depth,
-        $quoted_string_1, $quoted_string_2, $allowed_quote_modifiers );
+    my (
+        $in_quote,        $quote_type,
+        $quote_character, $quote_pos,
+        $quote_depth,     $quoted_string_1,
+        $quoted_string_2, $allowed_quote_modifiers,
+        $quote_starting_tok,
+    );
 
     # TV4: SCALARS for multi-line identifiers and
     # statements. These are initialized with a subroutine call
@@ -2065,6 +2070,7 @@ sub prepare_for_a_new_file {
         $quoted_string_1         = EMPTY_STRING;
         $quoted_string_2         = EMPTY_STRING;
         $allowed_quote_modifiers = EMPTY_STRING;
+        $quote_starting_tok      = EMPTY_STRING;
 
         # TV4:
         $id_scan_state = EMPTY_STRING;
@@ -2149,6 +2155,7 @@ sub prepare_for_a_new_file {
             $quote_character, $quote_pos,
             $quote_depth,     $quoted_string_1,
             $quoted_string_2, $allowed_quote_modifiers,
+            $quote_starting_tok,
         ];
 
         my $rTV4 = [ $id_scan_state, $identifier, $want_paren ];
@@ -2225,8 +2232,11 @@ sub prepare_for_a_new_file {
         ) = @{$rTV2};
 
         (
-            $in_quote, $quote_type, $quote_character, $quote_pos, $quote_depth,
-            $quoted_string_1, $quoted_string_2, $allowed_quote_modifiers,
+            $in_quote,        $quote_type,
+            $quote_character, $quote_pos,
+            $quote_depth,     $quoted_string_1,
+            $quoted_string_2, $allowed_quote_modifiers,
+            $quote_starting_tok,
         ) = @{$rTV3};
 
         ( $id_scan_state, $identifier, $want_paren ) = @{$rTV4};
@@ -3389,6 +3399,7 @@ EOM
         $in_quote                = 1;
         $type                    = 'Q';
         $allowed_quote_modifiers = EMPTY_STRING;
+        $quote_starting_tok      = $tok;
         return;
     } ## end sub do_QUOTATION_MARK
 
@@ -3402,6 +3413,7 @@ EOM
         $in_quote                = 1;
         $type                    = 'Q';
         $allowed_quote_modifiers = EMPTY_STRING;
+        $quote_starting_tok      = $tok;
         return;
     } ## end sub do_APOSTROPHE
 
@@ -3415,6 +3427,7 @@ EOM
         $in_quote                = 1;
         $type                    = 'Q';
         $allowed_quote_modifiers = EMPTY_STRING;
+        $quote_starting_tok      = $tok;
         return;
     } ## end sub do_BACKTICK
 
@@ -3452,6 +3465,7 @@ EOM
             $in_quote                = 1;
             $type                    = 'Q';
             $allowed_quote_modifiers = $quote_modifiers{'m'};
+            $quote_starting_tok      = 'm';
         }
         else {    # not a pattern; check for a /= token
 
@@ -3783,6 +3797,7 @@ EOM
             $in_quote                = 1;
             $type                    = 'Q';
             $allowed_quote_modifiers = $quote_modifiers{'m'};
+            $quote_starting_tok      = 'm';
         }
         else {
             ( $type_sequence, $indent_flag ) =
@@ -4432,6 +4447,7 @@ EOM
             # (see 'signatures.t' for good examples)
             $in_quote                = $quote_items{'q'};
             $allowed_quote_modifiers = $quote_modifiers{'q'};
+            $quote_starting_tok      = 'q';
             $type                    = 'q';
             $quote_type              = 'q';
             return 1;
@@ -4643,6 +4659,7 @@ EOM
         }
         $in_quote                = $quote_items{$tok};
         $allowed_quote_modifiers = $quote_modifiers{$tok};
+        $quote_starting_tok      = $tok;
 
         # All quote types are 'Q' except possibly qw quotes.
         # qw quotes are special in that they may generally be trimmed
@@ -5321,6 +5338,13 @@ EOM
 
     } ## end sub do_BAREWORD
 
+    # FIXME: Tentative
+    my %is_interpolated_quote = (
+        q{`} => 1,
+        q{"} => 1,
+        qq   => 1,
+    );
+
     sub do_FOLLOW_QUOTE {
 
         my $self = shift;
@@ -5333,6 +5357,10 @@ EOM
             $routput_token_type->[$i] = $type;
 
         }
+
+        # Save starting lengths for here target search of just current line
+        my $len_qs1 = length($quoted_string_1);
+##      my $len_qs2 = length($quoted_string_2);
 
         # scan for the end of the quote or pattern
         (
@@ -5360,8 +5388,37 @@ EOM
 
         );
 
-        # all done if we didn't find it
+        # All done if we didn't find it
         if ($in_quote) { return }
+
+        # Check for possible interpolated here-doc in a quote
+        if ( $is_interpolated_quote{$quote_starting_tok} ) {
+
+            # look for << in the last line
+            my $pos_shift = rindex( $quoted_string_1, '<<' );
+            if ( $pos_shift >= $len_qs1 ) {
+
+                # followed by a '}'
+                my $pos_closing = rindex( $quoted_string_1, '}' );
+                if ( $pos_closing > $pos_shift ) {
+
+                    # preceded by a '${'  TODO: need to also check for '@{' ?
+                    my $pos_opening =
+                      rindex( $quoted_string_1, '${', $pos_shift );
+
+                    if ( $pos_opening >= 0 && $pos_opening < $pos_shift ) {
+
+                        # scan quote for here targets
+                        my $rht =
+                          $self->find_interpolated_here_targets(
+                            $quoted_string_1, $len_qs1 );
+                        if ($rht) {
+                            push @{$rhere_target_list}, @{$rht};
+                        }
+                    }
+                }
+            }
+        }
 
         # save pattern and replacement text for rescanning
         my $qs1 = $quoted_string_1;
@@ -10692,6 +10749,119 @@ sub do_quote {
 
     );
 } ## end sub do_quote
+
+use constant DEBUG_FIND_INTERPOLATED_HERE_TARGETS => 0;
+use constant TEST_FIND_INTERPOLATED_HERE_TARGETS  => 0;
+
+sub find_interpolated_here_targets {
+    my ( $self, $quoted_string, $len_starting_lines ) = @_;
+
+    # Search for here targets in a quoted string
+    # Given:
+    #   $quoted_string = the complete string of an interpolated quote
+    #   $len_starting_lines = number of characters of the first n-1 lines
+    #      (=0 if this is a single-line quote)
+    # Task:
+    #   Find and return a list of all here targets on the last line;
+    #   i.e., if here target is index ii, we only return the
+    #   target if rmap->[$ii]>=$len_starting_lines
+
+    #  The items returned are the format needed for @{$rhere_target_list};
+    #  [ $here_doc_target, $here_quote_character ]
+    #  there can be multiple here targets.
+
+    my $rht;
+    return $rht if ( !TEST_FIND_INTERPOLATED_HERE_TARGETS );
+
+    # Tokenize the entire quote, even if multi-line, because we have to
+    # determine which parts are in single quotes
+    my ( $rtokens, $rmap, $rtoken_type ) = pre_tokenize($quoted_string);
+    my $max_ii = @{$rtokens} - 1;
+
+    # State variables:
+    my $backslash_count = 0;    # number of consecutive \
+    my $block_depth     = 0;    # depth of '${' or '@{'
+
+    # loop over pre-tokens
+    my $ii = -1;
+    while ( ++$ii <= $max_ii ) {
+        my $token = $rtokens->[$ii];
+        if (DEBUG_FIND_INTERPOLATED_HERE_TARGETS) {
+            print
+"i=$ii tok=$token backslash=$backslash_count block=$block_depth\n";
+        }
+        if ( !$block_depth ) {
+            if ( $token eq BACKSLASH ) { $backslash_count++; next }
+            if ( $backslash_count && $rtokens->[ $ii - 1 ] ne BACKSLASH ) {
+                $backslash_count = 0;
+            }
+            if ( $backslash_count % 2 ) { next }
+        }
+        else { $backslash_count = 0 }
+
+        # look for code blocks starting with '${' or '@{'
+        if ( $token eq '$' || $token eq '@' ) {
+            if (   $ii < $max_ii
+                && $block_depth <= 0
+                && $rtokens->[ $ii + 1 ] eq '{' )
+            {
+                $ii++;
+                $block_depth++;
+            }
+            next;
+        }
+
+        next if ( !$block_depth );
+
+        if ( $token eq '{' ) {
+            $block_depth++;
+            next;
+        }
+        if ( $token eq '}' ) {
+            $block_depth--;
+            next;
+        }
+        if ( $token eq '<' && $ii < $max_ii - 3 ) {
+            next if ( $rtokens->[ $ii + 1 ] ne '<' );
+            $ii++;
+            my $next_type  = $rtoken_type->[ $ii + 1 ];
+            my $next_token = $rtokens->[ $ii + 1 ];
+            if ( $next_type eq BACKSLASH ) {
+                $ii++;
+                $next_type  = $rtoken_type->[ $ii + 1 ];
+                $next_token = $rtokens->[ $ii + 1 ];
+            }
+
+            # look for targets like "${ \<<END1 }${ \<<END2 }";
+            if ( $next_type eq 'w' ) {
+                $ii++;
+                if ( $rmap->[$ii] >= $len_starting_lines ) {
+                    push @{$rht}, [ $next_token, EMPTY_STRING ];
+                }
+            }
+
+            # look for targets like  "${ \<<'END1' }${ \<<\"END2\" }";
+            elsif ( $next_type eq "'" || $next_type eq '"' ) {
+                my $quote_char = $next_type;
+                $ii++;
+                my $here_target = EMPTY_STRING;
+                while ( ++$ii <= $max_ii && $rtokens->[$ii] ne $quote_char ) {
+                    next
+                      if ( $quote_char eq '"' && $rtokens->[$ii] eq BACKSLASH );
+                    $here_target .= $rtokens->[$ii];
+                }
+                if ( $rmap->[$ii] >= $len_starting_lines ) {
+                    push @{$rht}, [ $here_target, $quote_char ];
+                }
+            }
+            else {
+                ## no here target
+            }
+        }
+        next;
+    } ## end while ( ++$ii <= $max_ii )
+    return $rht;
+} ## end sub find_interpolated_here_targets
 
 # Some possible non-word quote delimiters, for preliminary checking
 my %is_punct_char;
