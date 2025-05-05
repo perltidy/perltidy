@@ -264,7 +264,11 @@ EOM
             last;
         }
         elsif ( $ans eq 'Q' ) {
-            if ( ifyes("Quit without finishing, are you sure? [Y/N]") ) {
+            if (
+                ifyes(
+                    "Quit spell check without finishing, are you sure? [Y/N]")
+              )
+            {
                 exit 1;
             }
         }
