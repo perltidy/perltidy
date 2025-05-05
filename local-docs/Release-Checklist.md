@@ -26,7 +26,7 @@
   - review the issues at [github](https://github.com/perltidy/perltidy/issues/)
   - be sure builds at github and Appveyor are clean for all version of perl
 
-- Basic tteps to build a **new version**
+- Basic steps to build a **new version**
   - [cl] review/update the CHANGES.md file
   - [scan, man] review code, especially any ## commented out sections and "FIXME's"
   - [pod] run podchecker on all .pod files
