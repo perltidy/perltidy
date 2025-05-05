@@ -490,6 +490,8 @@
 ../snippets32.t	git182.git182
 ../snippets32.t	objectpad.def
 ../snippets32.t	objectpad.objectpad
+../snippets32.t	git183.def
+../snippets32.t	git183.git183
 ../snippets4.t	gnu1.gnu
 ../snippets4.t	gnu2.def
 ../snippets4.t	gnu2.gnu
@@ -610,5 +612,4 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets32.t	git183.def
-../snippets32.t	git183.git183
+../snippets32.t	here3.def

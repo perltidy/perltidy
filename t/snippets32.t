@@ -13,6 +13,7 @@
 #10 objectpad.objectpad
 #11 git183.def
 #12 git183.git183
+#13 here3.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -117,6 +118,18 @@ sub run {
     myfunction('x');
     my $res = myfunction ? 'X' : 'Y';  print ' ?';
 }
+----------
+
+        'here3' => <<'----------',
+my $animal="Mice";
+my $state="Blind";
+print "${ \<< 'END1'}$ { \<< \"END2\" }$ { \<<END3 }";
+Three
+END1
+$state
+END2
+$animal
+END3
 ----------
 
         'kblx' => <<'----------',
@@ -453,6 +466,22 @@ my @options = (
 );
 #>>>
 #12...........
+        },
+
+        'here3.def' => {
+            source => "here3",
+            params => "def",
+            expect => <<'#13...........',
+my $animal = "Mice";
+my $state  = "Blind";
+print "${ \<< 'END1'}$ { \<< \"END2\" }$ { \<<END3 }";
+Three
+END1
+$state
+END2
+$animal
+END3
+#13...........
         },
     };
 

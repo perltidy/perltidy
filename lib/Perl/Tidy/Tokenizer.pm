@@ -5338,11 +5338,22 @@ EOM
 
     } ## end sub do_BAREWORD
 
-    # FIXME: Tentative
+    # Table of quote types checked for interpolated here targets.
+    # The type 's' could be interpolated but is not checked.
+    # Doing so would add significant complexity for something not useful.
     my %is_interpolated_quote = (
+        q{'} => 0,
         q{`} => 1,
         q{"} => 1,
         qq   => 1,
+        qx   => 1,
+        m    => 1,
+        qr   => 1,
+        q    => 0,
+        qw   => 0,
+        s    => 0,    # not checked
+        y    => 0,
+        tr   => 0,
     );
 
     sub do_FOLLOW_QUOTE {
@@ -5352,13 +5363,16 @@ EOM
         # Continue following a quote on a new line
         $type = $quote_type;
 
-        if ( !@{$routput_token_list} ) {    # initialize if continuation line
+        # initialize if continuation line
+        if ( !@{$routput_token_list} ) {
             push( @{$routput_token_list}, $i );
             $routput_token_type->[$i] = $type;
 
         }
 
-        # Save starting lengths for here target search of just current line
+        # Save starting lengths for here target search of just current line.
+        # Currently, all checked quote types currently have 1 string
+        # If 's' checks are added, then both types would need to be checked.
         my $len_qs1 = length($quoted_string_1);
 ##      my $len_qs2 = length($quoted_string_2);
 
@@ -5391,31 +5405,31 @@ EOM
         # All done if we didn't find it
         if ($in_quote) { return }
 
-        # Check for possible interpolated here-doc in a quote
+        # Check for possible here targets in an interpolated quote
         if ( $is_interpolated_quote{$quote_starting_tok} ) {
 
-            # look for << in the last line
+            # Perform some quick tests to avoid a sub call:
             my $pos_shift = rindex( $quoted_string_1, '<<' );
-            if ( $pos_shift >= $len_qs1 ) {
+            if (
+
+                # '<<' in the last line
+                $pos_shift >= $len_qs1
 
                 # followed by a '}'
-                my $pos_closing = rindex( $quoted_string_1, '}' );
-                if ( $pos_closing > $pos_shift ) {
+                && rindex( $quoted_string_1, '}' ) > $pos_shift
 
-                    # preceded by a '${'  TODO: need to also check for '@{' ?
-                    my $pos_opening =
-                      rindex( $quoted_string_1, '${', $pos_shift );
+                # preceded by '$' or '@'
+                && (   rindex( $quoted_string_1, '$', $pos_shift ) >= 0
+                    || rindex( $quoted_string_1, '@', $pos_shift ) >= 0 )
+              )
+            {
 
-                    if ( $pos_opening >= 0 && $pos_opening < $pos_shift ) {
-
-                        # scan quote for here targets
-                        my $rht =
-                          $self->find_interpolated_here_targets(
-                            $quoted_string_1, $len_qs1 );
-                        if ($rht) {
-                            push @{$rhere_target_list}, @{$rht};
-                        }
-                    }
+                # scan the quote for here targets
+                my $rht =
+                  $self->find_interpolated_here_targets( $quoted_string_1,
+                    $len_qs1 );
+                if ($rht) {
+                    push @{$rhere_target_list}, @{$rht};
                 }
             }
         }
@@ -10751,7 +10765,6 @@ sub do_quote {
 } ## end sub do_quote
 
 use constant DEBUG_FIND_INTERPOLATED_HERE_TARGETS => 0;
-use constant TEST_FIND_INTERPOLATED_HERE_TARGETS  => 0;
 
 sub find_interpolated_here_targets {
     my ( $self, $quoted_string, $len_starting_lines ) = @_;
@@ -10764,99 +10777,124 @@ sub find_interpolated_here_targets {
     # Task:
     #   Find and return a list of all here targets on the last line;
     #   i.e., if here target is index ii, we only return the
-    #   target if rmap->[$ii]>=$len_starting_lines
+    #   target if $rmap->[$ii]>=$len_starting_lines
 
     #  The items returned are the format needed for @{$rhere_target_list};
     #  [ $here_doc_target, $here_quote_character ]
     #  there can be multiple here targets.
 
     my $rht;
-    return $rht if ( !TEST_FIND_INTERPOLATED_HERE_TARGETS );
 
-    # Tokenize the entire quote, even if multi-line, because we have to
-    # determine which parts are in single quotes
+    # Break the entire quote into pre-tokens, even if multi-line, because we
+    # have to determine which parts are in single quotes
     my ( $rtokens, $rmap, $rtoken_type ) = pre_tokenize($quoted_string);
     my $max_ii = @{$rtokens} - 1;
 
-    # State variables:
-    my $backslash_count = 0;    # number of consecutive \
-    my $block_depth     = 0;    # depth of '${' or '@{'
+    # Depth of braces controlled by a sigil
+    my $code_depth = 0;
 
-    # loop over pre-tokens
+    # Loop over pre-tokens
     my $ii = -1;
     while ( ++$ii <= $max_ii ) {
         my $token = $rtokens->[$ii];
         if (DEBUG_FIND_INTERPOLATED_HERE_TARGETS) {
-            print
-"i=$ii tok=$token backslash=$backslash_count block=$block_depth\n";
+            print "i=$ii tok=$token block=$code_depth\n";
         }
-        if ( !$block_depth ) {
-            if ( $token eq BACKSLASH ) { $backslash_count++; next }
-            if ( $backslash_count && $rtokens->[ $ii - 1 ] ne BACKSLASH ) {
-                $backslash_count = 0;
-            }
-            if ( $backslash_count % 2 ) { next }
-        }
-        else { $backslash_count = 0 }
 
-        # look for code blocks starting with '${' or '@{'
-        if ( $token eq '$' || $token eq '@' ) {
-            if (   $ii < $max_ii
-                && $block_depth <= 0
-                && $rtokens->[ $ii + 1 ] eq '{' )
-            {
-                $ii++;
-                $block_depth++;
+        if ( $token eq BACKSLASH ) {
+            if ( !$code_depth ) { $ii++ }
+            next;
+        }
+
+        # Look for start of interpolation code block, '${', '@{', '$var{', etc
+        if ( !$code_depth ) {
+            if ( $token eq '$' || $token eq '@' ) {
+
+                $ii++
+                  if ( $ii < $max_ii && $rtoken_type->[ $ii + 1 ] eq 'b' );
+
+                while (
+                    $ii < $max_ii
+                    && (   $rtoken_type->[ $ii + 1 ] eq 'w'
+                        || $rtoken_type->[ $ii + 1 ] eq '::' )
+                  )
+                {
+                    $ii++;
+                } ## end while ( $ii < $max_ii && ...)
+
+                $ii++
+                  if ( $ii < $max_ii && $rtoken_type->[ $ii + 1 ] eq 'b' );
+
+                if ( $ii < $max_ii && $rtokens->[ $ii + 1 ] eq '{' ) {
+                    $ii++;
+                    $code_depth++;
+                }
             }
             next;
         }
 
-        next if ( !$block_depth );
-
+        # Continue interpolating while $code_depth > 0..
         if ( $token eq '{' ) {
-            $block_depth++;
+            $code_depth++;
             next;
         }
         if ( $token eq '}' ) {
-            $block_depth--;
+            $code_depth--;
             next;
         }
-        if ( $token eq '<' && $ii < $max_ii - 3 ) {
-            next if ( $rtokens->[ $ii + 1 ] ne '<' );
+
+        # Look for '<<'
+        if (   $token ne '<'
+            || $ii >= $max_ii - 1
+            || $rtokens->[ $ii + 1 ] ne '<' )
+        {
+            next;
+        }
+        $ii++;
+
+        # or '<<~'
+        if ( $rtoken_type->[ $ii + 1 ] eq '~' && $ii < $max_ii - 2 ) {
             $ii++;
-            my $next_type  = $rtoken_type->[ $ii + 1 ];
-            my $next_token = $rtokens->[ $ii + 1 ];
-            if ( $next_type eq BACKSLASH ) {
-                $ii++;
-                $next_type  = $rtoken_type->[ $ii + 1 ];
-                $next_token = $rtokens->[ $ii + 1 ];
-            }
+        }
 
-            # look for targets like "${ \<<END1 }${ \<<END2 }";
-            if ( $next_type eq 'w' ) {
-                $ii++;
-                if ( $rmap->[$ii] >= $len_starting_lines ) {
-                    push @{$rht}, [ $next_token, EMPTY_STRING ];
-                }
-            }
+        # blanks ok before targets in quotes
+        my $saw_blank;
+        if ( $rtoken_type->[ $ii + 1 ] eq 'b' && $ii < $max_ii - 2 ) {
+            $saw_blank = 1;
+            $ii++;
+        }
 
-            # look for targets like  "${ \<<'END1' }${ \<<\"END2\" }";
-            elsif ( $next_type eq "'" || $next_type eq '"' ) {
-                my $quote_char = $next_type;
-                $ii++;
-                my $here_target = EMPTY_STRING;
-                while ( ++$ii <= $max_ii && $rtokens->[$ii] ne $quote_char ) {
-                    next
-                      if ( $quote_char eq '"' && $rtokens->[$ii] eq BACKSLASH );
-                    $here_target .= $rtokens->[$ii];
-                }
-                if ( $rmap->[$ii] >= $len_starting_lines ) {
-                    push @{$rht}, [ $here_target, $quote_char ];
-                }
+        my $next_type = $rtoken_type->[ $ii + 1 ];
+
+        # Look for unquoted targets like "${ \<<END1 }"
+        if ( $next_type eq 'w' ) {
+            if ($saw_blank) {
+                ## error: blank target is deprecated
             }
             else {
-                ## no here target
+                $ii++;
+                if ( $rmap->[$ii] >= $len_starting_lines ) {
+                    push @{$rht}, [ $rtokens->[$ii], EMPTY_STRING ];
+                }
             }
+        }
+
+        # Look for quoted targets like  "${ \<< 'END1' }${ \<<\"END2\" }";
+        elsif ( $next_type eq "'" || $next_type eq '"' || $next_type eq '`' ) {
+            my $quote_char = $next_type;
+            $ii++;
+            my $here_target = EMPTY_STRING;
+            while ( ++$ii <= $max_ii && $rtokens->[$ii] ne $quote_char ) {
+                next
+                  if ( $quote_char ne "'" && $rtokens->[$ii] eq BACKSLASH );
+                $here_target .= $rtokens->[$ii];
+            }
+            if ( $rmap->[$ii] >= $len_starting_lines ) {
+                push @{$rht}, [ $here_target, $quote_char ];
+            }
+        }
+        else {
+            ## no here target found
         }
         next;
     } ## end while ( ++$ii <= $max_ii )

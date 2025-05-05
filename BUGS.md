@@ -13,21 +13,6 @@ for example the following line
 
 which uses double brackets to contain single brackets does not render correctly.
 
-## Perltidy does not look for here-document targets inside of quoted strings
-
-For example, consider the following script
-
-```
-print "${ \<<END1 }${ \<<END2 }";
-Hello
-END1
-World
-END2
-```
-
-Perltidy will not look for the here-doc targets within the quotes, so it
-will not format the script correctly.
-
 ## Issues and Feature Requests
 
 The most recent Issues and Feature requests can be seen [at GitHub](https://github.com/perltidy/perltidy)

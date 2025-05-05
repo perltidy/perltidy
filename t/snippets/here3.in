@@ -1,0 +1,9 @@
+my $animal="Mice";
+my $state="Blind";
+print "${ \<< 'END1'}$ { \<< \"END2\" }$ { \<<END3 }";
+Three
+END1
+$state
+END2
+$animal
+END3
