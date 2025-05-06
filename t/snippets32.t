@@ -14,6 +14,8 @@
 #11 git183.def
 #12 git183.git183
 #13 here3.def
+#14 bocp.bocp1
+#15 bocp.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -31,6 +33,9 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
+        'bocp1' => <<'----------',
+-bocp='w'
+----------
         'def'    => "",
         'git181' => "-nasc",
         'git182' => <<'----------',
@@ -73,6 +78,17 @@ BEGIN {
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'bocp' => <<'----------',
+        my ( $rOpts, $config_file, $rraw_options, $roption_string,
+            $rexpansion, $roption_category, $rinteger_option_range );
+
+        is( sprintf( "%#*vo", ":", "Perl" ),
+            '0120:0145:0162:0154', 'ASCII sprintf("%#*vo", ":", "Perl")' );
+
+        initialize_warn_variable_types( $wvt_in_args, $num_files,
+            $line_range_clipped );
+----------
 
         'git181' => <<'----------',
 on develop => sub {
@@ -482,6 +498,43 @@ END2
 $animal
 END3
 #13...........
+        },
+
+        'bocp.bocp1' => {
+            source => "bocp",
+            params => "bocp1",
+            expect => <<'#14...........',
+        my (
+            $rOpts,          $config_file, $rraw_options,
+            $roption_string, $rexpansion,  $roption_category,
+            $rinteger_option_range
+        );
+
+        is(
+            sprintf( "%#*vo", ":", "Perl" ),
+            '0120:0145:0162:0154',
+            'ASCII sprintf("%#*vo", ":", "Perl")'
+        );
+
+        initialize_warn_variable_types(
+            $wvt_in_args, $num_files, $line_range_clipped
+        );
+#14...........
+        },
+
+        'bocp.def' => {
+            source => "bocp",
+            params => "def",
+            expect => <<'#15...........',
+        my ( $rOpts, $config_file, $rraw_options, $roption_string,
+            $rexpansion, $roption_category, $rinteger_option_range );
+
+        is( sprintf( "%#*vo", ":", "Perl" ),
+            '0120:0145:0162:0154', 'ASCII sprintf("%#*vo", ":", "Perl")' );
+
+        initialize_warn_variable_types( $wvt_in_args, $num_files,
+            $line_range_clipped );
+#15...........
         },
     };
 

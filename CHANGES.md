@@ -2,12 +2,18 @@
 
 ## 2025 03 11.03
 
-    - Add option --skip-formatting-except-id=NAME discussed in git #183. This allows
-      formatting to apply only to lines tagged with #<<< id=NAME, where NAME
-      is a user-defined tag.
+    - Add option --break-open-compact-parens=s, discussed in git #78.
+      This changes the default formatting for lists which would normally
+      be displayed compactly on two lines. It causes them to be formatted
+      in the same way as long lists, with line breaks at the opening and
+      closing parentheses.
 
-    - A relatively rare problem with the formatting combination -xci and -lp or -xlp
-      has been fixed.  Some lines had more leading spaces that intended.
+    - Add option --skip-formatting-except-id=NAME discussed in git #183.
+      This allows formatting to apply only to lines tagged with #<<< id=NAME,
+      where NAME is a user-defined tag.
+
+    - A relatively rare problem with the formatting combination -xci and -lp or
+      -xlp has been fixed.  Some lines had more leading spaces that intended.
 
     - New option -m added to --dump-mismatched-returns and
       --warn-mismatched-returns. This checks for multiple array

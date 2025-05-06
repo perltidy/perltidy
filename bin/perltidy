@@ -3920,6 +3920,42 @@ working with trailing commas. These can be combined with the
 B<-break-trailing-comma-types> parameter for additional control of list
 formatting.
 
+=item B<-bocp=s>,  B<--break-open-compact-parens=s>
+
+When list contained in parentheses is too long to display on a single line, but
+short enough to display on two lines, then the default is to display it
+compactly on two lines.  If more than two lines are required, then the default
+is to put line breaks after the opening paren and before the closing paren. For
+example, the following short list is displayed with the default formatting:
+
+    initialize_warn_variable_types( $wvt_in_args, $num_files,
+        $line_range_clipped );
+
+The parameter B<-bocp=s> can be used to cause short lists like this to
+be broken open in the same way as longer lists. The parameter B<s> is a single
+letter which indicates the types of parentheses to which this applies. This
+letter may be one of the following (the same as given in the previous section):
+
+ '1' or '*' matches all parens
+ 'k' matches if the previous nonblank token is a perl keyword
+     (such as 'my', 'return'),
+ 'K' matches if 'k' does not: previous token is not a keyword
+ 'f' matches if previous token is a function (not a keyword)
+ 'F' matches if 'f' does not.
+ 'w' matches if either 'k' or 'f' match.
+ 'W' matches if 'w' does not.
+ '0' deactivates this parameter [DEFAULT]
+
+In this case, the most useful of these are B<f> (function), B<k> (keyword), and
+B<w> (both).
+
+So to illustrate:
+
+    # perltidy -bocp='f'
+    initialize_warn_variable_types(
+        $wvt_in_args, $num_files, $line_range_clipped
+    );
+
 =item B<-mft=n>,  B<--maximum-fields-per-table=n>
 
 If B<n> is a positive number, and the computed number of fields for any table

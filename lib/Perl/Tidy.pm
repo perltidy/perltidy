@@ -3804,11 +3804,8 @@ sub generate_options {
     $add_option->( 'break-after-labels',                     'bal',   '=i' );
     $add_option->( 'pack-operator-types',                    'pot',   '=s' );
 
-    # This was an experiment mentioned in git #78, originally named -bopl. I
-    # expanded it to also open logical blocks, based on git discussion #100,
-    # and renamed it -bocp. It works, but will remain commented out due to
-    # apparent lack of interest.
-    # $add_option->( 'break-open-compact-parens', 'bocp', '=s' );
+    # This was an experiment mentioned in git #78, originally named -bopl.
+    $add_option->( 'break-open-compact-parens', 'bocp', '=s' );
 
     ########################################
     $category = 6;    # Controlling list formatting

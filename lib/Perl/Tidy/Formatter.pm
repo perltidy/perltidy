@@ -79,11 +79,9 @@ use List::Util qw( min max first );    # min, max first are in Perl 5.8
 our $VERSION = '20250311.03';
 
 # List of hash keys to prevent -duk from listing them.
-# 'break-open-compact-parens' is an unimplemented option.
 # 'Unicode::Collate::Locale' is in the data for scan_unique_keys
 my @unique_hash_keys_uu =
-  qw( rOpts file_writer_object unlike isnt break-open-compact-parens }]
-  Unicode::Collate::Locale );
+  qw( rOpts file_writer_object unlike isnt }] Unicode::Collate::Locale );
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -2353,6 +2351,8 @@ EOM
     initialize_trailing_comma_rules();    # after 'initialize_line_length_vars'
                                           # and '_trailing_comma_break_rules'
 
+    initialize_break_open_compact_parens();
+
     initialize_interbracket_arrow_style();
 
     initialize_weld_nested_exclusion_rules();
@@ -3895,6 +3895,40 @@ EOM
 
     return;
 } ## end sub initialize_trailing_comma_break_rules
+
+sub initialize_break_open_compact_parens {
+    my $long_name  = 'break-open-compact-parens';
+    my $short_name = 'bocp';
+    my $opt        = $rOpts->{$long_name};
+
+    # This option is turned off for values undef and 0
+    return if ( !$opt );
+
+    $opt =~ s/^\s+//;
+    $opt =~ s/\s+$//;
+    $opt =~ s/\($//;
+    if ( $opt eq 'kf' || $opt eq 'fk' ) { $opt = 'w' }
+    my $key = '(';
+
+    if ( length($opt) != 1 ) {
+        my $txt = join( ',', split //, $opt );
+        Warn(<<EOM);
+Multiple entries '$txt' given for '$key' in '-$short_name'; only 1 is possible
+EOM
+        $opt = 0;
+    }
+    elsif ( $opt !~ /^[kKfFwW\*01]$/ ) {
+        Warn(<<EOM);
+Unknown flag '$opt' given for '-$short_name; ignoring'
+EOM
+        $opt = 0;
+    }
+    else {
+        # no error seen
+    }
+    $rOpts->{$long_name} = $opt;
+    return;
+} ## end sub initialize_break_open_compact_parens
 
 sub initialize_trailing_comma_rules {
 
@@ -35852,12 +35886,12 @@ EOM
         # Also, since it contains no 'or's, there will be a forced break at
         # its 'and'.
 
-        # Handle the experimental flag --break-open-compact-parens
-        # NOTE: This flag is not currently used and may eventually be removed.
-        # If this flag is set, we will implement it by
-        # pretending we did not see the opening structure, since in that case
-        # parens always get opened up.
-        if (   $saw_opening_structure
+        # Experimental coding for --break-open-compact-parens.
+        # If this flag is set, we will implement it by pretending we did not
+        # see the opening structure, since in that case parens always get
+        # opened up.  NOTE: deactivated, eventually to be deleted.
+        if (   0
+            && $saw_opening_structure
             && $rOpts_break_open_compact_parens )
         {
 
