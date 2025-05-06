@@ -5339,8 +5339,7 @@ EOM
     } ## end sub do_BAREWORD
 
     # Table of quote types checked for interpolated here targets.
-    # The type 's' could be interpolated but is not checked.
-    # Doing so would add significant complexity for something not useful.
+    # Issue 310 has extensive test cases.
     my %is_interpolated_quote = (
         q{'} => 0,
         q{`} => 1,
@@ -5351,7 +5350,7 @@ EOM
         qr   => 1,
         q    => 0,
         qw   => 0,
-        s    => 0,    # not checked
+        s    => 1,
         y    => 0,
         tr   => 0,
     );
