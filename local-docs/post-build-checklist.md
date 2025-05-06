@@ -6,20 +6,29 @@
    - Test with perl-5.8.1
     - perlbrew use perl-5.8.1
     - perl Makefile.PL; make; make test
-   - Test RPerl and verify that it still works:
+   - Test RPerl and verify that it still works (only necessary for CPAN releases):
     - build and install the latest Perl::Tidy on development machine
     - install the latest RPerl [currently RPerl-7.000000]
     - perl Makefile.PL, make, make test - should complete ok
   - Commit to github and check test results
   - Install and test on several systems if possible
 
-  - Upload Release to CPAN
+  - Uploading a tagged version (update version):
+    - Example commands:
+
+     git tag -a 20250311.03
+     git push origin --tags
+
+    - Bump the local version immediately after pushing a tagged version
+
+  - Release to CPAN:
     - Select a time when you will be available for a few days in a problem is reported
   - Upload release to sourceforge
   - Update web site
   - Update any relevant git # issues
   - Run the RUNME.sh file to tag this version and also push the tags to github. Check that the tags are uploaded at:
     https://github.com/perltidy/perltidy/tags
+  - Bump the local version to .01
 
   - Some References:
    - Release::Checklist

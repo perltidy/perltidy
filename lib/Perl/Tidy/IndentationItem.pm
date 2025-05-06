@@ -9,7 +9,7 @@ package Perl::Tidy::IndentationItem;
 use strict;
 use warnings;
 
-our $VERSION = '20250311.03';
+our $VERSION = '20250311.04';
 
 BEGIN {
 

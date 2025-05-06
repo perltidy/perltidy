@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2025 03 11.03
+## 2025 03 11.04
 
     - Add option --break-open-compact-parens=s, discussed in git #78.
       This changes the default formatting for lists which would normally
