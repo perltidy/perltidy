@@ -8650,6 +8650,25 @@ my$varstr=PDL::Char->new([
         ["jkl","mno",'pqr']
     ] );
 
+==> b1521 <==
+    $canvas->create(
+        'oval',
+        $path_x - $circle_radius,
+        $path_y - $circle_radius,
+        $path_x + $circle_radius,
+        $path_y + $circle_radius,
+        -fill => 'white',
+    );
+
+    $canvas->create(
+        'oval',
+        $path_x - $circle_radius,
+        $path_y - $circle_radius,
+        $path_x + $circle_radius,
+        $path_y + $circle_radius,
+        -fill => 'white',
+    );
+
 ==> b156 <==
 # State 1
 {

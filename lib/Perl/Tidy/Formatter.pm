@@ -35138,6 +35138,17 @@ EOM
                     $want_comma_break[$depth] = 0;
                     return;
                 }
+                else {
+
+                    # patch for b1521, where -cab=0 can conflict with -batc=s.
+                    # if -batc has already set a break, ignore -cab=0
+                    my $in    = $inext_to_go[$i];
+                    my $seqno = $in ? $type_sequence_to_go[$in] : SEQ_ROOT;
+                    if ( $self->[_rbreak_container_]->{$seqno} ) {
+                        $want_comma_break[$depth] = 0;
+                        return;
+                    }
+                }
             }
 
             $self->set_forced_breakpoint($i)

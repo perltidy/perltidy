@@ -12820,6 +12820,30 @@ my$varstr=PDL::Char->new([
 --delete-old-whitespace
 --stack-opening-square-bracket
 
+==> b1521.in <==
+    $canvas->create(
+        'oval', $path_x - $circle_radius, $path_y - $circle_radius,
+        $path_x + $circle_radius, $path_y + $circle_radius,
+        -fill => 'white',
+    );
+
+    $canvas->create(
+        'oval',
+        $path_x - $circle_radius,
+        $path_y - $circle_radius,
+        $path_x + $circle_radius,
+        $path_y + $circle_radius,
+        -fill => 'white'
+    );
+
+==> b1521.par <==
+--ignore-old-breakpoints
+--comma-arrow-breakpoints=0
+--add-trailing-commas
+--want-trailing-commas='i'
+--delete-trailing-commas
+--break-at-trailing-comma-types='m'
+
 ==> b156.in <==
 # State 1
 {
