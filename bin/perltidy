@@ -7170,9 +7170,11 @@ The following types of issues are reported:
 
 =item B<s:> calls requesting a scalar from a sub which only returns two or more items.
 
+=item B<m:> multiple array return sizes.
+
 =back
 
-These issue types are illustrated with the following code
+Most of these issue types are illustrated with the following code
 
     sub macho {
         ...
@@ -7190,6 +7192,18 @@ These issue types are illustrated with the following code
     ( $name, $flags, $access) = wimp(); # 'o' (want array 3 > 2)
     ($name) = wimp();                   # 'u' (want array 1 < 2)
     $name   = wimp();  # 's' (want scalar but 2 values returned)
+
+The type B<m> issue occurs when a sub has multiple returns of finite lists with
+different counts greater than 1, and not all of them are matched with calls.
+For example:
+
+    sub find_libs {
+        ...;
+        return ( $libjava, $libjvm, $libhpi, $libawt );  # 4 items
+        ...;
+        return ( $libjava, $libawt );                    # 2 items
+    }
+    my ( $libjava, $libjvm, $libhpi, $libawt ) = find_libs();
 
 This analysis works by scanning all call statements and all sub return
 statements, and comparing the number of items wanted with the possible
