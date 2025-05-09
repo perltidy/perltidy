@@ -2023,11 +2023,11 @@ sub prepare_for_a_new_file {
     # TV3: SCALARS for quote variables.  These are initialized with a
     # subroutine call and continually updated as lines are processed.
     my (
-        $in_quote,        $quote_type,
-        $quote_character, $quote_pos,
-        $quote_depth,     $quoted_string_1,
-        $quoted_string_2, $allowed_quote_modifiers,
-        $quote_starting_tok,
+        $in_quote,           $quote_type,
+        $quote_character,    $quote_pos,
+        $quote_depth,        $quoted_string_1,
+        $quoted_string_2,    $allowed_quote_modifiers,
+        $quote_starting_tok, $quote_here_target_2,
     );
 
     # TV4: SCALARS for multi-line identifiers and
@@ -2071,6 +2071,7 @@ sub prepare_for_a_new_file {
         $quoted_string_2         = EMPTY_STRING;
         $allowed_quote_modifiers = EMPTY_STRING;
         $quote_starting_tok      = EMPTY_STRING;
+        $quote_here_target_2     = undef;
 
         # TV4:
         $id_scan_state = EMPTY_STRING;
@@ -2151,11 +2152,11 @@ sub prepare_for_a_new_file {
         ];
 
         my $rTV3 = [
-            $in_quote,        $quote_type,
-            $quote_character, $quote_pos,
-            $quote_depth,     $quoted_string_1,
-            $quoted_string_2, $allowed_quote_modifiers,
-            $quote_starting_tok,
+            $in_quote,           $quote_type,
+            $quote_character,    $quote_pos,
+            $quote_depth,        $quoted_string_1,
+            $quoted_string_2,    $allowed_quote_modifiers,
+            $quote_starting_tok, $quote_here_target_2,
         ];
 
         my $rTV4 = [ $id_scan_state, $identifier, $want_paren ];
@@ -2232,11 +2233,11 @@ sub prepare_for_a_new_file {
         ) = @{$rTV2};
 
         (
-            $in_quote,        $quote_type,
-            $quote_character, $quote_pos,
-            $quote_depth,     $quoted_string_1,
-            $quoted_string_2, $allowed_quote_modifiers,
-            $quote_starting_tok,
+            $in_quote,           $quote_type,
+            $quote_character,    $quote_pos,
+            $quote_depth,        $quoted_string_1,
+            $quoted_string_2,    $allowed_quote_modifiers,
+            $quote_starting_tok, $quote_here_target_2,
         ) = @{$rTV3};
 
         ( $id_scan_state, $identifier, $want_paren ) = @{$rTV4};
@@ -3400,6 +3401,7 @@ EOM
         $type                    = 'Q';
         $allowed_quote_modifiers = EMPTY_STRING;
         $quote_starting_tok      = $tok;
+        $quote_here_target_2     = undef;
         return;
     } ## end sub do_QUOTATION_MARK
 
@@ -3414,6 +3416,7 @@ EOM
         $type                    = 'Q';
         $allowed_quote_modifiers = EMPTY_STRING;
         $quote_starting_tok      = $tok;
+        $quote_here_target_2     = undef;
         return;
     } ## end sub do_APOSTROPHE
 
@@ -3428,6 +3431,7 @@ EOM
         $type                    = 'Q';
         $allowed_quote_modifiers = EMPTY_STRING;
         $quote_starting_tok      = $tok;
+        $quote_here_target_2     = undef;
         return;
     } ## end sub do_BACKTICK
 
@@ -3466,6 +3470,7 @@ EOM
             $type                    = 'Q';
             $allowed_quote_modifiers = $quote_modifiers{'m'};
             $quote_starting_tok      = 'm';
+            $quote_here_target_2     = undef;
         }
         else {    # not a pattern; check for a /= token
 
@@ -3798,6 +3803,7 @@ EOM
             $type                    = 'Q';
             $allowed_quote_modifiers = $quote_modifiers{'m'};
             $quote_starting_tok      = 'm';
+            $quote_here_target_2     = undef;
         }
         else {
             ( $type_sequence, $indent_flag ) =
@@ -4450,6 +4456,7 @@ EOM
             $quote_starting_tok      = 'q';
             $type                    = 'q';
             $quote_type              = 'q';
+            $quote_here_target_2     = undef;
             return 1;
         }
 
@@ -4660,6 +4667,7 @@ EOM
         $in_quote                = $quote_items{$tok};
         $allowed_quote_modifiers = $quote_modifiers{$tok};
         $quote_starting_tok      = $tok;
+        $quote_here_target_2     = undef;
 
         # All quote types are 'Q' except possibly qw quotes.
         # qw quotes are special in that they may generally be trimmed
@@ -5366,14 +5374,12 @@ EOM
         if ( !@{$routput_token_list} ) {
             push( @{$routput_token_list}, $i );
             $routput_token_type->[$i] = $type;
-
         }
 
-        # Save starting lengths for here target search of just current line.
-        # Currently, all checked quote types currently have 1 string
-        # If 's' checks are added, then both types would need to be checked.
-        my $len_qs1 = length($quoted_string_1);
-##      my $len_qs2 = length($quoted_string_2);
+        # Save starting lengths for here target search
+        my $len_qs1        = length($quoted_string_1);
+        my $len_qs2        = length($quoted_string_2);
+        my $in_quote_start = $in_quote;
 
         # scan for the end of the quote or pattern
         (
@@ -5401,39 +5407,93 @@ EOM
 
         );
 
-        # All done if we didn't find it
-        if ($in_quote) { return }
-
         # Check for possible here targets in an interpolated quote
-        if ( $is_interpolated_quote{$quote_starting_tok} ) {
+        if (   $is_interpolated_quote{$quote_starting_tok}
+            && $in_quote < $in_quote_start )
+        {
 
-            # Perform some quick tests to avoid a sub call:
-            my $pos_shift = rindex( $quoted_string_1, '<<' );
-            if (
+            # post any saved target of a 2-part quote if the end is reached
+            if ( !$in_quote && defined($quote_here_target_2) ) {
 
-                # '<<' in the last line
-                $pos_shift >= $len_qs1
-
-                # followed by a '}'
-                && rindex( $quoted_string_1, '}' ) > $pos_shift
-
-                # preceded by '$' or '@'
-                && (   rindex( $quoted_string_1, '$', $pos_shift ) >= 0
-                    || rindex( $quoted_string_1, '@', $pos_shift ) >= 0 )
-              )
-            {
-
-                # scan the quote for here targets
-                my $rht =
-                  $self->find_interpolated_here_targets( $quoted_string_1,
-                    $len_qs1 );
-                if ($rht) {
-                    push @{$rhere_target_list}, @{$rht};
+                # Safety check
+                if ( $quote_items{$quote_starting_tok} == 2 ) {
+                    push @{$rhere_target_list}, @{$quote_here_target_2};
                 }
+                else {
+                    DEVEL_MODE
+                      && $self->Fault(
+"unexpected saved here target near line $input_line_number\n"
+                      );
+                }
+                $quote_here_target_2 = undef;
             }
+
+            # Single part quotes: use $quoted_string_1, and
+            #  $in_quote drops from 1 to 0 when the end is found
+            # Dual part quotes ('s'): first part is in $quoted_string_2, and
+            #  $in_quote:
+            #    drops from 2 to 1 when the the first part is found
+            #    drops 1 to 0 when the the second part is found
+            #    drops from 2 to 0 if both parts are found in this call
+            # The tricky part is that we must search for here targets whenever
+            # $in_quote drops, but we can only post here targets after the end
+            # of the last part is found (in_quote==0).
+
+            # Initialize for the normal case of a single quote
+            my $qs         = $quoted_string_1;
+            my $len_qs     = $len_qs1;
+            my $num_quotes = $in_quote_start - $in_quote;
+
+            # Dual part quotes (type 's') have first part in $quoted_string_2
+            if ( $in_quote_start == 2 ) {
+                $qs     = $quoted_string_2;
+                $len_qs = $len_qs2;
+            }
+
+            # Loop to search 1 or 2 quotes for here targets
+            while ( $num_quotes-- > 0 ) {
+
+                # Perform quick tests to avoid a sub call:
+                my $pos_shift = rindex( $qs, '<<' );
+                if (
+
+                    # '<<' in the last line
+                    $pos_shift >= $len_qs
+
+                    # followed by a '}'
+                    && rindex( $qs, '}' ) > $pos_shift
+
+                    # preceded by '$' or '@'
+                    && (   rindex( $qs, '$', $pos_shift ) >= 0
+                        || rindex( $qs, '@', $pos_shift ) >= 0 )
+                  )
+                {
+
+                    # scan the quote for here targets
+                    my $rht =
+                      $self->find_interpolated_here_targets( $qs, $len_qs );
+                    if ($rht) {
+
+                        # only post here targets when end of quote is found
+                        if ($in_quote) {
+                            $quote_here_target_2 = $rht;
+                        }
+                        else {
+                            push @{$rhere_target_list}, @{$rht};
+                        }
+                    }
+                }
+
+                # re-initialize for next pass
+                $qs     = $quoted_string_1;
+                $len_qs = $len_qs1;
+            } ## end while ( $num_quotes-- > 0)
         }
 
-        # save pattern and replacement text for rescanning
+        if ($in_quote) { return }
+
+        # All done with this quote...
+        # Save pattern and replacement text for rescanning for /e
         my $qs1 = $quoted_string_1;
 
         # re-initialize for next search
