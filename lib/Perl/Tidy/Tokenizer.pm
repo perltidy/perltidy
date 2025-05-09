@@ -7754,9 +7754,16 @@ sub check_final_nesting_depths {
         if ($cd_aa) {
             my $rsl = $rstarting_line_of_current_depth->[$aa]->[$cd_aa];
             my $sl  = $rsl->[0];
+
+            # Add hint for something like a missing terminal ':' of a ternary
+            my $hint = EMPTY_STRING;
+            if ( $cd_aa == 1 ) {
+                $hint =
+                  " (its closing $closing_brace_names[$aa] was not found)";
+            }
             my $msg = <<"EOM";
 Final nesting depth of $opening_brace_names[$aa]s is $cd_aa
-The most recent un-matched $opening_brace_names[$aa] is on line $sl
+The most recent un-matched $opening_brace_names[$aa] is on line $sl$hint
 EOM
             $self->indicate_error( $msg, @{$rsl}, '^' );
             $self->increment_brace_error();
