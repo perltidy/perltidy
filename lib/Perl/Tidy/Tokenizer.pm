@@ -5363,6 +5363,23 @@ EOM
         tr   => 0,
     );
 
+    sub push_here_targets {
+        my ($rht) = @_;
+
+        # Push here targets found in a quote onto the here target list
+        push @{$rhere_target_list}, @{$rht};
+
+        # Change type from 'Q' to 'h' for quotes with here-doc targets so that
+        # the formatter (see sub process_line_of_CODE) will not make any line
+        # breaks after this point.
+        $type = 'h';
+        if ( $i_tok < 0 ) {
+            my $ilast = $routput_token_list->[-1];
+            $routput_token_type->[$ilast] = $type;
+        }
+        return;
+    } ## end sub push_here_targets
+
     sub do_FOLLOW_QUOTE {
 
         my $self = shift;
@@ -5407,6 +5424,9 @@ EOM
 
         );
 
+        # Save pattern and replacement text for rescanning for /e
+        my $qs1_for_e_scan = $quoted_string_1;
+
         # Check for possible here targets in an interpolated quote
         if (   $is_interpolated_quote{$quote_starting_tok}
             && $in_quote < $in_quote_start )
@@ -5417,7 +5437,7 @@ EOM
 
                 # Safety check
                 if ( $quote_items{$quote_starting_tok} == 2 ) {
-                    push @{$rhere_target_list}, @{$quote_here_target_2};
+                    push_here_targets($quote_here_target_2);
                 }
                 else {
                     DEVEL_MODE
@@ -5451,7 +5471,7 @@ EOM
             }
 
             # Loop to search 1 or 2 quotes for here targets
-            while ( $num_quotes-- > 0 ) {
+            foreach ( 1 .. $num_quotes ) {
 
                 # Perform quick tests to avoid a sub call:
                 my $pos_shift = rindex( $qs, '<<' );
@@ -5470,7 +5490,7 @@ EOM
                 {
 
                     # scan the quote for here targets
-                    my $rht =
+                    my ( $rht, $qs_mod ) =
                       $self->find_interpolated_here_targets( $qs, $len_qs );
                     if ($rht) {
 
@@ -5479,7 +5499,11 @@ EOM
                             $quote_here_target_2 = $rht;
                         }
                         else {
-                            push @{$rhere_target_list}, @{$rht};
+                            push_here_targets($rht);
+
+                            # Replace the string with the modified version
+                            # in case it is re-scanned due to a /e modifier
+                            $qs1_for_e_scan = $qs_mod;
                         }
                     }
                 }
@@ -5493,8 +5517,6 @@ EOM
         if ($in_quote) { return }
 
         # All done with this quote...
-        # Save pattern and replacement text for rescanning for /e
-        my $qs1 = $quoted_string_1;
 
         # re-initialize for next search
         $quote_character = EMPTY_STRING;
@@ -5519,26 +5541,17 @@ EOM
 
                 # For an 'e' quote modifier we must scan the replacement
                 # text for here-doc targets...
-                # but if the modifier starts a new line we can skip
+                # but if the modifier starts a new line we must skip
                 # this because either the here doc will be fully
                 # contained in the replacement text (so we can
-                # ignore it) or Perl will not find it.
-                # See test 'here2.in'.
-                if ( $saw_modifier_e && $i_tok >= 0 ) {
-
-                    my $rht = $self->scan_replacement_text($qs1);
-
-                    # Change type from 'Q' to 'h' for quotes with
-                    # here-doc targets so that the formatter (see sub
-                    # process_line_of_CODE) will not make any line
-                    # breaks after this point.
+                # ignore it) or Perl will not find it. The modifier will have a
+                # pretoken index $i=1 if it starts a new line, so we only look
+                # for a here doc if $i>1.  See test 'here2.in'.
+                ##if ( $saw_modifier_e && $i_tok >= 0 ) {
+                if ( $saw_modifier_e && $i > 1 ) {
+                    my $rht = $self->scan_replacement_text($qs1_for_e_scan);
                     if ($rht) {
-                        push @{$rhere_target_list}, @{$rht};
-                        $type = 'h';
-                        if ( $i_tok < 0 ) {
-                            my $ilast = $routput_token_list->[-1];
-                            $routput_token_type->[$ilast] = $type;
-                        }
+                        push_here_targets($rht);
                     }
                 }
 
@@ -10916,6 +10929,10 @@ sub find_interpolated_here_targets {
         {
             next;
         }
+
+        # Remember the location of the first '<' so it can be modified
+        my $ii_left_shift = $ii;
+
         $ii++;
 
         # or '<<~'
@@ -10941,6 +10958,11 @@ sub find_interpolated_here_targets {
                 $ii++;
                 if ( $rmap->[$ii] >= $len_starting_lines ) {
                     push @{$rht}, [ $rtokens->[$ii], EMPTY_STRING ];
+
+                    # Modify the string so the target is not found again
+                    my $pos_left_shift = $rmap->[$ii_left_shift];
+                    substr( $quoted_string, $pos_left_shift,     1, SPACE );
+                    substr( $quoted_string, $pos_left_shift + 1, 1, SPACE );
                 }
             }
         }
@@ -10964,7 +10986,7 @@ sub find_interpolated_here_targets {
         }
         next;
     } ## end while ( ++$ii <= $max_ii )
-    return $rht;
+    return ( $rht, $quoted_string );
 } ## end sub find_interpolated_here_targets
 
 # Some possible non-word quote delimiters, for preliminary checking
