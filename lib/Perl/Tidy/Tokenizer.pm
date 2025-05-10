@@ -5457,7 +5457,8 @@ EOM
             #    drops from 2 to 0 if both parts are found in this call
             # The tricky part is that we must search for here targets whenever
             # $in_quote drops, but we can only post here targets after the end
-            # of the last part is found (in_quote==0).
+            # of the last part is found (in_quote==0). See test 'here4.in'.
+            # Update c310 added interpolated here docs and has many test cases.
 
             # Initialize for the normal case of a single quote
             my $qs         = $quoted_string_1;
@@ -5547,7 +5548,6 @@ EOM
                 # ignore it) or Perl will not find it. The modifier will have a
                 # pretoken index $i=1 if it starts a new line, so we only look
                 # for a here doc if $i>1.  See test 'here2.in'.
-                ##if ( $saw_modifier_e && $i_tok >= 0 ) {
                 if ( $saw_modifier_e && $i > 1 ) {
                     my $rht = $self->scan_replacement_text($qs1_for_e_scan);
                     if ($rht) {

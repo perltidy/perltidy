@@ -16,6 +16,7 @@
 #13 here3.def
 #14 bocp.bocp1
 #15 bocp.def
+#16 here4.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -146,6 +147,20 @@ $state
 END2
 $animal
 END3
+----------
+
+        'here4' => <<'----------',
+# Note that the 'OLD' text does not immediately follow the <<OLD target line.
+# The basic rule is: at each closing ')' look for any << doc on that same line
+# but postpone scanning for the text until the last ')'.
+my $string = "Three Little Pigs";
+$string =~ s(${\<<OLD})(${\<<NEW}
+Cute
+NEW
+)ex;
+Little
+OLD
+if($string){print $string,"\n"};
 ----------
 
         'kblx' => <<'----------',
@@ -535,6 +550,24 @@ END3
         initialize_warn_variable_types( $wvt_in_args, $num_files,
             $line_range_clipped );
 #15...........
+        },
+
+        'here4.def' => {
+            source => "here4",
+            params => "def",
+            expect => <<'#16...........',
+# Note that the 'OLD' text does not immediately follow the <<OLD target line.
+# The basic rule is: at each closing ')' look for any << doc on that same line
+# but postpone scanning for the text until the last ')'.
+my $string = "Three Little Pigs";
+$string =~ s(${\<<OLD})(${\<<NEW}
+Cute
+NEW
+)ex;
+Little
+OLD
+if ($string) { print $string, "\n" }
+#16...........
         },
     };
 

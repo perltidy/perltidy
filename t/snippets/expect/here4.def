@@ -1,0 +1,11 @@
+# Note that the 'OLD' text does not immediately follow the <<OLD target line.
+# The basic rule is: at each closing ')' look for any << doc on that same line
+# but postpone scanning for the text until the last ')'.
+my $string = "Three Little Pigs";
+$string =~ s(${\<<OLD})(${\<<NEW}
+Cute
+NEW
+)ex;
+Little
+OLD
+if ($string) { print $string, "\n" }
