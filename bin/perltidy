@@ -5745,12 +5745,12 @@ aligned.
 Vertical alignment is implemented by locally increasing an existing blank space
 to produce alignment with an adjacent line.  It cannot occur if there is no
 blank space to increase.  So if a particular space is removed by one of the
-existing controls then vertical alignment cannot occur. Likewise, if a space is
-added with one of the controls, then vertical alignment might occur.
+existing controls then vertical alignment cannot occur.
 
-For example,
+For example, if we remove the space before the "fat commas" in the above
+example, vertical alignment cannot occur:
 
-        # perltidy -nwls='=>'
+        # perltidy --no-want-left-space='=>'
         $data = $pkg->new(
             PeerAddr=> join( ".", @port[ 0 .. 3 ] ),
             PeerPort=> $port[4] * 256 + $port[5],
@@ -5774,7 +5774,7 @@ negative B<-novalign> is an alias for B<-nvc -nvsc -nvbc>.
 
 =item B<Controlling code alignment with --valign-code or -vc>
 
-The B<-vc> flag enables alignment of code symbols such as B<=>.  The default is B<-vc>.
+The B<-vc> flag enables alignment of code symbols such as <=>.  The default is B<-vc>.
 For detailed control of which symbols to align, see the B<-valign-exclude-list> parameter
 below.
 
