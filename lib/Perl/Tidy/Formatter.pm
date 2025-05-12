@@ -36755,9 +36755,16 @@ EOM
         # can be allowed and still look ok.
         #--------------------------------------------------------------------
 
-        if (   ( $formatted_lines < 3 && $packed_lines < $formatted_lines )
-            || ( $formatted_lines < 2 )
-            || ( $unused_columns > $max_allowed_sparsity * $formatted_columns )
+        if (
+            # but honor --maximum-fields-per-table if multiline (git #78)
+            !( $rOpts_maximum_fields_per_table && $packed_lines > 1 )
+
+            && (
+                   ( $formatted_lines < 3 && $packed_lines < $formatted_lines )
+                || ( $formatted_lines < 2 )
+                || ( $unused_columns >
+                    $max_allowed_sparsity * $formatted_columns )
+            )
           )
         {
             #----------------------------------------------------------------

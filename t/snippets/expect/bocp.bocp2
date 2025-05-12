@@ -1,0 +1,19 @@
+        my (
+            $rOpts,
+            $config_file,
+            $rraw_options,
+            $roption_string,
+            $rexpansion,
+            $roption_category,
+            $rinteger_option_range
+        );
+
+        is(
+            sprintf( "%#*vo", ":", "Perl" ),
+            '0120:0145:0162:0154',
+            'ASCII sprintf("%#*vo", ":", "Perl")'
+        );
+
+        initialize_warn_variable_types(
+            $wvt_in_args, $num_files, $line_range_clipped
+        );

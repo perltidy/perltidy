@@ -17,6 +17,7 @@
 #14 bocp.bocp1
 #15 bocp.def
 #16 here4.def
+#17 bocp.bocp2
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -36,6 +37,10 @@ BEGIN {
     $rparams = {
         'bocp1' => <<'----------',
 -bocp='w'
+----------
+        'bocp2' => <<'----------',
+-bocp='w'
+-mft=1
 ----------
         'def'    => "",
         'git181' => "-nasc",
@@ -568,6 +573,32 @@ Little
 OLD
 if ($string) { print $string, "\n" }
 #16...........
+        },
+
+        'bocp.bocp2' => {
+            source => "bocp",
+            params => "bocp2",
+            expect => <<'#17...........',
+        my (
+            $rOpts,
+            $config_file,
+            $rraw_options,
+            $roption_string,
+            $rexpansion,
+            $roption_category,
+            $rinteger_option_range
+        );
+
+        is(
+            sprintf( "%#*vo", ":", "Perl" ),
+            '0120:0145:0162:0154',
+            'ASCII sprintf("%#*vo", ":", "Perl")'
+        );
+
+        initialize_warn_variable_types(
+            $wvt_in_args, $num_files, $line_range_clipped
+        );
+#17...........
         },
     };
 
