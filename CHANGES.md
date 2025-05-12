@@ -2,6 +2,9 @@
 
 ## 2025 03 11.04
 
+    - Fix a problem where --maximum-lines-per-table=1 was not working
+      with --break-open-compact-parens; discussed in git #78.
+
     - Add option --break-open-compact-parens=s, discussed in git #78.
       This changes the default formatting for lists which would normally
       be displayed compactly on two lines. It causes them to be formatted

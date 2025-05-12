@@ -36756,8 +36756,13 @@ EOM
         #--------------------------------------------------------------------
 
         if (
-            # but honor --maximum-fields-per-table if multiline (git #78)
-            !( $rOpts_maximum_fields_per_table && $packed_lines > 1 )
+            # but not for a multiline list where the field count is constrained
+            # by --maximum-fields-per-table (git #78)
+            !(
+                   $rOpts_maximum_fields_per_table
+                && $packed_lines > 1
+                && $number_of_fields >= $rOpts_maximum_fields_per_table
+            )
 
             && (
                    ( $formatted_lines < 3 && $packed_lines < $formatted_lines )
