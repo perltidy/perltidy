@@ -36756,11 +36756,11 @@ EOM
         #--------------------------------------------------------------------
 
         if (
-            # but not for a multiline list where the field count is constrained
+            # But not for a multiline list where the field count is constrained
             # by --maximum-fields-per-table (git #78)
             !(
                    $rOpts_maximum_fields_per_table
-                && $packed_lines > 1
+                && ( $packed_lines > 1 || @{$ri_ragged_break_list} )
                 && $number_of_fields >= $rOpts_maximum_fields_per_table
             )
 
