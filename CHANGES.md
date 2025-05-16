@@ -1,9 +1,9 @@
 # Perltidy Change Log
 
-## 2025 03 11.04
+## 2025 03 11.05
 
-    - Fix a problem where --maximum-lines-per-table=1 was not working
-      with --break-open-compact-parens; discussed in git #78.
+    - Fix a problem where --maximum-fields-per-table=1 was not always working
+      correctly with --break-open-compact-parens; discussed in git #78.
 
     - Add option --break-open-compact-parens=s, discussed in git #78.
       This changes the default formatting for lists which would normally
