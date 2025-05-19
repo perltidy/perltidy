@@ -3813,7 +3813,7 @@ sub generate_options {
     $add_option->( 'break-at-old-comma-breakpoints', 'boc',  '!' );
     $add_option->( 'break-at-trailing-comma-types',  'btct', '=s' );
     $add_option->( 'comma-arrow-breakpoints',        'cab',  '=i' );
-    $add_option->( 'maximum-fields-per-table',       'mft',  '=i' );
+    $add_option->( 'maximum-fields-per-table',       'mft',  '=s' );
 
     ########################################
     $category = 7;    # Retaining or ignoring existing line breaks
@@ -4096,7 +4096,6 @@ sub generate_options {
         'keyword-paren-inner-tightness'             => [ 0, 2,     1 ],
         'long-block-line-count'                     => [ 0, undef, 8 ],
         'maximum-consecutive-blank-lines'           => [ 0, undef, 1 ],
-        'maximum-fields-per-table'                  => [ 0, undef, 0 ],
         'maximum-file-size-mb'                      => [ 0, undef, 10 ],
         'maximum-level-errors'                      => [ 0, undef, 1 ],
         'maximum-line-length'                       => [ 0, undef, 80 ],

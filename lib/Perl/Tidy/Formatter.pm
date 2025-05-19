@@ -246,7 +246,6 @@ my (
     $rOpts_line_up_parentheses,
     $rOpts_logical_padding,
     $rOpts_maximum_consecutive_blank_lines,
-    $rOpts_maximum_fields_per_table,
     $rOpts_maximum_line_length,
     $rOpts_minimize_continuation_indentation,
     $rOpts_one_line_block_semicolons,
@@ -493,6 +492,9 @@ my (
     # INITIALIZER: weld_containers
     $total_weld_count,
 
+    # INITIALIZER: initialize_maximum_field_count_control_hash
+    %maximum_field_count_control_hash,
+
     #--------------------------------------------------------
     # Section 2: Work arrays for the current batch of tokens.
     #--------------------------------------------------------
@@ -665,6 +667,7 @@ BEGIN {
         _ris_short_broken_eval_block_      => $i++,
         _ris_bare_trailing_comma_by_seqno_ => $i++,
         _rtightness_override_by_seqno_     => $i++,
+        _rmaximum_field_count_by_seqno_    => $i++,
 
         _rseqno_non_indenting_brace_by_ix_ => $i++,
         _rmax_vertical_tightness_          => $i++,
@@ -1201,6 +1204,7 @@ sub new {
     $self->[_ris_short_broken_eval_block_]      = {};
     $self->[_ris_bare_trailing_comma_by_seqno_] = {};
     $self->[_rtightness_override_by_seqno_]     = {};
+    $self->[_rmaximum_field_count_by_seqno_]    = {};
 
     $self->[_rseqno_non_indenting_brace_by_ix_] = {};
     $self->[_rmax_vertical_tightness_]          = {};
@@ -2316,6 +2320,8 @@ EOM
 
     initialize_space_after_keyword();
 
+    initialize_maximum_field_count_control_hash();
+
     initialize_extended_block_tightness_list();
 
     # The flag '$controlled_comma_style' will be set if the user
@@ -2778,6 +2784,110 @@ sub initialize_space_after_keyword {
 
     return;
 } ## end sub initialize_space_after_keyword
+
+sub initialize_maximum_field_count_control_hash {
+
+    # Note similarity with sub 'initialize_line_up_parentheses_control_hash'
+    # They might eventually be combined, but there are differences
+    # Especially, the integer is not optional here, and can have any value.
+
+    %maximum_field_count_control_hash = ();
+
+    my $opt_name = 'maximum-fields-per-table';
+    my $opt      = $rOpts->{$opt_name};
+
+    # zero and empty string are the same as no limit
+    return if ( !$opt );
+    $opt =~ s/^\s+//;
+    $opt =~ s/\s+$//;
+    return if ( !$opt );
+
+    # check for single integer
+    if ( $opt =~ /^\d+$/ ) {
+        foreach my $key (qw# ( { [ #) {
+            $maximum_field_count_control_hash{$key} = [ undef, $opt ];
+        }
+
+        # setting to allow original logic to function
+        $maximum_field_count_control_hash{'*'} = $opt;
+        return;
+    }
+
+    # The format is space separated items, where each item must consist of a
+    # string with a token type preceded by an optional text token and followed
+    # by an integer:
+    # For example:
+    #    W(1
+    #  = (flag1)(key)(flag2), where
+    #    flag1 = 'W'
+    #    key = '('
+    #    flag2 = '1'
+
+    my @items = split /\s+/, $opt;
+    my $msg1;
+    my $msg2;
+    foreach my $item (@items) {
+        my $item_save = $item;
+        my ( $flag1, $key, $flag2 );
+        if ( $item =~ /^ ([^\(\[\{]*)?  ([\(\{\[])  (\d+) $/x ) {
+            ##             $flag1          $key     $flag2
+            $flag1 = $1 if ($1);
+            $key   = $2 if ($2);
+            $flag2 = $3 if ( defined($3) );
+        }
+        else {
+            $msg1 .= " '$item_save'";
+            next;
+        }
+
+        if ( !defined($key) ) {
+            $msg1 .= " '$item_save'";
+            next;
+        }
+
+        # Check for valid flag1
+        if ( !defined($flag1) ) { $flag1 = '*' }
+
+        if ( $flag1 !~ /^[kKfFwW\*]$/ ) {
+            $msg1 .= " '$item_save'";
+            next;
+        }
+
+        if ( !defined( $line_up_parentheses_control_hash{$key} ) ) {
+            $maximum_field_count_control_hash{$key} = [ $flag1, $flag2 ];
+            next;
+        }
+
+        # check for multiple conflicting specifications
+        my $rflags = $maximum_field_count_control_hash{$key};
+        my $err;
+        if ( defined( $rflags->[0] ) && $rflags->[0] ne $flag1 ) {
+            $err = 1;
+            $rflags->[0] = $flag1;
+        }
+        if ( defined( $rflags->[1] ) && $rflags->[1] ne $flag2 ) {
+            $err = 1;
+            $rflags->[1] = $flag2;
+        }
+        $msg2 .= " '$item_save'" if ($err);
+        next;
+    }
+    if ($msg1) {
+        Warn(<<EOM);
+Unexpecting symbol(s) encountered in --$opt_name will be ignored:
+$msg1
+EOM
+    }
+    if ($msg2) {
+        Warn(<<EOM);
+Multiple specifications were encountered in the $opt_name at:
+$msg2
+Only the last will be used.
+EOM
+    }
+
+    return;
+} ## end sub initialize_maximum_field_count_control_hash
 
 sub initialize_outdent_keyword {
 
@@ -3561,8 +3671,7 @@ sub initialize_global_option_vars {
     $rOpts_logical_padding = $rOpts->{'logical-padding'};
     $rOpts_maximum_consecutive_blank_lines =
       $rOpts->{'maximum-consecutive-blank-lines'};
-    $rOpts_maximum_fields_per_table = $rOpts->{'maximum-fields-per-table'};
-    $rOpts_maximum_line_length      = $rOpts->{'maximum-line-length'};
+    $rOpts_maximum_line_length = $rOpts->{'maximum-line-length'};
     $rOpts_minimize_continuation_indentation =
       $rOpts->{'minimize-continuation-indentation'};
     $rOpts_one_line_block_semicolons = $rOpts->{'one-line-block-semicolons'};
@@ -16655,6 +16764,11 @@ EOM
         $self->mark_parent_containers( $seqno, $rhas_ternary );
     }
 
+    # set maximum field counts if defined
+    if (%maximum_field_count_control_hash) {
+        $self->set_maximum_field_count();
+    }
+
     # Turn off -lp for containers with here-docs with text within a container,
     # since they have their own fixed indentation.  Fixes case b1081.
     if ($rOpts_line_up_parentheses) {
@@ -16746,6 +16860,45 @@ EOM
 
     return;
 } ## end sub respace_post_loop_ops
+
+sub set_maximum_field_count {
+    my ($self) = shift;
+
+    # Set maximum field counts by sequence number if the user
+    # has entered any limits with --maximum-fields-per-table.
+    # This allows efficient processing for things like -mft='w(1'
+
+    return if ( !%maximum_field_count_control_hash );
+
+    # Using closure variables:
+    #  $rLL_new  (**NOTE: $rLL has not been updated when this is called**)
+    #  $ris_list_by_seqno
+    #  $rtype_count_by_seqno
+    #  $K_opening_container
+
+    my $rmaximum_field_count_by_seqno = {};
+    foreach my $seqno ( keys %{$ris_list_by_seqno} ) {
+        my $K_opening = $K_opening_container->{$seqno};
+        next if ( !defined($K_opening) );    ## shouldn't happen
+        my $token         = $rLL_new->[$K_opening]->[_TOKEN_];
+        my $rpacked_flags = $maximum_field_count_control_hash{$token};
+        next if ( !$rpacked_flags );
+        my ( $flag, $max ) = @{$rpacked_flags};
+        if ($flag) {
+            my $match =
+              $self->match_paren_control_flag( $seqno, $flag, $rLL_new );
+            return if ( !$match );
+        }
+        my $rtype_count = $rtype_count_by_seqno->{$seqno};
+        next if ( !$rtype_count );
+        my $comma_count = $rtype_count->{','};
+        if ( $comma_count && $comma_count >= $max ) {
+            $rmaximum_field_count_by_seqno->{$seqno} = $max;
+        }
+    }
+    $self->[_rmaximum_field_count_by_seqno_] = $rmaximum_field_count_by_seqno;
+    return;
+} ## end sub set_maximum_field_count
 
 sub store_token {
 
@@ -29638,6 +29791,7 @@ EOM
         my $comma_arrow_count_contained = 0;
         my @unmatched_closing_indexes_in_this_batch;
         my @unmatched_opening_indexes_in_this_batch;
+        my @matched_seqnos;
 
         my @i_for_semicolon;
         foreach my $i ( 0 .. $max_index_to_go ) {
@@ -29690,6 +29844,7 @@ EOM
                             $mate_index_to_go[$i_mate] = $i;
                             my $cac = $comma_arrow_count{$seqno};
                             $comma_arrow_count_contained += $cac if ($cac);
+                            push @matched_seqnos, $type_sequence_to_go[$i];
                         }
                         else {
                             push @unmatched_opening_indexes_in_this_batch,
@@ -29994,6 +30149,25 @@ EOM
             # single balanced token
         }
 
+        # See if there are any complete lists with limited field counts
+        my $has_limited_field_count;
+        if (%maximum_field_count_control_hash) {
+            foreach (@matched_seqnos) {
+                if ( $self->[_rmaximum_field_count_by_seqno_]->{$_} ) {
+                    $has_limited_field_count = 1;
+                    last;
+                }
+            }
+
+            # FIXME: this temporary patch allows match to older versions for
+            # input of just -mft=n.  It will be deleted after final testing.
+            $has_limited_field_count ||=
+              (      $comma_count_in_batch
+                  && $maximum_field_count_control_hash{'*'}
+                  && $maximum_field_count_control_hash{'*'} <=
+                  $comma_count_in_batch );
+        }
+
         my $rbond_strength_bias = [];
         if (
                $is_long_line
@@ -30006,8 +30180,7 @@ EOM
             # call break_lists if we might want to break at commas
             || (
                 $comma_count_in_batch
-                && (   $rOpts_maximum_fields_per_table > 0
-                    && $rOpts_maximum_fields_per_table <= $comma_count_in_batch
+                && (   $has_limited_field_count
                     || $rOpts_comma_arrow_breakpoints == 0 )
             )
 
@@ -36247,7 +36420,7 @@ EOM
         # $rhash_B: For contents see return from sub 'table_layout_B'
 
         # Find lengths of all list items needed for calculating page layout
-        my $rhash_A = table_layout_A($rhash_IN);
+        my $rhash_A = $self->table_layout_A($rhash_IN);
         return if ( !defined($rhash_A) );
 
         # Some variables received from caller...
@@ -36343,13 +36516,14 @@ EOM
         # Break at (almost) every comma for a list containing a broken
         # sublist.
 
-        my $ritem_lengths     = $rhash_A->{_ritem_lengths};
-        my $ri_term_begin     = $rhash_A->{_ri_term_begin};
-        my $ri_term_end       = $rhash_A->{_ri_term_end};
-        my $ri_term_comma     = $rhash_A->{_ri_term_comma};
-        my $item_count        = $rhash_A->{_item_count_A};
-        my $i_first_comma     = $rhash_A->{_i_first_comma};
-        my $i_true_last_comma = $rhash_A->{_i_true_last_comma};
+        my $ritem_lengths       = $rhash_A->{_ritem_lengths};
+        my $ri_term_begin       = $rhash_A->{_ri_term_begin};
+        my $ri_term_end         = $rhash_A->{_ri_term_end};
+        my $ri_term_comma       = $rhash_A->{_ri_term_comma};
+        my $item_count          = $rhash_A->{_item_count_A};
+        my $i_first_comma       = $rhash_A->{_i_first_comma};
+        my $i_true_last_comma   = $rhash_A->{_i_true_last_comma};
+        my $maximum_field_count = $rhash_A->{_maximum_field_count};
 
         # Break at every comma except for a comma between two
         # simple, small terms.  This prevents long vertical
@@ -36361,10 +36535,8 @@ EOM
         my $skipped_count = 0;
         my $columns       = table_columns_available($i_first_comma);
         my $fields        = int( $columns / $small_length );
-        if (   $rOpts_maximum_fields_per_table
-            && $fields > $rOpts_maximum_fields_per_table )
-        {
-            $fields = $rOpts_maximum_fields_per_table;
+        if ( $maximum_field_count && $fields > $maximum_field_count ) {
+            $fields = $maximum_field_count;
         }
         my $max_skipped_count = $fields - 1;
 
@@ -36523,6 +36695,7 @@ EOM
         my $first_term_length      = $rhash_A->{_first_term_length};
         my $i_first_comma          = $rhash_A->{_i_first_comma};
         my $i_last_comma           = $rhash_A->{_i_last_comma};
+        my $maximum_field_count    = $rhash_A->{_maximum_field_count};
 ##      my $i_true_last_comma      = $rhash_A->{_i_true_last_comma};
 
         # Variables received from caller
@@ -36759,9 +36932,9 @@ EOM
             # But not for a multiline list where the field count is constrained
             # by --maximum-fields-per-table (git #78)
             !(
-                   $rOpts_maximum_fields_per_table
+                   $maximum_field_count
                 && ( $packed_lines > 1 || @{$ri_ragged_break_list} )
-                && $number_of_fields >= $rOpts_maximum_fields_per_table
+                && $number_of_fields >= $maximum_field_count
             )
 
             && (
@@ -36811,7 +36984,7 @@ EOM
 
     sub table_layout_A {
 
-        my ($rhash_IN) = @_;
+        my ( $self, $rhash_IN ) = @_;
 
         # Find lengths of all list items needed to calculate page layout
 
@@ -36930,6 +37103,12 @@ EOM
             $i_effective_last_comma = $max_index_to_go - 1;
         }
 
+        # Lookup maximum field count by seqno
+        my $parent_seqno = $parent_seqno_to_go[$i_first_comma] || SEQ_ROOT;
+        my $maximum_field_count =
+          $self->[_rmaximum_field_count_by_seqno_]->{$parent_seqno};
+        $maximum_field_count = 0 if ( !$maximum_field_count );
+
         # Return the hash of derived variables.
         return {
 
@@ -36949,6 +37128,7 @@ EOM
             _i_first_comma          => $i_first_comma,
             _i_last_comma           => $i_last_comma,
             _i_true_last_comma      => $i_true_last_comma,
+            _maximum_field_count    => $maximum_field_count,
         };
 
     } ## end sub table_layout_A
@@ -36983,6 +37163,7 @@ EOM
         my $ri_term_end            = $rhash_A->{_ri_term_end};
         my $ritem_lengths          = $rhash_A->{_ritem_lengths};
         my $rmax_length            = $rhash_A->{_rmax_length};
+        my $maximum_field_count    = $rhash_A->{_maximum_field_count};
 
         # Specify if the list must have an even number of fields or not.
         # It is generally safest to assume an even number, because the
@@ -37119,8 +37300,10 @@ EOM
         # This will be our second guess, if possible.
         my ( $number_of_fields_best, $ri_ragged_break_list,
             $new_identifier_count )
-          = $self->study_list_complexity( $ri_term_begin, $ri_term_end,
-            $ritem_lengths, $max_width );
+          = $self->study_list_complexity(
+            $ri_term_begin, $ri_term_end, $ritem_lengths,
+            $max_width,     $maximum_field_count
+          );
 
         if (   $number_of_fields_best != 0
             && $number_of_fields_best < $number_of_fields_max )
@@ -37171,10 +37354,10 @@ EOM
 
         # The user can place an upper bound on the number of fields,
         # which can be useful for doing maintenance on tables
-        if (   $rOpts_maximum_fields_per_table
-            && $number_of_fields > $rOpts_maximum_fields_per_table )
+        if (   $maximum_field_count
+            && $number_of_fields > $maximum_field_count )
         {
-            $number_of_fields = $rOpts_maximum_fields_per_table;
+            $number_of_fields = $maximum_field_count;
         }
 
         # How many columns (characters) and lines would this container take
@@ -37347,7 +37530,9 @@ EOM
 
 sub study_list_complexity {
 
-    my ( $self, $ri_term_begin, $ri_term_end, $ritem_lengths, $max_width ) = @_;
+    my ( $self, $ri_term_begin, $ri_term_end, $ritem_lengths, $max_width,
+        $maximum_field_count )
+      = @_;
 
     # Look for complex tables which should be formatted with one term per line.
     # Returns the following:
@@ -37359,8 +37544,9 @@ sub study_list_complexity {
     #
     my $item_count            = @{$ri_term_begin};
     my $complex_item_count    = 0;
-    my $number_of_fields_best = $rOpts_maximum_fields_per_table;
     my $i_max                 = @{$ritem_lengths} - 1;
+    my $number_of_fields_best = 0;
+    if ($maximum_field_count) { $number_of_fields_best = $maximum_field_count }
 
     my $i_last_last_break = -3;
     my $i_last_break      = -2;
