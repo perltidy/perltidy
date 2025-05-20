@@ -30871,6 +30871,12 @@ sub cuddled_paren_brace {
 
     # Implement the --cuddled-paren-brace-... options; see git #110, git #184.
 
+    # Given:
+    #   $ri_left -  reference to current list of the first index $i for each
+    #               output line in this batch
+    #   $ri_right - reference to current list of the last index $i for each
+    #               output line in this batch
+
     # Be sure this has multiple lines
     my $nmax = @{$ri_right} - 1;
     return if ( $nmax < 1 );
@@ -30914,15 +30920,18 @@ sub cuddled_paren_brace {
             return;
         }
 
+        # OK, break after the opening paren and before the closing paren.
+        # Note that we have to use the '$set_forced' flag to prevent
+        # these breaks from being undone by recombination operations.
         my @insert_list;
         push @insert_list, $i_mate;
         push @insert_list, $ir_nm - 1;
-        my $set_force = 1;
+        my $set_forced = 1;
         $self->insert_additional_breaks( \@insert_list, $ri_left, $ri_right,
-            $set_force );
+            $set_forced );
     }
 
-    # Ok to combine the last lines
+    # Okay to combine the last lines
     pop @{$ri_left};
     my $ir_end = pop @{$ri_right};
     $ri_right->[-1] = $ir_end;
