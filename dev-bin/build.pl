@@ -600,7 +600,7 @@ sub scan_for_bad_characters {
 
     $rstatus->{'SCAN'} = 'TBD';
     my $rmodules = get_modules();
-    my $saw_pod  = scan_for_pod($rmodules);
+    my ($saw_pod, $saw_FIXME_uu)  = scan_for_pod($rmodules);
 
     print <<EOM;
 Scanning for tabs, non-ascii, and line-ending spaces ...
@@ -885,7 +885,7 @@ sub update_version_number {
         push @sources, $lib_path . $module;
     }
 
-    my $saw_pod = scan_for_pod( \@sources );
+    my ($saw_pod, $saw_FIXME) = scan_for_pod( \@sources );
     return if ($saw_pod);
 
     # I have removed this one; it was useful in development
@@ -920,6 +920,11 @@ EOM
         return;
     }
     elsif ( $ans eq 'RV' ) {
+        if ($saw_FIXME) {
+            $rstatus->{'V'} = 'TBD';
+            query("You should not do a full release containing FIXME's. Hit <cr>");
+            return;
+        }
         my $new_VERSION = get_new_release_version();
         next if ( $new_VERSION == $source_VERSION );
         if ( ifyes("New version will be: '$new_VERSION'. OK? [Y/N]") ) {
@@ -1465,7 +1470,6 @@ EOM
 Scanning .pm files for ##FIXME pod __END__  and __DATA__ ...
 EOM
     if ($saw_FIXME) {
-        $saw_problem = 1;
         local $" = ') (';
         query(<<EOM);
 Found $saw_FIXME files with 'FIXME': (@files_with_FIXME);
@@ -1513,7 +1517,7 @@ OK
 EOM
     }
 
-    return $saw_problem;
+    return ($saw_problem, $saw_FIXME);
 } ## end sub scan_for_pod
 
 sub make_tag_script {
@@ -1524,6 +1528,7 @@ sub make_tag_script {
 git tag -a $new_VERSION
 git push origin --tags
 unlink \$0;
+echo "**Now bump your version number**"
 EOM
     }
 

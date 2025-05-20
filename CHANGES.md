@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2025 03 11.05
+## 2025 03 11.06
 
     - A new parameter --cuddled-paren-brace-weld, or -cpbw, has been added to
       handle issue git #184. This modifies --cuddled-paren-brace by

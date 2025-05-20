@@ -2927,7 +2927,8 @@ For example:
     }
 
 A limitation is that this operation cannot be done if it would conflict
-with other parameter settings, such as B<--opening-brace-on-new-line>.
+with other parameter settings, such as B<--opening-brace-on-new-line>
+and B<--opening-brace-always-on-right>.
 
 =item B<-cpbw>, B<--cuddled-paren-brace-weld>
 
@@ -7751,7 +7752,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20250311.05
+This man page documents perltidy version 20250311.06
 
 =head1 BUG REPORTS
 
