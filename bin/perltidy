@@ -54,11 +54,15 @@ A convenient aid to systematically defining a set of style parameters
 can be found at
 http://perltidy.sourceforge.net/stylekey.html
 
-Perltidy can produce output on either of two modes, depending on the
-existence of an B<-html> flag.  Without this flag, the output is passed
-through a formatter.  The default formatting tries to follow the
-recommendations in perlstyle(1), but it can be controlled in detail with
-numerous input parameters, which are described in L<"FORMATTING OPTIONS">.
+Perltidy can produce output on either of two modes, depending on the existence
+of an B<-html> flag.  Without this flag, the output is passed through a
+formatter.  The default formatting tries to follow the recommendations in
+perlstyle(1), but it can be controlled in detail with numerous input
+parameters, which are described in L<"FORMATTING OPTIONS">.  Many style
+variations are possible, but it is worth noting that the default style is
+particularly convenient for working on chunks of code with a line editor
+because it is easy to select a sequence of lines with balanced containers,
+which is a necessary for formatting a snippet of code with perltidy.
 
 When the B<-html> flag is given, the output is passed through an HTML
 formatter which is described in L<"HTML OPTIONS">.
@@ -2922,6 +2926,45 @@ For example:
         ...;
     }
 
+A limitation is that this operation cannot be done if it would conflict
+with other parameter settings, such as B<--opening-brace-on-new-line>.
+
+=item B<-cpbw>, B<--cuddled-paren-brace-weld>
+
+This parameter modifies the B<-cuddled-paren-brace> parameter of the previous
+to actively form these cuddled pairs whenever possible.  In situations where an
+opening block brace will be placed on a new line, separated from a closing
+paren, it will move a preceding closing paren there too.  So in effect, it
+causes a closing paren and opening brace to become 'welded' together.
+
+To illustrate, formatting with B<-cpb> alone gives:
+
+        # perltidy -cpb
+        if (   $Kouter_opening == $Kfirst
+            && $token_oo eq '('
+            && $has_tight_paren{$type_prev} )
+        {
+            $Kref = $Kprev;
+        }
+
+Here, the option B<-cpb> by itself has no effect here because the
+C<)> and C<}> are on different lines. But adding ``-cpbw`` gives:
+
+        # perltidy -cpb -cpbw
+        if (
+               $Kouter_opening == $Kfirst
+            && $token_oo eq '('
+            && $has_tight_paren{$type_prev}
+        ) {
+            $Kref = $Kprev;
+        }
+
+In this case, the B<-cpbw> modifier has caused the container to be broken open
+so that its closing paren is on the same line as opening brace.
+
+The default is not to do this. Note that B<-cpbw> is a modifier and has no
+effect unless B<-cpb> is also set.
+
 =item B<-otr>,  B<--opening-token-right> and related flags
 
 The B<-otr> flag is a hint that perltidy should not place a break between a
@@ -3956,12 +3999,12 @@ So to illustrate:
         $wvt_in_args, $num_files, $line_range_clipped
     );
 
-=item B<-mft=n>,  B<--maximum-fields-per-table=n>
+=item B<-mft=s>,  B<--maximum-fields-per-table=s>
 
-If B<n> is a positive number, and the computed number of fields for any table
-exceeds B<n>, then it will be reduced to B<n>.  This parameter might be used on
-a small section of code to force a list to have a particular number of fields
-per line, and then either the B<-boc> flag could be used to retain this
+If B<s> is a positive number B<n>, and the computed number of fields for any
+table exceeds B<n>, then it will be reduced to B<n>.  This parameter might be
+used on a small section of code to force a list to have a particular number of
+fields per line, and then either the B<-boc> flag could be used to retain this
 formatting, or a blank line or comment could be introduced somewhere to freeze
 the formatting in future applications of perltidy. For example
 
@@ -3977,6 +4020,30 @@ the formatting in future applications of perltidy. For example
 
 The default value is B<n=0>, which does not place a limit on the
 number of fields in a table.
+
+Starting with perltidy version 20250311.05, an optional more general
+input parameter allows some selection of the tables to which this
+option applies. The integer B<n> may be preceded by one of the
+container types C<(>, C<[>, or C<{> to selected just that type
+of container. Different numerical values may be assigned to different
+container types.  For example, the input
+
+    -mft='(1 [2'
+
+would mean use 1 field for tables within parens, 2 fields for tables within
+square brackets, and do not control the fields within curly braces.
+
+In addition, parens may be preceded by one of the paren control
+letters C<k f w K F W> defined in the previous section to further limit
+the tables for which the number of fields will be controlled.  One
+use for this would be to match the control of the number of fields
+of a table with the parameter B<--break-open-compact-parens> described
+above.  Thus the combination
+
+   -bocp='f' -mft='f(1'
+
+says that paren lists following function calls should be
+broken open, and these same lists should have 1 field per line.
 
 =item B<-cab=n>,  B<--comma-arrow-breakpoints=n>
 
@@ -7568,24 +7635,24 @@ The following list shows all short parameter names which allow a prefix
  D      aia    altc   ame    anl    asbl   asc    ast    asu    atc
  atnl   aws    b      baa    baao   bar    bbao   bbb    bbc    bbs
  bl     bli    boa    boc    bok    bol    bom    bos    bot    cblx
- ce     conv   cpb    cs     csc    cscb   cscw   dac    dbc    dbs
- dcbl   dcsc   ddf    dhk    dia    dior   dln    dltc   dma    dmcp
- dmr    dnl    dop    dp     dpro   drc    dsc    dsk    dsm    dsn
- dtc    dtco   dtt    duk    duv    dwic   dwls   dwrs   dws    eos
- f      fpva   frm    fs     fso    gcs    hbc    hbcm   hbco   hbh
- hbhh   hbi    hbj    hbk    hbm    hbn    hbp    hbpd   hbpu   hbq
- hbs    hbsc   hbv    hbw    hent   hic    hicm   hico   hih    hihh
- hii    hij    hik    him    hin    hip    hipd   hipu   hiq    his
- hisc   hiv    hiw    hsc    html   ibc    icb    icp    ils    iob
- ipc    isbc   iscl   kgb    kgbd   kgbi   kis    lal    log    lop
- lp     lsl    mci    mem    nib    ohbr   okw    ola    olc    oll
- olq    opr    opt    osbc   osbr   otr    ple    pod    pvl    q
- qwaf   sac    sbc    sbl    scbb   schb   scp    scsb   sct    se
- sfp    sfs    skp    sob    sobb   sohb   sop    sosb   sot    ssc
- st     sts    t      tac    tbc    toc    tp     tqw    trp    ts
- tsc    tso    vbc    vc     viu    vmll   vsc    vsn    vwe    w
- wfc    wia    wma    wme    wmr    wn     wsk    wuk    x      xbt
- xci    xlp    xs
+ ce     conv   cpb    cpbw   cs     csc    cscb   cscw   dac    dbc
+ dbs    dcbl   dcsc   ddf    dhk    dia    dior   dln    dltc   dma
+ dmcp   dmr    dnl    dop    dp     dpro   drc    dsc    dsk    dsm
+ dsn    dtc    dtco   dtt    duk    duv    dwic   dwls   dwrs   dws
+ eos    f      fpva   frm    fs     fso    gcs    hbc    hbcm   hbco
+ hbh    hbhh   hbi    hbj    hbk    hbm    hbn    hbp    hbpd   hbpu
+ hbq    hbs    hbsc   hbv    hbw    hent   hic    hicm   hico   hih
+ hihh   hii    hij    hik    him    hin    hip    hipd   hipu   hiq
+ his    hisc   hiv    hiw    hsc    html   ibc    icb    icp    ils
+ iob    ipc    isbc   iscl   kgb    kgbd   kgbi   kis    lal    log
+ lop    lp     lsl    mci    mem    nib    ohbr   okw    ola    olc
+ oll    olq    opr    opt    osbc   osbr   otr    ple    pod    pvl
+ q      qwaf   sac    sbc    sbl    scbb   schb   scp    scsb   sct
+ se     sfp    sfs    skp    sob    sobb   sohb   sop    sosb   sot
+ ssc    st     sts    t      tac    tbc    toc    tp     tqw    trp
+ ts     tsc    tso    vbc    vc     viu    vmll   vsc    vsn    vwe
+ w      wfc    wia    wma    wme    wmr    wn     wsk    wuk    x
+ xbt    xci    xlp    xs
 
 Equivalently, the prefix 'no' or 'no-' on the corresponding long names may be
 used.

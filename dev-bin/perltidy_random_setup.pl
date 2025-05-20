@@ -966,6 +966,9 @@ EOM
             # always iterate
             'iterations' => [ 6, 10 ],
 
+            'maximum-fields-per-table' =>
+              [ 1, 2, 3, 5, 100, 'w(1', 'f(1', 'k(1' ],
+
             'want-break-after'   => \@operators,
             'want-break-before'  => \@operators,
             'want-left-space'    => \@operators,

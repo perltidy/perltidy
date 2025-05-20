@@ -18,6 +18,8 @@
 #15 bocp.def
 #16 here4.def
 #17 bocp.bocp2
+#18 cpbw.cpbw1
+#19 cpbw.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -41,6 +43,10 @@ BEGIN {
         'bocp2' => <<'----------',
 -bocp='w'
 -mft=1
+----------
+        'cpbw1' => <<'----------',
+--cuddled-paren-brace
+--cuddled-paren-brace-weld
 ----------
         'def'    => "",
         'git181' => "-nasc",
@@ -94,6 +100,13 @@ BEGIN {
 
         initialize_warn_variable_types( $wvt_in_args, $num_files,
             $line_range_clipped );
+----------
+
+        'cpbw' => <<'----------',
+if (   !$NO_UTF
+    && defined %unicode_table && length(%unicode_table) > 2 )
+{ # side comment
+}
 ----------
 
         'git181' => <<'----------',
@@ -599,6 +612,31 @@ if ($string) { print $string, "\n" }
             $wvt_in_args, $num_files, $line_range_clipped
         );
 #17...........
+        },
+
+        'cpbw.cpbw1' => {
+            source => "cpbw",
+            params => "cpbw1",
+            expect => <<'#18...........',
+if (
+       !$NO_UTF
+    && defined %unicode_table
+    && length(%unicode_table) > 2
+) {    # side comment
+}
+#18...........
+        },
+
+        'cpbw.def' => {
+            source => "cpbw",
+            params => "def",
+            expect => <<'#19...........',
+if (   !$NO_UTF
+    && defined %unicode_table
+    && length(%unicode_table) > 2 )
+{    # side comment
+}
+#19...........
         },
     };
 

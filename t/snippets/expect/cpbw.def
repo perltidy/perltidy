@@ -1,0 +1,5 @@
+if (   !$NO_UTF
+    && defined %unicode_table
+    && length(%unicode_table) > 2 )
+{    # side comment
+}

@@ -224,6 +224,7 @@ my (
     $rOpts_comma_arrow_breakpoints,
     $rOpts_continuation_indentation,
     $rOpts_cuddled_paren_brace,
+    $rOpts_cuddled_paren_brace_weld,
     $rOpts_delete_closing_side_comments,
     $rOpts_delete_old_whitespace,
     $rOpts_delete_side_comments,
@@ -3639,6 +3640,7 @@ sub initialize_global_option_vars {
     $rOpts_comma_arrow_breakpoints  = $rOpts->{'comma-arrow-breakpoints'};
     $rOpts_continuation_indentation = $rOpts->{'continuation-indentation'};
     $rOpts_cuddled_paren_brace      = $rOpts->{'cuddled-paren-brace'};
+    $rOpts_cuddled_paren_brace_weld = $rOpts->{'cuddled-paren-brace-weld'};
     $rOpts_delete_closing_side_comments =
       $rOpts->{'delete-closing-side-comments'};
     $rOpts_delete_old_whitespace = $rOpts->{'delete-old-whitespace'};
@@ -30260,6 +30262,10 @@ EOM
                 $self->break_equals( $ri_first, $ri_last )
                   if ( @{$ri_first} >= 3 );
 
+                if ($rOpts_cuddled_paren_brace) {
+                    $self->cuddled_paren_brace( $ri_first, $ri_last );
+                }
+
                 # now we do a correction step to clean this up a bit
                 # (The only time we would not do this is for debugging)
                 $self->recombine_breakpoints( $ri_first, $ri_last,
@@ -30860,9 +30866,73 @@ sub break_all_chain_tokens {
     return;
 } ## end sub break_all_chain_tokens
 
+sub cuddled_paren_brace {
+    my ( $self, $ri_left, $ri_right ) = @_;
+
+    # Implement the --cuddled-paren-brace-... options; see git #110, git #184.
+
+    # Be sure this has multiple lines
+    my $nmax = @{$ri_right} - 1;
+    return if ( $nmax < 1 );
+
+    # Look for an opening brace starting last line of the batch
+    my $il_n = $ri_left->[$nmax];
+    return if ( $tokens_to_go[$il_n] ne '{' || !$block_type_to_go[$il_n] );
+
+    # Preceded by a closing paren on the previous line
+    my $il_nm = $ri_left->[ $nmax - 1 ];
+    my $ir_nm = $ri_right->[ $nmax - 1 ];
+    return if ( $tokens_to_go[$ir_nm] ne ')' );
+
+    # The opening brace should be alone, or followed by a side comment
+    my $ir_n = $ri_right->[$nmax];
+    if ( $ir_n ne $il_n ) {
+
+        # Check for a side comment:
+        my $inext = $inext_to_go[$il_n];
+        return if ( $inext ne $ir_n );
+        return if ( $types_to_go[$ir_n] ne '#' );
+
+        # The combined line cannot be too long
+        my $i_test = $rOpts_ignore_side_comment_lengths ? $il_n : $ir_n;
+        my $excess = $self->excess_line_length( $ir_nm, $i_test, 1 );
+        return if ( $excess > 0 );
+    }
+
+    # We need a break before this closing paren if it is not alone on the line
+    if ( $ir_nm != $il_nm ) {
+
+        # Only the '_weld' option can fix this
+        return if ( !$rOpts_cuddled_paren_brace_weld );
+
+        # Only make symmetric breaks. This requires that both opening
+        # and closing parens are in this batch.
+        my $i_mate = $mate_index_to_go[$ir_nm];
+        if ( !defined($i_mate) ) {
+
+            # Strange, cannot make a symmetric break. Shouldn't get here.
+            return;
+        }
+
+        my @insert_list;
+        push @insert_list, $i_mate;
+        push @insert_list, $ir_nm - 1;
+        my $set_force = 1;
+        $self->insert_additional_breaks( \@insert_list, $ri_left, $ri_right,
+            $set_force );
+    }
+
+    # Ok to combine the last lines
+    pop @{$ri_left};
+    my $ir_end = pop @{$ri_right};
+    $ri_right->[-1] = $ir_end;
+
+    return;
+} ## end sub cuddled_paren_brace
+
 sub insert_additional_breaks {
 
-    my ( $self, $ri_break_list, $ri_first, $ri_last ) = @_;
+    my ( $self, $ri_break_list, $ri_first, $ri_last, ($set_forced) ) = @_;
 
     # This routine will add line breaks at requested locations after
     # sub break_long_lines has made preliminary breaks.
@@ -30873,6 +30943,8 @@ sub insert_additional_breaks {
     #               output line in this batch
     #   $ri_last - reference to current list of the last index $i for each
     #               output line in this batch
+    #   $set_forced - request to set forced breakpoints at the new breaks.
+    #                This may be needed to prevent recombination later.
 
     my $i_f;
     my $i_l;
@@ -30910,6 +30982,7 @@ EOM
         {
             splice( @{$ri_first}, $line_number, 1, ( $i_f, $i_break_right ) );
             splice( @{$ri_last},  $line_number, 1, ( $i_break_left, $i_l ) );
+            if ($set_forced) { $self->set_forced_breakpoint($i_break_left) }
         }
     }
     return;
@@ -31687,22 +31760,7 @@ EOM
 
                 if ( $type_ibeg_2 eq '{' ) {
 
-                    # join isolated ')' and '{' if requested (git #110)
-                    if (   $rOpts_cuddled_paren_brace
-                        && $type_iend_1 eq '}'
-                        && $iend_1 == $ibeg_1
-                        && $ibeg_2 == $iend_2 )
-                    {
-                        if (   $tokens_to_go[$iend_1] eq ')'
-                            && $tokens_to_go[$ibeg_2] eq '{' )
-                        {
-                            $n_best  = $n;
-                            $ix_best = $ix;
-                            last;
-                        }
-                    }
-
-                    # otherwise, a terminal '{' should stay where it is
+                    # a terminal '{' should stay where it is
                     # unless preceded by a fat comma
                     next if ( $type_iend_1 ne '=>' );
                 }
@@ -42986,7 +43044,7 @@ sub make_paren_name {
                 || (
                     $type_beg eq '}'
 
-                    && (   $types_to_go[$iend] eq '{'
+                    && (   $terminal_type eq '{'
                         || $levels_to_go[$iend] < $level_beg )
 
                     # but not if a cuddled block

@@ -2,6 +2,34 @@
 
 ## 2025 03 11.05
 
+    - A new parameter --cuddled-paren-brace-weld, or -cpbw, has been added to
+      handle issue git #184. This modifies --cuddled-paren-brace by
+      preventing a paren and following brace from getting separated in
+      certain situations. The difference is illustrated here:
+
+        # perltidy -cpb alone has no effect for this short snippet:
+        if (   !$NO_UTF
+            && defined %unicode_table
+            && length(%unicode_table) > 2 )
+        {
+            ...;
+        }
+
+        # perltidy -cpb -cpbw keeps the closing paren next to the opening brace:
+        if (
+               !$NO_UTF
+            && defined %unicode_table
+            && length(%unicode_table) > 2
+        ) {
+            ...;
+        }
+
+    - The parameter --maximum-fields-per-table, or -mft, now accepts a string
+      input which can limit its application to certain containers. For
+      example, -mft='f(1' means that function call lists should be formatted
+      with just 1 item per line. It has no effect on other tables. The
+      manual has further information.
+
     - Fix a problem where --maximum-fields-per-table=1 was not always working
       correctly with --break-open-compact-parens; discussed in git #78.
 
