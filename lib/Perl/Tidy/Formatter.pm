@@ -2809,7 +2809,9 @@ sub initialize_maximum_field_count_control_hash {
             $maximum_field_count_control_hash{$key} = [ undef, $opt ];
         }
 
-        # setting to allow original logic to function
+        # Setting to allow original logic to function. c490.  This can be
+        # removed when the corresponding code for $has_limited_field_count is
+        # removed.
         $maximum_field_count_control_hash{'*'} = $opt;
         return;
     }
@@ -30161,13 +30163,16 @@ EOM
                 }
             }
 
-            # FIXME: this temporary patch allows match to older versions for
-            # input of just -mft=n.  It will be deleted after final testing.
+            # TODO: This temporary patch allows exact match to older versions
+            # for input of just -mft=n.  It is deactivated and can be removed
+            # after the next CPAN release. The corresponding code which
+            # initializes the '*' could also be removed at the same time. c490.
             $has_limited_field_count ||=
-              (      $comma_count_in_batch
-                  && $maximum_field_count_control_hash{'*'}
-                  && $maximum_field_count_control_hash{'*'} <=
-                  $comma_count_in_batch );
+                 0
+              && $comma_count_in_batch
+              && $maximum_field_count_control_hash{'*'}
+              && ( $maximum_field_count_control_hash{'*'} <=
+                $comma_count_in_batch );
         }
 
         my $rbond_strength_bias = [];
