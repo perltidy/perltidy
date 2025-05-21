@@ -25,6 +25,8 @@ my $PROFILES_file = "PROFILES.txt";
 my $perltidy      = "./perltidy.pl";
 my $rprofiles     = [];
 
+my @unused_keys_uu = qw( profiles );
+
 check_if_empty();
 main();
 
@@ -41,7 +43,7 @@ WARNING: There are $num files here, including $dir_count directories
 You should start in an empty directory. Quit? Y/N
 EOM
     return;
-}
+} ## end sub check_if_empty
 
 sub main {
 
@@ -224,6 +226,7 @@ EOM
             write_list( $PROFILES_file, $rprofiles );
             last;
         }
+        else { }
     } ## end while (1)
 
     write_GO();
@@ -378,6 +381,7 @@ EOM
         }
         elsif ( $ans eq 'Y' ) { $rnew_files = $rold_files; last }
         elsif ( $ans eq 'Q' ) { last }
+        else                  { }
     } ## end while (1)
     $rnew_files = [ sort @{$rnew_files} ];
     return $rnew_files;
@@ -471,7 +475,7 @@ sub write_GO {
 
     if ( -e $runme ) {
         my $bak = "$runme.bak";
-        if ( -e $bak ) { unlink $bak }
+        if ( -e $bak ) { unlink($bak) }
         system("mv $runme $bak");
     }
 
@@ -563,9 +567,9 @@ sub read_list {
         return $rlist;
     }
     while ( my $line = <$fh> ) {
-        $line         =~ s/^\s+//;
-        $line         =~ s/\s+$//;
-        next if $line =~ /^#/;
+        $line =~ s/^\s+//;
+        $line =~ s/\s+$//;
+        next if ( $line =~ /^#/ );
         push @{$rlist}, $line;
     } ## end while ( my $line = <$fh> )
     $fh->close();
@@ -598,13 +602,13 @@ sub query {
 } ## end sub query
 
 sub queryu {
-    return uc query(@_);
+    return uc( query(@_) );
 }
 
 sub ifyes {
 
     # Updated to have default, which should be "Y" or "N"
-    my ( $msg, $default ) = @_;
+    my ( $msg, ($default) ) = @_;
     my $count = 0;
   ASK:
     my $ans = query($msg);
@@ -622,8 +626,8 @@ sub ifyes {
 } ## end sub ifyes
 
 sub get_output_filename {
-    my ( $msg, $default ) = @_;
-    $msg = "Enter filename to write" unless $msg;
+    my ( $msg, ($default) ) = @_;
+    $msg = "Enter filename to write" unless ($msg);
   RETRY:
     my $filename;
     if ($default) {
@@ -642,7 +646,7 @@ sub get_output_filename {
 
 sub get_input_filename {
     my ( $msg, $ext, $default ) = @_;
-    $msg = "Enter filename to read" unless $msg;
+    $msg = "Enter filename to read" unless ($msg);
   RETRY:
     my $filename;
     if ($default) {
@@ -665,7 +669,7 @@ sub get_input_filename {
 } ## end sub get_input_filename
 
 sub get_num {
-    my ( $msg, $default ) = @_;
+    my ( $msg, ($default) ) = @_;
     if ( defined($default) ) {
         $msg =~ s/:$//;
         $msg .= " (<cr>=$default):";
@@ -698,12 +702,12 @@ sub get_num {
         system "perltidy --dump-long-names >$tmpnam";
         open( IN, "<", $tmpnam ) || die "cannot open $tmpnam: $!\n";
         while ( my $line = <IN> ) {
-            next if $line =~ /#/;
+            next if ( $line =~ /#/ );
             chomp $line;
             push @{$rparameters}, $line;
         }
         close IN;
-        unlink $tmpnam if ( -e $tmpnam );
+        unlink($tmpnam) if ( -e $tmpnam );
         return $rparameters;
     } ## end sub get_parameters
 
@@ -717,7 +721,7 @@ sub get_num {
         system "perltidy --dump-integer-option-range>$tmpnam";
         open( IN, "<", $tmpnam ) || die "cannot open $tmpnam: $!\n";
         while ( my $line = <IN> ) {
-            next if $line =~ /#/;
+            next if ( $line =~ /#/ );
             chomp $line;
             $line =~ s/\s+//g;
             my ( $opt, $min, $max, $default ) = split /,/, $line;
@@ -727,7 +731,7 @@ sub get_num {
             $integer_option_range{$opt} = [ $min, $max, $default ];
         } ## end while ( my $line = <IN> )
         close IN;
-        unlink $tmpnam if ( -e $tmpnam );
+        unlink($tmpnam) if ( -e $tmpnam );
         return \%integer_option_range;
     } ## end sub get_integer_option_range
 
@@ -775,6 +779,7 @@ EOM
                     }
                 }
                 elsif ( $ans eq 'R' ) { @{$rprofiles} = []; last }
+                else                  { }
             } ## end while (1)
         }
         my $max_cases =
@@ -1095,10 +1100,10 @@ EOM
             if ( $parameter =~ /^([\w\-]+)([^\s]*)/ ) {
                 $name = $1;
                 $flag = $2;
-                $flag = "" unless $flag;
+                $flag = "" unless ($flag);
                 $type = $flag_types{$flag} if ($flag);
 
-                next if $skip{$name};
+                next if ( $skip{$name} );
 
                 # skip all dump options; they dump to stdout and exit
                 next if ( $name =~ /^dump-/ );
@@ -1145,7 +1150,7 @@ EOM
                     if ( defined($rinteger_option_range) ) {
                         my $irange = $rinteger_option_range->{$name};
                         if ( defined($irange) ) {
-                            my ( $min, $max, $def ) = @{$irange};
+                            my ( $min, $max, $def_uu ) = @{$irange};
                             if ( !defined($min) ) { $min = 0 }
                             if ( !defined($max) ) {
                                 if ( defined($rrange) ) { $max = $rrange->[1] }
@@ -1178,7 +1183,7 @@ EOM
                 }
                 else {
                     my $xx = int( rand(1) + 0.5 );
-                    next unless $xx;
+                    next unless ($xx);
                     $line = "--$name";
                 }
 
