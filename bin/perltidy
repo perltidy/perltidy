@@ -2926,17 +2926,14 @@ For example:
         ...;
     }
 
-A limitation is that this operation cannot be done if it would conflict
-with other parameter settings, such as B<--opening-brace-on-new-line>
-and B<--opening-brace-always-on-right>.
-
 =item B<-cpbw>, B<--cuddled-paren-brace-weld>
 
 This parameter modifies the B<-cuddled-paren-brace> parameter of the previous
-to actively form these cuddled pairs whenever possible.  In situations where an
-opening block brace will be placed on a new line, separated from a closing
-paren, it will move a preceding closing paren there too.  So in effect, it
-causes a closing paren and opening brace to become 'welded' together.
+to actively form these cuddled pairs whenever possible.  In situations where
+the opening block brace will be placed on a new line, and separated from a
+closing paren on the previous line, it will move a preceding closing paren
+there too.  So in effect, it causes a closing paren to stay with an
+opening brace as if they were 'welded' together.
 
 To illustrate, formatting with B<-cpb> alone gives:
 
@@ -2965,6 +2962,10 @@ so that its closing paren is on the same line as opening brace.
 
 The default is not to do this. Note that B<-cpbw> is a modifier and has no
 effect unless B<-cpb> is also set.
+
+A limitation is that this operation cannot be done if it would conflict
+with other parameter settings, such as B<--opening-brace-on-new-line>
+and B<--opening-brace-always-on-right>.
 
 =item B<-otr>,  B<--opening-token-right> and related flags
 
