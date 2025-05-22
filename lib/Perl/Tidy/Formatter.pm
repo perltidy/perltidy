@@ -20847,21 +20847,17 @@ sub cross_check_sub_calls {
                 #  Try 1 and Try 2 are general, for any object name
                 #  Try 3 and Try 4 are guesses for common uses of '$self'
 
-                #------------------------------------------------
+                #-----------------------------------------------------------
                 # Try 1: Parent sub self name matches caller name
-                #------------------------------------------------
-                if ($parent_self_name) {
-
-                    # and the only calls to parent sub (if any) are arrow calls.
-                    if (
-                        $parent_self_name eq $caller_name
-                        && (  !$common_hash{$key_parent_sub}->{direct_calls}
-                            || $caller_is_dollar_self )
-                      )
-                    {
-                        $is_self_call = 1;
-                    }
-                }
+                # and either:
+                #   - the only calls to parent sub (if any) are arrow calls,
+                #   - or the name is '$self'
+                #-----------------------------------------------------------
+                $is_self_call =
+                     $parent_self_name
+                  && $parent_self_name eq $caller_name
+                  && (!$common_hash{$key_parent_sub}->{direct_calls}
+                    || $caller_is_dollar_self );
 
                 #---------------------------------------------------------
                 # Try 2. See if the name was blessed in the containing sub
