@@ -2851,7 +2851,7 @@ sub initialize_maximum_field_count_control_hash {
         # Check for valid flag1
         if ( !defined($flag1) ) { $flag1 = '*' }
 
-        if ( $flag1 !~ /^[kKfFwW\*]$/ ) {
+        if ( $flag1 !~ /^[kKfFwW\*01]$/ ) {
             $msg1 .= " '$item_save'";
             next;
         }
@@ -8533,6 +8533,10 @@ EOM
         $self->set_ci();
 
         $self->find_multiline_qw($rqw_lines);
+
+        if (%maximum_field_count_control_hash) {
+            $self->set_maximum_field_count();
+        }
     }
 
     # Dump unique hash keys
@@ -12211,6 +12215,43 @@ EOM
 
     return;
 } ## end sub set_ci
+
+sub set_maximum_field_count {
+    my ($self) = shift;
+
+    # Set maximum field counts by sequence number if the user
+    # has entered any limits with --maximum-fields-per-table.
+    # This allows efficient processing for things like -mft='w(1'
+
+    return if ( !%maximum_field_count_control_hash );
+
+    my $rLL                  = $self->[_rLL_];
+    my $ris_list_by_seqno    = $self->[_ris_list_by_seqno_];
+    my $rtype_count_by_seqno = $self->[_rtype_count_by_seqno_];
+    my $K_opening_container  = $self->[_K_opening_container_];
+
+    my $rmaximum_field_count_by_seqno = {};
+    foreach my $seqno ( keys %{$ris_list_by_seqno} ) {
+        my $K_opening = $K_opening_container->{$seqno};
+        next if ( !defined($K_opening) );    ## shouldn't happen
+        my $token         = $rLL->[$K_opening]->[_TOKEN_];
+        my $rpacked_flags = $maximum_field_count_control_hash{$token};
+        next if ( !$rpacked_flags );
+        my ( $flag, $max ) = @{$rpacked_flags};
+        if ($flag) {
+            my $match = $self->match_paren_control_flag( $seqno, $flag );
+            next if ( !$match );
+        }
+        my $rtype_count = $rtype_count_by_seqno->{$seqno};
+        next if ( !$rtype_count );
+        my $comma_count = $rtype_count->{','};
+        if ( $comma_count && $comma_count >= $max ) {
+            $rmaximum_field_count_by_seqno->{$seqno} = $max;
+        }
+    }
+    $self->[_rmaximum_field_count_by_seqno_] = $rmaximum_field_count_by_seqno;
+    return;
+} ## end sub set_maximum_field_count
 
 sub set_CODE_type {
     my ($self) = @_;
@@ -16768,11 +16809,6 @@ EOM
         $self->mark_parent_containers( $seqno, $rhas_ternary );
     }
 
-    # set maximum field counts if defined
-    if (%maximum_field_count_control_hash) {
-        $self->set_maximum_field_count();
-    }
-
     # Turn off -lp for containers with here-docs with text within a container,
     # since they have their own fixed indentation.  Fixes case b1081.
     if ($rOpts_line_up_parentheses) {
@@ -16864,45 +16900,6 @@ EOM
 
     return;
 } ## end sub respace_post_loop_ops
-
-sub set_maximum_field_count {
-    my ($self) = shift;
-
-    # Set maximum field counts by sequence number if the user
-    # has entered any limits with --maximum-fields-per-table.
-    # This allows efficient processing for things like -mft='w(1'
-
-    return if ( !%maximum_field_count_control_hash );
-
-    # Using closure variables:
-    #  $rLL_new  (**NOTE: $rLL has not been updated when this is called**)
-    #  $ris_list_by_seqno
-    #  $rtype_count_by_seqno
-    #  $K_opening_container
-
-    my $rmaximum_field_count_by_seqno = {};
-    foreach my $seqno ( keys %{$ris_list_by_seqno} ) {
-        my $K_opening = $K_opening_container->{$seqno};
-        next if ( !defined($K_opening) );    ## shouldn't happen
-        my $token         = $rLL_new->[$K_opening]->[_TOKEN_];
-        my $rpacked_flags = $maximum_field_count_control_hash{$token};
-        next if ( !$rpacked_flags );
-        my ( $flag, $max ) = @{$rpacked_flags};
-        if ($flag) {
-            my $match =
-              $self->match_paren_control_flag( $seqno, $flag, $rLL_new );
-            next if ( !$match );
-        }
-        my $rtype_count = $rtype_count_by_seqno->{$seqno};
-        next if ( !$rtype_count );
-        my $comma_count = $rtype_count->{','};
-        if ( $comma_count && $comma_count >= $max ) {
-            $rmaximum_field_count_by_seqno->{$seqno} = $max;
-        }
-    }
-    $self->[_rmaximum_field_count_by_seqno_] = $rmaximum_field_count_by_seqno;
-    return;
-} ## end sub set_maximum_field_count
 
 sub store_token {
 
