@@ -62,7 +62,7 @@ parameters, which are described in L<"FORMATTING OPTIONS">.  Many style
 variations are possible, but it is worth noting that the default style is
 particularly convenient for working on chunks of code with a line editor
 because it is easy to select a sequence of lines with balanced containers,
-which is a necessary for formatting a snippet of code with perltidy.
+which is necessary for formatting a snippet of code with perltidy.
 
 When the B<-html> flag is given, the output is passed through an HTML
 formatter which is described in L<"HTML OPTIONS">.
