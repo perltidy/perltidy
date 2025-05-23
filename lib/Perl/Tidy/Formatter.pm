@@ -16891,7 +16891,7 @@ sub set_maximum_field_count {
         if ($flag) {
             my $match =
               $self->match_paren_control_flag( $seqno, $flag, $rLL_new );
-            return if ( !$match );
+            next if ( !$match );
         }
         my $rtype_count = $rtype_count_by_seqno->{$seqno};
         next if ( !$rtype_count );
