@@ -13345,6 +13345,16 @@ sub scan_variable_usage {
         my $bad_name = $check_for_overlapping_variables->( $name, $KK );
         return if ($bad_name);
 
+        # Added internal check for issue c491
+        if ( !defined($my_keyword) ) {
+            my ( $aa, $bb, $cc ) = caller();
+            DEVEL_MODE && Fault(<<EOM);
+Undefined keyword for variable name=$name at line $line_index
+called from $aa $bb $cc
+EOM
+            return;
+        }
+
         # Store this lexical variable
         my $rhash = $rblock_stack->[-1]->{rvars};
         $rhash->{$name} = {
@@ -14110,7 +14120,9 @@ EOM
 
                 # Special check for lexical method (c481)
                 # with a token like 'method $var'
+                # Fixed undefined keyword, c491
                 if ( $token =~ /^method (\$.+)/ ) {
+                    $my_keyword = 'method';
                     $checkin_new_lexical->( $KK, $1 );
                 }
                 $check_sub_signature->($KK);
