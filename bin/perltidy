@@ -4003,12 +4003,20 @@ So to illustrate:
 
 =item B<-mft=s>,  B<--maximum-fields-per-table=s>
 
-If B<s> is a positive number B<n>, and the computed number of fields for any
+Perltidy will use special formatting rules for lists are relatively small,
+irregular, or associated with certain keywords such as C<sprintf>. In other
+words, for data which may not display well as a table. For other lists it will
+make a table with a certain number of fields B<n> which is computed to fit the
+page width and the data.  This number B<n> can be controlled with this input
+parameter.
+
+If B<s> is a positive number B<n>, and the computed number of fields for a
 table exceeds B<n>, then it will be reduced to B<n>.  This parameter might be
-used on a small section of code to force a list to have a particular number of
-fields per line, and then either the B<-boc> flag could be used to retain this
-formatting, or a blank line or comment could be introduced somewhere to freeze
-the formatting in future applications of perltidy. For example
+used, for example, on a small section of code to force a list to have a
+particular number of fields per line, and then either the B<-boc> flag could be
+used to retain this formatting, or a blank line or comment could be introduced
+somewhere to freeze the formatting in future applications of perltidy. For
+example,
 
     # perltidy -mft=2
     @month_of_year = (
@@ -4045,7 +4053,8 @@ above.  Thus the combination
    -bocp='f' -mft='f(1'
 
 says that paren lists following function calls should be
-broken open, and these same lists should have 1 field per line.
+broken open, and these same lists should have 1 field per line
+when formatted as a table.
 
 =item B<-cab=n>,  B<--comma-arrow-breakpoints=n>
 
