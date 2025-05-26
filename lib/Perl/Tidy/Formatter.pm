@@ -4566,7 +4566,7 @@ sub initialize_whitespace_hashes {
 { #<<< begin closure set_whitespace_flags
 
 my %is_special_ws_type;
-my %is_wCUG;
+my %is_wCUG_arrow;
 my %is_wi;
 
 BEGIN {
@@ -4578,8 +4578,8 @@ BEGIN {
     @is_special_ws_type{@q} = (1) x scalar(@q);
 
     # These hashes replace slower regex tests
-    @q = qw( w C U G );
-    @is_wCUG{@q} = (1) x scalar(@q);
+    @q = qw( w C U G -> );
+    @is_wCUG_arrow{@q} = (1) x scalar(@q);
 
     @q = qw( w i );
     @is_wi{@q} = (1) x scalar(@q);
@@ -5004,10 +5004,11 @@ sub set_whitespace_flags {
                 # decided that would not be a good idea.
 
                 # Updated to allow detached '->' from tokenizer (issue c140)
+                # Updated to include ->( type asub calls for type 'f' matches
                 elsif (
 
-                    #        /^[wCUG]$/
-                    $is_wCUG{$last_type}
+                    # w C U G ->
+                    $is_wCUG_arrow{$last_type}
 
                     || (
 
@@ -36792,6 +36793,7 @@ EOM
         # NOTE: i_opening_paren changes value below so we need to get these here
         my $opening_is_in_block = $self->is_in_block_by_i($i_opening_paren);
         my $opening_token       = $tokens_to_go[$i_opening_paren];
+        my $seqno_opening       = $type_sequence_to_go[$i_opening_paren];
 
         #---------------------------------------------------------------
         # Section B1: Determine '$number_of_fields' = the best number of
@@ -36822,7 +36824,9 @@ EOM
           $self->table_layout_B( $rhash_IN, $rhash_A, $is_lp_formatting );
         return if ( !defined($hash_B) );
 
+        #------------------
         # Updated variables
+        #------------------
         $i_first_comma   = $hash_B->{_i_first_comma_B};
         $i_opening_paren = $hash_B->{_i_opening_paren_B};
         $item_count      = $hash_B->{_item_count_B};
@@ -36878,9 +36882,8 @@ EOM
                     $two_line_word_wrap_ok = 1;
                 }
                 else {
-                    my $seqno = $type_sequence_to_go[$i_opening_paren];
                     $two_line_word_wrap_ok =
-                      !$self->match_paren_control_flag( $seqno, $flag );
+                      !$self->match_paren_control_flag( $seqno_opening, $flag );
                 }
             }
         }
