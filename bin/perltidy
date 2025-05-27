@@ -1013,7 +1013,7 @@ which says to exclude lists within square-brackets and braces.  So what remains 
 A second optional item of information which can be given for parentheses is an alphanumeric
 letter which is used to limit the selection further depending on the type of
 token immediately before the paren.  The possible letters are currently 'k',
-'K', 'f', 'F', 'w', and 'W', with these meanings for matching whatever precedes an opening paren:
+'K', 'f', 'F', 'w', and 'W', with these meanings for matching whatever precedes an opening paren (see L<"Specifying Paren Types">):
 
  'k' matches if the previous nonblank token is a perl keyword
      (such as 'if', 'while'),
@@ -3371,7 +3371,7 @@ A third optional item of information which can be given is an alphanumeric
 letter which is used to limit the selection further depending on the type of
 token immediately before the container.  If given, it goes just before the
 container symbol.  The possible letters are currently 'k', 'K', 'f', 'F',
-'w', and 'W', with these meanings:
+'w', and 'W', with these meanings (see L<"Specifying Paren Types">):
 
  'k' matches if the previous nonblank token is a perl keyword
      (such as 'if', 'while'),
@@ -3942,7 +3942,7 @@ For parentheses, an additional item of information which can be given is an
 alphanumeric letter which is used to limit the selection further depending on
 the type of token immediately before the opening paren.  The possible letters
 are currently 'k', 'K', 'f', 'F', 'w', and 'W', with these meanings for
-matching whatever precedes an opening paren:
+matching whatever precedes an opening paren (see L<"Specifying Paren Types">):
 
  'k' matches if the previous nonblank token is a perl keyword
      (such as 'if', 'while'),
@@ -3979,7 +3979,7 @@ example, the following short list is displayed with the default formatting:
 The parameter B<-bocp=s> can be used to cause short lists like this to
 be broken open in the same way as longer lists. The parameter B<s> is a single
 letter which indicates the types of parentheses to which this applies. This
-letter may be one of the following (the same as given in the previous section):
+letter may be one of the following (see L<"Specifying Paren Types">):
 
  '1' or '*' matches all parens
  'k' matches if the previous nonblank token is a perl keyword
@@ -4346,7 +4346,7 @@ For parentheses, an additional item of information which can be given is an
 alphanumeric letter which is used to limit the selection further depending on
 the type of token immediately before the opening paren.  The possible letters
 are currently 'k', 'K', 'f', 'F', 'w', and 'W', with these meanings for
-matching whatever precedes an opening paren:
+matching whatever precedes an opening paren (see L<"Specifying Paren Types">):
 
  'k' matches if the previous nonblank token is a perl keyword
      (such as 'if', 'while'),
@@ -5035,9 +5035,7 @@ the command to keep a break after all opening parens is:
 
 It is possible to be more specific in matching parentheses by preceding them
 with a letter.  The possible letters are 'k', 'K', 'f', 'F', 'w', and 'W', with
-these meanings (these are the same as used in the
-B<--weld-nested-exclusion-list> and B<--line-up-parentheses-exclusion-list>
-parameters):
+these meanings (see L<"Specifying Paren Types">):
 
  'k' matches if the previous nonblank token is a perl keyword
      (such as 'if', 'while'),
@@ -7621,6 +7619,38 @@ spaces.  For another example, the following list specifies all block types
 for vertical tightness:
 
    -bbvtl='*'
+
+=head2 Specifying Paren Types
+
+Several input parameters accept a single alphanumeric letter to specify the
+parentheses to which they apply.
+
+The possible letters are 'k', 'K', 'f', 'F', 'w', and 'W', with these
+meanings for matching whatever precedes an opening paren:
+
+ 'k' matches if the previous nonblank token is a perl keyword
+     (such as 'my', 'for'),
+ 'K' matches if 'k' does not: previous token is not a keyword
+ 'f' matches if previous token is a function (not a keyword)
+ 'F' matches if 'f' does not.
+ 'w' matches if either 'k' or 'f' match.
+ 'W' matches if 'w' does not.
+
+Most parameters also allow '1' or '*' to select all parens, and '0' to
+select no parens.
+
+For example, this expression matches type 'k' (keyword)
+but also 'w' (keyword or function) and 'F' (not a function):
+
+    my ( $name, $inx2, $id, $dir, $key);
+
+This expression matches type 'f' (function)
+and also 'w' (keyword or function) and 'K' (not a keyword):
+
+    $G->get_attribute( 'capacity', $u, $v );
+
+So both of these expressions match type 'w' (keyword or function).
+Note that the letter 'w' is suggestive of some kind of word.
 
 =head2 Specifying File Extensions
 
