@@ -2856,7 +2856,7 @@ sub initialize_maximum_field_count_control_hash {
             next;
         }
 
-        if ( !defined( $line_up_parentheses_control_hash{$key} ) ) {
+        if ( !defined( $maximum_field_count_control_hash{$key} ) ) {
             $maximum_field_count_control_hash{$key} = [ $flag1, $flag2 ];
             next;
         }
