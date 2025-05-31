@@ -2373,6 +2373,141 @@ EOM
     return;
 } ## end sub check_options
 
+sub parse_container_control_options {
+
+    my ( $opt_value, $rvalid_regex ) = @_;
+
+    # Make a control hash for a container type input string.
+
+    # Given: input hash ref with these values
+    #   $opt_value  => the option string to parse
+    #   $rvalid_regex => OPTIONAL hash ref with valid regexes, in the form
+    #     $key=[$regex1,$regex2] where $key is one of: '(' '[' '{'
+    # Returns:
+    #   \%control_hash = control hash for this option (see below)
+    #   $error_message = true on any error: control hash is not valid;
+    #                    caller should print the message and exit
+    #
+    # For example, value = 'f(1' gives the following result
+
+    #        'f(1' produces the (key, value) entry '{'=>['f',1]
+    #         |||
+    #  flag1--^|^---flag2 (must match regex2)
+    #          ^--------------container key, one of ( { [
+    #
+
+    # NOTE: this sub could eventually be called to replace coding for
+    # options -wnxl -lpxl -lpil -wtc
+
+    my %control_hash;
+    my $error_message;
+    my %multiple_entries;
+
+    if ( !defined($opt_value) ) {
+        return ( \%control_hash, $error_message );
+    }
+
+    $opt_value =~ s/^\s+//;
+    $opt_value =~ s/\s+$//;
+
+    # Allow an empty string or '0' to mean no control
+    if ( !$opt_value ) {
+        return ( \%control_hash, $error_message );
+    }
+
+    # Allow a single constant to apply to each type if the regex allows
+    if ( $opt_value !~ /[\(\{\[]/ && $opt_value !~ /\s/ ) {
+        foreach my $key (qw/ ( { [ /) {
+            $control_hash{$key} = [ undef, $opt_value ];
+            next if ( !defined($rvalid_regex) );
+            my ( $regex1_uu, $regex2 ) = @{ $rvalid_regex->{$key} };
+            if ( !$regex2 || $opt_value !~ /$regex2/ ) {
+                %control_hash = ();
+                $error_message .= " '$opt_value': not valid\n";
+                last;
+            }
+        }
+        return ( \%control_hash, $error_message );
+    }
+
+    # The format is space separated items, where each item must consist of a
+    # string with an opening token type preceded and followed by optional text
+    # tokens.  For example:
+
+    #    f(1
+    #  = (flag1)(key)(flag2), where
+    #    flag1 = 'f'
+    #    key = '('
+    #    flag2 = '1'
+
+    my @items = split /\s+/, $opt_value;
+    foreach my $item (@items) {
+        my ( $flag1, $key, $flag2 );
+
+        # Break into three parts:
+        if ( $item =~ /^ ([^\(\[\{]*)?  ([\(\{\[])  ([^\(\[\{]*)? $/x ) {
+            ##             $flag1          $key     $flag2
+            $flag1 = $1 if ( defined($1) );
+            $key   = $2 if ($2);
+            $flag2 = $3 if ( defined($3) );
+        }
+
+        # Allow 'q' as a key if it is in $rvalid_regex. It may have a left
+        # flag but not a right flag.
+        elsif ( substr( $item, -1, 1 ) eq 'q' && $rvalid_regex->{'q'} ) {
+            $key = 'q';
+            if ( length($item) > 1 ) { $flag1 = substr( $item, 0, -1 ) }
+        }
+        else {
+            $error_message .= " '$item': did not see one of '(' '{' '['\n";
+            next;
+        }
+
+        # Shouldn't happen:
+        if ( !defined($key) ) {
+            $error_message .= " '$item': did not see one of '(' '{' '['\n";
+            next;
+        }
+
+        # Check for valid flags if a regex is given.
+        if ($rvalid_regex) {
+            my ( $regex1, $regex2 ) = @{ $rvalid_regex->{$key} };
+            if ( $flag1 && defined($regex1) && $flag1 !~ /$regex1/ ) {
+                $error_message .=
+                  " '$item': '$flag1' not valid before '$key'\n";
+                next;
+            }
+            if ( $flag2 && defined($regex2) && $flag2 !~ /$regex2/ ) {
+                $error_message .= " '$item': '$flag2 not valid after '$key'\n";
+                next;
+            }
+        }
+
+        if ( !defined( $control_hash{$key} ) ) {
+            $control_hash{$key} = [ $flag1, $flag2 ];
+            next;
+        }
+
+        # Check for multiple conflicting specifications
+        my $rflags = $control_hash{$key};
+        if ( defined( $rflags->[0] ) && $rflags->[0] ne $flag1 ) {
+            $multiple_entries{$key} = $item;
+            $rflags->[0] = $flag1;
+        }
+        if ( defined( $rflags->[1] ) && $rflags->[1] ne $flag2 ) {
+            $multiple_entries{$key} = $item;
+            $rflags->[1] = $flag2;
+        }
+        next;
+    }
+    if (%multiple_entries) {
+        foreach my $key ( keys %multiple_entries ) {
+            $error_message .= "multiple entries for '$key'\n";
+        }
+    }
+    return ( \%control_hash, $error_message );
+} ## end sub parse_container_control_options
+
 sub check_skip_formatting_except_id {
 
     # Check for valid --skip-formatting-except-id
@@ -2788,33 +2923,16 @@ sub initialize_space_after_keyword {
 
 sub initialize_maximum_field_count_control_hash {
 
-    # Note similarity with sub 'initialize_line_up_parentheses_control_hash'
-    # They might eventually be combined, but there are differences
-    # Especially, the integer is not optional here, and can have any value.
-
     %maximum_field_count_control_hash = ();
 
-    my $opt_name = 'maximum-fields-per-table';
-    my $opt      = $rOpts->{$opt_name};
+    my $opt_name  = 'maximum-fields-per-table';
+    my $opt_value = $rOpts->{$opt_name};
 
     # zero and empty string are the same as no limit
-    return if ( !$opt );
-    $opt =~ s/^\s+//;
-    $opt =~ s/\s+$//;
-    return if ( !$opt );
-
-    # check for single integer
-    if ( $opt =~ /^\d+$/ ) {
-        foreach my $key (qw# ( { [ #) {
-            $maximum_field_count_control_hash{$key} = [ undef, $opt ];
-        }
-
-        # Setting to allow original logic to function. c490.  This can be
-        # removed when the corresponding code for $has_limited_field_count is
-        # removed.
-        $maximum_field_count_control_hash{'*'} = $opt;
-        return;
-    }
+    return if ( !$opt_value );
+    $opt_value =~ s/^\s+//;
+    $opt_value =~ s/\s+$//;
+    return if ( !$opt_value );
 
     # The format is space separated items, where each item must consist of a
     # string with a token type preceded by an optional text token and followed
@@ -2825,71 +2943,35 @@ sub initialize_maximum_field_count_control_hash {
     #    flag1 = 'W'
     #    key = '('
     #    flag2 = '1'
+    my $regex_rhs_all   = qr{^\d+$};
+    my $regex_lhs_paren = qr{^[kKfFwW\*01]$};
+    my $regex_lhs_other = qr{^[\*01]$};
+    my $regex_hash      = {
+        '(' => [ $regex_lhs_paren, $regex_rhs_all ],
+        '{' => [ $regex_lhs_other, $regex_rhs_all ],
+        '[' => [ $regex_lhs_other, $regex_rhs_all ],
+    };
 
-    my @items = split /\s+/, $opt;
-    my $msg1;
-    my $msg2;
-    foreach my $item (@items) {
-        my $item_save = $item;
-        my ( $flag1, $key, $flag2 );
-        if ( $item =~ /^ ([^\(\[\{]*)?  ([\(\{\[])  (\d+) $/x ) {
-            ##             $flag1          $key     $flag2
-            $flag1 = $1 if ($1);
-            $key   = $2 if ($2);
-            $flag2 = $3 if ( defined($3) );
-        }
-        else {
-            $msg1 .= " '$item_save'";
-            next;
-        }
+    my ( $rcontrol_hash, $error_message ) =
+      parse_container_control_options( $opt_value, $regex_hash );
 
-        if ( !defined($key) ) {
-            $msg1 .= " '$item_save'";
-            next;
-        }
-
-        # Check for valid flag1
-        if ( !defined($flag1) ) { $flag1 = '*' }
-
-        if ( $flag1 !~ /^[kKfFwW\*01]$/ ) {
-            $msg1 .= " '$item_save'";
-            next;
-        }
-
-        if ( !defined( $maximum_field_count_control_hash{$key} ) ) {
-            $maximum_field_count_control_hash{$key} = [ $flag1, $flag2 ];
-            next;
-        }
-
-        # check for multiple conflicting specifications
-        my $rflags = $maximum_field_count_control_hash{$key};
-        my $err;
-        if ( defined( $rflags->[0] ) && $rflags->[0] ne $flag1 ) {
-            $err = 1;
-            $rflags->[0] = $flag1;
-        }
-        if ( defined( $rflags->[1] ) && $rflags->[1] ne $flag2 ) {
-            $err = 1;
-            $rflags->[1] = $flag2;
-        }
-        $msg2 .= " '$item_save'" if ($err);
-        next;
-    }
-    if ($msg1) {
-        Warn(<<EOM);
-Unexpecting symbol(s) encountered in --$opt_name will be ignored:
-$msg1
-EOM
-    }
-    if ($msg2) {
-        Warn(<<EOM);
-Multiple specifications were encountered in the $opt_name at:
-$msg2
-Only the last will be used.
+    if ($error_message) {
+        Die(<<EOM);
+Error parsing --$opt_name='$opt_value'
+$error_message
 EOM
     }
 
+    if ( !$rcontrol_hash ) {
+        return;
+    }
+
+    # Looks ok, copy values to the actual control hash
+    foreach my $key ( keys %{$rcontrol_hash} ) {
+        $maximum_field_count_control_hash{$key} = $rcontrol_hash->{$key};
+    }
     return;
+
 } ## end sub initialize_maximum_field_count_control_hash
 
 sub initialize_outdent_keyword {
@@ -30168,17 +30250,6 @@ EOM
                     last;
                 }
             }
-
-            # TODO: This temporary patch allows exact match to older versions
-            # for input of just -mft=n.  It is deactivated and can be removed
-            # after the next CPAN release. The corresponding code which
-            # initializes the '*' could also be removed at the same time. c490.
-            $has_limited_field_count ||=
-                 0
-              && $comma_count_in_batch
-              && $maximum_field_count_control_hash{'*'}
-              && ( $maximum_field_count_control_hash{'*'} <=
-                $comma_count_in_batch );
         }
 
         my $rbond_strength_bias = [];

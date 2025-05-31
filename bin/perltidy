@@ -4044,8 +4044,9 @@ would mean use 1 field for tables within parens, 2 fields for tables within
 square brackets, and do not control the fields within curly braces.
 
 In addition, parens may be preceded by one of the paren control
-letters C<k f w K F W> defined in the previous section to further limit
-the tables for which the number of fields will be controlled.  One
+letters C<k f w K F W> to further limit
+the tables for which the number of fields will be controlled
+(see the table above or L<"Specifying Paren Types">). One
 use for this would be to match the control of the number of fields
 of a table with the parameter B<--break-open-compact-parens> described
 above.  Thus the combination
