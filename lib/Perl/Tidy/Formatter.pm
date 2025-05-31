@@ -2381,20 +2381,28 @@ sub parse_container_control_options {
 
     # Given: input hash ref with these values
     #   $opt_value  => the option string to parse
-    #   $rvalid_regex => OPTIONAL hash ref with valid regexes, in the form
-    #     $key=[$regex1,$regex2] where $key is one of: '(' '[' '{'
+    #   $rvalid_regex => OPTIONAL hash ref with parse info, see below
     # Returns:
     #   \%control_hash = control hash for this option (see below)
     #   $error_message = true on any error: control hash is not valid;
     #                    caller should print the message and exit
+
+    #   $rvalid_regex may contain these key,value pairs:
+    #     $key  =>  [$regex1,$regex2] where $key is one of: '(' '[' '{' 'q'
+    #     rhs_required => true means a value must follow input keys '(' '[' '{'
+    #     The special key 'q' never takes a value on the right.
     #
-    # For example, value = 'f(1' gives the following result
+    # For example, $opt_value = 'f(1' gives the following basic result
 
     #        'f(1' produces the (key, value) entry '{'=>['f',1]
     #         |||
     #  flag1--^|^---flag2 (must match regex2)
     #          ^--------------container key, one of ( { [
     #
+    # if flag1 and flag2 match regexes, if given, then an entry is made
+    # in the control hash:
+    #
+    #   $control_hash{'('}=>[$flag1,$flag2];
 
     # NOTE: this sub could eventually be called to replace coding for
     # options -wnxl -lpxl -lpil -wtc
@@ -2403,15 +2411,17 @@ sub parse_container_control_options {
     my $error_message;
     my %multiple_entries;
 
-    if ( !defined($opt_value) ) {
-        return ( \%control_hash, $error_message );
+    my $rhs_required = defined($rvalid_regex) && $rvalid_regex->{rhs_required};
+
+    if ( defined($opt_value) ) {
+        $opt_value =~ s/^\s+//;
+        $opt_value =~ s/\s+$//;
     }
 
-    $opt_value =~ s/^\s+//;
-    $opt_value =~ s/\s+$//;
-
-    # Allow an empty string or '0' to mean no control
-    if ( !$opt_value ) {
+    if ( !defined($opt_value) || !length($opt_value) ) {
+        if ($rhs_required) {
+            $error_message .= "A value is required for this parameter\n";
+        }
         return ( \%control_hash, $error_message );
     }
 
@@ -2447,9 +2457,9 @@ sub parse_container_control_options {
         # Break into three parts:
         if ( $item =~ /^ ([^\(\[\{]*)?  ([\(\{\[])  ([^\(\[\{]*)? $/x ) {
             ##             $flag1          $key     $flag2
-            $flag1 = $1 if ( defined($1) );
-            $key   = $2 if ($2);
-            $flag2 = $3 if ( defined($3) );
+            $flag1 = $1 if ( length($1) );
+            $key   = $2;
+            $flag2 = $3 if ( length($3) );
         }
 
         # Allow 'q' as a key if it is in $rvalid_regex. It may have a left
@@ -2463,21 +2473,20 @@ sub parse_container_control_options {
             next;
         }
 
-        # Shouldn't happen:
-        if ( !defined($key) ) {
-            $error_message .= " '$item': did not see one of '(' '{' '['\n";
+        if ( !defined($flag2) && $rhs_required ) {
+            $error_message .= " '$item': a value is required after '$key'\n";
             next;
         }
 
         # Check for valid flags if a regex is given.
         if ($rvalid_regex) {
             my ( $regex1, $regex2 ) = @{ $rvalid_regex->{$key} };
-            if ( $flag1 && defined($regex1) && $flag1 !~ /$regex1/ ) {
+            if ( defined($flag1) && defined($regex1) && $flag1 !~ /$regex1/ ) {
                 $error_message .=
                   " '$item': '$flag1' not valid before '$key'\n";
                 next;
             }
-            if ( $flag2 && defined($regex2) && $flag2 !~ /$regex2/ ) {
+            if ( defined($flag2) && defined($regex2) && $flag2 !~ /$regex2/ ) {
                 $error_message .= " '$item': '$flag2 not valid after '$key'\n";
                 next;
             }
@@ -2947,9 +2956,10 @@ sub initialize_maximum_field_count_control_hash {
     my $regex_lhs_paren = qr{^[kKfFwW\*01]$};
     my $regex_lhs_other = qr{^[\*01]$};
     my $regex_hash      = {
-        '(' => [ $regex_lhs_paren, $regex_rhs_all ],
-        '{' => [ $regex_lhs_other, $regex_rhs_all ],
-        '[' => [ $regex_lhs_other, $regex_rhs_all ],
+        '('          => [ $regex_lhs_paren, $regex_rhs_all ],
+        '{'          => [ $regex_lhs_other, $regex_rhs_all ],
+        '['          => [ $regex_lhs_other, $regex_rhs_all ],
+        rhs_required => 1,
     };
 
     my ( $rcontrol_hash, $error_message ) =
