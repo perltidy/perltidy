@@ -3812,6 +3812,7 @@ sub generate_options {
     $category = 6;    # Controlling list formatting
     ########################################
     $add_option->( 'break-at-old-comma-breakpoints', 'boc',  '!' );
+    $add_option->( 'break-at-old-comma-types',       'boct', '=s' );
     $add_option->( 'break-at-trailing-comma-types',  'btct', '=s' );
     $add_option->( 'comma-arrow-breakpoints',        'cab',  '=i' );
     $add_option->( 'maximum-fields-per-table',       'mft',  '=s' );

@@ -3883,7 +3883,27 @@ the original style, yields
                 1, 4, 6, 4, 1,);
 
 A disadvantage of this flag compared to the methods discussed above is that all
-tables in the file must already be nicely formatted.
+tables in the file must already be nicely formatted. The parameter of the next
+section can be used to limit the tables to which it applies.
+
+=item B<-boct=s>,  B<--break-at-old-comma-types=s>
+
+This parameter can be used to make the B<-boc> flag of the previous section apply
+only to commas in certain types of containers. The parameter string B<s> is a
+space-separated list of the types of containers. It may include any of the
+list container tokens B<(>, B<{>, and B<[>. In addition, a paren token may be
+preceded by any of the letters 'k', 'K', 'f', 'F', 'w', and 'W', to further
+restrict the types of parens to which B<-boc> applies (see L<"Specifying Paren Types">).
+
+For example:
+
+    -boct='('  means only keep old comma breaks in paren lists
+    -boct='f(' means only keep old comma breaks in function call lists
+
+Commas which are not contained within one of these three container types can
+be selected with a ';' character.
+
+Note that this parameter has no effect unless B<-break-at-old-comma-breakpoints> is also set.
 
 =item B<-btct=s>,  B<--break-at-trailing-comma-types=s>
 

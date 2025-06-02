@@ -496,6 +496,9 @@ my (
     # INITIALIZER: initialize_maximum_field_count_control_hash
     %maximum_field_count_control_hash,
 
+    # INITIALIZER: initialize_break_at_old_comma_types
+    %break_at_old_comma_types,
+
     #--------------------------------------------------------
     # Section 2: Work arrays for the current batch of tokens.
     #--------------------------------------------------------
@@ -669,6 +672,7 @@ BEGIN {
         _ris_bare_trailing_comma_by_seqno_ => $i++,
         _rtightness_override_by_seqno_     => $i++,
         _rmaximum_field_count_by_seqno_    => $i++,
+        _rbreak_at_old_commas_by_seqno_    => $i++,
 
         _rseqno_non_indenting_brace_by_ix_ => $i++,
         _rmax_vertical_tightness_          => $i++,
@@ -1206,6 +1210,7 @@ sub new {
     $self->[_ris_bare_trailing_comma_by_seqno_] = {};
     $self->[_rtightness_override_by_seqno_]     = {};
     $self->[_rmaximum_field_count_by_seqno_]    = {};
+    $self->[_rbreak_at_old_commas_by_seqno_]    = {};
 
     $self->[_rseqno_non_indenting_brace_by_ix_] = {};
     $self->[_rmax_vertical_tightness_]          = {};
@@ -2323,6 +2328,8 @@ EOM
 
     initialize_maximum_field_count_control_hash();
 
+    initialize_break_at_old_comma_types();
+
     initialize_extended_block_tightness_list();
 
     # The flag '$controlled_comma_style' will be set if the user
@@ -2426,7 +2433,10 @@ sub parse_container_control_options {
     }
 
     # Allow a single constant to apply to each type if the regex allows
-    if ( $opt_value !~ /[\(\{\[]/ && $opt_value !~ /\s/ ) {
+    if (   $opt_value !~ /[\(\{\[]/
+        && $opt_value !~ /\s/
+        && !$rvalid_regex->{ substr( $opt_value, -1, 1 ) } )
+    {
         foreach my $key (qw/ ( { [ /) {
             $control_hash{$key} = [ undef, $opt_value ];
             next if ( !defined($rvalid_regex) );
@@ -2462,10 +2472,11 @@ sub parse_container_control_options {
             $flag2 = $3 if ( length($3) );
         }
 
-        # Allow 'q' as a key if it is in $rvalid_regex. It may have a left
-        # flag but not a right flag.
-        elsif ( substr( $item, -1, 1 ) eq 'q' && $rvalid_regex->{'q'} ) {
-            $key = 'q';
+        # Allow a single character (like 'q' or ';')  as a key if it is in
+        # $rvalid_regex.  It may have a left flag but not a right flag.
+        ##elsif ( substr( $item, -1, 1 ) eq 'q' && $rvalid_regex->{'q'} ) {
+        elsif ( $rvalid_regex->{ substr( $item, -1, 1 ) } ) {
+            $key = substr( $item, -1, 1 );
             if ( length($item) > 1 ) { $flag1 = substr( $item, 0, -1 ) }
         }
         else {
@@ -2983,6 +2994,62 @@ EOM
     return;
 
 } ## end sub initialize_maximum_field_count_control_hash
+
+sub initialize_break_at_old_comma_types {
+
+    %break_at_old_comma_types = ();
+
+    my $opt_name  = 'break-at-old-comma-types';
+    my $opt_value = $rOpts->{$opt_name};
+
+    # zero and empty string are the same as no constraint on -boc
+    return if ( !$opt_value );
+    $opt_value =~ s/^\s+//;
+    $opt_value =~ s/\s+$//;
+    return if ( !$opt_value );
+
+    my $regex_nomatch   = qr{^$};
+    my $regex_lhs_paren = qr{^[kKfFwW\*01]$};
+    my $regex_lhs_other = qr{^[\*01]$};
+    my $regex_hash      = {
+        '(' => [ $regex_lhs_paren, $regex_nomatch ],
+        '{' => [ $regex_lhs_other, $regex_nomatch ],
+        '[' => [ $regex_lhs_other, $regex_nomatch ],
+        ';' => [ $regex_lhs_other, $regex_nomatch ],
+    };
+
+    my ( $rcontrol_hash, $error_message ) =
+      parse_container_control_options( $opt_value, $regex_hash );
+
+    if ($error_message) {
+        Die(<<EOM);
+Error parsing --$opt_name='$opt_value'
+$error_message
+EOM
+    }
+
+    if ( !$rcontrol_hash ) {
+        return;
+    }
+
+    # Just return if -boc is not set, because -boc is the master switch and
+    # -boct just modifies it. We had to come this far for syntax checking.
+    if ( !$rOpts->{'break-at-old-comma-breakpoints'} ) {
+        return;
+    }
+
+    # Looks ok, copy values to the actual control hash
+    foreach my $key ( keys %{$rcontrol_hash} ) {
+        $break_at_old_comma_types{$key} = $rcontrol_hash->{$key};
+
+        # Add a duplicate entry any matching closing tokens (not for ';')
+        my $key_mate = $matching_token{$key};
+        $break_at_old_comma_types{$key_mate} = $rcontrol_hash->{$key}
+          if ($key_mate);
+    }
+    return;
+
+} ## end sub initialize_break_at_old_comma_types
 
 sub initialize_outdent_keyword {
 
@@ -16120,8 +16187,31 @@ sub respace_tokens_inner_loop {
                 #----------------------------------------------------------
                 else {
 
-                    # if this looks like a list ..
                     my $rtype_count = $rtype_count_by_seqno->{$type_sequence};
+
+                    # Set [_rbreak_at_old_commas_by_seqno_] at a closing token.
+                    # It will be needed by the trailing comma subs.
+                    if (   %break_at_old_comma_types
+                        && $break_at_old_comma_types{$token}
+                        && $rtype_count
+                        && ( $rtype_count->{','} || $rtype_count->{'=>'} )
+                        && !$rtype_count->{';'}
+                        && !$rtype_count->{'f'} )
+                    {
+                        my $match      = 1;
+                        my $paren_flag = $break_at_old_comma_types{$token}->[0];
+                        if ( $paren_flag && $token eq ')' ) {
+                            $match =
+                              $self->match_paren_control_flag( $type_sequence,
+                                $paren_flag, $rLL_new );
+                        }
+                        if ($match) {
+                            $self->[_rbreak_at_old_commas_by_seqno_]
+                              ->{$type_sequence} = 1;
+                        }
+                    }
+
+                    # if this looks like a list ..
                     if (   !$rtype_count
                         || !$rtype_count->{';'} && !$rtype_count->{'f'} )
                     {
@@ -17000,6 +17090,18 @@ EOM
         if ( @{ $rarrow_call_chain->{$seqno_start} } < 2 ) {
             delete $rseqno_arrow_call_chain_start->{$seqno};
             delete $rarrow_call_chain->{$seqno_start};
+        }
+    }
+
+    # Handle the option -boct=';' which makes -boc apply to all blocks
+    if ( %break_at_old_comma_types && $break_at_old_comma_types{';'} ) {
+        my $SEQ_ROOT = SEQ_ROOT;
+        $self->[_rbreak_at_old_commas_by_seqno_]->{$SEQ_ROOT} = 1;
+        foreach my $seqno ( keys %{$rblock_type_of_seqno} ) {
+            my $rtype_count = $rtype_count_by_seqno->{$seqno};
+            next unless ($rtype_count);
+            next unless ( $rtype_count->{','} || $rtype_count->{'=>'} );
+            $self->[_rbreak_at_old_commas_by_seqno_]->{$seqno} = 1;
         }
     }
 
@@ -18019,10 +18121,15 @@ sub match_trailing_comma_rule {
     my $closing_token = $rLL->[$KK]->[_TOKEN_];
 
     # factors which force stability
+    my $break_at_old_commas =
+        %break_at_old_comma_types
+      ? $self->[_rbreak_at_old_commas_by_seqno_]->{$type_sequence}
+      : $rOpts_break_at_old_comma_breakpoints;
+    $break_at_old_commas &&= !$rOpts_ignore_old_breakpoints;
+
     my $is_permanently_broken =
       $self->[_ris_permanently_broken_]->{$type_sequence};
-    $is_permanently_broken ||= $rOpts_break_at_old_comma_breakpoints
-      && !$rOpts_ignore_old_breakpoints;
+    $is_permanently_broken ||= $break_at_old_commas;
     $is_permanently_broken ||= $stable_flag;
 
     my $K_opening = $self->[_K_opening_container_]->{$type_sequence};
@@ -18297,8 +18404,7 @@ sub match_trailing_comma_rule {
                 && $rOpts_add_trailing_commas
 
                 # -boc is set and active
-                && $rOpts_break_at_old_comma_breakpoints
-                && !$rOpts_ignore_old_breakpoints
+                && $break_at_old_commas
               )
             {
                 # ignore this test
@@ -18341,11 +18447,7 @@ sub match_trailing_comma_rule {
 
         # For 'i' only, a list that can be shown to be stable is a match
         if ( !$match && $trailing_comma_style eq 'i' ) {
-            $match = (
-                $is_permanently_broken
-                  || ( $rOpts_break_at_old_comma_breakpoints
-                    && !$rOpts_ignore_old_breakpoints )
-            );
+            $match = $is_permanently_broken || $break_at_old_commas;
         }
     }
 
@@ -24515,7 +24617,12 @@ EOM
 
             # Since it has a line-ending comma, it will stay broken if the
             # -boc flag is set
-            if ($rOpts_break_at_old_comma_breakpoints) { $OK = 1 }
+            my $break_at_old_commas =
+                %break_at_old_comma_types
+              ? $self->[_rbreak_at_old_commas_by_seqno_]->{$seqno}
+              : $rOpts_break_at_old_comma_breakpoints;
+            $break_at_old_commas &&= !$rOpts_ignore_old_breakpoints;
+            if ($break_at_old_commas) { $OK = 1 }
 
             # OK if the container contains multiple fat commas
             # Better: multiple lines with fat commas
@@ -28042,6 +28149,19 @@ EOM
                 }
             }
 
+            # Check for -boc if last line ended in a comma
+            my $break_at_old_commas;
+            if (   $last_old_nonblank_type eq ','
+                && $rOpts_break_at_old_comma_breakpoints )
+            {
+                $break_at_old_commas = 1;
+                if (%break_at_old_comma_types) {
+                    my $p_seqno = $parent_seqno_to_go[$max_index_to_go];
+                    $break_at_old_commas =
+                      $self->[_rbreak_at_old_commas_by_seqno_]->{$p_seqno};
+                }
+            }
+
             if (
 
                 # this check needed -mangle (for example rt125012)
@@ -28052,12 +28172,11 @@ EOM
                 )
 
                 # Patch for RT #98902. Honor request to break at old commas.
-                || (   $rOpts_break_at_old_comma_breakpoints
-                    && $last_old_nonblank_type eq ',' )
+                || $break_at_old_commas
               )
             {
                 $forced_breakpoint_to_go[$max_index_to_go] = 1
-                  if ($rOpts_break_at_old_comma_breakpoints);
+                  if ($break_at_old_commas);
                 $index_start_one_line_block = undef;
                 $self->end_batch();
             }
@@ -34601,6 +34720,7 @@ sub do_colon_breaks {
         @i_equals,
         @override_cab3,
         @type_sequence_stack,
+        @break_at_old_commas,
 
     );
 
@@ -34719,6 +34839,11 @@ sub do_colon_breaks {
             $rfor_semicolon_list[$depth_t]         = [];
             $i_equals[$depth_t]                    = -1;
 
+            $break_at_old_commas[$depth_t] =
+                %break_at_old_comma_types
+              ? $self->[_rbreak_at_old_commas_by_seqno_]->{$seqno}
+              : $rOpts_break_at_old_comma_breakpoints;
+
             # these arrays must retain values between calls
             if ( $changed_seqno || !defined( $has_broken_sublist[$depth_t] ) ) {
                 $dont_align[$depth_t]         = 0;
@@ -34788,6 +34913,7 @@ sub do_colon_breaks {
                         rdo_not_break_apart => \$do_not_break_apart,
                         must_break_open     => $must_break_open,
                         has_broken_sublist  => $has_broken_sublist[$dd],
+                        break_at_old_commas => $break_at_old_commas[$dd],
                     }
                 );
                 $bp_count           = $forced_breakpoint_count - $fbc;
@@ -35355,7 +35481,7 @@ EOM
             # handle comma-arrow
             elsif ( $type eq '=>' ) {
                 next if ( $last_nonblank_type eq '=>' );
-                next if ($rOpts_break_at_old_comma_breakpoints);
+                next if ( $break_at_old_commas[$depth] );
                 next
                   if ( $rOpts_comma_arrow_breakpoints == 3
                     && !defined( $override_cab3[$depth] ) );
@@ -35840,6 +35966,11 @@ EOM
         $rand_or_list[$depth]                = [];
         $rfor_semicolon_list[$depth]         = [];
         $i_equals[$depth]                    = -1;
+
+        $break_at_old_commas[$depth] =
+            %break_at_old_comma_types
+          ? $self->[_rbreak_at_old_commas_by_seqno_]->{$type_sequence}
+          : $rOpts_break_at_old_comma_breakpoints;
 
         # if line ends here then signal closing token to break
         if ( $next_nonblank_type eq 'b' || $next_nonblank_type eq '#' ) {
@@ -36583,10 +36714,11 @@ EOM
         return if ( !defined($rhash_A) );
 
         # Some variables received from caller...
-        my $i_closing_paren    = $rhash_IN->{i_closing_paren};
-        my $i_opening_paren    = $rhash_IN->{i_opening_paren};
-        my $has_broken_sublist = $rhash_IN->{has_broken_sublist};
-        my $interrupted        = $rhash_IN->{interrupted};
+        my $i_closing_paren     = $rhash_IN->{i_closing_paren};
+        my $i_opening_paren     = $rhash_IN->{i_opening_paren};
+        my $has_broken_sublist  = $rhash_IN->{has_broken_sublist};
+        my $interrupted         = $rhash_IN->{interrupted};
+        my $break_at_old_commas = $rhash_IN->{break_at_old_commas};
 
         #-----------------------------------------
         # Section A: Handle some special cases ...
@@ -36608,13 +36740,14 @@ EOM
         # A list is forced to use old breakpoints if it was interrupted
         # by side comments or blank lines, or requested by user.
         #--------------------------------------------------------------
-        if (   $rOpts_break_at_old_comma_breakpoints
+        if (   $break_at_old_commas
             || $interrupted
             || $i_opening_paren < 0 )
         {
             my $i_first_comma     = $rhash_A->{_i_first_comma};
             my $i_true_last_comma = $rhash_A->{_i_true_last_comma};
-            $self->copy_old_breakpoints( $i_first_comma, $i_true_last_comma );
+            $self->copy_old_breakpoints( $i_first_comma, $i_true_last_comma,
+                $break_at_old_commas );
             return;
         }
 
@@ -36843,6 +36976,8 @@ EOM
         my $item_count       = $rhash_A->{_item_count_A};
         my $identifier_count = $rhash_A->{_identifier_count_A};
 
+##      Commented items are available but not currently used
+
         # Derived variables:
 ##      my $ritem_lengths          = $rhash_A->{_ritem_lengths};
 ##      my $ri_term_begin          = $rhash_A->{_ri_term_begin};
@@ -36866,12 +37001,13 @@ EOM
 ##      my $interrupted         = $rhash_IN->{interrupted};
         my $rdo_not_break_apart = $rhash_IN->{rdo_not_break_apart};
         my $must_break_open     = $rhash_IN->{must_break_open};
+        my $break_at_old_commas = $rhash_IN->{break_at_old_commas};
 
 ## NOTE: these input vars from caller use the values from rhash_A (see above):
 ##      my $item_count          = $rhash_IN->{item_count};
 ##      my $identifier_count    = $rhash_IN->{identifier_count};
 
-        # NOTE: i_opening_paren changes value below so we need to get these here
+        # CAUTION: i_opening_paren changes value below so we get these vars here
         my $opening_is_in_block = $self->is_in_block_by_i($i_opening_paren);
         my $opening_token       = $tokens_to_go[$i_opening_paren];
         my $seqno_opening       = $type_sequence_to_go[$i_opening_paren];
@@ -37113,7 +37249,8 @@ EOM
             # use old breakpoints if this is a 'big' list
             if ( $packed_lines > 2 && $item_count > 10 ) {
                 write_logfile_entry("List sparse: using old breakpoints\n");
-                $self->copy_old_breakpoints( $i_first_comma, $i_last_comma );
+                $self->copy_old_breakpoints( $i_first_comma, $i_last_comma,
+                    $break_at_old_commas );
             }
 
             # let the continuation logic handle it if 2 lines
@@ -37954,7 +38091,7 @@ sub set_ragged_breakpoints {
 } ## end sub set_ragged_breakpoints
 
 sub copy_old_breakpoints {
-    my ( $self, $i_first_comma, $i_last_comma ) = @_;
+    my ( $self, $i_first_comma, $i_last_comma, $break_at_old_commas ) = @_;
 
     # We are formatting a list and have decided to make comma breaks
     # the same as in the input file.
@@ -37980,7 +38117,7 @@ sub copy_old_breakpoints {
 
     # just copy old breakpoints unless $controlled_comma_style or -boc
     if (   !$controlled_comma_style
-        && !$rOpts_break_at_old_comma_breakpoints )
+        && !$break_at_old_commas )
     {
         foreach my $ii (@i_old_breaks) {
             $self->set_forced_breakpoint($ii);
@@ -38009,7 +38146,7 @@ sub copy_old_breakpoints {
     # leading and trailing commas. In that case excess iterations
     # can occur (see b878)
     if (  !$controlled_comma_style
-        && $rOpts_break_at_old_comma_breakpoints )
+        && $break_at_old_commas )
     {
 
         my $mixed = $num_before && $num_after;

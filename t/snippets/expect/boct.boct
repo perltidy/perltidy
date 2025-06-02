@@ -1,0 +1,13 @@
+my @list = ( 1, 1, 1, 1, 2, 1, );
+
+# test boct='f('
+my $val = func(
+    1,
+    1, 1,
+    1, 2, 1,
+);
+
+# uncontained commas: test -boct=';'
+my $prefix = substr $exception,
+  0,
+  length $REQUIRED_LENGTH;
