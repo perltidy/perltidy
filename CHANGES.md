@@ -2,6 +2,11 @@
 
 ## 2025 03 11.07
 
+    - A new parameter --break-at-old-comma-types=s, or -boct=s, allows the
+      parameter --break-at-old-comma-breakpoints (-boc) to be limited to
+      selected container types.  For example, -boc -boct='f(' means break
+      at old commas but only if they are are in function call lists.
+
     - A new parameter --cuddled-paren-brace-weld, or -cpbw, has been added to
       handle issue git #184. This modifies --cuddled-paren-brace by
       preventing a paren and following brace from getting separated in
