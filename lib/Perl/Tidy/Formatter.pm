@@ -2638,14 +2638,14 @@ sub initialize_grep_and_friends {
 sub initialize_weld_nested_exclusion_rules {
     %weld_nested_exclusion_rules = ();
 
-    my $opt_name = 'weld-nested-exclusion-list';
-    my $str      = $rOpts->{$opt_name};
+    my $opt_name  = 'weld-nested-exclusion-list';
+    my $opt_value = $rOpts->{$opt_name};
 
     # let a '0' be the same as not defined
-    return unless ($str);
-    $str =~ s/^\s+//;
-    $str =~ s/\s+$//;
-    return unless ($str);
+    return unless ($opt_value);
+    $opt_value =~ s/^\s+//;
+    $opt_value =~ s/\s+$//;
+    return unless ($opt_value);
 
     # There are four container tokens.
     my %token_keys = (
@@ -2689,7 +2689,7 @@ sub initialize_weld_nested_exclusion_rules {
     # .k(  - exclude a secondary paren preceded by a keyword
     # [ {  - exclude all brackets and braces
 
-    my @items = split /\s+/, $str;
+    my @items = split /\s+/, $opt_value;
     my $msg1;
     my $msg2;
     foreach my $item (@items) {
@@ -2741,16 +2741,15 @@ sub initialize_weld_nested_exclusion_rules {
         if ($err) { $msg2 .= " '$item_save'"; }
     }
     if ($msg1) {
-        Warn(<<EOM);
-Unexpecting symbol(s) encountered in --$opt_name will be ignored:
+        Die(<<EOM);
+Unexpected symbol(s) encountered in --$opt_name='$opt_value':
 $msg1
 EOM
     }
     if ($msg2) {
-        Warn(<<EOM);
-Multiple specifications were encountered in the --weld-nested-exclusion-list for:
+        Die(<<EOM);
+Conflicting specifications were encountered in $opt_name='$opt_value' at:
 $msg2
-Only the last will be used.
 EOM
     }
     return;
@@ -2805,13 +2804,23 @@ EOM
 } ## end sub initialize_lpxl_lpil
 
 sub initialize_line_up_parentheses_control_hash {
-    my ( $str, $opt_name ) = @_;
+    my ( $opt_value, $opt_name ) = @_;
+
+    # Process 'line-up-parentheses-exclusion-list' ('lpil')
+    #     or: 'line-up-parentheses-inclusion-list' ('lpxl')
+
+    # Given:
+    #    $opt_value = the value of the option
+    #    $opt_name  = the name of the option for error reporting
+
+    # NOTE: This is essentially a simplified version of
+    # sub 'parse_container_control_options'
 
     # let a 0 be the same as not defined
-    return unless ($str);
-    $str =~ s/^\s+//;
-    $str =~ s/\s+$//;
-    return unless ($str);
+    return unless ($opt_value);
+    $opt_value =~ s/^\s+//;
+    $opt_value =~ s/\s+$//;
+    return unless ($opt_value);
 
     # The format is space separated items, where each item must consist of a
     # string with a token type preceded by an optional text token and followed
@@ -2823,7 +2832,7 @@ sub initialize_line_up_parentheses_control_hash {
     #    key = '('
     #    flag2 = '1'
 
-    my @items = split /\s+/, $str;
+    my @items = split /\s+/, $opt_value;
     my $msg1;
     my $msg2;
     foreach my $item (@items) {
@@ -2885,16 +2894,15 @@ sub initialize_line_up_parentheses_control_hash {
         next;
     }
     if ($msg1) {
-        Warn(<<EOM);
-Unexpecting symbol(s) encountered in --$opt_name will be ignored:
+        Die(<<EOM);
+Unexpected symbol(s) encountered in --$opt_name='$opt_value':
 $msg1
 EOM
     }
     if ($msg2) {
-        Warn(<<EOM);
-Multiple specifications were encountered in the $opt_name at:
+        Die(<<EOM);
+Conflicting specifications were encountered in --$opt_name='$opt_value' at:
 $msg2
-Only the last will be used.
 EOM
     }
 
@@ -4153,7 +4161,7 @@ sub initialize_trailing_comma_break_rules {
 
         # check for conflicting signed options
         if ($error_message) {
-            Warn(<<EOM);
+            Die(<<EOM);
 Error parsing --want-trailing-commas='$option':
 $error_message
 EOM
@@ -4423,7 +4431,7 @@ sub initialize_trailing_comma_rules {
         }
 
         if ($error_message) {
-            Warn(<<EOM);
+            Die(<<EOM);
 Error parsing --want-trailing-commas='$option':
 $error_message
 EOM

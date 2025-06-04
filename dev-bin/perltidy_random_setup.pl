@@ -937,6 +937,8 @@ EOM
             'one-line-block-exclusion-list' =>
               [ 'sort', 'map', 'grep', 'eval', '*', 'zzyzx' ],
 
+            'break-at-old-comma-types' => ['f(', '[', ';', '{', 'w(', '(' ],
+
             'break-open-compact-parens' =>
               [ '0', '1', 'f', 'k', 'w', 'F', 'K', 'W' ],
 

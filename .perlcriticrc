@@ -108,6 +108,9 @@ max_characters=250
 # complex when matching things like line feeds and carriage returns.
 [-RegularExpressions::RequireExtendedFormatting]
 
+# Unfortunately this isn't possible for some automated parsing code
+[-RegularExpressions::ProhibitFixedStringMatches]
+
 #---------------------------------------------------
 # Policies to be skipped or adjusted for severity=2:
 #---------------------------------------------------
