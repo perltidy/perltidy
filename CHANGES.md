@@ -13,20 +13,18 @@
       certain situations. The difference is illustrated here:
 
         # perltidy -cpb alone has no effect for this short snippet:
-        if (   !$NO_UTF
-            && defined %unicode_table
-            && length(%unicode_table) > 2 )
+        if (   $Kouter_opening == $Kfirst
+            && $has_tight_paren{$type_prev} )
         {
-            ...;
+            $Kref = $Kprev;
         }
 
         # perltidy -cpb -cpbw keeps the closing paren next to the opening brace:
         if (
-               !$NO_UTF
-            && defined %unicode_table
-            && length(%unicode_table) > 2
+               $Kouter_opening == $Kfirst
+            && $has_tight_paren{$type_prev}
         ) {
-            ...;
+            $Kref = $Kprev;
         }
 
     - The parameter --maximum-fields-per-table, or -mft, now accepts a string

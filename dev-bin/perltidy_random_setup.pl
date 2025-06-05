@@ -152,7 +152,7 @@ R   - Read a config file
 $file_info
 FR  - Replace Files: replace with all new files
 FA  - Add Files: add to or modify current set of files
-P   - Profiles: 
+P   - Profiles:
 $profile_info
 C   - Chain mode               : $chain_mode
 D   - Delete good output?      : $delete_good_output
@@ -937,7 +937,7 @@ EOM
             'one-line-block-exclusion-list' =>
               [ 'sort', 'map', 'grep', 'eval', '*', 'zzyzx' ],
 
-            'break-at-old-comma-types' => ['f(', '[', ';', '{', 'w(', '(' ],
+            'break-at-old-comma-types' => [ 'f(', '[', ';', '{', 'w(', '(' ],
 
             'break-open-compact-parens' =>
               [ '0', '1', 'f', 'k', 'w', 'F', 'K', 'W' ],
@@ -1086,7 +1086,13 @@ EOM
           vertical-tightness
           vertical-tightness-closing
           closing-token-indentation
+
+          line-up-parentheses
         );
+
+        # Added line-up-parentheses in c495 because it overlaps with
+        # --extended-line-up-parentheses, so we get excessive -lp testing
+        # if either one can be on or off. Just having -xlp set is enough.
 
         # Added vertical-tightness and vertical-tightness-closing because
         # they are expansions. They should not be among the options. (c271)
@@ -1193,9 +1199,92 @@ EOM
                 push @random_parameters, $line;
             }
         }
-        return \@random_parameters;
+
+        my $rrandom_parameters = fix_conflicts( \@random_parameters );
+
+        return $rrandom_parameters;
     } ## end sub get_random_parameters
 }
+
+sub fix_conflicts {
+    my ($rlines) = @_;
+
+    my %is_conflict;
+    my @fixed_lines;
+
+    # Handle -iob conflicts
+    # These conflict with --ignore-old-breakponts (-iob).
+    my @iob_conflicts = (
+        '--break-at-old-method-breakpoints',
+        '--break-at-old-comma-breakpoints',
+        '--break-at-old-semicolon-breakpoints',
+        '--break-at-old-attribute-breakpoints',
+        '--break-at-old-keyword-breakpoints',
+        '--break-at-old-logical-breakpoints',
+        '--break-at-old-ternary-breakpoints',
+        '--keep-old-breakpoints-before',
+        '--keep-old-breakpoints-after',
+    );
+
+    # We will use -iob a small fraction of the time
+    my $FRAC_IOB = 0.2;
+    my $frac    = rand(1);
+    my $use_iob = $frac < $FRAC_IOB;
+    if ($use_iob) {
+        @is_conflict{@iob_conflicts} = (1) x scalar(@iob_conflicts);
+    }
+
+    # Handle -lp/-xlp conflicts
+    # Conflict: -lp  conflicts with -io, -fnl, -nanl, or -ndnl; ignoring -lp
+    # Conflict: -wc cannot currently be used with the -lp option; ignoring -wc
+    my @lp_conflicts = (
+        '--noadd-newlines',          '--nodelete-old-newlines',
+        '--nodelete-old-whitespace', '--noadd-whitespace',
+        '--whitespace-cycle',
+    );
+
+    my $saw_lp;
+    foreach my $line ( @{$rlines} ) {
+        if ( $line =~ /line-up-parentheses/ && $line !~ /^--no/ ) {
+            $saw_lp = 1;
+            last;
+        }
+    }
+    if ($saw_lp) {
+        @is_conflict{@lp_conflicts} = (1) x scalar(@lp_conflicts);
+    }
+
+    # Handle -bar conflicts
+    my @bar_conflicts =
+      ( '--opening-brace-on-new-line', '--brace-left-and-indent', );
+    my $saw_bar;
+    foreach my $line ( @{$rlines} ) {
+        if ( $line =~ 'opening-brace-always-on-right' ) {
+            $saw_bar = $line =~ /^--opening-brace-always-on-right/;
+            last;
+        }
+    }
+    if ($saw_bar) {
+        @is_conflict{@bar_conflicts} = (1) x scalar(@bar_conflicts);
+    }
+
+    # Main loop to fix lines
+    foreach my $line ( @{$rlines} ) {
+        if ( $line =~ /ignore-old-breakpoints/ ) {
+            if   ($use_iob) { $line =~ s/^--noignore/--ignore/ }
+            else            { $line =~ s/^--ignore/--noignore/ }
+        }
+        else {
+            my $opt = $line;
+            chomp $opt;
+            $opt =~ s/=.*//;
+            if ( $is_conflict{$opt} ) { $line = '##' . $line }
+        }
+        push @fixed_lines, $line;
+    }
+
+    return \@fixed_lines;
+} ## end sub fix_conflicts
 
 sub check_DEVEL_MODE {
     my ($fname) = @_;
