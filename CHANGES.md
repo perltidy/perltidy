@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2025 03 11.07
+## 2025 03 11.08
 
     - A new parameter --break-at-old-comma-types=s, or -boct=s, allows the
       parameter --break-at-old-comma-breakpoints (-boc) to be limited to
