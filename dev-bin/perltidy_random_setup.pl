@@ -930,7 +930,7 @@ EOM
             'break-after-labels'    => [ 0, 2 ],
 
             'want-call-parens'   => [ '&',   'open', 'close' ],
-            'nowant-call-parens' => [ 'pop', 'open' ],
+            'nowant-call-parens' => [ 'pop', 'push' ],
 
             'want-trailing-commas' =>
               [ '0', '*', 'm', 'b', 'h', 'i', ' ', 'f(b', 'f(m', 'f(h' ],
