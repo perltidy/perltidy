@@ -3375,7 +3375,7 @@ sub initialize_pack_operator_types {
         if (@unknown) {
             my $num = @unknown;
             local $LIST_SEPARATOR = SPACE;
-            Warn(<<EOM);
+            Die(<<EOM);
 $num unrecognized types(s) were input with --$long_name :
 @unknown
 EOM
@@ -3586,7 +3586,7 @@ EOM
     if (@unknown_types) {
         my $num = @unknown_types;
         local $LIST_SEPARATOR = SPACE;
-        Warn(<<EOM);
+        Die(<<EOM);
 $num unrecognized token types were input with -$short_name :
 @unknown_types
 EOM
@@ -3599,17 +3599,17 @@ EOM
 
         if ( length($flag) != 1 ) {
             my $txt = join( ',', split //, $flag );
-            Warn(<<EOM);
+            Die(<<EOM);
 Multiple entries '$txt' given for '$key' in '-$short_name'; only 1 is possible
 EOM
         }
         elsif ( ( $key eq '(' || $key eq ')' ) && $flag !~ /^[kKfFwW\*]$/ ) {
-            Warn(<<EOM);
+            Die(<<EOM);
 Unknown flag '$flag' given for '$key' in '-$short_name'
 EOM
         }
         elsif ( ( $key eq '}' || $key eq '}' ) && $flag !~ /^[bB\*]$/ ) {
-            Warn(<<EOM);
+            Die(<<EOM);
 Unknown flag '$flag' given for '$key' in '-$short_name'
 EOM
         }
@@ -3716,8 +3716,8 @@ sub initialize_multiple_token_tightness {
 
     if ($error_string) {
         $error_string =~ s/\s+$//;
-        Warn(<<EOM);
-Ignoring these unknown terms in --$opt_name: '$error_string'
+        Die(<<EOM);
+Unknown terms in --$opt_name: '$error_string'
 EOM
     }
 
@@ -3760,7 +3760,7 @@ EOM
             my $msg =
               "ERROR: the --$opt_name input caused an invalid regex '$regex'\n";
             DEVEL_MODE && Fault($msg);
-            Warn($msg);
+            Die($msg);
             %multiple_token_tightness = ();
             return;
         }
@@ -4192,13 +4192,13 @@ sub initialize_break_open_compact_parens {
 
     if ( length($opt) != 1 ) {
         my $txt = join( ',', split //, $opt );
-        Warn(<<EOM);
+        Die(<<EOM);
 Multiple entries '$txt' given for '$key' in '-$short_name'; only 1 is possible
 EOM
         $opt = 0;
     }
     elsif ( $opt !~ /^[kKfFwW\*01]$/ ) {
-        Warn(<<EOM);
+        Die(<<EOM);
 Unknown flag '$opt' given for '-$short_name; ignoring'
 EOM
         $opt = 0;
@@ -7697,11 +7697,11 @@ EOM
             }
 
             # just warn and keep going with defaults
-            Warn(
-"Error: the -cscp prefix '$csc_prefix' caused the invalid regex '$csc_prefix_pattern'\n"
-            );
-            Warn("Please consider using a simpler -cscp prefix\n");
-            Warn("Using default -cscp instead; please check output\n");
+            Warn(<<EOM);
+Error: the -cscp prefix '$csc_prefix' caused the invalid regex '$csc_prefix_pattern'
+Please consider using a simpler -cscp prefix
+Using default -cscp instead; please check output
+EOM
         }
         else {
             $csc_prefix         = $test_csc_prefix;
@@ -7774,7 +7774,7 @@ sub initialize_keep_old_blank_lines_hash {
         if (@unknown_types) {
             my $num = @unknown_types;
             local $LIST_SEPARATOR = SPACE;
-            Warn(<<EOM);
+            Die(<<EOM);
 $num unrecognized token types were input with --$short_name :
 @unknown_types
 EOM
