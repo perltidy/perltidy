@@ -3897,8 +3897,8 @@ restrict the types of parens to which B<-boc> applies (see L<"Specifying Paren T
 
 For example:
 
-    -boct='('  means only keep old comma breaks in paren lists
-    -boct='f(' means only keep old comma breaks in function call lists
+    -boct='('  means keep old comma breaks in paren lists
+    -boct='f(' means keep old comma breaks in function call lists
 
 Commas which are not contained within one of these three container types can
 be selected with a ';' character.

@@ -2388,16 +2388,16 @@ sub parse_container_control_options {
 
     # Given: input hash ref with these values
     #   $opt_value  => the option string to parse
-    #   $rvalid_regex => OPTIONAL hash ref with parse info, see below
+    #   $rvalid_regex => Optional hash ref with parse info, see below
     # Returns:
     #   \%control_hash = control hash for this option (see below)
     #   $error_message = true on any error: control hash is not valid;
     #                    caller should print the message and exit
 
-    #   $rvalid_regex may contain these key,value pairs:
-    #     $key  =>  [$regex1,$regex2] where $key is one of: '(' '[' '{' 'q'
-    #     rhs_required => true means a value must follow input keys '(' '[' '{'
-    #     The special key 'q' never takes a value on the right.
+    # $rvalid_regex may contain these key,value pairs:
+    #     $key  =>  [$regex1,$regex2] where $key is one of: '(' '[' '{' ';'
+    #     'rhs_required' => true means a value must follow these keys
+    # If $rvlid_regex is not given then raw flags are returned unchecked.
     #
     # For example, $opt_value = 'f(1' gives the following basic result
 
@@ -2411,8 +2411,7 @@ sub parse_container_control_options {
     #
     #   $control_hash{'('}=>[$flag1,$flag2];
 
-    # NOTE: this sub could eventually be called to replace coding for
-    # options -wnxl -lpxl -lpil -wtc
+    # NOTE: Similar coding exists for options -wnxl -lpxl -lpil -wtc
 
     my %control_hash;
     my $error_message;
@@ -2484,20 +2483,29 @@ sub parse_container_control_options {
             next;
         }
 
+        # if flag is not defined:
+        #   - ok for lhs
+        #   - ok for rhs unless the 'rhs_required' key is set
         if ( !defined($flag2) && $rhs_required ) {
             $error_message .= " '$item': a value is required after '$key'\n";
             next;
         }
 
-        # Check for valid flags if a regex is given.
+        # if flag is defined:
+        #   - if regex is not defined, flag is not allowed
+        #   - if regex is defined, flag must match it
         if ($rvalid_regex) {
             my ( $regex1, $regex2 ) = @{ $rvalid_regex->{$key} };
-            if ( defined($flag1) && defined($regex1) && $flag1 !~ /$regex1/ ) {
+            if ( defined($flag1)
+                && ( !defined($regex1) || $flag1 !~ /$regex1/ ) )
+            {
                 $error_message .=
                   " '$item': '$flag1' not valid before '$key'\n";
                 next;
             }
-            if ( defined($flag2) && defined($regex2) && $flag2 !~ /$regex2/ ) {
+            if ( defined($flag2)
+                && ( !defined($regex2) || $flag2 !~ /$regex2/ ) )
+            {
                 $error_message .= " '$item': '$flag2 not valid after '$key'\n";
                 next;
             }
@@ -3016,7 +3024,7 @@ sub initialize_break_at_old_comma_types {
     $opt_value =~ s/\s+$//;
     return if ( !$opt_value );
 
-    my $regex_nomatch   = qr{^$};
+    my $regex_nomatch   = undef;
     my $regex_lhs_paren = qr{^[kKfFwW\*01]$};
     my $regex_lhs_other = qr{^[\*01]$};
     my $regex_hash      = {
@@ -3586,7 +3594,8 @@ EOM
     if (@unknown_types) {
         my $num = @unknown_types;
         local $LIST_SEPARATOR = SPACE;
-        Die(<<EOM);
+        ## NOTE: use Warn instead of Die here to simplify testing
+        Warn(<<EOM);
 $num unrecognized token types were input with -$short_name :
 @unknown_types
 EOM
@@ -7771,10 +7780,12 @@ sub initialize_keep_old_blank_lines_hash {
         else {
             push @unknown_types, $str;
         }
+
         if (@unknown_types) {
             my $num = @unknown_types;
             local $LIST_SEPARATOR = SPACE;
-            Die(<<EOM);
+            ## NOTE: use Warn instead of Die here to simplify testing
+            Warn(<<EOM);
 $num unrecognized token types were input with --$short_name :
 @unknown_types
 EOM

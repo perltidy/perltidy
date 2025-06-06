@@ -33,9 +33,6 @@
       with just 1 item per line. It has no effect on other tables. The
       manual has further information.
 
-    - Fix a problem where --maximum-fields-per-table=1 was not always working
-      correctly with --break-open-compact-parens; discussed in git #78.
-
     - Add option --break-open-compact-parens=s, discussed in git #78.
       This changes the default formatting for lists which would normally
       be displayed compactly on two lines. It causes them to be formatted
