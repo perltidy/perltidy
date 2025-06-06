@@ -11578,7 +11578,7 @@ BEGIN {
     );
     @can_start_digraph{@q} = (1) x scalar(@q);
 
-    my @trigraphs = qw( ... **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~ );
+    my @trigraphs = qw( ... **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~ ^^= );
     @is_trigraph{@trigraphs} = (1) x scalar(@trigraphs);
 
     my @tetragraphs = qw( <<>> );

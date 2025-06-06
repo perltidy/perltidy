@@ -2,6 +2,8 @@
 
 ## 2025 03 11.08
 
+    - Added support for the assigning logical xor ^^= operator
+
     - A new parameter --break-at-old-comma-types=s, or -boct=s, allows the
       parameter --break-at-old-comma-breakpoints (-boc) to be limited to
       selected container types.  For example, -boc -boct='f(' means break
