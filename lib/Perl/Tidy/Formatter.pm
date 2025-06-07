@@ -760,7 +760,7 @@ BEGIN {
     # Initialize constant hashes ...
     my @q;
 
-    @q = qw( = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x= );
+    @q = qw( = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x= ^^= );
     @is_assignment{@q} = (1) x scalar(@q);
 
     # a hash needed by break_lists for efficiency:
@@ -40194,7 +40194,7 @@ EOM
         # Replaced =~ and // in the list.  // had been removed in RT 119588
         @q = qw#
           = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
-          { ? : => && || ~~ !~~ =~ !~ // <=> ->
+          { ? : => && || ~~ !~~ =~ !~ // <=> -> ^^=
           #;
         @is_vertical_alignment_type{@q} = (1) x scalar(@q);
 

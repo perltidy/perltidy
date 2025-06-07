@@ -37,3 +37,7 @@ $mask = ~( ~$mask | $DeadBits{$word} ) if $no_fatal;
     }
 }
 
+$v1 = 1;
+$vv2 += $yy;
+$vvv3 **= 2;
+$zz ^^= $qq;

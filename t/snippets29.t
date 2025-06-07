@@ -188,6 +188,10 @@ $mask  = ~( ~$mask | $DeadBits{$word} ) if $no_fatal;
             $height = $row * 25 if $row * 25 < $height;
 }}}
 
+$v1 = 1;
+$vv2 += $yy;
+$vvv3 **= 2;
+$zz ^^= $qq;
 ----------
 
         'git137' => <<'----------',
@@ -458,6 +462,10 @@ $mask = ~( ~$mask | $DeadBits{$word} ) if $no_fatal;
     }
 }
 
+$v1 = 1;
+$vv2 += $yy;
+$vvv3 **= 2;
+$zz ^^= $qq;
 #10...........
         },
 
@@ -504,6 +512,10 @@ $mask  = ~( ~$mask | $DeadBits{$word} ) if $no_fatal;
     }
 }
 
+$v1     = 1;
+$vv2   += $yy;
+$vvv3 **= 2;
+$zz   ^^= $qq;
 #11...........
         },
 

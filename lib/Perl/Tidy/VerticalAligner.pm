@@ -536,7 +536,7 @@ BEGIN {
     @q = qw( if unless or || );
     @is_if_or{@q} = (1) x scalar(@q);
 
-    @q = qw( = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x= );
+    @q = qw( = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x= ^^= );
     @is_assignment{@q} = (1) x scalar(@q);
 
     @q = qw( => );

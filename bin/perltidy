@@ -5900,7 +5900,7 @@ More detailed control of alignment types is available with these two
 parameters.  Most of the vertical alignments in typical programs occur at one
 of the tokens ',', '=', and '=>', but many other alignments are possible and are given in the following list:
 
-  = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
+  = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x= ^^=
   { ( ? : , ; => && || ~~ !~~ =~ !~ // <=> -> q
   if unless and or err for foreach while until
 
@@ -6043,7 +6043,7 @@ normally both in view.
 
 The following assignment operators are aligned independently by default:
 
-      = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
+      = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x= ^^=
 
 Setting B<--valign-wide-equals>, or B<-vwe>, causes them to be vertically
 aligned together with the trailing B<=> all aligned. For example, here
@@ -7652,7 +7652,7 @@ meanings for matching whatever precedes an opening paren:
  'k' matches if the previous nonblank token is a perl keyword
      (such as 'my', 'for'),
  'K' matches if 'k' does not: previous token is not a keyword
- 'f' matches if previous token is a function (not a keyword)
+ 'f' matches if previous token is a function or '->' (not a keyword)
  'F' matches if 'f' does not.
  'w' matches if either 'k' or 'f' match.
  'W' matches if 'w' does not.
