@@ -41,9 +41,11 @@
       in the same way as long lists, with line breaks at the opening and
       closing parentheses.
 
-    - Add option --skip-formatting-except-id=NAME discussed in git #183.
-      This allows formatting to apply only to lines tagged with #<<< id=NAME,
-      where NAME is a user-defined tag.
+    - Add option --skip-formatting-except-id=NAME, or -sfei=NAME, discussed
+      in git #183.  This allows formatting to apply only to lines tagged
+      with #<<< id=NAME, where NAME is a user-defined tag. The special
+      variation -sfei='-' can be used to run perltidy with full checking
+      but without any formatting changes.
 
     - A relatively rare problem with the formatting combination -xci and -lp or
       -xlp has been fixed.  Some lines had more leading spaces that intended.

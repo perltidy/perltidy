@@ -84,6 +84,7 @@ my (
     $rbrace_type,
     $rcurrent_depth,
     $rcurrent_sequence_number,
+    $ris_lexical_sub,
     $rdepth_array,
     $ris_block_function,
     $ris_block_list_function,
@@ -1963,6 +1964,7 @@ sub prepare_for_a_new_file {
     $total_depth              = 0;
     $rtotal_depth             = [];
     $rcurrent_sequence_number = [];
+    $ris_lexical_sub          = {};
     $next_sequence_number     = SEQ_ROOT + 1;
 
     $rparen_type                     = [];
@@ -2111,6 +2113,7 @@ sub prepare_for_a_new_file {
             $rbrace_type,
             $rcurrent_depth,
             $rcurrent_sequence_number,
+            $ris_lexical_sub,
             $rdepth_array,
             $ris_block_function,
             $ris_block_list_function,
@@ -2193,6 +2196,7 @@ sub prepare_for_a_new_file {
             $rbrace_type,
             $rcurrent_depth,
             $rcurrent_sequence_number,
+            $ris_lexical_sub,
             $rdepth_array,
             $ris_block_function,
             $ris_block_list_function,
@@ -4964,6 +4968,42 @@ EOM
             return if ($is_attribute);
         }
 
+        #-----------------------------------------
+        # Preliminary check for a lexical sub name
+        #-----------------------------------------
+        my $is_lexical_sub_type;
+        if ( my $rseqno_hash = $ris_lexical_sub->{$tok_kw} ) {
+
+            # Look back up the stack for this sub...
+            my $cd_aa = $rcurrent_depth->[BRACE];
+            foreach my $cd ( reverse( 0 .. $cd_aa ) ) {
+                my $seqno =
+                    $cd
+                  ? $rcurrent_sequence_number->[BRACE]->[$cd]
+                  : SEQ_ROOT;
+
+                # Note that lexical subs use the sequence number as package name
+                if ( $rseqno_hash->{$seqno} ) {
+                    if ( $ris_constant->{$seqno}->{$tok_kw} ) {
+                        $is_lexical_sub_type = 'C';
+                    }
+                    elsif ( $ris_block_function->{$seqno}->{$tok_kw} ) {
+                        $is_lexical_sub_type = 'G';
+                    }
+                    elsif ( $ris_block_list_function->{$seqno}->{$tok_kw} ) {
+                        $is_lexical_sub_type = 'G';
+                    }
+                    elsif ( $ris_user_function->{$seqno}->{$tok_kw} ) {
+                        $is_lexical_sub_type = 'U';
+                    }
+                    else {
+                        $is_lexical_sub_type = 'U';
+                    }
+                    last;
+                }
+            }
+        }
+
         #----------------------------------------
         # Starting final if-elsif- chain of tests
         #----------------------------------------
@@ -5141,6 +5181,12 @@ EOM
             $self->do_USE_CONSTANT();
         }
 
+        # Lexical sub names override keywords, labels.  Based on testing,
+        # this seems to be the correct location for this check.
+        elsif ($is_lexical_sub_type) {
+            $type = $is_lexical_sub_type;
+        }
+
         # various quote operators
         elsif ( $is_q_qq_qw_qx_qr_s_y_tr_m{$tok} ) {
             $self->do_QUOTE_OPERATOR();
@@ -5243,7 +5289,6 @@ EOM
             $self->[ $is_END_DATA{$tok_kw} ] = 1;
             $is_last = 1;                          ## is last token on this line
         }
-
         elsif ( $is_keyword{$tok_kw} ) {
             $self->do_KEYWORD();
         }
@@ -9607,15 +9652,6 @@ EOM
 
 {    ## closure for sub do_scan_sub
 
-    my %warn_if_lexical;
-
-    BEGIN {
-
-        # lexical subs with these names can cause parsing errors in this version
-        my @q = qw( m q qq qr qw qx s tr y );
-        @warn_if_lexical{@q} = (1) x scalar(@q);
-    } ## end BEGIN
-
     # saved package and subnames in case prototype is on separate line
     my ( $package_saved, $subname_saved );
 
@@ -9730,20 +9766,24 @@ EOM
 
             if ($is_lexical_sub) {
 
-                # lexical subs use the block sequence number as a package name
+                # Lexical subs use the containing block sequence number as a
+                # package name.
                 my $seqno =
                   $rcurrent_sequence_number->[BRACE]
                   ->[ $rcurrent_depth->[BRACE] ];
-                $seqno   = 1 if ( !defined($seqno) );
+                $seqno   = SEQ_ROOT if ( !defined($seqno) );
                 $package = $seqno;
-                if ( $warn_if_lexical{$subname} ) {
-                    $self->warning(
-"'my' sub '$subname' matches a builtin name and may not be handled correctly in this perltidy version.\n"
-                    );
+                $ris_lexical_sub->{$subname}->{$seqno} = 1;
 
-                    # This may end badly, it is safest to block formatting
-                    # For an example, see perl527/lexsub.t (issue c203)
-                    $self->[_in_trouble_] = 1;
+                # Complain if lexical sub name hides a quote operator
+                if ( $is_q_qq_qw_qx_qr_s_y_tr_m{$subname} ) {
+                    $self->complain(
+                        "'my' sub '$subname' matches a builtin quote operator\n"
+                    );
+                    ## OLD CODING, before improved handling of lexical subs:
+                    ## This may end badly, it is safest to avoid formatting.
+                    ## For an example, see perl527/lexsub.t (issue c203)
+                    ## $self->[_in_trouble_] = 1;
                 }
             }
             else {
@@ -11578,7 +11618,8 @@ BEGIN {
     );
     @can_start_digraph{@q} = (1) x scalar(@q);
 
-    my @trigraphs = qw( ... **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~ ^^= );
+    my @trigraphs =
+      qw( ... **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~ ^^= );
     @is_trigraph{@trigraphs} = (1) x scalar(@trigraphs);
 
     my @tetragraphs = qw( <<>> );
