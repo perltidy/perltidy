@@ -7730,7 +7730,7 @@ self-checking, but still, it is possible that an error could be
 introduced and go undetected.  Therefore, it is essential to make
 careful backups and to test reformatted scripts.
 
-The main current limitation is that perltidy does not scan modules
+The main limitation is that perltidy does not scan modules
 included with 'use' statements.  This makes it necessary to guess the
 context of any bare words introduced by such modules.  Perltidy has good
 guessing algorithms, but they are not infallible.  When it must guess,
@@ -7740,8 +7740,8 @@ If you encounter a bug, please report it.
 
 =item  B<What perltidy does not parse and format>
 
-Perltidy indents but does not reformat comments and C<qw> quotes.
-Perltidy does not in any way modify the contents of here documents or
+Perltidy indents but does not reformat comments.
+Perltidy does not modify the contents of here documents or
 quoted text, even if they contain source code.  (You could, however,
 reformat them separately).  Perltidy does not format 'format' sections
 in any way.  And, of course, it does not modify pod documents.

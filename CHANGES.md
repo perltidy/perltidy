@@ -4,6 +4,11 @@
 
     - Added support for the assigning logical xor ^^= operator
 
+    - For input paramters which allow a paren type to be selected, the
+      selection 'f' (function call) now includes functions called with
+      a direct arrow before the paren, '->('. This was an oversight which
+      has been corrected.
+
     - A new parameter --break-at-old-comma-types=s, or -boct=s, allows the
       parameter --break-at-old-comma-breakpoints (-boc) to be limited to
       selected container types.  For example, -boc -boct='f(' means break

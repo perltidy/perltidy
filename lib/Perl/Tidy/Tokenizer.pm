@@ -3634,10 +3634,30 @@ EOM
         # distinguished by 'block_type',
         # which will be blank for an anonymous hash
         else {
-
             $block_type =
               $self->code_block_type( $i_tok, $rtokens, $rtoken_type,
                 $max_token_index );
+
+            # Is a new lexical sub looking for its block sequence number?
+            # This is indicated with a special '911' signal.
+            if (   $block_type
+                && $ris_lexical_sub->{911}
+                && $last_nonblank_type eq 'S'
+                && substr( $block_type, 0, 3 ) eq 'sub' )
+            {
+                my ( $subname, $package ) = @{ $ris_lexical_sub->{911} };
+                if (   $block_type =~ /^sub $subname/
+                    && $is_my_our_state{$last_last_nonblank_token} )
+                {
+                    $ris_lexical_sub->{$subname}->{$package} =
+                      $next_sequence_number;
+                }
+
+                # Turn the signal off, even if we did not find the block being
+                # sought - it may not exist if the sub statement was a simple
+                # declaration without a block definition.
+                $ris_lexical_sub->{911} = undef;
+            }
 
             # patch to promote bareword type to function taking block
             if (   $block_type
@@ -4972,33 +4992,55 @@ EOM
         # Preliminary check for a lexical sub name
         #-----------------------------------------
         my $is_lexical_sub_type;
+
+        # Has this name been seen as a lexical sub?
         if ( my $rseqno_hash = $ris_lexical_sub->{$tok_kw} ) {
 
-            # Look back up the stack for this sub...
+            # Look back up the stack to see if it is still in scope
+            my @seqno_tested;
             my $cd_aa = $rcurrent_depth->[BRACE];
             foreach my $cd ( reverse( 0 .. $cd_aa ) ) {
-                my $seqno =
+                my $containing_seqno =
                     $cd
                   ? $rcurrent_sequence_number->[BRACE]->[$cd]
                   : SEQ_ROOT;
 
-                # Note that lexical subs use the sequence number as package name
-                if ( $rseqno_hash->{$seqno} ) {
-                    if ( $ris_constant->{$seqno}->{$tok_kw} ) {
+                push @seqno_tested, $containing_seqno;
+
+                # Lexical subs use their containing sequence number as package
+                if ( my $seqno_brace = $rseqno_hash->{$containing_seqno} ) {
+
+                    # This sub is still in scope...set the type
+                    if ( $ris_constant->{$containing_seqno}->{$tok_kw} ) {
                         $is_lexical_sub_type = 'C';
                     }
-                    elsif ( $ris_block_function->{$seqno}->{$tok_kw} ) {
+                    elsif (
+                        $ris_block_function->{$containing_seqno}->{$tok_kw} )
+                    {
                         $is_lexical_sub_type = 'G';
                     }
-                    elsif ( $ris_block_list_function->{$seqno}->{$tok_kw} ) {
+                    elsif (
+                        $ris_block_list_function->{$containing_seqno}->{$tok_kw}
+                      )
+                    {
                         $is_lexical_sub_type = 'G';
                     }
-                    elsif ( $ris_user_function->{$seqno}->{$tok_kw} ) {
+                    elsif ( $ris_user_function->{$containing_seqno}->{$tok_kw} )
+                    {
                         $is_lexical_sub_type = 'U';
                     }
                     else {
                         $is_lexical_sub_type = 'U';
                     }
+
+                    # But lexical subs do not apply within their defining code
+                    foreach my $seqno_test ( reverse(@seqno_tested) ) {
+                        if ( $seqno_test == $seqno_brace ) {
+                            $is_lexical_sub_type = undef;
+                            last;
+                        }
+                    }
+
                     last;
                 }
             }
@@ -9756,11 +9798,12 @@ EOM
         {
             $match   = 1;
             $subname = $2;
-
-            my $is_lexical_sub =
-              $last_nonblank_type eq 'k' && $last_nonblank_token eq 'my';
+            my $is_lexical_sub = $last_nonblank_type eq 'k'
+              && $is_my_our_state{$last_nonblank_token};
             if ( $is_lexical_sub && $1 ) {
-                $self->warning("'my' sub $subname cannot be in package '$1'\n");
+                $self->warning(
+"'$last_nonblank_token' sub $subname cannot be in package '$1'\n"
+                );
                 $is_lexical_sub = 0;
             }
 
@@ -9773,7 +9816,17 @@ EOM
                   ->[ $rcurrent_depth->[BRACE] ];
                 $seqno   = SEQ_ROOT if ( !defined($seqno) );
                 $package = $seqno;
-                $ris_lexical_sub->{$subname}->{$seqno} = 1;
+
+                # The value will eventually be the seqno of the opening curly
+                # brace of the definition (if any). We use -1 until we find it.
+                $ris_lexical_sub->{$subname}->{$package} = -1;
+
+                # Set a special signal to tell sub do_LEFT_CURLY_BRACKET to
+                # update this value if the next opening sub block brace is for
+                # this sub.  The reason we need this value is to avoid applying
+                # this new sub in its own definition block.  Note that '911' is
+                # not a possible sub name. Search for '911' for related code.
+                $ris_lexical_sub->{911} = [ $subname, $package ];
 
                 # Complain if lexical sub name hides a quote operator
                 if ( $is_q_qq_qw_qx_qr_s_y_tr_m{$subname} ) {
