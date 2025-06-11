@@ -4996,49 +4996,32 @@ EOM
         # Has this name been seen as a lexical sub?
         if ( my $rseqno_hash = $ris_lexical_sub->{$tok_kw} ) {
 
-            # Look back up the stack to see if it is still in scope
+            # Look back up the stack to see if it is still in scope.
+            # Use the deepest we find if there are multiple versions.
             my @seqno_tested;
             my $cd_aa = $rcurrent_depth->[BRACE];
             foreach my $cd ( reverse( 0 .. $cd_aa ) ) {
-                my $containing_seqno =
+                my $p_seqno =
                     $cd
                   ? $rcurrent_sequence_number->[BRACE]->[$cd]
                   : SEQ_ROOT;
 
-                push @seqno_tested, $containing_seqno;
+                push @seqno_tested, $p_seqno;
 
                 # Lexical subs use their containing sequence number as package
-                if ( my $seqno_brace = $rseqno_hash->{$containing_seqno} ) {
+                if ( my $seqno_brace = $rseqno_hash->{$p_seqno} ) {
 
-                    # This sub is still in scope...set the type
-                    if ( $ris_constant->{$containing_seqno}->{$tok_kw} ) {
-                        $is_lexical_sub_type = 'C';
-                    }
-                    elsif (
-                        $ris_block_function->{$containing_seqno}->{$tok_kw} )
-                    {
-                        $is_lexical_sub_type = 'G';
-                    }
-                    elsif (
-                        $ris_block_list_function->{$containing_seqno}->{$tok_kw}
-                      )
-                    {
-                        $is_lexical_sub_type = 'G';
-                    }
-                    elsif ( $ris_user_function->{$containing_seqno}->{$tok_kw} )
-                    {
-                        $is_lexical_sub_type = 'U';
-                    }
-                    else {
-                        $is_lexical_sub_type = 'U';
-                    }
+                    # This sub is in scope .. lookup its type
+                    $is_lexical_sub_type =
+                        $ris_constant->{$p_seqno}->{$tok_kw}            ? 'C'
+                      : $ris_block_function->{$p_seqno}->{$tok_kw}      ? 'G'
+                      : $ris_block_list_function->{$p_seqno}->{$tok_kw} ? 'G'
+                      : $ris_user_function->{$p_seqno}->{$tok_kw}       ? 'U'
+                      :                                                   'U';
 
                     # But lexical subs do not apply within their defining code
-                    foreach my $seqno_test ( reverse(@seqno_tested) ) {
-                        if ( $seqno_test == $seqno_brace ) {
-                            $is_lexical_sub_type = undef;
-                            last;
-                        }
+                    if ( grep { $_ == $seqno_brace } @seqno_tested ) {
+                        $is_lexical_sub_type = undef;
                     }
 
                     last;
