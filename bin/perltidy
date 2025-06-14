@@ -69,7 +69,7 @@ formatter which is described in L<"HTML OPTIONS">.
 
 =head1 EXAMPLES
 
-Here are some example perltidy commands followed by their meanings:
+Here are some example perltidy commands and their meanings:
 
 =over 4
 
@@ -7854,7 +7854,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20250311.08
+This man page documents perltidy version 20250616
 
 =head1 BUG REPORTS
 

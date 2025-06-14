@@ -623,7 +623,7 @@
 <dt id="Fix-error-check-caused-by--wn--iscl-case-c058"><b>Fix error check caused by -wn -iscl, case c058</b></dt>
 <dd>
 
-<p>Testing with random parameters triggered an an internal error check. This was caused by a recent coding change which allowed a weld across a side comment. The problem was in the development version, not in the latest released version, and is fixed with this update. This closes issue c058.</p>
+<p>Testing with random parameters triggered an internal error check. This was caused by a recent coding change which allowed a weld across a side comment. The problem was in the development version, not in the latest released version, and is fixed with this update. This closes issue c058.</p>
 
 <p>14 Aug 2021, 5a13886.</p>
 
@@ -754,7 +754,7 @@
 <dt id="Fix-edge-case-of-formatting-instability-b1189"><b>Fix edge case of formatting instability, b1189</b>.</dt>
 <dd>
 
-<p>Testing with random parameters produced a case of unstable formatting involving welding with parameter -notrim-qw. The problem was that the -notrim-qw flag converts a qw quote into a quote with fixed leading whitespace. The lines of these types of quotes which have no other code are are output early in the formatting process, since they have a fixed format, so welding does not work. In particular, the closing tokens cannot be welded if they are on a separate line. This also holds for all types of non-qw quotes. So welding can only be done if the first and last lines of a non-qw quote contain other code. A check for this was added.</p>
+<p>Testing with random parameters produced a case of unstable formatting involving welding with parameter -notrim-qw. The problem was that the -notrim-qw flag converts a qw quote into a quote with fixed leading whitespace. The lines of these types of quotes which have no other code are output early in the formatting process, since they have a fixed format, so welding does not work. In particular, the closing tokens cannot be welded if they are on a separate line. This also holds for all types of non-qw quotes. So welding can only be done if the first and last lines of a non-qw quote contain other code. A check for this was added.</p>
 
 <p>For example, in the following snippet the terminal &#39;}&#39; is alone on a line:</p>
 
@@ -845,7 +845,7 @@
 <dt id="Fix-edge-case-of-formatting-instability-b1184"><b>Fix edge case of formatting instability, b1184</b>.</dt>
 <dd>
 
-<p>Testing with random parameters produced a case of welding instability involving a tripple weld with parameters -wn, -vt=n, -lp. This update fixes the problem.</p>
+<p>Testing with random parameters produced a case of welding instability involving a triple weld with parameters -wn, -vt=n, -lp. This update fixes the problem.</p>
 
 <p>This fixes case b1184.</p>
 
@@ -865,7 +865,7 @@
 <dt id="Fix-edge-case-of-formatting-instability"><b>Fix edge case of formatting instability</b>.</dt>
 <dd>
 
-<p>Random testing with random input parameters produced cases of formatting instability involving welding with unusual parameter settings. This update makes a small tolarance adjustment to fix it.</p>
+<p>Random testing with random input parameters produced cases of formatting instability involving welding with unusual parameter settings. This update makes a small tolerance adjustment to fix it.</p>
 
 <p>This fixes cases b1180 b1181.</p>
 
@@ -1147,7 +1147,7 @@
         &quot;vendredi&quot;, &quot;samedi&quot;, &quot;dimanche&quot;
     ] ];</code></pre>
 
-<p>which is incorrect because it ignors the -bbsb flag. The corrected result is</p>
+<p>which is incorrect because it ignores the -bbsb flag. The corrected result is</p>
 
 <pre><code>    # NEW: OK
     # -sil=1 -bbsb=3 -wn
@@ -1229,7 +1229,7 @@
 <dt id="Fix-case-b1172-a-failure-to-converge"><b>Fix case b1172, a failure to converge</b></dt>
 <dd>
 
-<p>Random testing produced case b1172, a failure to converge with unusual parametrs. This update fixes this case. There are no other known cases of instability at the present time but testing continues.</p>
+<p>Random testing produced case b1172, a failure to converge with unusual parameters. This update fixes this case. There are no other known cases of instability at the present time but testing continues.</p>
 
 <p>10 Jul 2021, 47e7f9b.</p>
 
@@ -1296,7 +1296,7 @@
 <dt id="Fix-problem-caused-by-side-comment-after-pointer-part-2"><b>Fix problem caused by side comment after pointer, part 2</b></dt>
 <dd>
 
-<p>This is related to the previous issue, c037. The following snippet was misparsed at the old style &#39; package separater due to the side comment following the pointer.</p>
+<p>This is related to the previous issue, c037. The following snippet was misparsed at the old style &#39; package separator due to the side comment following the pointer.</p>
 
 <pre><code>    @ret
     =
@@ -1477,7 +1477,7 @@
 <dt id="Fixed-use-of-uninitialized-value"><b>Fixed use of uninitialized value</b></dt>
 <dd>
 
-<p>The previous Tokenizer update caused the use of an unitialized value when run on case b1053:</p>
+<p>The previous Tokenizer update caused the use of an uninitialized value when run on case b1053:</p>
 
 <pre><code> Use of uninitialized value $next_nonblank_token in pattern match (m//) at /home/steve/bin/Perl/Tidy/Tokenizer.pm line 7589.
  Use of uninitialized value $nn_nonblank_token in pattern match (m//) at /home/steve/bin/Perl/Tidy/Tokenizer.pm line 3723.
@@ -1488,7 +1488,7 @@
 <p>1 Jul 2021, ea139bd.</p>
 
 </dd>
-<dt id="Fix-token-type-of-colon-introducing-anonomyous-sub-attribute-list"><b>Fix token type of colon introducing anonomyous sub attribute list</b></dt>
+<dt id="Fix-token-type-of-colon-introducing-anonymous-sub-attribute-list"><b>Fix token type of colon introducing anonymous sub attribute list</b></dt>
 <dd>
 
 <p>In the following example</p>
@@ -1592,7 +1592,7 @@
 <dt id="Added-flag--atnl---add-terminal-newline-see-git-58"><b>Added flag -atnl, --add-terminal-newline, see git #58</b></dt>
 <dd>
 
-<p>This flag, which is enabled by default, allows perltidy to terminate the last line of the output stream with a newline character, regardless of whether or not the input stream was terminated with a newline character. If this flag is negated, with <b>-natnl</b>, then perltidy will add a terminal newline to the the output stream only if the input stream is terminated with a newline.</p>
+<p>This flag, which is enabled by default, allows perltidy to terminate the last line of the output stream with a newline character, regardless of whether or not the input stream was terminated with a newline character. If this flag is negated, with <b>-natnl</b>, then perltidy will add a terminal newline to the output stream only if the input stream is terminated with a newline.</p>
 
 <p>Negating this flag may be useful for manipulating one-line scripts intended for use on a command line.</p>
 
@@ -1668,7 +1668,7 @@
 <dt id="Add---code-skipping-option-see-git-65"><b>Add --code-skipping option, see git #65</b></dt>
 <dd>
 
-<p>Added a new option &#39;--code-skipping&#39;, requested in git #65, in which code between comment lines &#39;#&lt;&lt;V&#39; and &#39;#&gt;&gt;V&#39; is passed verbatim to the output stream without error checking. It is simmilar to --format skipping but there is no error checking, and is useful for skipping an extended syntax.</p>
+<p>Added a new option &#39;--code-skipping&#39;, requested in git #65, in which code between comment lines &#39;#&lt;&lt;V&#39; and &#39;#&gt;&gt;V&#39; is passed verbatim to the output stream without error checking. It is similar to --format skipping but there is no error checking, and is useful for skipping an extended syntax.</p>
 
 <p>16 Jun 2021, 99ec876.</p>
 
@@ -1726,7 +1726,7 @@
 <dt id="Remove-incorrect-warning-at-repeated-function-paren-call"><b>Remove incorrect warning at repeated function paren call</b></dt>
 <dd>
 
-<p>This update removes an incorrect error messagge at the construct &#39;)(&#39;. To illustrate, the following is a valid program:</p>
+<p>This update removes an incorrect error message at the construct &#39;)(&#39;. To illustrate, the following is a valid program:</p>
 
 <pre><code>    my @words = qw(To view this email as a web page go here);
     my @subs;
@@ -1852,7 +1852,7 @@
 <dt id="Added-optional-o-in-octal-number-definitions"><b>Added optional o in octal number definitions</b></dt>
 <dd>
 
-<p>An optional letter &#39;o&#39; or &#39;O&#39; in the octal representation of numbers, which was added in perl version 5.33.5, is now recogized. The leading zero is still required.</p>
+<p>An optional letter &#39;o&#39; or &#39;O&#39; in the octal representation of numbers, which was added in perl version 5.33.5, is now recognized. The leading zero is still required.</p>
 
 <p>For example:</p>
 
@@ -2196,7 +2196,7 @@
                      May June July August
     September October November December) )[$mon];</code></pre>
 
-<p>This is difficult to fix. The best solution is to place the closing qw qw containers on a separate line.</p>
+<p>This is difficult to fix. The best solution is to place the closing qw containers on a separate line.</p>
 
 <p>This fix is for case c002.</p>
 
@@ -2262,7 +2262,7 @@
 <dt id="Fix-vertical-alignment-issue-in-rt136416"><b>Fix vertical alignment issue in rt136416</b></dt>
 <dd>
 
-<p>This update fixes a problem with unwanted vertical alignment rasied in rt#136416. The example is</p>
+<p>This update fixes a problem with unwanted vertical alignment raised in rt#136416. The example is</p>
 
 <pre><code>    use File::Spec::Functions &#39;catfile&#39;, &#39;catdir&#39;;
     use Mojo::Base &#39;Mojolicious&#39;,        &#39;-signatures&#39;;</code></pre>
@@ -2412,7 +2412,7 @@
 <pre><code>    syntax error at /tmp/issues.t line 5, near &quot;/( &quot;
         (Might be a runaway multi-line // string starting on line 2)</code></pre>
 
-<p>The error is due to perl&#39;s weird parsing rules near a possible indrect object. This is a situation where perltidy must ignore a user spacing and line break request. This should have been done but in this case a flag to prevent this was not being propagated to later stages of formatting. This has been fixed.</p>
+<p>The error is due to perl&#39;s weird parsing rules near a possible indirect object. This is a situation where perltidy must ignore a user spacing and line break request. This should have been done but in this case a flag to prevent this was not being propagated to later stages of formatting. This has been fixed.</p>
 
 <p>20 Apr 2021, 4fbc69a.</p>
 
@@ -2532,7 +2532,7 @@
 <dt id="Unify-coding-for-welded-quotes-and-other-welded-containers"><b>Unify coding for welded quotes and other welded containers</b></dt>
 <dd>
 
-<p>Random testing produced some cases where welded quotes were not converging. These were found to be due to the same problem previouly encountered and fixed for normal containers. The problem was fixed by moving the corrected coding to a new common sub.</p>
+<p>Random testing produced some cases where welded quotes were not converging. These were found to be due to the same problem previously encountered and fixed for normal containers. The problem was fixed by moving the corrected coding to a new common sub.</p>
 
 <p>This update fixes cases b1066 b1067 b1071 b1079 b1080.</p>
 
@@ -2713,7 +2713,7 @@
 <dt id="Fix-problems-with-combinations-of--iob--lp"><b>Fix problems with combinations of -iob -lp</b></dt>
 <dd>
 
-<p>This is an correction to the update of 13 Mar 2021, 71adc77. Random testing produced several additional problems with convergence involving the combination -iob -lp. This update fixes the problem by overriding -iob at some breakpoins which are essential to the -lp parameter.</p>
+<p>This is an correction to the update of 13 Mar 2021, 71adc77. Random testing produced several additional problems with convergence involving the combination -iob -lp. This update fixes the problem by overriding -iob at some breakpoints which are essential to the -lp parameter.</p>
 
 <p>This update fixes these old cases: b1021 b1023</p>
 
@@ -2749,7 +2749,7 @@
 <dt id="Fix-rare-problem-with-combination--lp--wn--naws"><b>Fix rare problem with combination -lp -wn -naws</b></dt>
 <dd>
 
-<p>This update fixes case b1032 by includeing lines starting with &#39;if&#39;, &#39;or&#39;, and || among the stable breakpoints for welding when -lp -naws flags are also set.</p>
+<p>This update fixes case b1032 by including lines starting with &#39;if&#39;, &#39;or&#39;, and || among the stable breakpoints for welding when -lp -naws flags are also set.</p>
 
 <p>This update also modifies update 7a6be43 of 16 Mar 2021 to exclude list items when checking token lengths. This reduces changes to existing formatting while still fixing the problem in case b1031.</p>
 
@@ -2940,7 +2940,7 @@
     print H
     ;</code></pre>
 
-<p>The tokenizer was alternately parsing &#39;H&#39; as either possble indirect object, &#39;Z&#39;, or indirect object, &#39;Y&#39;. Two fixes were tested. The first was to modify the tokenizer to recognize a &#39;;&#39; as well as a space as a direct object terminator. An alternative fix is to not allowing a break before type &#39;Y&#39; so that the tokenizer kept parsing as type &#39;Y&#39;. Both fixes work, but the latter fix would change existing formatting by the -extrude option, so the first fix was used. With this fix, the stable state is &#39;State 1&#39; above.</p>
+<p>The tokenizer was alternately parsing &#39;H&#39; as either possible indirect object, &#39;Z&#39;, or indirect object, &#39;Y&#39;. Two fixes were tested. The first was to modify the tokenizer to recognize a &#39;;&#39; as well as a space as a direct object terminator. An alternative fix is to not allowing a break before type &#39;Y&#39; so that the tokenizer kept parsing as type &#39;Y&#39;. Both fixes work, but the latter fix would change existing formatting by the -extrude option, so the first fix was used. With this fix, the stable state is &#39;State 1&#39; above.</p>
 
 <p>This update is a generalization of the update <a href="#Fixed-blinker-related-to-line-break-at-indirect-object">&quot;Fixed blinker related to line break at indirect object&quot;</a> of 16 Jan 2021.</p>
 
@@ -2950,7 +2950,7 @@
 <dt id="Do-not-start-a-batch-with-a-blank-token"><b>Do not start a batch with a blank token</b></dt>
 <dd>
 
-<p>Perltidy does final formatting in discrete batches of tokens, where a batch is a continuous section of the total token list. A batch begins a new line and will be broken into one or more lines. If a batch starts with a blank token it will simply be skipped on on output. However, some rare problems have been found in random testing which can occur if a batch starts with a blank. An example is case b984 which has the following parameters:</p>
+<p>Perltidy does final formatting in discrete batches of tokens, where a batch is a continuous section of the total token list. A batch begins a new line and will be broken into one or more lines. If a batch starts with a blank token it will simply be skipped on output. However, some rare problems have been found in random testing which can occur if a batch starts with a blank. An example is case b984 which has the following parameters:</p>
 
 <pre><code>        # this is file &#39;b984.pro&#39;
         --block-brace-vertical-tightness=2
@@ -3027,7 +3027,7 @@
 <dt id="Restrict-previous-update-to-just--vmll"><b>Restrict previous update to just -vmll</b></dt>
 <dd>
 
-<p>The previous update was found to occasionally needlessly change existing formatting with very long long lines. So it is restricted to just when -vmll is set. For example, it is ok to keep the long quote following the opening paren in the following case.</p>
+<p>The previous update was found to occasionally needlessly change existing formatting with very long lines. So it is restricted to just when -vmll is set. For example, it is ok to keep the long quote following the opening paren in the following case.</p>
 
 <pre><code>  # perltidy -gnu
   ok( &quot;got to the end without dying (note without DEBUGGING passing this test means nothing)&quot;
@@ -3113,7 +3113,7 @@
 <dt id="Add-weld-rule-to-avoid-conflict-between--wn-and--bom"><b>Add weld rule to avoid conflict between -wn and -bom</b></dt>
 <dd>
 
-<p>Testing with ramdom input parameters produced states which were oscillating because of a conflict between the -wn and -bom parameters. The problem was resolved by giving the -bom parameter priority over -wn.</p>
+<p>Testing with random input parameters produced states which were oscillating because of a conflict between the -wn and -bom parameters. The problem was resolved by giving the -bom parameter priority over -wn.</p>
 
 <p>These cases are fixed with this update: b966 b973</p>
 
@@ -3245,7 +3245,7 @@
 <dt id="Fix-conflict-of--kbl-0-and-essential-space-after-cut"><b>Fix conflict of -kbl=0 and essential space after =cut</b></dt>
 <dd>
 
-<p>Random testing produced a case where a blank line after an =cut was alternately being deleted and added due to a conflict with the flag setting -keep-old-blank-lines=0. This was resolved by giving prioritiy to the essential blank line after the =cut line.</p>
+<p>Random testing produced a case where a blank line after an =cut was alternately being deleted and added due to a conflict with the flag setting -keep-old-blank-lines=0. This was resolved by giving priority to the essential blank line after the =cut line.</p>
 
 <p>This fixes case b860. 11 Feb 2021, 8c13609.</p>
 
@@ -3253,7 +3253,7 @@
 <dt id="Do-not-break-one-line-block-at-here-target"><b>Do not break one-line block at here target</b></dt>
 <dd>
 
-<p>A blinking state produced by random testing was traced to a line of coding which which unnecessarily prevented one-line blocks from being formed when a here-target was encountered. This has been fixed.</p>
+<p>A blinking state produced by random testing was traced to a line of coding which unnecessarily prevented one-line blocks from being formed when a here-target was encountered. This has been fixed.</p>
 
 <p>For example, the code block in the following contains a here target and was being broken into two lines:</p>
 
@@ -3897,7 +3897,7 @@
             );    # eps,p/e,div,yld,cap
         }</code></pre>
 
-<p>The following exampel shows an unexpected alignment in the cascade of trailing comments which are aligned but slowly separating from their closing containers:</p>
+<p>The following example shows an unexpected alignment in the cascade of trailing comments which are aligned but slowly separating from their closing containers:</p>
 
 <pre><code>    # OLD:
     {
@@ -4488,7 +4488,7 @@
         ...
     }</code></pre>
 
-<p>For the following specific contitions the block comment in line 2 could be converted into a hanging side comment, which is undesirable:</p>
+<p>For the following specific conditions the block comment in line 2 could be converted into a hanging side comment, which is undesirable:</p>
 
 <pre><code>   1. The line contains nothing except for a &#39;#&#39; with no leading space
    2. It follows a line with side comment
@@ -4500,7 +4500,7 @@
 <dt id="improved-convergence-test"><b>improved convergence test</b></dt>
 <dd>
 
-<p>A better test for convergence has been added. When iterations are requested, the new test will stop after the first pass if no changes in line break locations are made. Previously, at least two passes were required to verify convergnece unless the output stream had the same checksum as the input stream. Extensive testing has been made to verify the correctness of the new test. This update was made 23 Nov 2020, 29efb63.</p>
+<p>A better test for convergence has been added. When iterations are requested, the new test will stop after the first pass if no changes in line break locations are made. Previously, at least two passes were required to verify convergence unless the output stream had the same checksum as the input stream. Extensive testing has been made to verify the correctness of the new test. This update was made 23 Nov 2020, 29efb63.</p>
 
 </dd>
 <dt id="fixed-problem-with-vertical-alignments-involving-if-statements"><b>fixed problem with vertical alignments involving &#39;if&#39; statements</b></dt>
@@ -4624,7 +4624,7 @@
 
 <pre><code>  use perl6-alpha;</code></pre>
 
-<p>was broken into sepate lines</p>
+<p>was broken into separate lines</p>
 
 <pre><code>  use
   perl6
@@ -5018,7 +5018,7 @@
  Use of uninitialized value $cti in numeric eq (==) at /home/steve/bin/Perl/Tidy/Formatter.pm line 11936.
  Use of uninitialized value $cti in numeric eq (==) at /home/steve/bin/Perl/Tidy/Formatter.pm line 11944.</code></pre>
 
-<p>This was fixed 13 Sep 2020 in &#39;fixed unitialized variable problem &#39;, adb2096.</p>
+<p>This was fixed 13 Sep 2020 in &#39;fixed uninitialized variable problem &#39;, adb2096.</p>
 
 </dd>
 <dt id="fixed-uninitialized-value-reference3"><b>fixed uninitialized value reference</b></dt>
@@ -5029,7 +5029,7 @@
 <pre><code> substr outside of string at /home/steve/bin/Perl/Tidy/Tokenizer.pm line 7362.
  Use of uninitialized value in concatenation (.) or string at /home/steve/bin/Perl/Tidy/Tokenizer.pm line 7362.</code></pre>
 
-<p>This was fixed 13 Sep 2020 in &#39;fixed unitialized variable problem&#39;, 5bf49a3.</p>
+<p>This was fixed 13 Sep 2020 in &#39;fixed uninitialized variable problem&#39;, 5bf49a3.</p>
 
 </dd>
 <dt id="fixed-uninitialized-value-reference4"><b>fixed uninitialized value reference</b></dt>
@@ -5059,7 +5059,7 @@
 <dt id="uninitialized-index-referenced"><b>uninitialized index referenced</b></dt>
 <dd>
 
-<p>An unitialized index was referenced when running on a file of randomly generated text:</p>
+<p>An uninitialized index was referenced when running on a file of randomly generated text:</p>
 
 <pre><code>  Use of uninitialized value $K_oo in subtraction (-) at /home/steve/bin/Perl/Tidy/Formatter.pm line 7259.</code></pre>
 
@@ -5103,7 +5103,7 @@
  This is probably an error introduced by a recent programming change. 
  ==============================================================================</code></pre>
 
-<p>The deletion of the extra, spaced, comma had created an extra space in the token array which had not been forseen in the original programming. It was fixed 10 Sep 2020 in &quot;fixed very rare fault found with automated testing&quot;, eb1b1d9.</p>
+<p>The deletion of the extra, spaced, comma had created an extra space in the token array which had not been foreseen in the original programming. It was fixed 10 Sep 2020 in &quot;fixed very rare fault found with automated testing&quot;, eb1b1d9.</p>
 
 </dd>
 <dt id="Error-parsing-deprecated-variable"><b>Error parsing deprecated $# variable</b></dt>
@@ -5176,7 +5176,7 @@
 <dt id="Line-order-switched-at-start-of-quoted-text"><b>Line order switched at start of quoted text</b></dt>
 <dd>
 
-<p>This problem arose in several scripts involving the parameter --line-up-parentheses pluse one or more of the vertical tightness flags. It can be illustrated with the following snippet:</p>
+<p>This problem arose in several scripts involving the parameter --line-up-parentheses plus one or more of the vertical tightness flags. It can be illustrated with the following snippet:</p>
 
 <pre><code>    perltidy --line-up-parentheses --paren-vertical-tightness=1
 
@@ -5263,7 +5263,7 @@
 <dt id="uninitialized-value-message-found-7-Sep-2020"><b>uninitialized value message, found 7 Sep 2020</b></dt>
 <dd>
 
-<p>Unitialized values were referenced. An index was not being tested. Fixed 8 Sep 2020 in &quot;fix undefined variable&quot;, 9729965.</p>
+<p>Uninitialized values were referenced. An index was not being tested. Fixed 8 Sep 2020 in &quot;fix undefined variable&quot;, 9729965.</p>
 
 <pre><code> Use of uninitialized value $Kon in array element at /home/steve/bin/Perl/Tidy/Formatter.pm line 4022.
  Use of uninitialized value $Kon in array element at /home/steve/bin/Perl/Tidy/Formatter.pm line 4023.
@@ -5319,7 +5319,7 @@
 
 <p>Note the unusual situation of a comma followed by an &#39;||&#39;. Perltidy will format this satisfactorily but it will write an error message. The syntax is correct, however. Perl knows the prototype of the &#39;ok&#39; function, which is called here without parens, so the last comma marks the last arg and is needed to keep the || from attaching to the last arg.</p>
 
-<p>Full support of peren-less calls will probably never be implemented in perltidy because it would require that it parse all of the modules used to find the prototypes. This would make it impossible to run perltidy on small snippets of code from within an editor.</p>
+<p>Full support of paren-less calls will probably never be implemented in perltidy because it would require that it parse all of the modules used to find the prototypes. This would make it impossible to run perltidy on small snippets of code from within an editor.</p>
 
 <p>The problem can be avoid if parens are used:</p>
 

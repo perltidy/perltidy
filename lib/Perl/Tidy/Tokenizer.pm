@@ -33,7 +33,7 @@ use strict;
 use warnings;
 use English qw( -no_match_vars );
 
-our $VERSION = '20250311.08';
+our $VERSION = '20250616';
 
 use Carp;
 
@@ -5020,8 +5020,10 @@ EOM
                       :                                                   'U';
 
                     # But lexical subs do not apply within their defining code
-                    if ( grep { $_ == $seqno_brace } @seqno_tested ) {
+                    foreach (@seqno_tested) {
+                        next if ( $_ != $seqno_brace );
                         $is_lexical_sub_type = undef;
+                        last;
                     }
 
                     last;
