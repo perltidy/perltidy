@@ -24842,7 +24842,7 @@ sub extended_ci {
         {
             my $Kprev = $self->K_previous_nonblank($KK);
             $Kprev = $self->K_previous_nonblank($Kprev);
-            my $type_prev = $Kprev ? $rLL->[$Kprev]->[_TYPE_] : 'b';
+            my $type_prev = $Kprev ? $rLL->[$Kprev]->[_TYPE_] : ';';
             if ( $type_prev eq '=' || $type_prev eq ';' ) {
                 $block_with_ci = 0;
             }

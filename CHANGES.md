@@ -4,7 +4,7 @@
 
     - Added support for the assigning logical xor ^^= operator
 
-    - For input paramters which allow a paren type to be selected, the
+    - For input parameters which allow a paren type to be selected, the
       selection 'f' (function call) now includes functions called with
       a direct arrow before the paren, '->('. This was an oversight which
       has been corrected.
@@ -62,6 +62,12 @@
       not all of them are matched with calls.
 
     - Improved support for Object::Pad, see git #182.
+
+    - A limitation on the treatment  of lexical subs has been fixed. Previously,
+      a lexical sub with the same name as a quote operator would produce a warning,
+      and might cause a tokenization error.
+
+    - Here targets in quotes are now located and handled correctly.
 
 ## 2025 03 11
 

@@ -71,96 +71,120 @@ formatter which is described in L<"HTML OPTIONS">.
 
 Here are some example perltidy commands followed by their meanings:
 
-  perltidy somefile.pl
+=over 4
+
+=item *
 
 This will produce a file F<somefile.pl.tdy> containing the script reformatted
 using the default options, which approximate the style suggested in
 perlstyle(1).  The source file F<somefile.pl> is unchanged.
 
-  perltidy *.pl
+  perltidy somefile.pl
+
+=item *
 
 Execute perltidy on all F<.pl> files in the current directory with the
 default options.  The output will be in files with an appended F<.tdy>
 extension.  For any file with an error, there will be a file with extension
 F<.ERR>.
 
-  perltidy -b file1.pl file2.pl
+  perltidy *.pl
+
+
+=item *
 
 Modify F<file1.pl> and F<file2.pl> in place, and backup the originals to
 F<file1.pl.bak> and F<file2.pl.bak>.  If F<file1.pl.bak> and/or F<file2.pl.bak>
 already exist, they will be overwritten.
 
-  perltidy -b -bext='/' file1.pl file2.pl
+  perltidy -b file1.pl file2.pl
+
+=item *
 
 Same as the previous example except that the backup files F<file1.pl.bak> and F<file2.pl.bak> will be deleted if there are no errors.
 
-  perltidy -gnu somefile.pl
+  perltidy -b -bext='/' file1.pl file2.pl
 
-Execute perltidy on file F<somefile.pl> with a style which approximates the
-GNU Coding Standards for C programs.  The output will be F<somefile.pl.tdy>.
+=item *
 
-  perltidy -i=3 somefile.pl
+Execute perltidy on file F<somefile.pl>, with 4 columns for each level of
+continuation indentation (B<-ci=4>) instead of the default 2 columns, so that
+it is the same as the default primary indentation (B<-i=4>). There will not be
+any tabs in the reformatted script, except for any which already exist in
+comments, pod documents, quotes, and here documents.  Output will be
+F<somefile.pl.tdy>.
 
-Execute perltidy on file F<somefile.pl>, with 3 columns for each level of
-indentation (B<-i=3>) instead of the default 4 columns.  There will not be any
-tabs in the reformatted script, except for any which already exist in comments,
-pod documents, quotes, and here documents.  Output will be F<somefile.pl.tdy>.
+  perltidy -ci=4 somefile.pl
 
-  perltidy -i=3 -et=8 somefile.pl
+=item *
 
-Same as the previous example, except that leading whitespace will
-be entabbed with one tab character per 8 spaces.
+Same as the previous example, except that leading whitespace will be entabbed
+with one tab character per 4 spaces, and thus one tab for each indentation
+level.
 
-  perltidy -ce -l=72 somefile.pl
+  perltidy -ci=4 -et=4 somefile.pl
+
+=item *
 
 Execute perltidy on file F<somefile.pl> with all defaults except use "cuddled
 elses" (B<-ce>) and a maximum line length of 72 columns (B<-l=72>) instead of
 the default 80 columns.
 
-  perltidy -g somefile.pl
+  perltidy -ce -l=72 somefile.pl
 
-Execute perltidy on file F<somefile.pl> and save a log file F<somefile.pl.LOG>
-which shows the nesting of braces, parentheses, and square brackets at
-the start of every line.
+=item *
+
+Dump a table of comma-separated metrics for subroutines longer than 10 lines to
+F<blocks.csv> and immediately exit without formatting:
 
    perltidy -dbs -dbl=10 somefile.pl >blocks.csv
 
-This will dump a table of comma-separated metrics for subroutines longer than
-10 lines to F<blocks.csv>.
+=item *
+
+Dump a list of unused and reused lexical variable names to F<vars.txt>:
 
     perltidy -duv somefile.pl >vars.txt
 
-This will dump a list of unused and reused lexical variable names to
-F<vars.txt>.
-
-  perltidy -html somefile.pl
+=item *
 
 This will produce a file F<somefile.pl.html> containing the script with
 html markup.  The output file will contain an embedded style sheet in
 the C<<HEAD>> section which may be edited to change the appearance.
 
-  perltidy -html -css=mystyle.css somefile.pl
+  perltidy -html somefile.pl
+
+=item *
 
 This will produce a file F<somefile.pl.html> containing the script with
 html markup.  This output file will contain a link to a separate style
 sheet file F<mystyle.css>.  If the file F<mystyle.css> does not exist,
 it will be created.  If it exists, it will not be overwritten.
 
-  perltidy -html -pre somefile.pl
+  perltidy -html -css=mystyle.css somefile.pl
+
+=item *
 
 Write an html snippet with only the C<<PRE>> section to F<somefile.pl.html>.
 This is useful when code snippets are being formatted for inclusion in a
 larger web page.  No style sheet will be written in this case.
 
-  perltidy -html -ss >mystyle.css
+  perltidy -html -pre somefile.pl
+
+=item *
 
 Write a style sheet to F<mystyle.css> and exit.
 
-  perltidy -html -frm mymodule.pm
+  perltidy -html -ss >mystyle.css
+
+=item *
 
 Write html with a frame holding a table of contents and the source code.  The
 output files will be F<mymodule.pm.html> (the frame), F<mymodule.pm.toc.html>
 (the table of contents), and F<mymodule.pm.src.html> (the source code).
+
+  perltidy -html -frm mymodule.pm
+
+=back
 
 =head1 OPTIONS - OVERVIEW
 
@@ -170,10 +194,11 @@ whether flags are before or after any filenames.  However, the relative
 order of parameters is important, with later parameters overriding the
 values of earlier parameters.
 
-For each parameter, there is a long name and a short name.  The short
+For most parameters, there is a long name and a short name.  The short
 names are convenient for keyboard input, while the long names are
-self-documenting and therefore useful in scripts.  It is customary to
-use two leading dashes for long names, but one may be used.
+self-documenting and therefore useful in scripts.  B<It is customary to
+use two leading dashes for long names, but a single dash may be used
+for any parameter.>
 
 Most parameters which serve as on/off flags can be negated with a
 leading "n" (for the short name) or a leading "no" or "no-" (for the
@@ -680,7 +705,7 @@ The default was changed from B<-neos> to B<-eos> in versions after 20220217.
 If this change causes a program to start running incorrectly on encoded files,
 an emergency fix might be to set B<-neos>.  Additional information can be found
 in the man pages for the B<Perl::Tidy> module and also in
-L<https://github.com/perltidy/perltidy/blob/master/docs/eos_flag.md>.
+L<https://github.com/perltidy/perltidy/blob/master/docs/eos_flag.md>
 
 =item B<-gcs>,  B<--use-unicode-gcstring>
 
@@ -759,6 +784,18 @@ reformatting complex code structures, such as deeply nested ternary statements.
 =back
 
 =head2 Code Indentation Control
+
+The basic indentation model used by perltidy sets the indentation of a line equal to
+the sum of any number of primary indentation levels, each of which corresponds to
+the entry into a new container, plus one continuation level, which arises when a
+statement is broken across multiple lines. This is not the most general possible
+model, but it has been found to work well with most perl code while
+also allowing robust coding which avoids instabilities.
+
+The number of spaces corresponding to these primary and secondary (continuation)
+levels can be independently controlled. The number of spaces for the
+primary indentation is B<--indent-columns=n>, or B<-i=n>, as described above.
+The number of spaces for the secondary indentation is described in the next section.
 
 =over 4
 
@@ -2514,10 +2551,13 @@ Here are some points regarding this option:
 The special option B<--skip-formatting-except-id='-'>, or B<-sfei='-'>, means
 skip all formatting (since a tag named '-' does not exist).  This will allow
 the code to be scanned for problems, but the formatting will not be changed.
+The B<-notidy> parameter can also be used to skip formatting, but it exits at
+an earlier point in the process, so it runs faster but does not perform as many
+code checks.
 
 =item *
 
-The sections which are being skipped or formatted can be checked by
+The sections which are being skipped or formatted can be determined by
 dumping a log file with the B<-g> parameter.
 
 =item *
@@ -3339,7 +3379,7 @@ last represents a quoted list.  For example the string
 means do B<NOT> include square-brackets, braces, or quotes in any welds.  The only unspecified
 container is '(', so this string means that only welds involving parens will be made.
 
-To illustrate, following welded snippet consists of a chain of three welded
+To illustrate, the following welded snippet consists of a chain of three welded
 containers with types '(' '[' and 'q':
 
     # perltidy -wn
@@ -7660,13 +7700,14 @@ meanings for matching whatever precedes an opening paren:
 Most parameters also allow '1' or '*' to select all parens, and '0' to
 select no parens.
 
-For example, this expression matches type 'k' (keyword)
-but also 'w' (keyword or function) and 'F' (not a function):
+For example, the opening paren in this expression is preceded by the builtin
+keyword C<my> so it matches type 'k' (keyword) but also 'w' (keyword or
+function) and 'F' (not a function):
 
     my ( $name, $inx2, $id, $dir, $key);
 
-This expression matches type 'f' (function)
-and also 'w' (keyword or function) and 'K' (not a keyword):
+The opening paren in the following expression is a function call so it matches
+type 'f' (function) and also 'w' (keyword or function) and 'K' (not a keyword):
 
     $G->get_attribute( 'capacity', $u, $v );
 

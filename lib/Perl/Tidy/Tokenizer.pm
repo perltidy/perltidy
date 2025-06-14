@@ -9800,8 +9800,9 @@ EOM
                 $seqno   = SEQ_ROOT if ( !defined($seqno) );
                 $package = $seqno;
 
-                # The value will eventually be the seqno of the opening curly
-                # brace of the definition (if any). We use -1 until we find it.
+                # The value will eventually be the sequence number of the
+                # opening curly brace of the definition (if any). We use -1
+                # until we find it.
                 $ris_lexical_sub->{$subname}->{$package} = -1;
 
                 # Set a special signal to tell sub do_LEFT_CURLY_BRACKET to
