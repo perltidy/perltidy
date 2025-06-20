@@ -212,7 +212,7 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
         my $ofile   = "ofile.$ext";
         my $chkfile = "chkfile.$ext";
 
-        print STDERR "\n" . $hash . '>' x 60 . "\n";
+        ##print STDERR "\n" . $hash . '>' x 60 . "\n";
         print STDERR
           "$hash>Run '$nf.$np' : profile='$profile', ifile='$ifile'\n";
 

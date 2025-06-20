@@ -8669,6 +8669,14 @@ my$varstr=PDL::Char->new([
         -fill => 'white',
     );
 
+==> b1522 <==
+        $s = node(
+            $x, promise { &transform( $f, $s ) },
+        );
+        $s = node(
+            $x, promise { &transform( $f, $s ) },
+        );
+
 ==> b156 <==
 # State 1
 {

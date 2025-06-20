@@ -4466,6 +4466,25 @@ EOM
         if ( $rOpts_whitespace_cycle && $rOpts_whitespace_cycle <= 4 ) {
             $rOpts_delete_trailing_commas = 0;
         }
+
+        # Fix for b1522: check for possible unstable interactions with -btct
+        elsif (%trailing_comma_break_rules) {
+            my $delete_rules = $trailing_comma_rules{delete};
+            foreach my $key ( keys %{$delete_rules} ) {
+                my $delete_rule = $delete_rules->{$key};
+                next if ( !defined($delete_rule) );
+                next if ( $delete_rule->[0] ne 'i' );
+                my $break_rule = $trailing_comma_break_rules{$key};
+                next if ( !defined($break_rule) );
+
+                # Change delete option 'i' to 'b' if there is a break rule
+                # for the same trailing comma.
+                if ( $break_rule->[0] ) { $delete_rule->[0] = 'b' }
+            }
+        }
+        else {
+            ## no other cases yet
+        }
     }
 
     return;

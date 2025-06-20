@@ -12844,6 +12844,21 @@ my$varstr=PDL::Char->new([
 --delete-trailing-commas
 --break-at-trailing-comma-types='m'
 
+==> b1522.in <==
+        $s = node(
+            $x, promise { &transform( $f, $s ) },
+        );
+        $s = node(
+            $x,
+            promise { &transform( $f, $s ) }
+        );
+
+==> b1522.par <==
+--add-trailing-commas
+--want-trailing-commas='i'
+--delete-trailing-commas
+--break-at-trailing-comma-types='b'
+
 ==> b156.in <==
 # State 1
 {
