@@ -12462,6 +12462,8 @@ sub set_CODE_type {
 
     my $rOpts_format_skipping_begin = $rOpts->{'format-skipping-begin'};
     my $rOpts_format_skipping_end   = $rOpts->{'format-skipping-end'};
+    my $rOpts_detect_format_skipping_from_start =
+      $rOpts->{'detect-format-skipping-from-start'};
     my $rOpts_static_block_comment_prefix =
       $rOpts->{'static-block-comment-prefix'};
     my $rOpts_skip_formatting_except_id = $rOpts->{'skip-formatting-except-id'};
@@ -12471,6 +12473,7 @@ sub set_CODE_type {
     my @ix_side_comments;
 
     my $In_format_skipping_section = $Inverted_skip_mode ? 1 : 0;
+    my $saw_format_skipping_begin;
     my $Saw_VERSION_in_this_file   = 0;
     my $has_side_comment           = 0;
     my $last_line_had_side_comment = 0;
@@ -12542,6 +12545,7 @@ sub set_CODE_type {
                 /$format_skipping_pattern_begin/
               )
             {
+                $saw_format_skipping_begin = 1;
                 my $input_line_no = $line_of_tokens->{_line_number};
                 if ( !$In_format_skipping_section ) {
 
@@ -12589,6 +12593,7 @@ sub set_CODE_type {
                     substr( $rLL->[$Kfirst]->[_TOKEN_], 0, 4 ) eq '#>>>'
                     || $rOpts_format_skipping_end
                 )
+                && $rOpts_format_skipping
                 && ( $rLL->[$Kfirst]->[_TOKEN_] . SPACE ) =~
                 /$format_skipping_pattern_end/
               )
@@ -12606,7 +12611,11 @@ sub set_CODE_type {
                         next;
                     }
                     else {
-                        ## ignore useless #>>> not following #<<<
+
+                        # '#>>>' not following '#<<<' in inverted mode
+                        write_logfile_entry(
+"Line $input_line_no: Ignoring #>>> not following #<<<\n"
+                        );
                     }
                 }
                 else {
@@ -12617,7 +12626,27 @@ sub set_CODE_type {
                         );
                     }
                     else {
-                        ## ignore useless #>>> not following #<<<
+
+                        # '#>>>' not following '#<<<' in normal mode
+                        # Check for format skipping from start of file
+                        if (  !$saw_format_skipping_begin
+                            && $rOpts_detect_format_skipping_from_start )
+                        {
+                            foreach my $ix ( 0 .. $ix_line - 1 ) {
+                                $rlines->[$ix]->{_line_type} = 'FS';
+                            }
+                            @ix_side_comments = ();
+                            write_logfile_entry(
+"Line $input_line_no: Exiting automatically detected format-skipping section\n"
+                            );
+                            $CODE_type = 'FS';
+                            next;
+                        }
+                        else {
+                            write_logfile_entry(
+"Line $input_line_no: Ignoring #>>> not following #<<<\n"
+                            );
+                        }
                     }
                 }
             }
@@ -16009,7 +16038,8 @@ sub respace_tokens {
 
             # The first token should always have been given index 0 by sub
             # write_line()
-            if ( $Kfirst != 0 ) {
+            # - but skip this check if we started in format skipping
+            if ( $Kfirst != 0 && $last_line_type ne 'FS' ) {
                 Fault("Program Bug: first K is $Kfirst but should be 0");
             }
         }

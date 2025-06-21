@@ -3,6 +3,9 @@
 # Contents:
 #1 boct.boct
 #2 boct.def
+#3 dfsfs.def
+#4 dfsfs.dfsfs1
+#5 dfsfs.dfsfs2
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -23,7 +26,12 @@ BEGIN {
         'boct' => <<'----------',
 -boc -boct='f( ;'
 ----------
-        'def' => "",
+        'def'    => "",
+        'dfsfs1' => "-dsc",
+        'dfsfs2' => <<'----------',
+-dsc
+-ndfsfs
+----------
     };
 
     ############################
@@ -49,6 +57,23 @@ my $val = func(
 my $prefix = substr $exception,
       0,
       length $REQUIRED_LENGTH;
+----------
+
+        'dfsfs' => <<'----------',
+# test detect-format-skipping-from-start
+my @list1; # this will not be deleted with -dsc
+   @list1 = (1,
+             1, 1,
+             1, 2, 1,
+             1, 3, 3, 1,
+             1, 4, 6, 4, 1,);
+#>>>
+my @list2; # this will be deleted with -dsc
+   @list2 = (1,
+             1, 1,
+             1, 2, 1,
+             1, 3, 3, 1,
+             1, 4, 6, 4, 1,);
 ----------
     };
 
@@ -89,6 +114,54 @@ my $val = func( 1, 1, 1, 1, 2, 1, );
 # uncontained commas: test -boct=';'
 my $prefix = substr $exception, 0, length $REQUIRED_LENGTH;
 #2...........
+        },
+
+        'dfsfs.def' => {
+            source => "dfsfs",
+            params => "def",
+            expect => <<'#3...........',
+# test detect-format-skipping-from-start
+my @list1; # this will not be deleted with -dsc
+   @list1 = (1,
+             1, 1,
+             1, 2, 1,
+             1, 3, 3, 1,
+             1, 4, 6, 4, 1,);
+#>>>
+my @list2;    # this will be deleted with -dsc
+@list2 = ( 1, 1, 1, 1, 2, 1, 1, 3, 3, 1, 1, 4, 6, 4, 1, );
+#3...........
+        },
+
+        'dfsfs.dfsfs1' => {
+            source => "dfsfs",
+            params => "dfsfs1",
+            expect => <<'#4...........',
+# test detect-format-skipping-from-start
+my @list1; # this will not be deleted with -dsc
+   @list1 = (1,
+             1, 1,
+             1, 2, 1,
+             1, 3, 3, 1,
+             1, 4, 6, 4, 1,);
+#>>>
+my @list2;
+@list2 = ( 1, 1, 1, 1, 2, 1, 1, 3, 3, 1, 1, 4, 6, 4, 1, );
+#4...........
+        },
+
+        'dfsfs.dfsfs2' => {
+            source => "dfsfs",
+            params => "dfsfs2",
+            expect => <<'#5...........',
+# test detect-format-skipping-from-start
+my @list1;
+@list1 = ( 1, 1, 1, 1, 2, 1, 1, 3, 3, 1, 1, 4, 6, 4, 1, );
+
+#>>>
+my @list2;
+@list2 = ( 1, 1, 1, 1, 2, 1, 1, 3, 3, 1, 1, 4, 6, 4, 1, );
+#5...........
         },
     };
 

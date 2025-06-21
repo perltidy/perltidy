@@ -3726,6 +3726,7 @@ sub generate_options {
     $add_option->( 'format-skipping',                     'fs',    '!' );
     $add_option->( 'format-skipping-begin',               'fsb',   '=s' );
     $add_option->( 'format-skipping-end',                 'fse',   '=s' );
+    $add_option->( 'detect-format-skipping-from-start',   'dfsfs', '!' );
     $add_option->( 'hanging-side-comments',               'hsc',   '!' );
     $add_option->( 'indent-block-comments',               'ibc',   '!' );
     $add_option->( 'indent-spaced-block-comments',        'isbc',  '!' );
@@ -4040,6 +4041,7 @@ sub generate_options {
       backup-file-extension=bak
       code-skipping
       format-skipping
+      detect-format-skipping-from-start
 
       pod2html
       html-table-of-contents
