@@ -1,5 +1,13 @@
 # Perltidy Change Log
 
+## 2025 06 16.01
+
+    - Updated for issue git #186: if a closing format skipping comment
+      '#>>>' is encountered before any '#<<<' is seen, then format
+      skipping is assumed to start with the first line of the file.
+      Use --nodetect-format-skipping-from-start or -ndfsfs to prevent
+      this check.
+
 ## 2025 06 16
 
     - Added support for the assigning logical xor ^^= operator
