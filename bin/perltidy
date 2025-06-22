@@ -2498,13 +2498,22 @@ ending marker for format skipping.  The default is equivalent to
 The beginning and ending strings may be the same, but it is preferable
 to make them different for clarity.
 
+=item B<-fsfs>,  B<--format-skipping-from-start>
+
+When this flag is set, and format skipping is enabled, format skipping begins
+from the start of a file even though there is no beginning format skipping
+comment.  In other words, setting this flag is like having a beginning
+marker line '#<<<' just before the first line of the file.  Format skipping
+will continue until an ending comment is reached.  If no ending comment is
+found, then formatting will be skipped for the entire file.
+
 =item B<-dfsfs>,  B<--detect-format-skipping-from-start>
 
 If perltidy encounters a format skipping B<end> string before any B<begin>
-string, the by default it will assume that format skipping begins with the
-first line of the file. Use B<-ndfsfs>, or
-B<--nodetect-format-skipping-from-start> to avoid making this assumption. See
-git #186 for a discussion.
+string, then by default it will assume that format skipping begins with the
+first line of the file, even if the previous flag B<-fsfs> is not set. Use
+B<-ndfsfs>, or B<--nodetect-format-skipping-from-start> to avoid making this
+assumption. See git #186 for a discussion.
 
 =item B<-cs>,  B<--code-skipping>
 
@@ -2526,6 +2535,14 @@ The default is equivalent to -csb='#<<V'.
 
 This may be used to change the ending comment for a B<--code-skipping> section, and its use is similar to the B<-fse=string>.
 The default is equivalent to -cse='#>>V'.
+
+=item B<-csfs>,  B<--code-skipping-from-start>
+
+When this flag is set, and code skipping is enabled, code skipping begins from
+the start of a file even though there is no beginning code skipping comment.
+In other words, setting this flag is like having a beginning marker line
+'#<<V' just before the first line of the file.  Code skipping will continue
+until an ending comment is reached.
 
 =back
 
@@ -7746,24 +7763,24 @@ The following list shows all short parameter names which allow a prefix
  D      aia    altc   ame    anl    asbl   asc    ast    asu    atc
  atnl   aws    b      baa    baao   bar    bbao   bbb    bbc    bbs
  bl     bli    boa    boc    bok    bol    bom    bos    bot    cblx
- ce     conv   cpb    cpbw   cs     csc    cscb   cscw   dac    dbc
- dbs    dcbl   dcsc   ddf    dhk    dia    dior   dln    dltc   dma
- dmcp   dmr    dnl    dop    dp     dpro   drc    dsc    dsk    dsm
- dsn    dtc    dtco   dtt    duk    duv    dwic   dwls   dwrs   dws
- eos    f      fpva   frm    fs     fso    gcs    hbc    hbcm   hbco
- hbh    hbhh   hbi    hbj    hbk    hbm    hbn    hbp    hbpd   hbpu
- hbq    hbs    hbsc   hbv    hbw    hent   hic    hicm   hico   hih
- hihh   hii    hij    hik    him    hin    hip    hipd   hipu   hiq
- his    hisc   hiv    hiw    hsc    html   ibc    icb    icp    ils
- iob    ipc    isbc   iscl   kgb    kgbd   kgbi   kis    lal    log
- lop    lp     lsl    mci    mem    nib    ohbr   okw    ola    olc
- oll    olq    opr    opt    osbc   osbr   otr    ple    pod    pvl
- q      qwaf   sac    sbc    sbl    scbb   schb   scp    scsb   sct
- se     sfp    sfs    skp    sob    sobb   sohb   sop    sosb   sot
- ssc    st     sts    t      tac    tbc    toc    tp     tqw    trp
- ts     tsc    tso    vbc    vc     viu    vmll   vsc    vsn    vwe
- w      wfc    wia    wma    wme    wmr    wn     wsk    wuk    x
- xbt    xci    xlp    xs
+ ce     conv   cpb    cpbw   cs     csc    cscb   cscw   csfs   dac
+ dbc    dbs    dcbl   dcsc   ddf    dfsfs  dhk    dia    dior   dln
+ dltc   dma    dmcp   dmr    dnl    dop    dp     dpro   drc    dsc
+ dsk    dsm    dsn    dtc    dtco   dtt    duk    duv    dwic   dwls
+ dwrs   dws    eos    f      fpva   frm    fs     fsfs   fso    gcs
+ hbc    hbcm   hbco   hbh    hbhh   hbi    hbj    hbk    hbm    hbn
+ hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv    hbw    hent   hic
+ hicm   hico   hih    hihh   hii    hij    hik    him    hin    hip
+ hipd   hipu   hiq    his    hisc   hiv    hiw    hsc    html   ibc
+ icb    icp    ils    iob    ipc    isbc   iscl   kgb    kgbd   kgbi
+ kis    lal    log    lop    lp     lsl    mci    mem    nib    ohbr
+ okw    ola    olc    oll    olq    opr    opt    osbc   osbr   otr
+ ple    pod    pvl    q      qwaf   sac    sbc    sbl    scbb   schb
+ scp    scsb   sct    se     sfp    sfs    skp    sob    sobb   sohb
+ sop    sosb   sot    ssc    st     sts    t      tac    tbc    toc
+ tp     tqw    trp    ts     tsc    tso    vbc    vc     viu    vmll
+ vsc    vsn    vwe    w      wfc    wia    wma    wme    wmr    wn
+ wsk    wuk    x      xbt    xci    xlp    xs
 
 Equivalently, the prefix 'no' or 'no-' on the corresponding long names may be
 used.

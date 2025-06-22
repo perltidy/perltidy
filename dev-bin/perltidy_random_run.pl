@@ -192,8 +192,8 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
     my ( $chkfile_case_min, $chkfile_case_max );
     my $ofile_size_min_expected = 0;
 
-    my $error_flag    = 0;
-    my $efile_count   = 0;
+    my $error_flag  = 0;
+    my $efile_count = 0;
     my $has_starting_error;
     my $starting_syntax_ok = 1;
     my $tmperr             = "STDERR.txt";
@@ -213,14 +213,14 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
         my $chkfile = "chkfile.$ext";
 
         ##print STDERR "\n" . $hash . '>' x 60 . "\n";
+        print STDERR "\n";
         print STDERR
           "$hash>Run '$nf.$np' : profile='$profile', ifile='$ifile'\n";
 
         if ( -e $tmperr ) { unlink $tmperr }
 
         #my $cmd = "$binfile <$ifile >$ofile -pro=$profile 2>$tmperr";
-        $cmd =
-          "$binfile <$ifile >$ofile -pro=$profile $append_flags 2>$tmperr";
+        $cmd = "$binfile <$ifile >$ofile -pro=$profile $append_flags 2>$tmperr";
         system_echo( $cmd, $hash );
         my $efile   = "perltidy.ERR";
         my $logfile = "perltidy.LOG";
@@ -329,7 +329,7 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
         # Do a syntax check if requested
         if ( $do_syntax_check && $starting_syntax_ok ) {
             my $synfile = "$ofile.syntax";
-            $cmd     = "perl -c $ofile 2>$synfile";
+            $cmd = "perl -c $ofile 2>$synfile";
             system_echo( $cmd, $hash );
             my $fh;
             if ( open( $fh, '<', $synfile ) ) {

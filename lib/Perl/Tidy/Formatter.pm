@@ -2543,8 +2543,10 @@ sub check_skip_formatting_except_id {
     my $opt      = $rOpts->{$opt_name};
     return if ( !defined($opt) );
 
-    # Option should match \w except -sfei='-' which means skip everything
-    if ( $opt =~ /\W/g && $opt ne '-' ) {
+    # Option should match \w except
+    #    -sfei='-' which means skip everything
+    #    -sfei='*' which means match everything
+    if ( $opt =~ /\W/g && $opt ne '-' && $opt ne '*' ) {
         my $pos = pos($opt);
         my $msg = <<EOM;
 --$opt_name='$opt'   : expecting only letters and digits
@@ -12472,7 +12474,10 @@ sub set_CODE_type {
     # Remember indexes of lines with side comments
     my @ix_side_comments;
 
-    my $In_format_skipping_section = $Inverted_skip_mode ? 1 : 0;
+    my $In_format_skipping_section = $rOpts->{'format-skipping-from-start'};
+    if ($Inverted_skip_mode) {
+        $In_format_skipping_section = !$In_format_skipping_section;
+    }
     my $saw_format_skipping_begin;
     my $Saw_VERSION_in_this_file   = 0;
     my $has_side_comment           = 0;
@@ -12567,8 +12572,11 @@ sub set_CODE_type {
                         # We are at a '#<<<' in format skipping inverted mode;
                         # start formatting (stop format skipping) if id matches
                         my $token = $rLL->[$Kfirst]->[_TOKEN_];
-                        if (   $token =~ /\s+id=(\w+)/
-                            && $1 eq $rOpts_skip_formatting_except_id )
+                        if (
+                            $rOpts_skip_formatting_except_id eq '*'
+                            || (   $token =~ /\s+id=(\w+)/
+                                && $1 eq $rOpts_skip_formatting_except_id )
+                          )
                         {
                             $In_format_skipping_section = 0;
                             write_logfile_entry(
@@ -12633,13 +12641,17 @@ sub set_CODE_type {
                             && $rOpts_detect_format_skipping_from_start )
                         {
                             foreach my $ix ( 0 .. $ix_line - 1 ) {
-                                $rlines->[$ix]->{_line_type} = 'FS';
+                                my $lot = $rlines->[$ix];
+                                if ( $lot->{_line_type} eq 'CODE' ) {
+                                    $lot->{_code_type} = 'FS';
+                                }
                             }
                             @ix_side_comments = ();
                             write_logfile_entry(
 "Line $input_line_no: Exiting automatically detected format-skipping section\n"
                             );
-                            $CODE_type = 'FS';
+                            $saw_format_skipping_begin = 1;
+                            $CODE_type                 = 'FS';
                             next;
                         }
                         else {
@@ -18848,9 +18860,14 @@ EOM
 
         # It is only safe to trim the actual line text if the input
         # line had a terminal blank token. Otherwise, we may be
-        # in a quote.
+        # in a quote.  Fix for issue c500:
+        #  -leave trailing blanks if line goes out verbatim (FS or VB)
+        #  -add a newline back
         if ( $line_of_tokens->{_ended_in_blank_token} ) {
-            $line_of_tokens->{_line_text} =~ s/\s+$//;
+            my $CODE_type = $line_of_tokens->{_code_type};
+            if ( $CODE_type ne 'FS' && $CODE_type ne 'VB' ) {
+                $line_of_tokens->{_line_text} =~ s/\s+$/\n/;
+            }
         }
         $line_of_tokens->{_rK_range} = [ $Kfirst, $Klast ];
 

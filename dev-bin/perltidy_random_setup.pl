@@ -1088,6 +1088,8 @@ EOM
           closing-token-indentation
 
           line-up-parentheses
+          format-skipping-from-start
+          code-skipping-from-start
         );
 
         # Added line-up-parentheses in c495 because it overlaps with
@@ -1228,8 +1230,8 @@ sub fix_conflicts {
 
     # We will use -iob a small fraction of the time
     my $FRAC_IOB = 0.2;
-    my $frac    = rand(1);
-    my $use_iob = $frac < $FRAC_IOB;
+    my $frac     = rand(1);
+    my $use_iob  = $frac < $FRAC_IOB;
     if ($use_iob) {
         @is_conflict{@iob_conflicts} = (1) x scalar(@iob_conflicts);
     }

@@ -2,11 +2,22 @@
 
 ## 2025 06 16.01
 
-    - Updated for issue git #186: if a closing format skipping comment
+    - Update for issue git #186: if a closing format skipping comment
       '#>>>' is encountered before any '#<<<' is seen, then format
       skipping is assumed to start with the first line of the file.
       Use --nodetect-format-skipping-from-start or -ndfsfs to prevent
       this check.
+
+    - Added option --code-skipping-from-start, or -csfs. This causes
+      code-skipping to begin from the start of a file even though there
+      is no starting marker comment, '#<<V'. Likewise, added
+      --format-skipping-from-start, or -fsfs. This causes format skipping
+      to begin from the start of a file even though there is no starting
+      marker comment, '#<<<'.
+
+    - Fixed a bug involving the --format-skipping option. If a line in
+      the skipped code had trailing blanks, then the newline at the end
+      of that line was lost.
 
 ## 2025 06 16
 

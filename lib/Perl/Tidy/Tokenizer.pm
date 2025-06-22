@@ -592,20 +592,22 @@ EOM
     # _hit_bug_              program bug detected
 
     my $self = [];
-    $self->[_rhere_target_list_]        = [];
-    $self->[_in_here_doc_]              = 0;
-    $self->[_here_doc_target_]          = EMPTY_STRING;
-    $self->[_here_quote_character_]     = EMPTY_STRING;
-    $self->[_in_data_]                  = 0;
-    $self->[_in_end_]                   = 0;
-    $self->[_in_format_]                = 0;
-    $self->[_in_error_]                 = 0;
-    $self->[_in_trouble_]               = 0;
-    $self->[_warning_count_]            = 0;
-    $self->[_html_tag_count_]           = 0;
-    $self->[_in_pod_]                   = 0;
-    $self->[_in_code_skipping_]         = 0;
-    $self->[_in_format_skipping_]       = 0;
+    $self->[_rhere_target_list_]    = [];
+    $self->[_in_here_doc_]          = 0;
+    $self->[_here_doc_target_]      = EMPTY_STRING;
+    $self->[_here_quote_character_] = EMPTY_STRING;
+    $self->[_in_data_]              = 0;
+    $self->[_in_end_]               = 0;
+    $self->[_in_format_]            = 0;
+    $self->[_in_error_]             = 0;
+    $self->[_in_trouble_]           = 0;
+    $self->[_warning_count_]        = 0;
+    $self->[_html_tag_count_]       = 0;
+    $self->[_in_pod_]               = 0;
+    $self->[_in_code_skipping_] =
+      $rOpts->{'code-skipping-from-start'} && $rOpts_code_skipping;
+    $self->[_in_format_skipping_] =
+      $rOpts->{'format-skipping-from-start'} && $rOpts_format_skipping;
     $self->[_in_attribute_list_]        = 0;
     $self->[_in_quote_]                 = 0;
     $self->[_quote_target_]             = EMPTY_STRING;

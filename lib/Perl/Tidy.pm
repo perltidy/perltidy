@@ -3723,9 +3723,11 @@ sub generate_options {
     $add_option->( 'code-skipping',                       'cs',    '!' );
     $add_option->( 'code-skipping-begin',                 'csb',   '=s' );
     $add_option->( 'code-skipping-end',                   'cse',   '=s' );
+    $add_option->( 'code-skipping-from-start',            'csfs',  '!' );
     $add_option->( 'format-skipping',                     'fs',    '!' );
     $add_option->( 'format-skipping-begin',               'fsb',   '=s' );
     $add_option->( 'format-skipping-end',                 'fse',   '=s' );
+    $add_option->( 'format-skipping-from-start',          'fsfs',  '!' );
     $add_option->( 'detect-format-skipping-from-start',   'dfsfs', '!' );
     $add_option->( 'hanging-side-comments',               'hsc',   '!' );
     $add_option->( 'indent-block-comments',               'ibc',   '!' );
