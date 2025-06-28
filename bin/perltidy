@@ -2419,15 +2419,8 @@ this:
 
 (The last character V is like a < or > rotated 90 degrees).
 Additional text may appear on the special comment lines provided that it is
-separated from the marker by at least one space to highlight the sign, as in
+separated from the marker by at least one space, as in
 the above examples.
-
-Any number of code-skipping or format-skipping sections may appear in a file.
-If an opening code-skipping or format-skipping comment is not followed by a
-corresponding closing comment, then skipping continues to the end of the file.
-If a closing code-skipping or format-skipping comment appears in a file but
-does not follow a corresponding opening comment, then it is treated as an
-ordinary comment without any special meaning.
 
 It is recommended to use B<--code-skipping> only if you need to hide a block of
 an extended syntax which would produce errors if parsed by perltidy, and use
@@ -2437,6 +2430,29 @@ limitations on which lines to which it can be applied.  The B<--code-skipping>
 option, on the other hand, does not do error checking and its use is more
 restrictive because the code which remains, after skipping the marked lines,
 must be syntactically correct code with balanced containers.
+
+Any number of code-skipping or format-skipping sections may appear in a file.
+
+For B<format-skipping>, a basic rule is that beginning and ending markers must
+alternate from the beginning to the end the file (i.e. they do not stack). If
+they do not alternate, then a warning will occur and formatting will not be
+done.
+Normally, the first marker will be a beginning marker and the last marker will
+be an ending marker, but this is not necessary. If the last marker is a
+beginning marker, then skipping continues to the end of the file. If the first
+marker is an ending marker, then format skipping starts at the first line and
+continues to that ending marker (unless the
+B<--detect-format-skipping-from-start> flag has been turned off; see below).
+
+For B<code-skipping>, the rules are more primitive because perltidy is
+simultaneously parsing the text and looking for markers.  There are two cases,
+depending on the companion flag B<--code-skipping-from-start>.  If this flag
+has not been set, which is the default, then code skipping begins when a
+beginning marker is encountered and continues until an ending marker or the end
+of the file is reached.  If the B<--code-skipping-from-start> flag is set, then
+code skipping begins with the first line and continues until an ending marker
+or the end of the file is reached. In both cases, code skipping will start
+again if a beginning marker is encountered.
 
 These features should be used sparingly to avoid littering code with markers,
 but they can be helpful for working around occasional problems.
@@ -2453,14 +2469,11 @@ should not normally be needed.
 
 =item B<-fs>,  B<--format-skipping>
 
-As explained above, this flag, which is enabled by default, causes any code
-between special beginning and ending comment markers to be passed to the output
-without formatting.  The code between the comments is still checked for errors
-however.  The default beginning marker is #<<< and the default ending marker is
-#>>>.
-
-Format skipping begins when a format skipping beginning comment is seen and
-continues until a format-skipping ending comment is found.
+This is the master switch for format skipping.  As explained above, this flag,
+which is enabled by default, causes any code between special beginning and
+ending comment markers to be passed to the output without formatting.  The code
+between the comments is still checked for errors however.  The default
+beginning marker is #<<< and the default ending marker is #>>>.
 
 This feature can be disabled with B<-nfs>.   This should not normally be necessary.
 
@@ -2476,8 +2489,7 @@ command line can be difficult.
 If changed comment markers do not appear to be working, use the B<-log> flag and
 examine the F<.LOG> file to see if and where they are being detected.
 
-The B<-fsb=string> parameter may be used to change the beginning marker for
-format skipping.  The default is equivalent to -fsb='#<<<'.  The string that
+The default is equivalent to -fsb='#<<<'.  The string that
 you enter must begin with a # and should be in quotes as necessary to get past
 the command shell of your system.  It is actually the leading text of a pattern
 that is constructed by appending a '\s', so you must also include backslashes
@@ -2495,33 +2507,22 @@ The B<-fse=string> is the corresponding parameter used to change the
 ending marker for format skipping.  The default is equivalent to
 -fse='#<<<'.
 
-The beginning and ending strings may be the same, but it is preferable
-to make them different for clarity.
-
-=item B<-fsfs>,  B<--format-skipping-from-start>
-
-When this flag is set, and format skipping is enabled, format skipping begins
-from the start of a file even though there is no beginning format skipping
-comment.  In other words, setting this flag is like having a beginning
-marker line '#<<<' just before the first line of the file.  Format skipping
-will continue until an ending comment is reached.  If no ending comment is
-found, then formatting will be skipped for the entire file.
-
 =item B<-dfsfs>,  B<--detect-format-skipping-from-start>
 
-If perltidy encounters a format skipping B<end> string before any B<begin>
-string, then by default it will assume that format skipping begins with the
-first line of the file, even if the previous flag B<-fsfs> is not set. Use
-B<-ndfsfs>, or B<--nodetect-format-skipping-from-start> to avoid making this
-assumption. See git #186 for a discussion.
+If perltidy encounters a format skipping B<end> comment before any format
+skipping B<begin> comment, then by default it will assume that format skipping
+begins with the first line of the file.  Use B<-ndfsfs>, or
+B<--nodetect-format-skipping-from-start> to avoid making this assumption.  In
+that case, if the first format skipping marker in a file is an end marker, it
+will be ignored.
 
 =item B<-cs>,  B<--code-skipping>
 
-As explained above, this flag, which is enabled by default, causes any code
-between special beginning and ending comment markers to be directly passed to
-the output without any error checking or formatting.  Essentially, perltidy
-treats it as if it were a block of arbitrary text.  The default beginning
-marker is #<<V and the default ending marker is #>>V.
+This is the master switch for code skipping. This flag, which is enabled by
+default, causes any code between special beginning and ending comment markers
+to be directly passed to the output without any error checking or formatting.
+Essentially, perltidy treats it as if it were a block of arbitrary text.  The
+default beginning marker is #<<V and the default ending marker is #>>V.
 
 This feature can be disabled with B<-ncs>.   This should not normally be
 necessary.
@@ -2538,11 +2539,11 @@ The default is equivalent to -cse='#>>V'.
 
 =item B<-csfs>,  B<--code-skipping-from-start>
 
-When this flag is set, and code skipping is enabled, code skipping begins from
-the start of a file even though there is no beginning code skipping comment.
-In other words, setting this flag is like having a beginning marker line
-'#<<V' just before the first line of the file.  Code skipping will continue
-until an ending comment is reached.
+When this flag is set, and code skipping has not been disabled, code skipping
+begins from the start of a file even though there is no beginning code skipping
+comment.  In other words, setting this flag is like having a beginning marker
+line '#<<V' just before the first line of the file.  Code skipping will
+continue until an ending comment is reached.
 
 =back
 
@@ -2582,8 +2583,23 @@ code checks.
 
 =item *
 
+The special option B<--skip-formatting-except-id='*'>, or B<-sfei='*'>, means
+to format all sections marked for format skipping, regardless of any B<id=>
+comment.  This can eliminate the need for adding B<id=> to the format skipping
+markers in simple cases.
+
+=item *
+
 The sections which are being skipped or formatted can be determined by
 dumping a log file with the B<-g> parameter.
+
+=item *
+
+If the first marker in the file is an ending marker, then it ends a section
+which starts from the first line of the file without a beginning marker.  In
+that case, an identifier for that section may be placed on the ending marker.
+This is the only case where an identifier is read from an ending marker, and
+is necessary because there is no corresponding beginning marker.
 
 =item *
 

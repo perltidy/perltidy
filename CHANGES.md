@@ -10,14 +10,16 @@
 
     - Added option --code-skipping-from-start, or -csfs. This causes
       code-skipping to begin from the start of a file even though there
-      is no starting marker comment, '#<<V'. Likewise, added
-      --format-skipping-from-start, or -fsfs. This causes format skipping
-      to begin from the start of a file even though there is no starting
-      marker comment, '#<<<'.
+      is no starting marker comment, '#<<V'.
 
     - Fixed a bug involving the --format-skipping option. If a line in
       the skipped code had trailing blanks, then the newline at the end
       of that line was lost.
+
+    - Added a check to insure that format skipping begin and end markers
+      strictly alternate along the lines of a file. If these markers
+      do not alternate, a warning occurs and formatting is skipped.
+      This is intended to help catch errors.
 
 ## 2025 06 16
 

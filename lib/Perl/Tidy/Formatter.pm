@@ -8656,7 +8656,7 @@ EOM
 
 sub finish_formatting {
 
-    my ( $self, $severe_error ) = @_;
+    my ( $self, $rtokenization_info ) = @_;
 
     # The file has been tokenized and is ready to be formatted.
     # All of the relevant data is stored in $self, ready to go.
@@ -8671,6 +8671,8 @@ sub finish_formatting {
     # Some of the code in sub break_lists is not robust enough to process code
     # with arbitrary brace errors. The simplest fix is to just return the file
     # verbatim if there are brace errors.  This fixes issue c160.
+    my $severe_error        = $rtokenization_info->{severe_error};
+    my $early_FS_end_marker = $rtokenization_info->{early_FS_end_marker};
     $severe_error ||= get_saw_brace_error();
 
     # Check the maximum level. If it is extremely large we will give up and
@@ -8697,7 +8699,7 @@ EOM
     }
 
     {
-        my $rix_side_comments = $self->set_CODE_type();
+        my $rix_side_comments = $self->set_CODE_type($early_FS_end_marker);
 
         $self->find_non_indenting_braces($rix_side_comments);
 
@@ -12454,10 +12456,14 @@ sub set_maximum_field_count {
 } ## end sub set_maximum_field_count
 
 sub set_CODE_type {
-    my ($self) = @_;
+    my ( $self, $early_FS_end_marker ) = @_;
 
     # Examine each line of code and set a flag '$CODE_type' to describe it.
     # Also return a list of lines with side comments.
+
+    # Given:
+    #    $early_FS_end_marker - a format skipping end marker, like '#>>>',
+    #       which is the first format skipping marker in the file.
 
     my $rLL    = $self->[_rLL_];
     my $rlines = $self->[_rlines_];
@@ -12474,11 +12480,76 @@ sub set_CODE_type {
     # Remember indexes of lines with side comments
     my @ix_side_comments;
 
-    my $In_format_skipping_section = $rOpts->{'format-skipping-from-start'};
+    my $In_format_skipping_section = 0;
     if ($Inverted_skip_mode) {
         $In_format_skipping_section = !$In_format_skipping_section;
     }
-    my $saw_format_skipping_begin;
+
+    # Save a list of markers seen for possible error messages, and because
+    # user may have made begin and end markers identical.
+    my @format_marker_list;
+    my $format_markers_differ =
+      $format_skipping_pattern_begin ne $format_skipping_pattern_end;
+
+    my $check_inverted_mode_match = sub {
+        my ( $token, $input_line_no ) = @_;
+
+        # Check for a match to a format skipping id in inverted mode.
+        # Given:
+        #    $token = token of tag (or full block comment text)
+        #    $input_line_no = line number (for log file entry)
+
+        # Note1: This sub should only be called if both these are true:
+        #  - $In_format_skipping_section, and
+        #  - $inverted_skip_mode
+
+        # Note2: Normally the tag is the beginning tag, '#<<< idtext'.
+        # But it will be the ending tag if the beginning tag is missing.
+        # In that case, the id text will be on the closing tag.
+
+        # Be sure we have received a comment tag
+        if ( !defined($token) || substr( $token, 0, 1 ) ne '#' ) {
+            return;
+        }
+
+        if (
+            $rOpts_skip_formatting_except_id eq '*'
+            || (   $token =~ /\s+id=(\w+)/
+                && $1 eq $rOpts_skip_formatting_except_id )
+          )
+        {
+            $In_format_skipping_section = 0;
+            write_logfile_entry(
+"Line $input_line_no: Entering selected format section $rOpts_skip_formatting_except_id\n"
+            );
+        }
+    }; ## end $check_inverted_mode_match = sub
+
+    #----------------------------------------------------------------------
+    # Detect skipping from start if tokenizer found a leading '#>>>' marker
+    #----------------------------------------------------------------------
+    if (   $early_FS_end_marker
+        && $rOpts_detect_format_skipping_from_start
+        && $rOpts_format_skipping )
+    {
+        if ( !$Inverted_skip_mode ) {
+            if ( !$In_format_skipping_section ) {
+                $In_format_skipping_section = 1;
+                write_logfile_entry(
+"Line 1: Entering automatically detected format-skipping section\n"
+                );
+            }
+        }
+        else {
+            if ($In_format_skipping_section) {
+
+                # Note that in this case the id will be taken from the closing
+                # marker instead of the opening marker
+                $check_inverted_mode_match->( $early_FS_end_marker, 1 );
+            }
+        }
+    }
+
     my $Saw_VERSION_in_this_file   = 0;
     my $has_side_comment           = 0;
     my $last_line_had_side_comment = 0;
@@ -12548,9 +12619,14 @@ sub set_CODE_type {
                 && $rOpts_format_skipping
                 && ( $rLL->[$Kfirst]->[_TOKEN_] . SPACE ) =~
                 /$format_skipping_pattern_begin/
+
+                # Assume alternating begin/end markers if user has made them
+                # identical
+                && (   $format_markers_differ
+                    || !@format_marker_list
+                    || $format_marker_list[0] == -1 )
               )
             {
-                $saw_format_skipping_begin = 1;
                 my $input_line_no = $line_of_tokens->{_line_number};
                 if ( !$In_format_skipping_section ) {
 
@@ -12572,17 +12648,7 @@ sub set_CODE_type {
                         # We are at a '#<<<' in format skipping inverted mode;
                         # start formatting (stop format skipping) if id matches
                         my $token = $rLL->[$Kfirst]->[_TOKEN_];
-                        if (
-                            $rOpts_skip_formatting_except_id eq '*'
-                            || (   $token =~ /\s+id=(\w+)/
-                                && $1 eq $rOpts_skip_formatting_except_id )
-                          )
-                        {
-                            $In_format_skipping_section = 0;
-                            write_logfile_entry(
-"Line $input_line_no: Entering selected format section $rOpts_skip_formatting_except_id\n"
-                            );
-                        }
+                        $check_inverted_mode_match->( $token, $input_line_no );
                     }
                     else {
 
@@ -12593,6 +12659,7 @@ sub set_CODE_type {
                         );
                     }
                 }
+                push @format_marker_list, [ 1, $input_line_no ];
             }
 
             # check for format-skipping end marker, normally #>>>
@@ -12636,31 +12703,12 @@ sub set_CODE_type {
                     else {
 
                         # '#>>>' not following '#<<<' in normal mode
-                        # Check for format skipping from start of file
-                        if (  !$saw_format_skipping_begin
-                            && $rOpts_detect_format_skipping_from_start )
-                        {
-                            foreach my $ix ( 0 .. $ix_line - 1 ) {
-                                my $lot = $rlines->[$ix];
-                                if ( $lot->{_line_type} eq 'CODE' ) {
-                                    $lot->{_code_type} = 'FS';
-                                }
-                            }
-                            @ix_side_comments = ();
-                            write_logfile_entry(
-"Line $input_line_no: Exiting automatically detected format-skipping section\n"
-                            );
-                            $saw_format_skipping_begin = 1;
-                            $CODE_type                 = 'FS';
-                            next;
-                        }
-                        else {
-                            write_logfile_entry(
+                        write_logfile_entry(
 "Line $input_line_no: Ignoring #>>> not following #<<<\n"
-                            );
-                        }
+                        );
                     }
                 }
+                push @format_marker_list, [ -1, $input_line_no ];
             }
             else {
                 # not at a format skipping control line

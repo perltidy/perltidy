@@ -220,6 +220,7 @@ BEGIN {
         _in_pod_                             => $i++,
         _in_code_skipping_                   => $i++,
         _in_format_skipping_                 => $i++,
+        _rformat_skipping_list_              => $i++,
         _in_attribute_list_                  => $i++,
         _in_quote_                           => $i++,
         _quote_target_                       => $i++,
@@ -606,8 +607,8 @@ EOM
     $self->[_in_pod_]               = 0;
     $self->[_in_code_skipping_] =
       $rOpts->{'code-skipping-from-start'} && $rOpts_code_skipping;
-    $self->[_in_format_skipping_] =
-      $rOpts->{'format-skipping-from-start'} && $rOpts_format_skipping;
+    $self->[_in_format_skipping_]       = 0;
+    $self->[_rformat_skipping_list_]    = [];
     $self->[_in_attribute_list_]        = 0;
     $self->[_in_quote_]                 = 0;
     $self->[_quote_target_]             = EMPTY_STRING;
@@ -1093,7 +1094,19 @@ EOM
         $self->write_logfile_entry(
             "  defined at line(s): (@lower_case_labels_at)\n");
     }
-    return $severe_error;
+
+    # Get the text of any leading format skipping tag
+    my $early_FS_end_marker;
+    my $rformat_skipping_list = $self->[_rformat_skipping_list_];
+    if ( @{$rformat_skipping_list} && $rformat_skipping_list->[0]->[0] == -1 ) {
+        $early_FS_end_marker = $rformat_skipping_list->[0]->[2];
+    }
+
+    return {
+        severe_error        => $severe_error,
+        early_FS_end_marker => $early_FS_end_marker,
+    };
+
 } ## end sub report_tokenization_errors
 
 sub show_indentation_table {
@@ -2519,7 +2532,7 @@ EOM
         }
 
         # now its safe to report errors
-        my $severe_error_uu = $tokenizer->report_tokenization_errors();
+        my $rtokenization_info_uu = $tokenizer->report_tokenization_errors();
 
         # TODO: Could propagate a severe error up
 
@@ -5872,41 +5885,83 @@ EOM
                 && $rOpts_code_skipping
 
                 # note that the code_skipping_patterns require a newline
-                && $input_line . "\n" =~ /$code_skipping_pattern_begin/
+                && ( $input_line . SPACE ) =~ /$code_skipping_pattern_begin/
               )
             {
                 $self->[_in_code_skipping_] = $self->[_last_line_number_];
                 return;
             }
 
-            if ( !$self->[_in_format_skipping_] ) {
-                if (
-                    (
-                        substr( $input_line, 0, 4 ) eq '#<<<'
-                        || $rOpts_format_skipping_begin
-                    )
-                    && $rOpts_format_skipping
+            # Look for format skipping tags, but just normal mode.
+            # It will be used for these purposes:
+            # - to inform the formatter of an end token with no begin token
+            # - for making a hint when a brace error is detected
+            if (
+                (
+                    substr( $input_line, 0, 4 ) eq '#<<<'
+                    || $rOpts_format_skipping_begin
+                )
+                && $rOpts_format_skipping
 
-                    # note that the code_skipping_patterns require a newline
-                    && $input_line . "\n" =~ /$format_skipping_pattern_begin/
-                  )
+                # note that the format_skipping_patterns require a space
+                && ( $input_line . SPACE ) =~ /$format_skipping_pattern_begin/
+
+                # allow same token for begin and end
+                && (
+                    !$self->[_in_format_skipping_]
+                    || ( $format_skipping_pattern_begin ne
+                        $format_skipping_pattern_end )
+                )
+              )
+            {
+                my $on_off                = 1;
+                my $lno                   = $self->[_last_line_number_];
+                my $rformat_skipping_list = $self->[_rformat_skipping_list_];
+
+                # format markers must alternate between on and off
+                if ( @{$rformat_skipping_list}
+                    && $rformat_skipping_list->[-1]->[0] == $on_off )
                 {
-                    $self->[_in_format_skipping_] = $self->[_last_line_number_];
+                    my $lno_last = $rformat_skipping_list->[-1]->[1];
+                    $self->warning(
+"consecutive format-skipping start markers - see line $lno_last\n"
+                    );
+                    $self->[_in_trouble_] = 1;
                 }
+                push @{$rformat_skipping_list}, [ $on_off, $lno, $input_line ];
+                $self->[_in_format_skipping_] = $lno;
+            }
+            elsif (
+                (
+                    substr( $input_line, 0, 4 ) eq '#>>>'
+                    || $rOpts_format_skipping_end
+                )
+                && $rOpts_format_skipping
+
+                # note that the format_skipping_patterns require a newline
+                && ( $input_line . SPACE ) =~ /$format_skipping_pattern_end/
+              )
+            {
+                my $lno                   = $self->[_last_line_number_];
+                my $rformat_skipping_list = $self->[_rformat_skipping_list_];
+                my $on_off                = -1;
+
+                # markers must alternate between on and off
+                if ( @{$rformat_skipping_list}
+                    && $rformat_skipping_list->[-1]->[0] == $on_off )
+                {
+                    my $lno_last = $rformat_skipping_list->[-1]->[1];
+                    $self->warning(
+"consecutive format-skipping end markers - see line $lno_last\n"
+                    );
+                    $self->[_in_trouble_] = 1;
+                }
+
+                push @{$rformat_skipping_list}, [ $on_off, $lno, $input_line ];
+                $self->[_in_format_skipping_] = 0;
             }
             else {
-                if (
-                    (
-                        substr( $input_line, 0, 4 ) eq '#>>>'
-                        || $rOpts_format_skipping_end
-                    )
-
-                    # note that the code_skipping_patterns require a newline
-                    && $input_line . "\n" =~ /$format_skipping_pattern_end/
-                  )
-                {
-                    $self->[_in_format_skipping_] = 0;
-                }
+                # not a format skipping comment
             }
 
             # Optional fast processing of a block comment
