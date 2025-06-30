@@ -2433,26 +2433,28 @@ must be syntactically correct code with balanced containers.
 
 Any number of code-skipping or format-skipping sections may appear in a file.
 
-For B<format-skipping>, a basic rule is that beginning and ending markers must
-alternate from the beginning to the end the file (i.e. they do not stack). If
-they do not alternate, then a warning will occur and formatting will not be
-done.
-Normally, the first marker will be a beginning marker and the last marker will
-be an ending marker, but this is not necessary. If the last marker is a
-beginning marker, then skipping continues to the end of the file. If the first
-marker is an ending marker, then format skipping starts at the first line and
-continues to that ending marker (unless the
+When multiple sections of code are marked for B<format-skipping>, the beginning
+and ending markers must alternate from the beginning of the file to the end
+(i.e., code skipping sections cannot be stacked).  If markers do not alternate,
+then a warning will occur and formatting will not be done. This is to help
+catch errors early. Normally, the first marker in a file will be a beginning
+marker and the last marker will be an ending marker, but this is not necessary.
+If the first marker is an ending marker, then format skipping starts at the
+first line and continues to that ending marker (unless the
 B<--detect-format-skipping-from-start> flag has been turned off; see below).
+If the last marker is a beginning marker, then skipping continues to the end of
+the file.
 
-For B<code-skipping>, the rules are more primitive because perltidy is
-simultaneously parsing the text and looking for markers.  There are two cases,
-depending on the companion flag B<--code-skipping-from-start>.  If this flag
-has not been set, which is the default, then code skipping begins when a
-beginning marker is encountered and continues until an ending marker or the end
-of the file is reached.  If the B<--code-skipping-from-start> flag is set, then
-code skipping begins with the first line and continues until an ending marker
-or the end of the file is reached. In both cases, code skipping will start
-again if a beginning marker is encountered.
+For B<code-skipping>, the rules for multiple sections are a little more
+primitive because perltidy is simultaneously parsing the text while looking for
+markers.  There are two cases, depending on the companion flag
+B<--code-skipping-from-start>, described below.  If this flag has not been set,
+which is the default, then code skipping begins when a beginning marker is
+encountered and continues until an ending marker, or the end of the file, is
+reached.  If the B<--code-skipping-from-start> flag is set, then code skipping
+begins with the first line and continues until an ending marker, or the end of
+the file, is reached. In both cases, code skipping will restart if a beginning
+marker is encountered.
 
 These features should be used sparingly to avoid littering code with markers,
 but they can be helpful for working around occasional problems.
@@ -2554,18 +2556,24 @@ cause perltidy to B<only> format sections of code which are labeled with the
 selected tag on C<format-skipping> comments.
 
 For example, the tagged sections might contain tables which are best formatted
-with special values of the C<--maximum-line-length> parameter.
+with special values of the B<--maximum-line-length> parameter. Or perhaps a
+tagged section is a deeply nested table which would avoid unwanted line breaks
+if formatted with less indentation by using a special value of
+B<--starting-indentation-level=n>.
 
 The tag name is introduced with the added text B<id=NAME> after one or more
-spaces on the opening format-skipping comment. The tag B<NAME> can be any
-combination of letters and numbers. For example
+spaces on the opening format-skipping comment.  The tag B<NAME> can be any
+combination of letters and numbers, and there must not be any space around the
+equals sign.
 
- #<<< id=Table27
+For example
+
+ #<<< id=LongLines
    ...
  #>>>
 
 The code in this section will be treated like any other format skipping section
-unless the parameter B<--skip-formatting-except-id=Table27> is entered.
+unless the parameter B<--skip-formatting-except-id=LongLines> is entered.
 In that case, it will be formatted.
 
 Here are some points regarding this option:
@@ -2595,24 +2603,21 @@ dumping a log file with the B<-g> parameter.
 
 =item *
 
-If the first marker in the file is an ending marker, then it ends a section
-which starts from the first line of the file without a beginning marker.  In
-that case, an identifier for that section may be placed on the ending marker.
-This is the only case where an identifier is read from an ending marker, and
-is necessary because there is no corresponding beginning marker.
-
-=item *
-
 When this option is used, the starting indentation is still guessed from
 the first code in the file, even if it is not being formatted.  If this
 results in an unwanted indentation of the tagged section, then the
 parameter B<--starting-indentation-level=n>, or B<-sil=n>, can be used
 to set the desired indentation.
 
+
 =item *
 
-This feature was suggested in issue git #183 at
-L<https://github.com/perltidy/perltidy/issues/183>, which discusses an example.
+If the first format skipping marker in a file is an ending marker, then it ends
+a format skipping section which starts from the first line of the file without
+a beginning marker. So the usual method of putting an identifier tag on the
+beginning marker cannot be used. In this special case, an identifier for that
+section may be placed on the ending marker.  This is the only case where an
+identifier is read from an ending marker.
 
 =back
 
@@ -7783,20 +7788,20 @@ The following list shows all short parameter names which allow a prefix
  dbc    dbs    dcbl   dcsc   ddf    dfsfs  dhk    dia    dior   dln
  dltc   dma    dmcp   dmr    dnl    dop    dp     dpro   drc    dsc
  dsk    dsm    dsn    dtc    dtco   dtt    duk    duv    dwic   dwls
- dwrs   dws    eos    f      fpva   frm    fs     fsfs   fso    gcs
- hbc    hbcm   hbco   hbh    hbhh   hbi    hbj    hbk    hbm    hbn
- hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv    hbw    hent   hic
- hicm   hico   hih    hihh   hii    hij    hik    him    hin    hip
- hipd   hipu   hiq    his    hisc   hiv    hiw    hsc    html   ibc
- icb    icp    ils    iob    ipc    isbc   iscl   kgb    kgbd   kgbi
- kis    lal    log    lop    lp     lsl    mci    mem    nib    ohbr
- okw    ola    olc    oll    olq    opr    opt    osbc   osbr   otr
- ple    pod    pvl    q      qwaf   sac    sbc    sbl    scbb   schb
- scp    scsb   sct    se     sfp    sfs    skp    sob    sobb   sohb
- sop    sosb   sot    ssc    st     sts    t      tac    tbc    toc
- tp     tqw    trp    ts     tsc    tso    vbc    vc     viu    vmll
- vsc    vsn    vwe    w      wfc    wia    wma    wme    wmr    wn
- wsk    wuk    x      xbt    xci    xlp    xs
+ dwrs   dws    eos    f      fpva   frm    fs     fso    gcs    hbc
+ hbcm   hbco   hbh    hbhh   hbi    hbj    hbk    hbm    hbn    hbp
+ hbpd   hbpu   hbq    hbs    hbsc   hbv    hbw    hent   hic    hicm
+ hico   hih    hihh   hii    hij    hik    him    hin    hip    hipd
+ hipu   hiq    his    hisc   hiv    hiw    hsc    html   ibc    icb
+ icp    ils    iob    ipc    isbc   iscl   kgb    kgbd   kgbi   kis
+ lal    log    lop    lp     lsl    mci    mem    nib    ohbr   okw
+ ola    olc    oll    olq    opr    opt    osbc   osbr   otr    ple
+ pod    pvl    q      qwaf   sac    sbc    sbl    scbb   schb   scp
+ scsb   sct    se     sfp    sfs    skp    sob    sobb   sohb   sop
+ sosb   sot    ssc    st     sts    t      tac    tbc    toc    tp
+ tqw    trp    ts     tsc    tso    vbc    vc     viu    vmll   vsc
+ vsn    vwe    w      wfc    wia    wma    wme    wmr    wn     wsk
+ wuk    x      xbt    xci    xlp    xs
 
 Equivalently, the prefix 'no' or 'no-' on the corresponding long names may be
 used.
