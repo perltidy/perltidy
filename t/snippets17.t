@@ -1088,7 +1088,7 @@ sub foo2 ( $first, $, $third ) {
 
 # valid attributes
 sub fnord (&\%) : switch(10,foo(7,3)) : expensive;
-sub plugh () : Ugly('\(") : Bad;
+sub plugh ()    : Ugly('\(")          : Bad;
 #17...........
         },
 

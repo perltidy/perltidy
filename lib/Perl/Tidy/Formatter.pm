@@ -40306,9 +40306,10 @@ EOM
         my @q;
 
         # Replaced =~ and // in the list.  // had been removed in RT 119588
+        # Added 'A' for git #187
         @q = qw#
           = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
-          { ? : => && || ~~ !~~ =~ !~ // <=> -> ^^=
+          { ? : => && || ~~ !~~ =~ !~ // <=> -> ^^= A
           #;
         @is_vertical_alignment_type{@q} = (1) x scalar(@q);
 
@@ -40649,6 +40650,20 @@ EOM
 
                 if ( $rOpts_valign_wide_equals && $is_assignment{$type} ) {
                     $alignment_type = '=';
+                }
+
+                # attribute colon, git #187
+                if ( $type eq 'A' ) {
+
+                    my $in = $inext_to_go[$i];
+                    my $type_next =
+                      $in > $ibeg && $in < $iend ? $types_to_go[$in] : 'b';
+
+                    # exclude poor alignment cases
+                    $alignment_type =
+                      ( $type_next eq 'w' || $type_next eq 'q' )
+                      ? $type
+                      : EMPTY_STRING;
                 }
 
                 # Do not align a terminal token.  Although it might

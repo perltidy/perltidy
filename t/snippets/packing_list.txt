@@ -501,6 +501,9 @@
 ../snippets32.t	cpbw.def
 ../snippets33.t	boct.boct
 ../snippets33.t	boct.def
+../snippets33.t	dfsfs.def
+../snippets33.t	dfsfs.dfsfs1
+../snippets33.t	dfsfs.dfsfs2
 ../snippets4.t	gnu1.gnu
 ../snippets4.t	gnu2.def
 ../snippets4.t	gnu2.gnu
@@ -621,6 +624,3 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets33.t	dfsfs.def
-../snippets33.t	dfsfs.dfsfs1
-../snippets33.t	dfsfs.dfsfs2
