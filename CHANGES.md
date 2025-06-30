@@ -1,6 +1,22 @@
 # Perltidy Change Log
 
-## 2025 06 16.01
+## 2025 06 16.02
+
+    - Update for issue git #187: add vertical alignment of colons
+      used as attribute separators. These colons have token type 'A',
+      and this vertical alignment will be on by default (since all
+      vertical alignments occur by default).  For example:
+
+        # old default
+        field $tile_size : param;
+        field $bar : reader : writer;
+
+        # new default with alignment of token type 'A'
+        field $tile_size  : param;
+        field $bar        : reader : writer;
+
+      This alignment can be turned off to recover the previous formatting
+      with --valign-exclusion-list='A', or -vxl='A'.
 
     - Update for issue git #186: if a closing format skipping comment
       '#>>>' is encountered before any '#<<<' is seen, then format
