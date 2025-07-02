@@ -37,6 +37,11 @@
       do not alternate, a warning occurs and formatting is skipped.
       This is intended to help catch errors.
 
+    - In lists formatted with the B<--line-up-parentheses> option,
+      when some of the list items include here-docs, the formatting
+      may change to more closely follow the B<-lp> style.
+
+
 ## 2025 06 16
 
     - Added support for the assigning logical xor ^^= operator

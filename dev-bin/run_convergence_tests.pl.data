@@ -12859,6 +12859,26 @@ my$varstr=PDL::Char->new([
 --delete-trailing-commas
 --break-at-trailing-comma-types='b'
 
+==> b1523.in <==
+     &WH::Spell::AddSpell(
+          "Cause Heavy Wounds", "WPFD",
+          "CauseHeavyWounds",   <<'EOH' );
+xyzzy
+EOH
+
+     &WH::Spell::AddSpell(
+                           "Cause Heavy Wounds",
+                           "WPFD",
+                           "CauseHeavyWounds",
+                           <<'EOH' );
+xyzzy
+EOH
+
+==> b1523.par <==
+--maximum-line-length=52
+--indent-columns=5
+--extended-line-up-parentheses
+
 ==> b156.in <==
 # State 1
 {

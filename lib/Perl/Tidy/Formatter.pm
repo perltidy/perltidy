@@ -15834,8 +15834,6 @@ my $K_closing_container;
 my @K_sequenced_token_list;
 my @seqno_paren_arrow;
 
-my %K_first_here_doc_by_seqno;
-
 my $last_nonblank_code_type;
 my $last_nonblank_code_token;
 my $last_nonblank_block_type;
@@ -15937,8 +15935,6 @@ sub initialize_respace_tokens_closure {
       $self->[_rDOLLAR_underscore_by_sub_seqno_];
     $rK_sub_by_seqno     = $self->[_rK_sub_by_seqno_];
     $ris_my_sub_by_seqno = $self->[_ris_my_sub_by_seqno_];
-
-    %K_first_here_doc_by_seqno = ();
 
     $last_nonblank_code_type       = ';';
     $last_nonblank_code_token      = ';';
@@ -16052,7 +16048,29 @@ sub respace_tokens {
         my $input_line_number = $line_of_tokens->{_line_number};
         my $last_line_type    = $line_type;
         $line_type = $line_of_tokens->{_line_type};
-        next unless ( $line_type eq 'CODE' );
+
+        if ( $line_type ne 'CODE' ) {
+            if ( $line_type eq 'HERE_END' ) {
+                my $seqno = $seqno_stack{ $depth_next - 1 };
+                if ( defined($seqno) ) {
+                    if ( !$ris_permanently_broken->{$seqno} ) {
+                        $ris_permanently_broken->{$seqno} = 1;
+                        $self->mark_parent_containers( $seqno,
+                            $ris_permanently_broken );
+                    }
+
+                    # FIXME: This can now be deleted.
+                    # Turn off -lp for containers with here-docs with
+                    # text within a container, since they have their own fixed
+                    # indentation.  Fixes case b1081.
+                    if ( 0 && $rOpts_line_up_parentheses ) {
+                        $ris_excluded_lp_container->{$seqno} = 1;
+                    }
+                }
+            }
+            next;
+        }
+
         $CODE_type = $line_of_tokens->{_code_type};
 
         if ( $CODE_type eq 'BL' ) {
@@ -17132,19 +17150,6 @@ EOM
         $self->mark_parent_containers( $seqno, $rhas_ternary );
     }
 
-    # Turn off -lp for containers with here-docs with text within a container,
-    # since they have their own fixed indentation.  Fixes case b1081.
-    if ($rOpts_line_up_parentheses) {
-        foreach my $seqno ( keys %K_first_here_doc_by_seqno ) {
-            my $Kh      = $K_first_here_doc_by_seqno{$seqno};
-            my $Kc      = $K_closing_container->{$seqno};
-            my $line_Kh = $rLL_new->[$Kh]->[_LINE_INDEX_];
-            my $line_Kc = $rLL_new->[$Kc]->[_LINE_INDEX_];
-            next if ( $line_Kh == $line_Kc );
-            $ris_excluded_lp_container->{$seqno} = 1;
-        }
-    }
-
     # Set a flag to turn off -cab=3 in complex structures.  Otherwise,
     # instability can occur.  When it is overridden the behavior of the closest
     # match, -cab=2, will be used instead.  This fixes cases b1096 b1113.
@@ -17539,19 +17544,6 @@ EOM
                 # Count line-ending commas for -bbx
                 if ( $type eq ',' && $Ktoken_vars == $Klast_old_code ) {
                     $rlec_count_by_seqno->{$seqno}++;
-                }
-
-                # Remember index of first here doc target
-                if ( $type eq 'h' && !$K_first_here_doc_by_seqno{$seqno} ) {
-                    my $KK_new = @{$rLL_new};
-                    $K_first_here_doc_by_seqno{$seqno} = $KK_new;
-
-                    # the here doc which follows makes the container broken
-                    if ( !$ris_permanently_broken->{$seqno} ) {
-                        $ris_permanently_broken->{$seqno} = 1;
-                        $self->mark_parent_containers( $seqno,
-                            $ris_permanently_broken );
-                    }
                 }
             }
         }

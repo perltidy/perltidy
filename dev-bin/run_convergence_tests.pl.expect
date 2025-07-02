@@ -8677,6 +8677,19 @@ my$varstr=PDL::Char->new([
             $x, promise { &transform( $f, $s ) },
         );
 
+==> b1523 <==
+     &WH::Spell::AddSpell(
+          "Cause Heavy Wounds", "WPFD",
+          "CauseHeavyWounds",   <<'EOH' );
+xyzzy
+EOH
+
+     &WH::Spell::AddSpell(
+          "Cause Heavy Wounds", "WPFD",
+          "CauseHeavyWounds",   <<'EOH' );
+xyzzy
+EOH
+
 ==> b156 <==
 # State 1
 {
