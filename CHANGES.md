@@ -37,9 +37,9 @@
       do not alternate, a warning occurs and formatting is skipped.
       This is intended to help catch errors.
 
-    - In lists formatted with the B<--line-up-parentheses> option,
-      when some of the list items include here-docs, the formatting
-      may change to more closely follow the B<-lp> style.
+    - For lists which contain here docs and which are formatted with
+      the --line-up-parentheses option, the formatting may in some
+      cases change to more closely follow the -lp style.
 
 
 ## 2025 06 16

@@ -913,7 +913,8 @@ BEGIN {
     @q = qw( = => );
     @is_equal_or_fat_comma{@q} = (1) x scalar(@q);
 
-    @q = qw( => ; h f );
+    # Removed 'h' (no longer needed after updated b1523)
+    @q = qw( => ; f );
     push @q, ',';
     @is_counted_type{@q} = (1) x scalar(@q);
 
@@ -3265,7 +3266,6 @@ sub initialize_line_up_parentheses {
 
     if ( $rOpts->{'line-up-parentheses'} ) {
 
-        # b1507 fix, Option 1: included add-whitespace here for a simple fix
         if (   $rOpts->{'indent-only'}
             || !$rOpts->{'add-newlines'}
             || !$rOpts->{'delete-old-newlines'} )
@@ -16050,6 +16050,9 @@ sub respace_tokens {
         $line_type = $line_of_tokens->{_line_type};
 
         if ( $line_type ne 'CODE' ) {
+
+            # Mark containers interrupted with HERE DOC text.
+            # See test cases b1081, b1523
             if ( $line_type eq 'HERE_END' ) {
                 my $seqno = $seqno_stack{ $depth_next - 1 };
                 if ( defined($seqno) ) {
@@ -16057,14 +16060,6 @@ sub respace_tokens {
                         $ris_permanently_broken->{$seqno} = 1;
                         $self->mark_parent_containers( $seqno,
                             $ris_permanently_broken );
-                    }
-
-                    # FIXME: This can now be deleted.
-                    # Turn off -lp for containers with here-docs with
-                    # text within a container, since they have their own fixed
-                    # indentation.  Fixes case b1081.
-                    if ( 0 && $rOpts_line_up_parentheses ) {
-                        $ris_excluded_lp_container->{$seqno} = 1;
                     }
                 }
             }
@@ -36338,16 +36333,6 @@ EOM
                 $tol += $rOpts_continuation_indentation;
             }
 
-            # b1507, Option 3: a minimal fix by increasing tol by -ci
-            elsif ( 0
-                && !$rOpts_add_whitespace
-                && $rOpts_extended_line_up_parentheses
-                && $rOpts_extended_continuation_indentation )
-            {
-                $tol += $rOpts_continuation_indentation;
-            }
-            else { }
-
             $is_long_term = $excess + $tol > 0;
 
         }
@@ -36763,6 +36748,7 @@ sub find_token_starting_list {
     if ( $levels_to_go[$iprev_nb] < $levels_to_go[$i_opening_paren] ) {
 
         # b1507, Option 4 fix: do not go past a decrease in level
+        # This was the best solution for that issue.
     }
     elsif ( $type_prev_nb eq ',' ) {
 
