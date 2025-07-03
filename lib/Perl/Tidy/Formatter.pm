@@ -16175,7 +16175,7 @@ sub respace_tokens {
                 )
               )
             {
-                $self->store_token();
+                store_new_blank_token();
             }
         }
 
@@ -16817,7 +16817,7 @@ EOM
                 && $rLL_new->[-1]->[_TYPE_] ne 'b'
                 && $rOpts_add_whitespace )
             {
-                $self->store_token();
+                store_new_blank_token();
             }
             $self->store_token($rtoken_vars);
             next;
@@ -16923,7 +16923,7 @@ EOM
             && $rLL_new->[-1]->[_TYPE_] ne 'b'
             && $rOpts_add_whitespace )
         {
-            $self->store_token();
+            store_new_blank_token();
         }
         $self->store_token($rtoken_vars);
 
@@ -17238,38 +17238,15 @@ EOM
 
 sub store_token {
 
-    my ( $self, ($item) ) = @_;
+    my ( $self, $item ) = @_;
 
-    # Store one token during respace operations
+    # Store one token in the $rLL_new array during respace operations
+    # In most cases it is being directly transferred from the old $rLL array.
 
     # Given:
-    #  $item =
-    #    if defined      => reference to a token to be stored
-    #    if not defined  => make and store a blank space
+    #  $item = reference to a token to be stored
 
     # NOTE: this sub is called once per token so coding efficiency is critical.
-
-    # If no arg, then make and store a blank space
-    if ( !$item ) {
-
-        #  - Never start the array with a space, and
-        #  - Never store two consecutive spaces
-        if ( @{$rLL_new} && $rLL_new->[-1]->[_TYPE_] ne 'b' ) {
-
-            # Note that the level and ci_level of newly created spaces should
-            # be the same as the previous token.  Otherwise the coding for the
-            # -lp option can create a blinking state in some rare cases.
-            # (see b1109, b1110).
-            $item                    = [];
-            $item->[_TYPE_]          = 'b';
-            $item->[_TOKEN_]         = SPACE;
-            $item->[_TYPE_SEQUENCE_] = EMPTY_STRING;
-            $item->[_LINE_INDEX_]    = $rLL_new->[-1]->[_LINE_INDEX_];
-            $item->[_LEVEL_]         = $rLL_new->[-1]->[_LEVEL_];
-        }
-        else { return }
-    }
-
     # The next multiple assignment statements are significantly faster than
     # doing them one-by-one.
     my (
@@ -17566,6 +17543,130 @@ EOM
     return;
 } ## end sub store_token
 
+sub store_new_blank_token {
+
+    # Make and store a new blank token during respace operations
+
+    # Never start the array with a space
+    if ( !@{$rLL_new} ) {
+        DEVEL_MODE && Fault(<<EOM);
+Attempt to make a blank the first token
+EOM
+        return;
+    }
+
+    # Never store two consecutive spaces
+    my $item_last = $rLL_new->[-1];
+    if ( $item_last->[_TYPE_] eq 'b' ) {
+        return;
+    }
+
+    # Note that the level and ci_level of newly created spaces should
+    # be the same as the previous token.  Otherwise the coding for the
+    # -lp option can create a blinking state in some rare cases.
+    # (see b1109, b1110).
+    my $item = [];
+    $item->[_TYPE_]              = 'b';
+    $item->[_TOKEN_]             = SPACE;
+    $item->[_TYPE_SEQUENCE_]     = EMPTY_STRING;
+    $item->[_LINE_INDEX_]        = $item_last->[_LINE_INDEX_];
+    $item->[_LEVEL_]             = $item_last->[_LEVEL_];
+    $item->[_CUMULATIVE_LENGTH_] = ++$cumulative_length;
+    $item->[_TOKEN_LENGTH_]      = 1;
+    push @{$rLL_new}, $item;
+    return;
+} ## end sub store_new_blank_token
+
+sub store_new_nonblank_token {
+
+    my ( $self, $type, $token, $Kp ) = @_;
+
+    # Create and insert a completely new token into the output stream
+    # Caller must add space after this token if necessary
+    # NOTE: this is for nonblank tokens, like ',' and '->'.
+    # See 'store_new_blank_token' for creating and storing new blank tokens.
+
+    # Input parameters:
+    #  $type  = the token type
+    #  $token = the token text
+    #  $Kp    = index of the previous token in the new list, $rLL_new
+
+    # This operation is a little tricky because we are creating a new token and
+    # we have to take care to follow the requested whitespace rules.
+
+    my $Ktop         = @{$rLL_new} - 1;
+    my $top_is_space = $Ktop >= 0 && $rLL_new->[$Ktop]->[_TYPE_] eq 'b';
+    if ( $top_is_space && $want_left_space{$type} == WS_NO ) {
+
+        #----------------------------------------------------
+        # Method 1: Convert the top blank into the new token.
+        #----------------------------------------------------
+
+        # Be Careful: we are working on the top of the new stack, on a token
+        # which has been stored.
+
+        $rLL_new->[$Ktop]->[_TOKEN_]        = $token;
+        $rLL_new->[$Ktop]->[_TOKEN_LENGTH_] = length($token);
+        $rLL_new->[$Ktop]->[_TYPE_]         = $type;
+
+        # NOTE: we are changing the output stack without updating variables
+        # $last_nonblank_code_type, etc. Future needs might require that
+        # those variables be updated here.  For now, we just update the
+        # type counts as necessary.
+
+        if ( $is_counted_type{$type} ) {
+            my $seqno = $seqno_stack{ $depth_next - 1 };
+            if ($seqno) {
+                $self->[_rtype_count_by_seqno_]->{$seqno}->{$type}++;
+            }
+        }
+    }
+    else {
+
+        #----------------------------------------
+        # Method 2: Use the normal storage method
+        #----------------------------------------
+
+        # Patch for issue c078: keep line indexes in order.  If the top
+        # token is a space that we are keeping (due to '-wls=...) then
+        # we have to check that old line indexes stay in order.
+        # In very rare
+        # instances in which side comments have been deleted and converted
+        # into blanks, we may have filtered down multiple blanks into just
+        # one. In that case the top blank may have a higher line number
+        # than the previous nonblank token. Although the line indexes of
+        # blanks are not really significant, we need to keep them in order
+        # in order to pass error checks.
+        if ($top_is_space) {
+            my $old_top_ix = $rLL_new->[$Ktop]->[_LINE_INDEX_];
+            my $new_top_ix = $rLL_new->[$Kp]->[_LINE_INDEX_];
+            if ( $new_top_ix < $old_top_ix ) {
+                $rLL_new->[$Ktop]->[_LINE_INDEX_] = $new_top_ix;
+            }
+        }
+        else {
+            if ( $want_left_space{$type} == WS_YES ) {
+                store_new_blank_token();
+            }
+        }
+
+        my $rcopy = copy_token_as_type( $rLL_new->[$Kp], $type, $token );
+        $self->store_token($rcopy);
+
+    }
+
+    $last_last_nonblank_code_type  = $last_nonblank_code_type;
+    $last_last_nonblank_code_token = $last_nonblank_code_token;
+
+    $last_nonblank_code_type  = $type;
+    $last_nonblank_code_token = $token;
+
+    # This sub is currently called to store non-block types ',' and '->', so:
+    $last_nonblank_block_type = EMPTY_STRING;
+
+    return;
+} ## end sub store_new_nonblank_token
+
 sub add_phantom_semicolon {
 
     my ( $self, $KK ) = @_;
@@ -17833,7 +17934,7 @@ sub add_trailing_comma {
 
         # any blank after the comma will be added before the closing paren,
         # below
-        $self->store_new_token( ',', ',', $Kp );
+        $self->store_new_nonblank_token( ',', ',', $Kp );
     }
     return;
 
@@ -18005,8 +18106,10 @@ sub add_interbracket_arrow {
         return;
     }
 
-    $self->store_new_token( '->', '->', $Kp );
-    if ( $want_right_space{'->'} == WS_YES ) { $self->store_token() }
+    $self->store_new_nonblank_token( '->', '->', $Kp );
+    if ( $want_right_space{'->'} == WS_YES ) {
+        store_new_blank_token();
+    }
 
     return;
 } ## end sub add_interbracket_arrow
@@ -18101,7 +18204,7 @@ sub unstore_last_nonblank_token {
     # add a blank if requested
     else {
         if ( $want_space == 1 ) {
-            $self->store_token();
+            store_new_blank_token();
         }
         elsif ( !$want_space ) {
 
@@ -18608,94 +18711,6 @@ sub match_trailing_comma_rule {
     }
     return $match;
 } ## end sub match_trailing_comma_rule
-
-sub store_new_token {
-
-    my ( $self, $type, $token, $Kp ) = @_;
-
-    # Create and insert a completely new token into the output stream
-    # Caller must add space after this token if necessary
-
-    # Input parameters:
-    #  $type  = the token type
-    #  $token = the token text
-    #  $Kp    = index of the previous token in the new list, $rLL_new
-
-    # This operation is a little tricky because we are creating a new token and
-    # we have to take care to follow the requested whitespace rules.
-
-    my $Ktop         = @{$rLL_new} - 1;
-    my $top_is_space = $Ktop >= 0 && $rLL_new->[$Ktop]->[_TYPE_] eq 'b';
-    if ( $top_is_space && $want_left_space{$type} == WS_NO ) {
-
-        #----------------------------------------------------
-        # Method 1: Convert the top blank into the new token.
-        #----------------------------------------------------
-
-        # Be Careful: we are working on the top of the new stack, on a token
-        # which has been stored.
-
-        $rLL_new->[$Ktop]->[_TOKEN_]        = $token;
-        $rLL_new->[$Ktop]->[_TOKEN_LENGTH_] = length($token);
-        $rLL_new->[$Ktop]->[_TYPE_]         = $type;
-
-        # NOTE: we are changing the output stack without updating variables
-        # $last_nonblank_code_type, etc. Future needs might require that
-        # those variables be updated here.  For now, we just update the
-        # type counts as necessary.
-
-        if ( $is_counted_type{$type} ) {
-            my $seqno = $seqno_stack{ $depth_next - 1 };
-            if ($seqno) {
-                $self->[_rtype_count_by_seqno_]->{$seqno}->{$type}++;
-            }
-        }
-    }
-    else {
-
-        #----------------------------------------
-        # Method 2: Use the normal storage method
-        #----------------------------------------
-
-        # Patch for issue c078: keep line indexes in order.  If the top
-        # token is a space that we are keeping (due to '-wls=...) then
-        # we have to check that old line indexes stay in order.
-        # In very rare
-        # instances in which side comments have been deleted and converted
-        # into blanks, we may have filtered down multiple blanks into just
-        # one. In that case the top blank may have a higher line number
-        # than the previous nonblank token. Although the line indexes of
-        # blanks are not really significant, we need to keep them in order
-        # in order to pass error checks.
-        if ($top_is_space) {
-            my $old_top_ix = $rLL_new->[$Ktop]->[_LINE_INDEX_];
-            my $new_top_ix = $rLL_new->[$Kp]->[_LINE_INDEX_];
-            if ( $new_top_ix < $old_top_ix ) {
-                $rLL_new->[$Ktop]->[_LINE_INDEX_] = $new_top_ix;
-            }
-        }
-        else {
-            if ( $want_left_space{$type} == WS_YES ) {
-                $self->store_token();
-            }
-        }
-
-        my $rcopy = copy_token_as_type( $rLL_new->[$Kp], $type, $token );
-        $self->store_token($rcopy);
-
-    }
-
-    $last_last_nonblank_code_type  = $last_nonblank_code_type;
-    $last_last_nonblank_code_token = $last_nonblank_code_token;
-
-    $last_nonblank_code_type  = $type;
-    $last_nonblank_code_token = $token;
-
-    # This sub is currently called to store non-block types ',' and '->', so:
-    $last_nonblank_block_type = EMPTY_STRING;
-
-    return;
-} ## end sub store_new_token
 
 sub check_Q {
 
