@@ -6182,22 +6182,55 @@ sub valign_output_step_A {
 
     my ( $self, $rinput_hash ) = @_;
 
-    my $line                 = $rinput_hash->{line};
-    my $min_ci_gap           = $rinput_hash->{min_ci_gap};
-    my $do_not_align         = $rinput_hash->{do_not_align};
-    my $group_leader_length  = $rinput_hash->{group_leader_length};
-    my $extra_leading_spaces = $rinput_hash->{extra_leading_spaces};
-    my $level                = $rinput_hash->{level};
-    my $maximum_line_length  = $rinput_hash->{maximum_line_length};
+    my (
 
-    my $rfields                   = $line->{'rfields'};
-    my $rfield_lengths            = $line->{'rfield_lengths'};
-    my $leading_space_count       = $line->{'leading_space_count'};
-    my $outdent_long_lines        = $line->{'outdent_long_lines'};
-    my $maximum_field_index       = $line->{'jmax'};
-    my $rvertical_tightness_flags = $line->{'rvertical_tightness_flags'};
-    my $Kend                      = $line->{'Kend'};
-    my $level_end                 = $line->{'level_end'};
+        $line,
+        $min_ci_gap,
+        $do_not_align,
+        $group_leader_length,
+        $extra_leading_spaces,
+        $level,
+        $maximum_line_length,
+
+      ) =
+
+      @{$rinput_hash}{
+        qw(
+          line
+          min_ci_gap
+          do_not_align
+          group_leader_length
+          extra_leading_spaces
+          level
+          maximum_line_length
+        )
+      };
+
+    my (
+
+        $rfields,
+        $rfield_lengths,
+        $leading_space_count,
+        $outdent_long_lines,
+        $maximum_field_index,
+        $rvertical_tightness_flags,
+        $Kend,
+        $level_end,
+
+      ) =
+
+      @{$line}{
+        qw(
+          rfields
+          rfield_lengths
+          leading_space_count
+          outdent_long_lines
+          jmax
+          rvertical_tightness_flags
+          Kend
+          level_end
+        )
+      };
 
     # Check for valid hash keys at end of lifetime of $line during development
     DEVEL_MODE
@@ -6706,16 +6739,34 @@ sub get_output_line_number {
 
         my ( $self, $rinput ) = @_;
 
-        my $leading_space_count       = $rinput->{leading_space_count};
-        my $str                       = $rinput->{line};
-        my $str_length                = $rinput->{line_length};
-        my $side_comment_length       = $rinput->{side_comment_length};
-        my $outdent_long_lines        = $rinput->{outdent_long_lines};
-        my $rvertical_tightness_flags = $rinput->{rvertical_tightness_flags};
-        my $level                     = $rinput->{level};
-##      my $level_end                 = $rinput->{level_end};
-        my $Kend                = $rinput->{Kend};
-        my $maximum_line_length = $rinput->{maximum_line_length};
+        ##Note: key 'level_end' not needed
+        my (
+
+            $leading_space_count,
+            $str,
+            $str_length,
+            $side_comment_length,
+            $outdent_long_lines,
+            $rvertical_tightness_flags,
+            $level,
+            $Kend,
+            $maximum_line_length,
+
+          ) =
+
+          @{$rinput}{
+            qw(
+              leading_space_count
+              line
+              line_length
+              side_comment_length
+              outdent_long_lines
+              rvertical_tightness_flags
+              level
+              Kend
+              maximum_line_length
+            )
+          };
 
         # Useful -gcs test cases for wide characters are
         # perl527/(method.t.2, reg_mesg.t, mime-header.t)
