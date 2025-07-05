@@ -8690,6 +8690,18 @@ EOH
 xyzzy
 EOH
 
+==> b1524 <==
+use strict;
+
+require Exporter;
+
+use CGI;
+use C4::Auth;
+use HTML::Template;
+
+my $query = new CGI;
+my $template;
+
 ==> b156 <==
 # State 1
 {
@@ -12072,8 +12084,9 @@ use PVTests;
 use Test::More 0.88;
 my $String = 'foo';    # blank after this opens and closes
 
-my $Foo  = bless \$v1, 'Foo';
-my $Bar  = bless \$v2, 'Bar';
+my $Foo = bless \$v1, 'Foo';
+my $Bar = bless \$v2, 'Bar';
+
 my $Baz  = bless \$v3, 'Baz';
 my $Quux = bless \$v4, 'Quux';
 my $v1;

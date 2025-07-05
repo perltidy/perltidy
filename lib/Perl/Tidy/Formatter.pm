@@ -27254,8 +27254,8 @@ EOM
         my ( $self, $i, $token, $level ) = @_;
 
         # End the previous group if we have reached the maximum
-        # group size
-        if ( $rOpts_kgb_size_max && @group >= $rOpts_kgb_size_max ) {
+        # group size. Fix for b1524: use $count instead of @group
+        if ( $rOpts_kgb_size_max && $count >= $rOpts_kgb_size_max ) {
             $self->kgb_end_group();
         }
 
@@ -42842,12 +42842,12 @@ sub make_paren_name {
 
         my $is_outdented_line;
 
-        my $type_beg            = $types_to_go[$ibeg];
-        my $token_beg           = $tokens_to_go[$ibeg];
-        my $level_beg           = $levels_to_go[$ibeg];
-        my $block_type_beg      = $block_type_to_go[$ibeg];
-        my $leading_spaces_beg  = $leading_spaces_to_go[$ibeg];
-        my $seqno_beg           = $type_sequence_to_go[$ibeg];
+        my $type_beg           = $types_to_go[$ibeg];
+        my $token_beg          = $tokens_to_go[$ibeg];
+        my $level_beg          = $levels_to_go[$ibeg];
+        my $block_type_beg     = $block_type_to_go[$ibeg];
+        my $leading_spaces_beg = $leading_spaces_to_go[$ibeg];
+        my $seqno_beg          = $type_sequence_to_go[$ibeg];
 
         # QW INDENTATION PATCH 3:
         my $seqno_qw_closing;

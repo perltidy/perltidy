@@ -12879,6 +12879,23 @@ EOH
 --indent-columns=5
 --extended-line-up-parentheses
 
+==> b1524.in <==
+use strict;
+
+require Exporter;
+
+use CGI;
+use C4::Auth;
+use HTML::Template;
+
+my $query = new CGI;
+my $template;
+
+==> b1524.par <==
+--keep-old-blank-lines=0
+--keyword-group-blanks-size='1.8'
+--keyword-group-blanks-inside
+
 ==> b156.in <==
 # State 1
 {
