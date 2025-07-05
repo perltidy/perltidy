@@ -8396,21 +8396,35 @@ EOM
         #  $line_of_tokens_old = line received from tokenizer
         #  $line_of_tokens     = line of tokens being formed for formatter
 
-        my $rtokens = $line_of_tokens_old->{_rtokens};
-        my $jmax    = @{$rtokens} - 1;
+        my (
+
+            $rtokens,
+            $line_number,
+            $rtoken_type,
+            $rblock_type,
+            $rtype_sequence,
+            $rlevels,
+
+          ) =
+
+          @{$line_of_tokens_old}{
+            qw(
+              _rtokens
+              _line_number
+              _rtoken_type
+              _rblock_type
+              _rtype_sequence
+              _rlevels
+            )
+          };
+
+        my $jmax = @{$rtokens} - 1;
         if ( $jmax < 0 ) {
 
             # safety check; shouldn't happen
-            my $lno = $line_of_tokens->{_line_number};
-            DEVEL_MODE && Fault("$lno: unexpected jmax=$jmax\n");
+            DEVEL_MODE && Fault("$line_number: unexpected jmax=$jmax\n");
             return;
         }
-
-        my $line_index     = $line_of_tokens_old->{_line_number} - 1;
-        my $rtoken_type    = $line_of_tokens_old->{_rtoken_type};
-        my $rblock_type    = $line_of_tokens_old->{_rblock_type};
-        my $rtype_sequence = $line_of_tokens_old->{_rtype_sequence};
-        my $rlevels        = $line_of_tokens_old->{_rlevels};
 
         my $rLL                     = $self->[_rLL_];
         my $rSS                     = $self->[_rSS_];
@@ -8418,7 +8432,7 @@ EOM
 
         DEVEL_MODE
           && check_sequence_numbers( $rtokens, $rtoken_type,
-            $rtype_sequence, $line_index + 1 );
+            $rtype_sequence, $line_number );
 
         # Find the starting nesting depth ...
         # It must be the value of variable 'level' of the first token
@@ -8439,9 +8453,8 @@ EOM
                 # -qwaf is expecting another 'q' token for multiline -qw
                 # based on the {_ending_in_quote} flag from the tokenizer
                 # of the previous line, but a 'q' didn't arrive.
-                my $lno = $line_index + 1;
                 Fault(
-"$lno: -qwaf expecting qw continuation line but saw type '$rtoken_type->[0]'\n"
+"$line_number: -qwaf expecting qw continuation line but saw type '$rtoken_type->[0]'\n"
                 );
             }
         }
@@ -8473,8 +8486,9 @@ EOM
                         $new_seqno_from_old_seqno{$seqno_old} = $seqno;
                     }
                     if ( DEVEL_MODE && $seqno != $last_new_seqno + 1 ) {
-                        my $lno = $line_index + 1;
-                        Fault("$lno: seqno=$seqno last=$last_new_seqno\n");
+                        Fault(
+                            "$line_number: seqno=$seqno last=$last_new_seqno\n"
+                        );
                     }
                     $last_new_seqno                          = $seqno;
                     $self->[_K_opening_container_]->{$seqno} = @{$rLL};
@@ -8503,6 +8517,7 @@ EOM
                             $self->[_ris_sub_block_]->{$seqno} = 1;
                         }
                         else {
+
                             # not a sub type
                         }
                     }
@@ -8530,9 +8545,8 @@ EOM
                         # incrementally upon encountering each new
                         # opening token, so every positive sequence
                         # number should correspond to an opening token.
-                        my $lno = $line_index + 1;
                         DEVEL_MODE && Fault(<<EOM);
-$lno: No opening token seen for closing token = '$token' at seq=$seqno at depth=$opening_depth
+$line_number: No opening token seen for closing token = '$token' at seq=$seqno at depth=$opening_depth
 EOM
                     }
                     $self->[_K_closing_container_]->{$seqno} = @{$rLL};
@@ -8545,8 +8559,9 @@ EOM
                         $new_seqno_from_old_seqno{$seqno_old} = $seqno;
                     }
                     if ( DEVEL_MODE && $seqno != $last_new_seqno + 1 ) {
-                        my $lno = $line_index + 1;
-                        Fault("$lno: seqno=$seqno last=$last_new_seqno\n");
+                        Fault(
+                            "$line_number: seqno=$seqno last=$last_new_seqno\n"
+                        );
                     }
                     $last_new_seqno = $seqno;
                     $self->[_K_opening_ternary_]->{$seqno} = @{$rLL};
@@ -8567,9 +8582,8 @@ EOM
                 # numbers, or if an error has been introduced in a
                 # hash such as %is_opening_container
                 else {
-                    my $lno = $line_index + 1;
                     DEVEL_MODE && Fault(<<EOM);
-$lno: Unexpected sequenced token '$token' of type '$rtoken_type->[$j]', sequence=$seqno arrived from tokenizer.
+$line_number: Unexpected sequenced token '$token' of type '$rtoken_type->[$j]', sequence=$seqno arrived from tokenizer.
 Expecting only opening or closing container tokens or ternary tokens with sequence numbers.
 EOM
                 }
@@ -8585,10 +8599,12 @@ EOM
                     my $level = $rlevels->[$j];
                     if ( $level > $self->[_maximum_level_] ) {
                         $self->[_maximum_level_]         = $level;
-                        $self->[_maximum_level_at_line_] = $line_index + 1;
+                        $self->[_maximum_level_at_line_] = $line_number;
                     }
                 }
-                else { $self->[_rI_closing_]->[$seqno] = @{$rSS} }
+                else {
+                    $self->[_rI_closing_]->[$seqno] = @{$rSS};
+                }
                 push @{$rSS}, $sign * $seqno;
                 $tokary[_TYPE_SEQUENCE_] = $seqno;
             }
@@ -8606,7 +8622,7 @@ EOM
             $tokary[_TOKEN_]      = $token;
             $tokary[_TYPE_]       = $rtoken_type->[$j];
             $tokary[_LEVEL_]      = $rlevels->[$j];
-            $tokary[_LINE_INDEX_] = $line_index;
+            $tokary[_LINE_INDEX_] = $line_number - 1;
 
             push @{$rLL}, \@tokary;
 
@@ -16226,7 +16242,6 @@ sub respace_tokens_inner_loop {
     #   $Klast  = index of last token on this line
     #   $input_line_number  = number of this line in input stream
 
-    my $type;
     foreach my $KK ( $Kfirst .. $Klast ) {
 
         # Update closure variable needed by sub store_token
@@ -16234,8 +16249,22 @@ sub respace_tokens_inner_loop {
 
         my $rtoken_vars = $rLL->[$KK];
 
+        my (
+
+            $type,
+            $token,
+            $type_sequence,
+
+          ) = @{$rtoken_vars}[
+
+          _TYPE_,
+          _TOKEN_,
+          _TYPE_SEQUENCE_,
+
+          ];
+
         # Handle a blank space ...
-        if ( ( $type = $rtoken_vars->[_TYPE_] ) eq 'b' ) {
+        if ( $type eq 'b' ) {
 
             # Delete it if not wanted by whitespace rules
             # or we are deleting all whitespace
@@ -16276,16 +16305,13 @@ sub respace_tokens_inner_loop {
             next;
         }
 
-        my $token = $rtoken_vars->[_TOKEN_];
-
         # Handle a sequenced token ... i.e. one of ( ) { } [ ] ? :
-        if ( $rtoken_vars->[_TYPE_SEQUENCE_] ) {
+        if ($type_sequence) {
 
             # One of ) ] } ...
             if ( $is_closing_token{$token} ) {
 
-                my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
-                my $block_type    = $rblock_type_of_seqno->{$type_sequence};
+                my $block_type = $rblock_type_of_seqno->{$type_sequence};
 
                 #---------------------------------------------
                 # check for semicolon addition in a code block
@@ -16435,7 +16461,6 @@ sub respace_tokens_inner_loop {
 
             # Opening container
             else {
-                my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
                 if ( $rwant_arrow_before_seqno->{$type_sequence} ) {
 
                     # +1 means add  -1 means delete previous arrow
@@ -17315,7 +17340,7 @@ sub store_token {
         {
 
             # Is it a side comment or a block comment?
-            if ( $Ktoken_vars > $Kfirst_old ) {
+            if ( $Klast_old > $Kfirst_old ) {
 
                 # This is a side comment. If we do not ignore its length, and
                 # -iscl has not been set, then the line could be broken and
@@ -28301,9 +28326,9 @@ EOM
 
                 # this check needed -mangle (for example rt125012)
                 (
-                       ( !$index_start_one_line_block )
-                    && ( $last_old_nonblank_type eq ';' )
-                    && ( $first_new_nonblank_token ne '}' )
+                      !$index_start_one_line_block
+                    && $last_old_nonblank_type eq ';'
+                    && $first_new_nonblank_token ne '}'
                 )
 
                 # Patch for RT #98902. Honor request to break at old commas.
@@ -42266,17 +42291,14 @@ sub xlp_tweak {
             return [ $rtokens, $rfields, $rpatterns, $rfield_lengths ];
         }
 
+        my ( @tokens, @fields, @patterns, @field_lengths );
+
         my $i_start              = $ibeg;
         my $depth                = 0;
         my $i_depth_prev         = $i_start;
         my $depth_prev           = $depth;
         my %container_name       = ( 0 => EMPTY_STRING );
         my $saw_exclamation_mark = 0;
-
-        my @tokens        = ();
-        my @fields        = ();
-        my @patterns      = ();
-        my @field_lengths = ();
 
         #-------------------------------------------------------------
         # Make a container name for any uncontained commas, issue c089
@@ -42826,7 +42848,6 @@ sub make_paren_name {
         my $block_type_beg      = $block_type_to_go[$ibeg];
         my $leading_spaces_beg  = $leading_spaces_to_go[$ibeg];
         my $seqno_beg           = $type_sequence_to_go[$ibeg];
-        my $is_closing_type_beg = $is_closing_type{$type_beg};
 
         # QW INDENTATION PATCH 3:
         my $seqno_qw_closing;
@@ -43162,8 +43183,8 @@ sub make_paren_name {
 
             # MOJO patch: Set a flag if this lines begins with ')->'
             my $leading_paren_arrow = (
-                     $is_closing_type_beg
-                  && $token_beg eq ')'
+                     $token_beg eq ')'
+                  && $is_closing_type{$type_beg}
                   && (
                     (
                            $ibeg < $i_terminal
@@ -43321,7 +43342,7 @@ sub make_paren_name {
         if ( $seqno_beg && $self->[_rwant_reduced_ci_]->{$seqno_beg} ) {
 
             # if this is an opening, it must be alone on the line ...
-            if ( $is_closing_type{$type_beg} || $ibeg == $i_terminal ) {
+            if ( $is_closing_type_beg || $ibeg == $i_terminal ) {
                 $adjust_indentation = 1;
             }
 
@@ -44041,20 +44062,12 @@ sub set_vertical_tightness_flags {
             && !$block_type_to_go[$ibeg_next]
             && $is_closing_token{$token_next}
             && !$self->[_rbreak_container_]
-            ->{ $type_sequence_to_go[$ibeg_next] }    # b1498
+            ->{ $type_sequence_to_go[$ibeg_next] }    # b1498, b977, b1303
             && $types_to_go[$iend] ne '#'
           )    # for safety, shouldn't happen!
         {
             my $cvt   = $closing_vertical_tightness{$token_next};
             my $seqno = $type_sequence_to_go[$ibeg_next];
-
-            # Avoid conflict of -bom and -pvt=1 or -pvt=2, fixes b977, b1303
-            # See similar patch above for $ovt.
-            # NOTE: this is overridden by fix for b1498 above and can
-            # eventually be removed.
-            if ( 0 && $cvt && $self->[_rbreak_container_]->{$seqno} ) {
-                $cvt = 0;
-            }
 
             # Implement cvt=3: like cvt=0 for assigned structures, like cvt=1
             # otherwise.  Added for rt136417.
