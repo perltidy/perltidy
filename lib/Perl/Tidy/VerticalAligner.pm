@@ -6554,7 +6554,8 @@ sub get_output_line_number {
                 }
             }
 
-            if ( $gap >= 0 && defined($seqno_beg) ) {
+            if ( $gap >= 0 ) {
+                if ( !defined($seqno_beg) ) { $seqno_beg = EMPTY_STRING }
                 $maximum_line_length   = $cached_line_maximum_length;
                 $leading_string        = $cached_line_text . SPACE x $gap;
                 $leading_string_length = $cached_line_text_length + $gap;
@@ -6841,7 +6842,7 @@ sub get_output_line_number {
             $seqno_end     = $rvertical_tightness_flags->{_vt_seqno_end};
         }
 
-        $seqno_string = $seqno_end;
+        $seqno_string = defined($seqno_end) ? $seqno_end : EMPTY_STRING;
 
         # handle any cached line ..
         # either append this line to it or write it out

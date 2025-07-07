@@ -4894,11 +4894,16 @@ sub set_whitespace_flags {
 
             $last_type_is_opening = 0;
 
-            my $seqno           = $rtokh->[_TYPE_SEQUENCE_];
-            my $block_type      = $rblock_type_of_seqno->{$seqno};
-            my $last_seqno      = $rtokh_last->[_TYPE_SEQUENCE_];
-            my $last_block_type = $rblock_type_of_seqno->{$last_seqno}
-              || $block_type_for_tightness{$last_seqno};
+            my $seqno = $rtokh->[_TYPE_SEQUENCE_];
+            my $block_type =
+              $seqno ? $rblock_type_of_seqno->{$seqno} : EMPTY_STRING;
+
+            my $last_seqno = $rtokh_last->[_TYPE_SEQUENCE_];
+            my $last_block_type =
+              $last_seqno
+              ? ( $rblock_type_of_seqno->{$last_seqno}
+                  || $block_type_for_tightness{$last_seqno} )
+              : EMPTY_STRING;
 
             $j_tight_closing_paren = -1;
 
@@ -8459,7 +8464,8 @@ EOM
             }
         }
 
-        my $j = -1;
+        my $line_index = $line_number - 1;
+        my $j          = -1;
 
         # NOTE: coding efficiency is critical in this loop over all tokens
         foreach my $token ( @{$rtokens} ) {
@@ -8609,7 +8615,9 @@ EOM
                 $tokary[_TYPE_SEQUENCE_] = $seqno;
             }
             else {
-                $tokary[_TYPE_SEQUENCE_] = EMPTY_STRING;
+                # Note that the coding should be robust enough to allow this to
+                # be left undefined, but for safety we assign a value. c505.
+                $tokary[_TYPE_SEQUENCE_] = DEVEL_MODE ? undef : EMPTY_STRING;
             }
 
             # Here we are storing the first five variables per token. The
@@ -8622,7 +8630,7 @@ EOM
             $tokary[_TOKEN_]      = $token;
             $tokary[_TYPE_]       = $rtoken_type->[$j];
             $tokary[_LEVEL_]      = $rlevels->[$j];
-            $tokary[_LINE_INDEX_] = $line_number - 1;
+            $tokary[_LINE_INDEX_] = $line_index;
 
             push @{$rLL}, \@tokary;
 
@@ -24530,8 +24538,10 @@ sub break_before_list_opening_containers {
             my $KK_test = $rK_weld_right->{$KK};
             if ( defined($KK_test) ) {
                 my $seqno_inner = $rLL->[$KK_test]->[_TYPE_SEQUENCE_];
-                $is_list ||= $self->is_list_by_seqno($seqno_inner);
-                $has_list = $rhas_list->{$seqno_inner};
+                if ($seqno_inner) {
+                    $is_list ||= $self->is_list_by_seqno($seqno_inner);
+                    $has_list = $rhas_list->{$seqno_inner};
+                }
             }
         }
 
@@ -25724,6 +25734,7 @@ sub is_fragile_block_type {
                     #        $issue->{
                     #           'borrowernumber'},  # borrowernumber
                         if (   defined($Kc_test)
+                            && $seqno_end
                             && $seqno_end == $rLL->[$Kc_test]->[_TYPE_SEQUENCE_]
                             && $rLL->[$Kc_test]->[_LINE_INDEX_] == $iline + 1 )
                         {
@@ -29408,7 +29419,7 @@ sub starting_one_line_block {
 
         # ignore some small blocks
         my $type_sequence_i = $rLL->[$Ki]->[_TYPE_SEQUENCE_];
-        my $nobreak         = $rshort_nested->{$type_sequence_i};
+        my $nobreak = $type_sequence_i ? $rshort_nested->{$type_sequence_i} : 0;
 
         # Return false result if we exceed the maximum line length,
         if ( $pos > $maximum_line_length ) {
