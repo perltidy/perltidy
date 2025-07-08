@@ -13631,8 +13631,8 @@ sub scan_variable_usage {
 
         # Store the new identifier at index $KK
         # Given:
-        #   $KK = index of this token
-        #   $true_name = the name to use for lexical methods
+        #  $KK = index of this token
+        #  $true_name = (if defined) alternate name to use for lexical methods
 
         my $name       = $rLL->[$KK]->[_TOKEN_];
         my $line_index = $rLL->[$KK]->[_LINE_INDEX_];
@@ -42904,8 +42904,11 @@ sub make_paren_name {
 
         # Parameters needed for option 2, aligning with opening token:
         my (
-            $opening_indentation, $opening_offset,
-            $is_leading,          $opening_exists
+            $opening_indentation,
+            $opening_offset,
+            $is_leading,
+            $opening_exists,
+
         );
 
         #-------------------------------------
@@ -42941,8 +42944,9 @@ sub make_paren_name {
         # if line starts with a non-sequenced item
         #-----------------------------------------
         else {
-            if ( $type_beg eq ';' && !$rOpts_indent_leading_semicolon ) {
-                $adjust_indentation = 1;
+            if ( $type_beg eq ';' ) {
+                $adjust_indentation = 1
+                  if ( !$rOpts_indent_leading_semicolon );
             }
         }
 
@@ -43250,16 +43254,19 @@ sub make_paren_name {
             && (
 
                 # certain leading keywords if requested
-                $rOpts_outdent_keywords
-                && $type_beg eq 'k'
-                && $outdent_keyword{$token_beg}
+                (
+                       $rOpts_outdent_keywords
+                    && $type_beg eq 'k'
+                    && $outdent_keyword{$token_beg}
+                )
 
                 # or labels if requested
-                || $rOpts_outdent_labels && $type_beg eq 'J'
+                || (   $rOpts_outdent_labels
+                    && $type_beg eq 'J' )
 
                 # or static block comments if requested
-                || $this_batch->[_is_static_block_comment_]
-                && $rOpts_outdent_static_block_comments
+                || (   $rOpts_outdent_static_block_comments
+                    && $this_batch->[_is_static_block_comment_] )
             )
           )
         {
