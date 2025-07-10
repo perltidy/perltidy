@@ -1,5 +1,47 @@
 <h1>Perltidy Change Log</h1>
 
+<h2>2025 07 11</h2>
+
+<pre><code>- Update for issue git #187: add vertical alignment of colons
+  used as attribute separators. These colons have token type 'A',
+  and this vertical alignment will be on by default (since all
+  vertical alignments occur by default).  For example:
+
+    # old default
+    field $tile_size : param;
+    field $bar : reader : writer;
+
+    # new default with alignment of token type 'A'
+    field $tile_size  : param;
+    field $bar        : reader : writer;
+
+  This alignment can be turned off to recover the previous formatting
+  with --valign-exclusion-list='A', or -vxl='A'.
+
+- Update for issue git #186: if a closing format skipping comment
+  '#&gt;&gt;&gt;' is encountered before any '#&lt;&lt;&lt;' is seen, then format
+  skipping is assumed to start with the first line of the file.
+  Use --nodetect-format-skipping-from-start or -ndfsfs to prevent
+  this check.
+
+- Added option --code-skipping-from-start, or -csfs. This causes
+  code-skipping to begin from the start of a file even though there
+  is no starting marker comment, '#&lt;&lt;V'.
+
+- Fixed a bug involving the --format-skipping option. If a line in
+  the skipped code had trailing blanks, then the newline at the end
+  of that line was lost.
+
+- Added a check to insure that format skipping begin and end markers
+  strictly alternate along the lines of a file. If these markers
+  do not alternate, a warning occurs and formatting is skipped.
+  This is intended to help catch errors.
+
+- For lists which contain here docs and which are formatted with
+  the --line-up-parentheses option, the formatting may in some
+  cases change to more closely follow the -lp style.
+</code></pre>
+
 <h2>2025 06 16</h2>
 
 <pre><code>- Added support for the assigning logical xor ^^= operator

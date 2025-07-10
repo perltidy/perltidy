@@ -1885,11 +1885,15 @@
 
  #&gt;&gt;V</code></pre>
 
-<p>(The last character V is like a &lt; or &gt; rotated 90 degrees). Additional text may appear on the special comment lines provided that it is separated from the marker by at least one space to highlight the sign, as in the above examples.</p>
-
-<p>Any number of code-skipping or format-skipping sections may appear in a file. If an opening code-skipping or format-skipping comment is not followed by a corresponding closing comment, then skipping continues to the end of the file. If a closing code-skipping or format-skipping comment appears in a file but does not follow a corresponding opening comment, then it is treated as an ordinary comment without any special meaning.</p>
+<p>(The last character V is like a &lt; or &gt; rotated 90 degrees). Additional text may appear on the special comment lines provided that it is separated from the marker by at least one space, as in the above examples.</p>
 
 <p>It is recommended to use <b>--code-skipping</b> only if you need to hide a block of an extended syntax which would produce errors if parsed by perltidy, and use <b>--format-skipping</b> otherwise. This is because the <b>--format-skipping</b> option provides the benefits of error checking, and there are essentially no limitations on which lines to which it can be applied. The <b>--code-skipping</b> option, on the other hand, does not do error checking and its use is more restrictive because the code which remains, after skipping the marked lines, must be syntactically correct code with balanced containers.</p>
+
+<p>Any number of code-skipping or format-skipping sections may appear in a file.</p>
+
+<p>When multiple sections of code are marked for <b>format-skipping</b>, the beginning and ending markers must alternate from the beginning of the file to the end (i.e., code skipping sections cannot be stacked). If markers do not alternate, then a warning will occur and formatting will not be done. This is to help catch errors early. Normally, the first marker in a file will be a beginning marker and the last marker will be an ending marker, but this is not necessary. If the first marker is an ending marker, then format skipping starts at the first line and continues to that ending marker (unless the <b>--detect-format-skipping-from-start</b> flag has been turned off; see below). If the last marker is a beginning marker, then skipping continues to the end of the file.</p>
+
+<p>For <b>code-skipping</b>, the rules for multiple sections are a little more primitive because perltidy is simultaneously parsing the text while looking for markers. There are two cases, depending on the companion flag <b>--code-skipping-from-start</b>, described below. If this flag has not been set, which is the default, then code skipping begins when a beginning marker is encountered and continues until an ending marker, or the end of the file, is reached. If the <b>--code-skipping-from-start</b> flag is set, then code skipping begins with the first line and continues until an ending marker, or the end of the file, is reached. In both cases, code skipping will restart if a beginning marker is encountered.</p>
 
 <p>These features should be used sparingly to avoid littering code with markers, but they can be helpful for working around occasional problems.</p>
 
@@ -1902,9 +1906,7 @@
 <dt id="fs---format-skipping"><b>-fs</b>, <b>--format-skipping</b></dt>
 <dd>
 
-<p>As explained above, this flag, which is enabled by default, causes any code between special beginning and ending comment markers to be passed to the output without formatting. The code between the comments is still checked for errors however. The default beginning marker is #&lt;&lt;&lt; and the default ending marker is #&gt;&gt;&gt;.</p>
-
-<p>Format skipping begins when a format skipping beginning comment is seen and continues until a format-skipping ending comment is found.</p>
+<p>This is the master switch for format skipping. As explained above, this flag, which is enabled by default, causes any code between special beginning and ending comment markers to be passed to the output without formatting. The code between the comments is still checked for errors however. The default beginning marker is #&lt;&lt;&lt; and the default ending marker is #&gt;&gt;&gt;.</p>
 
 <p>This feature can be disabled with <b>-nfs</b>. This should not normally be necessary.</p>
 
@@ -1916,7 +1918,7 @@
 
 <p>If changed comment markers do not appear to be working, use the <b>-log</b> flag and examine the <i>.LOG</i> file to see if and where they are being detected.</p>
 
-<p>The <b>-fsb=string</b> parameter may be used to change the beginning marker for format skipping. The default is equivalent to -fsb=&#39;#&lt;&lt;&lt;&#39;. The string that you enter must begin with a # and should be in quotes as necessary to get past the command shell of your system. It is actually the leading text of a pattern that is constructed by appending a &#39;\s&#39;, so you must also include backslashes for characters to be taken literally rather than as patterns.</p>
+<p>The default is equivalent to -fsb=&#39;#&lt;&lt;&lt;&#39;. The string that you enter must begin with a # and should be in quotes as necessary to get past the command shell of your system. It is actually the leading text of a pattern that is constructed by appending a &#39;\s&#39;, so you must also include backslashes for characters to be taken literally rather than as patterns.</p>
 
 <p>Some examples show how example strings become patterns:</p>
 
@@ -1930,13 +1932,17 @@
 
 <p>The <b>-fse=string</b> is the corresponding parameter used to change the ending marker for format skipping. The default is equivalent to -fse=&#39;#&lt;&lt;&lt;&#39;.</p>
 
-<p>The beginning and ending strings may be the same, but it is preferable to make them different for clarity.</p>
+</dd>
+<dt id="dfsfs---detect-format-skipping-from-start"><b>-dfsfs</b>, <b>--detect-format-skipping-from-start</b></dt>
+<dd>
+
+<p>If perltidy encounters a format skipping <b>end</b> comment before any format skipping <b>begin</b> comment, then by default it will assume that format skipping begins with the first line of the file. Use <b>-ndfsfs</b>, or <b>--nodetect-format-skipping-from-start</b> to avoid making this assumption. In that case, if the first format skipping marker in a file is an end marker, it will be ignored.</p>
 
 </dd>
 <dt id="cs---code-skipping"><b>-cs</b>, <b>--code-skipping</b></dt>
 <dd>
 
-<p>As explained above, this flag, which is enabled by default, causes any code between special beginning and ending comment markers to be directly passed to the output without any error checking or formatting. Essentially, perltidy treats it as if it were a block of arbitrary text. The default beginning marker is #&lt;&lt;V and the default ending marker is #&gt;&gt;V.</p>
+<p>This is the master switch for code skipping. This flag, which is enabled by default, causes any code between special beginning and ending comment markers to be directly passed to the output without any error checking or formatting. Essentially, perltidy treats it as if it were a block of arbitrary text. The default beginning marker is #&lt;&lt;V and the default ending marker is #&gt;&gt;V.</p>
 
 <p>This feature can be disabled with <b>-ncs</b>. This should not normally be necessary.</p>
 
@@ -1953,21 +1959,29 @@
 <p>This may be used to change the ending comment for a <b>--code-skipping</b> section, and its use is similar to the <b>-fse=string</b>. The default is equivalent to -cse=&#39;#&gt;&gt;V&#39;.</p>
 
 </dd>
+<dt id="csfs---code-skipping-from-start"><b>-csfs</b>, <b>--code-skipping-from-start</b></dt>
+<dd>
+
+<p>When this flag is set, and code skipping has not been disabled, code skipping begins from the start of a file even though there is no beginning code skipping comment. In other words, setting this flag is like having a beginning marker line &#39;#&lt;&lt;V&#39; just before the first line of the file. Code skipping will continue until an ending comment is reached.</p>
+
+</dd>
 </dl>
 
 <h2 id="Formatting-Only-Tagged-Sections-of-Code">Formatting Only Tagged Sections of Code</h2>
 
 <p>A command <b>--skip-formatting-except-id=tag</b>, or <b>-sfei=tag</b>, is available to cause perltidy to <b>only</b> format sections of code which are labeled with the selected tag on <code>format-skipping</code> comments.</p>
 
-<p>For example, the tagged sections might contain tables which are best formatted with special values of the <code>--maximum-line-length</code> parameter.</p>
+<p>For example, the tagged sections might contain tables which are best formatted with special values of the <b>--maximum-line-length</b> parameter. Or perhaps a tagged section is a deeply nested table which would avoid unwanted line breaks if formatted with less indentation by using a special value of <b>--starting-indentation-level=n</b>.</p>
 
-<p>The tag name is introduced with the added text <b>id=NAME</b> after one or more spaces on the opening format-skipping comment. The tag <b>NAME</b> can be any combination of letters and numbers. For example</p>
+<p>The tag name is introduced with the added text <b>id=NAME</b> after one or more spaces on the opening format-skipping comment. The tag <b>NAME</b> can be any combination of letters and numbers, and there must not be any space around the equals sign.</p>
 
-<pre><code> #&lt;&lt;&lt; id=Table27
+<p>For example</p>
+
+<pre><code> #&lt;&lt;&lt; id=LongLines
    ...
  #&gt;&gt;&gt;</code></pre>
 
-<p>The code in this section will be treated like any other format skipping section unless the parameter <b>--skip-formatting-except-id=Table27</b> is entered. In that case, it will be formatted.</p>
+<p>The code in this section will be treated like any other format skipping section unless the parameter <b>--skip-formatting-except-id=LongLines</b> is entered. In that case, it will be formatted.</p>
 
 <p>Here are some points regarding this option:</p>
 
@@ -1976,13 +1990,16 @@
 <li><p>The special option <b>--skip-formatting-except-id=&#39;-&#39;</b>, or <b>-sfei=&#39;-&#39;</b>, means skip all formatting (since a tag named &#39;-&#39; does not exist). This will allow the code to be scanned for problems, but the formatting will not be changed. The <b>-notidy</b> parameter can also be used to skip formatting, but it exits at an earlier point in the process, so it runs faster but does not perform as many code checks.</p>
 
 </li>
+<li><p>The special option <b>--skip-formatting-except-id=&#39;*&#39;</b>, or <b>-sfei=&#39;*&#39;</b>, means to format all sections marked for format skipping, regardless of any <b>id=</b> comment. This can eliminate the need for adding <b>id=</b> to the format skipping markers in simple cases.</p>
+
+</li>
 <li><p>The sections which are being skipped or formatted can be determined by dumping a log file with the <b>-g</b> parameter.</p>
 
 </li>
 <li><p>When this option is used, the starting indentation is still guessed from the first code in the file, even if it is not being formatted. If this results in an unwanted indentation of the tagged section, then the parameter <b>--starting-indentation-level=n</b>, or <b>-sil=n</b>, can be used to set the desired indentation.</p>
 
 </li>
-<li><p>This feature was suggested in issue git #183 at <a href="https://github.com/perltidy/perltidy/issues/183">https://github.com/perltidy/perltidy/issues/183</a>, which discusses an example.</p>
+<li><p>If the first format skipping marker in a file is an ending marker, then it ends a format skipping section which starts from the first line of the file without a beginning marker. So the usual method of putting an identifier tag on the beginning marker cannot be used. In this special case, an identifier for that section may be placed on the ending marker. This is the only case where an identifier is read from an ending marker.</p>
 
 </li>
 </ul>
@@ -5964,24 +5981,24 @@
 <pre><code> D      aia    altc   ame    anl    asbl   asc    ast    asu    atc
  atnl   aws    b      baa    baao   bar    bbao   bbb    bbc    bbs
  bl     bli    boa    boc    bok    bol    bom    bos    bot    cblx
- ce     conv   cpb    cpbw   cs     csc    cscb   cscw   dac    dbc
- dbs    dcbl   dcsc   ddf    dhk    dia    dior   dln    dltc   dma
- dmcp   dmr    dnl    dop    dp     dpro   drc    dsc    dsk    dsm
- dsn    dtc    dtco   dtt    duk    duv    dwic   dwls   dwrs   dws
- eos    f      fpva   frm    fs     fso    gcs    hbc    hbcm   hbco
- hbh    hbhh   hbi    hbj    hbk    hbm    hbn    hbp    hbpd   hbpu
- hbq    hbs    hbsc   hbv    hbw    hent   hic    hicm   hico   hih
- hihh   hii    hij    hik    him    hin    hip    hipd   hipu   hiq
- his    hisc   hiv    hiw    hsc    html   ibc    icb    icp    ils
- iob    ipc    isbc   iscl   kgb    kgbd   kgbi   kis    lal    log
- lop    lp     lsl    mci    mem    nib    ohbr   okw    ola    olc
- oll    olq    opr    opt    osbc   osbr   otr    ple    pod    pvl
- q      qwaf   sac    sbc    sbl    scbb   schb   scp    scsb   sct
- se     sfp    sfs    skp    sob    sobb   sohb   sop    sosb   sot
- ssc    st     sts    t      tac    tbc    toc    tp     tqw    trp
- ts     tsc    tso    vbc    vc     viu    vmll   vsc    vsn    vwe
- w      wfc    wia    wma    wme    wmr    wn     wsk    wuk    x
- xbt    xci    xlp    xs</code></pre>
+ ce     conv   cpb    cpbw   cs     csc    cscb   cscw   csfs   dac
+ dbc    dbs    dcbl   dcsc   ddf    dfsfs  dhk    dia    dior   dln
+ dltc   dma    dmcp   dmr    dnl    dop    dp     dpro   drc    dsc
+ dsk    dsm    dsn    dtc    dtco   dtt    duk    duv    dwic   dwls
+ dwrs   dws    eos    f      fpva   frm    fs     fso    gcs    hbc
+ hbcm   hbco   hbh    hbhh   hbi    hbj    hbk    hbm    hbn    hbp
+ hbpd   hbpu   hbq    hbs    hbsc   hbv    hbw    hent   hic    hicm
+ hico   hih    hihh   hii    hij    hik    him    hin    hip    hipd
+ hipu   hiq    his    hisc   hiv    hiw    hsc    html   ibc    icb
+ icp    ils    iob    ipc    isbc   iscl   kgb    kgbd   kgbi   kis
+ lal    log    lop    lp     lsl    mci    mem    nib    ohbr   okw
+ ola    olc    oll    olq    opr    opt    osbc   osbr   otr    ple
+ pod    pvl    q      qwaf   sac    sbc    sbl    scbb   schb   scp
+ scsb   sct    se     sfp    sfs    skp    sob    sobb   sohb   sop
+ sosb   sot    ssc    st     sts    t      tac    tbc    toc    tp
+ tqw    trp    ts     tsc    tso    vbc    vc     viu    vmll   vsc
+ vsn    vwe    w      wfc    wia    wma    wme    wmr    wn     wsk
+ wuk    x      xbt    xci    xlp    xs</code></pre>
 
 <p>Equivalently, the prefix &#39;no&#39; or &#39;no-&#39; on the corresponding long names may be used.</p>
 
@@ -6059,7 +6076,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20250616</p>
+<p>This man page documents perltidy version 20250711</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

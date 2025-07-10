@@ -5,7 +5,7 @@ use Carp;
 
 { #<<< A non-indenting brace to contain all lexical variables
 
-our $VERSION = '20250616.02';
+our $VERSION = '20250711';
 use English qw( -no_match_vars );
 use Scalar::Util 'refaddr';    # perl 5.8.1 and later
 use Perl::Tidy::VerticalAligner::Alignment;
@@ -6554,8 +6554,8 @@ sub get_output_line_number {
                 }
             }
 
-            if ( $gap >= 0 ) {
-                if ( !defined($seqno_beg) ) { $seqno_beg = EMPTY_STRING }
+            # NOTE: using defined() since $seqno_beg can be 0 for -bbvt
+            if ( $gap >= 0 && defined($seqno_beg) ) {
                 $maximum_line_length   = $cached_line_maximum_length;
                 $leading_string        = $cached_line_text . SPACE x $gap;
                 $leading_string_length = $cached_line_text_length + $gap;

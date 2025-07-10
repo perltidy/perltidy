@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2025 06 16.02
+## 2025 07 11
 
     - Update for issue git #187: add vertical alignment of colons
       used as attribute separators. These colons have token type 'A',
