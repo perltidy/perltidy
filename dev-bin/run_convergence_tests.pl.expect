@@ -8702,6 +8702,20 @@ use HTML::Template;
 my $query = new CGI;
 my $template;
 
+==> b1525 <==
+   my (%reverse_genetic_code) = (
+      'L' =>
+          'CTA CTC CTG CTT TTA TTG'
+      ,    # Leucine
+   );
+
+   my (%reverse_genetic_code) = (
+      'L' =>
+          'CTA CTC CTG CTT TTA TTG'
+      ,    # Leucine
+   );
+
+
 ==> b156 <==
 # State 1
 {

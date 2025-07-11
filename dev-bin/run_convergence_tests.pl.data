@@ -12896,6 +12896,26 @@ my $template;
 --keyword-group-blanks-size='1.8'
 --keyword-group-blanks-inside
 
+==> b1525.in <==
+   my (%reverse_genetic_code) = (
+      'L' =>
+          'CTA CTC CTG CTT TTA TTG'
+      ,    # Leucine
+   );
+
+   my (%reverse_genetic_code) = (
+     'L' =>
+         'CTA CTC CTG CTT TTA TTG', # Leucine
+   );
+
+
+==> b1525.par <==
+--maximum-line-length=37
+--indent-columns=3
+--continuation-indentation=4
+--extended-line-up-parentheses
+--ignore-side-comment-lengths
+
 ==> b156.in <==
 # State 1
 {

@@ -25810,6 +25810,18 @@ sub is_fragile_block_type {
                         if ( $length > $max_prong_len ) {
                             $max_prong_len = $length;
                         }
+
+                        # Fix for b1525: avoid instability for a leading comma
+                        # in interrupted mode when -iscl is set
+                        elsif ($K_terminal == $K_first
+                            && $rOpts_ignore_side_comment_lengths
+                            && $has_comment )
+                        {
+                            $max_prong_len += 2;
+                        }
+                        else {
+                            ## no other special cases
+                        }
                     }
                 }
             }
