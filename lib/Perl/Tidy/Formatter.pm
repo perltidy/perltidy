@@ -23937,6 +23937,18 @@ sub weld_nested_quotes {
         my $next_token = $rLL->[$Kn]->[_TOKEN_];
         next if ( substr( $next_token, 0, 1 ) ne 'q' );
 
+        # c507: do not weld to a qw at '}{qw(...' for -xlp style. This can
+        # result in lines which exceed the line length limit because there
+        # may not be a break at the LR location.
+        if (   $rOpts_extended_line_up_parentheses
+            && length($next_token) > 3
+            && $rLL->[$Kouter_opening]->[_TYPE_] eq 'L'
+            && $Kouter_opening
+            && $rLL->[ $Kouter_opening - 1 ]->[_TYPE_] eq 'R' )
+        {
+            next;
+        }
+
         # The token before the closing container must also be a quote
         my $Kouter_closing = $K_closing_container->{$outer_seqno};
         my $Kinner_closing = $self->K_previous_nonblank($Kouter_closing);

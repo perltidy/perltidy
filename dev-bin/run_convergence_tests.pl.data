@@ -19550,3 +19550,17 @@ push @paths, qw(
 --paren-tightness=2
 --paren-vertical-tightness-closing=2
 --maximum-line-length=50
+
+==> c507.in <==
+        # c507: Line length was exceeded at qw weld line for -xlp -l=70 -wn
+        # Update c507 prevents the bad qw weld here. This just for -xlp.
+        # Otherwise, a break is inserted at the '}{' to avoid the problem.
+        @opts{ qw( name field_names field_types field_lengths
+            field_decimals ) } = (
+                        $filename,
+                        @{$parsed_sqlxxxxxxxxxxxxxx}{ qw( createfieldsxxxxxxx
+                        createtypes createlengths createdecimals ) },
+            );
+
+==> c507.par <==
+-xlp -l=70 -wn
