@@ -12916,6 +12916,35 @@ my $template;
 --extended-line-up-parentheses
 --ignore-side-comment-lengths
 
+==> b1527.in <==
+    my $response
+      = $self->transport->send_receive ( endpoint => $self->endpoint,
+                                         action   =>
+                                           $self->on_action-> (
+                                              $serializer->uriformethod (
+                                                                    $_[0]
+                                              )
+                                           ),
+      );
+    my $response
+      = $self->transport->send_receive ( endpoint => $self->endpoint,
+                                         action   =>
+                                           $self->on_action
+                                           -> ( $serializer
+                                                ->uriformethod ( $_[0]
+                                                ) ),
+      );
+
+
+==> b1527.par <==
+--maximum-line-length=73
+--weld-nested-containers
+--paren-vertical-tightness=2
+--extended-line-up-parentheses
+--space-function-paren
+--break-before-all-operators
+--break-at-old-comma-breakpoints
+
 ==> b156.in <==
 # State 1
 {

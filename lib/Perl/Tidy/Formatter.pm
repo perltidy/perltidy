@@ -7028,8 +7028,8 @@ EOM
             # Sixth Approximation. Welds.
             #---------------------------------------------------------------
 
-            # Do not allow a break within welds
-            if ( $total_weld_count && $seqno ) {
+            # Do not allow a break within welds (fix b1527: do not check seqno)
+            if ($total_weld_count) {
                 my $KK = $K_to_go[$i];
                 if ( $rK_weld_right->{$KK} ) {
                     $strength = NO_BREAK;

@@ -8716,6 +8716,25 @@ my $template;
    );
 
 
+==> b1527 <==
+    my $response
+      = $self->transport->send_receive ( endpoint => $self->endpoint,
+                                         action   =>
+                                           $self->on_action
+                                           -> ( $serializer->uriformethod (
+                                                                    $_[0]
+                                           ) ),
+      );
+    my $response
+      = $self->transport->send_receive ( endpoint => $self->endpoint,
+                                         action   =>
+                                           $self->on_action
+                                           -> ( $serializer->uriformethod (
+                                                                    $_[0]
+                                           ) ),
+      );
+
+
 ==> b156 <==
 # State 1
 {
