@@ -24872,8 +24872,16 @@ EOM
 
         # option 2: indent one level
         elsif ( $ci_flag == 2 ) {
-            $ci -= 1;
-            $radjusted_levels->[$KK] += 1;
+
+            # b1526 emergency fix for -wc: skip this if -wc and we are beyond
+            # the value of -wc because indenting can become outdenting in that
+            # case, and unstable.
+            if (  !$rOpts_whitespace_cycle
+                || $rLL->[$KK]->[_LEVEL_] < $rOpts_whitespace_cycle )
+            {
+                $ci -= 1;
+                $radjusted_levels->[$KK] += 1;
+            }
         }
 
         # unknown option

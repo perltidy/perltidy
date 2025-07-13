@@ -8716,6 +8716,34 @@ my $template;
    );
 
 
+==> b1526 <==
+        my @items = map {
+        $self->encode_object(
+                SOAP::Data->type(
+                        ordered_hash =>
+                          [
+        key   => $_,
+        value => $value->{$_},
+                          ]
+                ),
+                'item', ''
+        )
+        } keys %$value;
+
+        my @items = map {
+        $self->encode_object(
+                SOAP::Data->type(
+                        ordered_hash =>
+                          [
+        key   => $_,
+        value => $value->{$_},
+                          ]
+                ),
+                'item', ''
+        )
+        } keys %$value;
+
+
 ==> b1527 <==
     my $response
       = $self->transport->send_receive ( endpoint => $self->endpoint,

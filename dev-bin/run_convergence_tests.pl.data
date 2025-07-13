@@ -12916,6 +12916,39 @@ my $template;
 --extended-line-up-parentheses
 --ignore-side-comment-lengths
 
+==> b1526.in <==
+        my @items = map {
+        $self->encode_object(
+                SOAP::Data->type(
+                        ordered_hash =>
+        [ key => $_, value => $value->{$_}, ]
+                ),
+                'item', ''
+        )
+        } keys %$value;
+
+        my @items = map {
+        $self->encode_object(
+                SOAP::Data->type(
+                        ordered_hash =>
+                          [
+        key   => $_,
+        value => $value->{$_},
+                          ]
+                ),
+                'item', ''
+        )
+        } keys %$value;
+
+
+==> b1526.par <==
+--maximum-line-length=53
+--indent-columns=8
+--break-before-square-bracket=1
+--comma-arrow-breakpoints=3
+--break-before-square-bracket-and-indent=2
+--whitespace-cycle=1
+
 ==> b1527.in <==
     my $response
       = $self->transport->send_receive ( endpoint => $self->endpoint,
