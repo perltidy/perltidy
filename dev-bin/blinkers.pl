@@ -114,7 +114,7 @@ sub get_version {
     }
     my $line = <$fh>;
     chomp $line;
-    my ( $part1, $version ) = split /,\s+v/, $line;
+    my ( $part1_uu, $version ) = split /,\s+v/, $line;
     $fh->close();
     if ( -e $tmpname ) { unlink $tmpname }
     return $version;
@@ -142,7 +142,7 @@ sub set_dirs {
 }
 
 sub find_git_home {
-    my ( $fh, $err_file ) = File::Temp::tempfile();
+    my ( $fh_uu, $err_file ) = File::Temp::tempfile();
 
     # See if we are within the perltidy git
     $git_home = qx[git rev-parse --show-toplevel 2>$err_file];
@@ -200,10 +200,11 @@ sub retest_blinkers {
         }
 
         my $state = blinker_test($rhash);
-        if    ( !defined($state) ) { push @unknown,      $dir }
+        if    ( !defined($state) ) { push @unknown, $dir }
         elsif ( $state == 0 )      { push @not_blinking, $dir }
-        elsif ( $state == 1 )      { push @blinking,     $dir }
-        chdir $starting_dir;    ##BOOGA
+        elsif ( $state == 1 )      { push @blinking, $dir }
+        else                       { }
+        chdir $starting_dir;
     }
 
     chdir $starting_dir;
@@ -260,7 +261,7 @@ sub find_starting_files {
     # Find the initial input file and profile in the current directory
     my ($rhash) = @_;
     $rhash->{infile}        = undef;
-    $rhash->{outfile}       = undef;
+##  $rhash->{outfile}       = undef;
     $rhash->{error_message} = EMPTY_STRING;
 
     my @files = glob("*");
@@ -418,11 +419,23 @@ sub profile_simplify {
     my ( $ifile, $pfile, $my_perltidy ) = @_;
     my $dir = getcwd();
 
-    print ">>>ifile=$ifile, pfile=$pfile, dir=$dir\n";
-    if ( !-e $pfile ) {
-        query("Cannot find $pfile for this case: please run 'prep'");
+    if (!defined($ifile)) {
+        query("Input file is not defined");
         return;
     }
+    if (!-e $ifile) {
+        query("Cannot locate input file '$ifile'");
+        return;
+    }
+    if (!defined($pfile)) {
+        query("A profile is not defined for '$ifile'");
+        return;
+    }
+    if ( !-e $pfile ) {
+        query("Cannot find profile for input file '$ifile': please run 'prep'");
+        return;
+    }
+    print ">>>ifile=$ifile, pfile=$pfile, dir=$dir\n";
 
     my @tmp_list;
     open( PRO, "<", $pfile ) || die "cannot open $pfile: $!\n";
@@ -618,7 +631,7 @@ EOM
     }
     print
 "$npass passes with $num_start items and table=@chunk_table and ratio=$ratio\n";
-    return ( $rprofile_keep, $err_msg, $npass );
+    return ( $rprofile_keep, $err_msg ); ##, $npass );
 }
 
 sub param_to_file {
