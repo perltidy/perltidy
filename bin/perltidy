@@ -4812,7 +4812,7 @@ This parameter makes it possible to skip adding or deleting arrows following a
 container which is complex in some sense. Three levels of complexity can be
 specified with the integer B<n>, as follows:
 
- n=0  the left container must contain be a single thing (token)
+ n=0  the left container must contain a single thing (token)
  n=1  the left container must not contain other containers [DEFAULT]
  n=2  the left container may contain anything
 
