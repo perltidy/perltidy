@@ -3860,6 +3860,8 @@ sub generate_options {
     ########################################
     $category = 9;    # Other controls
     ########################################
+    $add_option->( 'dump-nested-ternaries',        'dnt',  '!' );
+    $add_option->( 'warn-nested-ternaries',        'wnt',  '!' );
     $add_option->( 'warn-missing-else',            'wme',  '!' );
     $add_option->( 'add-missing-else',             'ame',  '!' );
     $add_option->( 'add-missing-else-comment',     'amec', '=s' );

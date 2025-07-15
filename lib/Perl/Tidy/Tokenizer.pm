@@ -6432,10 +6432,12 @@ EOM
 
         $self->[_in_quote_] = $in_quote;
         $self->[_quote_target_] =
-            $in_quote
-          ? $matching_end_token{$quote_character}
-              ? $matching_end_token{$quote_character}
-              : $quote_character
+          $in_quote
+          ? (
+              $matching_end_token{$quote_character}
+            ? $matching_end_token{$quote_character}
+            : $quote_character
+          )
           : EMPTY_STRING;
         $self->[_rhere_target_list_] = $rhere_target_list;
 

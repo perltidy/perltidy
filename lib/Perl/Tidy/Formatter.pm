@@ -6954,12 +6954,15 @@ EOM
             #   $type - if not keyword
             #   $token - if keyword, but map some keywords together
             my $left_key =
-              $type eq 'k' ? $token eq 'err' ? 'or' : $token : $type;
+              $type eq 'k' ? ( $token eq 'err' ? 'or' : $token ) : $type;
+
             my $right_key =
-                $next_nonblank_type eq 'k'
-              ? $next_nonblank_token eq 'err'
-                  ? 'or'
-                  : $next_nonblank_token
+              $next_nonblank_type eq 'k'
+              ? (
+                $next_nonblank_token eq 'err'
+                ? 'or'
+                : $next_nonblank_token
+              )
               : $next_nonblank_type;
 
             # bias left token
@@ -8792,6 +8795,16 @@ EOM
     if ( $rOpts->{'dump-block-summary'} ) {
         $self->dump_block_summary();
         Exit(0);
+    }
+
+    if ( $rOpts->{'dump-nested-ternaries'} ) {
+        $self->dump_nested_ternaries();
+        Exit(0);
+    }
+
+    if ( $rOpts->{'warn-nested-ternaries'} ) {
+        $self->warn_nested_ternaries()
+          if ( $self->[_logger_object_] );
     }
 
     # Dump variable usage info if requested
@@ -22113,6 +22126,83 @@ EOM
     }
     return;
 } ## end sub dump_mismatched_returns
+
+sub find_nested_ternaries {
+    my ($self) = @_;
+
+    # find nested ternaries for -dnt and -wnt
+
+    my $rLL                 = $self->[_rLL_];
+    my $K_opening_ternary   = $self->[_K_opening_ternary_];
+    my $K_closing_ternary   = $self->[_K_closing_ternary_];
+    my $K_closing_container = $self->[_K_closing_container_];
+    my ( $Ko_last, $Kc_last, $seqno_last );
+    my $output_string = EMPTY_STRING;
+
+    # Loop over all ternaries in order
+    foreach my $seqno ( sort { $a <=> $b } keys %{$K_opening_ternary} ) {
+
+        # Pull out the indexes of the '?' and ':' tokens of this ternary
+        my $Ko = $K_opening_ternary->{$seqno};    # '?'
+        my $Kc = $K_closing_ternary->{$seqno};    # ':'
+
+        # If this '?' comes before a previous ':' then it is nested
+        if ( defined($Kc_last) && $Ko < $Kc_last ) {
+
+            # But we will look for and ignore nested terms contained in parens
+            my $is_contained;
+            foreach my $seqno_t ( $seqno_last + 1 .. $seqno - 1 ) {
+                my $Kc_t = $K_closing_container->{$seqno_t};
+                if ( $Kc_t > $Ko ) { $is_contained = 1; last }
+            }
+
+            if ( !$is_contained ) {
+                my $lno = 1 + $rLL->[$Ko]->[_LINE_INDEX_];
+                $output_string .= "$lno: nested ternary\n";
+            }
+        }
+        $Ko_last    = $Ko;
+        $Kc_last    = $Kc;
+        $seqno_last = $seqno;
+    }
+
+    return $output_string;
+} ## end sub find_nested_ternaries
+
+sub dump_nested_ternaries {
+    my ($self) = @_;
+
+    # implement --dump-nested-ternaries
+    my $output_string = $self->find_nested_ternaries();
+    if ($output_string) {
+        my $input_stream_name = get_input_stream_name();
+        chomp $output_string;
+        print {*STDOUT} <<EOM;
+$input_stream_name: output for --dump-nested-ternaries
+$output_string
+EOM
+    }
+    return;
+} ## end sub dump_nested_ternaries
+
+sub warn_nested_ternaries {
+    my ($self) = @_;
+
+    # implement --warn-nested-ternaries
+    my $output_string = $self->find_nested_ternaries();
+    if ($output_string) {
+        my $opt_name = 'warn-nested-ternaries';
+        chomp $output_string;
+        warning(<<EOM);
+
+Begin scan for --$opt_name
+$output_string
+End scan for --$opt_name
+EOM
+    }
+
+    return;
+} ## end sub warn_nested_ternaries
 
 sub check_for_old_break {
     my ( $self, $KK, $rkeep_break_hash, $rbreak_hash ) = @_;
