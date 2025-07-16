@@ -22130,26 +22130,34 @@ EOM
 sub find_nested_ternaries {
     my ($self) = @_;
 
-    # find nested ternaries for -dnt and -wnt
+    # Find nested ternaries for -dnt and -wnt
+
+    # Returns:
+    #    $output_string = string of nested ternaries for output
 
     my $rLL                 = $self->[_rLL_];
     my $K_opening_ternary   = $self->[_K_opening_ternary_];
     my $K_closing_ternary   = $self->[_K_closing_ternary_];
     my $K_closing_container = $self->[_K_closing_container_];
-    my ( $Ko_last, $Kc_last, $seqno_last );
+    my ( $Ko_last, $Kc_last, $seqno_last, $depth_last );
     my $output_string = EMPTY_STRING;
+    my $opt_cutoff    = 'nested-ternary-warning-depth';
+    my $warning_depth = $rOpts->{$opt_cutoff};
+    my $skipped_count = 0;
 
-    # Loop over all ternaries in order
+    # Loop over all ternaries in order of occurrence
     foreach my $seqno ( sort { $a <=> $b } keys %{$K_opening_ternary} ) {
 
-        # Pull out the indexes of the '?' and ':' tokens of this ternary
-        my $Ko = $K_opening_ternary->{$seqno};    # '?'
-        my $Kc = $K_closing_ternary->{$seqno};    # ':'
+        # Pull out the indexes of the '?' and ':' tokens for this ternary
+        my $Ko    = $K_opening_ternary->{$seqno};    # '?'
+        my $Kc    = $K_closing_ternary->{$seqno};    # ':'
+        my $depth = 0;
 
-        # If this '?' comes before a previous ':' then it is nested
+        # If this '?' precedes the ':' of a previous ternary then it is nested
         if ( defined($Kc_last) && $Ko < $Kc_last ) {
 
-            # But we will look for and ignore nested terms contained in parens
+            # But nested ternaries contained in parens have their depth reset
+            # to zero.
             my $is_contained;
             foreach my $seqno_t ( $seqno_last + 1 .. $seqno - 1 ) {
                 my $Kc_t = $K_closing_container->{$seqno_t};
@@ -22157,15 +22165,28 @@ sub find_nested_ternaries {
             }
 
             if ( !$is_contained ) {
-                my $lno = 1 + $rLL->[$Ko]->[_LINE_INDEX_];
-                $output_string .= "$lno: nested ternary\n";
+                $depth = 1 + $depth_last;
+                if ( $depth >= $warning_depth ) {
+                    my $lno = 1 + $rLL->[$Ko]->[_LINE_INDEX_];
+                    $output_string .= "$lno: nested ternary depth=$depth\n";
+                }
+                else {
+                    $skipped_count++;
+                }
             }
         }
         $Ko_last    = $Ko;
         $Kc_last    = $Kc;
         $seqno_last = $seqno;
+        $depth_last = $depth;
     }
-
+    if ($output_string) {
+        my $cutoff_info =
+          $skipped_count
+          ? "--$opt_cutoff=$warning_depth filtered out $skipped_count nested ternaries"
+          : EMPTY_STRING;
+        $output_string = $cutoff_info . "\n" . $output_string;
+    }
     return $output_string;
 } ## end sub find_nested_ternaries
 
@@ -22173,12 +22194,13 @@ sub dump_nested_ternaries {
     my ($self) = @_;
 
     # implement --dump-nested-ternaries
+    my $opt_name      = 'dump-nested-ternaries';
     my $output_string = $self->find_nested_ternaries();
     if ($output_string) {
         my $input_stream_name = get_input_stream_name();
         chomp $output_string;
         print {*STDOUT} <<EOM;
-$input_stream_name: output for --dump-nested-ternaries
+$input_stream_name: output for --$opt_name
 $output_string
 EOM
     }
