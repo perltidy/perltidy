@@ -22141,8 +22141,8 @@ sub find_nested_ternaries {
     my $K_closing_container = $self->[_K_closing_container_];
     my ( $Ko_last, $Kc_last, $seqno_last, $depth_last );
     my $output_string = EMPTY_STRING;
-    my $opt_cutoff    = 'nested-ternary-warning-depth';
-    my $warning_depth = $rOpts->{$opt_cutoff};
+    my $opt_cutoff    = 'nested-ternary-maximum-depth';
+    my $maximum_depth = $rOpts->{$opt_cutoff};
     my $skipped_count = 0;
 
     # Loop over all ternaries in order of occurrence
@@ -22166,7 +22166,7 @@ sub find_nested_ternaries {
 
             if ( !$is_contained ) {
                 $depth = 1 + $depth_last;
-                if ( $depth >= $warning_depth ) {
+                if ( $depth > $maximum_depth ) {
                     my $lno = 1 + $rLL->[$Ko]->[_LINE_INDEX_];
                     $output_string .= "$lno: nested ternary depth=$depth\n";
                 }
@@ -22183,7 +22183,7 @@ sub find_nested_ternaries {
     if ($output_string) {
         my $cutoff_info =
           $skipped_count
-          ? "--$opt_cutoff=$warning_depth filtered out $skipped_count nested ternaries"
+          ? "--$opt_cutoff=$maximum_depth filtered out $skipped_count nested ternaries"
           : EMPTY_STRING;
         $output_string = $cutoff_info . "\n" . $output_string;
     }

@@ -3862,7 +3862,7 @@ sub generate_options {
     ########################################
     $add_option->( 'dump-nested-ternaries',        'dnt',  '!' );
     $add_option->( 'warn-nested-ternaries',        'wnt',  '!' );
-    $add_option->( 'nested-ternary-warning-depth', 'ntwd', '=i' );
+    $add_option->( 'nested-ternary-maximum-depth', 'ntmd', '=i' );
     $add_option->( 'warn-missing-else',            'wme',  '!' );
     $add_option->( 'add-missing-else',             'ame',  '!' );
     $add_option->( 'add-missing-else-comment',     'amec', '=s' );
@@ -4131,7 +4131,7 @@ sub generate_options {
         'vertical-tightness-closing'                => [ 0, 3,     undef ],
         'warn-mismatched-arg-overcount-cutoff'      => [ 0, undef, 1 ],
         'warn-mismatched-arg-undercount-cutoff'     => [ 0, undef, 4 ],
-        'nested-ternary-warning-depth'              => [ 1, undef, 1 ],
+        'nested-ternary-maximum-depth'              => [ 0, undef, 0 ],
         'warn-unique-keys-cutoff'                   => [ 1, undef, 1 ],
         'whitespace-cycle'                          => [ 0, undef, 0 ],
     );
