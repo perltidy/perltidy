@@ -36435,9 +36435,17 @@ EOM
         # We only want the -cab flag to apply to list containers, so
         # for non-lists we use the default and stable -cab=5 value.
         # Fixes case b939a.
-        if ( $type_sequence && !$self->[_ris_list_by_seqno_]->{$type_sequence} )
-        {
-            $cab_flag = 5;
+        if ( $type_sequence && $cab_flag != 5 ) {
+            if ( !$self->[_ris_list_by_seqno_]->{$type_sequence} ) {
+                $cab_flag = 5;
+            }
+
+            # And set cab_flag = 5 if there are no fat commas in this list
+            else {
+                my $rtype_count =
+                  $self->[_rtype_count_by_seqno_]->{$type_sequence};
+                if ( !$rtype_count || !$rtype_count->{'=>'} ) { $cab_flag = 5 }
+            }
         }
 
         # Ignore old breakpoints when under stress.
@@ -36533,8 +36541,7 @@ EOM
         }
 
         # We've set breaks after all comma-arrows.  Now we have to
-        # undo them if this can be a one-line block
-        # (the only breakpoints set will be due to comma-arrows)
+        # undo them if this can be a one-line block.
 
         if (
 
@@ -36544,17 +36551,6 @@ EOM
             # and if the opening structure is in this batch
             && $saw_opening_structure
 
-            # and either on the same old line
-            && (
-                $old_breakpoint_count_stack[$current_depth] ==
-                $last_old_breakpoint_count
-
-                # or user wants to form long blocks with arrows
-                # check on _rbreak_container_ added for b1500
-                || ( $cab_flag == 2
-                    && !$self->[_rbreak_container_]->{$type_sequence} )
-            )
-
             # and we made breakpoints between the opening and closing
             && ( $breakpoint_undo_stack[$current_depth] <
                 $forced_breakpoint_undo_count )
@@ -36562,6 +36558,27 @@ EOM
             # and this block is short enough to fit on one line
             # Note: use < because need 1 more space for possible comma
             && !$is_long_term
+
+            # and ...
+            && (
+
+                # either on the same old line (unless ignoring old breakpoints)
+
+                # OLD: test for tokens on same line caused instability b1528:
+                #   $old_breakpoint_count_stack[$current_depth] ==
+                #         $last_old_breakpoint_count
+
+                # Updated pair of tests which fix b1528:
+                $rOpts_ignore_old_breakpoints
+
+                || $self->on_same_line_by_K( $K_to_go[$i_opening],
+                    $K_to_go[$i] )
+
+                # ... or user wants to form long blocks with arrows
+                # check on _rbreak_container_ added for b1500
+                || ( $cab_flag == 2
+                    && !$self->[_rbreak_container_]->{$type_sequence} )
+            )
 
           )
         {
@@ -38565,6 +38582,21 @@ sub excess_line_length {
       $maximum_line_length_at_level[ $levels_to_go[$ibeg] ];
 
 } ## end sub excess_line_length
+
+sub on_same_line_by_K {
+
+    my ( $self, $Ko, $Kc ) = @_;
+
+    # Given:
+    #   $Ko, $Kc = indexes of two tokens in the main $rLL array
+    # Return:
+    #   true if they are on the same input line
+    #   false if not
+    return if ( !defined($Ko) || $Ko < 0 );
+    return if ( !defined($Kc) || $Kc < 0 );
+    my $rLL = $self->[_rLL_];
+    return $rLL->[$Ko]->[_LINE_INDEX_] == $rLL->[$Kc]->[_LINE_INDEX_];
+} ## end sub on_same_line_by_K
 
 sub get_spaces {
 

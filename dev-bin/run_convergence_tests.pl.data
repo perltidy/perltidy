@@ -12978,6 +12978,29 @@ my $template;
 --break-before-all-operators
 --break-at-old-comma-breakpoints
 
+==> b1528.in <==
+for $dir (
+         split ( /:/, $ENV{ 'PATH' } )
+ )
+{
+}
+
+for $dir (
+         split (  /:/, $ENV{ 'PATH' }
+         ) )
+{
+}
+
+==> b1528.par <==
+--maximum-line-length=38
+--indent-columns=9
+--continuation-indentation=1
+--paren-vertical-tightness=1
+--paren-vertical-tightness-closing=3
+--space-keyword-paren
+--brace-tightness=0
+--keyword-paren-inner-tightness=2
+
 ==> b156.in <==
 # State 1
 {

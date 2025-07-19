@@ -7799,16 +7799,18 @@ $last = after (
 ==> b1450 <==
                     if (      $x
                               || (      ($self->allele_ori eq 'g')
-                                        && (      substr($self->dnStreamSeq, -1, 1,) eq
-                                                  'c')))
+                                        && (
+                                                  substr(   $self->dnStreamSeq, -1,
+                                                            1,) eq 'c')))
                     {
                               return 1;
                     }
 
                     if (      $x
                               || (      ($self->allele_ori eq 'g')
-                                        && (      substr($self->dnStreamSeq, -1, 1,) eq
-                                                  'c')))
+                                        && (
+                                                  substr(   $self->dnStreamSeq, -1,
+                                                            1,) eq 'c')))
                     {
                               return 1;
                     }
@@ -8762,6 +8764,19 @@ my $template;
                                            ) ),
       );
 
+
+==> b1528 <==
+for $dir (
+         split (  /:/, $ENV{ 'PATH' }
+         ) )
+{
+}
+
+for $dir (
+         split (  /:/, $ENV{ 'PATH' }
+         ) )
+{
+}
 
 ==> b156 <==
 # State 1
