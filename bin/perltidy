@@ -7438,6 +7438,73 @@ trailing B<*> on a name may be used to indicate a partial string match.
 
 =back
 
+=item B<Use --dump-nested-ternaries> to dump a list nested ternaries.
+
+Like other B<-dump-> commands, this writes to the standard output and then exits immediately,
+without doing any formatting. A ternary statement has the form
+
+  Condition ? Value_if_true : Value_if_false
+
+If the term C<Value_if_true> is itself a ternary, then that ternary is itself
+nested one level deeper.  Nested ternaries are relatively easy to create but can
+be tedious to read. And sometimes they can be rewritten in a simpler way.
+
+This parameter checks the nesting depth of each ternary in a script and, if it is not
+zero, then its line number and nesting depth are listed in the output. The list
+may be limited to ternaries with a depth greater than a certain value with the next
+parameter.
+
+=item B<Use --nested-ternary-maximum-depth=n> to ignore ternaries nested to a depth of B<n> or less.
+
+Ternary statements with a depth less than or equal to B<n> are ignored by
+B<--dump-nested-ternaries> and its companion B<--warn-nested-ternaries>.  The
+default value B<n=0> will cause all nested ternaries to be listed. A value
+B<n=1>, for example, will cause ternaries with a depth of 0 or 1 to be ignored
+by these commands.
+
+=item B<Use --warn-nested-ternaries> to write a warning when a nested ternary is encountered.
+
+This is the same as the B<-dump> parameter described above except that any
+nested ternaries are reported in the error file and formatting continues normally.
+
+Additional comments on nested ternaries:
+
+=over 4
+
+=item *
+
+The nesting depth of an arbitrary ternary can be found by writing a list of
+just the C<?> and C<:> symbols of the entire expression, along with any
+container brackets which completely enclose any of them. Then the nesting depth
+of the C<?> which introduces a ternary is the number of C<?> symbols which
+immediately precede it. For example, for this statement which gives the maximum
+of three values
+
+        $a > $b ? $a > $c ? $a : $c : $b > $c ? $b : $c;
+
+we get
+
+        ? ? : : ? :
+
+Since there is a sequence of two adjacent C<?> symbols, the maximum nesting depth is 1.
+
+=item *
+
+Parentheses around a term cause its depth to be reset to zero. The parentheses
+might be for a function call, or just for grouping. So one way to avoid a
+warning for a certain ternary is to introduce parentheses.  For example,
+modifying the above example to be
+
+        $a > $b ? ( $a > $c ? $a : $c ) : $b > $c ? $b : $c;
+
+we get
+
+        ? ( ? : ) : ? :
+
+In this case, there are no adjacent C<?> symbols, so the nesting depth is zero.
+
+=back
+
 =back
 
 =head2 B<Working with MakeMaker, AutoLoader and SelfLoader>
@@ -7786,22 +7853,22 @@ The following list shows all short parameter names which allow a prefix
  bl     bli    boa    boc    bok    bol    bom    bos    bot    cblx
  ce     conv   cpb    cpbw   cs     csc    cscb   cscw   csfs   dac
  dbc    dbs    dcbl   dcsc   ddf    dfsfs  dhk    dia    dior   dln
- dltc   dma    dmcp   dmr    dnl    dop    dp     dpro   drc    dsc
- dsk    dsm    dsn    dtc    dtco   dtt    duk    duv    dwic   dwls
- dwrs   dws    eos    f      fpva   frm    fs     fso    gcs    hbc
- hbcm   hbco   hbh    hbhh   hbi    hbj    hbk    hbm    hbn    hbp
- hbpd   hbpu   hbq    hbs    hbsc   hbv    hbw    hent   hic    hicm
- hico   hih    hihh   hii    hij    hik    him    hin    hip    hipd
- hipu   hiq    his    hisc   hiv    hiw    hsc    html   ibc    icb
- icp    ils    iob    ipc    isbc   iscl   kgb    kgbd   kgbi   kis
- lal    log    lop    lp     lsl    mci    mem    nib    ohbr   okw
- ola    olc    oll    olq    opr    opt    osbc   osbr   otr    ple
- pod    pvl    q      qwaf   sac    sbc    sbl    scbb   schb   scp
- scsb   sct    se     sfp    sfs    skp    sob    sobb   sohb   sop
- sosb   sot    ssc    st     sts    t      tac    tbc    toc    tp
- tqw    trp    ts     tsc    tso    vbc    vc     viu    vmll   vsc
- vsn    vwe    w      wfc    wia    wma    wme    wmr    wn     wsk
- wuk    x      xbt    xci    xlp    xs
+ dltc   dma    dmcp   dmr    dnl    dnt    dop    dp     dpro   drc
+ dsc    dsk    dsm    dsn    dtc    dtco   dtt    duk    duv    dwic
+ dwls   dwrs   dws    eos    f      fpva   frm    fs     fso    gcs
+ hbc    hbcm   hbco   hbh    hbhh   hbi    hbj    hbk    hbm    hbn
+ hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv    hbw    hent   hic
+ hicm   hico   hih    hihh   hii    hij    hik    him    hin    hip
+ hipd   hipu   hiq    his    hisc   hiv    hiw    hsc    html   ibc
+ icb    icp    ils    iob    ipc    isbc   iscl   kgb    kgbd   kgbi
+ kis    lal    log    lop    lp     lsl    mci    mem    nib    ohbr
+ okw    ola    olc    oll    olq    opr    opt    osbc   osbr   otr
+ ple    pod    pvl    q      qwaf   sac    sbc    sbl    scbb   schb
+ scp    scsb   sct    se     sfp    sfs    skp    sob    sobb   sohb
+ sop    sosb   sot    ssc    st     sts    t      tac    tbc    toc
+ tp     tqw    trp    ts     tsc    tso    vbc    vc     viu    vmll
+ vsc    vsn    vwe    w      wfc    wia    wma    wme    wmr    wn
+ wnt    wsk    wuk    x      xbt    xci    xlp    xs
 
 Equivalently, the prefix 'no' or 'no-' on the corresponding long names may be
 used.
@@ -7900,7 +7967,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20250711
+This man page documents perltidy version 20250711.01
 
 =head1 BUG REPORTS
 

@@ -1,5 +1,11 @@
 # Perltidy Change Log
 
+## 2025 07 11.01
+
+    - Added --dump-nested-ternaries, --warn-nested-ternaries, and
+      --nested-ternary-maximum-depth=n. These can be used to locate
+      nested ternary statements in a script.
+
 ## 2025 07 11
 
     - Update for issue git #187: add vertical alignment of colons
