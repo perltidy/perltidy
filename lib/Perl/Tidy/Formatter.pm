@@ -36562,24 +36562,16 @@ EOM
             # and ...
             && (
 
-                # either on the same old line (unless ignoring old breakpoints)
-
-                # OLD: test for tokens on same line caused instability b1528:
-                #   $old_breakpoint_count_stack[$current_depth] ==
-                #         $last_old_breakpoint_count
-
-                # Updated pair of tests which fix b1528:
+                # ..either on the same old line if not ignoring old breakpoints
+                # (updated tests to fix b1528)
                 $rOpts_ignore_old_breakpoints
-
-                || $self->on_same_line_by_K( $K_to_go[$i_opening],
-                    $K_to_go[$i] )
+                || !$self->[_ris_broken_container_]->{$type_sequence}
 
                 # ... or user wants to form long blocks with arrows
                 # check on _rbreak_container_ added for b1500
                 || ( $cab_flag == 2
                     && !$self->[_rbreak_container_]->{$type_sequence} )
             )
-
           )
         {
             $self->undo_forced_breakpoint_stack(
@@ -38585,21 +38577,6 @@ sub excess_line_length {
       $maximum_line_length_at_level[ $levels_to_go[$ibeg] ];
 
 } ## end sub excess_line_length
-
-sub on_same_line_by_K {
-
-    my ( $self, $Ko, $Kc ) = @_;
-
-    # Given:
-    #   $Ko, $Kc = indexes of two tokens in the main $rLL array
-    # Return:
-    #   true if they are on the same input line
-    #   false if not
-    return if ( !defined($Ko) || $Ko < 0 );
-    return if ( !defined($Kc) || $Kc < 0 );
-    my $rLL = $self->[_rLL_];
-    return $rLL->[$Ko]->[_LINE_INDEX_] == $rLL->[$Kc]->[_LINE_INDEX_];
-} ## end sub on_same_line_by_K
 
 sub get_spaces {
 
