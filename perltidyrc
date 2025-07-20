@@ -6,7 +6,7 @@
 #   necessary to format with these parameters every time. But it should
 #   be done before a commit.
 
-# warnings
+# show all warnings
 --warning-output
 
 # all if-elsif chains must end in an else block
@@ -60,6 +60,10 @@
 # Prefer call parens for these keywords:
 --want-call-parens='open unlink substr defined ref scalar int
 uc lc sprintf if unless reverse'
+
+# Minimize use of nested ternary expressions. If this triggers a warning,
+# and I want to keep the ternary, I use parens to turn the warning off.
+--warn-nested-ternaries
 
 # This defines a new option which is invoked with -debug on the command line.
 # It overrides any of the settings above.

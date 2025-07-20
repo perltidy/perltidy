@@ -1468,8 +1468,7 @@ my @cases =
         # S1
         @_ =
                 (
-                join( " ",
-                        sort @{ mro::get_isarev $args[0] } ),
+                join( " ", sort @{ mro::get_isarev $args[0] } ),
                 join( " ", sort @args[ 1 .. $#args - 1 ] ),
                 pop @args
                 );
@@ -1477,8 +1476,7 @@ my @cases =
         # S2
         @_ =
                 (
-                join( " ",
-                        sort @{ mro::get_isarev $args[0] } ),
+                join( " ", sort @{ mro::get_isarev $args[0] } ),
                 join( " ", sort @args[ 1 .. $#args - 1 ] ),
                 pop @args
                 );
@@ -1550,8 +1548,7 @@ Moose::Exporter
         # S1
         @_ =
                 (
-                join( " ",
-                        sort @{ mro::get_isarev $args[0] } ),
+                join( " ", sort @{ mro::get_isarev $args[0] } ),
                 join( " ", sort @args[ 1 .. $#args - 1 ] ),
                 pop @args
                 );
@@ -1559,8 +1556,7 @@ Moose::Exporter
         # S2
         @_ =
                 (
-                join( " ",
-                        sort @{ mro::get_isarev $args[0] } ),
+                join( " ", sort @{ mro::get_isarev $args[0] } ),
                 join( " ", sort @args[ 1 .. $#args - 1 ] ),
                 pop @args
                 );
@@ -1568,7 +1564,9 @@ Moose::Exporter
 ==> b1043 <==
         # S1
         my $addr =(
-                DynaLoader::dl_find_symbol($handle,uc $prefix.$name)
+                DynaLoader::dl_find_symbol(
+                        $handle,uc $prefix.$name
+                  )
                   ||DynaLoader::dl_find_symbol(
                           $handle, $prefix.$name
                   )
@@ -1577,7 +1575,9 @@ Moose::Exporter
         # S2
 
         my $addr =(
-                DynaLoader::dl_find_symbol($handle,uc $prefix.$name)
+                DynaLoader::dl_find_symbol(
+                        $handle,uc $prefix.$name
+                  )
                   ||DynaLoader::dl_find_symbol(
                           $handle, $prefix.$name
                   )
@@ -1754,21 +1754,18 @@ my @boolfunc =
                         # S1
                         my ( $lname, $sname ) = (
                                 $subname,
-                                substr( $subname, 0,
-                                        $maxflen - 3 )
+                                substr( $subname, 0, $maxflen - 3 )
                         );
 
                         #S2
                         my ( $lname, $sname ) = (
                                 $subname,
-                                substr( $subname, 0,
-                                        $maxflen - 3 )
+                                substr( $subname, 0, $maxflen - 3 )
                         );
 
                         my ( $lname, $sname ) = (
                                 $subname,
-                                substr( $subname, 0,
-                                        $maxflen - 3 )
+                                substr( $subname, 0, $maxflen - 3 )
                         );
 
 ==> b1053 <==
@@ -1973,30 +1970,12 @@ my @subnormals =
         (
         [ '1e-320', '%a', '0x1.fap-1064' ],
         [ '3e-324', '%.1a', '0x1.0p-1074' ],
-        [
-                '0x1.fffffffffffffp-1022', '%a',
-                '0x1.fffffffffffffp-1022'
-        ],
-        [
-                '0x0.fffffffffffffp-1022', '%a',
-                '0x1.ffffffffffffep-1023'
-        ],
-        [
-                '0x0.7ffffffffffffp-1022', '%a',
-                '0x1.ffffffffffffcp-1024'
-        ],
-        [
-                '0x0.3ffffffffffffp-1022', '%a',
-                '0x1.ffffffffffff8p-1025'
-        ],
-        [
-                '0x0.1ffffffffffffp-1022', '%a',
-                '0x1.ffffffffffffp-1026'
-        ],
-        [
-                '0x0.0ffffffffffffp-1022', '%a',
-                '0x1.fffffffffffep-1027'
-        ],
+        ['0x1.fffffffffffffp-1022', '%a','0x1.fffffffffffffp-1022'],
+        ['0x0.fffffffffffffp-1022', '%a','0x1.ffffffffffffep-1023'],
+        ['0x0.7ffffffffffffp-1022', '%a','0x1.ffffffffffffcp-1024'],
+        ['0x0.3ffffffffffffp-1022', '%a','0x1.ffffffffffff8p-1025'],
+        ['0x0.1ffffffffffffp-1022', '%a','0x1.ffffffffffffp-1026'],
+        ['0x0.0ffffffffffffp-1022', '%a','0x1.fffffffffffep-1027'],
         );
 
 # S2
@@ -2004,30 +1983,12 @@ my @subnormals =
         (
         [ '1e-320', '%a', '0x1.fap-1064' ],
         [ '3e-324', '%.1a', '0x1.0p-1074' ],
-        [
-                '0x1.fffffffffffffp-1022', '%a',
-                '0x1.fffffffffffffp-1022'
-        ],
-        [
-                '0x0.fffffffffffffp-1022', '%a',
-                '0x1.ffffffffffffep-1023'
-        ],
-        [
-                '0x0.7ffffffffffffp-1022', '%a',
-                '0x1.ffffffffffffcp-1024'
-        ],
-        [
-                '0x0.3ffffffffffffp-1022', '%a',
-                '0x1.ffffffffffff8p-1025'
-        ],
-        [
-                '0x0.1ffffffffffffp-1022', '%a',
-                '0x1.ffffffffffffp-1026'
-        ],
-        [
-                '0x0.0ffffffffffffp-1022', '%a',
-                '0x1.fffffffffffep-1027'
-        ],
+        ['0x1.fffffffffffffp-1022', '%a','0x1.fffffffffffffp-1022'],
+        ['0x0.fffffffffffffp-1022', '%a','0x1.ffffffffffffep-1023'],
+        ['0x0.7ffffffffffffp-1022', '%a','0x1.ffffffffffffcp-1024'],
+        ['0x0.3ffffffffffffp-1022', '%a','0x1.ffffffffffff8p-1025'],
+        ['0x0.1ffffffffffffp-1022', '%a','0x1.ffffffffffffp-1026'],
+        ['0x0.0ffffffffffffp-1022', '%a','0x1.fffffffffffep-1027'],
         );
 
 ==> b1062 <==
@@ -4125,13 +4086,8 @@ removed    => {}
 );
 
 ==> b116 <==
-my %SPECIALS=(
-      "mail" =>
-        [
-            "Received:",">From",
-            "Return-Path:","Cc:",
-        ],
-);
+my %SPECIALS=("mail" =>
+        ["Received:",">From","Return-Path:","Cc:",],);
 
 ==> b1160 <==
 {
@@ -7798,19 +7754,15 @@ $last = after (
 
 ==> b1450 <==
                     if (      $x
-                              || (      ($self->allele_ori eq 'g')
-                                        && (
-                                                  substr(   $self->dnStreamSeq, -1,
-                                                            1,) eq 'c')))
+                              || (         ($self->allele_ori eq 'g')
+                                        && (substr($self->dnStreamSeq, -1, 1,) eq 'c')))
                     {
                               return 1;
                     }
 
                     if (      $x
-                              || (      ($self->allele_ori eq 'g')
-                                        && (
-                                                  substr(   $self->dnStreamSeq, -1,
-                                                            1,) eq 'c')))
+                              || (         ($self->allele_ori eq 'g')
+                                        && (substr($self->dnStreamSeq, -1, 1,) eq 'c')))
                     {
                               return 1;
                     }
@@ -7826,13 +7778,7 @@ my %distance_pref =
         );
 
 my %distance_pref =
-        (
-        meter => 1.1,
-        inch  => 0.7,
-        foot  => 0.9,
-        yard  => 0,
-        mile  => 1.0,
-        );
+     ( meter => 1.1, inch => 0.7, foot => 0.9, yard => 0, mile => 1.0 );
 
 
 ==> b1453 <==
@@ -11414,15 +11360,15 @@ if ($printmask
 
 ==> b946 <==
 if ($optf) {
-    ($comp) =(
-        split ' ', $comp, $optf +1
-    )[$optf];
+    ($comp) =
+      (split ' ', $comp, $optf +1)
+      [$optf];
 }
 
 
 ==> b947 <==
-push @ARGV2 => [
-         $dir, $intermediate++ ];
+push @ARGV2 =>
+  [ $dir, $intermediate++ ];
 
 
 ==> b948 <==
@@ -11438,8 +11384,8 @@ my (
 
 ==> b949 <==
 push @{ $remember{ $operator }
-  } => [
-         $left, $right, $answer ];
+  } =>
+  [ $left, $right, $answer ];
 
 __END__
 push @{ $remember{ $operator }
@@ -11973,13 +11919,15 @@ my $seq = (
 )->next_seq();
 
 ==> b989 <==
-my $branch = (
-       split( m#/#, $branchdata )
-)[5];
+my $branch =
+     (
+       split( m#/#, $branchdata ) )
+     [5];
 
-my $branch = (
-       split( m#/#, $branchdata )
-)[5];
+my $branch =
+     (
+       split( m#/#, $branchdata ) )
+     [5];
 
 
 ==> b990 <==

@@ -37083,7 +37083,10 @@ EOM
         # so they need a tolerance to avoid instability.  Fixes b1259, 1260.
         my $opening_token = $tokens_to_go[$i_opening_paren];
         my $tol           = 0;
-        if (   $break_before_container_types{$opening_token}
+
+        # Deactivated extra tols after update 1528; no longer necessary (c509)
+        if (   0
+            && $break_before_container_types{$opening_token}
             && $container_indentation_options{$opening_token}
             && $container_indentation_options{$opening_token} == 2 )
         {
