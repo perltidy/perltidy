@@ -36529,7 +36529,9 @@ EOM
             # the formatting is independent of the -BBX results.
             # Fixes cases b1137 b1149 b1150 b1155 b1158 b1159 b1160
             # b1161 b1166 b1167 b1168
-            if (  !$ci_levels_to_go[$i_opening]
+            # Deactivated after fix b1528, no longer necessary (c511)
+            if (   0
+                && !$ci_levels_to_go[$i_opening]
                 && $self->[_rbreak_before_container_by_seqno_]->{$type_sequence}
               )
             {
