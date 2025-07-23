@@ -24287,7 +24287,9 @@ sub mark_short_nested_blocks {
     my $rblock_type_of_seqno    = $self->[_rblock_type_of_seqno_];
     my $rK_sequenced_token_list = $self->[_rK_sequenced_token_list_];
 
-    # Variables needed for estimating line lengths
+    # Variables needed for estimating line lengths:
+    # Note: $length_tol can be reduced to 0 without causing instability (c511)
+    # but a value of 1 is used to minimize changes to existing code.
     my $maximum_text_length;
     my $starting_lentot;
     my $length_tol = 1;
@@ -24621,9 +24623,11 @@ sub break_before_list_opening_containers {
     my $rK_weld_right             = $self->[_rK_weld_right_];
     my $rblock_type_of_seqno      = $self->[_rblock_type_of_seqno_];
 
-    my $length_tol =
-      max( 1, $rOpts_continuation_indentation, $rOpts_indent_columns );
-    if ($rOpts_ignore_old_breakpoints) {
+    # Note: $length_tol can be reduced to 0 without causing instability (c511)
+    # but a value of 1 is used to minimize changes to existing code.
+    my $length_tol = 1;
+##    = max( 1, $rOpts_continuation_indentation, $rOpts_indent_columns );
+    if ( $rOpts_ignore_old_breakpoints ) {
 
         # Patch suggested by b1231; the old tol was excessive.
         ## $length_tol += $rOpts_maximum_line_length;
@@ -35062,10 +35066,12 @@ sub do_colon_breaks {
         # - Always allow for at least one extra space after a closing token so
         # that we do not strand a comma or semicolon. (oneline.t).
 
-        # - Use an increased line length tolerance when -ci > -i to avoid
+        # OLD: Use an increased line length tolerance when -ci > -i to avoid
         # blinking states (case b923 and others).
-        $length_tol =
-          1 + max( 0, $rOpts_continuation_indentation - $rOpts_indent_columns );
+        # Note: $length_tol can be reduced to 0 without causing instability (c511)
+        # but a value of 1 is used to minimize changes to existing code.
+        $length_tol = 1;
+##      1 + max( 0, $rOpts_continuation_indentation - $rOpts_indent_columns );
 
         # In addition, it may be necessary to use a few extra tolerance spaces
         # when -lp is used and/or when -xci is used.  The history of this

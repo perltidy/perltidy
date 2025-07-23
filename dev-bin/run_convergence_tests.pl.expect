@@ -1205,8 +1205,7 @@ use Test::Requires {
 my%fielddefinitions=(
     z3950servers=>
             [
-             {field=>'id',type=>'int(11)',null=>'',key=>'PRI',default=>'',extra=>'auto_increment'
-             },
+             {field=>'id',type=>'int(11)',null=>'',key=>'PRI',default=>'',extra=>'auto_increment'},
             ],
 
 );
@@ -1215,8 +1214,7 @@ my%fielddefinitions=(
 my%fielddefinitions=(
     z3950servers=>
             [
-             {field=>'id',type=>'int(11)',null=>'',key=>'PRI',default=>'',extra=>'auto_increment'
-             },
+             {field=>'id',type=>'int(11)',null=>'',key=>'PRI',default=>'',extra=>'auto_increment'},
             ],
 
 );
@@ -1871,11 +1869,7 @@ my @boolfunc =
        );
 
        is_deeply(
-                 [
-                   $it->halt_tap(
-                                 {control => {details => 0}}
-                   )
-                 ],
+                 [$it->halt_tap({control => {details => 0}})],
                  [[OUT_STD, "Bail out!  0\n"]],
                  "falsy details"
        );
@@ -3032,20 +3026,14 @@ sub generate_manifest_poD{
 # Note that this has a -norecombine in the .par file
 
    # S1
-   $data = {
-             map { split ( '=', $_ ) }
-                      split (
-                              ' ', $2
-                      )
-   };
+   $data =
+            { map { split ( '=', $_ ) }
+              split ( ' ', $2 ) };
 
    # S2
-   $data = {
-             map { split ( '=', $_ ) }
-                      split (
-                              ' ', $2
-                      )
-   };
+   $data =
+            { map { split ( '=', $_ ) }
+              split ( ' ', $2 ) };
 
 ==> b1104 <==
 foreach $port (
@@ -3298,29 +3286,27 @@ sub checkorder{
 
 ==> b1117 <==
 is_deeply(
-      $feature->prereqs->as_string_hash,
-      {
-      develop=>{
-        requires=>{'Genius::Evil'=>'1.234'}
-      },
-      runtime=>{
+     $feature->prereqs->as_string_hash,
+     {
+     develop=>
+     {requires=>{'Genius::Evil'=>'1.234'}},
+     runtime=>{
       requires=>{'Machine::Weather'=>'2.0'}
-      },
-      },
-      '$feature->prereqs',
+     },
+     },
+     '$feature->prereqs',
 );
 
 is_deeply(
-      $feature->prereqs->as_string_hash,
-      {
-      develop=>{
-        requires=>{'Genius::Evil'=>'1.234'}
-      },
-      runtime=>{
+     $feature->prereqs->as_string_hash,
+     {
+     develop=>
+     {requires=>{'Genius::Evil'=>'1.234'}},
+     runtime=>{
       requires=>{'Machine::Weather'=>'2.0'}
-      },
-      },
-      '$feature->prereqs',
+     },
+     },
+     '$feature->prereqs',
 );
 
 is_deeply(
@@ -3699,18 +3685,10 @@ Could not fork '$html_converter $saved_file': $!});
 
 ==> b1137 <==
   $out->{errors}=
-          [{
-   tag=>'OOPS',
-   fail=>!$ENV{FAILURE_DO_PASS},
-   details=>"An error occurred"
-          }];
+          [{tag=>'OOPS',fail=>!$ENV{FAILURE_DO_PASS},details=>"An error occurred"}];
 
   $out->{errors}=
-          [{
-   tag=>'OOPS',
-   fail=>!$ENV{FAILURE_DO_PASS},
-   details=>"An error occurred"
-          }];
+          [{tag=>'OOPS',fail=>!$ENV{FAILURE_DO_PASS},details=>"An error occurred"}];
 
 
 ==> b1138 <==
@@ -3802,15 +3780,11 @@ my @schedule = (
 );
 
 ==> b1142 <==
-      is_deeply(
-            [sets_plan({plan=>{}})],
-            [0],
+      is_deeply([sets_plan({plan=>{}})],[0],
 "Empty plan means count of 0, nothing extra"
       );
 
-      is_deeply(
-            [sets_plan({plan=>{}})],
-            [0],
+      is_deeply([sets_plan({plan=>{}})],[0],
 "Empty plan means count of 0, nothing extra"
       );
 
@@ -3909,42 +3883,26 @@ my @schedule = (
 
 
 ==> b1149 <==
-my %results = (
-T_UV =>
-   {
-type      => 'u',
-with_size => undef,
-what      => '(UV)$var',
-what_size => undef
-   },
-);
+my %results =
+   ( T_UV =>
+   { type => 'u', with_size => undef, what => '(UV)$var', what_size => undef },
+   );
 
-my %results = (
-T_UV =>
-   {
-type      => 'u',
-with_size => undef,
-what      => '(UV)$var',
-what_size => undef
-   },
-);
+my %results =
+   ( T_UV =>
+   { type => 'u', with_size => undef, what => '(UV)$var', what_size => undef },
+   );
 
 ==> b1150 <==
-my %base = (
-'meta-spec' =>
-   {
-url     => "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
-version => 2,
-   },
-);
+my %base =
+   ( 'meta-spec' =>
+   { url => "http://search.cpan.org/perldoc?CPAN::Meta::Spec", version => 2, },
+   );
 
-my %base = (
-'meta-spec' =>
-   {
-url     => "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
-version => 2,
-   },
-);
+my %base =
+   ( 'meta-spec' =>
+   { url => "http://search.cpan.org/perldoc?CPAN::Meta::Spec", version => 2, },
+   );
 
 ==> b1151 <==
   my %tag_cache =
@@ -3977,17 +3935,11 @@ version => 2,
 
 
 ==> b1153 <==
- @summary = @output[
-        6 .. (
-               $#output - 1
-        )
- ];
+ @summary = @output[ 6 .. (
+              $#output - 1 ) ];
 
- @summary = @output[
-        6 .. (
-               $#output - 1
-        )
- ];
+ @summary = @output[ 6 .. (
+              $#output - 1 ) ];
 
 
 ==> b1154 <==
@@ -4004,84 +3956,54 @@ version => 2,
                             |0xA0];
 
 ==> b1155 <==
-%aa = (
-uvar =>
-  {
-char   => 'U',
-vtable => 'uvar',
-desc   => 'Available for use by extensions'
-  },
-);
+%aa =
+  ( uvar =>
+  { char => 'U', vtable => 'uvar', desc => 'Available for use by extensions' },
+  );
 
-%aa = (
-uvar =>
-  {
-char   => 'U',
-vtable => 'uvar',
-desc   => 'Available for use by extensions'
-  },
-);
+%aa =
+  ( uvar =>
+  { char => 'U', vtable => 'uvar', desc => 'Available for use by extensions' },
+  );
 
 ==> b1156 <==
   $distros{ distro_base (
-                     $short_distro)
-  }{$distro} = 1 ;
+    $short_distro) }{$distro} = 1 ;
 
   $distros{ distro_base (
-                     $short_distro)
-  }{$distro} = 1 ;
+    $short_distro) }{$distro} = 1 ;
 
 ==> b1157 <==
- @summary = @output[
-        12 .. (
-                $#output - 1
-        )
- ];
+ @summary = @output[ 12 .. (
+              $#output - 1 ) ];
 
- @summary = @output[
-        12 .. (
-                $#output - 1
-        )
- ];
+ @summary = @output[ 12 .. (
+              $#output - 1 ) ];
 
 
 ==> b1158 <==
-%language_for = (
-'13' =>
-   {
-tokens => \%v13,
-setup  => sub { shift->{iterator}->handle_unicode; },
-   },
-);
+%language_for =
+   ( '13' =>
+   { tokens => \%v13, setup => sub { shift->{iterator}->handle_unicode; }, },
+   );
 
-%language_for = (
-'13' =>
-   {
-tokens => \%v13,
-setup  => sub { shift->{iterator}->handle_unicode; },
-   },
-);
+%language_for =
+   ( '13' =>
+   { tokens => \%v13, setup => sub { shift->{iterator}->handle_unicode; }, },
+   );
 
 ==> b1159 <==
 my %delta = (
 
 5.009002 =>
-  {
-delta_from => 5.009001,
-changed    => { 'corelist' => '1', },
-removed    => {}
-  },
+  { delta_from => 5.009001, changed => { 'corelist' => '1', }, removed => {} },
 
 );
 
 my %delta = (
 
 5.009002 =>
-  {
-delta_from => 5.009001,
-changed    => { 'corelist' => '1', },
-removed    => {}
-  },
+  { delta_from => 5.009001, changed => { 'corelist' => '1', }, removed => {} },
 
 );
 
@@ -4090,19 +4012,12 @@ my %SPECIALS=("mail" =>
         ["Received:",">From","Return-Path:","Cc:",],);
 
 ==> b1160 <==
-{
-'Safe' =>
-   {
-'DISTRIBUTION' => 'RGARCIA/Safe-2.35.tar.gz',
-'FILES'        => q[dist/Safe],
-   },
-}
+{ 'Safe' =>
+   { 'DISTRIBUTION' => 'RGARCIA/Safe-2.35.tar.gz', 'FILES' => q[dist/Safe], }, }
 
 {
-'Safe' => {
-'DISTRIBUTION' => 'RGARCIA/Safe-2.35.tar.gz',
-'FILES'        => q[dist/Safe],
-},
+'Safe' =>
+   { 'DISTRIBUTION' => 'RGARCIA/Safe-2.35.tar.gz', 'FILES' => q[dist/Safe], },
 }
 
 
@@ -4110,19 +4025,14 @@ my %SPECIALS=("mail" =>
 {
 name => 'Just includes',
 args =>
-  {
-argv     => [ qw( one two three ) ],
-includes => [ qw( four five six ) ],
-  },
+  { argv => [ qw( one two three ) ], includes => [ qw( four five six ) ], },
 expect => { includes => [ qw( four five six ) ], },
 }
 
 {
 name   => 'Just includes',
-  args => {
-argv     => [ qw( one two three ) ],
-includes => [ qw( four five six ) ],
-  },
+  args =>
+  { argv => [ qw( one two three ) ], includes => [ qw( four five six ) ], },
   expect => { includes => [ qw( four five six ) ], },
 }
 
@@ -4153,22 +4063,16 @@ includes => [ qw( four five six ) ],
             @{ $EXPORT_TAGS{standard} },);
 
 ==> b1164 <==
- my @displayable =@$items[
-        $pos .. (
-                  $pos+$limit
-        )
- ];
+ my @displayable =
+        @$items[ $pos .. (
+               $pos+$limit ) ];
 
- my @displayable =@$items[
-        $pos .. (
-                  $pos+$limit
-        )
- ];
+ my @displayable =
+        @$items[ $pos .. (
+               $pos+$limit ) ];
 
 ==> b1165 <==
- $lb_table[
-        $lb_enums{
-         'E_Base'}
+ $lb_table[ $lb_enums{'E_Base'}
         ][
         $lb_enums{
          'E_Modifier'}
@@ -4176,9 +4080,7 @@ includes => [ qw( four five six ) ],
         = $lb_actions{
   'LB_NOBREAK'};
 
- $lb_table[
-        $lb_enums{
-         'E_Base'}
+ $lb_table[ $lb_enums{'E_Base'}
         ][
         $lb_enums{
          'E_Modifier'}
@@ -4188,66 +4090,36 @@ includes => [ qw( four five six ) ],
 
 ==> b1166 <==
 my $connect =
-   {
-headers =>
-   {
-host         => "$request->{host}:$request->{port}",
-'user-agent' => $agent,
-   }
+   { headers =>
+   { host => "$request->{host}:$request->{port}", 'user-agent' => $agent, }
    };
 
 my $connect =
-   {
-headers =>
-   {
-host         => "$request->{host}:$request->{port}",
-'user-agent' => $agent,
-   }
+   { headers =>
+   { host => "$request->{host}:$request->{port}", 'user-agent' => $agent, }
    };
 
 ==> b1167 <==
 my $xx =
-   {
-'expr::array::lex_1const_m1' =>
-   {
-desc  => 'lexical $array[-1]',
-setup => 'my @a = (1)',
-code  => '$a[-1]',
-   },
+   { 'expr::array::lex_1const_m1' =>
+   { desc => 'lexical $array[-1]', setup => 'my @a = (1)', code => '$a[-1]', },
    };
 
 my $xx =
-   {
-'expr::array::lex_1const_m1' =>
-   {
-desc  => 'lexical $array[-1]',
-setup => 'my @a = (1)',
-code  => '$a[-1]',
-   },
+   { 'expr::array::lex_1const_m1' =>
+   { desc => 'lexical $array[-1]', setup => 'my @a = (1)', code => '$a[-1]', },
    };
 
 
 ==> b1168 <==
 my $xx =
-   {
-vendorarch =>
-   {
-s     => $vprefix,
-t     => 'vendor',
-d     => "$version/$arch",
-style => $libstyle
-   },
+   { vendorarch =>
+   { s => $vprefix, t => 'vendor', d => "$version/$arch", style => $libstyle },
    };
 
 my $xx =
-   {
-vendorarch =>
-   {
-s     => $vprefix,
-t     => 'vendor',
-d     => "$version/$arch",
-style => $libstyle
-   },
+   { vendorarch =>
+   { s => $vprefix, t => 'vendor', d => "$version/$arch", style => $libstyle },
    };
 
 
@@ -5252,9 +5124,7 @@ $obj= {
            "5th", "6th", "7th", "8th",
            "9th"
           ],
-          [
-           1, 2, 5, 6, 3, 1.5, 1, 3, 4
-          ],
+          [ 1, 2, 5, 6, 3, 1.5, 1, 3, 4 ],
          );
 
 # S2
@@ -5265,9 +5135,7 @@ $obj= {
            "5th", "6th", "7th", "8th",
            "9th"
           ],
-          [
-           1, 2, 5, 6, 3, 1.5, 1, 3, 4
-          ],
+          [ 1, 2, 5, 6, 3, 1.5, 1, 3, 4 ],
          );
 
 ==> b1232 <==
@@ -5384,12 +5252,12 @@ is(
 
 ==> b1239 <==
 # S1
-( sockaddr_in( getsockname ( $_[0]->[_SOCKET] ) )
-)[0];
+( sockaddr_in( getsockname ( $_[0]->[_SOCKET] ) ) )
+          [0];
 
 # S2
-( sockaddr_in( getsockname ( $_[0]->[_SOCKET] ) )
-)[0];
+( sockaddr_in( getsockname ( $_[0]->[_SOCKET] ) ) )
+          [0];
 
 ==> b1240 <==
      # S1
@@ -5945,17 +5813,13 @@ use overload
 
 ==> b1285 <==
 foreach $func (
-        @{$Win32API::Registry::EXPORT_TAGS{FuncA}
-        },
-        @{$Win32API::Registry::EXPORT_TAGS{FuncW}
-        }
+    @{ $Win32API::Registry::EXPORT_TAGS{FuncA} },
+    @{ $Win32API::Registry::EXPORT_TAGS{FuncW} }
 );
 
 foreach $func (
-        @{$Win32API::Registry::EXPORT_TAGS{FuncA}
-        },
-        @{$Win32API::Registry::EXPORT_TAGS{FuncW}
-        }
+    @{ $Win32API::Registry::EXPORT_TAGS{FuncA} },
+    @{ $Win32API::Registry::EXPORT_TAGS{FuncW} }
 );
 
 
@@ -6150,9 +6014,8 @@ if ((
 
 ==> b1305 <==
 my %Map =(
-  File::Spec->catfile(
-    $Dir,"linktest_with_dir.tar"
-        ) =>
+  File::Spec->catfile($Dir,
+    "linktest_with_dir.tar") =>
         [
     [   0, qr/SECURE EXTRACT MODE/],
     [ 1, qr/^$/ ]
@@ -6160,9 +6023,8 @@ my %Map =(
 );
 
 my %Map =(
-  File::Spec->catfile(
-    $Dir,"linktest_with_dir.tar"
-        ) =>
+  File::Spec->catfile($Dir,
+    "linktest_with_dir.tar") =>
         [
     [   0, qr/SECURE EXTRACT MODE/],
     [ 1, qr/^$/ ]
@@ -6643,14 +6505,12 @@ params =>
 
 ==> b1338 <==
       # S1:
-      (
-         sockaddr_in ( getsockname( $_[0]->[_SOCKET] ) )
-      )[0];
+      ( sockaddr_in ( getsockname( $_[0]->[_SOCKET] ) ) )
+             [0];
 
       # S2:
-      (
-         sockaddr_in ( getsockname( $_[0]->[_SOCKET] ) )
-      )[0];
+      ( sockaddr_in ( getsockname( $_[0]->[_SOCKET] ) ) )
+             [0];
 
 ==> b1339 <==
    # S1
@@ -7470,16 +7330,14 @@ print join( "\n",
 
 ==> b1431 <==
             C4::Circulation::AddRenewal(
-                             $issue->{
-                                'borrowernumber'},    # borrowernumber
+                             $issue->{'borrowernumber'}, # borrowernumber
                              $item->itemnumber,
                              undef, undef,
                              $circ->{'date'},
             ) unless ($DEBUG);
 
             C4::Circulation::AddRenewal(
-                             $issue->{
-                                'borrowernumber'},    # borrowernumber
+                             $issue->{'borrowernumber'}, # borrowernumber
                              $item->itemnumber,
                              undef, undef,
                              $circ->{'date'},
@@ -7961,9 +7819,8 @@ sub bubba {
   # S1;
   diag "Connected to "
         . inet_ntoa (
-                     ( unpack_sockaddr_in (
-                             getpeername(T)
-                     ) )[1] ) . "\n";
+     (unpack_sockaddr_in ( getpeername(T) )
+     )[1] ) . "\n";
 
   # S2
   diag "Connected to "
@@ -8170,24 +8027,16 @@ foreach $n (
 ==> b1469 <==
 my @outer =
         (
-         [
-          'a1', 'a2', 'a3',
-         ], [
-          'b1', 'b2', 'b3',
-         ], [
-          'c1', 'c2', 'c3',
-         ],
+         [ 'a1', 'a2', 'a3', ],
+         [ 'b1', 'b2', 'b3', ],
+         [ 'c1', 'c2', 'c3', ],
         );
 
 my @outer =
         (
-         [
-          'a1', 'a2', 'a3',
-         ], [
-          'b1', 'b2', 'b3',
-         ], [
-          'c1', 'c2', 'c3',
-         ],
+         [ 'a1', 'a2', 'a3', ],
+         [ 'b1', 'b2', 'b3', ],
+         [ 'c1', 'c2', 'c3', ],
         );
 
 ==> b1470 <==
@@ -8578,12 +8427,12 @@ $apple_encodings[1][$i] = { map ( { $_ => $count++ }
 ==> b1519 <==
 { { { {
    $contents .= join(
-      (  ( $USING_STYLES && $image_style ) ? " CLASS=\"$image_style\"" : '' ) );
+      ( ( $USING_STYLES && $image_style ) ? " CLASS=\"$image_style\"" : '' ) );
 } } } }
 
 { { { {
    $contents .= join(
-      (  ( $USING_STYLES && $image_style ) ? " CLASS=\"$image_style\"" : '' ) );
+      ( ( $USING_STYLES && $image_style ) ? " CLASS=\"$image_style\"" : '' ) );
 } } } }
 
 
@@ -10825,11 +10674,9 @@ ${
 ==> b901 <==
 # State 1
 @tagged_texts =
-         walk_html(
-                    $tree,
+         walk_html( $tree,
                     sub { [ 'MAYBE', $_[ 0 ] ] },
-                    \&promote_if_h1tag
-         );
+                    \&promote_if_h1tag );
 
 # State 2
 @tagged_texts = walk_html(
@@ -10929,18 +10776,16 @@ EOF
 
 ==> b911 <==
 # State 1
-my$test=(
-semctl(
--1,0,0,0
-)
-)[0];
+my$test=
+  (
+semctl(-1,0,0,0))
+  [0];
 
 # state 2
-my$test=(
-semctl(
--1,0,0,0
-)
-)[0];
+my$test=
+  (
+semctl(-1,0,0,0))
+  [0];
 
 
 ==> b912 <==
@@ -11071,22 +10916,14 @@ foreach my $p(
 
 ==> b926 <==
 my@str1=(
-substr(
-$strD,0,3
-),
-substr(
-$strD,3,4
-),
+substr($strD,0,3),
+substr($strD,3,4),
 );
 
 # state 2
 my@str1=(
-substr(
-$strD,0,3
-),
-substr(
-$strD,3,4
-),
+substr($strD,0,3),
+substr($strD,3,4),
 );
 
 ==> b928 <==
