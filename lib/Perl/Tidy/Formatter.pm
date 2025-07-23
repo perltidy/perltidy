@@ -24626,8 +24626,7 @@ sub break_before_list_opening_containers {
     # Note: $length_tol can be reduced to 0 without causing instability (c511)
     # but a value of 1 is used to minimize changes to existing code.
     my $length_tol = 1;
-##    = max( 1, $rOpts_continuation_indentation, $rOpts_indent_columns );
-    if ( $rOpts_ignore_old_breakpoints ) {
+    if ($rOpts_ignore_old_breakpoints) {
 
         # Patch suggested by b1231; the old tol was excessive.
         ## $length_tol += $rOpts_maximum_line_length;
@@ -35068,10 +35067,9 @@ sub do_colon_breaks {
 
         # OLD: Use an increased line length tolerance when -ci > -i to avoid
         # blinking states (case b923 and others).
-        # Note: $length_tol can be reduced to 0 without causing instability (c511)
-        # but a value of 1 is used to minimize changes to existing code.
+        # NEW: $length_tol can be reduced to 0 without causing instability
+        # but a value of 1 is used to minimize changes to existing code (c511).
         $length_tol = 1;
-##      1 + max( 0, $rOpts_continuation_indentation - $rOpts_indent_columns );
 
         # In addition, it may be necessary to use a few extra tolerance spaces
         # when -lp is used and/or when -xci is used.  The history of this
@@ -40306,13 +40304,10 @@ EOM
             if ( @{$rfields} ) {
                 $rfields->[-1] .= " $closing_side_comment";
 
-              # NOTE: Patch for csc. We can just use 1 for the length of the csc
-              # because its length should not be a limiting factor from here on.
+                # NOTE: Patch for csc. We can just use 1 for the length of the
+                # csc because its length should not be a limiting factor from
+                # here on.
                 $rfield_lengths->[-1] += 2;
-
-                # repack
-                $rline_alignment =
-                  [ $rtokens, $rfields, $rpatterns, $rfield_lengths ];
             }
         }
 
