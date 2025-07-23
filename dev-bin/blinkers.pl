@@ -33,6 +33,11 @@ my $perltidy         = 'perltidy';
 my $perltidy_version = EMPTY_STRING;
 set_perltidy();
 
+# Fixed filenames
+my $exp_filename  = "ofile.exp";
+my $new_filename  = "ofile.new";
+my $diff_filename = "ofile.diff";
+
 my $rdirs      = [];
 my $dir_string = EMPTY_STRING;
 set_dirs();
@@ -41,6 +46,7 @@ my $rcode = {
     'TIDY' => \&set_perltidy,
     'DIRS' => \&set_dirs,
     'RET'  => \&retest_blinkers,
+    'UPD'  => \&review_changes,
     'MIN'  => \&minimize_profiles,
     'GIT'  => \&ask_git_home,
     'REN'  => \&rename_blinkers,
@@ -62,6 +68,7 @@ git   - git home: $git_home
 ret   - retest check/update Version Number
 min   - minimize profile(s)
 ren   - rename a set of directories
+upd   - review/update changes to expected results
 q,x   - eXit
 
 EOM
@@ -85,9 +92,11 @@ sub set_perltidy {
 
     use Cwd qw(getcwd);
     use Cwd 'abs_path';
-
+    print "Current version: '$perltidy'\n";
     while (1) {
-        my $ans = query("Enter the file with perltidy, <cr>='perltidy':");
+        my $ans = query(
+"Enter the file with perltidy, 'perltidy' for default, or <cr>=no change:"
+        );
         last unless ($ans);
         if ( -e $ans && -x $ans ) {
             $perltidy = abs_path($ans);
@@ -173,6 +182,7 @@ sub retest_blinkers {
     my @unknown;         # state 0
     my @blinking;        # state 1
     my @not_blinking;    # state 2
+    my @changed;
 
     my $starting_dir = getcwd();
 
@@ -199,11 +209,13 @@ sub retest_blinkers {
             next;
         }
 
-        my $state = blinker_test($rhash);
+        blinker_test($rhash);
+        my $state = $rhash->{is_blinking};
         if    ( !defined($state) ) { push @unknown, $dir }
         elsif ( $state == 0 )      { push @not_blinking, $dir }
         elsif ( $state == 1 )      { push @blinking, $dir }
         else                       { }
+        if ( $rhash->{is_changed} ) { push @changed, $dir }
         chdir $starting_dir;
     }
 
@@ -254,13 +266,22 @@ EOM
         print $msg;
         $fh->print($msg) if ($fh);
     }
+    if (@changed) {
+        my $num = @changed;
+        my $msg = <<EOM;
+
+$num dirs have formatting changed; **run 'upd' to review them**
+EOM
+        print $msg;
+        $fh->print($msg) if ($fh);
+    }
 }
 
 sub find_starting_files {
 
     # Find the initial input file and profile in the current directory
     my ($rhash) = @_;
-    $rhash->{infile}        = undef;
+    $rhash->{infile} = undef;
 ##  $rhash->{outfile}       = undef;
     $rhash->{error_message} = EMPTY_STRING;
 
@@ -270,7 +291,7 @@ sub find_starting_files {
     my @unknown;
     foreach my $file (@files) {
         next if ( $file =~ /^perltidy/ );
-        next if ( $file =~ /\.(ERR|LOG)/ );
+        next if ( $file =~ /\.(ERR|LOG|exp|new|diff)/ );
 
         #print "file=$file\n";
         if ( $file =~ /^profile\.\d+$/ ) {
@@ -311,9 +332,13 @@ sub blinker_test {
     my $ifile       = $rhash->{infile};
     my $pfile       = $rhash->{profile};
     my $my_perltidy = $rhash->{perltidy};
-    return unless ( $pfile && $ifile && $my_perltidy );
 
-    my $is_blinker;
+    my $is_blinking;
+    my $is_changed;
+    $rhash->{is_blinking} = $is_blinking;
+    $rhash->{is_changed}  = $is_changed;
+
+    return unless ( $pfile && $ifile && $my_perltidy );
 
     # overwritten
     my $dfile = "tmp34.txt";
@@ -349,8 +374,8 @@ sub blinker_test {
             $cmd = "diff $ofile_last $ofile >$dfile";
             system($cmd);
             return unless -e $dfile;    ## error of some kind
-            $is_blinker = -z $dfile ? 0 : 1;
-            if ( !$is_blinker ) {
+            $is_blinking = -z $dfile ? 0 : 1;
+            if ( !$is_blinking ) {
                 if ( -e $dfile ) { unlink $dfile }
                 last;
             }
@@ -359,14 +384,33 @@ sub blinker_test {
         # md5 digest method for finding blinkers
         my $digest = digest_file($ofile);
         if ( defined( $digest_seen{$digest} ) ) {
-            $is_blinker = $digest_seen{$digest} == $i - 1 ? 0 : 1;
+            $is_blinking = $digest_seen{$digest} == $i - 1 ? 0 : 1;
         }
         $digest_seen{$digest} = $i;
 
         $ofile_last = $ofile;
     }
 
-    if ($is_blinker) {
+    # Check for differences compared to previous expected result
+    if ( defined($ofile_last) && -e $ofile_last ) {
+        if ( -e $new_filename ) { unlink $new_filename }
+        if ( !-e $exp_filename ) {
+            copy( $ofile_last, $exp_filename );
+        }
+        else {
+            $cmd = "diff $exp_filename $ofile_last >$diff_filename";
+            system($cmd);
+            if ( -e $diff_filename ) {
+                if ( -z $diff_filename ) { unlink $diff_filename }
+                else {
+                    copy( $ofile_last, $new_filename );
+                    $is_changed = 1;
+                }
+            }
+        }
+    }
+
+    if ($is_blinking) {
 
         # The last blinker will leave the following files:
         # tmp.3 tmp.4 tmp34.diff
@@ -381,7 +425,53 @@ sub blinker_test {
     foreach my $file (@ofiles) {
         if ( -e $file ) { unlink $file }
     }
-    return $is_blinker;
+    $rhash->{is_blinking} = $is_blinking;
+    $rhash->{is_changed}  = $is_changed;
+    return;
+}
+
+sub review_changes {
+
+    my $starting_dir = getcwd();
+    my @dirs_with_diffs;
+    my ( $fh, $tmpname ) = File::Temp::tempfile();
+    foreach my $dir ( @{$rdirs} ) {
+        next unless ( -d $dir );
+        chdir $dir;
+        if ( -e $new_filename && -e $diff_filename && !-z $diff_filename ) {
+            push @dirs_with_diffs, $dir;
+            my $cmd = "echo $dir >> $tmpname; cat $diff_filename >> $tmpname;";
+            system($cmd);
+        }
+        chdir $starting_dir;
+    }
+    $fh->close();
+    if ( !@dirs_with_diffs ) {
+        query("No differences found for the selected cases");
+        unlink $tmpname;
+        return;
+    }
+
+    my $num = @dirs_with_diffs;
+    if ( ifyes("$num differences found; do you want to review them? [Y/N]\n") )
+    {
+        openurl("$tmpname");
+    }
+    if ( ifyes("May I delete this temporary file '$tmpname'?\n") ) {
+        unlink $tmpname;
+    }
+    if ( ifyes("update expected results for ALL of these cases? [Y/N]\n") ) {
+        foreach my $dir (@dirs_with_diffs) {
+            chdir $dir;
+            if ( -e $new_filename ) {
+                if ( -e $exp_filename )  { unlink($exp_filename) }
+                if ( -e $diff_filename ) { unlink($diff_filename) }
+                rename( $new_filename, $exp_filename );
+            }
+            chdir $starting_dir;
+        }
+    }
+    return;
 }
 
 sub minimize_profiles {
@@ -419,15 +509,15 @@ sub profile_simplify {
     my ( $ifile, $pfile, $my_perltidy ) = @_;
     my $dir = getcwd();
 
-    if (!defined($ifile)) {
+    if ( !defined($ifile) ) {
         query("Input file is not defined");
         return;
     }
-    if (!-e $ifile) {
+    if ( !-e $ifile ) {
         query("Cannot locate input file '$ifile'");
         return;
     }
-    if (!defined($pfile)) {
+    if ( !defined($pfile) ) {
         query("A profile is not defined for '$ifile'");
         return;
     }
@@ -577,7 +667,8 @@ sub profile_simplify_inner_loop {
             perltidy => $my_perltidy,
         };
 
-        my $is_blinking = blinker_test($rhash);
+        blinker_test($rhash);
+        my $is_blinking = $rhash->{is_blinking};
 
         my $keep_size = @{$rprofile_keep};
         print <<EOM;
@@ -631,7 +722,7 @@ EOM
     }
     print
 "$npass passes with $num_start items and table=@chunk_table and ratio=$ratio\n";
-    return ( $rprofile_keep, $err_msg ); ##, $npass );
+    return ( $rprofile_keep, $err_msg );    ##, $npass );
 }
 
 sub param_to_file {
@@ -735,6 +826,26 @@ sub system_echo {
     system $cmd;
     return;
 }
+
+sub openurl {
+    my $url      = shift;
+    my $platform = $^O;
+    my $cmd;
+    if    ( $platform eq 'darwin' ) { $cmd = "open \"$url\""; }    # OS X
+    elsif ( $platform eq 'MSWin32' or $platform eq 'msys' ) {
+        $cmd = "start \"\" \"$url\"";
+    }    # Windows native or MSYS / Git Bash
+    elsif ( $platform eq 'cygwin' ) {
+        $cmd = "cmd.exe /c start \"\" \"$url \"";
+    }    # Cygwin; !! Note the required trailing space.
+    else {
+        $cmd = "xdg-open \"$url\"";
+    } # assume a Freedesktop-compliant OS, which includes many Linux distros, PC-BSD, OpenSolaris, ...
+    if ( system($cmd) != 0 ) {
+        die
+"Cannot locate or failed to open default browser; please open '$url' manually.";
+    }
+} ## end sub openurl
 
 sub slurp_file {
     my ($file) = @_;
