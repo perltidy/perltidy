@@ -188,9 +188,7 @@ open( CVSLOG,
         {
           push(
                 @subfields_data,
-                &create_input(
-                               '', '', '', $i, $record, $authorised_values_sth
-                )
+                &create_input( '', '', '', $i, $record, $authorised_values_sth )
           );
         }
       }
@@ -207,9 +205,7 @@ open( CVSLOG,
         {
           push(
                 @subfields_data,
-                &create_input(
-                               '', '', '', $i, $record, $authorised_values_sth
-                )
+                &create_input( '', '', '', $i, $record, $authorised_values_sth )
           );
         }
       }
@@ -1562,9 +1558,7 @@ Moose::Exporter
 ==> b1043 <==
         # S1
         my $addr =(
-                DynaLoader::dl_find_symbol(
-                        $handle,uc $prefix.$name
-                  )
+                DynaLoader::dl_find_symbol($handle,uc $prefix.$name)
                   ||DynaLoader::dl_find_symbol(
                           $handle, $prefix.$name
                   )
@@ -1573,9 +1567,7 @@ Moose::Exporter
         # S2
 
         my $addr =(
-                DynaLoader::dl_find_symbol(
-                        $handle,uc $prefix.$name
-                  )
+                DynaLoader::dl_find_symbol($handle,uc $prefix.$name)
                   ||DynaLoader::dl_find_symbol(
                           $handle, $prefix.$name
                   )
@@ -6622,13 +6614,13 @@ print to_json({success => $success ? 1 : 0});
 
 ==> b1354 <==
 # S1
-while (my ( $sid, $u, $lasttime )=
-         split( /:/, <S> ) )
+while (my ( $sid, $u,$lasttime )=
+         split( /:/, <S> ))
 
   # S2
   while (
-         my ( $sid, $u, $lasttime )
-         =split( /:/, <S> ) )
+         my ( $sid, $u,$lasttime )
+         =split( /:/, <S> ))
 
 
 ==> b1355 <==
@@ -6818,9 +6810,8 @@ my $formatter = new HTML::FormatPS(
 open(
       OUT,
       ">"
-              . Bio::Root::IO->catfile(
-                                        "t", "out.pfam"
-              ),
+              . Bio::Root::IO->catfile( "t",
+                                        "out.pfam" ),
 );
 
 # S2
@@ -6870,8 +6861,8 @@ if (  ioctl (  STDERR, $TIOCGWINSZ,
           ...;
 }
 
-if (  ioctl (  STDERR, $TIOCGWINSZ, $winsize
-      )
+if (  ioctl (  STDERR, $TIOCGWINSZ,
+               $winsize )
   )
 {
           ...;
@@ -6918,14 +6909,20 @@ SOAP::Transport::HTTP::Daemon->new (LocalAddr => $host,
 
 ==> b1395 <==
     # The old = break is under stress and must be ignored
-                  if(my ($safari_build, $safari_minor) =
-                        split /\./, $1)
+                  if(
+                        my ($safari_build,
+                              $safari_minor)
+                        = split /\./, $1
+                       )
                   {
                         ...;
                   }
 
-                  if(my ($safari_build, $safari_minor) =
-                        split /\./, $1)
+                  if(
+                        my ($safari_build,
+                              $safari_minor)
+                        = split /\./, $1
+                       )
                   {
                         ...;
                   }
@@ -6933,28 +6930,24 @@ SOAP::Transport::HTTP::Daemon->new (LocalAddr => $host,
 
 ==> b1396 <==
      print 'not '
-       unless ( near (
-            great_circle_distance ( 0, 0, 0, pi / 2 ), pi / 2
-       ) );
+       unless ( near ( great_circle_distance ( 0, 0, 0, pi / 2 ),
+            pi / 2 ) );
 
      print 'not '
-       unless ( near (
-            great_circle_distance ( 0, 0, 0, pi / 2 ), pi / 2
-       ) );
+       unless ( near ( great_circle_distance ( 0, 0, 0, pi / 2 ),
+            pi / 2 ) );
 
 
 ==> b1397 <==
          (
-                  my $msg = sprintf (
-                           gettext("%s: fatal error at line %d:\n"), $progname, $line
-                      )
+                  my $msg = sprintf ( gettext("%s: fatal error at line %d:\n"),
+                           $progname, $line )
                       . "@_\n"
          ) =~ tr/\0//d;
 
          (
-                  my $msg = sprintf (
-                           gettext("%s: fatal error at line %d:\n"), $progname, $line
-                      )
+                  my $msg = sprintf ( gettext("%s: fatal error at line %d:\n"),
+                           $progname, $line )
                       . "@_\n"
          ) =~ tr/\0//d;
 
@@ -8562,16 +8555,30 @@ my $template;
 
 ==> b1528 <==
 for $dir (
-         split (  /:/, $ENV{ 'PATH' }
-         ) )
+         split ( /:/, $ENV{ 'PATH' } )
+ )
 {
 }
 
 for $dir (
-         split (  /:/, $ENV{ 'PATH' }
-         ) )
+         split ( /:/, $ENV{ 'PATH' } )
+ )
 {
 }
+
+==> b1530 <==
+       $_taintbrush =
+        substr(
+               join('',
+                     grep { defined } @ARGV, %ENV),
+               0, 0,
+        );
+       $_taintbrush =
+        substr(
+               join('',
+                     grep { defined } @ARGV, %ENV),
+               0, 0,
+        );
 
 ==> b156 <==
 # State 1
@@ -10182,13 +10189,15 @@ has 'baz' => (
 # State 1 :
 @eigenvalues=
   eigenvalue( [
-        [ 3, 4 ], [ 4, -3 ]
+                [ 3, 4 ],
+                [ 4, -3 ]
   ] );
 
 # State 2 :
 @eigenvalues=
   eigenvalue( [
-        [ 3, 4 ], [ 4, -3 ]
+                [ 3, 4 ],
+                [ 4, -3 ]
   ] );
 
 @eigenvalues=
@@ -10468,10 +10477,9 @@ for my $index ( GZIP_MIN_HEADER_SIZE
     +1 )
 
 ==> b789 <==
-                  my $wd =
-                         (
+                  my $wd = (
                            $self->splitpath( Cwd::getcwd(), 1 )
-                         )[1];
+                  )[1];
 
                   my $wd = (
                            $self->splitpath( Cwd::getcwd(), 1 )
@@ -11197,9 +11205,9 @@ if ($printmask
 
 ==> b946 <==
 if ($optf) {
-    ($comp) =
-      (split ' ', $comp, $optf +1)
-      [$optf];
+    ($comp) =(
+        split ' ', $comp, $optf +1
+    )[$optf];
 }
 
 

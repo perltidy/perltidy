@@ -7,9 +7,8 @@
             # but weld this more complex statement
             my $compass = uc(
                 opposite_direction(
-                    line_to_canvas_direction(
-                        @{ $coords[0] }, @{ $coords[1] }
-                    )
+                    line_to_canvas_direction( @{ $coords[0] },
+                        @{ $coords[1] } )
                 )
             );
 

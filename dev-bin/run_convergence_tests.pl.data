@@ -13001,6 +13001,34 @@ for $dir (
 --brace-tightness=0
 --keyword-paren-inner-tightness=2
 
+==> b1530.in <==
+       $_taintbrush =
+        substr(
+               join('',
+                     grep { defined } @ARGV, %ENV,),
+               0, 0,
+        );
+       $_taintbrush =
+        substr(
+               join(
+                     '',
+                     grep { defined } @ARGV, %ENV
+               ),
+               0, 0,
+        );
+
+==> b1530.par <==
+--maximum-line-length=53
+--indent-columns=7
+--continuation-indentation=1
+--extended-line-up-parentheses
+--paren-tightness=2
+--add-trailing-commas
+--want-trailing-commas='b'
+--delete-trailing-commas
+--want-break-after='+ & !~ .= = |= >= .= -= ='
+--interbracket-arrow-style='}->{'
+
 ==> b156.in <==
 # State 1
 {
