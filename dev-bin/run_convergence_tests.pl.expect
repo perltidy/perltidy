@@ -6749,21 +6749,15 @@ print star (
 
 ==> b1381 <==
 my $formatter = new HTML::FormatPS(
-    'PaperSize'    => 'Letter',
-    'LeftMargin'   => 20,            # in points
-    'RightMargin'  => 20,            # ditto
-    'TopMargin'    => 10,
-    'BottomMargin' => 30,
-    'FontFamily'   => 'Helvetica',
+    'PaperSize'   => 'Letter', 'LeftMargin' => 20,    # in points
+    'RightMargin' => 20,                              # ditto
+    'TopMargin'   => 10, 'BottomMargin' => 30, 'FontFamily' => 'Helvetica'
 );
 
 my $formatter = new HTML::FormatPS(
-    'PaperSize'    => 'Letter',
-    'LeftMargin'   => 20,            # in points
-    'RightMargin'  => 20,            # ditto
-    'TopMargin'    => 10,
-    'BottomMargin' => 30,
-    'FontFamily'   => 'Helvetica',
+    'PaperSize'   => 'Letter', 'LeftMargin' => 20,    # in points
+    'RightMargin' => 20,                              # ditto
+    'TopMargin'   => 10, 'BottomMargin' => 30, 'FontFamily' => 'Helvetica'
 );
 
 ==> b1384 <==
@@ -6890,11 +6884,9 @@ if (  ioctl (  STDERR, $TIOCGWINSZ,
       ) ;
 
 ==> b1394 <==
-SOAP::Transport::HTTP::Daemon->new (
-                                    LocalAddr => $host,
+SOAP::Transport::HTTP::Daemon->new (LocalAddr => $host,
                                     LocalPort => $port,
-                                    Reuse => 1,
-  )
+                                    Reuse => 1,)
   ->dispatch_with ({ 'urn:WishListCustomer' => 'WishListCustomer' } )
   ->objects_by_reference ('WishListCustomer')
   ->handle ;
@@ -7620,13 +7612,7 @@ $last = after (
 
 ==> b1451 <==
 my %distance_pref =
-        (
-        meter => 1.1,
-        inch  => 0.7,
-        foot  => 0.9,
-        yard  => 0,
-        mile  => 1.0,
-        );
+     ( meter => 1.1, inch => 0.7, foot => 0.9, yard => 0, mile => 1.0 );
 
 my %distance_pref =
      ( meter => 1.1, inch => 0.7, foot => 0.9, yard => 0, mile => 1.0 );
@@ -8566,6 +8552,18 @@ for $dir (
 {
 }
 
+==> b1529 <==
+       dies_ok {
+              $mech->click_button (
+                                  id => 0, input => 1
+              )
+       }
+       dies_ok {
+              $mech->click_button (
+                                  id => 0, input => 1
+              )
+       }
+
 ==> b1530 <==
        $_taintbrush =
         substr(
@@ -8592,6 +8590,19 @@ for $dir (
             'ExtUtils::MM_Unix')
           ->parse_abstract($file)
     );
+
+==> b1533 <==
+       throws_ok {
+              $obj->create_comment(
+                                sha => 123, data => 5
+              )
+       }
+
+       throws_ok {
+              $obj->create_comment(
+                                sha => 123, data => 5
+              )
+       }
 
 ==> b156 <==
 # State 1

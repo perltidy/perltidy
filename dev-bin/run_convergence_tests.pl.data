@@ -13001,6 +13001,31 @@ for $dir (
 --brace-tightness=0
 --keyword-paren-inner-tightness=2
 
+==> b1529.in <==
+       dies_ok {
+              $mech->click_button (
+                                  id => 0, input => 1
+              )
+       }
+       dies_ok {
+              $mech->click_button ( id    => 0,
+                                    input => 1 )
+       }
+
+==> b1529.par <==
+--maximum-line-length=53
+--indent-columns=7
+--continuation-indentation=1
+--paren-vertical-tightness=2
+--extended-line-up-parentheses
+--space-function-paren
+--comma-arrow-breakpoints=3
+--add-trailing-commas
+--want-trailing-commas='b'
+--delete-trailing-commas
+--break-open-compact-parens='K'
+--interbracket-arrow-style='}->{'
+
 ==> b1530.in <==
        $_taintbrush =
         substr(
@@ -13050,6 +13075,30 @@ for $dir (
 --want-trailing-commas='b'
 --delete-trailing-commas
 --brace-tightness=2
+--interbracket-arrow-style='}->{'
+
+==> b1533.in <==
+       throws_ok {
+              $obj->create_comment (sha => 123,
+                                    data => 5)
+              }
+
+       throws_ok {
+              $obj->create_comment(
+                                sha => 123, data => 5
+              )
+       }
+
+==> b1533.par <==
+--maximum-line-length=53
+--indent-columns=7
+--continuation-indentation=1
+--extended-line-up-parentheses
+--comma-arrow-breakpoints=3
+--add-trailing-commas
+--want-trailing-commas='b'
+--delete-trailing-commas
+--break-open-compact-parens='K'
 --interbracket-arrow-style='}->{'
 
 ==> b156.in <==

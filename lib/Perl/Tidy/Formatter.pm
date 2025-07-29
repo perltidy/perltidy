@@ -18068,6 +18068,23 @@ sub delete_trailing_comma {
         }
     }
 
+    # The combination -cab=3 -lp -atc -dtc can be unstable in paren lists with
+    # '=>' tokens. So in this case we do not delete. Fixes b1529, b1533.  This
+    # is very rare because -cab=3 is seldom used, and a user can always run
+    # -atc and -dtc in separate runs if necessary. See also b1394 for a
+    # previous fix which locally changed the cab value. The method here
+    # is more robust.
+    if (  !$match
+        && $rOpts_add_trailing_commas
+        && $rOpts_line_up_parentheses
+        && $rOpts_comma_arrow_breakpoints == 3
+        && $rLL->[$Kfirst]->[_TOKEN_] eq '(' )
+    {
+        my $type_sequence = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+        my $rtype_count   = $self->[_rtype_count_by_seqno_]->{$type_sequence};
+        if ( $rtype_count->{'=>'} ) { $match = 0 }
+    }
+
     # If no match and not delayed
     if ( !$match && !$self->delay_trailing_comma_op( 0, $stable_flag ) ) {
 
@@ -18751,7 +18768,10 @@ sub match_trailing_comma_rule {
             # The combination of -atc and -dtc and -cab=3 can be unstable
             # (b1394). So we deactivate -cab=3 in this case.
             # A value of '0' or '4' is required for stability of case b1451.
-            if ( $rOpts_comma_arrow_breakpoints == 3 ) {
+            # DEACTIVATED: This was causing instability and replaced as part
+            # of b1529, which turns off comma deletions if -cab=3 -atc -lp
+            # instead of changing -cab=3.
+            if ( 0 && $rOpts_comma_arrow_breakpoints == 3 ) {
                 $self->[_roverride_cab3_]->{$type_sequence} = 0;
             }
         }
