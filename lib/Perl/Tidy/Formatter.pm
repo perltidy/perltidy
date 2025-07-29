@@ -37792,6 +37792,7 @@ EOM
         my $first_term_length      = $rhash_A->{_first_term_length};
         my $i_effective_last_comma = $rhash_A->{_i_effective_last_comma};
         my $i_first_comma          = $rhash_A->{_i_first_comma};
+        my $i_last_comma           = $rhash_A->{_i_last_comma};
         my $identifier_count       = $rhash_A->{_identifier_count_A};
         my $item_count             = $rhash_A->{_item_count_A};
         my $ri_term_begin          = $rhash_A->{_ri_term_begin};
@@ -37998,8 +37999,36 @@ EOM
 
         # How many columns (characters) and lines would this container take
         # if no additional whitespace were added?
-        my $packed_columns = token_sequence_length( $i_opening_paren + 1,
-            $i_effective_last_comma + 1 );
+        my $packed_columns;
+
+        # Fix for b1531 b1532 b1534:
+        # We want packed_columns to be the same regardless of any trailing
+        # comma. There are two cases:
+
+        # Case 1: $i_last_comma == $i_effective_last_comma => there is a
+        # trailing comma so we include it in the sum.  Previously this was used
+        # for all cases.
+        if ( $i_last_comma == $i_effective_last_comma ) {
+            $packed_columns = token_sequence_length( $i_opening_paren + 1,
+                $i_effective_last_comma + 1 );
+        }
+
+        # Case 2: $i_last_comma != $i_effective_last_comma: no trailing comma,
+        # so we measure through $i_effective_last_comma-1 and add the comma
+        # width.  This is because $i_effective_last_comma = $ie+1 where $ie is
+        # the last nonblank token in the list before the closing paren. So
+        # we compute the length through the last token and add a comma width.
+        else {
+            $packed_columns = token_sequence_length( $i_opening_paren + 1,
+                $i_effective_last_comma ) + 1;
+            ## allow for space before comma
+            if (   $i_first_comma > 0
+                && $types_to_go[ $i_first_comma - 1 ] eq 'b' )
+            {
+                $packed_columns += 1;
+            }
+        }
+
         if ( $columns <= 0 ) { $columns = 1 }    # avoid divide by zero
         my $packed_lines = 1 + int( $packed_columns / $columns );
 

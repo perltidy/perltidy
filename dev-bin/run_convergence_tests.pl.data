@@ -13029,6 +13029,29 @@ for $dir (
 --want-break-after='+ & !~ .= = |= >= .= -= ='
 --interbracket-arrow-style='}->{'
 
+==> b1531.in <==
+    $self->abstract(
+        bless(
+            {DISTNAME => $self->name},
+            'ExtUtils::MM_Unix'
+        )->parse_abstract($file)
+    );
+
+    $self->abstract(
+        bless({DISTNAME => $self->name},
+            'ExtUtils::MM_Unix',)
+          ->parse_abstract($file)
+    );
+
+==> b1531.par <==
+--maximum-line-length=53
+--paren-tightness=2
+--add-trailing-commas
+--want-trailing-commas='b'
+--delete-trailing-commas
+--brace-tightness=2
+--interbracket-arrow-style='}->{'
+
 ==> b156.in <==
 # State 1
 {

@@ -8580,6 +8580,19 @@ for $dir (
                0, 0,
         );
 
+==> b1531 <==
+    $self->abstract(
+        bless({DISTNAME => $self->name},
+            'ExtUtils::MM_Unix')
+          ->parse_abstract($file)
+    );
+
+    $self->abstract(
+        bless({DISTNAME => $self->name},
+            'ExtUtils::MM_Unix')
+          ->parse_abstract($file)
+    );
+
 ==> b156 <==
 # State 1
 {
