@@ -1072,10 +1072,23 @@ BEGIN {
         'want-break-before'                         => 40,
         'want-left-space'                           => 14,
         'want-right-space'                          => 14,
-        'want-trailing-commas'                      => 24,
+        'want-trailing-commas'                      => 24.1,
         'warning-output'                            => 3,
         'weld-fat-comma'                            => 1,
         'weld-nested-containers'                    => 183,
         'whitespace-cycle'                          => 7,
     };
+
+    # IMPORTANT:
+
+    # Styles must have higher priority than any options which use them so that
+    # they are available until the last option which needs them (c513).
+
+    # At present, 'add-interbracket-arrows', 'delete-interbracket-arrows',
+    # 'warn-interbracket-arrows' all have 0, so we just increase their style a
+    # bit:
+    $rfrequency_hash->{'interbracket-arrow-style'} = 0.1;
+
+    # Also, the value for 'want-trailing-commas' in the table above has been
+    # increased by 0.1.
 }
