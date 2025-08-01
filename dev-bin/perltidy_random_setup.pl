@@ -1090,7 +1090,12 @@ EOM
           line-up-parentheses
           format-skipping-from-start
           code-skipping-from-start
+          warn-unique-keys
+
         );
+
+        # Added warn-unique-keys because it can produce signifcant error
+        # output and has been tested
 
         # Added line-up-parentheses in c495 because it overlaps with
         # --extended-line-up-parentheses, so we get excessive -lp testing
