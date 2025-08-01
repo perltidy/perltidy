@@ -1558,7 +1558,9 @@ Moose::Exporter
 ==> b1043 <==
         # S1
         my $addr =(
-                DynaLoader::dl_find_symbol($handle,uc $prefix.$name)
+                DynaLoader::dl_find_symbol(
+                        $handle,uc $prefix.$name
+                  )
                   ||DynaLoader::dl_find_symbol(
                           $handle, $prefix.$name
                   )
@@ -1567,7 +1569,9 @@ Moose::Exporter
         # S2
 
         my $addr =(
-                DynaLoader::dl_find_symbol($handle,uc $prefix.$name)
+                DynaLoader::dl_find_symbol(
+                        $handle,uc $prefix.$name
+                  )
                   ||DynaLoader::dl_find_symbol(
                           $handle, $prefix.$name
                   )
@@ -6614,13 +6618,13 @@ print to_json({success => $success ? 1 : 0});
 
 ==> b1354 <==
 # S1
-while (my ( $sid, $u,$lasttime )=
-         split( /:/, <S> ))
+while (my ( $sid, $u, $lasttime )=
+         split( /:/, <S> ) )
 
   # S2
   while (
-         my ( $sid, $u,$lasttime )
-         =split( /:/, <S> ))
+         my ( $sid, $u, $lasttime )
+         =split( /:/, <S> ) )
 
 
 ==> b1355 <==
@@ -6901,20 +6905,14 @@ SOAP::Transport::HTTP::Daemon->new (LocalAddr => $host,
 
 ==> b1395 <==
     # The old = break is under stress and must be ignored
-                  if(
-                        my ($safari_build,
-                              $safari_minor)
-                        = split /\./, $1
-                       )
+                  if(my ($safari_build, $safari_minor) =
+                        split /\./, $1)
                   {
                         ...;
                   }
 
-                  if(
-                        my ($safari_build,
-                              $safari_minor)
-                        = split /\./, $1
-                       )
+                  if(my ($safari_build, $safari_minor) =
+                        split /\./, $1)
                   {
                         ...;
                   }
@@ -6922,24 +6920,28 @@ SOAP::Transport::HTTP::Daemon->new (LocalAddr => $host,
 
 ==> b1396 <==
      print 'not '
-       unless ( near ( great_circle_distance ( 0, 0, 0, pi / 2 ),
-            pi / 2 ) );
+       unless ( near (
+            great_circle_distance ( 0, 0, 0, pi / 2 ), pi / 2
+       ) );
 
      print 'not '
-       unless ( near ( great_circle_distance ( 0, 0, 0, pi / 2 ),
-            pi / 2 ) );
+       unless ( near (
+            great_circle_distance ( 0, 0, 0, pi / 2 ), pi / 2
+       ) );
 
 
 ==> b1397 <==
          (
-                  my $msg = sprintf ( gettext("%s: fatal error at line %d:\n"),
-                           $progname, $line )
+                  my $msg = sprintf (
+                           gettext("%s: fatal error at line %d:\n"), $progname, $line
+                      )
                       . "@_\n"
          ) =~ tr/\0//d;
 
          (
-                  my $msg = sprintf ( gettext("%s: fatal error at line %d:\n"),
-                           $progname, $line )
+                  my $msg = sprintf (
+                           gettext("%s: fatal error at line %d:\n"), $progname, $line
+                      )
                       . "@_\n"
          ) =~ tr/\0//d;
 
@@ -8541,14 +8543,14 @@ my $template;
 
 ==> b1528 <==
 for $dir (
-         split ( /:/, $ENV{ 'PATH' } )
- )
+         split (  /:/, $ENV{ 'PATH' }
+         ) )
 {
 }
 
 for $dir (
-         split ( /:/, $ENV{ 'PATH' } )
- )
+         split (  /:/, $ENV{ 'PATH' }
+         ) )
 {
 }
 
@@ -11259,9 +11261,9 @@ if ($printmask
 
 ==> b946 <==
 if ($optf) {
-    ($comp) =(
-        split ' ', $comp, $optf +1
-    )[$optf];
+    ($comp) =
+      (split ' ', $comp, $optf +1)
+      [$optf];
 }
 
 

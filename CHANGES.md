@@ -6,19 +6,10 @@
       --nested-ternary-maximum-depth=n. These can be used to locate
       nested ternary statements in a script.
 
-    - A line length tolerance was adjusted by 1 character to help keep
-      table formatting unchanged when adding and deleting trailing commas.
-      This can occasionally change formatting of some small lists. For example,
-      the following was one of two changes to the perltidy source code using
-      default parameter settings:
-
-      OLD:
-                $delete_unique_quoted_words->( $word,
-                    $missing_GetOptions_keys );
-      NEW:
-                $delete_unique_quoted_words->(
-                    $word, $missing_GetOptions_keys
-                );
+    - For the --line-up-parentheses option, a line length tolerance was
+      adjusted by 1 character to help keep table formatting unchanged when
+      adding and deleting trailing commas.  This can occasionally change
+      formatting of some small lists when formatted with -lp.
 
 ## 2025 07 11
 

@@ -10865,9 +10865,8 @@ EOM
 
             # Ignore multiline quotes for the remaining checks
             if ( !$is_multiline ) {
-                $delete_unique_quoted_words->(
-                    $word, $missing_GetOptions_keys
-                );
+                $delete_unique_quoted_words->( $word,
+                    $missing_GetOptions_keys );
             }
         }
     }
@@ -23600,10 +23599,7 @@ EOM
             $weld_count_this_start = 0;
             $weld_starts_in_block  = 0;
 
-            (
-                my $new_weld_ok,
-                $maximum_text_length, $starting_lentot, my $msg
-              )
+            ( my $new_weld_ok, $maximum_text_length, $starting_lentot, my $msg )
               = $self->setup_new_weld_measurements( $Kouter_opening,
                 $Kinner_opening );
 
@@ -37169,10 +37165,22 @@ EOM
 
         # Fix b1530: make result independent of any trailing comma. This will
         # help avoid instability with --add and --delete-trailing-commas, and
-        # keep results unchanged when they are deactivated.
-        if ( $rhash_A->{_i_effective_last_comma} != $rhash_A->{_i_last_comma} )
+        # keep results unchanged when they are deactivated. So far this has
+        # only been an  issue for -lp, so this is restricted to -lp
+        # to minimize changes to existing code.
+        if (
+            $rOpts_line_up_parentheses
+            && ( $rhash_A->{_i_effective_last_comma} !=
+                $rhash_A->{_i_last_comma} )
+          )
         {
             $tol += 1;
+            my $i_first_comma = $rhash_A->{_i_first_comma};
+            if (   $i_first_comma > 0
+                && $types_to_go[ $i_first_comma - 1 ] eq 'b' )
+            {
+                $tol += 1;
+            }
         }
 
         # c410: check for $i_closing_paren > $max_index_to_go
