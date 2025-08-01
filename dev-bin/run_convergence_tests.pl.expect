@@ -8604,6 +8604,36 @@ for $dir (
               )
        }
 
+==> b1535 <==
+  $slashdb->setStory( $form->{sid},
+              { writestatus => 'dirty', },
+  );
+  $slashdb->setStory(
+                  $form->{sid},
+                  {
+                    writestatus => 'dirty'
+                  },
+  );
+
+==> b1535a <==
+  $slashdb->setStory( $form->{sid},
+              { writestatus => 'dirty', },
+  );
+  $slashdb->setStory(
+                  $form->{sid},
+                  { writestatus => 'dirty'
+                  },
+  );
+
+==> b1535b <==
+        getError('compress filter',
+             { ratio => 'postersubj', },);
+        getError(
+                 'compress filter',
+                 { ratio => 'postersubj'
+                 },
+        );
+
 ==> b156 <==
 # State 1
 {

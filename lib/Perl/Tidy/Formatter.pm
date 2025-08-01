@@ -18074,7 +18074,9 @@ sub delete_trailing_comma {
     # -atc and -dtc in separate runs if necessary. See also b1394 for a
     # previous fix which locally changed the cab value. The method here
     # is more robust.
-    if (  !$match
+    # DEACTIVATED and replaced with b1535
+    if (   0
+        && !$match
         && $rOpts_add_trailing_commas
         && $rOpts_line_up_parentheses
         && $rOpts_comma_arrow_breakpoints == 3
@@ -18451,6 +18453,35 @@ sub match_trailing_comma_rule {
     }
 
     my $follows_isolated_closing_token;
+
+    #-------------------------------------------------------------------------
+    # Check for some stability issues involving -lp -atc -dtc and small lists.
+    # Fixes b1535* plus replaces previous fix for b1529 b1533
+    #-------------------------------------------------------------------------
+    if (
+           $rOpts_line_up_parentheses
+        && $rOpts_add_trailing_commas
+        && $rOpts_delete_trailing_commas
+        && $fat_comma_count
+        && ( !defined($iline_first_comma)
+            || $iline_last_comma - $iline_first_comma <= 1 )
+      )
+    {
+
+        # -lp -atc -dtc -cab=1,2,3 can be unstable: b1535
+        if (   $rOpts_comma_arrow_breakpoints > 0
+            && $rOpts_comma_arrow_breakpoints < 4 )
+        {
+            return $no_change;
+        }
+
+        # -lp -atc -dtc -vt can be unstable: b1535a
+        if (   %opening_vertical_tightness
+            && $opening_vertical_tightness{$token} )
+        {
+            return $no_change;
+        }
+    }
 
     #----------------------------------------------------------------
     # If no existing commas, see if we have an inner nested container

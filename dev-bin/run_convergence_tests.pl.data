@@ -13101,6 +13101,65 @@ for $dir (
 --break-open-compact-parens='K'
 --interbracket-arrow-style='}->{'
 
+==> b1535.in <==
+  $slashdb->setStory( $form->{sid},
+              { writestatus => 'dirty', },
+  );
+  $slashdb->setStory(
+                  $form->{sid},
+                  {
+                    writestatus => 'dirty'
+                  },
+  );
+
+==> b1535.par <==
+--maximum-line-length=42
+--indent-columns=2
+--extended-line-up-parentheses
+--comma-arrow-breakpoints=1
+--want-trailing-commas='m'
+--add-trailing-commas
+--delete-trailing-commas
+
+==> b1535a.in <==
+  $slashdb->setStory( $form->{sid},
+              { writestatus => 'dirty', },
+  );
+  $slashdb->setStory(
+                  $form->{sid},
+                  { writestatus => 'dirty'
+                  },
+  );
+
+==> b1535a.par <==
+--maximum-line-length=42
+--indent-columns=2
+--extended-line-up-parentheses
+--want-trailing-commas='m'
+--add-trailing-commas
+--brace-vertical-tightness=1
+--delete-trailing-commas
+
+==> b1535b.in <==
+        getError('compress filter',
+             { ratio => 'postersubj', },);
+        getError(
+                 'compress filter',
+                 {
+                   ratio => 'postersubj'
+                 },
+        );
+
+==> b1535b.par <==
+--maximum-line-length=42
+--indent-columns=2
+--extended-line-up-parentheses
+--paren-tightness=2
+--want-trailing-commas='m'
+--add-trailing-commas
+--brace-vertical-tightness=1
+--delete-trailing-commas
+
 ==> b156.in <==
 # State 1
 {
