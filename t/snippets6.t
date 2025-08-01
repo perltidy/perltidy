@@ -296,8 +296,7 @@ say 'ok_200_24_hours.value '
 say 'ok_200_24_hours.value '
     . average(
     {   '$and' => [
-            { time   => { '$gt', $time - 60 * 60 * 24 } },
-            { status => 200 }
+            { time => { '$gt', $time - 60 * 60 * 24 } }, { status => 200 }
         ]
     }
     );

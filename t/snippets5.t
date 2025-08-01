@@ -439,8 +439,9 @@ push @contents,
                 $c->Tr(
                     $c->td(
                         { -valign => 'top' },
-                        $c->strong( " Relevant Discipline ",
-                            $c->br(), "Area " )
+                        $c->strong(
+                            " Relevant Discipline ", $c->br(), "Area "
+                        )
                     ),
                     $c->td(
                         { -valign => 'top' },

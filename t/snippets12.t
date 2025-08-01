@@ -507,8 +507,9 @@ use_all_ok( qw{
             # but weld this more complex statement
             my $compass = uc(
                 opposite_direction(
-                    line_to_canvas_direction( @{ $coords[0] },
-                        @{ $coords[1] } )
+                    line_to_canvas_direction(
+                        @{ $coords[0] }, @{ $coords[1] }
+                    )
                 )
             );
 
@@ -543,9 +544,9 @@ use_all_ok( qw{
                 PDL::Graphics::TriD::Scale->new( $sx, $sy, $sz ) );
 
             # but weld this more complex statement
-            my $compass =
-              uc( opposite_direction( line_to_canvas_direction( @{ $coords[0] },
-                @{ $coords[1] } ) ) );
+            my $compass = uc( opposite_direction( line_to_canvas_direction(
+                @{ $coords[0] }, @{ $coords[1] }
+            ) ) );
 
             # OLD: do not weld to a one-line block because the function could
             # get separated from its opening paren.
