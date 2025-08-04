@@ -6,6 +6,8 @@
 #3 dfsfs.def
 #4 dfsfs.dfsfs1
 #5 dfsfs.dfsfs2
+#6 c226.c226
+#7 c226.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -26,6 +28,7 @@ BEGIN {
         'boct' => <<'----------',
 -boc -boct='f( ;'
 ----------
+        'c226'   => "-xci",
         'def'    => "",
         'dfsfs1' => "-dsc",
         'dfsfs2' => <<'----------',
@@ -57,6 +60,29 @@ my $val = func(
 my $prefix = substr $exception,
       0,
       length $REQUIRED_LENGTH;
+----------
+
+        'c226' => <<'----------',
+            join(
+                ", ",
+                map {
+                    join( ": ",
+                        $feat->settingName( $_->{'type'}, $_->{'setting'} ) )
+                  }
+                  grep { ( $_->{'enable'} & $subFeatureFlags ) != 0 }
+                  @$featureEntries
+            );
+
+            return map {
+                ref $_
+                    ? do {
+                        my $dumper = Data::Dumper->new( [$_] );
+                        $dumper->Indent(1)->Terse(1);
+                        $dumper->Sortkeys(1) if $dumper->can("Sortkeys");
+                        $dumper->Dump;
+                    }
+                    : $_
+            } @_;
 ----------
 
         'dfsfs' => <<'----------',
@@ -162,6 +188,60 @@ my @list1;
 my @list2;
 @list2 = ( 1, 1, 1, 1, 2, 1, 1, 3, 3, 1, 1, 4, 6, 4, 1, );
 #5...........
+        },
+
+        'c226.c226' => {
+            source => "c226",
+            params => "c226",
+            expect => <<'#6...........',
+            join(
+                ", ",
+                map {
+                    join( ": ",
+                        $feat->settingName( $_->{'type'}, $_->{'setting'} ) )
+                  }
+                  grep { ( $_->{'enable'} & $subFeatureFlags ) != 0 }
+                  @$featureEntries
+            );
+
+            return map {
+                ref $_
+                  ? do {
+                      my $dumper = Data::Dumper->new( [$_] );
+                      $dumper->Indent(1)->Terse(1);
+                      $dumper->Sortkeys(1) if $dumper->can("Sortkeys");
+                      $dumper->Dump;
+                  }
+                  : $_
+            } @_;
+#6...........
+        },
+
+        'c226.def' => {
+            source => "c226",
+            params => "def",
+            expect => <<'#7...........',
+            join(
+                ", ",
+                map {
+                    join( ": ",
+                        $feat->settingName( $_->{'type'}, $_->{'setting'} ) )
+                  }
+                  grep { ( $_->{'enable'} & $subFeatureFlags ) != 0 }
+                  @$featureEntries
+            );
+
+            return map {
+                ref $_
+                  ? do {
+                    my $dumper = Data::Dumper->new( [$_] );
+                    $dumper->Indent(1)->Terse(1);
+                    $dumper->Sortkeys(1) if $dumper->can("Sortkeys");
+                    $dumper->Dump;
+                  }
+                  : $_
+            } @_;
+#7...........
         },
     };
 

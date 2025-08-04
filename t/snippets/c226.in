@@ -1,0 +1,20 @@
+            join(
+                ", ",
+                map {
+                    join( ": ",
+                        $feat->settingName( $_->{'type'}, $_->{'setting'} ) )
+                  }
+                  grep { ( $_->{'enable'} & $subFeatureFlags ) != 0 }
+                  @$featureEntries
+            );
+
+            return map {
+                ref $_
+                    ? do {
+                        my $dumper = Data::Dumper->new( [$_] );
+                        $dumper->Indent(1)->Terse(1);
+                        $dumper->Sortkeys(1) if $dumper->can("Sortkeys");
+                        $dumper->Dump;
+                    }
+                    : $_
+            } @_;
