@@ -25205,6 +25205,15 @@ sub extended_ci {
             }
         }
 
+        # Do not let -xci control closing block ci for sort,map,grep.
+        # Otherwise, the ci may get removed later by sub undo_ci (c226).
+        if (   $block_with_ci
+            && $rLL->[$KK]->[_TOKEN_] eq '}'
+            && $rLL->[$KK]->[_CI_LEVEL_] )
+        {
+            $block_with_ci = 0;
+        }
+
         if ($block_with_ci) {
             $rLL->[$KK]->[_CI_LEVEL_] = 1;
             if ($seqno_top) {

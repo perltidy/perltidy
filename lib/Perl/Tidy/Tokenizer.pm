@@ -7105,7 +7105,9 @@ sub operator_expected {
         return OPERATOR;
     }
 
+    #---------------------
     # Section 2E: bareword
+    #---------------------
     if ( $last_nonblank_type eq 'w' ) {
 
         # It is safest to return UNKNOWN if a possible ? pattern delimiter may
