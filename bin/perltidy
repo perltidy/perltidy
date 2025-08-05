@@ -1040,7 +1040,7 @@ The only required piece of information is a container type, which is one of
 
   -lpil='('
 
-means use -lp formatting only on lists within parentheses, not lists in square-brackets or braces.
+means use B<-lp> formatting only on lists within parentheses, not lists in square-brackets or braces.
 The same thing could alternatively be specified with
 
   -lpxl = '[ {'
@@ -1064,11 +1064,11 @@ For example:
 
   -lpil = 'f('
 
-means only apply -lp to function calls, and
+means only apply B<-lp> to function calls, and
 
   -lpil = 'w('
 
-means only apply -lp to parenthesized lists which follow a function or a keyword.
+means only apply B<-lp> to parenthesized lists which follow a function or a keyword.
 
 This last example could alternatively be written using the B<-lpxl=s> flag as
 
@@ -1089,7 +1089,7 @@ For example,
 
   -lpil = 'f(2'
 
-means only apply -lp to function calls with simple lists (not containing any sublists,
+means only apply B<-lp> to function calls with simple lists (not containing any sublists,
 code blocks or ternary expressions).
 
 =item B<-cti=n>, B<--closing-token-indentation>
@@ -1120,7 +1120,7 @@ The flags B<-cti=1> and B<-cti=2> work well with the B<--line-up-parentheses>
                        );
 
 These flags are merely hints to the formatter and they may not always be
-followed.  In particular, if -lp is not being used, the indentation for
+followed.  In particular, if B<-lp> is not being used, the indentation for
 B<cti=1> is constrained to be no more than one indentation level.
 
 If desired, this control can be applied independently to each of the
@@ -1212,7 +1212,7 @@ The special side comment can be changed with the next parameter.
 =item B<-nibp=s>, B<--non-indenting-brace-prefix=s>
 
 The B<-nibp=string> parameter may be used to change the marker for
-non-indenting braces.  The default is equivalent to -nibp='#<<<'.  The string
+non-indenting braces.  The default is equivalent to B<-nibp>='#<<<'.  The string
 that you enter must begin with a # and should be in quotes as necessary to get
 past the command shell of your system.  This string is the leading text of a
 regex pattern that is constructed by prepending a '^' and appending
@@ -1736,7 +1736,7 @@ You will probably also want to use the flag B<-skp> (previous item) too.
 The parameter is not recommended because spacing a function paren can make a
 program vulnerable to parsing problems by Perl.  For example, the following
 two-line program will run as written but will have a syntax error if
-reformatted with -sfp:
+reformatted with B<-sfp>:
 
   if ( -e filename() ) { print "I'm here\n"; }
   sub filename { return $0 }
@@ -1820,8 +1820,8 @@ To illustrate, the following snippet is shown formatted in three ways:
 
 In the second case the -pt=2 parameter makes all of the parens tight. In the
 third case the -kpit=0 flag causes the space within the 'if' parens to have a
-space, since 'if' is one of the keywords to which the -kpit flag applies by
-default.  The remaining parens are still tight because of the -pt=2 parameter.
+space, since 'if' is one of the keywords to which the B<-kpit> flag applies by
+default.  The remaining parens are still tight because of the B<-pt=2> parameter.
 
 The set of keywords to which this parameter applies are by default are:
 
@@ -1990,12 +1990,12 @@ This parameter causes perltidy to ignore the length of side comments when
 setting line breaks.  The default, B<-niscl>, is to include the length of
 side comments when breaking lines to stay within the length prescribed
 by the B<-l=n> maximum line length parameter.  For example, the following
-single line would remain intact with -l=50 and -iscl:
+single line would remain intact with B<-l=50> and B<-iscl>:
 
     # perltidy -l=50 -iscl
     $vmsfile =~ s/;[\d\-]*$//;    # Clip off version number
 
-whereas without the -iscl flag the line will be broken:
+whereas without the B<-iscl> flag the line will be broken:
 
     # perltidy -l=50
     $vmsfile =~
@@ -2142,7 +2142,7 @@ the next flag for additional control of the abbreviated text.
 As discussed in the previous item, when the
 closing-side-comment-maximum-text limit is exceeded the comment text must
 be truncated.  Older versions of perltidy terminated with three dots, and this
-can still be achieved with -ncscb:
+can still be achieved with B<-ncscb>:
 
   perltidy -csc -ncscb
   } ## end foreach my $foo (sort { $b cmp $a ...
@@ -2491,7 +2491,7 @@ command line can be difficult.
 If changed comment markers do not appear to be working, use the B<-log> flag and
 examine the F<.LOG> file to see if and where they are being detected.
 
-The default is equivalent to -fsb='#<<<'.  The string that
+The default is equivalent to B<-fsb>='#<<<'.  The string that
 you enter must begin with a # and should be in quotes as necessary to get past
 the command shell of your system.  It is actually the leading text of a pattern
 that is constructed by appending a '\s', so you must also include backslashes
@@ -2532,12 +2532,12 @@ necessary.
 =item B<-csb=string>,  B<--code-skipping-begin=string>
 
 This may be used to change the beginning comment for a B<--code-skipping> section, and its use is similar to the B<-fsb=string>.
-The default is equivalent to -csb='#<<V'.
+The default is equivalent to B<-csb='#<<V'>.
 
 =item B<-cse=string>,  B<--code-skipping-end=string>
 
 This may be used to change the ending comment for a B<--code-skipping> section, and its use is similar to the B<-fse=string>.
-The default is equivalent to -cse='#>>V'.
+The default is equivalent to B<-cse='#>>V'>.
 
 =item B<-csfs>,  B<--code-skipping-from-start>
 
@@ -3863,7 +3863,7 @@ B<-baao> or B<--break-after-all-operators>,
 
 B<-bbao> or B<--break-before-all-operators>.
 
-The -baao sets the default to be to break after all of the following operators:
+The B<-baao> flag sets the default to be to break after all of the following operators:
 
     % + - * / x != == >= <= =~ !~ < > | &
     = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
@@ -3951,7 +3951,7 @@ is shown here:
     );
 
 For another possibility see
-the -fs flag in L<"Skipping Selected Sections of Code">.
+the B<-fs> flag in L<"Skipping Selected Sections of Code">.
 
 =over 4
 
@@ -4288,7 +4288,7 @@ For example, given this list with a repeated comma
 
       ignoreSpec( $file, "file",, \%spec, \%Rspec );
 
-we can remove it with -drc
+we can remove it with B<-drc>
 
       # perltidy -drc:
       ignoreSpec( $file, "file", \%spec, \%Rspec );
@@ -4801,7 +4801,7 @@ given. And
 
    perltidy -wia -ias=0
 
-will warn if any arrows exist, since the flag -ias=0 means that no arrows
+will warn if any arrows exist, since the flag B<-ias=0> means that no arrows
 are wanted.
 
 =back
@@ -5109,7 +5109,7 @@ of these parameters should be specified, because repeating a
 command-line parameter always overwrites the previous one before
 perltidy ever sees it.
 
-For example, -kbb='=>' means that if an input line begins with a '=>' then the
+For example, B<-kbb='=>'> means that if an input line begins with a '=>' then the
 output script should also have a line break before that token.
 
 For example, given the script:
@@ -5694,7 +5694,7 @@ by Damian Conway:
 Please note that this parameter set includes B<-st> (B<--standard-output>) and
 B<-se> (B<--standard-error-output>) flags, which make perltidy act as a filter
 on one file only.  These can be overridden by placing B<-nst> and/or B<-nse>
-after the -pbp parameter.
+after the B<-pbp> parameter.
 
 Also note that the value of continuation indentation, B<-ci=4>, is equal to the
 value of the full indentation, B<-i=4>.  It is recommended that the either (1)
@@ -6240,7 +6240,7 @@ B<--use-feature='noclass'>.  This tells perltidy B<not> to treat words B<class>,
 
 B<Neither of these> (B<--use-feature> not defined). This is the DEFAULT and
 recommended setting. In this case perltidy will try to automatically handle
-both the newer --use-feature 'class' syntax as well as some conflicting
+both the newer C<feature 'class'> syntax as well as some conflicting
 uses of some of these special words by existing modules.
 
 =back
@@ -6563,7 +6563,7 @@ indentation level errors are allowed before perltidy skips formatting and just
 outputs a file verbatim.  The default is B<n=1>.  This means that if the final
 indentation of a script differs from the starting indentation by more than 1
 levels, the file will be output verbatim.  To avoid formatting if there are any
-indentation level errors use -maxle=0. To skip this check you can either set n
+indentation level errors use B<-maxle=0>. To skip this check you can either set n
 equal to a large number, such as B<n=100>, or set B<n=-1>.
 
 For example, the following script has level error of 3 and will be output verbatim
@@ -7908,7 +7908,7 @@ in any way.  And, of course, it does not modify pod documents.
 
 =item B<Temporary files>
 
-Under the -html option with the default --pod2html flag, a temporary file is
+Under the B<-html> option with the default B<--pod2html> flag, a temporary file is
 required to pass text to Pod::Html.  Unix systems will try to use the POSIX
 tmpnam() function.  Otherwise the file F<perltidy.TMP> will be temporarily
 created in the current working directory.
