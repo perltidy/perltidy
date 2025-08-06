@@ -3986,10 +3986,15 @@ For example:
     -boct='('  means keep old comma breaks in paren lists
     -boct='f(' means keep old comma breaks in function call lists
 
-Commas which are not contained within one of these three container types can
-be selected with a ';' character.
+Commas which are not contained within one of the three list container types,
+such as those in a paren-less function call, can be selected with a B<';'>
+character.  And multiple selections should be separated with spaces.
 
-Note that this parameter has no effect unless B<-break-at-old-comma-breakpoints> is also set.
+For example,
+B<-boct='; ('> means keep breaks at uncontained commas and at commas in parens.
+
+Note that this parameter has no effect unless
+B<-break-at-old-comma-breakpoints>, or B<-boc>, is also set.
 
 =item B<-btct=s>,  B<--break-at-trailing-comma-types=s>
 
