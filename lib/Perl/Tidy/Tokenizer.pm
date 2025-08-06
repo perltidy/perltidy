@@ -1115,6 +1115,9 @@ sub show_indentation_table {
     # Output indentation table made at closing braces.  This can be helpful for
     # the case of a missing brace in a previously formatted file.
 
+    # skip if problem reading file
+    return if ( $self->[_in_error_] );
+
     # skip if -wc is used (rare); it is too complex to use
     return if ($rOpts_whitespace_cycle);
 
@@ -1200,7 +1203,7 @@ sub show_indentation_table {
     my @output_lines;
     push @output_lines, <<EOM;
 Table of initial nesting level differences at closing braces.
-This might help localize brace errors if the file was previously formatted.
+This might help localize brace errors IF perltidy previously formatted the file.
 line: error=[new brace level]-[old indentation level]
 EOM
     foreach my $i (@pre_indexes) {
