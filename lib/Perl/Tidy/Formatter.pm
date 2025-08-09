@@ -6696,11 +6696,24 @@ EOM
                 }
             }
 
-            # good to break after end of code blocks
-            if ( $type eq '}' && $block_type && $next_nonblank_type ne ';' ) {
+            # Good to break after end of code blocks ..
+            if ( $type eq '}' && $block_type ) {
 
-                $bond_str = 0.5 * WEAK + 0.5 * VERY_WEAK + $code_bias;
-                $code_bias += $delta_bias;
+                # ..except before commas and semicolons
+                if (   $next_nonblank_type ne ';'
+                    && $next_nonblank_type ne ',' )
+                {
+                    $bond_str = 0.5 * WEAK + 0.5 * VERY_WEAK + $code_bias;
+                    $code_bias += $delta_bias;
+                }
+
+                # The following tiny strength boost will break a tie between
+                # breaks after a '=>' and before a comma at '},' in favor of a
+                # break after the '=>'. It is only required for -xlp but works
+                # for all cases. Fixes b1536.
+                else {
+                    $bond_str += $delta_bias;
+                }
             }
 
             if ( $type eq 'k' ) {
@@ -25659,12 +25672,13 @@ sub is_fragile_block_type {
 
     sub cumulative_length_to_comma {
 
-        my ( $self, $KK, $K_comma, $K_closing ) = @_;
+        my ( $self, $KK, $K_comma, $K_closing, ($is_interrupted) ) = @_;
 
         # Given:
         #  $KK        = index of starting token, or blank before start
         #  $K_comma   = index of line-ending comma
         #  $K_closing = index of the container closing token
+        #  $is_interrupted = true for an interrupted list call: for b1536a
 
         # Return:
         #  $length = cumulative length of the term
@@ -25704,8 +25718,12 @@ sub is_fragile_block_type {
             # appropriate closing token when it is not on the same line as its
             # opening token.
 
+            # $is_interrupted is added to fix b1536a. We must not zero the
+            # length when this is true.
+
             my $K_prev = $self->K_previous_nonblank($K_comma);
             if (   defined($K_prev)
+                && !$is_interrupted
                 && $K_prev >= $KK
                 && $rLL->[$K_prev]->[_TYPE_SEQUENCE_] )
             {
@@ -25992,9 +26010,11 @@ sub is_fragile_block_type {
                     #--------------------------
                     if ( $rLL->[$K_terminal]->[_TYPE_] eq ',' ) {
 
+                        # Fix for b1536a: add $is_interrupted flag
+                        my $is_interrupted = 1;
                         my $length =
                           $self->cumulative_length_to_comma( $K_first,
-                            $K_terminal, $K_c );
+                            $K_terminal, $K_c, $is_interrupted );
 
                         # Fix for b1331: at a broken => item, include the
                         # length of the previous half of the item plus one for

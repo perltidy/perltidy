@@ -7060,30 +7060,34 @@ my %MyTokens= (
 
 ==> b1408 <==
           $registry->add_type_constraint(
-              Moose::Meta::TypeConstraint::Parameterizable->new(
-                   parent =>
-                     Moose::Util::TypeConstraints::find_type_constraint( 'Ref' ),
-                   constraint_generator => sub {
+                    Moose::Meta::TypeConstraint::Parameterizable->new(
+                              parent =>
+                                Moose::Util::TypeConstraints::find_type_constraint(
+                                        'Ref' ),
+                              constraint_generator => sub {
 
-                             return sub {
-                                       foreach my $x ( @$_ ) {
-                                                 ( $check->( $x ) ) || return;
-                                       }
-                             }
-                   }, ) );
+                                        return sub {
+                                                  foreach my $x ( @$_ ) {
+                                                            ( $check->( $x ) )
+                                                              || return;
+                                                  }
+                                        }
+                              }, ) );
 
           $registry->add_type_constraint(
-              Moose::Meta::TypeConstraint::Parameterizable->new(
-                   parent =>
-                     Moose::Util::TypeConstraints::find_type_constraint( 'Ref' ),
-                   constraint_generator => sub {
+                    Moose::Meta::TypeConstraint::Parameterizable->new(
+                              parent =>
+                                Moose::Util::TypeConstraints::find_type_constraint(
+                                        'Ref' ),
+                              constraint_generator => sub {
 
-                             return sub {
-                                       foreach my $x ( @$_ ) {
-                                                 ( $check->( $x ) ) || return;
-                                       }
-                             }
-                   }, ) );
+                                        return sub {
+                                                  foreach my $x ( @$_ ) {
+                                                            ( $check->( $x ) )
+                                                              || return;
+                                                  }
+                                        }
+                              }, ) );
 
 
 ==> b1409 <==
@@ -7562,24 +7566,24 @@ $last = after (
 ==> b1448 <==
        $save_check =
                 $menu_frame->Checkbutton(
-                                          -variable => \$root->{'modified'},
-                                          ( $os ne 'win' ? ( -selectcolor => "red" ) : () ),
-                                          -highlightthickness => 0,
-                                          -padx               => 0,
-                                          -pady               => 0,
+                            -variable => \$root->{'modified'},
+                            ( $os ne 'win' ? ( -selectcolor => "red" ) : () ),
+                            -highlightthickness => 0,
+                            -padx               => 0,
+                            -pady               => 0,
 
-                                          #-font => "times 5",
+                            #-font => "times 5",
                 );
 
        $save_check =
                 $menu_frame->Checkbutton(
-                                          -variable => \$root->{'modified'},
-                                          ( $os ne 'win' ? ( -selectcolor => "red" ) : () ),
-                                          -highlightthickness => 0,
-                                          -padx               => 0,
-                                          -pady               => 0,
+                            -variable => \$root->{'modified'},
+                            ( $os ne 'win' ? ( -selectcolor => "red" ) : () ),
+                            -highlightthickness => 0,
+                            -padx               => 0,
+                            -pady               => 0,
 
-                                          #-font => "times 5",
+                            #-font => "times 5",
                 );
 
 
@@ -8635,6 +8639,28 @@ for $dir (
                  { ratio => 'postersubj'
                  },
         );
+
+==> b1536 <==
+$i =
+      &GetOptions(
+         "<>" =>
+         sub { $bootfile = $_[ 0 ] },    # any "non-option" is
+      );
+$i =
+      &GetOptions(
+         "<>" =>
+         sub { $bootfile = $_[ 0 ] },    # any "non-option" is
+      );
+
+==> b1536a <==
+$i =
+      &GetOptions(
+        "<>" => sub { $bootfile = $_[ 0 ] }, # any "non-option" is
+      );
+$i =
+      &GetOptions(
+        "<>" => sub { $bootfile = $_[ 0 ] }, # any "non-option" is
+      );
 
 ==> b156 <==
 # State 1

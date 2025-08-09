@@ -13160,6 +13160,50 @@ for $dir (
 --brace-vertical-tightness=1
 --delete-trailing-commas
 
+==> b1536.in <==
+$i =
+      &GetOptions(
+         "<>" => sub { $bootfile = $_[ 0 ] }
+         ,    # any "non-option" is
+      );
+$i =
+      &GetOptions(
+               "<>" =>
+               sub { $bootfile = $_[ 0 ] },  # any "non-option" is
+      );
+
+==> b1536.par <==
+--maximum-line-length=46
+--continuation-indentation=6
+--extended-continuation-indentation
+--extended-line-up-parentheses
+--delete-old-whitespace
+--square-bracket-tightness=0
+--ignore-side-comment-lengths
+
+==> b1536a.in <==
+$i =
+      &GetOptions(
+               "<>"          =>
+               sub { $bootfile = $_[ 0 ] },  # any "non-option" is
+      );
+$i =
+      &GetOptions(
+                 "<>" =>
+                 sub { $bootfile = $_[ 0 ] }
+                 ,    # any "non-option" is
+      );
+
+==> b1536a.par <==
+--maximum-line-length=46
+--indent-columns=3
+--continuation-indentation=6
+--extended-continuation-indentation
+--extended-line-up-parentheses
+--square-bracket-tightness=0
+--brace-vertical-tightness-closing=1
+--ignore-side-comment-lengths
+
 ==> b156.in <==
 # State 1
 {
