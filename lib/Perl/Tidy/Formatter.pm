@@ -9179,6 +9179,29 @@ sub find_selected_blocks {
 
     my $dump_all_types = $rdump_block_types->{'*'};
 
+    # FIXME: possible new option for showing comment counts
+    my $show_comment_count = $rdump_block_types->{'#'};
+
+    my $get_sub_arg_count = sub {
+        my ($seqno) = @_;
+
+        # Given:
+        #    $seqno = sequence number of a sub or asub block
+        # Return:
+        #    $count = decorated arg count
+        my $rarg = { seqno => $seqno };
+        $self->count_sub_input_args($rarg);
+        my $count = $rarg->{shift_count_min};
+        if ( !defined($count) ) { $count = '*' }
+        if ($show_comment_count) {
+            my $pre_count  = $rarg->{leading_comment_count};
+            my $post_count = $rarg->{post_arg_comment_count};
+            if ($pre_count)  { $count = '#' . $count }
+            if ($post_count) { $count = $count . '#' }
+        }
+        return $count;
+    }; ## end $get_sub_arg_count = sub
+
     my @selected_blocks;
 
     #---------------------------------------------------
@@ -9258,11 +9281,7 @@ EOM
                     last;
                 }
             }
-            my $rarg = { seqno => $seqno };
-            $self->count_sub_input_args($rarg);
-            my $count = $rarg->{shift_count_min};
-            if ( !defined($count) ) { $count = '*' }
-
+            my $count = $get_sub_arg_count->($seqno);
             $type .= '(' . $count . ')';
         }
         elsif ( $ris_sub_block->{$seqno}
@@ -9284,11 +9303,7 @@ EOM
                 $type = 'asub';
             }
 
-            my $rarg = { seqno => $seqno };
-            $self->count_sub_input_args($rarg);
-            my $count = $rarg->{shift_count_min};
-            if ( !defined($count) ) { $count = '*' }
-
+            my $count = $get_sub_arg_count->($seqno);
             $type .= '(' . $count . ')';
         }
         elsif (
@@ -19931,6 +19946,29 @@ sub count_default_sub_args {
     return;
 } ## end sub count_default_sub_args
 
+sub count_comment_lines {
+    my ( $self, $Kbeg, $Kend ) = @_;
+
+    # Count the number of comments after token $Kbeg before any non-comment,
+    # non-blank token.
+    # Given:
+    #    $Kbeg = index before first token to test
+    #    $Kend = index of last token to test
+    # Return:
+    #    $count = number of comments with text
+
+    my $rLL   = $self->[_rLL_];
+    my $count = 0;
+    foreach my $KK ( $Kbeg + 1 .. $Kend - 1 ) {
+        my $type = $rLL->[$KK]->[_TYPE_];
+        next if ( $type eq 'b' );
+        last if ( $type ne '#' );
+        my $token = $rLL->[$KK]->[_TOKEN_];
+        if ( $token =~ /\w/ ) { $count++ }
+    }
+    return $count;
+} ## end sub count_comment_lines
+
 sub count_sub_input_args {
     my ( $self, $item ) = @_;
 
@@ -20104,6 +20142,10 @@ sub count_sub_input_args {
     my $semicolon_count_after_last_shift = 0;
     my $in_interpolated_quote;
 
+    # Variables to count number of leading comments
+    my $leading_comment_count = 0;
+    my $KK_first_code;
+
     my $KK         = $K_opening;
     my $KK_this_nb = $KK;
     while ( ++$KK < $K_closing ) {
@@ -20119,7 +20161,22 @@ sub count_sub_input_args {
 
         my $type = $rLL->[$KK]->[_TYPE_];
         next if ( $type eq 'b' );
-        next if ( $type eq '#' );
+
+        if ( $type eq '#' ) {
+            if ( !$KK_first_code ) {
+                my $token = $rLL->[$KK]->[_TOKEN_];
+                if ( $token =~ /\w/ ) {
+                    $leading_comment_count++;
+                }
+            }
+            next;
+        }
+
+        if ( !$KK_first_code ) {
+            $KK_first_code = $KK;
+            $item->{leading_comment_count} = $leading_comment_count;
+        }
+
         $KK_this_nb = $KK;
 
         my $token = $rLL->[$KK]->[_TOKEN_];
@@ -20186,6 +20243,10 @@ sub count_sub_input_args {
 
                     # NOTE: this could disagree with $_[n] usage; we
                     # ignore this for now.
+
+                    # Count comments after the '=@_;'
+                    $item->{post_arg_comment_count} =
+                      $self->count_comment_lines( $K_p, $K_closing );
                     return;
                 }
 
