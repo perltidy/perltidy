@@ -11,6 +11,19 @@
       adding and deleting trailing commas.  This can occasionally change
       formatting of some small lists when formatted with -lp.
 
+    - In hash key lists which have side comments after sub blocks,
+      long lines which were previously broken before a comma may now
+      be broken after a previous '=>'. This change was made to
+      fix a rare stability problem. For example:
+
+      OLD:
+        '+' => sub { $turtle->turn( $changes->{"dtheta"} ); }
+        ,               # Turn clockwise
+
+      NEW:
+        '+' =>
+            sub { $turtle->turn( $changes->{"dtheta"} ); },    # Turn clockwise
+
 ## 2025 07 11
 
     - Update for issue git #187: add vertical alignment of colons
