@@ -6668,6 +6668,7 @@ parameters:
   block_count  - total number of code blocks nested in this block
   mccabe1      - McCabe complexity measure of this code block
   mccabe2      - modified: subs have anonymous sub complexity removed
+  comment_lines - number of lines of comments or POD with some text
 
 This feature was developed to help identify complex sections of code as an aid
 in refactoring.  The McCabe complexity measure, 'mccabe1', matches the

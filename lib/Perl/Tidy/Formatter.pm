@@ -9076,16 +9076,21 @@ sub find_loop_label {
 sub find_code_line_count {
     my ($self) = @_;
 
-    # Find the cumulative number of lines of code, excluding blanks,
-    # comments and pod.
-    # Return '$rcode_line_count' = ref to array with cumulative
-    #   code line count for each input line number.
+    # Find the cumulative number of lines of code and of comments
+    # Return:
+    #   '$rcode_line_count' = ref to array with cumulative
+    #      code line count for each input line number.
+    #      (excluding blanks, # comments and pod)
+    #   '$rcomment_line_count' = ref to array with cumulative
+    #      non-empty comment line count for each input line number.
 
     my $rcode_line_count;
-    my $rLL             = $self->[_rLL_];
-    my $rlines          = $self->[_rlines_];
-    my $ix_line         = -1;
-    my $code_line_count = 0;
+    my $rcomment_line_count;
+    my $rLL                = $self->[_rLL_];
+    my $rlines             = $self->[_rlines_];
+    my $ix_line            = -1;
+    my $code_line_count    = 0;
+    my $comment_line_count = 0;
 
     # loop over all lines
     foreach my $line_of_tokens ( @{$rlines} ) {
@@ -9103,24 +9108,38 @@ sub find_code_line_count {
 
                 # it is non-blank
                 my $jmax = defined($Kfirst) ? $Klast - $Kfirst : -1;
-                if ( $jmax > 0 || $rLL->[$Klast]->[_TYPE_] ne '#' ) {
 
-                    # ok, it is a non-comment
+                if ( $jmax > 0 || $rLL->[$Klast]->[_TYPE_] ne '#' ) {
                     $code_line_count++;
+                }
+                else {
+                    $comment_line_count++
+                      if ( $rLL->[$Klast]->[_TOKEN_] =~ /\w/ );
                 }
             }
         }
 
-        # Count all other special line types except pod;
-        # For a list of line types see sub 'process_all_lines'
         else {
+
+            # Count all other special line types except pod as 'code';
+            # For a list of line types see sub 'process_all_lines'
             if ( $line_type !~ /^POD/ ) { $code_line_count++ }
+
+            # Count nonblank pod text as 'comments'
+            else {
+                if (   $line_type eq 'POD'
+                    && $line_of_tokens->{_line_text} =~ /\w/ )
+                {
+                    $comment_line_count++;
+                }
+            }
         }
 
         # Store the cumulative count using the input line index
-        $rcode_line_count->[$ix_line] = $code_line_count;
+        $rcode_line_count->[$ix_line]    = $code_line_count;
+        $rcomment_line_count->[$ix_line] = $comment_line_count;
     }
-    return $rcode_line_count;
+    return ( $rcode_line_count, $rcomment_line_count );
 } ## end sub find_code_line_count
 
 sub find_selected_packages {
@@ -9179,9 +9198,6 @@ sub find_selected_blocks {
 
     my $dump_all_types = $rdump_block_types->{'*'};
 
-    # FIXME: possible new option for showing comment counts
-    my $show_comment_count = $rdump_block_types->{'#'};
-
     my $get_sub_arg_count = sub {
         my ($seqno) = @_;
 
@@ -9193,12 +9209,13 @@ sub find_selected_blocks {
         $self->count_sub_input_args($rarg);
         my $count = $rarg->{shift_count_min};
         if ( !defined($count) ) { $count = '*' }
-        if ($show_comment_count) {
-            my $pre_count  = $rarg->{leading_comment_count};
-            my $post_count = $rarg->{post_arg_comment_count};
-            if ($pre_count)  { $count = '#' . $count }
-            if ($post_count) { $count = $count . '#' }
-        }
+
+        # put '#' marks before and after the count to indicate comments
+        my $pre_count  = $rarg->{leading_comment_count};
+        my $post_count = $rarg->{post_arg_comment_count};
+        if ($pre_count)  { $count = '#' . $count }
+        if ($post_count) { $count = $count . '#' }
+
         return $count;
     }; ## end $get_sub_arg_count = sub
 
@@ -11557,8 +11574,9 @@ sub dump_block_summary {
 
     my $input_stream_name = get_input_stream_name();
 
-    # Get code line count
-    my $rcode_line_count = $self->find_code_line_count();
+    # Get code and comment line counts
+    my ( $rcode_line_count, $rcomment_line_count ) =
+      $self->find_code_line_count();
 
     # Get mccabe count
     my $rmccabe_count_sum = $self->find_mccabe_count();
@@ -11592,6 +11610,14 @@ sub dump_block_summary {
             $code_lines = $code_lines_close - $code_lines_open + 1;
         }
 
+        # define total number of lines of non-empty comments
+        my $comment_lines_open  = $rcomment_line_count->[$lx_open];
+        my $comment_lines_close = $rcomment_line_count->[$lx_close];
+        my $comment_lines       = 0;
+        if ( defined($comment_lines_open) && defined($comment_lines_close) ) {
+            $comment_lines = $comment_lines_close - $comment_lines_open;
+        }
+
         # add mccabe_count for this block
         my $mccabe_closing = $rmccabe_count_sum->{ $K_closing + 1 };
         my $mccabe_opening = $rmccabe_count_sum->{$K_opening};
@@ -11607,9 +11633,10 @@ sub dump_block_summary {
             $asub_mccabe_count_by_parent_seqno{$parent_seqno} += $mccabe_count;
         }
 
-        $item->{line_count}   = $line_count;
-        $item->{code_lines}   = $code_lines;
-        $item->{mccabe_count} = $mccabe_count;
+        $item->{line_count}    = $line_count;
+        $item->{code_lines}    = $code_lines;
+        $item->{mccabe_count}  = $mccabe_count;
+        $item->{comment_lines} = $comment_lines;
     }
 
     foreach my $item (@all_blocks) {
@@ -11655,6 +11682,7 @@ sub dump_block_summary {
             $item->{block_count},
             $mccabe1,
             $mccabe2,
+            $item->{comment_lines},
             $item->{K_opening},
 
         ];
@@ -11666,7 +11694,7 @@ sub dump_block_summary {
     my @sorted_lines = sort { $a->[-1] <=> $b->[-1] } @{$routput_lines};
 
     print {*STDOUT}
-"file,line,line_count,code_lines,type,name,level,max_change,block_count,mccabe1,mccabe2 \n";
+"file,line,line_count,code_lines,type,name,level,max_change,block_count,mccabe1,mccabe2,comment_lines\n";
 
     foreach my $rline_vars (@sorted_lines) {
 
