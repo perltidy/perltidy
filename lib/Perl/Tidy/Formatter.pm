@@ -11653,7 +11653,7 @@ sub dump_block_summary {
 
         # compute mccabe2 of subs by subtracting any asub counts
         my $seqno = $item->{seqno};
-        if ( substr( $item->{type}, 0, 3 ) eq 'sub' ) {
+        if ( $seqno && substr( $item->{type}, 0, 3 ) eq 'sub' ) {
             my $asub_count = $asub_mccabe_count_by_parent_seqno{$seqno};
             if ($asub_count) {
                 $mccabe2 -= $asub_count;
@@ -11663,7 +11663,7 @@ sub dump_block_summary {
         # NOTE: lexical methods stay marked as 'asub' for now.
         # Something like 'lexical method' would be too long.
         my $display_type = $item->{type};
-        if ( $ris_method_block->{$seqno} ) {
+        if ( $seqno && $ris_method_block->{$seqno} ) {
             $display_type =~ s/^sub/method/;
         }
 

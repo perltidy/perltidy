@@ -28,6 +28,12 @@
         '+' =>
             sub { $turtle->turn( $changes->{"dtheta"} ); },    # Turn clockwise
 
+    - Fixed undefined variable reference when --dump-block-summary was
+      run with --dump-block-types='package'. The dump was okay, but
+      an error message like the following was emitted:
+
+      Use of uninitialized value $seqno in hash element ...
+
 ## 2025 07 11
 
     - Update for issue git #187: add vertical alignment of colons
