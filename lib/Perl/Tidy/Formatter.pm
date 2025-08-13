@@ -9211,8 +9211,8 @@ sub find_selected_blocks {
         if ( !defined($count) ) { $count = '*' }
 
         # put '#' marks before and after the count to indicate comments
-        my $pre_count  = $rarg->{leading_comment_count};
-        my $post_count = $rarg->{post_arg_comment_count};
+        my $pre_count  = $rarg->{has_pre_arg_comments};
+        my $post_count = $rarg->{has_post_arg_comments};
         if ($pre_count)  { $count = '#' . $count }
         if ($post_count) { $count = $count . '#' }
 
@@ -19974,28 +19974,82 @@ sub count_default_sub_args {
     return;
 } ## end sub count_default_sub_args
 
-sub count_comment_lines {
-    my ( $self, $Kbeg, $Kend ) = @_;
+sub count_comments {
 
-    # Count the number of comments after token $Kbeg before any non-comment,
-    # non-blank token.
+    my ( $self, $Kbeg, $Kend, ($quit_early) ) = @_;
+
+    # Count the number of nonblank pod and comment lines between lines with
+    # tokens $Kbeg and $Kend. Stop counting upon encountering a line which
+    # is neither a comment nor a pod line.
+
     # Given:
-    #    $Kbeg = index before first token to test
-    #    $Kend = index of last token to test
+    #    $Kbeg = index of first token
+    #    $Kend = index of last token
+    #    $quite_early = ( optional control flag ):
+    #        true  => stop search when $count=1 (exact count not needed)
+    #        false => return full count
     # Return:
-    #    $count = number of comments with text
+    #    $count = number of lines with comments or pod text
 
-    my $rLL   = $self->[_rLL_];
-    my $count = 0;
-    foreach my $KK ( $Kbeg + 1 .. $Kend - 1 ) {
-        my $type = $rLL->[$KK]->[_TYPE_];
-        next if ( $type eq 'b' );
-        last if ( $type ne '#' );
-        my $token = $rLL->[$KK]->[_TOKEN_];
-        if ( $token =~ /\w/ ) { $count++ }
+    # NOTE: This sub is similar to sub 'find_code_line_count', but simpler.
+
+    my $rLL    = $self->[_rLL_];
+    my $rlines = $self->[_rlines_];
+    my $count  = 0;
+    if (   !defined($Kbeg)
+        || !defined($Kend)
+        || $Kbeg < 0
+        || $Kbeg > $Kend
+        || $Kend > @{$rLL} - 1 )
+    {
+        # no lines to test
+        return $count;
+    }
+    my $ix_beg = $rLL->[$Kbeg]->[_LINE_INDEX_] + 1;
+    my $ix_end = $rLL->[$Kend]->[_LINE_INDEX_] - 1;
+    foreach my $ix ( $ix_beg .. $ix_end ) {
+        my $line_of_tokens = $rlines->[$ix];
+        my $line_type      = $line_of_tokens->{_line_type};
+
+        # if 'CODE' it must be non-blank and non-comment
+        if ( $line_type eq 'CODE' ) {
+            my $rK_range = $line_of_tokens->{_rK_range};
+            my ( $Kfirst, $Klast ) = @{$rK_range};
+
+            # If line has tokens...
+            if ( defined($Kfirst) ) {
+
+                my $jmax = defined($Kfirst) ? $Klast - $Kfirst : -1;
+
+                # Quit if not a block comment
+                last
+                  if ( $jmax > 0 || $rLL->[$Klast]->[_TYPE_] ne '#' );
+
+                # Count nonblank comment text
+                if ( $rLL->[$Klast]->[_TOKEN_] =~ /\w/ ) {
+                    $count++;
+                    last if ($quit_early);
+                }
+            }
+        }
+        else {
+
+            # All other special line types except pod are considered 'code',
+            # so we end the search
+            last
+              if ( $line_type !~ /^POD/ );
+
+            # Count nonblank pod text
+            if (   $line_type eq 'POD'
+                && $line_of_tokens->{_line_text} =~ /\w/ )
+            {
+                $count++;
+                last if ($quit_early);
+            }
+        }
     }
     return $count;
-} ## end sub count_comment_lines
+} ## end sub count_comments
 
 sub count_sub_input_args {
     my ( $self, $item ) = @_;
@@ -20136,6 +20190,11 @@ sub count_sub_input_args {
         }
     }
 
+    my $seqno     = $seqno_block;
+    my $K_opening = $self->[_K_opening_container_]->{$seqno};
+    my $K_closing = $self->[_K_closing_container_]->{$seqno};
+    return unless ( defined($K_closing) );
+
     #---------------------------------------
     # Check for and process a signature list
     #---------------------------------------
@@ -20150,6 +20209,10 @@ sub count_sub_input_args {
         $item->{is_signature} = 1;
         $self->count_list_elements($item);
 
+        $item->{has_pre_arg_comments} = 0;
+        $item->{has_post_arg_comments} =
+          $self->count_comments( $K_opening, $K_closing, 1 );
+
         # We are finished for a signature list
         return;
     }
@@ -20157,10 +20220,6 @@ sub count_sub_input_args {
     #-------------------------------------------------------------
     # Main loop: look for =shift; and =@_; within sub block braces
     #-------------------------------------------------------------
-    my $seqno     = $seqno_block;
-    my $K_opening = $self->[_K_opening_container_]->{$seqno};
-    my $K_closing = $self->[_K_closing_container_]->{$seqno};
-    return unless ( defined($K_closing) );
 
     my $level_opening = $rLL->[$K_opening]->[_LEVEL_];
 
@@ -20171,8 +20230,9 @@ sub count_sub_input_args {
     my $in_interpolated_quote;
 
     # Variables to count number of leading comments
-    my $leading_comment_count = 0;
+    my $pre_arg_comment_count = 0;
     my $KK_first_code;
+    my $KK_last_shift_semicolon;
 
     my $KK         = $K_opening;
     my $KK_this_nb = $KK;
@@ -20194,7 +20254,7 @@ sub count_sub_input_args {
             if ( !$KK_first_code ) {
                 my $token = $rLL->[$KK]->[_TOKEN_];
                 if ( $token =~ /\w/ ) {
-                    $leading_comment_count++;
+                    $pre_arg_comment_count++;
                 }
             }
             next;
@@ -20202,7 +20262,14 @@ sub count_sub_input_args {
 
         if ( !$KK_first_code ) {
             $KK_first_code = $KK;
-            $item->{leading_comment_count} = $leading_comment_count;
+
+            # Check for pod if no block comments seen
+            if ( !$pre_arg_comment_count ) {
+                $pre_arg_comment_count =
+                  $self->count_comments( $K_opening, $KK, 1 );
+            }
+
+            $item->{has_pre_arg_comments} = $pre_arg_comment_count;
         }
 
         $KK_this_nb = $KK;
@@ -20272,9 +20339,9 @@ sub count_sub_input_args {
                     # NOTE: this could disagree with $_[n] usage; we
                     # ignore this for now.
 
-                    # Count comments after the '=@_;'
-                    $item->{post_arg_comment_count} =
-                      $self->count_comment_lines( $K_p, $K_closing );
+                    # Count initial comments and pod after the '=@_;'
+                    $item->{has_post_arg_comments} =
+                      $self->count_comments( $K_p, $K_closing, 1 );
                     return;
                 }
 
@@ -20455,6 +20522,11 @@ sub count_sub_input_args {
                             $item->{shift_count_min} = $shift_count;
                             $item->{shift_count_max} = $shift_count;
                         }
+                        if ($KK_last_shift_semicolon) {
+                            $item->{has_post_arg_comments} =
+                              $self->count_comments( $KK_last_shift_semicolon,
+                                $K_closing, 1 );
+                        }
                         return;
                     }
                 }
@@ -20483,6 +20555,9 @@ sub count_sub_input_args {
             }
         }
         elsif ( $type eq ';' ) {
+            if ( !$semicolon_count_after_last_shift ) {
+                $KK_last_shift_semicolon = $KK;
+            }
             $semicolon_count_after_last_shift++;
         }
 
@@ -20576,6 +20651,10 @@ sub count_sub_input_args {
     if ( !$saw_pop_at_underscore ) {
         $item->{shift_count_min} = $shift_count;
         $item->{shift_count_max} = $shift_count;
+        if ($KK_last_shift_semicolon) {
+            $item->{has_post_arg_comments} =
+              $self->count_comments( $KK_last_shift_semicolon, $K_closing, 1 );
+        }
     }
     return;
 

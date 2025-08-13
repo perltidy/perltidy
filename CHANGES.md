@@ -2,6 +2,10 @@
 
 ## 2025 07 11.01
 
+    - A new output field for the --dump-block-summary command gives
+      the number of lines of comments and pod in a block.  For subs and
+      anonymous subs, the existence of header comments is also indicated.
+
     - Added --dump-nested-ternaries, --warn-nested-ternaries, and
       --nested-ternary-maximum-depth=n. These can be used to locate
       nested ternary statements in a script.
@@ -14,7 +18,7 @@
     - In hash key lists which have side comments after sub blocks,
       long lines which were previously broken before a comma may now
       be broken after a previous '=>'. This change was made to
-      fix a rare stability problem. For example:
+      fix a very rare stability problem. For example:
 
       OLD:
         '+' => sub { $turtle->turn( $changes->{"dtheta"} ); }

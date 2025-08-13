@@ -6692,6 +6692,12 @@ Subroutines whose arg count cannot easily be determined are indicated
 as C<sub(*)>.  The count includes any leading object passed in a method
 call (such as B<$self>).
 
+Also for subroutines, the existence of comments or pod text before and after
+the call arg definition is indicated by hash symbols around the number of args.
+Thus, C<sub(9#)> indicates a sub with 9 args with some comments following their
+definition.  And C<sub(#0)> indicates a sub with some leading comments or
+pod text but no call args.
+
 By default the table lists subroutines with more than 20 C<code_lines>, but
 this can be changed with the following two parameters:
 
