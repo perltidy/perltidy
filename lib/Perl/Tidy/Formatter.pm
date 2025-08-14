@@ -20237,6 +20237,27 @@ sub count_sub_input_args {
     my $KK_first_code;
     my $KK_last_shift_semicolon;
 
+    my $set_arg_comment_counts = sub {
+        my ($K_arg_end) = @_;
+
+        # Call this before return to set pre and post arg comment counts
+        # in the hash ref $item for subs without signatures.
+        # Given:
+        #   $K_arg_end = last arg token, or undef if none found
+
+        # Check for pod if no initial one-line comments seen
+        if ( !$pre_arg_comment_count ) {
+            $pre_arg_comment_count =
+              $self->count_comments( $K_opening, $K_closing, 1 );
+        }
+        $item->{has_pre_arg_comments} = $pre_arg_comment_count;
+
+        if ( defined($K_arg_end) ) {
+            $item->{has_post_arg_comments} =
+              $self->count_comments( $K_arg_end, $K_closing, 1 );
+        }
+    }; ## end $set_arg_comment_counts = sub
+
     my $KK         = $K_opening;
     my $KK_this_nb = $KK;
     while ( ++$KK < $K_closing ) {
@@ -20265,13 +20286,6 @@ sub count_sub_input_args {
 
         if ( !$KK_first_code ) {
             $KK_first_code = $KK;
-
-            # Check for pod if no block comments seen
-            if ( !$pre_arg_comment_count ) {
-                $pre_arg_comment_count =
-                  $self->count_comments( $K_opening, $KK, 1 );
-            }
-            $item->{has_pre_arg_comments} = $pre_arg_comment_count;
         }
 
         $KK_this_nb = $KK;
@@ -20342,8 +20356,7 @@ sub count_sub_input_args {
                     # ignore this for now.
 
                     # Count initial comments and pod after the '=@_;'
-                    $item->{has_post_arg_comments} =
-                      $self->count_comments( $K_p, $K_closing, 1 );
+                    $set_arg_comment_counts->($K_p);
                     return;
                 }
 
@@ -20524,11 +20537,9 @@ sub count_sub_input_args {
                             $item->{shift_count_min} = $shift_count;
                             $item->{shift_count_max} = $shift_count;
                         }
-                        if ($KK_last_shift_semicolon) {
-                            $item->{has_post_arg_comments} =
-                              $self->count_comments( $KK_last_shift_semicolon,
-                                $K_closing, 1 );
-                        }
+
+                        $set_arg_comment_counts->($KK_last_shift_semicolon);
+
                         return;
                     }
                 }
@@ -20632,14 +20643,6 @@ sub count_sub_input_args {
         }
     } ## end while ( ++$KK < $K_closing)
 
-    if ( !$KK_first_code ) {
-        if ( !$pre_arg_comment_count ) {
-            $pre_arg_comment_count =
-              $self->count_comments( $K_opening, $K_closing, 1 );
-        }
-        $item->{has_pre_arg_comments} = $pre_arg_comment_count;
-    }
-
     #--------------------------------
     # the whole file has been scanned
     #--------------------------------
@@ -20661,10 +20664,7 @@ sub count_sub_input_args {
     if ( !$saw_pop_at_underscore ) {
         $item->{shift_count_min} = $shift_count;
         $item->{shift_count_max} = $shift_count;
-        if ($KK_last_shift_semicolon) {
-            $item->{has_post_arg_comments} =
-              $self->count_comments( $KK_last_shift_semicolon, $K_closing, 1 );
-        }
+        $set_arg_comment_counts->($KK_last_shift_semicolon);
     }
     return;
 
