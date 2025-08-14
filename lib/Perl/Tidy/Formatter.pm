@@ -9216,6 +9216,9 @@ sub find_selected_blocks {
         if ($pre_count)  { $count = '#' . $count }
         if ($post_count) { $count = $count . '#' }
 
+        # change ambiguous case '(#0)' to '(0#)'
+        if ( $count eq '#0' ) { $count = '0#' }
+
         return $count;
     }; ## end $get_sub_arg_count = sub
 
@@ -20268,7 +20271,6 @@ sub count_sub_input_args {
                 $pre_arg_comment_count =
                   $self->count_comments( $K_opening, $KK, 1 );
             }
-
             $item->{has_pre_arg_comments} = $pre_arg_comment_count;
         }
 
@@ -20630,6 +20632,14 @@ sub count_sub_input_args {
         }
     } ## end while ( ++$KK < $K_closing)
 
+    if ( !$KK_first_code ) {
+        if ( !$pre_arg_comment_count ) {
+            $pre_arg_comment_count =
+              $self->count_comments( $K_opening, $K_closing, 1 );
+        }
+        $item->{has_pre_arg_comments} = $pre_arg_comment_count;
+    }
+
     #--------------------------------
     # the whole file has been scanned
     #--------------------------------
@@ -20691,8 +20701,7 @@ sub count_sub_return_args {
 
     foreach ( @{$rKlist} ) {
         my $K_return = $rLL->[$_]->[_TYPE_] eq 'b' ? $_ + 1 : $_;
-##      my $type     = $rLL->[$K_return]->[_TYPE_];
-        my $token = $rLL->[$K_return]->[_TOKEN_];
+        my $token    = $rLL->[$K_return]->[_TOKEN_];
         if ( $token ne 'return' ) {
             DEVEL_MODE && Fault("expecting 'return' but got $token\n");
             last;
