@@ -47,12 +47,20 @@ sub DESTROY {
 # Constructor may be called as a class method
 sub new {
     my ( $class, $ri ) = @_;
+
+    # Create a new line object
+    # Given:
+    #   $ri = ref to hash of line parameters
+
     my $self = bless $ri, $class;
     return $self;
-}
+} ## end sub new
 
 sub get_column {
     my ( $self, $j ) = @_;
+
+    # Return the current column number of alignment $j
+
     my $alignment = $self->{ralignments}->[$j];
     return unless ( defined($alignment) );
     return $alignment->get_column();
@@ -77,7 +85,8 @@ sub increase_field_width {
 
     my ( $self, $j, $pad ) = @_;
 
-    # Increase the width of alignment field $j by $pad spaces
+    # Increase the width of alignment field $j by $pad spaces.
+    # So we must increase the widths of the higher alignments by $pad spaces.
     my $jmax = $self->{jmax};
     foreach ( $j .. $jmax ) {
         my $alignment = $self->{ralignments}->[$_];
@@ -90,7 +99,9 @@ sub increase_field_width {
 
 sub get_available_space_on_right {
     my $self = shift;
+
+    # Return the number of unused columns to the right of the last alignment
     my $jmax = $self->{jmax};
     return $self->{maximum_line_length} - $self->get_column($jmax);
-}
+} ## end sub get_available_space_on_right
 1;
