@@ -9216,8 +9216,8 @@ sub find_selected_blocks {
         if ($pre_count)  { $count = '#' . $count }
         if ($post_count) { $count = $count . '#' }
 
-        # change ambiguous case '(#0)' to '(0#)'
-        if ( $count eq '#0' ) { $count = '0#' }
+        # change ambiguous cases like '(#0)' to '(0#)'
+        if ( $count eq '#0' || $count eq '#0#' ) { $count = '0#' }
 
         return $count;
     }; ## end $get_sub_arg_count = sub
@@ -19977,24 +19977,27 @@ sub count_default_sub_args {
     return;
 } ## end sub count_default_sub_args
 
-sub count_comments {
+sub detect_comments {
 
-    my ( $self, $Kbeg, $Kend, ($quit_early) ) = @_;
+    my ( $self, $Kbeg, $Kend, ($want_full_count) ) = @_;
 
-    # Count the number of nonblank pod and comment lines between lines with
-    # tokens $Kbeg and $Kend. Stop counting upon encountering a line which
-    # is neither a comment nor a pod line.
+    # - Look for nonblank pod and comment lines between the lines with
+    #   tokens $Kbeg and $Kend.
+    # - Stop searching upon encountering a line which is neither a
+    #   comment nor a pod line.
 
     # Given:
     #    $Kbeg = index of first token
     #    $Kend = index of last token
-    #    $quite_early = ( optional control flag ):
-    #        true  => stop search when $count=1 (exact count not needed)
-    #        false => return full count
+    #    $want_full_count = ( optional control flag ):
+    #        true => return full count of nonblank comments
+    #        false  => stop search when $count=1 (exact count not needed)
     # Return:
-    #    $count = number of lines with comments or pod text
+    #    $count
+    #        = number of lines with comments or pod text if $want_full_count
+    #        = 0 or 1 otherwise
 
-    # NOTE: This sub is similar to sub 'find_code_line_count', but simpler.
+    # NOTE: This is a simplified version of sub 'find_code_line_count'
 
     my $rLL    = $self->[_rLL_];
     my $rlines = $self->[_rlines_];
@@ -20031,7 +20034,7 @@ sub count_comments {
                 # Count nonblank comment text
                 if ( $rLL->[$Klast]->[_TOKEN_] =~ /\w/ ) {
                     $count++;
-                    last if ($quit_early);
+                    last if ( !$want_full_count );
                 }
             }
         }
@@ -20047,12 +20050,12 @@ sub count_comments {
                 && $line_of_tokens->{_line_text} =~ /\w/ )
             {
                 $count++;
-                last if ($quit_early);
+                last if ( !$want_full_count );
             }
         }
     }
     return $count;
-} ## end sub count_comments
+} ## end sub detect_comments
 
 sub count_sub_input_args {
     my ( $self, $item ) = @_;
@@ -20214,7 +20217,7 @@ sub count_sub_input_args {
 
         $item->{has_pre_arg_comments} = 0;
         $item->{has_post_arg_comments} =
-          $self->count_comments( $K_opening, $K_closing, 1 );
+          $self->detect_comments( $K_opening, $K_closing, 1 );
 
         # We are finished for a signature list
         return;
@@ -20248,13 +20251,13 @@ sub count_sub_input_args {
         # Check for pod if no initial one-line comments seen
         if ( !$pre_arg_comment_count ) {
             $pre_arg_comment_count =
-              $self->count_comments( $K_opening, $K_closing, 1 );
+              $self->detect_comments( $K_opening, $K_closing );
         }
         $item->{has_pre_arg_comments} = $pre_arg_comment_count;
 
         if ( defined($K_arg_end) ) {
             $item->{has_post_arg_comments} =
-              $self->count_comments( $K_arg_end, $K_closing, 1 );
+              $self->detect_comments( $K_arg_end, $K_closing );
         }
     }; ## end $set_arg_comment_counts = sub
 
