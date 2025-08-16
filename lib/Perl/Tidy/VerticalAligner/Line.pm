@@ -46,17 +46,24 @@ sub DESTROY {
 
 # Constructor may be called as a class method
 sub new {
-    my ( $class, $ri ) = @_;
 
-    # Create a new line object
+    my ( $class, $rhash ) = @_;
+
+    # Create a new VerticalAligner::Line object
     # Given:
-    #   $ri = ref to hash of line parameters
+    #   $rhash = ref to hash for a Line
+    # This hash contains parameters describing one line.
+    # The parameters currently used by this object are:
+    #   {ralignments} = ref to array of vertical alignment columns
+    #   {jmax} = max index of {ralignments}
+    #   {maximum_line_length} = maximum number of spaces for this line
 
-    my $self = bless $ri, $class;
+    my $self = bless $rhash, $class;
     return $self;
 } ## end sub new
 
 sub get_column {
+
     my ( $self, $j ) = @_;
 
     # Return the current column number of alignment $j
@@ -67,6 +74,7 @@ sub get_column {
 } ## end sub get_column
 
 sub current_field_width {
+
     my ( $self, $j ) = @_;
 
     # Return number of columns of space between alignments $j and $j-1

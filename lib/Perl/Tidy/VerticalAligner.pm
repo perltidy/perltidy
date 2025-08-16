@@ -100,6 +100,7 @@ sub Die {
 }
 
 sub Fault {
+
     my ($msg) = @_;
 
     # This routine is called for errors that really should not occur
@@ -235,9 +236,10 @@ my (
 
 sub check_options {
 
-    # This routine is called to check the user-supplied run parameters
-    # and to configure the control hashes to them.
     my ($rOpts) = @_;
+
+    # This routine is called to check the user-supplied run parameters
+    # in $rOpts and to configure the control hashes to them.
 
     # All alignments are done by default
     %valign_control_hash    = ();
@@ -308,6 +310,7 @@ sub check_options {
 } ## end sub check_options
 
 sub check_keys {
+
     my ( $rtest, $rvalid, $msg, $exact_match ) = @_;
 
     # Check the keys of a hash:
@@ -344,6 +347,11 @@ EOM
 sub new {
 
     my ( $class, @arglist ) = @_;
+
+    # Create a VerticalAligner object
+    # Given:
+    #    @arglist is the hash of values shown below in %defaults
+
     if ( @arglist % 2 ) { croak "Odd number of items in arg hash list\n" }
 
     my %defaults = (
@@ -404,10 +412,9 @@ sub new {
 
 sub flush {
 
-    # flush() is the external call to completely empty the pipeline.
     my ($self) = @_;
 
-    # push things out the pipeline...
+    # flush() is the external call to completely empty the pipeline.
 
     # push out any current group lines
     $self->_flush_group_lines()
@@ -423,6 +430,7 @@ sub flush {
 } ## end sub flush
 
 sub initialize_for_new_group {
+
     my ($self) = @_;
 
     # initialize for a new group of lines to be aligned vertically
@@ -444,10 +452,12 @@ sub group_line_count {
     return +@{ $self->[_rgroup_lines_] };
 }
 
-# interface to Perl::Tidy::Diagnostics routines
-# For debugging; not currently used
 sub write_diagnostics {
+
     my ( $self, $msg ) = @_;
+
+    # Interface to Perl::Tidy::Diagnostics routines
+    # For debugging; not currently used
     my $diagnostics_object = $self->[_diagnostics_object_];
     if ($diagnostics_object) {
         $diagnostics_object->write_diagnostics($msg);
@@ -496,10 +506,12 @@ sub get_cached_line_count {
 
 sub get_recoverable_spaces {
 
-    # return the number of spaces (+ means shift right, - means shift left)
+    my $indentation = shift;
+
+    # Return the number of spaces (+ means shift right, - means shift left)
     # that we would like to shift a group of lines with the same indentation
     # to get them to line up with their opening parens
-    my $indentation = shift;
+
     return ref($indentation) ? $indentation->get_recoverable_spaces() : 0;
 } ## end sub get_recoverable_spaces
 
@@ -575,6 +587,8 @@ BEGIN {
 
 sub valign_input {
 
+    my ( $self, $rcall_hash ) = @_;
+
     #---------------------------------------------------------------------
     # This is the front door of the vertical aligner.  On each call
     # we receive one line of specially marked text for vertical alignment.
@@ -632,8 +646,6 @@ sub valign_input {
     # Tabs have been previously removed except for tabs in quoted strings and
     # side comments.  Tabs in these fields can mess up the column counting.
     # The log file warns the user if there are any such tabs.
-
-    my ( $self, $rcall_hash ) = @_;
 
     # Unpack the call args. This form is significantly faster than getting them
     # one-by-one.
@@ -1323,6 +1335,8 @@ sub fix_terminal_ternary {
 
 sub fix_terminal_else {
 
+    my ($rcall_hash) = @_;
+
     # Add empty fields as necessary to align a balanced terminal
     # else block to a previous if/elsif/unless block,
     # like this:
@@ -1332,7 +1346,6 @@ sub fix_terminal_else {
     #
     # returns a positive value if the else block should be indented
     #
-    my ($rcall_hash) = @_;
 
     my $old_line       = $rcall_hash->{old_line};
     my $rfields        = $rcall_hash->{rfields};
@@ -1415,9 +1428,9 @@ use constant EXPLAIN_CHECK_MATCH => 0;
 
 sub check_match {
 
-    # See if the current line matches the current vertical alignment group.
-
     my ( $self, $new_line, $base_line, $prev_line, $group_line_count ) = @_;
+
+    # See if the current line matches the current vertical alignment group.
 
     # Given:
     #  $new_line  = the line being considered for group inclusion
@@ -1685,9 +1698,10 @@ sub level_change {
 
 sub _flush_comment_lines {
 
+    my ($self) = @_;
+
     # Output a group consisting of COMMENT lines
 
-    my ($self) = @_;
     my $rgroup_lines = $self->[_rgroup_lines_];
     return if ( !@{$rgroup_lines} );
     my $group_level               = $self->[_group_level_];
@@ -1754,9 +1768,10 @@ sub _flush_comment_lines {
 
 sub _flush_group_lines {
 
+    my ( $self, ($level_jump) ) = @_;
+
     # This is the vertical aligner internal flush, which leaves the cache
     # intact
-    my ( $self, ($level_jump) ) = @_;
 
     # $level_jump = $next_level-$group_level, if known
     #             = undef if not known
@@ -1890,6 +1905,9 @@ sub _flush_group_lines {
     sub add_to_rgroup {
 
         my ($jend) = @_;
+
+        # Include the line at index $jend in the current alignment group
+
         my $rline = $rall_lines->[$jend];
 
         my $jbeg = $jend;
@@ -1917,6 +1935,11 @@ sub _flush_group_lines {
     sub end_rgroup {
 
         my ($imax_align) = @_;
+
+        # End the current alignment group and set its maximum alignment field
+        # Given:
+        #   $imax_align = maximum field to be vertically aligned
+
         return if ( !@{$rgroups} );
         return if ( $group_line_count <= 0 );
 
@@ -1962,6 +1985,7 @@ sub _flush_group_lines {
     } ## end sub block_penultimate_match
 
     sub sweep_top_down {
+
         my ( $self, $rlines, $group_level ) = @_;
 
         # This is the first of two major sweeps to find alignments.
@@ -2466,10 +2490,11 @@ sub sweep_left_to_right {
 
     sub move_to_common_column {
 
+        my ($rcall_hash) = @_;
+
         # This is a sub called by sub do_left_to_right_sweep to
         # move the alignment column of token $itok to $col_want for a
         # sequence of groups.
-        my ($rcall_hash) = @_;
 
         my $rlines    = $rcall_hash->{rlines};
         my $rgroups   = $rcall_hash->{rgroups};
@@ -2909,6 +2934,7 @@ EOM
 }
 
 sub delete_unmatched_tokens {
+
     my ( $rlines, $group_level ) = @_;
 
     # Remove as many obviously un-needed alignment tokens as possible.
@@ -3377,6 +3403,7 @@ sub delete_unmatched_tokens_main_loop {
 } ## end sub delete_unmatched_tokens_main_loop
 
 sub match_line_pairs {
+
     my ( $rlines, $rnew_lines, $rsubgroups, $group_level ) = @_;
 
     # Compare each pair of lines and save information about common matches
@@ -3564,16 +3591,9 @@ sub compare_patterns {
 
     my ($rcall_hash) = @_;
 
-    my $group_level = $rcall_hash->{group_level};
-    my $tok         = $rcall_hash->{tok};
-##  my $tok_m       = $rcall_hash->{tok_m};
-    my $pat   = $rcall_hash->{pat};
-    my $pat_m = $rcall_hash->{pat_m};
-    my $pad   = $rcall_hash->{pad};
-
     # This is a helper routine for sub match_line_pairs to decide if patterns
     # in two lines match well enough
-    # Given:
+    # Given these values in $rcall_hash:
     #   $tok_m, $pat_m = token and pattern of first line
     #   $tok, $pat     = token and pattern of second line
     #   $pad           = 0 if no padding is needed, !=0 otherwise
@@ -3581,6 +3601,13 @@ sub compare_patterns {
     #   0 = patterns match, continue
     #   1 = no match
     #   2 = no match, and lines do not match at all
+
+    my $group_level = $rcall_hash->{group_level};
+    my $tok         = $rcall_hash->{tok};
+##  my $tok_m       = $rcall_hash->{tok_m};
+    my $pat   = $rcall_hash->{pat};
+    my $pat_m = $rcall_hash->{pat_m};
+    my $pad   = $rcall_hash->{pad};
 
     my $GoToMsg     = EMPTY_STRING;
     my $return_code = 0;
@@ -3687,6 +3714,7 @@ sub compare_patterns {
 } ## end sub compare_patterns
 
 sub fat_comma_to_comma {
+
     my ($str) = @_;
 
     # Given:
@@ -3858,6 +3886,7 @@ sub get_line_token_info {
 } ## end sub get_line_token_info
 
 sub prune_alignment_tree {
+
     my ($rlines) = @_;
 
     # Given:
@@ -3977,6 +4006,7 @@ sub prune_alignment_tree {
     # which changed plus all deeper nodes attached to it.
     my $end_node;
     $end_node = sub {
+
         my ( $depth, $jl, $n_parent ) = @_;
 
         # $depth is the tree depth
@@ -4239,6 +4269,7 @@ sub prune_alignment_tree {
 } ## end sub prune_alignment_tree
 
 sub Dump_tree_groups {
+
     my ( $rgroup, $msg ) = @_;
 
     # Debug routine
@@ -4668,6 +4699,7 @@ sub forget_side_comment {
 }
 
 sub is_good_side_comment_column {
+
     my ( $self, $line, $line_number, $level, $num5 ) = @_;
 
     # Upon encountering the first side comment of a group, decide if
@@ -4962,6 +4994,7 @@ BEGIN {
 }
 
 sub min_max_median {
+
     my ($rvalues) = @_;
 
     # Given:  $rvalues = ref to an array of numbers
@@ -4983,6 +5016,7 @@ sub min_max_median {
 } ## end sub min_max_median
 
 sub end_signed_number_column {
+
     my ( $rgroup_lines, $rcol_hash, $ix_last ) = @_;
 
     # Finish formatting a column of unsigned numbers
@@ -5260,6 +5294,7 @@ EOM
 } ## end sub end_signed_number_column
 
 sub pad_signed_field {
+
     my ( $rstr, $rstr_len, $pos_start_number, $char_end_part1 ) = @_;
 
     # Insert an extra space before a number to highlight algebraic signs
@@ -5319,6 +5354,7 @@ EOM
 } ## end sub pad_signed_field
 
 sub split_field {
+
     my ( $pat1, $field, $pattern ) = @_;
 
     # Given;
@@ -5439,6 +5475,7 @@ sub split_field {
 } ## end sub split_field
 
 sub field_matches_end_pattern {
+
     my ( $field2, $pat2 ) = @_;
 
     # Check that a possible numeric field matches the ending pattern
@@ -5505,6 +5542,7 @@ EOM
 } ## end sub field_matches_end_pattern
 
 sub pad_signed_number_columns {
+
     my ($rgroup_lines) = @_;
 
     # Given:
@@ -5822,6 +5860,7 @@ sub pad_signed_number_columns {
 use constant DEBUG_WEC => 0;
 
 sub end_wide_equals_column {
+
     my ( $rgroup_lines, $rcol_hash, $ix_last ) = @_;
 
     # Finish formatting a column of wide equals
@@ -5984,6 +6023,7 @@ EOM
 } ## end sub end_wide_equals_column
 
 sub pad_wide_equals_columns {
+
     my ($rgroup_lines) = @_;
 
     # Given:
@@ -6174,13 +6214,13 @@ sub pad_wide_equals_columns {
 
 sub valign_output_step_A {
 
+    my ( $self, $rinput_hash ) = @_;
+
     #------------------------------------------------------------
     # This is Step A in writing vertically aligned lines.
     # The line is prepared according to the alignments which have
     # been found. Then it is shipped to the next step.
     #------------------------------------------------------------
-
-    my ( $self, $rinput_hash ) = @_;
 
     my (
 
@@ -6454,6 +6494,7 @@ sub get_output_line_number {
     } ## end sub initialize_step_B_cache
 
     sub _flush_step_B_cache {
+
         my ($self) = @_;
 
         # Send any text in the step_B cache on to step_C
@@ -6731,14 +6772,14 @@ sub get_output_line_number {
 
     sub valign_output_step_B {
 
+        my ( $self, $rinput ) = @_;
+
         #---------------------------------------------------------
         # This is Step B in writing vertically aligned lines.
         # Vertical tightness is applied according to preset flags.
         # In particular this routine handles stacking of opening
         # and closing tokens.
         #---------------------------------------------------------
-
-        my ( $self, $rinput ) = @_;
 
         ##Note: key 'level_end' not needed
         my (
@@ -6943,6 +6984,7 @@ sub get_output_line_number {
     }
 
     sub dump_valign_buffer {
+
         my ($self) = @_;
 
         # Send all lines in the current buffer on to step_D
@@ -6986,12 +7028,6 @@ sub get_output_line_number {
 
     sub valign_output_step_C {
 
-        #-----------------------------------------------------------------------
-        # This is Step C in writing vertically aligned lines.
-        # Lines are either stored in a buffer or passed along to the next step.
-        # The reason for storing lines is that we may later want to reduce their
-        # indentation when -sot and -sct are both used.
-        #-----------------------------------------------------------------------
         my (
             $self,
             $seqno_string,
@@ -6999,6 +7035,13 @@ sub get_output_line_number {
 
             @args_to_D,
         ) = @_;
+
+        #-----------------------------------------------------------------------
+        # This is Step C in writing vertically aligned lines.
+        # Lines are either stored in a buffer or passed along to the next step.
+        # The reason for storing lines is that we may later want to reduce their
+        # indentation when -sot and -sct are both used.
+        #-----------------------------------------------------------------------
 
         # Dump any saved lines if we see a line with an unbalanced opening or
         # closing token.
@@ -7162,13 +7205,13 @@ EOM
 
 sub valign_output_step_D {
 
+    my ( $self, $line, $leading_space_count, $level, $Kend ) = @_;
+
     #----------------------------------------------------------------
     # This is Step D in writing vertically aligned lines.
     # It is the end of the vertical alignment pipeline.
     # Write one vertically aligned line of code to the output object.
     #----------------------------------------------------------------
-
-    my ( $self, $line, $leading_space_count, $level, $Kend ) = @_;
 
     # Convert leading whitespace to use tabs if requested.
     if ( $require_tabs && $leading_space_count > 0 ) {
