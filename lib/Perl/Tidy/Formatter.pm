@@ -20282,6 +20282,10 @@ sub count_sub_input_args {
                 my $token = $rLL->[$KK]->[_TOKEN_];
                 if ( $token =~ /\w/ ) {
                     $pre_arg_comment_count++;
+
+                    # Set the count in case of early return which does
+                    # not call sub 'detect_comments'
+                    $item->{has_pre_arg_comments} = $pre_arg_comment_count;
                 }
             }
             next;
