@@ -1255,8 +1255,9 @@ sub new {
 
 sub check_rLL {
 
-    # Verify that the rLL array has not been auto-vivified
     my ( $self, $msg ) = @_;
+
+    # Verify that the rLL array has not been auto-vivified
     my $rLL    = $self->[_rLL_];
     my $Klimit = $self->[_Klimit_];
     my $num    = @{$rLL};
@@ -1844,9 +1845,16 @@ EOM
 
 sub copy_token_as_type {
 
+    my ( $rold_token, $type, $token ) = @_;
+
     # This provides a quick way to create a new token by
     # slightly modifying an existing token.
-    my ( $rold_token, $type, $token ) = @_;
+    # Given:
+    #   $rold_token = the old token to use as a template
+    #   $type  = the new token type
+    #   $token = the new token text
+    # Return:
+    #   ref to a new token
 
     my @rnew_token = @{$rold_token};
     $rnew_token[_TYPE_]          = $type;
@@ -1857,9 +1865,10 @@ sub copy_token_as_type {
 
 sub parent_seqno_by_K {
 
-    # Return the sequence number of the parent container of token K, if any.
-
     my ( $self, $KK ) = @_;
+
+    # Return the sequence number of the parent container of token $KK, if any.
+
     my $rLL = $self->[_rLL_];
 
     # The task is to jump forward to the next container token
@@ -2004,7 +2013,7 @@ sub is_in_block_by_K {
 sub is_in_list_by_i {
     my ( $self, $i ) = @_;
 
-    # Return true if token at i is contained in a LIST
+    # Return true if token at $i is contained in a LIST
     # Return false otherwise
     my $seqno = $parent_seqno_to_go[$i];
     return if ( !$seqno );
@@ -2017,9 +2026,10 @@ sub is_in_list_by_i {
 
 sub is_list_by_seqno {
 
+    my ( $self, $seqno ) = @_;
+
     # Return true if the immediate contents of a container appears to be a
     # list.
-    my ( $self, $seqno ) = @_;
     return unless ( defined($seqno) );
     return $self->[_ris_list_by_seqno_]->{$seqno};
 } ## end sub is_list_by_seqno
@@ -2218,9 +2228,10 @@ sub Q_spy {
 
 sub check_options {
 
-    # This routine is called to check the user-supplied run parameters
-    # and to configure the control hashes to them.
     ( $rOpts, my $wvt_in_args, my $num_files, my $line_range_clipped ) = @_;
+
+    # This routine is called to check the user-supplied run parameters
+    # in $rOpts and to configure the control hashes to them.
 
     initialize_whitespace_hashes();
 
@@ -2647,6 +2658,9 @@ sub initialize_grep_and_friends {
 } ## end sub initialize_grep_and_friends
 
 sub initialize_weld_nested_exclusion_rules {
+
+    # Parse --weld-nested-exclusion-list
+
     %weld_nested_exclusion_rules = ();
 
     my $opt_name  = 'weld-nested-exclusion-list';
@@ -7625,7 +7639,13 @@ sub make_blank_line_pattern {
 
 sub make_block_pattern {
 
-    #  Given a string of block-type keywords, return a regex to match them
+    my ( $abbrev, $string ) = @_;
+
+    # Given:
+    #   $abbrev = the command being processed, for error reporting
+    #   $string = a string of block-type keywords
+
+    #  Given a string of block-type keywords, return a regex to match them.
     #  The only tricky part is that labels are indicated with a single ':'
     #  and the 'sub' token text may have additional text after it (name of
     #  sub).
@@ -7640,7 +7660,6 @@ sub make_block_pattern {
     #  To distinguish between anonymous subs and named subs, use 'sub' to
     #   indicate a named sub, and 'asub' to indicate an anonymous sub
 
-    my ( $abbrev, $string ) = @_;
     my @list  = split_words($string);
     my @words = ();
     my %seen;
@@ -7879,10 +7898,16 @@ EOM
 
     sub check_sequence_numbers {
 
-        # Routine for checking sequence numbers.  This only needs to be
-        # done occasionally in DEVEL_MODE to be sure everything is working
-        # correctly.
         my ( $rtokens, $rtoken_type, $rtype_sequence, $input_line_no ) = @_;
+
+        # Verify the correctness of the sequence numbers arriving from the
+        # tokenizer.  For efficiency, this sub is only called in DEVEL_MODE.
+        # Given:
+        #   $rtokens        = ref to array of token text
+        #   $rtoken_type    = ref to array of token types
+        #   $rtype_sequence = ref to array of sequence numbers
+        #   $input_line_no  = number of this line in the input stream
+
         my $jmax = @{$rtokens} - 1;
         return if ( $jmax < 0 );
         foreach my $j ( 0 .. $jmax ) {
@@ -9887,13 +9912,16 @@ sub scan_hash_keys {
 
     my $is_hash_slice = sub {
 
+        my ($Ktest) = @_;
+
         # We are at an opening hash brace.
         # Look back to see if this is a slice.
+        # Given:
+        #  $Ktest = index of the token of an opening hash brace
         # Return:
         #  a name for the slice, or
         #  undef if not a slice
 
-        my ($Ktest) = @_;
         my $token = $rLL->[$Ktest]->[_TOKEN_];
 
         # walk back to find a '$'
@@ -10075,15 +10103,16 @@ EOM
 
     my $push_KK_last_nb = sub {
 
+        my ( $KK, $type_KK, $KK_last_nb, ($parent_seqno) ) = @_;
+
         # If the previous nonblank token was a hash key of type
         # 'Q' or 'w', then update its count
-        my ( $KK, $type_KK, $KK_last_nb, ($parent_seqno) ) = @_;
 
         # Given:
         #   $KK = index of current token
         #   $type_KK = type of token $KK
         #   $KK_last_nb = index of a hash key token before $KK
-        #   $parent_seqno = sequence number of container:
+        #   $parent_seqno = (optional) sequence number of container:
         #    - required for a key followed by '=>'
         #    - not required for a key in hash braces
 
@@ -11797,9 +11826,10 @@ sub set_ci {
 
     my $map_block_follows = sub {
 
+        my ($seqno) = @_;
+
         # return true if a sort/map/etc block follows the closing brace
         # of container $seqno
-        my ($seqno) = @_;
         my $Kc = $K_closing_container->{$seqno};
         return unless ( defined($Kc) );
 
@@ -11826,8 +11856,13 @@ sub set_ci {
 
     my $redo_preceding_comment_ci = sub {
 
-        # We need to reset the ci of the previous comment(s)
         my ( $K, $ci ) = @_;
+
+        # Reset the ci of the previous comment(s)
+        # Given:
+        #   $K = index of current token
+        #   $ci = ci value to apply to previous comment
+
         my $Km = $self->K_previous_code($K);
         return if ( !defined($Km) );
         foreach my $Kt ( $Km + 1 .. $K - 1 ) {
@@ -13806,6 +13841,10 @@ EOM
 
     my $checkin_new_constant = sub {
         my ( $KK, $word ) = @_;
+
+        # Given:
+        #   $KK = index of a constant name in 'use constant word=>..'
+        #   $word = the name of the constant
         return if ( !defined($word) );
         my $line_index = $rLL->[$KK]->[_LINE_INDEX_];
         my $rvars      = {
@@ -13829,6 +13868,8 @@ EOM
 
     my $scan_use_vars = sub {
         my ($KK) = @_;
+
+        # Find and process the variable names after 'use vars ...'
         my $Kn = $self->K_next_code($KK);
         return unless ($Kn);
         my $rlist = $self->expand_quoted_word_list($Kn);
@@ -13850,6 +13891,8 @@ EOM
 
     my $scan_use_constant = sub {
         my ($KK) = @_;
+
+        # Find and process the variable names after 'use constant ...'
         my $Kn = $self->K_next_code($KK);
         return unless ($Kn);
         my $type_n  = $rLL->[$Kn]->[_TYPE_];
@@ -13996,6 +14039,11 @@ EOM
 
     my $update_constant_count = sub {
         my ( $KK, $word ) = @_;
+
+        # Update the number of uses of a constant
+        # Given:
+        #   $KK = index of this token
+        #   $word = name of a constant
         if ( !defined($word) ) { $word = $rLL->[$KK]->[_TOKEN_] }
         my $package = $current_package;
         my $pos     = rindex( $word, '::' );
@@ -14011,11 +14059,13 @@ EOM
         return;
     }; ## end $update_constant_count = sub
 
-    #-----------------------------------------------
-    # sub to check for zero counts when stack closes
-    #-----------------------------------------------
     my $check_for_unused_names = sub {
+
         my ($rhash) = @_;
+
+        #----------------------------------------
+        # Check for zero counts when stack closes
+        #----------------------------------------
         foreach my $name ( keys %{$rhash} ) {
             my $entry   = $rhash->{$name};
             my $count   = $entry->{count};
@@ -14044,11 +14094,12 @@ EOM
         return;
     }; ## end $check_for_unused_names = sub
 
-    #---------------------------------------
-    # sub to scan interpolated text for vars
-    #---------------------------------------
     my $scan_quoted_text = sub {
         my ($text) = @_;
+
+        #---------------------------------------
+        # scan interpolated text for vars
+        #---------------------------------------
         return unless ($check_unused);
 
         # Looking for something like $word, @word, $word[, $$word, ${word}, ..
@@ -14062,11 +14113,12 @@ EOM
         return;
     }; ## end $scan_quoted_text = sub
 
-    #-------------------------------------------------------------
-    # sub to find the next opening brace seqno of an if-elsif- chain
-    #-------------------------------------------------------------
     my $push_next_if_chain = sub {
         my ( $KK, $rpopped_vars ) = @_;
+
+        #--------------------------------------------------------
+        # Find the next opening brace seqno of an if-elsif- chain
+        #--------------------------------------------------------
 
         # Given:
         #   $KK = index of a closing block brace of if/unless/elsif chain
@@ -15545,8 +15597,9 @@ sub interbracket_arrow_check {
 
     my $warn = sub {
 
-        # write a warning on changes made or needed if -wia is set
         my ( $rlno_list, $first_word ) = @_;
+
+        # write a warning on changes made or needed if -wia is set
         my $str;
         my $num_changes = @{$rlno_list};
         my @unique_lno  = do {
@@ -17973,9 +18026,9 @@ BEGIN {
 
 sub add_trailing_comma {
 
-    # Implement the --add-trailing-commas flag to the line end before index $KK:
-
     my ( $self, $KK, $Kfirst, $trailing_comma_add_rule ) = @_;
+
+    # Implement the --add-trailing-commas flag to the line end before index $KK:
 
     # Input parameter:
     #  $KK = index of closing token in old ($rLL) token list
@@ -19785,6 +19838,7 @@ BEGIN {
 }
 
 sub count_prototype_args {
+
     my ($string) = @_;
 
     # Given
@@ -25512,8 +25566,9 @@ sub extended_ci {
 
 sub braces_left_setup {
 
-    # Called once per file to mark all -bl, -sbl, and -asbl containers
     my $self = shift;
+
+    # Called once per file to mark all -bl, -sbl, and -asbl containers
 
     my $rOpts_bl   = $rOpts->{'opening-brace-on-new-line'};
     my $rOpts_sbl  = $rOpts->{'opening-sub-brace-on-new-line'};
@@ -25562,9 +25617,10 @@ sub braces_left_setup {
 
 sub bli_adjustment {
 
+    my $self = shift;
+
     # Called once per file to implement the --brace-left-and-indent option.
     # If -bli is set, adds one continuation indentation for certain braces
-    my $self = shift;
     return unless ( $rOpts->{'brace-left-and-indent'} );
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
@@ -28076,8 +28132,9 @@ EOM
 
     sub create_one_line_block {
 
-        # note that this updates a closure variable
         $index_start_one_line_block = shift;
+
+        # note that this updates a closure variable
 
         # Set index starting next one-line block
         # Given:
@@ -28376,8 +28433,9 @@ EOM
 
     sub end_batch {
 
-        # End the current batch, EXCEPT for a few special cases
         my ($self) = @_;
+
+        # End the current batch, EXCEPT for a few special cases
 
         if ( $max_index_to_go < 0 ) {
 
@@ -30000,8 +30058,9 @@ sub starting_one_line_block {
 
 sub unstore_token_to_go {
 
-    # remove most recent token from output stream
     my $self = shift;
+
+    # remove most recent token from output stream
     if ( $max_index_to_go > 0 ) {
         $max_index_to_go--;
     }
@@ -38663,8 +38722,10 @@ sub table_columns_available {
 
 sub maximum_number_of_fields {
 
-    # how many fields will fit in the available space?
     my ( $columns, $odd_or_even, $max_width, $pair_width ) = @_;
+
+    # How many fields will fit in the available space?
+
     my $max_pairs        = int( $columns / $pair_width );
     my $number_of_fields = $max_pairs * 2;
     if (   $odd_or_even == 1
@@ -42526,8 +42587,10 @@ sub pad_broken_list {
 
 sub pad_token {
 
-    # insert $pad_spaces before token number $ipad
     my ( $self, $ipad, $pad_spaces ) = @_;
+
+    # insert $pad_spaces before token number $ipad
+
     my $rLL     = $self->[_rLL_];
     my $KK      = $K_to_go[$ipad];
     my $tok     = $rLL->[$KK]->[_TOKEN_];
@@ -43774,6 +43837,19 @@ sub make_paren_name {
 
     sub get_closing_token_indentation {
 
+        my (
+            $self,
+
+            $ibeg,
+            $iend,
+            $rindentation_list,
+            $level_jump,
+            $i_terminal,
+            $is_semicolon_terminated,
+            $seqno_qw_closing,
+
+        ) = @_;
+
         # Determine indentation adjustment for a line with a leading closing
         # token - i.e. one of these:     ) ] } :
 
@@ -43798,19 +43874,6 @@ sub make_paren_name {
         #   $opening_offset,
         #   $is_leading,
         #   $opening_exists,
-
-        my (
-            $self,
-
-            $ibeg,
-            $iend,
-            $rindentation_list,
-            $level_jump,
-            $i_terminal,
-            $is_semicolon_terminated,
-            $seqno_qw_closing,
-
-        ) = @_;
 
         my $adjust_indentation         = 0;
         my $default_adjust_indentation = $adjust_indentation;
@@ -44231,10 +44294,10 @@ sub make_paren_name {
 
 sub get_opening_indentation {
 
-    # get the indentation of the line which output the opening token
+    # Get the indentation of the line which output the opening token
     # corresponding to a given closing token in the current output batch.
     #
-    # given:
+    # Given:
     # $i_closing - index in this line of a closing token ')' '}' or ']'
     #
     # $ri_first - reference to list of the first index $i for each output
@@ -44246,11 +44309,12 @@ sub get_opening_indentation {
     # $qw_seqno - optional sequence number to use if normal seqno not defined
     #           (NOTE: would be more general to just look this up from index i)
     #
-    # return:
+    # Return:
     #   -the indentation of the line which contained the opening token
     #    which matches the token at index $i_opening
     #   -and its offset (number of columns) from the start of the line
     #
+
     my (
         $self,
 
@@ -44260,7 +44324,7 @@ sub get_opening_indentation {
 
     ) = @_;
 
-    # first, see if the opening token is in the current batch
+    # First, see if the opening token is in the current batch
     my $i_opening = $mate_index_to_go[$i_closing];
     my ( $indent, $offset, $is_leading, $exists );
     $exists = 1;
@@ -44271,7 +44335,7 @@ sub get_opening_indentation {
           $self->lookup_opening_indentation( $i_opening, $rindentation_list );
     }
 
-    # if not, it should have been stored in the hash by a previous batch
+    # If not, it should have been stored in the hash by a previous batch
     else {
         my $seqno = $type_sequence_to_go[$i_closing];
         $seqno = $qw_seqno unless ($seqno);

@@ -736,7 +736,11 @@ EOM
     }
 
     my $get_hash_ref = sub {
+
         my ($key) = @_;
+
+        # Get and check a parameter from the input hash
+
         my $hash_ref = $input_hash{$key};
         if ( defined($hash_ref) ) {
             if ( ref($hash_ref) ne 'HASH' ) {
@@ -5221,12 +5225,12 @@ sub find_file_upwards {
 
 sub expand_command_abbreviations {
 
-    # go through @ARGV and expand any abbreviations
-    # note that @ARGV has been localized
-
     my ( $rexpansion, $rraw_options, $config_file ) = @_;
 
-    # set a pass limit to prevent an infinite loop;
+    # Go through @ARGV and expand any abbreviations
+    # Note that @ARGV has been localized
+
+    # Set a pass limit to prevent an infinite loop;
     # 10 should be plenty, but it may be increased to allow deeply
     # nested expansions.
     my $max_passes = 10;
@@ -5327,9 +5331,13 @@ DIE
     return;
 } ## end sub expand_command_abbreviations
 
-# Debug routine -- this will dump the expansion hash
 sub dump_short_names {
+
     my $rexpansion = shift;
+
+    # do --dump-short-names (-dsn)
+    # Debug routine -- this will dump the expansion hash
+
     print {*STDOUT} <<EOM;
 List of short names.  This list shows how all abbreviations are
 translated into other abbreviations and, eventually, into long names.
@@ -5346,13 +5354,14 @@ EOM
 
 sub check_vms_filename {
 
-    # given a valid filename (the perltidy input file)
+    my $filename = shift;
+
+    # Given a valid filename (the perltidy input file)
     # create a modified filename and separator character
     # suitable for VMS.
     #
     # Contributed by Michael Cartmell
     #
-    my $filename = shift;
     my ( $base, $path ) = fileparse($filename);
 
     # remove explicit ; version
@@ -5452,10 +5461,11 @@ EOS
 
 sub look_for_Windows {
 
-    # determine Windows sub-type and location of
-    # system-wide configuration files
     my $rpending_complaint = shift;
-    my $is_Windows         = ( $OSNAME =~ /win32|dos/i );
+
+    # Determine Windows sub-type and location of
+    # system-wide configuration files
+    my $is_Windows = ( $OSNAME =~ /win32|dos/i );
     my $Windows_type;
     $Windows_type = Win_OS_Type($rpending_complaint) if ($is_Windows);
     return ( $is_Windows, $Windows_type );
@@ -5463,11 +5473,12 @@ sub look_for_Windows {
 
 sub find_config_file {
 
-    # look for a .perltidyrc configuration file
-    # For Windows also look for a file named perltidy.ini
     my ( $is_Windows, $Windows_type, $rconfig_file_chatter,
         $rpending_complaint )
       = @_;
+
+    # Look for a .perltidyrc configuration file
+    # For Windows also look for a file named perltidy.ini
 
     ${$rconfig_file_chatter} .= "# Config file search...system reported as:";
     if ($is_Windows) {
@@ -5609,12 +5620,13 @@ sub find_config_file {
 
 sub Win_Config_Locs {
 
+    my ( $rpending_complaint, $os ) = @_;
+
     # In scalar context returns the OS name (95 98 ME NT3.51 NT4 2000 XP),
     # or undef if its not a win32 OS.  In list context returns OS, System
     # Directory, and All Users Directory.  All Users will be empty on a
     # 9x/Me box.  Contributed by: Yves Orton.
 
-    my ( $rpending_complaint, $os ) = @_;
     if ( !$os ) { $os = Win_OS_Type($rpending_complaint) }
 
     return unless ($os);
@@ -5644,7 +5656,11 @@ sub Win_Config_Locs {
 } ## end sub Win_Config_Locs
 
 sub dump_config_file {
+
     my ( $rconfig_string, $config_file, $rconfig_file_chatter ) = @_;
+
+    # do --dump-profile (-dpro)
+
     print {*STDOUT} "${$rconfig_file_chatter}";
     if ($rconfig_string) {
         my @lines = split /^/, ${$rconfig_string};
@@ -5977,7 +5993,9 @@ EOM
 
 sub parse_args {
 
-    # Parse a command string containing multiple string with possible
+    my ($body) = @_;
+
+    # Parse a command string $body containing multiple string with possible
     # quotes, into individual commands.  It might look like this, for example:
     #
     #    -wba=" + - "  -some-thing -wbb='. && ||'
@@ -5985,7 +6003,6 @@ sub parse_args {
     # There is no need, at present, to handle escaped quote characters.
     # (They are not perltidy tokens, so needn't be in strings).
 
-    my ($body)     = @_;
     my @body_parts = ();
     my $quote_char = EMPTY_STRING;
     my $part       = EMPTY_STRING;
@@ -6041,6 +6058,9 @@ EOM
 sub dump_long_names {
 
     my @names = @_;
+
+    # do --dump-long-names (-dln)
+
     print {*STDOUT} <<EOM;
 # Command line long names (passed to GetOptions)
 #--------------------------------------------------
@@ -6062,7 +6082,11 @@ EOM
 } ## end sub dump_long_names
 
 sub dump_integer_option_range {
+
     my ($rinteger_option_range) = @_;
+
+    # do --dump-integer-option-range (-dior)
+
     print {*STDOUT} "Option, min, max, default\n";
     foreach my $key ( sort keys %{$rinteger_option_range} ) {
         my ( $min, $max, $default ) = @{ $rinteger_option_range->{$key} };
@@ -6075,7 +6099,10 @@ sub dump_integer_option_range {
 } ## end sub dump_integer_option_range
 
 sub dump_defaults {
+
     my @defaults = @_;
+
+    #  do --dump-defaults (-ddf)
     print {*STDOUT} "Default command line options:\n";
     foreach my $line ( sort @defaults ) { print {*STDOUT} "$line\n" }
     return;
@@ -6083,9 +6110,10 @@ sub dump_defaults {
 
 sub readable_options {
 
+    my ( $rOpts, $roption_string ) = @_;
+
     # return options for this run as a string which could be
     # put in a perltidyrc file
-    my ( $rOpts, $roption_string ) = @_;
     my %Getopt_flags;
     my $rGetopt_flags    = \%Getopt_flags;
     my $readable_options = "# Final parameter set for this run.\n";
