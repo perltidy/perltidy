@@ -13204,6 +13204,26 @@ $i =
 --brace-vertical-tightness-closing=1
 --ignore-side-comment-lengths
 
+==> b1537.in <==
+print Data::Dumper->Dump(
+                     [
+                        $data, $obj,
+                     ],
+                     [ #
+                     ],
+);
+print Data::Dumper->Dump(
+                       [ $data, $obj, ],
+                       [    #
+                       ],
+);
+
+==> b1537.par <==
+--maximum-line-length=36
+--variable-maximum-line-length
+--extended-continuation-indentation
+--extended-line-up-parentheses
+
 ==> b156.in <==
 # State 1
 {

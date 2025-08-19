@@ -5462,12 +5462,13 @@ sub set_whitespace_flags {
 sub set_container_ws_by_keyword {
 
     my ( $word, $sequence_number ) = @_;
-    return unless (%keyword_paren_inner_tightness);
 
     # We just saw a keyword (or other function name) followed by an opening
     # paren. Now check to see if the following paren should have special
     # treatment for its inside space.  If so we set a hash value using the
     # sequence number as key.
+
+    return unless (%keyword_paren_inner_tightness);
     if ( $word && $sequence_number ) {
         my $tightness_here = $keyword_paren_inner_tightness{$word};
         if ( defined($tightness_here) && $tightness_here != 1 ) {
@@ -26339,7 +26340,6 @@ sub is_fragile_block_type {
         my $ris_permanently_broken     = $self->[_ris_permanently_broken_];
         my $ris_list_by_seqno          = $self->[_ris_list_by_seqno_];
         my $rhas_broken_list           = $self->[_rhas_broken_list_];
-        my $rtype_count_by_seqno       = $self->[_rtype_count_by_seqno_];
 
         #----------------------------------
         # Loop over tokens on this line ...
@@ -26412,16 +26412,15 @@ sub is_fragile_block_type {
                     #    stabilize by itself after one or two iterations.
                     #  - So, not doing this for now
 
-                    # Turn off the interrupted list rule if -vmll is set and a
-                    # list has '=>' characters.  This avoids instabilities due
-                    # to dependence on old line breaks; issue b1325.
+                    # Turn off the interrupted list rule if -vmll is set.
+                    # This avoids instabilities due to dependence on old line
+                    # breaks; issue b1325.
+                    # OLD: for a list which has '=>' characters, fixes b1325.
+                    # NEW: always turn off if -vmll is set, fixes b1537.
                     if (   $interrupted_list_rule
                         && $rOpts_variable_maximum_line_length )
                     {
-                        my $rtype_count = $rtype_count_by_seqno->{$seqno};
-                        if ( $rtype_count && $rtype_count->{'=>'} ) {
-                            $interrupted_list_rule = 0;
-                        }
+                        $interrupted_list_rule = 0;
                     }
 
                     my $K_c = $K_closing_container->{$seqno};

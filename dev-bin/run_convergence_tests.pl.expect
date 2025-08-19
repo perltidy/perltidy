@@ -7528,28 +7528,28 @@ $last = after (
 "Unrecognized $type number: $num\n";
 
 ==> b1446 <==
-     serverprint(
-         $d,
-         &X::newxCreateGlyphCursorReq($cursor=&next_resource_id,
-                                      $c,# sourcefont
-                                      $c,# maskfont
-                                      $ch,# sourcechar
-                                      $ch+1,# maskchar
-                                      $fr,$fg,$fb,
-                                      $br,$bg,$bb
-         )
+     serverprint($d,
+                 &X::newxCreateGlyphCursorReq(
+                                             $cursor=&next_resource_id,
+                                             $c,# sourcefont
+                                             $c,# maskfont
+                                             $ch,# sourcechar
+                                             $ch+1,# maskchar
+                                             $fr,$fg,$fb,
+                                             $br,$bg,$bb
+                 )
      );
 
-     serverprint(
-         $d,
-         &X::newxCreateGlyphCursorReq($cursor=&next_resource_id,
-                                      $c,# sourcefont
-                                      $c,# maskfont
-                                      $ch,# sourcechar
-                                      $ch+1,# maskchar
-                                      $fr,$fg,$fb,
-                                      $br,$bg,$bb
-         )
+     serverprint($d,
+                 &X::newxCreateGlyphCursorReq(
+                                             $cursor=&next_resource_id,
+                                             $c,# sourcefont
+                                             $c,# maskfont
+                                             $ch,# sourcechar
+                                             $ch+1,# maskchar
+                                             $fr,$fg,$fb,
+                                             $br,$bg,$bb
+                 )
      );
 
 ==> b1447 <==
@@ -8661,6 +8661,18 @@ $i =
       &GetOptions(
         "<>" => sub { $bootfile = $_[ 0 ] }, # any "non-option" is
       );
+
+==> b1537 <==
+print Data::Dumper->Dump(
+                       [ $data, $obj, ],
+                       [    #
+                       ],
+);
+print Data::Dumper->Dump(
+                       [ $data, $obj, ],
+                       [    #
+                       ],
+);
 
 ==> b156 <==
 # State 1
