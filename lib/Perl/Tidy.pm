@@ -533,17 +533,6 @@ my $md5_hex = sub {
     #   $buf = a string
     # Return:
     #   $digest = its MD5 sum
-
-    # Patch for [rt.cpan.org #88020]
-    # Use utf8::encode since md5_hex() only operates on bytes.
-    # my $digest = md5_hex( utf8::encode($sink_buffer) );
-
-    # Note added 20180114: the above patch did not work correctly.  I'm not
-    # sure why.  But switching to the method recommended in the Perl 5
-    # documentation for Encode worked.  According to this we can either use
-    #    $octets = encode_utf8($string)  or equivalently
-    #    $octets = encode("utf8",$string)
-    # and then calculate the checksum.  So:
     my $octets = Encode::encode( "utf8", $buf );
     my $digest = md5_hex($octets);
     return $digest;
@@ -3548,9 +3537,16 @@ sub generate_options {
     $category = 11;                                       # HTML
     $option_category{html} = $category_name[$category];
 
-    # routine to install and check options
+    # Routine to install and check options
     my $add_option = sub {
+
         my ( $long_name, $short_name, $flag ) = @_;
+
+        # Given:
+        #   $long_name  = the full option name, such as 'backup-method'
+        #   $short_name = the abbreviation, such as 'bm'
+        #   $flag       = the Getopt code, such as '=s', see above list
+
         push @option_string, $long_name . $flag;
         $option_category{$long_name} = $category_name[$category];
         if ($short_name) {
@@ -6172,6 +6168,8 @@ EOM
 } ## end sub show_version
 
 sub usage {
+
+    # Dump brief usage message if arg is -help or -h, or on certain errors
 
     print {*STDOUT} <<EOF;
 This is perltidy version $VERSION, a perl script indenter.  Usage:

@@ -20383,7 +20383,8 @@ sub count_sub_input_args {
                 my $token_mm = $rLL->[$K_mm]->[_TOKEN_];
                 my $seqno_mm = $rLL->[$K_mm]->[_TYPE_SEQUENCE_];
 
-                #  Count args in the list ( ... ) = @_;
+                #  - Count args in the list ( ... ) = @_, OR
+                #  - Give up if = @_ is not preceded by a simple list
                 if ( $seqno_mm && $token_mm eq ')' ) {
                     $item->{seqno_list}      = $seqno_mm;
                     $item->{is_signature}    = 0;
@@ -20417,12 +20418,10 @@ sub count_sub_input_args {
                     # NOTE: this could disagree with $_[n] usage; we
                     # ignore this for now.
 
-                    # Count initial comments and pod after the '=@_;'
-                    $set_arg_comment_counts->($K_p);
-                    return;
                 }
 
-                # Give up if = @_ is not preceded by a simple list
+                # Count initial comments and pod after the '=@_;'
+                $set_arg_comment_counts->($K_p);
                 return;
             }
 
