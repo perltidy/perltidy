@@ -2764,7 +2764,7 @@ EOM
 } ## end sub process_filter_layer
 
 # For safety, set an upper bound on number of iterations before stopping.
-# The average number of iterations is 2. No known cases exceed 3.
+# The average number of iterations is 2. No known cases exceed 5.
 use constant ITERATION_LIMIT => 6;
 
 sub process_iteration_layer {

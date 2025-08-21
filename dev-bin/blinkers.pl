@@ -18,6 +18,8 @@ use Encode      ();
 
 use constant EMPTY_STRING => q{};
 
+my @unique_keys_uu = qw( interbracket-arrow-style );
+
 # This database is used in minimization and initialized in BEGIN block at the
 # end:
 my $rfrequency_hash;
@@ -82,9 +84,9 @@ EOM
         else {
             hitcr("$ans: not a command");
         }
-    }
+    } ## end while (1)
     return;
-}
+} ## end sub main
 
 sub set_perltidy {
 
@@ -103,11 +105,11 @@ sub set_perltidy {
             last;
         }
         hitcr("cannot find an executable file named '$ans'");
-    }
+    } ## end while (1)
     $perltidy_version = get_version($perltidy);
     print STDERR "got '$perltidy version $perltidy_version'\n";
     return;
-}
+} ## end sub set_perltidy
 
 sub get_version {
     my ($my_perltidy) = @_;
@@ -125,9 +127,9 @@ sub get_version {
     chomp $line;
     my ( $part1_uu, $version ) = split /,\s+v/, $line;
     $fh->close();
-    if ( -e $tmpname ) { unlink $tmpname }
+    if ( -e $tmpname ) { unlink($tmpname) }
     return $version;
-}
+} ## end sub get_version
 
 sub set_dirs {
 
@@ -148,7 +150,7 @@ sub set_dirs {
         $dir_string .= "...[$numd dirs]";
     }
     return;
-}
+} ## end sub set_dirs
 
 sub find_git_home {
     my ( $fh_uu, $err_file ) = File::Temp::tempfile();
@@ -156,9 +158,9 @@ sub find_git_home {
     # See if we are within the perltidy git
     $git_home = qx[git rev-parse --show-toplevel 2>$err_file];
     chomp $git_home;
-    if ( -e $err_file ) { unlink $err_file }
+    if ( -e $err_file ) { unlink($err_file) }
     return;
-}
+} ## end sub find_git_home
 
 sub ask_git_home {
 
@@ -171,7 +173,7 @@ EOM
         chomp $git_home;
     }
     return;
-}
+} ## end sub ask_git_home
 
 sub retest_blinkers {
 
@@ -183,6 +185,11 @@ sub retest_blinkers {
     my @blinking;        # state 1
     my @not_blinking;    # state 2
     my @changed;
+
+    my $run_count              = 0;
+    my $iteration_total        = 0;
+    my $iteration_maximum      = 0;
+    my $iteration_maximum_case = "";
 
     my $starting_dir = getcwd();
 
@@ -210,6 +217,15 @@ sub retest_blinkers {
         }
 
         blinker_test($rhash);
+
+        my $iteration_count = $rhash->{iteration_count};
+        $run_count++;
+        $iteration_total += $iteration_count;
+        if ( $iteration_count > $iteration_maximum ) {
+            $iteration_maximum      = $iteration_count;
+            $iteration_maximum_case = $dir;
+        }
+
         my $state = $rhash->{is_blinking};
         if    ( !defined($state) ) { push @unknown, $dir }
         elsif ( $state == 0 )      { push @not_blinking, $dir }
@@ -224,7 +240,7 @@ sub retest_blinkers {
     my $report = "check.out";
     my $backup = $report . ".bak";
     if ( -e $report ) {
-        if ( -e $backup ) { unlink $backup }
+        if ( -e $backup ) { unlink($backup) }
         rename( $report, $backup );
     }
 
@@ -275,7 +291,23 @@ EOM
         print $msg;
         $fh->print($msg) if ($fh);
     }
-}
+
+    # Report iteration statistics
+    # See run_convergence_test.pl for similar code
+    print "-" x 31 . "\n";
+    if ( $run_count > 0 ) {
+        my $iteration_mean = sprintf( "%.2f", $iteration_total / $run_count );
+        my $spaces         = " " x length($iteration_maximum_case);
+        my $msg            = <<EOM;
+<<Stats for $run_count runs>>
+$spaces  converged on iteration $iteration_mean (average)
+$iteration_maximum_case: converged on iteration $iteration_maximum    (max)
+EOM
+        print $msg;
+        $fh->print($msg) if ($fh);
+    }
+    print "Note: this info is also in file $report\n";
+} ## end sub retest_blinkers
 
 sub find_starting_files {
 
@@ -323,7 +355,7 @@ sub find_starting_files {
         $rhash->{infile} = $ifiles[0];
     }
     return;
-}
+} ## end sub find_starting_files
 
 sub blinker_test {
 
@@ -335,8 +367,9 @@ sub blinker_test {
 
     my $is_blinking;
     my $is_changed;
-    $rhash->{is_blinking} = $is_blinking;
-    $rhash->{is_changed}  = $is_changed;
+    $rhash->{is_blinking}     = $is_blinking;
+    $rhash->{is_changed}      = $is_changed;
+    $rhash->{iteration_count} = 0;
 
     return unless ( $pfile && $ifile && $my_perltidy );
 
@@ -364,6 +397,7 @@ sub blinker_test {
         $ofile = "temp.$i";
         push @ofiles, $ofile;
         $count++;
+        $rhash->{iteration_count} = $count;
         $cmd = "$my_perltidy $ofile_last -o $ofile -pro=$pfile $my_opts";
         system($cmd);
         return unless ( -e $ofile );
@@ -373,10 +407,10 @@ sub blinker_test {
         if ( $i > 0 ) {
             $cmd = "diff $ofile_last $ofile >$dfile";
             system($cmd);
-            return unless -e $dfile;    ## error of some kind
+            return unless ( -e $dfile );    ## error of some kind
             $is_blinking = -z $dfile ? 0 : 1;
             if ( !$is_blinking ) {
-                if ( -e $dfile ) { unlink $dfile }
+                if ( -e $dfile ) { unlink($dfile) }
                 last;
             }
         }
@@ -393,7 +427,7 @@ sub blinker_test {
 
     # Check for differences compared to previous expected result
     if ( defined($ofile_last) && -e $ofile_last ) {
-        if ( -e $new_filename ) { unlink $new_filename }
+        if ( -e $new_filename ) { unlink($new_filename) }
         if ( !-e $exp_filename ) {
             copy( $ofile_last, $exp_filename );
         }
@@ -401,7 +435,7 @@ sub blinker_test {
             $cmd = "diff $exp_filename $ofile_last >$diff_filename";
             system($cmd);
             if ( -e $diff_filename ) {
-                if ( -z $diff_filename ) { unlink $diff_filename }
+                if ( -z $diff_filename ) { unlink($diff_filename) }
                 else {
                     copy( $ofile_last, $new_filename );
                     $is_changed = 1;
@@ -415,7 +449,7 @@ sub blinker_test {
         # The last blinker will leave the following files:
         # tmp.3 tmp.4 tmp34.diff
         my $qfile = "tmp34.diff";
-        if ( -e $qfile ) { unlink $qfile }
+        if ( -e $qfile ) { unlink($qfile) }
         rename $dfile,               $qfile;
         rename $ofiles[ $imax - 1 ], "tmp.3" if ( $imax > 0 );
         rename $ofiles[$imax],       "tmp.4" if ( $imax > 1 );
@@ -423,12 +457,12 @@ sub blinker_test {
 
     # clean up
     foreach my $file (@ofiles) {
-        if ( -e $file ) { unlink $file }
+        if ( -e $file ) { unlink($file) }
     }
     $rhash->{is_blinking} = $is_blinking;
     $rhash->{is_changed}  = $is_changed;
     return;
-}
+} ## end sub blinker_test
 
 sub review_changes {
 
@@ -448,7 +482,7 @@ sub review_changes {
     $fh->close();
     if ( !@dirs_with_diffs ) {
         query("No differences found for the selected cases");
-        unlink $tmpname;
+        unlink($tmpname);
         return;
     }
 
@@ -458,7 +492,7 @@ sub review_changes {
         openurl("$tmpname");
     }
     if ( ifyes("May I delete this temporary file '$tmpname'?\n") ) {
-        unlink $tmpname;
+        unlink($tmpname);
     }
     if ( ifyes("update expected results for ALL of these cases? [Y/N]\n") ) {
         foreach my $dir (@dirs_with_diffs) {
@@ -472,7 +506,7 @@ sub review_changes {
         }
     }
     return;
-}
+} ## end sub review_changes
 
 sub minimize_profiles {
 
@@ -503,7 +537,7 @@ sub minimize_profiles {
         chdir $starting_dir;
     }
     return;
-}
+} ## end sub minimize_profiles
 
 sub profile_simplify {
     my ( $ifile, $pfile, $my_perltidy ) = @_;
@@ -532,7 +566,7 @@ sub profile_simplify {
     foreach my $line (<PRO>) {
         chomp $line;
         next if ( $line =~ /^#/ );
-        next unless $line;
+        next unless ($line);
         my $key = "";
         if ( $line =~ /^-*?(\w[\w-]+\b)/ ) { $key = $1 }
         my $freq = $rfrequency_hash->{$key};
@@ -555,12 +589,12 @@ sub profile_simplify {
     }
 
     # Make the final set
-    @{$rprofile_keep} = reverse @{$rprofile_keep};
+    @{$rprofile_keep} = reverse( @{$rprofile_keep} );
     my $pfile_min = "test.pro";
     if ( -e $pfile_min ) { rename $pfile_min, "$pfile_min.bak" }
     param_to_file( $pfile_min, $rprofile_keep );
     return;
-}
+} ## end sub profile_simplify
 
 sub profile_simplify_inner_loop {
     my ( $rprofile_start, $ifile, $my_perltidy ) = @_;
@@ -631,7 +665,7 @@ sub profile_simplify_inner_loop {
             $i_chunk = $i;
             $chunk   = $chunk_table[$i_chunk];
         }
-    };
+    }; ## end $upshift = sub
 
     my $downshift = sub {
 
@@ -640,7 +674,7 @@ sub profile_simplify_inner_loop {
             $i_chunk -= 1;
             $chunk = $chunk_table[$i_chunk];
         }
-    };
+    }; ## end $downshift = sub
 
     # main loop to test each parameter and keep only parameters
     # needed to cause blinking:
@@ -719,11 +753,11 @@ EOM
                 last;
             }
         }
-    }
+    } ## end while (1)
     print
 "$npass passes with $num_start items and table=@chunk_table and ratio=$ratio\n";
     return ( $rprofile_keep, $err_msg );    ##, $npass );
-}
+} ## end sub profile_simplify_inner_loop
 
 sub param_to_file {
     my ( $pname, $rprofile ) = @_;
@@ -734,7 +768,7 @@ sub param_to_file {
     }
     close OUT;
     return;
-}
+} ## end sub param_to_file
 
 sub rename_blinkers {
     my $data      = $git_home . '/dev-bin/run_convergence_tests.pl.data';
@@ -750,7 +784,7 @@ sub rename_blinkers {
     hitcr("The next available case name is: '$next_name'\n");
 
     return;
-}
+} ## end sub rename_blinkers
 
 sub find_last_name {
     my ($data) = @_;
@@ -775,7 +809,7 @@ sub find_last_name {
 
     if ( defined($max_case) ) { $max_case = 'b' . $max_case }
     return $max_case;
-}
+} ## end sub find_last_name
 
 #########################################################
 # utils
@@ -787,10 +821,10 @@ sub query {
     my $ans = <STDIN>;
     chomp $ans;
     return $ans;
-}
+} ## end sub query
 
 sub queryu {
-    return uc query(@_);
+    return uc( query(@_) );
 }
 
 sub hitcr {
@@ -798,12 +832,12 @@ sub hitcr {
     if ($msg) { $msg .= " Hit <cr> to continue"; }
     else      { $msg = "Hit <cr> to continue" }
     query($msg);
-}
+} ## end sub hitcr
 
 sub ifyes {
 
     # Updated to have default, which should be "Y" or "N"
-    my ( $msg, $default ) = @_;
+    my ( $msg, ($default) ) = @_;
     my $count = 0;
   ASK:
     my $ans = query($msg);
@@ -818,14 +852,14 @@ sub ifyes {
         print STDERR "Please answer 'Y' or 'N'\n";
         goto ASK;
     }
-}
+} ## end sub ifyes
 
 sub system_echo {
     my ( $cmd, $quiet ) = @_;
     print "$cmd\n" unless ($quiet);
     system $cmd;
     return;
-}
+} ## end sub system_echo
 
 sub openurl {
     my $url      = shift;
@@ -849,26 +883,27 @@ sub openurl {
 
 sub slurp_file {
     my ($file) = @_;
-    open my $fh, '<', $file or die "cannot open $file\n";
+    my $fh;
+    open( $fh, '<', $file ) or die "cannot open $file\n";
     local $/;
     my $contents = <$fh>;
     close $fh;
     return $contents;
-}
+} ## end sub slurp_file
 
 sub digest_string {
     my ($buf)  = @_;
     my $octets = Encode::encode( "utf8", $buf );
     my $digest = md5_hex($octets);
     return $digest;
-}
+} ## end sub digest_string
 
 sub digest_file {
     my ($file) = @_;
     my $buf    = slurp_file($file);
     my $digest = digest_string($buf);
     return $digest;
-}
+} ## end sub digest_file
 
 BEGIN {
 

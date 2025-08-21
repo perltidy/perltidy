@@ -600,7 +600,7 @@ sub scan_for_bad_characters {
 
     $rstatus->{'SCAN'} = 'TBD';
     my $rmodules = get_modules();
-    my ($saw_pod, $saw_FIXME_uu)  = scan_for_pod($rmodules);
+    my ( $saw_pod, $saw_FIXME_uu ) = scan_for_pod($rmodules);
 
     print <<EOM;
 Scanning for tabs, non-ascii, and line-ending spaces ...
@@ -885,7 +885,7 @@ sub update_version_number {
         push @sources, $lib_path . $module;
     }
 
-    my ($saw_pod, $saw_FIXME) = scan_for_pod( \@sources );
+    my ( $saw_pod, $saw_FIXME ) = scan_for_pod( \@sources );
     return if ($saw_pod);
 
     # I have removed this one; it was useful in development
@@ -922,7 +922,9 @@ EOM
     elsif ( $ans eq 'RV' ) {
         if ($saw_FIXME) {
             $rstatus->{'V'} = 'TBD';
-            query("You should not do a full release containing FIXME's. Hit <cr>");
+            query(
+                "You should not do a full release containing FIXME's. Hit <cr>"
+            );
             return;
         }
         my $new_VERSION = get_new_release_version();
@@ -1517,7 +1519,7 @@ OK
 EOM
     }
 
-    return ($saw_problem, $saw_FIXME);
+    return ( $saw_problem, $saw_FIXME );
 } ## end sub scan_for_pod
 
 sub make_tag_script {

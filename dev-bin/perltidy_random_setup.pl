@@ -798,22 +798,22 @@ EOM
             }
 
             # Case 2 creates the smallest possible output file size
-            if ( $case == 2 ) {
+            elsif ( $case == 2 ) {
                 $rrandom_parameters = ["-dsm -dac -i=0 -ci=0 -it=2 -mbl=0"];
             }
 
-            # Case 3 checks extrude from mangle (case 2)
-            if ( $case == 3 ) {
+            # Case 3 checks extrude from case 2
+            elsif ( $case == 3 ) {
                 $rrandom_parameters = ["--extrude"];
             }
 
             # Case 4 checks mangle again from extrude (
-            if ( $case == 4 ) {
+            elsif ( $case == 4 ) {
                 $rrandom_parameters = ["--mangle"];
             }
 
             # From then on random parameters are generated
-            if ( $case > 5 ) {
+            else {
                 $rrandom_parameters = get_random_parameters();
             }
             my $fh;
@@ -1263,7 +1263,7 @@ sub fix_conflicts {
 
     # Handle -bar conflicts
     my @bar_conflicts =
-      ( '--opening-brace-on-new-line', '--brace-left-and-indent', );
+      ( '--opening-brace-on-new-line', '--brace-left-and-indent' );
     my $saw_bar;
     foreach my $line ( @{$rlines} ) {
         if ( $line =~ 'opening-brace-always-on-right' ) {

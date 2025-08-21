@@ -11,7 +11,7 @@ use Cwd qw(abs_path);
 my $absolute_path = abs_path( readlink $0 );
 print "path is $absolute_path\n";
 use File::Basename;
-my ( $name, $path, $suffix ) = fileparse($absolute_path);
+my ( $name_uu, $path, $suffix_uu ) = fileparse($absolute_path);
 my $PERLTIDY_GIT = $path . "../";
 
 # If this doesn't work, then replace the above with a specific
@@ -122,13 +122,14 @@ sub get_latest_perltidy {
     my $starting_dir = getcwd();
     my $dir          = $PERLTIDY_GIT;
     use File::Temp qw/ tempfile tempdir /;
-    my ( $fh_tmp, $tmpfile ) = tempfile();
+    my ( $fh_tmp_uu, $tmpfile ) = tempfile();
     chdir $dir;
     my $ofile = $starting_dir . '/perltidy.pl';
     system "./pm2pl $opt_D -o $ofile >$tmpfile";
     chdir $starting_dir;
-    open my $fh, '<', $tmpfile or die "Can't open $tmpfile: $!";
-    unlink $tmpfile;
+    my $fh;
+    open( $fh, '<', $tmpfile ) or die "Can't open $tmpfile: $!";
+    unlink($tmpfile);
     my $msg = do { local $/; <$fh> };
     return $msg;
-}
+} ## end sub get_latest_perltidy

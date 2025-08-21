@@ -64,7 +64,7 @@ if ( @ARGV > 1 ) {
     print STDERR "Too many args\n";
     die $usage;
 }
-elsif ( $ARGV[0] ) {
+if ( $ARGV[0] ) {
     my $arg = $ARGV[0];
     if ( $arg && $arg =~ /^(\d+)\.(\d+)$/ ) {
         $nf_beg = $1;
@@ -94,9 +94,9 @@ if ($perltidy) {
 
 $FILES_file         = "FILES.txt"    unless ($FILES_file);
 $PROFILES_file      = "PROFILES.txt" unless ($PROFILES_file);
-$chain_mode         = 0              unless defined($chain_mode);
-$do_syntax_check    = 0              unless defined($do_syntax_check);
-$delete_good_output = 1              unless defined($delete_good_output);
+$chain_mode         = 0              unless ( defined($chain_mode) );
+$do_syntax_check    = 0              unless ( defined($do_syntax_check) );
+$delete_good_output = 1              unless ( defined($delete_good_output) );
 
 my $rfiles    = read_list($FILES_file);
 my $rprofiles = read_list($PROFILES_file);
@@ -113,7 +113,7 @@ my @profiles = @{$rprofiles};
 if ( !@profiles ) {
     print STDOUT "No profiles found .. creating a default\n";
     my $fname = "profile.1";
-    open OUT, ">", $fname || die "cannot open $fname: $!\n";
+    open( OUT, ">", $fname ) || die "cannot open $fname: $!\n";
     my $rrandom_parameters = [""];
     foreach ( @{$rrandom_parameters} ) {
         print OUT "$_\n";
@@ -128,7 +128,7 @@ my @problems;
 my $BLINKDIR = "BLINKERS";
 
 my $stop_file = 'stop.now';
-if ( -e $stop_file ) { unlink $stop_file }
+if ( -e $stop_file ) { unlink($stop_file) }
 
 my @chkfile_errors;
 my @size_errors;
@@ -155,9 +155,16 @@ EOM
 my $GO_file = "GO.sh";
 if ( -e $GO_file ) {
     my $bak = "$GO_file.bak";
-    if ( -e $bak ) { unlink $bak }
+    if ( -e $bak ) { unlink($bak) }
     system("mv $GO_file $bak");
 }
+
+# Note on parameters used in the first cases:
+# case 1: uses default parameters
+# case 2: makes smallest possible file: -dsm -dac -i=0 -ci=0 -it=2 -mbl=0
+# case 3: uses --extrude on case 2
+# case 4: uses --mangle on output of case 3
+# Other cases use random parameters
 
 # Outer loop over files
 my $file_count = 0;
@@ -169,12 +176,12 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
     # remove any previously saved files
     if (@saved_for_deletion) {
         foreach (@saved_for_deletion) {
-            unlink $_ if ( -e $_ );
+            unlink($_) if ( -e $_ );
         }
         @saved_for_deletion = ();
     }
 
-    next unless -e $file;
+    next unless ( -e $file );
     $file_count = $nf;
     my $ifile                 = $file;
     my $ifile_original        = $ifile;
@@ -217,7 +224,7 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
         print STDERR
           "$hash>Run '$nf.$np' : profile='$profile', ifile='$ifile'\n";
 
-        if ( -e $tmperr ) { unlink $tmperr }
+        if ( -e $tmperr ) { unlink($tmperr) }
 
         #my $cmd = "$binfile <$ifile >$ofile -pro=$profile 2>$tmperr";
         $cmd = "$binfile <$ifile >$ofile -pro=$profile $append_flags 2>$tmperr";
@@ -303,6 +310,9 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
                 $error_count_this_file++;
                 $error_count_this_case++;
             }
+            else {
+                ## spot to catch additional issues
+            }
 
         }
 
@@ -337,13 +347,13 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
                 my $syntax_ok = @lines && $lines[-1] =~ /syntax OK/i;
                 if ( $case == 1 ) {
                     $starting_syntax_ok = $syntax_ok;
-                    unlink $synfile;
+                    unlink($synfile);
                     if ($syntax_ok) {
                         print STDERR "$hash syntax OK for $ofile\n";
                     }
                 }
                 elsif ($syntax_ok) {
-                    unlink $synfile;
+                    unlink($synfile);
                 }
                 else {
                     print STDERR "**ERROR:SYNTAX** see $synfile\n";
@@ -369,12 +379,16 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
             if ( $case == 1 ) {
                 $has_starting_error = 1;
             }
-            elsif ( !$has_starting_error ) {
-                print STDERR "**ERROR:CHK** see $chkfile.ERR\n";
-                $error_count++;
-                push @chkfile_errors, $chkfile;
-                $error_count_this_file++;
-                $error_count_this_case++;
+            else {
+
+                # Error: report if this is a new error
+                if ( !$has_starting_error ) {
+                    print STDERR "**ERROR:CHK** see $chkfile.ERR\n";
+                    $error_count++;
+                    push @chkfile_errors, $chkfile;
+                    $error_count_this_file++;
+                    $error_count_this_case++;
+                }
             }
         }
         if ( !-e $chkfile ) {
@@ -450,10 +464,10 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
             # otherwise, delete these files and the history
             else {
                 foreach (@created) {
-                    unlink $_ if ( -e $_ );
+                    unlink($_) if ( -e $_ );
                 }
                 foreach (@saved_for_deletion) {
-                    unlink $_ if ( -e $_ );
+                    unlink($_) if ( -e $_ );
                 }
                 @saved_for_deletion = ();
                 print STDERR "$hash deleting $ofile, not needed\n";
@@ -522,7 +536,7 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
 
 if (@saved_for_deletion) {
     foreach (@saved_for_deletion) {
-        unlink $_ if ( -e $_ );
+        unlink($_) if ( -e $_ );
     }
     @saved_for_deletion = ();
 }
@@ -621,6 +635,9 @@ elsif ( $file_count < $nf_end ) {
     my $np = 1;
     write_GO( $GO_file, $nf, $np );
 }
+else {
+    ## no more runs to do
+}
 
 print STDERR <<EOM;
 $hash Next: run 'RUNME.pl' or do this by hand:
@@ -632,7 +649,7 @@ EOM
 sub save_blinker_info {
     my ( $runname, $ofile, $profile, $tmperr ) = @_;
 
-    return unless "$BLINKDIR";
+    return unless ("$BLINKDIR");
     if ( !-d $BLINKDIR ) {
         unless ( mkdir($BLINKDIR) ) {
             print STDERR "Unable to create $BLINKDIR\n";
@@ -655,7 +672,7 @@ sub save_blinker_info {
     system("cp $profile $blink_dir");
     system("cat $tmperr >$blink_dir/README.txt");
     return;
-}
+} ## end sub save_blinker_info
 
 sub report_results {
 
@@ -708,7 +725,7 @@ $hash Minimum error file size: $efile_size_min for case $efile_case_min
 $hash Maximum error file size: $efile_size_max for case $efile_case_max
 EOM
     return;
-}
+} ## end sub report_results
 
 sub write_GO {
 
@@ -717,7 +734,7 @@ sub write_GO {
     #unlink $ofile if ( -e $ofile );
     if ( -e $ofile ) {
         my $bak = "$ofile.bak";
-        if ( -e $bak ) { unlink $bak }
+        if ( -e $bak ) { unlink($bak) }
         system("mv $ofile $bak");
     }
     my $fh;
@@ -736,7 +753,7 @@ perl RUNME.pl
 EOM
     system("chmod +x $ofile");
     print STDOUT "To restart, enter ./$ofile\n";
-}
+} ## end sub write_GO
 
 sub write_runme {
 
@@ -827,7 +844,7 @@ EOM
         print "Wrote '$ofile'\n";
         return;
     }
-}
+} ## end sub write_runme
 
 sub read_config {
 
@@ -852,7 +869,7 @@ EOM
     do $ifile;
 
     return;
-}
+} ## end sub read_config
 
 sub read_list {
     my ($fname) = @_;
@@ -866,18 +883,18 @@ sub read_list {
         return $rlist;
     }
     while ( my $line = <$fh> ) {
-        $line         =~ s/^\s+//;
-        $line         =~ s/\s+$//;
-        next if $line =~ /^#/;
+        $line =~ s/^\s+//;
+        $line =~ s/\s+$//;
+        next if ( $line =~ /^#/ );
         push @{$rlist}, $line;
-    }
+    } ## end while ( my $line = <$fh> )
     $fh->close();
     return $rlist;
-}
+} ## end sub read_list
 
 sub system_echo {
     my ( $cmd, $prefix ) = @_;
     my $str = $prefix ? $prefix . " " . $cmd : $cmd;
     print STDERR "$str\n";
     system($cmd);
-}
+} ## end sub system_echo
