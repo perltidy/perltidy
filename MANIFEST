@@ -54,6 +54,7 @@ Makefile.PL
 MANIFEST
 pm2pl
 README.md
+SECURITY.md
 t/.gitattributes
 t/atee.t
 t/filter_example.t
