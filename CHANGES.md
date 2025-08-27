@@ -34,6 +34,12 @@
 
       Use of uninitialized value $seqno in hash element ...
 
+    - The parameter --integer-range-check no longer accepts a 0 value, which
+      allowed integer range checks to be skipped.  This option was included
+      temporarily when new range-checking code was added to provide a
+      workaround in case problems arose with the new logic.  No problems have
+      been encountered, so this has been removed.
+
 ## 2025 07 11
 
     - Update for issue git #187: add vertical alignment of colons

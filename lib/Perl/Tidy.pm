@@ -4094,7 +4094,7 @@ sub generate_options {
         'entab-leading-whitespace'                  => [ 0, undef, 0 ],
         'fixed-position-side-comment'               => [ 0, undef, undef ],
         'indent-columns'                            => [ 0, undef, 4 ],
-        'integer-range-check'                       => [ 0, 3,     2 ],
+        'integer-range-check'                       => [ 1, 3,     2 ],
         'interbracket-arrow-complexity'             => [ 0, 2,     1 ],
         'iterations'                                => [ 0, undef, 1 ],
         'keep-old-blank-lines'                      => [ 0, 2,     1 ],
@@ -4924,29 +4924,31 @@ sub check_options {
 EOM
     }
 
+    # Check for integer values out of bounds as follows:
+    #  $integer_range_check=
+    #    1 => quietly reset bad values to defaults
+    #    2 => issue warning and reset bad values to defaults [DEFAULT]
+    #    3 => stop if any values are out of bounds
+    # Note: Previously a value of 0 meant to skip this check. This provided a
+    # workaround in case this logic caused a problem. This is no longer needed.
     my $integer_range_check = $rOpts->{'integer-range-check'};
     if (   !defined($integer_range_check)
-        || $integer_range_check < 0
+        || $integer_range_check <= 0
         || $integer_range_check > 3 )
     {
         $integer_range_check = 2;
     }
 
-    # Check for integer values out of bounds as follows:
-    #  $integer_range_check=
-    #    0 => skip check completely (for stress-testing perltidy only)
-    #    1 => quietly reset bad values to defaults
-    #    2 => issue warning and reset bad values defaults [DEFAULT]
-    #    3 => stop if any values are out of bounds
     if ($integer_range_check) {
         my $Error_message;
         foreach my $opt ( keys %{$rinteger_option_range} ) {
+            my $val = $rOpts->{$opt};
+            next unless ( defined($val) );
             my $range = $rinteger_option_range->{$opt};
             next unless ( defined($range) );
             my ( $min, $max, $default ) = @{$range};
 
-            my $val = $rOpts->{$opt};
-            if ( defined($min) && defined($val) && $val < $min ) {
+            if ( defined($min) && $val < $min ) {
                 $Error_message .= "--$opt=$val but should be >= $min";
                 if ( $integer_range_check < 3 ) {
                     $rOpts->{$opt} = $default;
@@ -4955,7 +4957,7 @@ EOM
                 }
                 $Error_message .= "\n";
             }
-            if ( defined($max) && defined($val) && $val > $max ) {
+            if ( defined($max) && $val > $max ) {
                 $Error_message .= "--$opt=$val but should be <= $max";
                 if ( $integer_range_check < 3 ) {
                     $rOpts->{$opt} = $default;

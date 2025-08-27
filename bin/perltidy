@@ -6600,12 +6600,11 @@ write a warning message and reset the value to its default setting. This
 default behavior can be changed with the parameter
 B<--integer-range-check=n>, or B<-irc=n>, as follows:
 
-    n=0  skip check completely (for stress-testing perltidy only)
     n=1  reset bad values to defaults but do not issue a warning
     n=2  reset bad values to defaults and issue warning [DEFAULT]
     n=3  stop if any values are out of bounds
 
-The values B<n=0> and B<n=1> are mainly useful for testing purposes.
+The value B<n=1> is mainly useful for testing purposes.
 
 =item B<Debugging perltidy tokenization>
 
