@@ -13224,6 +13224,30 @@ print Data::Dumper->Dump(
 --extended-continuation-indentation
 --extended-line-up-parentheses
 
+==> b1538.in <==
+        my $coerced =
+          $coercion->coerce( [
+            1,
+            2,
+            3
+          ] );
+
+        my $coerced = $coercion->coerce( [
+                                          1,
+                                          2,
+                                          3
+        ] );
+
+==> b1538.par <==
+--maximum-line-length=34
+--weld-nested-containers
+--variable-maximum-line-length
+--extended-continuation-indentation
+--extended-line-up-parentheses
+--paren-vertical-tightness-closing=1
+--stack-opening-square-bracket
+--keep-old-breakpoints-before=n
+
 ==> b156.in <==
 # State 1
 {

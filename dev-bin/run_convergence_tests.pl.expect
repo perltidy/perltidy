@@ -8674,6 +8674,19 @@ print Data::Dumper->Dump(
                        ],
 );
 
+==> b1538 <==
+        my $coerced = $coercion->coerce( [
+                                          1,
+                                          2,
+                                          3
+        ] );
+
+        my $coerced = $coercion->coerce( [
+                                          1,
+                                          2,
+                                          3
+        ] );
+
 ==> b156 <==
 # State 1
 {

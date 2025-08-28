@@ -22529,7 +22529,7 @@ EOM
 } ## end sub warn_nested_ternaries
 
 sub check_for_old_break {
-    my ( $self, $KK, $rkeep_break_hash, $rbreak_hash ) = @_;
+    my ( $self, $KK, $rkeep_break_hash, $rbreak_hash, $break_after ) = @_;
 
     # This sub is called to help implement flags:
     # --keep-old-breakpoints-before and --keep-old-breakpoints-after
@@ -22537,6 +22537,7 @@ sub check_for_old_break {
     #   $KK               = index of a token,
     #   $rkeep_break_hash = user control for --keep-old-...
     #   $rbreak_hash      = hash of tokens where breaks are requested
+    #   $break_after      = true for break after, false for break before
     # Set $rbreak_hash as follows if a user break is requested:
     #    = 1 make a hard break (flush the current batch)
     #        best for something like leading commas (-kbb=',')
@@ -22547,15 +22548,25 @@ sub check_for_old_break {
 
     my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
 
-    # non-container tokens use the type as the key
+    # Non-container tokens use the type as the key
     if ( !$seqno ) {
         my $type = $rLL->[$KK]->[_TYPE_];
         if ( $rkeep_break_hash->{$type} ) {
             $rbreak_hash->{$KK} = $is_soft_keep_break_type{$type} ? 2 : 1;
+
+            # Update the permanently broken flag for a non-sequenced token.
+            # This was added for b1538 but not strictly necessary.
+            my $seqno_parent           = $self->parent_seqno_by_K($KK);
+            my $ris_permanently_broken = $self->[_ris_permanently_broken_];
+            if ( !$ris_permanently_broken->{$seqno_parent} ) {
+                $ris_permanently_broken->{$seqno_parent} = 1;
+                $self->mark_parent_containers( $seqno_parent,
+                    $ris_permanently_broken );
+            }
         }
     }
 
-    # container tokens use the token as the key
+    # Container tokens use the token as the key
     else {
         my $token = $rLL->[$KK]->[_TOKEN_];
         my $flag  = $rkeep_break_hash->{$token};
@@ -22590,6 +22601,20 @@ EOM
             if ($match) {
                 my $type = $rLL->[$KK]->[_TYPE_];
                 $rbreak_hash->{$KK} = $is_soft_keep_break_type{$type} ? 2 : 1;
+
+                # Update the permanently broken flag for a sequenced token.
+                # This was added for b1538 but not strictly necessary.
+                my $seqno_parent =
+                  (      $is_opening_type{$type} && $break_after
+                      || $is_closing_type{$type} && !$break_after )
+                  ? $seqno
+                  : $self->parent_seqno_by_K($KK);
+                my $ris_permanently_broken = $self->[_ris_permanently_broken_];
+                if ( !$ris_permanently_broken->{$seqno_parent} ) {
+                    $ris_permanently_broken->{$seqno_parent} = 1;
+                    $self->mark_parent_containers( $seqno_parent,
+                        $ris_permanently_broken );
+                }
             }
         }
     }
@@ -22691,9 +22716,9 @@ sub keep_old_line_breaks {
     foreach my $item ( @{$rKrange_code_without_comments} ) {
         my ( $Kfirst, $Klast ) = @{$item};
         $self->check_for_old_break( $Kfirst, \%keep_break_before_type,
-            $rbreak_before_Kfirst );
+            $rbreak_before_Kfirst, 0 );
         $self->check_for_old_break( $Klast, \%keep_break_after_type,
-            $rbreak_after_Klast );
+            $rbreak_after_Klast, 1 );
     }
     return;
 } ## end sub keep_old_line_breaks
@@ -23649,18 +23674,23 @@ sub weld_nested_containers {
     my $weld_count_this_start = 0;
     my $weld_starts_in_block  = 0;
 
-    # OLD: $single_line_tol added to fix cases b1180 b1181
+    # HISTORY:
+    # A) $single_line_tol added to fix cases b1180 b1181
     #       = $rOpts_continuation_indentation > $rOpts_indent_columns ? 1 : 0;
-    # NEW: $single_line_tol=0  fixes b1212; and b1180-1181 work ok now
-    #                      =1  for -vmll and -lp; fixes b1452, b1453, b1454
-    # NOTE: the combination -vmll and -lp can be unstable, especially when
+
+    # B) $single_line_tol=0  fixes b1212; and b1180-1181 work ok now
+    #                    =1  for -vmll and -lp; fixes b1452, b1453, b1454:
+    ## $rOpts_variable_maximum_line_length && $rOpts_line_up_parentheses
+    ##  ? 1
+    ##  : 0;
+    # The combination -vmll and -lp can be unstable, especially when
     # also combined with -wn. It may eventually be necessary to turn off -vmll
     # if -lp is set. For now, this works. The value '1' is a minimum which
     # works but can be increased if necessary.
-    my $single_line_tol =
-      $rOpts_variable_maximum_line_length && $rOpts_line_up_parentheses
-      ? 1
-      : 0;
+
+    # C) $single_line_tol=0  fixes b1538 while all previous cases remain
+    # stable due to other updates. This case has -vmll -xlp -wn.
+    my $single_line_tol = 0;
 
     my $multiline_tol = $single_line_tol + 1 +
       max( $rOpts_indent_columns, $rOpts_continuation_indentation );
@@ -23803,6 +23833,10 @@ sub weld_nested_containers {
         {
             $rmax_vertical_tightness->{$outer_seqno} = 0;
         }
+
+##      Available for possible future use:
+##      my $is_permanently_broken =
+##          $self->[_ris_permanently_broken_]->{$inner_seqno};
 
         my $is_multiline_weld =
              $iline_oo == $iline_io
