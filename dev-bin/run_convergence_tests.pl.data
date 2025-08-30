@@ -13248,6 +13248,35 @@ print Data::Dumper->Dump(
 --stack-opening-square-bracket
 --keep-old-breakpoints-before=n
 
+==> b1539.in <==
+                  my $movie_data
+                   = {
+                        host => $hostname,
+
+                        fanart =>
+                         get_art( $images, 'fanart', 'backdrops' ),
+                        coverfile =>
+                         get_art( $images, 'coverart', 'posters' ),
+                   };
+                  my $movie_data = {
+                           host => $hostname,
+
+                           fanart => get_art(
+                                    $images, 'fanart',
+                                    'backdrops' ),
+                           coverfile => get_art(
+                                    $images, 'coverart',
+                                    'posters' ),
+                  };
+
+==> b1539.par <==
+--maximum-line-length=68
+--indent-columns=9
+--continuation-indentation=1
+--extended-line-up-parentheses
+--paren-vertical-tightness-closing=2
+--break-before-all-operators
+
 ==> b156.in <==
 # State 1
 {

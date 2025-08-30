@@ -25923,6 +25923,8 @@ sub is_fragile_block_type {
     my $len;
     my $last_nonblank_type;
     my @stack;
+    my $has_vtc2;
+    my $interrupted_list_ok;
 
     sub xlp_collapsed_lengths_initialize {
 
@@ -25940,6 +25942,26 @@ sub is_fragile_block_type {
             undef,       # $K_c,
             undef,       # $interrupted_list_rule
         ];
+
+        # Note if vertical-tightness-closing=2 is set for any container type
+        $has_vtc2 = 0;
+        if (%closing_vertical_tightness) {
+            foreach my $tok (qw< ) ] } >) {
+                my $cvt = $closing_vertical_tightness{$tok};
+                next if ( !$cvt || $cvt != 2 );
+                $has_vtc2 = 1;
+                last;
+            }
+        }
+
+        # Turn off interrupted_rule to avoid instability ..
+        $interrupted_list_ok =
+
+          # if -iob is set, OR
+          !$rOpts_ignore_old_breakpoints
+
+          # if -vmll is set; fixes b1325, b1537
+          && !$rOpts_variable_maximum_line_length;
 
         return;
     } ## end sub xlp_collapsed_lengths_initialize
@@ -26373,6 +26395,7 @@ sub is_fragile_block_type {
         my $ris_permanently_broken     = $self->[_ris_permanently_broken_];
         my $ris_list_by_seqno          = $self->[_ris_list_by_seqno_];
         my $rhas_broken_list           = $self->[_rhas_broken_list_];
+        my $rhas_list                  = $self->[_rhas_list_];
 
         #----------------------------------
         # Loop over tokens on this line ...
@@ -26420,48 +26443,27 @@ sub is_fragile_block_type {
                     }
 
                     # Set a flag if the 'Interrupted List Rule' will be applied
-                    # (see sub copy_old_breakpoints).
-                    # - Added check on has_broken_list to fix issue b1298
+                    # for this container.
+                    # - This helps avoid excess line length when lists are
+                    # interrupted and therefore may be processed with
+                    # sub 'copy_old_breakpoints'.
+                    # - But we have to be very careful not to avoid an
+                    # instability.
+                    # - Added broken_list check to fix issue b1298
+                    # - Check cvt2 and has_list added to fix issue b1539
 
                     my $interrupted_list_rule =
-                         $ris_permanently_broken->{$seqno}
+                         $interrupted_list_ok
+                      && $ris_permanently_broken->{$seqno}
                       && $ris_list_by_seqno->{$seqno}
                       && !$rhas_broken_list->{$seqno}
-                      && !$rOpts_ignore_old_breakpoints;
-
-                    # NOTES: Since we are looking at old line numbers we have
-                    # to be very careful not to introduce an instability.
-
-                    # This following causes instability (b1288-b1296):
-                    #   $interrupted_list_rule ||=
-                    #     $rOpts_break_at_old_comma_breakpoints;
-
-                    #  - We could turn off the interrupted list rule if there is
-                    #    a broken sublist, to follow 'Compound List Rule 1'.
-                    #  - We could use the _rhas_broken_list_ flag for this.
-                    #  - But it seems safer not to do this, to avoid
-                    #    instability, since the broken sublist could be
-                    #    temporary.  It seems better to let the formatting
-                    #    stabilize by itself after one or two iterations.
-                    #  - So, not doing this for now
-
-                    # Turn off the interrupted list rule if -vmll is set.
-                    # This avoids instabilities due to dependence on old line
-                    # breaks; issue b1325.
-                    # OLD: for a list which has '=>' characters, fixes b1325.
-                    # NEW: always turn off if -vmll is set, fixes b1537.
-                    if (   $interrupted_list_rule
-                        && $rOpts_variable_maximum_line_length )
-                    {
-                        $interrupted_list_rule = 0;
-                    }
+                      && !( $has_vtc2 && $rhas_list->{$seqno} );
 
                     my $K_c = $K_closing_container->{$seqno};
 
                     # Add length of any terminal list item if interrupted
                     # so that the result is the same as if the term is
                     # in the next line (b1446).
-
                     if (
                            $interrupted_list_rule
                         && $KK < $K_terminal

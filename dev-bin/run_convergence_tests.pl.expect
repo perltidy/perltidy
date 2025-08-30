@@ -8687,6 +8687,26 @@ print Data::Dumper->Dump(
                                           3
         ] );
 
+==> b1539 <==
+                  my $movie_data
+                   = {
+                        host => $hostname,
+
+                        fanart =>
+                         get_art( $images, 'fanart', 'backdrops' ),
+                        coverfile =>
+                         get_art( $images, 'coverart', 'posters' ),
+                   };
+                  my $movie_data
+                   = {
+                        host => $hostname,
+
+                        fanart =>
+                         get_art( $images, 'fanart', 'backdrops' ),
+                        coverfile =>
+                         get_art( $images, 'coverart', 'posters' ),
+                   };
+
 ==> b156 <==
 # State 1
 {
