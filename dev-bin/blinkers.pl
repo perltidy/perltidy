@@ -318,21 +318,17 @@ sub find_starting_files {
     $rhash->{error_message} = EMPTY_STRING;
 
     my @files = glob("*");
-    my ( $profile,  $txtfile,  $ifile );
-    my ( @profiles, @txtfiles, @ifiles );
+    my ( $profile,  $ifile );
+    my ( @profiles, @ifiles );
     my @unknown;
     foreach my $file (@files) {
         next if ( $file =~ /^perltidy/ );
-        next if ( $file =~ /\.(ERR|LOG|exp|new|diff)/ );
+        next if ( $file =~ /\.(ERR|LOG|exp|new|diff|txt|tdy)/ );
 
         #print "file=$file\n";
         if ( $file =~ /^profile\.\d+$/ ) {
             $profile = $file;
             push @profiles, $file;
-        }
-        elsif ( $file =~ /\.txt$/ ) {
-            $txtfile = $file;
-            push @txtfiles, $file;
         }
         elsif ( $file =~ /^ofile/ || $file =~ /\.p[lm]/i ) {
             $ifile = $file;
@@ -349,7 +345,8 @@ sub find_starting_files {
     }
     if ( @ifiles != 1 ) {
         my $num = @ifiles;
-        $rhash->{error_message} = "Number of perl files found: $num\n";
+        my $str="$ifiles[0] $ifiles[1]";
+        $rhash->{error_message} = "Number of perl files found: $num ($str)\n";
     }
     else {
         $rhash->{infile} = $ifiles[0];
