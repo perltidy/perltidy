@@ -13277,6 +13277,43 @@ print Data::Dumper->Dump(
 --paren-vertical-tightness-closing=2
 --break-before-all-operators
 
+==> b1540.in <==
+has child_projects => (
+           is      => 'ro',
+           isa     => ArrayRef [ InstanceOf [__PACKAGE__] ],
+           lazy    => 1,
+           default => sub {
+                 $_[0]->_inflate_array(
+                       $_[0]
+                       ->_full_data->{ projects }{ project },
+                       'Project', 'parent_project'
+                 );
+           }
+);
+
+has child_projects => (
+      is      => 'ro',
+      isa     => ArrayRef [ InstanceOf [__PACKAGE__] ],
+      lazy    => 1,
+      default => sub {
+            $_[0]->_inflate_array(
+                  $_[0]
+                          ->_full_data->{ projects }
+                          { project },
+                  'Project', 'parent_project'
+            );
+      }
+);
+
+==> b1540.par <==
+--maximum-line-length=61
+--indent-columns=6
+--continuation-indentation=8
+--extended-continuation-indentation
+--extended-line-up-parentheses
+--brace-tightness=0
+--keep-old-breakpoints-before='->'
+
 ==> b156.in <==
 # State 1
 {

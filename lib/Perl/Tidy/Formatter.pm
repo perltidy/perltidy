@@ -22555,13 +22555,15 @@ sub check_for_old_break {
             $rbreak_hash->{$KK} = $is_soft_keep_break_type{$type} ? 2 : 1;
 
             # Update the permanently broken flag for a non-sequenced token.
-            # This was added for b1538 but not strictly necessary.
-            my $seqno_parent           = $self->parent_seqno_by_K($KK);
-            my $ris_permanently_broken = $self->[_ris_permanently_broken_];
-            if ( !$ris_permanently_broken->{$seqno_parent} ) {
-                $ris_permanently_broken->{$seqno_parent} = 1;
-                $self->mark_parent_containers( $seqno_parent,
-                    $ris_permanently_broken );
+            # First added in b1538; soft break check added for b1540.
+            if ( !$is_soft_keep_break_type{$type} ) {
+                my $seqno_parent           = $self->parent_seqno_by_K($KK);
+                my $ris_permanently_broken = $self->[_ris_permanently_broken_];
+                if ( !$ris_permanently_broken->{$seqno_parent} ) {
+                    $ris_permanently_broken->{$seqno_parent} = 1;
+                    $self->mark_parent_containers( $seqno_parent,
+                        $ris_permanently_broken );
+                }
             }
         }
     }
@@ -22603,17 +22605,20 @@ EOM
                 $rbreak_hash->{$KK} = $is_soft_keep_break_type{$type} ? 2 : 1;
 
                 # Update the permanently broken flag for a sequenced token.
-                # This was added for b1538 but not strictly necessary.
-                my $seqno_parent =
-                  (      $is_opening_type{$type} && $break_after
-                      || $is_closing_type{$type} && !$break_after )
-                  ? $seqno
-                  : $self->parent_seqno_by_K($KK);
-                my $ris_permanently_broken = $self->[_ris_permanently_broken_];
-                if ( !$ris_permanently_broken->{$seqno_parent} ) {
-                    $ris_permanently_broken->{$seqno_parent} = 1;
-                    $self->mark_parent_containers( $seqno_parent,
-                        $ris_permanently_broken );
+                # First added in b1538; soft break check added for b1540.
+                if ( !$is_soft_keep_break_type{$type} ) {
+                    my $seqno_parent =
+                      (      $is_opening_type{$type} && $break_after
+                          || $is_closing_type{$type} && !$break_after )
+                      ? $seqno
+                      : $self->parent_seqno_by_K($KK);
+                    my $ris_permanently_broken =
+                      $self->[_ris_permanently_broken_];
+                    if ( !$ris_permanently_broken->{$seqno_parent} ) {
+                        $ris_permanently_broken->{$seqno_parent} = 1;
+                        $self->mark_parent_containers( $seqno_parent,
+                            $ris_permanently_broken );
+                    }
                 }
             }
         }
@@ -25924,7 +25929,6 @@ sub is_fragile_block_type {
     my $last_nonblank_type;
     my @stack;
     my $has_vtc2;
-    my $interrupted_list_ok;
 
     sub xlp_collapsed_lengths_initialize {
 
@@ -25953,15 +25957,6 @@ sub is_fragile_block_type {
                 last;
             }
         }
-
-        # Turn off interrupted_rule to avoid instability ..
-        $interrupted_list_ok =
-
-          # if -iob is set, OR
-          !$rOpts_ignore_old_breakpoints
-
-          # if -vmll is set; fixes b1325, b1537
-          && !$rOpts_variable_maximum_line_length;
 
         return;
     } ## end sub xlp_collapsed_lengths_initialize
@@ -26443,21 +26438,45 @@ sub is_fragile_block_type {
                     }
 
                     # Set a flag if the 'Interrupted List Rule' will be applied
-                    # for this container.
-                    # - This helps avoid excess line length when lists are
-                    # interrupted and therefore may be processed with
-                    # sub 'copy_old_breakpoints'.
-                    # - But we have to be very careful not to avoid an
-                    # instability.
-                    # - Added broken_list check to fix issue b1298
-                    # - Check cvt2 and has_list added to fix issue b1539
+                    # for this container. An interrupted list is a list which
+                    # must be processed in multiple batches. This makes it
+                    # difficult for the -xlp logic to make adjustments as
+                    # it goes to avoid exceeding the maximum line length.
+
+                    # The basic tradeoff is:
+                    # - Setting this flag helps avoid excess line lengths
+                    # - but it introduces a risk of instability.
+                    # So we have to be very careful here.
 
                     my $interrupted_list_rule =
-                         $interrupted_list_ok
-                      && $ris_permanently_broken->{$seqno}
+
+                      # Will this container be processed in multiple batches?
+                      # That makes adjusting xlp indentation difficult.
+                      $ris_permanently_broken->{$seqno}
+
+                      # and is it a list?
                       && $ris_list_by_seqno->{$seqno}
+
+                      # is it an intact list? Added to fix issue b1298, b1366
+                      # but this can switch on and off and cause instability
+                      # so we have to be very careful...
                       && !$rhas_broken_list->{$seqno}
-                      && !( $has_vtc2 && $rhas_list->{$seqno} );
+
+                      # ... in particular, having -vtc=2 can lead to
+                      # instability in some cases because it can cause
+                      # 'has_broken_list' to turn on and off.  This check fixes
+                      # b1539, but can lead to excessively long lines in
+                      # unusual cases.
+                      # FIXME: see c524 for possible workarounds.
+                      && !( $has_vtc2 && $rhas_list->{$seqno} )
+
+                      # NOTE: Previously we skipped if -iob was set, but
+                      # this is not strictly necessary.
+                      # && !$rOpts_ignore_old_breakpoints
+
+                      # and -vmll is NOT set; fixes b1325, b1537
+                      # In general, -vmll and -xlp are not a good combination.
+                      && !$rOpts_variable_maximum_line_length;
 
                     my $K_c = $K_closing_container->{$seqno};
 
