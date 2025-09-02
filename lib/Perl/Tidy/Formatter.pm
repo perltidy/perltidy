@@ -675,7 +675,8 @@ BEGIN {
         _rbreak_at_old_commas_by_seqno_    => $i++,
 
         _rseqno_non_indenting_brace_by_ix_ => $i++,
-        _rmax_vertical_tightness_          => $i++,
+        _rmax_opening_vertical_tightness_  => $i++,
+        _rmax_closing_vertical_tightness_  => $i++,
 
         _no_vertical_tightness_flags_ => $i++,
         _last_vt_type_                => $i++,
@@ -1214,7 +1215,8 @@ sub new {
     $self->[_rbreak_at_old_commas_by_seqno_]    = {};
 
     $self->[_rseqno_non_indenting_brace_by_ix_] = {};
-    $self->[_rmax_vertical_tightness_]          = {};
+    $self->[_rmax_opening_vertical_tightness_]  = {};
+    $self->[_rmax_closing_vertical_tightness_]  = {};
 
     $self->[_no_vertical_tightness_flags_] = 0;
     $self->[_last_vt_type_]                = 0;
@@ -23642,16 +23644,17 @@ sub weld_nested_containers {
     # involves setting certain hash values which will be checked
     # later during formatting.
 
-    my $rLL                     = $self->[_rLL_];
-    my $rlines                  = $self->[_rlines_];
-    my $K_opening_container     = $self->[_K_opening_container_];
-    my $K_closing_container     = $self->[_K_closing_container_];
-    my $rK_next_seqno_by_K      = $self->[_rK_next_seqno_by_K_];
-    my $rblock_type_of_seqno    = $self->[_rblock_type_of_seqno_];
-    my $ris_asub_block          = $self->[_ris_asub_block_];
-    my $rmax_vertical_tightness = $self->[_rmax_vertical_tightness_];
-    my $ris_list_by_seqno       = $self->[_ris_list_by_seqno_];
-    my $rhas_list               = $self->[_rhas_list_];
+    my $rLL                  = $self->[_rLL_];
+    my $rlines               = $self->[_rlines_];
+    my $K_opening_container  = $self->[_K_opening_container_];
+    my $K_closing_container  = $self->[_K_closing_container_];
+    my $rK_next_seqno_by_K   = $self->[_rK_next_seqno_by_K_];
+    my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
+    my $ris_asub_block       = $self->[_ris_asub_block_];
+    my $ris_list_by_seqno    = $self->[_ris_list_by_seqno_];
+    my $rhas_list            = $self->[_rhas_list_];
+    my $rmax_opening_vertical_tightness =
+      $self->[_rmax_opening_vertical_tightness_];
 
     my $rOpts_asbl = $rOpts->{'opening-anonymous-sub-brace-on-new-line'};
 
@@ -23836,7 +23839,7 @@ sub weld_nested_containers {
             && $iline_ic == $iline_io
             && $opening_vertical_tightness{$token_oo} )
         {
-            $rmax_vertical_tightness->{$outer_seqno} = 0;
+            $rmax_opening_vertical_tightness->{$outer_seqno} = 0;
         }
 
 ##      Available for possible future use:
@@ -26390,7 +26393,9 @@ sub is_fragile_block_type {
         my $ris_permanently_broken     = $self->[_ris_permanently_broken_];
         my $ris_list_by_seqno          = $self->[_ris_list_by_seqno_];
         my $rhas_broken_list           = $self->[_rhas_broken_list_];
-        my $rhas_list                  = $self->[_rhas_list_];
+        my $ris_broken_container       = $self->[_ris_broken_container_];
+        my $rmax_closing_vertical_tightness =
+          $self->[_rmax_closing_vertical_tightness_];
 
         #----------------------------------
         # Loop over tokens on this line ...
@@ -26437,6 +26442,24 @@ sub is_fragile_block_type {
                         }
                     }
 
+                    # b1539 Alternate Fix #4:
+                    # Turn off vtc=2 locally to avoid causing a small list to
+                    # form a new one-line block in a permanently broken list,
+                    # and thus causing the interrupted_list_rule to oscillate.
+                    # Limit this to containers where the opening and closing
+                    # input line numbers differ by less than 3. This should
+                    # catch all cases of significance.
+                    if (   $has_vtc2
+                        && $ris_list_by_seqno->{$seqno}
+                        && $ris_broken_container->{$seqno}
+                        && $ris_broken_container->{$seqno} < 3
+                        && @stack
+                        && defined( $stack[-1]->[_interrupted_list_rule_] )
+                        && $stack[-1]->[_interrupted_list_rule_] == 0 )
+                    {
+                        $rmax_closing_vertical_tightness->{$seqno} = 0;
+                    }
+
                     # Set a flag if the 'Interrupted List Rule' will be applied
                     # for this container. An interrupted list is a list which
                     # must be processed in multiple batches. This makes it
@@ -26448,35 +26471,36 @@ sub is_fragile_block_type {
                     # - but it introduces a risk of instability.
                     # So we have to be very careful here.
 
-                    my $interrupted_list_rule =
+                    # Set $interrupted_list_rule as follows:
+                    #   undef - not an interrupted list
+                    #   0  - skipped interrupted list: has broken sublist
+                    #   1  - processed interrupted list: no broken sublists
 
-                      # Will this container be processed in multiple batches?
-                      # That makes adjusting xlp indentation difficult.
-                      $ris_permanently_broken->{$seqno}
+                    my $interrupted_list_rule;
+                    if (
+                        # Will this container be processed in multiple batches?
+                        # That makes adjusting xlp indentation difficult.
+                        $ris_permanently_broken->{$seqno}
 
-                      # and is it a list?
-                      && $ris_list_by_seqno->{$seqno}
+                        # and is it a list?
+                        && $ris_list_by_seqno->{$seqno}
 
-                      # is it an intact list? Added to fix issue b1298, b1366
-                      # but this can switch on and off and cause instability
-                      # so we have to be very careful...
-                      && !$rhas_broken_list->{$seqno}
+                        # NOTE: Previously we skipped if -iob was set, but
+                        # this is not strictly necessary.
+                        # && !$rOpts_ignore_old_breakpoints
 
-                      # ... in particular, having -vtc=2 can lead to
-                      # instability in some cases because it can cause
-                      # 'has_broken_list' to turn on and off.  This check fixes
-                      # b1539, but can lead to excessively long lines in
-                      # unusual cases.
-                      # FIXME: see c524 for possible workarounds.
-                      && !( $has_vtc2 && $rhas_list->{$seqno} )
+                        # and -vmll is NOT set; fixes b1325, b1537
+                        # In general, -vmll and -xlp are not a good combination.
+                        && !$rOpts_variable_maximum_line_length
+                      )
+                    {
 
-                      # NOTE: Previously we skipped if -iob was set, but
-                      # this is not strictly necessary.
-                      # && !$rOpts_ignore_old_breakpoints
-
-                      # and -vmll is NOT set; fixes b1325, b1537
-                      # In general, -vmll and -xlp are not a good combination.
-                      && !$rOpts_variable_maximum_line_length;
+                        # Is it an intact list? Added to fix issue b1298, b1366
+                        # but this can switch on and off and cause instability
+                        # so we have to be very careful...
+                        $interrupted_list_rule =
+                          !$rhas_broken_list->{$seqno} ? 1 : 0;
+                    }
 
                     my $K_c = $K_closing_container->{$seqno};
 
@@ -26510,7 +26534,6 @@ sub is_fragile_block_type {
                         $K_c,
                         $interrupted_list_rule
                     ];
-
                 }
 
                 #--------------------
@@ -44631,10 +44654,14 @@ sub set_vertical_tightness_flags {
                 $ovt = 0;
             }
 
-            # The flag '_rmax_vertical_tightness_' avoids welding conflicts.
-            if ( defined( $self->[_rmax_vertical_tightness_]->{$seqno} ) ) {
+            # '_rmax_opening_vertical_tightness_' avoids welding conflicts.
+            if (
+                defined( $self->[_rmax_opening_vertical_tightness_]->{$seqno} )
+              )
+            {
                 $ovt =
-                  min( $ovt, $self->[_rmax_vertical_tightness_]->{$seqno} );
+                  min( $ovt,
+                    $self->[_rmax_opening_vertical_tightness_]->{$seqno} );
             }
 
             if (
@@ -44702,6 +44729,15 @@ sub set_vertical_tightness_flags {
                 && $self->[_ris_bare_trailing_comma_by_seqno_]->{$seqno} )
             {
                 $cvt = 0;
+            }
+
+            if (
+                defined( $self->[_rmax_closing_vertical_tightness_]->{$seqno} )
+              )
+            {
+                $cvt =
+                  min( $cvt,
+                    $self->[_rmax_closing_vertical_tightness_]->{$seqno} );
             }
 
             # Fix c473, in which a qwaf paren joined a backslash, like this:

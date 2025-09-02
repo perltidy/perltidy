@@ -8693,18 +8693,26 @@ print Data::Dumper->Dump(
                         host => $hostname,
 
                         fanart =>
-                         get_art( $images, 'fanart', 'backdrops' ),
+                         get_art(
+                                  $images, 'fanart', 'backdrops'
+                         ),
                         coverfile =>
-                         get_art( $images, 'coverart', 'posters' ),
+                         get_art(
+                                  $images, 'coverart', 'posters'
+                         ),
                    };
                   my $movie_data
                    = {
                         host => $hostname,
 
                         fanart =>
-                         get_art( $images, 'fanart', 'backdrops' ),
+                         get_art(
+                                  $images, 'fanart', 'backdrops'
+                         ),
                         coverfile =>
-                         get_art( $images, 'coverart', 'posters' ),
+                         get_art(
+                                  $images, 'coverart', 'posters'
+                         ),
                    };
 
 ==> b1540 <==
