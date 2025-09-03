@@ -13314,6 +13314,26 @@ has child_projects => (
 --brace-tightness=0
 --keep-old-breakpoints-before='->'
 
+==> b1541.in <==
+$x = &R::call( "sum",
+               (  1,
+                  2,
+                  3 ),
+);
+
+$x = &R::call( "sum",
+               (  1,
+                  2,
+                  3
+               ),
+);
+
+==> b1541.par <==
+--paren-vertical-tightness=1
+--extended-line-up-parentheses
+--paren-vertical-tightness-closing=2
+--keep-old-breakpoints-after=','
+
 ==> b156.in <==
 # State 1
 {

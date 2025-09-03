@@ -26442,17 +26442,14 @@ sub is_fragile_block_type {
                         }
                     }
 
-                    # b1539 Alternate Fix #4:
-                    # Turn off vtc=2 locally to avoid causing a small list to
-                    # form a new one-line block in a permanently broken list,
-                    # and thus causing the interrupted_list_rule to oscillate.
-                    # Limit this to containers where the opening and closing
-                    # input line numbers differ by less than 3. This should
-                    # catch all cases of significance.
+                    # b1539 fix; see also b1541:
+                    # Turn off vtc=2 locally to avoid causing a list to form a
+                    # one-line block in a broken list, and thus causing the
+                    # interrupted_list_rule to oscillate.
                     if (   $has_vtc2
                         && $ris_list_by_seqno->{$seqno}
                         && $ris_broken_container->{$seqno}
-                        && $ris_broken_container->{$seqno} < 3
+                        && !$ris_permanently_broken->{$seqno}
                         && @stack
                         && defined( $stack[-1]->[_interrupted_list_rule_] )
                         && $stack[-1]->[_interrupted_list_rule_] == 0 )
@@ -26499,7 +26496,7 @@ sub is_fragile_block_type {
                         # but this can switch on and off and cause instability
                         # so we have to be very careful...
                         $interrupted_list_rule =
-                          !$rhas_broken_list->{$seqno} ? 1 : 0;
+                          $rhas_broken_list->{$seqno} ? 0 : 1;
                     }
 
                     my $K_c = $K_closing_container->{$seqno};
