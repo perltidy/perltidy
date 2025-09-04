@@ -13334,6 +13334,57 @@ $x = &R::call( "sum",
 --paren-vertical-tightness-closing=2
 --keep-old-breakpoints-after=','
 
+==> b1542.in <==
+ $node->{_subs} =
+ {   getNode =>
+       [ 0, $node, $node, ],
+     getVars =>
+       [ undef, @newnodes, ],
+ };
+
+ $node->{_subs} =
+ {getNode => [ 0, $node, $node, ],
+  getVars => [ undef, @newnodes, ],
+ };
+
+==> b1542.par <==
+--maximum-line-length=35
+--indent-columns=1
+--extended-line-up-parentheses
+--break-before-hash-brace=2
+--square-bracket-vertical-tightness-closing=2
+--break-before-hash-brace-and-indent=1
+--brace-vertical-tightness=1
+--keep-old-breakpoints-before='}'
+
+==> b1543.in <==
+    my @newnodes = (
+        bless( { guest_user => 0 },
+               'FakeNode'
+        ),
+        bless( { guest_user => 1 },
+               'FakeNode'
+        )
+    );
+
+    my @newnodes = (
+            bless(
+                 { guest_user => 0 },
+                 'FakeNode'
+            ),
+            bless(
+                 { guest_user => 1 },
+                 'FakeNode'
+            )
+    );
+
+==> b1543.par <==
+--maximum-line-length=37
+--paren-vertical-tightness=2
+--extended-line-up-parentheses
+--brace-vertical-tightness-closing=1
+--keep-old-breakpoints-after=','
+
 ==> b156.in <==
 # State 1
 {

@@ -22558,7 +22558,8 @@ sub check_for_old_break {
 
             # Update the permanently broken flag for a non-sequenced token.
             # First added in b1538; soft break check added for b1540.
-            if ( !$is_soft_keep_break_type{$type} ) {
+            # Deactivated for b1543 to avoid problems with -xlp
+            if ( 0 && !$is_soft_keep_break_type{$type} ) {
                 my $seqno_parent           = $self->parent_seqno_by_K($KK);
                 my $ris_permanently_broken = $self->[_ris_permanently_broken_];
                 if ( !$ris_permanently_broken->{$seqno_parent} ) {
@@ -22608,7 +22609,8 @@ EOM
 
                 # Update the permanently broken flag for a sequenced token.
                 # First added in b1538; soft break check added for b1540.
-                if ( !$is_soft_keep_break_type{$type} ) {
+                # Removed for b1541, b1542 to avoid problems with -xlp
+                if ( 0 && !$is_soft_keep_break_type{$type} ) {
                     my $seqno_parent =
                       (      $is_opening_type{$type} && $break_after
                           || $is_closing_type{$type} && !$break_after )

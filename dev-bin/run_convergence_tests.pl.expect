@@ -8755,6 +8755,44 @@ $x = &R::call( "sum",
                   3 ),
 );
 
+==> b1542 <==
+ $node->{_subs} =
+ {   getNode =>
+       [ 0, $node, $node, ],
+     getVars =>
+       [ undef, @newnodes, ],
+ };
+
+ $node->{_subs} =
+ {   getNode =>
+       [ 0, $node, $node, ],
+     getVars =>
+       [ undef, @newnodes, ],
+ };
+
+==> b1543 <==
+    my @newnodes = (
+            bless(
+                 { guest_user => 0 },
+                 'FakeNode'
+            ),
+            bless(
+                 { guest_user => 1 },
+                 'FakeNode'
+            )
+    );
+
+    my @newnodes = (
+            bless(
+                 { guest_user => 0 },
+                 'FakeNode'
+            ),
+            bless(
+                 { guest_user => 1 },
+                 'FakeNode'
+            )
+    );
+
 ==> b156 <==
 # State 1
 {
