@@ -116,7 +116,7 @@ sub DESTROY {
 sub Die {
     my ($msg) = @_;
     Perl::Tidy::Die($msg);
-    croak "unexpected return from Perl::Tidy::Die";
+    croak "unexpected return from Perl::Tidy::Die\n";
 }
 
 sub Warn {
@@ -183,6 +183,28 @@ sub Exit {
     Perl::Tidy::Exit($msg);
     croak "unexpected return from Perl::Tidy::Exit";
 }
+
+sub is_keyword {
+
+    # Given:
+    #   $word = a string to test
+    # Return:
+    #   true if $word is a 'keyword' (like 'if', 'else', etc)
+    #   false otherwise
+    my $word = shift;
+    return Perl::Tidy::Tokenizer::is_keyword($word);
+} ## end sub is_keyword
+
+sub is_valid_token_type {
+
+    # Given:
+    #   $word = a string to test
+    # Return:
+    #   true if $word is a valid perltidy token type, like '+', '*', 'k' ...
+    #   false otherwise
+    my $type = shift;
+    return Perl::Tidy::Tokenizer::is_valid_token_type($type);
+} ## end sub is_valid_token_type
 
 # Global variables ...
 my (
@@ -3097,27 +3119,47 @@ sub initialize_outdent_keyword {
 
     # FUTURE: if not a keyword, assume that it is an identifier
     foreach (@okw) {
-        if ( Perl::Tidy::Tokenizer::is_keyword($_) ) {
-            $outdent_keyword{$_} = 1;
+        if ( !is_keyword($_) ) {
+            Die("Unexpected string '$_' in -okwl list; not a perl keyword\n");
         }
-        else {
-            Warn("ignoring '$_' in -okwl list; not a perl keyword");
-        }
+        $outdent_keyword{$_} = 1;
     }
     return;
 } ## end sub initialize_outdent_keyword
 
 sub initialize_keyword_paren_inner_tightness {
 
+    # Process and check a -kpitl=string, even if it will not be needed
+    my $kpitl_key = 'keyword-paren-inner-tightness-list';
+    my @kpit      = split_words( $rOpts->{$kpitl_key} );
+    if ( !@kpit ) {
+        @kpit = qw( if elsif unless while until for foreach );    # defaults
+    }
+    else {
+
+        # Do some very simple checks for invalid keywords and user-defined
+        # identifiers.
+        my @unknown_words;
+        foreach my $word (@kpit) {
+            if ( $word =~ /^\d/ || $word =~ /[^\w\:]/ ) {
+                push @unknown_words, $word;
+            }
+        }
+
+        if (@unknown_words) {
+            my $num = @unknown_words;
+            local $LIST_SEPARATOR = SPACE;
+            Die(<<EOM);
+$num invalid functions were input with --$kpitl_key :
+@unknown_words
+EOM
+        }
+    }
+
     # Setup hash for -kpit option
     %keyword_paren_inner_tightness = ();
     my $kpit_value = $rOpts->{'keyword-paren-inner-tightness'};
     if ( defined($kpit_value) && $kpit_value != 1 ) {
-        my @kpit =
-          split_words( $rOpts->{'keyword-paren-inner-tightness-list'} );
-        if ( !@kpit ) {
-            @kpit = qw( if elsif unless while until for foreach );    # defaults
-        }
 
         # we will allow keywords and user-defined identifiers
         foreach (@kpit) {
@@ -3604,7 +3646,7 @@ EOM
 
     my @unknown_types;
     foreach my $type (@list) {
-        if ( !Perl::Tidy::Tokenizer::is_valid_token_type($type) ) {
+        if ( !is_valid_token_type($type) ) {
             push @unknown_types, $type;
         }
     }
@@ -4086,7 +4128,8 @@ sub initialize_trailing_comma_break_rules {
     # uses OPENING tokens.
     my @all_keys = qw< ) ] } >;
 
-    my $option = $rOpts->{'break-at-trailing-comma-types'};
+    my $opt_name = 'break-at-trailing-comma-types';
+    my $option   = $rOpts->{$opt_name};
 
     if ($option) {
         $option =~ s/^\s+//;
@@ -4189,7 +4232,7 @@ sub initialize_trailing_comma_break_rules {
         # check for conflicting signed options
         if ($error_message) {
             Die(<<EOM);
-Error parsing --want-trailing-commas='$option':
+Error parsing --$opt_name='$option':
 $error_message
 EOM
         }
@@ -4287,7 +4330,8 @@ sub initialize_trailing_comma_rules {
     # uses OPENING tokens.
     my @all_keys = qw< ) ] } >;
 
-    my $option = $rOpts->{'want-trailing-commas'};
+    my $opt_name = 'want-trailing-commas';
+    my $option   = $rOpts->{$opt_name};
 
     if ($option) {
         $option =~ s/^\s+//;
@@ -4459,7 +4503,7 @@ sub initialize_trailing_comma_rules {
 
         if ($error_message) {
             Die(<<EOM);
-Error parsing --want-trailing-commas='$option':
+Error parsing --$opt_name='$option':
 $error_message
 EOM
         }
@@ -7427,7 +7471,8 @@ sub initialize_closing_side_comments {
 
 sub initialize_missing_else_comment {
 
-    my $comment = $rOpts->{'add-missing-else-comment'};
+    my $opt_name = 'add-missing-else-comment';
+    my $comment  = $rOpts->{$opt_name};
     if ( !$comment ) {
         $comment = '##FIX' . 'ME - added with perltidy -ame';
     }
@@ -7437,6 +7482,10 @@ sub initialize_missing_else_comment {
         $comment =~ s/\s+$//;
         $comment =~ s/\n/ /g;
         if ( substr( $comment, 0, 1 ) ne '#' ) {
+##FIXME: eventually convert Warn to Die
+            Warn(<<EOM);
+For --$opt_name=string, the string must begin with '#'
+EOM
             $comment = '#' . $comment;
         }
     }
@@ -7683,11 +7732,11 @@ sub make_block_pattern {
         elsif ( $i eq ':' ) {
             push @words, '\w+:';
         }
-        elsif ( $i =~ /^\w/ ) {
+        elsif ( $i =~ /^\w+$/ && $i !~ /^\d/ ) {
             push @words, $i;
         }
         else {
-            Warn("unrecognized block type $i after $abbrev, ignoring\n");
+            Die("unrecognized block type '$i' after $abbrev\n");
         }
     }
 
@@ -7733,7 +7782,8 @@ sub make_static_side_comment_pattern {
 sub make_closing_side_comment_prefix {
 
     # Be sure we have a valid closing side comment prefix
-    my $csc_prefix = $rOpts->{'closing-side-comment-prefix'};
+    my $opt_name   = 'closing-side-comment-prefix';
+    my $csc_prefix = $rOpts->{$opt_name};
     my $csc_prefix_pattern;
     if ( !defined($csc_prefix) ) {
         $csc_prefix         = '## end';
@@ -7742,6 +7792,9 @@ sub make_closing_side_comment_prefix {
     else {
         my $test_csc_prefix = $csc_prefix;
         if ( $test_csc_prefix !~ /^#/ ) {
+            Die(<<EOM);
+For --$opt_name=string, the string must begin with '#'
+EOM
             $test_csc_prefix = '#' . $test_csc_prefix;
         }
 
@@ -7781,7 +7834,7 @@ EOM
             $csc_prefix_pattern = $test_csc_prefix_pattern;
         }
     }
-    $rOpts->{'closing-side-comment-prefix'} = $csc_prefix;
+    $rOpts->{$opt_name} = $csc_prefix;
     $closing_side_comment_prefix_pattern = $csc_prefix_pattern;
     return;
 } ## end sub make_closing_side_comment_prefix
@@ -27469,9 +27522,8 @@ sub process_all_lines {
         if (   $rOpts_kgb_size_min && $rOpts_kgb_size_min !~ /^\d+$/
             || $rOpts_kgb_size_max && $rOpts_kgb_size_max !~ /^\d+$/ )
         {
-            Warn(<<EOM);
+            Die(<<EOM);
 Unexpected value for -kgbs: '$rOpts_kgb_size'; expecting 'min' or 'min.max';
-ignoring all -kgb flags
 EOM
 
             # Turn this option off so that this message does not keep repeating

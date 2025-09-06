@@ -39,7 +39,7 @@ BEGIN {
     $rparams = {
         'ame' => <<'----------',
 --add-missing-else
---add-missing-else-comment="NEED COMMENT"
+--add-missing-else-comment="## NEED COMMENT"
 ----------
         'c269'   => "-ame",
         'def'    => "",
@@ -390,7 +390,7 @@ sub hello {
     if    ( $level == 3 ) { $val = $global{'section'} }
     elsif ( $level == 2 ) { $val = $global{'chapter'} }
     else {
-        #NEED COMMENT
+        ## NEED COMMENT
     }
 #14...........
         },

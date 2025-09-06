@@ -861,7 +861,9 @@ EOM
 
         my @operators =
           qw(% + - * / x != == >= <= =~ !~ < > | & = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=);
-        my @keywords = qw(my our local do while if  garbage1 34 );
+        my @keywords = qw(
+          my our local do return while if unless and or err for foreach until
+        );
         my @colors   = qw(
           ForestGreen
           SaddleBrown
@@ -1043,6 +1045,7 @@ EOM
         ###################################################################
         my @q = qw(
           DEBUG
+          add-missing-else-comment
           assert-tidy
           assert-untidy
           backup-and-modify-in-place
@@ -1091,6 +1094,19 @@ EOM
           format-skipping-from-start
           code-skipping-from-start
           warn-unique-keys
+
+          backlink
+          cachedir
+          html-linked-style-sheet
+          html-src-extension
+          html-toc-extension
+          htmlroot
+          libpods
+          perl-syntax-check-flags
+          podpath
+          podroot
+          profile
+          title
 
         );
 

@@ -1,2 +1,2 @@
 --add-missing-else
---add-missing-else-comment="NEED COMMENT"
+--add-missing-else-comment="## NEED COMMENT"

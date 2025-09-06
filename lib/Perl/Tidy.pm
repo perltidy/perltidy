@@ -4811,6 +4811,13 @@ sub make_grep_alias_string {
         $exclude_string =~ s/\s+$//;
         my @q = split /\s+/, $exclude_string;
         @is_excluded_word{@q} = (1) x scalar(@q);
+        foreach my $word (@q) {
+            next if ( $word eq '*' );
+            if ( $word =~ /^\d/ || $word =~ /[^\w]/ ) {
+                my $opt_name = 'grep-alias-exclusion-list';
+                Die("unexpected word in --$opt_name: '$word'\n");
+            }
+        }
     }
 
     # The special option -gaxl='*' removes all defaults
@@ -4831,10 +4838,9 @@ sub make_grep_alias_string {
 
     foreach my $word (@word_list) {
         if ($word) {
-            if ( $word !~ /^\w[\w\d]*$/ ) {
-                Warn(
-                    "unexpected word in --grep-alias-list: '$word' - ignoring\n"
-                );
+            if ( $word =~ /^\d/ || $word =~ /[^\w]/ ) {
+                my $opt_name = 'grep-alias-list';
+                Die("unexpected word in --$opt_name: '$word'\n");
             }
             if ( !$seen{$word} && !$is_excluded_word{$word} ) {
                 $seen{$word}++;
