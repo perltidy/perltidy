@@ -7482,8 +7482,7 @@ sub initialize_missing_else_comment {
         $comment =~ s/\s+$//;
         $comment =~ s/\n/ /g;
         if ( substr( $comment, 0, 1 ) ne '#' ) {
-##FIXME: eventually convert Warn to Die
-            Warn(<<EOM);
+            Die(<<EOM);
 For --$opt_name=string, the string must begin with '#'
 EOM
             $comment = '#' . $comment;
