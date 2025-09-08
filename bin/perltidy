@@ -2029,11 +2029,17 @@ whitespace, they will not be mistaken as hanging side comments.
 
 =item B<Closing Side Comments>
 
-A closing side comment is a special comment which perltidy can
-automatically create and place after the closing brace of a code block.
-They can be useful for code maintenance and debugging.  The command
-B<-csc> (or B<--closing-side-comments>) adds or updates closing side
-comments.  For example, here is a small code snippet
+Closing side comments are special comments which perltidy can automatically
+create and place after the closing braces of selected code blocks.  They can be
+useful for code maintenance and debugging. The control parameters are as
+follows.
+
+=over 4
+
+=item B<-csc>, or B<--closing-side-comments>
+
+The command B<-csc> (or B<--closing-side-comments>) adds or updates closing
+side comments.  For example, here is a small code snippet
 
         sub message {
             if ( !defined( $_[0] ) ) {
@@ -2060,13 +2066,16 @@ for the C<if> and C<else> blocks, because they were below the 6 line
 cutoff limit for adding closing side comments.  This limit may be
 changed with the B<-csci> command, described below.
 
-The command B<-dcsc> (or B<--delete-closing-side-comments>) reverses this
-process and removes these comments.
+=item B<-dcsc>, or B<--delete-closing-side-comments>
 
-Several commands are available to modify the behavior of these two basic
-commands, B<-csc> and B<-dcsc>:
+The command B<-dcsc> (or B<--delete-closing-side-comments>) removes these
+comments.  However, it only removes side comments which have the special
+prefix, which is C<'## end'> by default.
 
-=over 4
+If both B<-dcsc> and B<-csc> are included in the same run, then B<-dcsc>
+operates first to remove old closing side comments.  Then, B<-csc> operates
+to create new closing side comments according to the current parameter
+settings.
 
 =item B<-csci=n>, or B<--closing-side-comment-interval=n>
 
@@ -2086,15 +2095,6 @@ C<n=6>.  To illustrate:
 
 Now the C<if> and C<else> blocks are commented.  However, now this has
 become very cluttered.
-
-=item B<-cscp=string>, or B<--closing-side-comment-prefix=string>
-
-where string is the prefix used before the name of the block type.  The
-default prefix, shown above, is C<## end>.  This string will be added to
-closing side comments, and it will also be used to recognize them in
-order to update, delete, and format them.  Any comment identified as a
-closing side comment will be placed just a single space to the right of
-its closing brace.
 
 =item B<-cscl=string>, or B<--closing-side-comment-list>
 
@@ -2170,25 +2170,6 @@ side comments.
 If B<n=1> is used, the results will be the same as B<n=2> whenever the
 resulting line length is less than the maximum allowed.
 
-=item B<-cscb>, or B<--closing-side-comments-balanced>
-
-When using closing-side-comments, and the closing-side-comment-maximum-text
-limit is exceeded, then the comment text must be abbreviated.
-It is terminated with three dots if the B<-cscb> flag is negated:
-
-  perltidy -csc -ncscb
-  } ## end foreach my $foo (sort { $b cmp $a ...
-
-This causes a problem with older editors which do not recognize comments
-because they cannot "bounce" around in the text correctly.  The B<-cscb>
-flag tries to help them by appending appropriate terminal balancing structures:
-
-  perltidy -csc -cscb
-  } ## end foreach my $foo (sort { $b cmp $a ... })
-
-The default is B<-cscb>.
-
-
 =item B<-cscw>, or B<--closing-side-comment-warnings>
 
 This parameter is intended to help make the initial transition to the use of
@@ -2202,6 +2183,34 @@ line for later attention.
 The intent is to avoid clobbering existing hand-written side comments
 which happen to match the pattern of closing side comments. This flag
 should only be needed on the first run with B<-csc>.
+
+=item B<-cscp=string>, or B<--closing-side-comment-prefix=string>
+
+This parameter changes the prefix which is used for closing side comments.  The
+default prefix is C<## end>.  All closing side comments begin with this prefix,
+and it is used to recognize them in order to update, delete, and format them.
+Any comment identified as a closing side comment will be placed just a single
+space to the right of its closing brace.
+
+This parameter is available in case the default causes a conflict with other
+software, but it should not normally be used because it can complicate keeping
+code updated in the event that code formatted with different prefixes are
+mixed.  The problem is that in any formatting pass, the various B<-csc*>
+parameters are restricted to working with a single closing side comment prefix.
+So if code has closing side comments with differing prefixes, it will take
+multiple passes to convert them back to a single new prefix.
+
+For a simple example, suppose we have code which was formatted with prefix
+C<-cscp='## END'>, and we want to convert those comments back to the default
+prefix. It would take two passes, such as:
+
+Pass 1 would find and remove old closing side comments with prefix C<'## END'>:
+
+   perltidy -cscp='## END' -dcsc oldfile -o tmpfile
+
+Pass 2 could then adds new comments with the default prefix:
+
+   perltidy -csc tmpfile -o newfile
 
 =back
 
@@ -2235,7 +2244,7 @@ comments will become incorrect as the code is updated.
 
 =item *
 
-If you edit the closing side comments generated by perltidy, you must also
+If you edit the closing side comments generated by perltidy, you should also
 change the prefix to be different from the closing side comment prefix.
 Otherwise, your edits will be lost when you rerun perltidy with B<-csc>.   For
 example, you could simply change C<## end> to be C<## End>, since the test is
