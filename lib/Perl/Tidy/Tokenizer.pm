@@ -6837,7 +6837,11 @@ BEGIN {
     # after package NAMESPACE, so expecting TERM)
     # Fix for c250: add new type 'S' for sub (not expecting operator)
     my @q = qw#
-      ; ! + x & ?  F J - p / Y : % f U ~ A G j L P S * . | ^ < = [ m { \ > t
+      ; ! + x & ?  F J - p / Y : % f U ~ A G j L P S * . | ^ < = [ m {
+      #;
+    push @q, "\\";
+    push @q, qw#
+      > t
       || >= != mm *= => .. !~ == && |= .= pp -= =~ += <= %= ^= x= ~~ ** << /=
       &= // >> ~. &. |. ^.
       ... **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~
