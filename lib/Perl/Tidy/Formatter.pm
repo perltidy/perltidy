@@ -5735,8 +5735,9 @@ EOM
 
         # These are the only characters which can (currently) form special
         # variables, like $^W: (issue c066, c068).
-        @q =
-          qw{ ? A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ \ ] ^ _ };
+        @q = qw{ ? A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ };
+        push @q, "\\";
+        push @q, ( qw{  ] ^ _ } );
         @is_special_variable_char{@q} = (1) x scalar(@q);
 
         @q = qw( 0 1 2 3 4 5 6 7 8 9 );
@@ -15993,7 +15994,11 @@ BEGIN {
       .. :: << >> ** && .. || // -> => += -= .= %= &= |= ^= *= <>
       ( ) <= >= == =~ !~ != ++ -- /= x=
       ... **= <<= >>= &&= ||= //= <=>
-      + - / * | % ! x ~ = \ ? : . < > ^ &
+      + - / * | % ! x ~ =
+      #;
+    push @q, "\\";
+    push @q, qw#
+      ? : . < > ^ &
       #;
     push @q, ',';
     @is_ascii_type{@q} = (1) x scalar(@q);
