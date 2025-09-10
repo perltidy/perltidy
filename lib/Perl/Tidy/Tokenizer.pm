@@ -8855,8 +8855,9 @@ sub do_scan_package {
 
         # These are the only characters which can (currently) form special
         # variables, like $^W: (issue c066).
-        my @q =
-          qw{ ? A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ \ ] ^ _ };
+        my @q = qw{ ? A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ };
+        push @q, "\\";
+        push @q, qw{ ] ^ _ };
         @is_special_variable_char{@q} = (1) x scalar(@q);
     } ## end BEGIN
 
