@@ -11736,9 +11736,17 @@ BEGIN {
     # make a hash of all valid token types for self-checking the tokenizer
     # (adding NEW_TOKENS : select a new character and add to this list)
     # fix for c250: added new token type 'P' and 'S'
+#    my @valid_token_types = qw#
+#      A b C G L R f h Q k t w i q n p m F pp mm U j J Y Z v P S
+#      { } ( ) [ ] ; + - / * | % ! x ~ = \ ? : . < > ^ &
+#      #;
     my @valid_token_types = qw#
       A b C G L R f h Q k t w i q n p m F pp mm U j J Y Z v P S
-      { } ( ) [ ] ; + - / * | % ! x ~ = \ ? : . < > ^ &
+      { } ( ) [ ] ; + - / * | % ! x ~ =
+      #;
+    push @valid_token_types, "\\";
+    push @valid_token_types, qw#
+      ? : . < > ^ &
       #;
     push( @valid_token_types, @digraphs );
     push( @valid_token_types, @trigraphs );
