@@ -4702,7 +4702,10 @@ sub initialize_whitespace_hashes {
       **= &&= ||= //= <=> A k f w F n C Y U G v P S ^^
       #;
 
-    my @spaces_left_side = qw< t ! ~ m p { \ h pp mm Z j >;
+      #my @spaces_left_side = qw< t ! ~ m p { \ h pp mm Z j >;
+    my @spaces_left_side = qw< t ! ~ m p { >;
+    push @spaces_left_side, "\\";
+    push @spaces_left_side, qw< h pp mm Z j >;
     push( @spaces_left_side, '#' );    # avoids warning message
 
     # c349: moved **= from @spaces_right_side to @spaces_both_sides
