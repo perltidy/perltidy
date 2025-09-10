@@ -874,8 +874,6 @@ EOM
           black
           white
           red
-
-          bubba
         );
 
         my %option_range = (
@@ -1167,8 +1165,10 @@ EOM
                         $count = $imax / 2 + 1;
                         if ( $count > 10 ) { $count = 10 }
                     }
+                    my %seen;
                     foreach my $i ( 1 .. $count ) {
                         my $index = $imax > 0 ? int( rand($imax) + 0.5 ) : 0;
+                        next if ( $seen{$index}++ );
                         if ( $i > 1 ) { $string .= ' ' }
                         $string .= $rrange->[$index];
                     }
