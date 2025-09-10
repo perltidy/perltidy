@@ -6837,7 +6837,11 @@ BEGIN {
     # after package NAMESPACE, so expecting TERM)
     # Fix for c250: add new type 'S' for sub (not expecting operator)
     my @q = qw#
-      ; ! + x & ?  F J - p / Y : % f U ~ A G j L P S * . | ^ < = [ m { \ > t
+      ; ! + x & ?  F J - p / Y : % f U ~ A G j L P S * . | ^ < = [ m {
+      #;
+    push @q, "\\";
+    push @q, qw#
+      > t
       || >= != mm *= => .. !~ == && |= .= pp -= =~ += <= %= ^= x= ~~ ** << /=
       &= // >> ~. &. |. ^.
       ... **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~
@@ -8851,8 +8855,9 @@ sub do_scan_package {
 
         # These are the only characters which can (currently) form special
         # variables, like $^W: (issue c066).
-        my @q =
-          qw{ ? A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ \ ] ^ _ };
+        my @q = qw{ ? A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ };
+        push @q, "\\";
+        push @q, qw{ ] ^ _ };
         @is_special_variable_char{@q} = (1) x scalar(@q);
     } ## end BEGIN
 
@@ -11733,7 +11738,11 @@ BEGIN {
     # fix for c250: added new token type 'P' and 'S'
     my @valid_token_types = qw#
       A b C G L R f h Q k t w i q n p m F pp mm U j J Y Z v P S
-      { } ( ) [ ] ; + - / * | % ! x ~ = \ ? : . < > ^ &
+      { } ( ) [ ] ; + - / * | % ! x ~ =
+      #;
+    push @valid_token_types, "\\";
+    push @valid_token_types, qw#
+      ? : . < > ^ &
       #;
     push( @valid_token_types, @digraphs );
     push( @valid_token_types, @trigraphs );
@@ -11910,7 +11919,11 @@ BEGIN {
     my @value_requestor_type = qw#
       L { ( [ ~ !~ =~ ; . .. ... A : && ! || // = + - x
       **= += -= .= /= *= %= x= &= |= ^= <<= >>= &&= ||= //=
-      <= >= == != => \ > < % * / ? & | ** <=> ~~ !~~ <<~
+      <= >= == != =>
+      #;
+    push @value_requestor_type, "\\";
+    push @value_requestor_type, qw#
+      > < % * / ? & | ** <=> ~~ !~~ <<~
       f F pp mm Y p m U J G j >> << ^ t
       ~. ^. |. &. ^.= |.= &.= ^^
       #;
