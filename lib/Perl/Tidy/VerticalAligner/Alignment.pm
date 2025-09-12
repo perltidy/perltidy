@@ -9,7 +9,7 @@ package Perl::Tidy::VerticalAligner::Alignment;
 use strict;
 use warnings;
 
-our $VERSION = '20250711.01';
+our $VERSION = '20250912';
 
 sub new {
 
@@ -24,7 +24,7 @@ sub new {
 
     my $self = bless $rhash, $class;
     return $self;
-}
+} ## end sub new
 
 sub AUTOLOAD {
 

@@ -1,6 +1,9 @@
 # Perltidy Change Log
 
-## 2025 07 11.01
+## 2025 09 12
+
+    - Fix git #191, where a new check to escape whitespace in a qw() quote
+      in perl-5.43.2 caused Perl::Tidy to emit unwanted warning messages.
 
     - A new output field for the --dump-block-summary command gives
       the number of lines of comments and pod in a block.  For subs and

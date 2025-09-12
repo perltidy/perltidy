@@ -76,7 +76,7 @@ use constant BACKSLASH    => q{\\};
 use Carp;
 use English    qw( -no_match_vars );
 use List::Util qw( min max first );    # min, max first are in Perl 5.8
-our $VERSION = '20250711.01';
+our $VERSION = '20250912';
 
 # List of hash keys to prevent -duk from listing them.
 # 'Unicode::Collate::Locale' is in the data for scan_unique_keys
@@ -4702,7 +4702,7 @@ sub initialize_whitespace_hashes {
       **= &&= ||= //= <=> A k f w F n C Y U G v P S ^^
       #;
 
-      #my @spaces_left_side = qw< t ! ~ m p { \ h pp mm Z j >;
+    #my @spaces_left_side = qw< t ! ~ m p { \ h pp mm Z j >;
     my @spaces_left_side = qw< t ! ~ m p { >;
     push @spaces_left_side, "\\";
     push @spaces_left_side, qw< h pp mm Z j >;
@@ -5740,7 +5740,7 @@ EOM
         # variables, like $^W: (issue c066, c068).
         @q = qw{ ? A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ };
         push @q, "\\";
-        push @q, ( qw{  ] ^ _ } );
+        push @q, (qw{  ] ^ _ });
         @is_special_variable_char{@q} = (1) x scalar(@q);
 
         @q = qw( 0 1 2 3 4 5 6 7 8 9 );
@@ -25566,7 +25566,22 @@ sub extended_ci {
             && $rLL->[$KK]->[_TOKEN_] eq '}'
             && $rLL->[$KK]->[_CI_LEVEL_] )
         {
-            $block_with_ci = 0;
+
+            # Patch c516 skip this for do { .. } while
+            my $is_do_while;
+            if ( $block_type eq 'do' ) {
+                my $Knext = $self->K_next_nonblank($KK);
+                if ( $Knext && $rLL->[$Knext]->[_TYPE_] eq 'k' ) {
+                    my $token_n = $rLL->[$Knext]->[_TOKEN_];
+                    if ( $token_n eq 'while' || $token_n eq 'until' ) {
+                        $is_do_while = 1;
+                    }
+                }
+            }
+
+            if ( !$is_do_while ) {
+                $block_with_ci = 0;
+            }
         }
 
         if ($block_with_ci) {

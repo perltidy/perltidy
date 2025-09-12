@@ -772,7 +772,7 @@
 
 <pre><code>  -lpil=&#39;(&#39;</code></pre>
 
-<p>means use -lp formatting only on lists within parentheses, not lists in square-brackets or braces. The same thing could alternatively be specified with</p>
+<p>means use <b>-lp</b> formatting only on lists within parentheses, not lists in square-brackets or braces. The same thing could alternatively be specified with</p>
 
 <pre><code>  -lpxl = &#39;[ {&#39;</code></pre>
 
@@ -792,11 +792,11 @@
 
 <pre><code>  -lpil = &#39;f(&#39;</code></pre>
 
-<p>means only apply -lp to function calls, and</p>
+<p>means only apply <b>-lp</b> to function calls, and</p>
 
 <pre><code>  -lpil = &#39;w(&#39;</code></pre>
 
-<p>means only apply -lp to parenthesized lists which follow a function or a keyword.</p>
+<p>means only apply <b>-lp</b> to parenthesized lists which follow a function or a keyword.</p>
 
 <p>This last example could alternatively be written using the <b>-lpxl=s</b> flag as</p>
 
@@ -815,7 +815,7 @@
 
 <pre><code>  -lpil = &#39;f(2&#39;</code></pre>
 
-<p>means only apply -lp to function calls with simple lists (not containing any sublists, code blocks or ternary expressions).</p>
+<p>means only apply <b>-lp</b> to function calls with simple lists (not containing any sublists, code blocks or ternary expressions).</p>
 
 </dd>
 <dt id="cti-n---closing-token-indentation"><b>-cti=n</b>, <b>--closing-token-indentation</b></dt>
@@ -844,7 +844,7 @@
                        &#39;Jul&#39;, &#39;Aug&#39;, &#39;Sep&#39;, &#39;Oct&#39;, &#39;Nov&#39;, &#39;Dec&#39;
                        );</code></pre>
 
-<p>These flags are merely hints to the formatter and they may not always be followed. In particular, if -lp is not being used, the indentation for <b>cti=1</b> is constrained to be no more than one indentation level.</p>
+<p>These flags are merely hints to the formatter and they may not always be followed. In particular, if <b>-lp</b> is not being used, the indentation for <b>cti=1</b> is constrained to be no more than one indentation level.</p>
 
 <p>If desired, this control can be applied independently to each of the closing container token types. In fact, <b>-cti=n</b> is merely an abbreviation for <b>-cpi=n -csbi=n -cbi=n</b>, where: <b>-cpi</b> or <b>--closing-paren-indentation</b> controls <b>)</b>&#39;s, <b>-csbi</b> or <b>--closing-square-bracket-indentation</b> controls <b>]</b>&#39;s, <b>-cbi</b> or <b>--closing-brace-indentation</b> controls non-block <b>}</b>&#39;s.</p>
 
@@ -914,7 +914,7 @@
 <dt id="nibp-s---non-indenting-brace-prefix-s"><b>-nibp=s</b>, <b>--non-indenting-brace-prefix=s</b></dt>
 <dd>
 
-<p>The <b>-nibp=string</b> parameter may be used to change the marker for non-indenting braces. The default is equivalent to -nibp=&#39;#&lt;&lt;&lt;&#39;. The string that you enter must begin with a # and should be in quotes as necessary to get past the command shell of your system. This string is the leading text of a regex pattern that is constructed by prepending a &#39;^&#39; and appending a&#39;\s&#39;, so you must also include backslashes for characters to be taken literally rather than as patterns.</p>
+<p>The <b>-nibp=string</b> parameter may be used to change the marker for non-indenting braces. The default is equivalent to <b>-nibp</b>=&#39;#&lt;&lt;&lt;&#39;. The string that you enter must begin with a # and should be in quotes as necessary to get past the command shell of your system. This string is the leading text of a regex pattern that is constructed by prepending a &#39;^&#39; and appending a&#39;\s&#39;, so you must also include backslashes for characters to be taken literally rather than as patterns.</p>
 
 <p>For example, to match the side comment &#39;#++&#39;, the parameter would be</p>
 
@@ -1337,7 +1337,7 @@
 
 <p>You will probably also want to use the flag <b>-skp</b> (previous item) too.</p>
 
-<p>The parameter is not recommended because spacing a function paren can make a program vulnerable to parsing problems by Perl. For example, the following two-line program will run as written but will have a syntax error if reformatted with -sfp:</p>
+<p>The parameter is not recommended because spacing a function paren can make a program vulnerable to parsing problems by Perl. For example, the following two-line program will run as written but will have a syntax error if reformatted with <b>-sfp</b>:</p>
 
 <pre><code>  if ( -e filename() ) { print &quot;I&#39;m here\n&quot;; }
   sub filename { return $0 }</code></pre>
@@ -1418,7 +1418,7 @@
     if (seek(DATA, 0, 0)) { ... }        # perltidy -pt=2
     if ( seek(DATA, 0, 0) ) { ... }      # perltidy -pt=2 -kpit=0</code></pre>
 
-<p>In the second case the -pt=2 parameter makes all of the parens tight. In the third case the -kpit=0 flag causes the space within the &#39;if&#39; parens to have a space, since &#39;if&#39; is one of the keywords to which the -kpit flag applies by default. The remaining parens are still tight because of the -pt=2 parameter.</p>
+<p>In the second case the -pt=2 parameter makes all of the parens tight. In the third case the -kpit=0 flag causes the space within the &#39;if&#39; parens to have a space, since &#39;if&#39; is one of the keywords to which the <b>-kpit</b> flag applies by default. The remaining parens are still tight because of the <b>-pt=2</b> parameter.</p>
 
 <p>The set of keywords to which this parameter applies are by default are:</p>
 
@@ -1565,12 +1565,12 @@
 <dt id="iscl---ignore-side-comment-lengths"><b>-iscl</b>, <b>--ignore-side-comment-lengths</b></dt>
 <dd>
 
-<p>This parameter causes perltidy to ignore the length of side comments when setting line breaks. The default, <b>-niscl</b>, is to include the length of side comments when breaking lines to stay within the length prescribed by the <b>-l=n</b> maximum line length parameter. For example, the following single line would remain intact with -l=50 and -iscl:</p>
+<p>This parameter causes perltidy to ignore the length of side comments when setting line breaks. The default, <b>-niscl</b>, is to include the length of side comments when breaking lines to stay within the length prescribed by the <b>-l=n</b> maximum line length parameter. For example, the following single line would remain intact with <b>-l=50</b> and <b>-iscl</b>:</p>
 
 <pre><code>    # perltidy -l=50 -iscl
     $vmsfile =~ s/;[\d\-]*$//;    # Clip off version number</code></pre>
 
-<p>whereas without the -iscl flag the line will be broken:</p>
+<p>whereas without the <b>-iscl</b> flag the line will be broken:</p>
 
 <pre><code>    # perltidy -l=50
     $vmsfile =~
@@ -1600,7 +1600,14 @@
 <dt id="Closing-Side-Comments"><b>Closing Side Comments</b></dt>
 <dd>
 
-<p>A closing side comment is a special comment which perltidy can automatically create and place after the closing brace of a code block. They can be useful for code maintenance and debugging. The command <b>-csc</b> (or <b>--closing-side-comments</b>) adds or updates closing side comments. For example, here is a small code snippet</p>
+<p>Closing side comments are special comments which perltidy can automatically create and place after the closing braces of selected code blocks. They can be useful for code maintenance and debugging. The control parameters are as follows.</p>
+
+<dl>
+
+<dt id="csc-or---closing-side-comments"><b>-csc</b>, or <b>--closing-side-comments</b></dt>
+<dd>
+
+<p>The command <b>-csc</b> (or <b>--closing-side-comments</b>) adds or updates closing side comments. For example, here is a small code snippet</p>
 
 <pre><code>        sub message {
             if ( !defined( $_[0] ) ) {
@@ -1624,12 +1631,15 @@
 
 <p>A closing side comment was added for <code>sub message</code> in this case, but not for the <code>if</code> and <code>else</code> blocks, because they were below the 6 line cutoff limit for adding closing side comments. This limit may be changed with the <b>-csci</b> command, described below.</p>
 
-<p>The command <b>-dcsc</b> (or <b>--delete-closing-side-comments</b>) reverses this process and removes these comments.</p>
+</dd>
+<dt id="dcsc-or---delete-closing-side-comments"><b>-dcsc</b>, or <b>--delete-closing-side-comments</b></dt>
+<dd>
 
-<p>Several commands are available to modify the behavior of these two basic commands, <b>-csc</b> and <b>-dcsc</b>:</p>
+<p>The command <b>-dcsc</b> (or <b>--delete-closing-side-comments</b>) removes these comments. However, it only removes side comments which have the special prefix, which is <code>&#39;## end&#39;</code> by default.</p>
 
-<dl>
+<p>If both <b>-dcsc</b> and <b>-csc</b> are included in the same run, then <b>-dcsc</b> operates first to remove old closing side comments. Then, <b>-csc</b> operates to create new closing side comments according to the current parameter settings.</p>
 
+</dd>
 <dt id="csci-n-or---closing-side-comment-interval-n"><b>-csci=n</b>, or <b>--closing-side-comment-interval=n</b></dt>
 <dd>
 
@@ -1646,12 +1656,6 @@
         } ## end sub message</code></pre>
 
 <p>Now the <code>if</code> and <code>else</code> blocks are commented. However, now this has become very cluttered.</p>
-
-</dd>
-<dt id="cscp-string-or---closing-side-comment-prefix-string"><b>-cscp=string</b>, or <b>--closing-side-comment-prefix=string</b></dt>
-<dd>
-
-<p>where string is the prefix used before the name of the block type. The default prefix, shown above, is <code>## end</code>. This string will be added to closing side comments, and it will also be used to recognize them in order to update, delete, and format them. Any comment identified as a closing side comment will be placed just a single space to the right of its closing brace.</p>
 
 </dd>
 <dt id="cscl-string-or---closing-side-comment-list"><b>-cscl=string</b>, or <b>--closing-side-comment-list</b></dt>
@@ -1683,7 +1687,7 @@
 <dt id="cscb-or---closing-side-comments-balanced"><b>-cscb</b>, or <b>--closing-side-comments-balanced</b></dt>
 <dd>
 
-<p>As discussed in the previous item, when the closing-side-comment-maximum-text limit is exceeded the comment text must be truncated. Older versions of perltidy terminated with three dots, and this can still be achieved with -ncscb:</p>
+<p>As discussed in the previous item, when the closing-side-comment-maximum-text limit is exceeded the comment text must be truncated. Older versions of perltidy terminated with three dots, and this can still be achieved with <b>-ncscb</b>:</p>
 
 <pre><code>  perltidy -csc -ncscb
   } ## end foreach my $foo (sort { $b cmp $a ...</code></pre>
@@ -1706,28 +1710,30 @@
 <p>If <b>n=1</b> is used, the results will be the same as <b>n=2</b> whenever the resulting line length is less than the maximum allowed.</p>
 
 </dd>
-<dt id="cscb-or---closing-side-comments-balanced1"><b>-cscb</b>, or <b>--closing-side-comments-balanced</b></dt>
-<dd>
-
-<p>When using closing-side-comments, and the closing-side-comment-maximum-text limit is exceeded, then the comment text must be abbreviated. It is terminated with three dots if the <b>-cscb</b> flag is negated:</p>
-
-<pre><code>  perltidy -csc -ncscb
-  } ## end foreach my $foo (sort { $b cmp $a ...</code></pre>
-
-<p>This causes a problem with older editors which do not recognize comments because they cannot &quot;bounce&quot; around in the text correctly. The <b>-cscb</b> flag tries to help them by appending appropriate terminal balancing structures:</p>
-
-<pre><code>  perltidy -csc -cscb
-  } ## end foreach my $foo (sort { $b cmp $a ... })</code></pre>
-
-<p>The default is <b>-cscb</b>.</p>
-
-</dd>
 <dt id="cscw-or---closing-side-comment-warnings"><b>-cscw</b>, or <b>--closing-side-comment-warnings</b></dt>
 <dd>
 
 <p>This parameter is intended to help make the initial transition to the use of closing side comments. It causes two things to happen if a closing side comment replaces an existing, different closing side comment: first, an error message will be issued, and second, the original side comment will be placed alone on a new specially marked comment line for later attention.</p>
 
 <p>The intent is to avoid clobbering existing hand-written side comments which happen to match the pattern of closing side comments. This flag should only be needed on the first run with <b>-csc</b>.</p>
+
+</dd>
+<dt id="cscp-string-or---closing-side-comment-prefix-string"><b>-cscp=string</b>, or <b>--closing-side-comment-prefix=string</b></dt>
+<dd>
+
+<p>This parameter changes the prefix which is used for closing side comments. The default prefix is <code>## end</code>. All closing side comments begin with this prefix, and it is used to recognize them in order to update, delete, and format them. Any comment identified as a closing side comment will be placed just a single space to the right of its closing brace.</p>
+
+<p>This parameter is available in case the default causes a conflict with other software, but it should not normally be used because it can complicate keeping code updated in the event that code formatted with different prefixes are mixed. The problem is that in any formatting pass, the various <b>-csc*</b> parameters are restricted to working with a single closing side comment prefix. So if code has closing side comments with differing prefixes, it will take multiple passes to convert them back to a single new prefix.</p>
+
+<p>For a simple example, suppose we have code which was formatted with prefix <code>-cscp=&#39;## END&#39;</code>, and we want to convert those comments back to the default prefix. It would take two passes, such as:</p>
+
+<p>Pass 1 would find and remove old closing side comments with prefix <code>&#39;## END&#39;</code>:</p>
+
+<pre><code>   perltidy -cscp=&#39;## END&#39; -dcsc oldfile -o tmpfile</code></pre>
+
+<p>Pass 2 could then adds new comments with the default prefix:</p>
+
+<pre><code>   perltidy -csc tmpfile -o newfile</code></pre>
 
 </dd>
 </dl>
@@ -1748,7 +1754,7 @@
 <li><p>Once you use <b>-csc</b>, you should continue to use it so that any closing side comments remain correct as code changes. Otherwise, these comments will become incorrect as the code is updated.</p>
 
 </li>
-<li><p>If you edit the closing side comments generated by perltidy, you must also change the prefix to be different from the closing side comment prefix. Otherwise, your edits will be lost when you rerun perltidy with <b>-csc</b>. For example, you could simply change <code>## end</code> to be <code>## End</code>, since the test is case sensitive. You may also want to use the <b>-ssc</b> flag to keep these modified closing side comments spaced the same as actual closing side comments.</p>
+<li><p>If you edit the closing side comments generated by perltidy, you should also change the prefix to be different from the closing side comment prefix. Otherwise, your edits will be lost when you rerun perltidy with <b>-csc</b>. For example, you could simply change <code>## end</code> to be <code>## End</code>, since the test is case sensitive. You may also want to use the <b>-ssc</b> flag to keep these modified closing side comments spaced the same as actual closing side comments.</p>
 
 </li>
 <li><p>Temporarily generating closing side comments is a useful technique for exploring and/or debugging a perl script, especially one written by someone else. You can always remove them with <b>-dcsc</b>.</p>
@@ -1918,7 +1924,7 @@
 
 <p>If changed comment markers do not appear to be working, use the <b>-log</b> flag and examine the <i>.LOG</i> file to see if and where they are being detected.</p>
 
-<p>The default is equivalent to -fsb=&#39;#&lt;&lt;&lt;&#39;. The string that you enter must begin with a # and should be in quotes as necessary to get past the command shell of your system. It is actually the leading text of a pattern that is constructed by appending a &#39;\s&#39;, so you must also include backslashes for characters to be taken literally rather than as patterns.</p>
+<p>The default is equivalent to <b>-fsb</b>=&#39;#&lt;&lt;&lt;&#39;. The string that you enter must begin with a # and should be in quotes as necessary to get past the command shell of your system. It is actually the leading text of a pattern that is constructed by appending a &#39;\s&#39;, so you must also include backslashes for characters to be taken literally rather than as patterns.</p>
 
 <p>Some examples show how example strings become patterns:</p>
 
@@ -1950,13 +1956,13 @@
 <dt id="csb-string---code-skipping-begin-string"><b>-csb=string</b>, <b>--code-skipping-begin=string</b></dt>
 <dd>
 
-<p>This may be used to change the beginning comment for a <b>--code-skipping</b> section, and its use is similar to the <b>-fsb=string</b>. The default is equivalent to -csb=&#39;#&lt;&lt;V&#39;.</p>
+<p>This may be used to change the beginning comment for a <b>--code-skipping</b> section, and its use is similar to the <b>-fsb=string</b>. The default is equivalent to <b>-csb=&#39;#&lt;&lt;V&#39;</b>.</p>
 
 </dd>
 <dt id="cse-string---code-skipping-end-string"><b>-cse=string</b>, <b>--code-skipping-end=string</b></dt>
 <dd>
 
-<p>This may be used to change the ending comment for a <b>--code-skipping</b> section, and its use is similar to the <b>-fse=string</b>. The default is equivalent to -cse=&#39;#&gt;&gt;V&#39;.</p>
+<p>This may be used to change the ending comment for a <b>--code-skipping</b> section, and its use is similar to the <b>-fse=string</b>. The default is equivalent to <b>-cse=&#39;#</b>&gt;V&#39;&gt;.</p>
 
 </dd>
 <dt id="csfs---code-skipping-from-start"><b>-csfs</b>, <b>--code-skipping-from-start</b></dt>
@@ -3021,7 +3027,7 @@
 
 <p><b>-bbao</b> or <b>--break-before-all-operators</b>.</p>
 
-<p>The -baao sets the default to be to break after all of the following operators:</p>
+<p>The <b>-baao</b> flag sets the default to be to break after all of the following operators:</p>
 
 <pre><code>    % + - * / x != == &gt;= &lt;= =~ !~ &lt; &gt; | &amp;
     = **= += *= &amp;= &lt;&lt;= &amp;&amp;= -= /= |= &gt;&gt;= ||= //= .= %= ^= x=
@@ -3090,7 +3096,7 @@
         1, 4, 6, 4, 1,
     );</code></pre>
 
-<p>For another possibility see the -fs flag in <a href="#Skipping-Selected-Sections-of-Code">&quot;Skipping Selected Sections of Code&quot;</a>.</p>
+<p>For another possibility see the <b>-fs</b> flag in <a href="#Skipping-Selected-Sections-of-Code">&quot;Skipping Selected Sections of Code&quot;</a>.</p>
 
 <dl>
 
@@ -3119,9 +3125,11 @@
 <pre><code>    -boct=&#39;(&#39;  means keep old comma breaks in paren lists
     -boct=&#39;f(&#39; means keep old comma breaks in function call lists</code></pre>
 
-<p>Commas which are not contained within one of these three container types can be selected with a &#39;;&#39; character.</p>
+<p>Commas which are not contained within one of the three list container types, such as those in a paren-less function call, can be selected with a <b>&#39;;&#39;</b> character. And multiple selections should be separated with spaces.</p>
 
-<p>Note that this parameter has no effect unless <b>-break-at-old-comma-breakpoints</b> is also set.</p>
+<p>For example, <b>-boct=&#39;; (&#39;</b> means keep breaks at uncontained commas and at commas in parens.</p>
+
+<p>Note that this parameter has no effect unless <b>-break-at-old-comma-breakpoints</b>, or <b>-boc</b>, is also set.</p>
 
 </dd>
 <dt id="btct-s---break-at-trailing-comma-types-s"><b>-btct=s</b>, <b>--break-at-trailing-comma-types=s</b></dt>
@@ -3343,7 +3351,7 @@
 
 <pre><code>      ignoreSpec( $file, &quot;file&quot;,, \%spec, \%Rspec );</code></pre>
 
-<p>we can remove it with -drc</p>
+<p>we can remove it with <b>-drc</b></p>
 
 <pre><code>      # perltidy -drc:
       ignoreSpec( $file, &quot;file&quot;, \%spec, \%Rspec );</code></pre>
@@ -3728,7 +3736,7 @@
 
 <pre><code>   perltidy -wia -ias=0</code></pre>
 
-<p>will warn if any arrows exist, since the flag -ias=0 means that no arrows are wanted.</p>
+<p>will warn if any arrows exist, since the flag <b>-ias=0</b> means that no arrows are wanted.</p>
 
 </li>
 </ul>
@@ -3739,7 +3747,7 @@
 
 <p>This parameter makes it possible to skip adding or deleting arrows following a container which is complex in some sense. Three levels of complexity can be specified with the integer <b>n</b>, as follows:</p>
 
-<pre><code> n=0  the left container must contain be a single thing (token)
+<pre><code> n=0  the left container must contain a single thing (token)
  n=1  the left container must not contain other containers [DEFAULT]
  n=2  the left container may contain anything</code></pre>
 
@@ -3986,7 +3994,7 @@
 
 <p>These parameters are each followed by a quoted string, <b>s</b>, containing a list of token types (separated only by spaces). No more than one of each of these parameters should be specified, because repeating a command-line parameter always overwrites the previous one before perltidy ever sees it.</p>
 
-<p>For example, -kbb=&#39;=&gt;&#39; means that if an input line begins with a &#39;=&gt;&#39; then the output script should also have a line break before that token.</p>
+<p>For example, <b>-kbb=&#39;=</b>&#39;&gt; means that if an input line begins with a &#39;=&gt;&#39; then the output script should also have a line break before that token.</p>
 
 <p>For example, given the script:</p>
 
@@ -4427,7 +4435,7 @@
     -wbb=&quot;% + - * / x != == &gt;= &lt;= =~ !~ &lt; &gt; | &amp; =
           **= += *= &amp;= &lt;&lt;= &amp;&amp;= -= /= |= &gt;&gt;= ||= //= .= %= ^= x=&quot;</code></pre>
 
-<p>Please note that this parameter set includes <b>-st</b> (<b>--standard-output</b>) and <b>-se</b> (<b>--standard-error-output</b>) flags, which make perltidy act as a filter on one file only. These can be overridden by placing <b>-nst</b> and/or <b>-nse</b> after the -pbp parameter.</p>
+<p>Please note that this parameter set includes <b>-st</b> (<b>--standard-output</b>) and <b>-se</b> (<b>--standard-error-output</b>) flags, which make perltidy act as a filter on one file only. These can be overridden by placing <b>-nst</b> and/or <b>-nse</b> after the <b>-pbp</b> parameter.</p>
 
 <p>Also note that the value of continuation indentation, <b>-ci=4</b>, is equal to the value of the full indentation, <b>-i=4</b>. It is recommended that the either (1) the parameter <b>-ci=2</b> be used instead, or (2) the flag <b>-xci</b> be set. This will help show structure, particularly when there are ternary statements. The following snippet illustrates these options.</p>
 
@@ -4869,7 +4877,7 @@
 <li><p><b>--use-feature=&#39;noclass&#39;</b>. This tells perltidy <b>not</b> to treat words <b>class</b>, <b>method</b>, <b>field</b>, <b>ADJUST</b> specially.</p>
 
 </li>
-<li><p><b>Neither of these</b> (<b>--use-feature</b> not defined). This is the DEFAULT and recommended setting. In this case perltidy will try to automatically handle both the newer --use-feature &#39;class&#39; syntax as well as some conflicting uses of some of these special words by existing modules.</p>
+<li><p><b>Neither of these</b> (<b>--use-feature</b> not defined). This is the DEFAULT and recommended setting. In this case perltidy will try to automatically handle both the newer <code>feature &#39;class&#39;</code> syntax as well as some conflicting uses of some of these special words by existing modules.</p>
 
 </li>
 </ul>
@@ -5078,7 +5086,7 @@
 <dt id="Controls-for-when-to-stop-processing"><b>Controls for when to stop processing</b></dt>
 <dd>
 
-<p><b>--maximum-level-errors=n</b> or <b>-maxle=n</b> specifies the maximum number of indentation level errors are allowed before perltidy skips formatting and just outputs a file verbatim. The default is <b>n=1</b>. This means that if the final indentation of a script differs from the starting indentation by more than 1 levels, the file will be output verbatim. To avoid formatting if there are any indentation level errors use -maxle=0. To skip this check you can either set n equal to a large number, such as <b>n=100</b>, or set <b>n=-1</b>.</p>
+<p><b>--maximum-level-errors=n</b> or <b>-maxle=n</b> specifies the maximum number of indentation level errors are allowed before perltidy skips formatting and just outputs a file verbatim. The default is <b>n=1</b>. This means that if the final indentation of a script differs from the starting indentation by more than 1 levels, the file will be output verbatim. To avoid formatting if there are any indentation level errors use <b>-maxle=0</b>. To skip this check you can either set n equal to a large number, such as <b>n=100</b>, or set <b>n=-1</b>.</p>
 
 <p>For example, the following script has level error of 3 and will be output verbatim</p>
 
@@ -5101,12 +5109,11 @@
 
 <p>Many of the input parameters take integer values. Before processing begins, a check is made to see if any of these integer parameters exceed their valid ranges. The default behavior when a range is exceeded is to write a warning message and reset the value to its default setting. This default behavior can be changed with the parameter <b>--integer-range-check=n</b>, or <b>-irc=n</b>, as follows:</p>
 
-<pre><code>    n=0  skip check completely (for stress-testing perltidy only)
-    n=1  reset bad values to defaults but do not issue a warning
+<pre><code>    n=1  reset bad values to defaults but do not issue a warning
     n=2  reset bad values to defaults and issue warning [DEFAULT]
     n=3  stop if any values are out of bounds</code></pre>
 
-<p>The values <b>n=0</b> and <b>n=1</b> are mainly useful for testing purposes.</p>
+<p>The value <b>n=1</b> is mainly useful for testing purposes.</p>
 
 </dd>
 <dt id="Debugging-perltidy-tokenization"><b>Debugging perltidy tokenization</b></dt>
@@ -5154,13 +5161,16 @@
   max_change   - change in depth to the most deeply nested code block
   block_count  - total number of code blocks nested in this block
   mccabe1      - McCabe complexity measure of this code block
-  mccabe2      - modified: subs have anonymous sub complexity removed</code></pre>
+  mccabe2      - modified: subs have anonymous sub complexity removed
+  comment_lines - number of lines of comments or POD with some text</code></pre>
 
 <p>This feature was developed to help identify complex sections of code as an aid in refactoring. The McCabe complexity measure, &#39;mccabe1&#39;, matches the definition used by Perl::Critic. The alternate complexity value, &#39;mccabe2&#39;, is the same except that for subroutines, the complexity of any contained anonymous subs is removed and shown separately. This alternate value can be more representative of the actual complexity, and sometimes much lower. For example, in one of the subs in perltidy the two values are 77 and 6. The difference is shared by the anonymous subs which it contains, of which the maximum is 36.</p>
 
 <p>By default the table contains these values for subroutines, but the user may request them for any or all blocks of code or packages. For blocks which are loops nested within loops, a postfix &#39;+&#39; to the <code>type</code> is added to indicate possible code complexity. Although the table does not otherwise indicate which blocks are nested in other blocks, this can be determined by computing and comparing the block ending line numbers.</p>
 
 <p>For subroutines, the number of call arguments (args) is listed in parentheses in the <code>type</code> column. For example, <code>sub(9)</code> indicates a sub with 9 args. Subroutines whose arg count cannot easily be determined are indicated as <code>sub(*)</code>. The count includes any leading object passed in a method call (such as <b>$self</b>).</p>
+
+<p>Also for subroutines, the existence of comments or pod text before and after the call arg definition is indicated by hash symbols around the number of args. Thus, <code>sub(9#)</code> indicates a sub with 9 args with some comments following their definition. And <code>sub(#0)</code> indicates a sub with some leading comments or pod text but no call args.</p>
 
 <p>By default the table lists subroutines with more than 20 <code>code_lines</code>, but this can be changed with the following two parameters:</p>
 
@@ -5735,6 +5745,58 @@
 </ul>
 
 </dd>
+<dt id="Use---dump-nested-ternaries-to-dump-a-list-nested-ternaries"><b>Use --dump-nested-ternaries</b> to dump a list nested ternaries.</dt>
+<dd>
+
+<p>Like other <b>-dump-</b> commands, this writes to the standard output and then exits immediately, without doing any formatting. A ternary statement has the form</p>
+
+<pre><code>  Condition ? Value_if_true : Value_if_false</code></pre>
+
+<p>If the term <code>Value_if_true</code> is itself a ternary, then that ternary is itself nested one level deeper. Nested ternaries are relatively easy to create but can be tedious to read. And sometimes they can be rewritten in a simpler way.</p>
+
+<p>This parameter checks the nesting depth of each ternary in a script and, if it is not zero, then its line number and nesting depth are listed in the output. The list may be limited to ternaries with a depth greater than a certain value with the next parameter.</p>
+
+</dd>
+<dt id="Use---nested-ternary-maximum-depth-n-to-ignore-ternaries-nested-to-a-depth-of-n-or-less"><b>Use --nested-ternary-maximum-depth=n</b> to ignore ternaries nested to a depth of <b>n</b> or less.</dt>
+<dd>
+
+<p>Ternary statements with a depth less than or equal to <b>n</b> are ignored by <b>--dump-nested-ternaries</b> and its companion <b>--warn-nested-ternaries</b>. The default value <b>n=0</b> will cause all nested ternaries to be listed. A value <b>n=1</b>, for example, will cause ternaries with a depth of 0 or 1 to be ignored by these commands.</p>
+
+</dd>
+<dt id="Use---warn-nested-ternaries-to-write-a-warning-when-a-nested-ternary-is-encountered"><b>Use --warn-nested-ternaries</b> to write a warning when a nested ternary is encountered.</dt>
+<dd>
+
+<p>This is the same as the <b>-dump</b> parameter described above except that any nested ternaries are reported in the error file and formatting continues normally.</p>
+
+<p>Additional comments on nested ternaries:</p>
+
+<ul>
+
+<li><p>The nesting depth of an arbitrary ternary can be found by writing a list of just the <code>?</code> and <code>:</code> symbols of the entire expression, along with any container brackets which completely enclose any of them. Then the nesting depth of the <code>?</code> which introduces a ternary is the number of <code>?</code> symbols which immediately precede it. For example, for this statement which gives the maximum of three values</p>
+
+<pre><code>        $a &gt; $b ? $a &gt; $c ? $a : $c : $b &gt; $c ? $b : $c;</code></pre>
+
+<p>we get</p>
+
+<pre><code>        ? ? : : ? :</code></pre>
+
+<p>Since there is a sequence of two adjacent <code>?</code> symbols, the maximum nesting depth is 1.</p>
+
+</li>
+<li><p>Parentheses around a term cause its depth to be reset to zero. The parentheses might be for a function call, or just for grouping. So one way to avoid a warning for a certain ternary is to introduce parentheses. For example, modifying the above example to be</p>
+
+<pre><code>        $a &gt; $b ? ( $a &gt; $c ? $a : $c ) : $b &gt; $c ? $b : $c;</code></pre>
+
+<p>we get</p>
+
+<pre><code>        ? ( ? : ) : ? :</code></pre>
+
+<p>In this case, there are no adjacent <code>?</code> symbols, so the nesting depth is zero.</p>
+
+</li>
+</ul>
+
+</dd>
 </dl>
 
 <h2 id="Working-with-MakeMaker-AutoLoader-and-SelfLoader"><b>Working with MakeMaker, AutoLoader and SelfLoader</b></h2>
@@ -5983,22 +6045,22 @@
  bl     bli    boa    boc    bok    bol    bom    bos    bot    cblx
  ce     conv   cpb    cpbw   cs     csc    cscb   cscw   csfs   dac
  dbc    dbs    dcbl   dcsc   ddf    dfsfs  dhk    dia    dior   dln
- dltc   dma    dmcp   dmr    dnl    dop    dp     dpro   drc    dsc
- dsk    dsm    dsn    dtc    dtco   dtt    duk    duv    dwic   dwls
- dwrs   dws    eos    f      fpva   frm    fs     fso    gcs    hbc
- hbcm   hbco   hbh    hbhh   hbi    hbj    hbk    hbm    hbn    hbp
- hbpd   hbpu   hbq    hbs    hbsc   hbv    hbw    hent   hic    hicm
- hico   hih    hihh   hii    hij    hik    him    hin    hip    hipd
- hipu   hiq    his    hisc   hiv    hiw    hsc    html   ibc    icb
- icp    ils    iob    ipc    isbc   iscl   kgb    kgbd   kgbi   kis
- lal    log    lop    lp     lsl    mci    mem    nib    ohbr   okw
- ola    olc    oll    olq    opr    opt    osbc   osbr   otr    ple
- pod    pvl    q      qwaf   sac    sbc    sbl    scbb   schb   scp
- scsb   sct    se     sfp    sfs    skp    sob    sobb   sohb   sop
- sosb   sot    ssc    st     sts    t      tac    tbc    toc    tp
- tqw    trp    ts     tsc    tso    vbc    vc     viu    vmll   vsc
- vsn    vwe    w      wfc    wia    wma    wme    wmr    wn     wsk
- wuk    x      xbt    xci    xlp    xs</code></pre>
+ dltc   dma    dmcp   dmr    dnl    dnt    dop    dp     dpro   drc
+ dsc    dsk    dsm    dsn    dtc    dtco   dtt    duk    duv    dwic
+ dwls   dwrs   dws    eos    f      fpva   frm    fs     fso    gcs
+ hbc    hbcm   hbco   hbh    hbhh   hbi    hbj    hbk    hbm    hbn
+ hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv    hbw    hent   hic
+ hicm   hico   hih    hihh   hii    hij    hik    him    hin    hip
+ hipd   hipu   hiq    his    hisc   hiv    hiw    hsc    html   ibc
+ icb    icp    ils    iob    ipc    isbc   iscl   kgb    kgbd   kgbi
+ kis    lal    log    lop    lp     lsl    mci    mem    nib    ohbr
+ okw    ola    olc    oll    olq    opr    opt    osbc   osbr   otr
+ ple    pod    pvl    q      qwaf   sac    sbc    sbl    scbb   schb
+ scp    scsb   sct    se     sfp    sfs    skp    sob    sobb   sohb
+ sop    sosb   sot    ssc    st     sts    t      tac    tbc    toc
+ tp     tqw    trp    ts     tsc    tso    vbc    vc     viu    vmll
+ vsc    vsn    vwe    w      wfc    wia    wma    wme    wmr    wn
+ wnt    wsk    wuk    x      xbt    xci    xlp    xs</code></pre>
 
 <p>Equivalently, the prefix &#39;no&#39; or &#39;no-&#39; on the corresponding long names may be used.</p>
 
@@ -6031,7 +6093,7 @@
 <dt id="Temporary-files"><b>Temporary files</b></dt>
 <dd>
 
-<p>Under the -html option with the default --pod2html flag, a temporary file is required to pass text to Pod::Html. Unix systems will try to use the POSIX tmpnam() function. Otherwise the file <i>perltidy.TMP</i> will be temporarily created in the current working directory.</p>
+<p>Under the <b>-html</b> option with the default <b>--pod2html</b> flag, a temporary file is required to pass text to Pod::Html. Unix systems will try to use the POSIX tmpnam() function. Otherwise the file <i>perltidy.TMP</i> will be temporarily created in the current working directory.</p>
 
 </dd>
 <dt id="Special-files-when-standard-input-is-used"><b>Special files when standard input is used</b></dt>
@@ -6076,7 +6138,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20250711</p>
+<p>This man page documents perltidy version 20250912</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 
