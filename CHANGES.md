@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2025 09 12
+## 2025 09 12.01
 
     - Fix git #191, where a new check to escape whitespace in a qw() quote
       in perl-5.43.2 caused Perl::Tidy to emit unwanted warning messages.
