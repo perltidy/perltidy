@@ -736,9 +736,7 @@ sub pod_to_html {
         # Note: -css=s is handled by perltidy itself
         # Note: backlink=s was incorrectly in this list up to v20250912:
         #   backlink can now be input as 'podbacklink', below
-        foreach
-          my $kw (qw( cachedir htmlroot libpods podpath podroot ))
-        {
+        foreach my $kw (qw( cachedir htmlroot libpods podpath podroot )) {
             if ( $rOpts->{$kw} ) { push @args, "--$kw=$rOpts->{$kw}" }
         }
 
@@ -746,8 +744,7 @@ sub pod_to_html {
         # "header!", "index!", "recurse!", "quiet!", "verbose!", "backlink!'
         # See note above regarding the change for backlink.
         foreach my $kw (
-            qw( podheader podindex podrecurse podquiet podverbose podbacklink )
-          )
+            qw( podheader podindex podrecurse podquiet podverbose podbacklink ))
         {
             my $kwd = $kw;    # allows us to strip 'pod'
             if    ( $rOpts->{$kw} ) { $kwd =~ s/^pod//; push @args, "--$kwd" }
