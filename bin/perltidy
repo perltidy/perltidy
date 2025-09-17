@@ -7603,11 +7603,11 @@ pod2html, and this prefix will be removed before they are passed to
 pod2html.  The flags which have the additional C<pod> prefix are:
 
    --[no]podheader --[no]podindex --[no]podrecurse --[no]podquiet
-   --[no]podverbose --podflush
+   --[no]podverbose --podflush --[no]backlink
 
 The flags which are unchanged from their use in pod2html are:
 
-   --backlink=s --cachedir=s --htmlroot=s --libpods=s --title=s
+   --cachedir=s --htmlroot=s --libpods=s --title=s
    --podpath=s --podroot=s
 
 where 's' is an appropriate character string.  Not all of these flags are

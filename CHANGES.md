@@ -2,6 +2,13 @@
 
 ## 2025 09 12.01
 
+    - When perltidy is run with the -html option, and pod is rendered to html
+      with pod2html, the pod2html option 'backlink' could not be set in
+      in previous versions due to a programming error. This has been fixed.
+      This setting can now be made by giving perltidy the flag '--podbacklink'.
+
+## 2025 09 12
+
     - Fix git #191, where a new check to escape whitespace in a qw() quote
       in perl-5.43.2 caused Perl::Tidy to emit unwanted warning messages.
 

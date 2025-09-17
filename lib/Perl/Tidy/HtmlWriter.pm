@@ -449,7 +449,6 @@ sub make_getopt_long_names {
     push @{$rgetopt_names}, "html-src-extension=s";
 
     # Pod::Html parameters:
-    push @{$rgetopt_names}, "backlink=s";
     push @{$rgetopt_names}, "cachedir=s";
     push @{$rgetopt_names}, "htmlroot=s";
     push @{$rgetopt_names}, "libpods=s";
@@ -459,6 +458,7 @@ sub make_getopt_long_names {
 
     # Pod::Html parameters with leading 'pod' which will be removed
     # before the call to Pod::Html
+    push @{$rgetopt_names}, "podbacklink!";
     push @{$rgetopt_names}, "podquiet!";
     push @{$rgetopt_names}, "podverbose!";
     push @{$rgetopt_names}, "podrecurse!";
@@ -732,19 +732,22 @@ sub pod_to_html {
         push @args, "--infile=$tmpfile", "--outfile=$tmpfile", "--title=$title";
 
         # Flags with string args:
-        # "backlink=s", "cachedir=s", "htmlroot=s", "libpods=s",
-        # "podpath=s", "podroot=s"
+        # "cachedir=s", "htmlroot=s", "libpods=s", "podpath=s", "podroot=s"
         # Note: -css=s is handled by perltidy itself
+        # Note: backlink=s was incorrectly in this list up to v20250912:
+        #   backlink can now be input as 'podbacklink', below
         foreach
-          my $kw (qw( backlink cachedir htmlroot libpods podpath podroot ))
+          my $kw (qw( cachedir htmlroot libpods podpath podroot ))
         {
             if ( $rOpts->{$kw} ) { push @args, "--$kw=$rOpts->{$kw}" }
         }
 
         # Toggle switches; these have extra leading 'pod'
-        # "header!", "index!", "recurse!", "quiet!", "verbose!"
-        foreach
-          my $kw (qw( podheader podindex podrecurse podquiet podverbose ))
+        # "header!", "index!", "recurse!", "quiet!", "verbose!", "backlink!'
+        # See note above regarding the change for backlink.
+        foreach my $kw (
+            qw( podheader podindex podrecurse podquiet podverbose podbacklink )
+          )
         {
             my $kwd = $kw;    # allows us to strip 'pod'
             if    ( $rOpts->{$kw} ) { $kwd =~ s/^pod//; push @args, "--$kwd" }
