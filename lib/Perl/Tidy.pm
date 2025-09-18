@@ -4052,7 +4052,9 @@ sub generate_options {
       html-entities
     );
 
-    # Ranges and defaults of all integer options (type '=i').
+    #------------------------------------------------------------
+    # Set Ranges and defaults of all integer options (type '=i').
+    #------------------------------------------------------------
     # NOTES:
     # 1. All integer options must be in this table, not in @defaults
     # 2. 'closing-token-indentation' (cti), 'vertical-tightness' (vt),
@@ -4141,6 +4143,16 @@ sub generate_options {
         if ( defined($val) ) {
             push @defaults, "$key=$val";
         }
+    }
+
+    #------------------------------------
+    # Locate strings options of type '=s'
+    #------------------------------------
+    my %is_string_option;
+    foreach my $opt (@option_string) {
+        next if ( substr( $opt, -2, 2 ) ne '=s' );
+        my $key = substr( $opt, 0, -2 );
+        $is_string_option{$key} = 1;
     }
 
     # Verify that only integers of type =i are in the above list during
@@ -4419,7 +4431,7 @@ q(wbb=% + - * / x != == >= <= =~ !~ < > | & = **= += *= &= <<= &&= -= /= |= >>= 
     # Uncomment next line to dump all expansions for debugging:
     # dump_short_names(\%expansion);
     return ( \@option_string, \@defaults, \%expansion, \%option_category,
-        \%integer_option_range );
+        \%integer_option_range, \%is_string_option );
 
 } ## end sub generate_options
 
@@ -4489,7 +4501,7 @@ sub _process_command_line {
     else { $glc = undef }
 
     my ( $roption_string, $rdefaults, $rexpansion,
-        $roption_category, $rinteger_option_range )
+        $roption_category, $rinteger_option_range, $ris_string_option )
       = generate_options();
 
     #--------------------------------------------------------------
@@ -4678,6 +4690,9 @@ EOM
                 expand_command_abbreviations( $rexpansion, \@raw_options,
                     $config_file );
 
+                check_for_missing_string_options( $ris_string_option,
+                    $config_file );
+
                 if ( !GetOptions( \%Opts, @{$roption_string} ) ) {
                     Die(
 "Error in this config file: $config_file  \nUse -npro to ignore this file, -dpro to dump it, -h for help'\n"
@@ -4763,6 +4778,8 @@ EOM
     # now process the command line parameters
     #----------------------------------------
     expand_command_abbreviations( $rexpansion, \@raw_options, $config_file );
+
+    check_for_missing_string_options($ris_string_option);
 
     local $SIG{'__WARN__'} = sub { Warn( $_[0] ) };
     if ( !GetOptions( \%Opts, @{$roption_string} ) ) {
@@ -5334,6 +5351,55 @@ DIE
     } ## end of loop over all passes
     return;
 } ## end sub expand_command_abbreviations
+
+sub check_for_missing_string_options {
+    my ( $ris_string_option, ($config_file) ) = @_;
+
+    # Given:
+    #  $ris_string_option = hash with keys are options of type '=s'
+    #  ($config_file) = optional parameter:
+    #     - name of config file if processing config file
+    #     - undef if processing command line args
+
+    # Task:
+    # Look for string options which are not immediately followed by '=string'.
+    # If the next word starts with '--', then it may be another option which
+    # will get gobbled up as the string arg. In that case, exit with an error
+    # message.
+
+    my ( $arg_last, $opt_last, $val_last, $missing_string_last );
+    my $error_message = EMPTY_STRING;
+    foreach my $arg (@ARGV) {
+        my ( $opt, $val, $missing_string );
+        if ( substr( $arg, 0, 2 ) eq '--' && length($arg) > 2 ) {
+            ( $opt, $val ) = split /=/, substr( $arg, 2 );
+            $missing_string =
+              defined($opt) && !defined($val) && $ris_string_option->{$opt};
+        }
+        if ( $opt && $missing_string_last ) {
+            $error_message .= <<EOM;
+  '$arg_last' may be missing its string parameter.
+EOM
+        }
+
+        $arg_last            = $arg;
+        $opt_last            = $opt;
+        $val_last            = $val;
+        $missing_string_last = $missing_string;
+    }
+
+    if ($error_message) {
+        my $pre_note = "Possible error detected while processing options ";
+        $pre_note .=
+          defined($config_file)
+          ? "in config file '$config_file':\n"
+          : "on the command line:\n";
+        my $post_note =
+          "Use the equals form '--option=string' to avoid this message.\n";
+        Die( $pre_note . $error_message . $post_note );
+    }
+    return;
+} ## end sub check_for_missing_string_options
 
 sub dump_short_names {
 
