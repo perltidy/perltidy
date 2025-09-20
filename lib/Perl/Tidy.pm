@@ -5362,34 +5362,65 @@ sub check_for_missing_string_options {
     #     - undef if processing command line args
 
     # Task:
-    # Look for string options which are not immediately followed by '=string'.
-    # If the next word starts with '--', then it may be another option which
-    # will get gobbled up as the string arg. In that case, exit with an error
-    # message.
+    # Look through @ARGV for string options which are not immediately followed
+    # by '=string'.  If the next word looks like another --option, then it may
+    # get gobbled up as the string arg. In that case, exit with an error
+    # message. The user can always force a string arg which looks like an
+    # option by using the '=string' input form.
 
-    my ( $arg_last, $opt_last, $val_last, $missing_string_last );
+    # Example of the type of error this sub checks for:
+
+    #   perltidy -lpil -l=9 filename
+
+    # In this sub, any short option forms have already been expanded into their
+    # long forms, so this will appear here in the local copy of @ARGV as three
+    # list items:
+
+    #   @ARGV = qw(
+    #     --line-up-parentheses-inclusion-list
+    #     --maximum-line-length=9
+    #     filename
+    #   );
+
+    # Then, since -lpil wants a string value, it will be set equal to
+    # '--line-up-parentheses=9' by sub GetOptions, which is probably not the
+    # desired value.
+
+    # This sub will catch most errors of this type at the earliest possible
+    # stage. One exception is if the user enters just part of an option name
+    # and relies on name completion by sub GetOptions.  Another exception is if
+    # a fileame follows the missing string option on the command line. In those
+    # cases we have to rely on later checks.
+
+    my $arg_seeking_string_last;
     my $error_message = EMPTY_STRING;
     foreach my $arg (@ARGV) {
-        my ( $opt, $val, $missing_string );
-        if ( substr( $arg, 0, 2 ) eq '--' && length($arg) > 2 ) {
-            ( $opt, $val ) = split /=/, substr( $arg, 2 );
-            $missing_string =
-              defined($opt) && !defined($val) && $ris_string_option->{$opt};
-        }
-        if ( $opt && $missing_string_last ) {
-            $error_message .= <<EOM;
-  '$arg_last' may be missing its string parameter.
-EOM
-        }
 
-        $arg_last            = $arg;
-        $opt_last            = $opt;
-        $val_last            = $val;
-        $missing_string_last = $missing_string;
+        my $arg_seeking_string;
+
+        # something like --option ?
+        if ( substr( $arg, 0, 2 ) eq '--' && length($arg) > 2 ) {
+
+            # Will the previous string without arg try to grab this option?
+            if ( $arg_seeking_string_last && $arg =~ /^\-\-[A-Za-z]/ ) {
+                $error_message .= <<EOM;
+  '$arg_seeking_string_last' may be missing its string parameter.
+EOM
+            }
+
+            # Is this a string option without a following '=value' ?
+            if ( index( $arg, '=' ) < 0
+                && $ris_string_option->{ substr( $arg, 2 ) } )
+            {
+                $arg_seeking_string = $arg;
+            }
+
+        }
+        $arg_seeking_string_last = $arg_seeking_string;
     }
 
     if ($error_message) {
-        my $pre_note = "Possible error detected while processing options ";
+        my $pre_note = "Possible error ";
         $pre_note .=
           defined($config_file)
           ? "in config file '$config_file':\n"
