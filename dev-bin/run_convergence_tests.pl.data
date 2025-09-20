@@ -13385,6 +13385,23 @@ $x = &R::call( "sum",
 --brace-vertical-tightness-closing=1
 --keep-old-breakpoints-after=','
 
+==> b1546.in <==
+push @paths, qw(
+    ../\
+    c:.\\../\
+    c:/\..//
+    c://.\/./\
+    \\.\\../\
+    //\..//
+    //.\/./\
+);
+
+==> b1546.par <==
+--qw-as-function
+--extended-line-up-parentheses
+--maximum-line-length=57
+--paren-tightness=2
+
 ==> b156.in <==
 # State 1
 {

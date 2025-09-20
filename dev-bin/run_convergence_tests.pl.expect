@@ -3711,12 +3711,12 @@ Could not fork '$html_converter $saved_file': $!});
 chdir$test_dir or die"Can't chdir $test_dir";
 @INC=
       (File::Spec->catdir((File::Spec->updir)x 3,
-                          qw(lib) ));
+                          qw(lib)));
 
 chdir$test_dir or die"Can't chdir $test_dir";
 @INC=
       (File::Spec->catdir((File::Spec->updir)x 3,
-                          qw(lib) ));
+                          qw(lib)));
 
 ==> b114 <==
 # State 1
@@ -4776,16 +4776,14 @@ if ( open( SH, '<', "${outdir}config_h.SH" ) )
                                     &&$word
                                     &&(
                                           ($ref_info=
-                                                $references{$word}))
-                                )
+                                                $references{$word})))
 
                                 if(
                                      !$found
                                     &&$word
                                     &&(
                                           ($ref_info=
-                                                $references{$word}))
-                                )
+                                                $references{$word})))
 
 ==> b1205 <==
         # S1 (x was being misparsed as a function call)
@@ -5139,8 +5137,7 @@ $obj= {
         $method.="AdminMode"
           if(
               (
-                defined($context->{args}->{admin_mode}
-                )
+                defined($context->{args}->{admin_mode})
               )
               &&($context->{args}->{admin_mode}eq"yes")
           );
@@ -5149,8 +5146,7 @@ $obj= {
         $method.="AdminMode"
           if(
               (
-                defined($context->{args}->{admin_mode}
-                )
+                defined($context->{args}->{admin_mode})
               )
               &&($context->{args}->{admin_mode}eq"yes")
           );
@@ -5368,15 +5364,13 @@ WriteMakefile(
   @dependents=
   (
            split(
-             $delim,$dependent{$ctr} )
-  );
+             $delim,$dependent{$ctr}));
 
   # S2
   @dependents=
   (
            split(
-             $delim,$dependent{$ctr} )
-  );
+             $delim,$dependent{$ctr}));
 
 ==> b1251 <==
               # S1
@@ -5780,7 +5774,7 @@ use overload
               "*",
               "$O$X$C$O$Y$C\\infopagename$O$Y$C$O$X$C\n",
 
-              " \\textohtmlinfopage" );
+              " \\textohtmlinfopage");
 
        $_=join(
               '',$_,
@@ -5793,7 +5787,7 @@ use overload
               "*",
               "$O$X$C$O$Y$C\\infopagename$O$Y$C$O$X$C\n",
 
-              " \\textohtmlinfopage" );
+              " \\textohtmlinfopage");
 
 ==> b1284 <==
                      # S1
@@ -7255,7 +7249,7 @@ my$sem=sub
      {
          IPC::Semaphore->new(IPC_PRIVATE,$nsem,
                            S_IRWXU|S_IRWXG|S_IRWXO|IPC_CREAT);
-     } );
+     });
 
 my$sem=sub
 {
@@ -7265,7 +7259,7 @@ my$sem=sub
      {
          IPC::Semaphore->new(IPC_PRIVATE,$nsem,
                            S_IRWXU|S_IRWXG|S_IRWXO|IPC_CREAT);
-     } );
+     });
 
 
 ==> b1426 <==
@@ -7555,12 +7549,12 @@ $last = after (
 ==> b1447 <==
     ok(defined($seqio=
                   $gb->get_Stream_by_batch([qw(J00522 AF303112
-                 2981014)] )
+                 2981014)])
     ));
 
     ok(defined($seqio=
                   $gb->get_Stream_by_batch([qw(J00522 AF303112
-                 2981014)] )
+                 2981014)])
     ));
 
 ==> b1448 <==
@@ -7990,7 +7984,7 @@ sub new{
 
 ==> b1468 <==
 foreach $n (
-     qw( msm ali ) )
+     qw( msm ali ))
 {    foreach $e ( qw(
           uc16
           ) )
@@ -8000,7 +7994,7 @@ foreach $n (
 }
 
 foreach $n (
-     qw( msm ali ) )
+     qw( msm ali ))
 {    foreach $e ( qw(
           uc16
           ) )
@@ -8095,11 +8089,11 @@ run_sub (
 $hr->set_uri_schemes([
  'http','https',
  undef,'ftp'
-] );
+]);
 $hr->set_uri_schemes([
  'http','https',
  undef,'ftp'
-] );
+]);
 
 
 ==> b1482 <==
@@ -8425,12 +8419,12 @@ $apple_encodings[1][$i] = { map ( { $_ => $count++ }
 my$varstr=PDL::Char->new([
         ["longstring","def","ghi"],
         ["jkl","mno",'pqr']
-    ] );
+    ]);
 
 my$varstr=PDL::Char->new([
         ["longstring","def","ghi"],
         ["jkl","mno",'pqr']
-    ] );
+    ]);
 
 ==> b1521 <==
     $canvas->create(
@@ -8548,13 +8542,13 @@ my $template;
 ==> b1528 <==
 for $dir (
          split (  /:/, $ENV{ 'PATH' }
-         ) )
+         ))
 {
 }
 
 for $dir (
          split (  /:/, $ENV{ 'PATH' }
-         ) )
+         ))
 {
 }
 
@@ -8793,6 +8787,11 @@ $x = &R::call( "sum",
             )
     );
 
+==> b1546 <==
+push @paths,
+  qw( ../\      c:.\\../\ c:/\..// c://.\/./\
+      \\.\\../\ //\..//   //.\/./\ );
+
 ==> b156 <==
 # State 1
 {
@@ -8923,7 +8922,7 @@ Readonly::Array
 ==> b184 <==
 Readonly::Hash my%CAPTURE_REFERENCE_ENGLISH=>
 (     hashify(qw{ $LAST_PAREN_MATCH $LAST_MATCH_START $LAST_MATCH_END }),
-      %CAPTURE_REFERENCE )
+      %CAPTURE_REFERENCE)
       ;
 
 ==> b186 <==
@@ -11321,13 +11320,13 @@ foreach my $x (
                     description=>$origin->{$name}{description},
                     prereqs=>
                       _prereqs_from_1(undef,undef,$origin->{$name}
-                      ), };
+                      ),};
 
                 # S2 : This is not broken
                 $features->{$name}=
                   {
                     description=>$origin->{$name}{description},
-                    prereqs=>_prereqs_from_1(undef,undef,$origin->{$name}), };
+                    prereqs=>_prereqs_from_1(undef,undef,$origin->{$name}),};
 
 ==> b939 <==
       # State 1

@@ -44668,6 +44668,7 @@ sub set_vertical_tightness_flags {
         my $ibeg_next = $ri_first->[ $nline + 1 ];
         my $token_end = $tokens_to_go[$iend];
         my $iend_next = $ri_last->[ $nline + 1 ];
+        my $interline_space = ( $types_to_go[ $ibeg_next - 1 ] eq 'b' ) ? 1 : 0;
 
         if (
                $type_sequence_to_go[$iend]
@@ -44893,7 +44894,7 @@ sub set_vertical_tightness_flags {
 
                     $vt_type         = 2;
                     $vt_opening_flag = 0;
-                    $vt_closing_flag = $tightness{$token_next} == 2 ? 0 : 1;
+                    $vt_closing_flag = $interline_space;
                     $vt_seqno        = $type_sequence_to_go[$ibeg_next];
                     $vt_valid_flag   = $valid_flag;
                     $vt_min_lines    = $min_lines;
@@ -44966,11 +44967,9 @@ sub set_vertical_tightness_flags {
             )
           )
         {
-            my $spaces = ( $types_to_go[ $ibeg_next - 1 ] eq 'b' ) ? 1 : 0;
-
             $vt_type         = 2;
             $vt_opening_flag = 0;
-            $vt_closing_flag = $spaces;
+            $vt_closing_flag = $interline_space;
             $vt_seqno        = $type_sequence_to_go[$ibeg_next];
             $vt_valid_flag   = 1;
             $vt_min_lines    = 0;
@@ -45031,11 +45030,9 @@ sub set_vertical_tightness_flags {
                     && $types_to_go[$iend_next] eq '#' )
               )
             {
-                my $spaces = ( $types_to_go[ $ibeg_next - 1 ] eq 'b' ) ? 1 : 0;
-
                 $vt_type         = 2;
                 $vt_opening_flag = 0;
-                $vt_closing_flag = $spaces;
+                $vt_closing_flag = $interline_space;
                 $vt_seqno        = $type_sequence_to_go[$ibeg_next];
                 $vt_valid_flag   = 1;
                 $vt_min_lines    = 0;
