@@ -8787,6 +8787,26 @@ $x = &R::call( "sum",
             )
     );
 
+==> b1545 <==
+my $frag =
+  Fey::SQL::Fragment::Join
+  ->new(
+    table1 => $s->table('User'),
+    table2 =>
+      $s->table('UserGroup'),
+    fk => (
+        $s->foreign_keys_between_tables
+          ( $s->tables(
+                        'User', 'UserGroup' ) )
+    )[0], );
+
+$first->add_column(
+            Fey::Column->new(
+                    name => 'first_id',
+                    type => 'integer',
+            ) );
+
+
 ==> b1546 <==
 push @paths,
   qw( ../\      c:.\\../\ c:/\..// c://.\/./\

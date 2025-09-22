@@ -5389,8 +5389,8 @@ sub check_for_missing_string_options {
     # This sub will catch most errors of this type at the earliest possible
     # stage. One exception is if the user enters just part of an option name
     # and relies on name completion by sub GetOptions.  Another exception is if
-    # a fileame follows the missing string option on the command line. In those
-    # cases we have to rely on later checks.
+    # a filename follows the missing string option on the command line. In
+    # those cases we have to rely on later checks.
 
     my $arg_seeking_string_last;
     my $error_message = EMPTY_STRING;

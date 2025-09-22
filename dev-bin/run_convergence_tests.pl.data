@@ -13385,6 +13385,34 @@ $x = &R::call( "sum",
 --brace-vertical-tightness-closing=1
 --keep-old-breakpoints-after=','
 
+==> b1545.in <==
+my $frag =
+  Fey::SQL::Fragment::Join
+  ->new(
+    table1 => $s->table('User'),
+    table2 =>
+      $s->table('UserGroup'),
+    fk => (
+        $s->foreign_keys_between_tables
+          ( $s->tables(
+                        'User', 'UserGroup' ) )
+    )[0], );
+
+$first->add_column(
+            Fey::Column->new(
+                    name => 'first_id',
+                    type => 'integer',
+            ) );
+
+
+==> b1545.par <==
+--maximum-line-length=31
+--weld-nested-containers
+--variable-maximum-line-length
+--paren-vertical-tightness=2
+--extended-line-up-parentheses
+--paren-vertical-tightness-closing=2
+
 ==> b1546.in <==
 push @paths, qw(
     ../\

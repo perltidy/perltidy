@@ -23788,14 +23788,23 @@ sub weld_nested_containers {
     #  _oc=outer closing, i.e. second of } {
     #  _ic=inner closing, i.e. first of  } }
 
-    my $previous_pair;
+    my $pair;
 
     # Main loop over nested pairs...
     # We are working from outermost to innermost pairs so that
     # level changes will be complete when we arrive at the inner pairs.
     while ( @{$rnested_pairs} ) {
-        my $item = pop @{$rnested_pairs};
-        my ( $inner_seqno, $outer_seqno ) = @{$item};
+        my $pair_last = $pair;
+        $pair = pop @{$rnested_pairs};
+        my ( $inner_seqno, $outer_seqno ) = @{$pair};
+
+        # Undo the starting length if this pair is not adjacent to the previous
+        # pair. Fixes b1545.
+        if ( defined($starting_lentot)
+            && $outer_seqno != $pair_last->[0] )
+        {
+            $starting_lentot = undef;
+        }
 
         my $Kouter_opening = $K_opening_container->{$outer_seqno};
         my $Kinner_opening = $K_opening_container->{$inner_seqno};
@@ -23854,12 +23863,6 @@ sub weld_nested_containers {
 
         # Set flag saying if this pair starts a new weld
         my $starting_new_weld = !( @welds && $outer_seqno == $welds[-1]->[0] );
-
-        # Set flag saying if this pair is adjacent to the previous nesting pair
-        # (even if previous pair was rejected as a weld)
-        my $touch_previous_pair =
-          defined($previous_pair) && $outer_seqno == $previous_pair->[0];
-        $previous_pair = $item;
 
         my $do_not_weld_rule = 0;
         my $Msg              = EMPTY_STRING;
@@ -23942,10 +23945,11 @@ EOM
         # If this pair is not adjacent to the previous pair (skipped or not),
         # then measure lengths from the start of line of oo.
         if (
-            !$touch_previous_pair
+            !defined($starting_lentot)
 
             # Also do this if restarting at a new line; fixes case b965, s001
             || ( !$weld_count_this_start && $iline_oo > $iline_outer_opening )
+
           )
         {
 
@@ -24331,7 +24335,7 @@ EOM
                 $Msg .= "Starting new weld\n";
                 print {*STDOUT} $Msg;
             }
-            push @welds, $item;
+            push @welds, $pair;
 
             my $parent_seqno = $self->parent_seqno_by_K($Kouter_closing);
             $weld_starts_in_block = $parent_seqno == SEQ_ROOT
@@ -44665,9 +44669,9 @@ sub set_vertical_tightness_flags {
         # Vertical Tightness Flags Section 1a:
         # Look for Type 1, last token of this line is a non-block opening token
         #--------------------------------------------------------------
-        my $ibeg_next = $ri_first->[ $nline + 1 ];
-        my $token_end = $tokens_to_go[$iend];
-        my $iend_next = $ri_last->[ $nline + 1 ];
+        my $ibeg_next       = $ri_first->[ $nline + 1 ];
+        my $token_end       = $tokens_to_go[$iend];
+        my $iend_next       = $ri_last->[ $nline + 1 ];
         my $interline_space = ( $types_to_go[ $ibeg_next - 1 ] eq 'b' ) ? 1 : 0;
 
         if (
