@@ -2246,6 +2246,42 @@ sub Q_spy {
     };
 } ## end sub Q_spy
 
+sub check_for_valid_token_types {
+    my ( $rlist, ( $option_name, $die_on_error ) ) = @_;
+
+    # Given:
+    #   $rlist = ref to list of possible token types
+    #   ($option_name) = optional name of option to use if a warning message
+    #                    should be issued (caller should add leading dash(es))
+    #   ($die_on_error) = optional flag, true=>Die instead of Warn on error
+    # Return:
+    #   nothing if no errors, or
+    #   ref to list of unknown token types
+    # TODO:
+    #   Consider resetting $rlist to be just the valid types.
+    #   This would give the caller more flexibility.
+
+    my @unknown_types;
+    foreach my $type ( @{$rlist} ) {
+        if ( !is_valid_token_type($type) ) {
+            push @unknown_types, $type;
+        }
+    }
+    return if ( !@unknown_types );
+
+    if ($option_name) {
+        my $num = @unknown_types;
+        local $LIST_SEPARATOR = SPACE;
+        my $msg = <<EOM;
+$num unrecognized token types were input with $option_name :
+@unknown_types
+EOM
+        Die($msg) if ($die_on_error);
+        Warn($msg);
+    }
+    return \@unknown_types;
+} ## end sub check_for_valid_token_types
+
 ###########################################
 # CODE SECTION 3: Check and process options
 ###########################################
@@ -3276,8 +3312,16 @@ sub initialize_token_break_preferences {
     $break_before->(@all_operators)
       if ( $rOpts->{'break-before-all-operators'} );
 
-    $break_after->( split_words( $rOpts->{'want-break-after'} ) );
-    $break_before->( split_words( $rOpts->{'want-break-before'} ) );
+    my $optname = 'want-break-after';
+    if ( my @q = split_words( $rOpts->{$optname} ) ) {
+        check_for_valid_token_types( \@q, "--$optname" );
+        $break_after->(@q);
+    }
+    $optname = 'want-break-before';
+    if ( my @q = split_words( $rOpts->{$optname} ) ) {
+        check_for_valid_token_types( \@q, "--$optname" );
+        $break_before->(@q);
+    }
 
     # Make note if breaks are before certain key types
     # Added '->' for git #171.
@@ -3644,22 +3688,8 @@ EOM
         }
     }
 
-    my @unknown_types;
-    foreach my $type (@list) {
-        if ( !is_valid_token_type($type) ) {
-            push @unknown_types, $type;
-        }
-    }
-
-    if (@unknown_types) {
-        my $num = @unknown_types;
-        local $LIST_SEPARATOR = SPACE;
-        ## NOTE: use Warn instead of Die here to simplify testing
-        Warn(<<EOM);
-$num unrecognized token types were input with -$short_name :
-@unknown_types
-EOM
-    }
+    # Currently Warn instead of Die on invalid token types.
+    check_for_valid_token_types( \@list, "-$short_name" );
 
     @{$rkeep_break_hash}{@list} = (1) x scalar(@list);
 
@@ -4804,18 +4834,22 @@ sub initialize_whitespace_hashes {
 
     # implement user whitespace preferences
     if ( my @q = split_words( $rOpts->{'want-left-space'} ) ) {
+        check_for_valid_token_types( \@q, "--want-left-space" );
         @want_left_space{@q} = (1) x scalar(@q);
     }
 
     if ( my @q = split_words( $rOpts->{'want-right-space'} ) ) {
+        check_for_valid_token_types( \@q, "--want-right-space" );
         @want_right_space{@q} = (1) x scalar(@q);
     }
 
     if ( my @q = split_words( $rOpts->{'nowant-left-space'} ) ) {
+        check_for_valid_token_types( \@q, "--nowant-left-space" );
         @want_left_space{@q} = (-1) x scalar(@q);
     }
 
     if ( my @q = split_words( $rOpts->{'nowant-right-space'} ) ) {
+        check_for_valid_token_types( \@q, "--nowant-right-space" );
         @want_right_space{@q} = (-1) x scalar(@q);
     }
 
