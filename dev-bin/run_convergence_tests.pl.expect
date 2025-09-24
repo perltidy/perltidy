@@ -8812,6 +8812,19 @@ push @paths,
   qw( ../\      c:.\\../\ c:/\..// c://.\/./\
       \\.\\../\ //\..//   //.\/./\ );
 
+==> b1548 <==
+yxskaft(
+     pack( "C*", 0xDF, 0x20 ), # ($bytes2 cmp $U) > 0
+     pack( "U*", 0x3AF, 0x20 )
+     ,                         # ($g2 cmp $byte) > 0
+);
+
+yxskaft(
+     pack( "C*", 0xDF, 0x20 ), # ($bytes2 cmp $U) > 0
+     pack( "U*", 0x3AF, 0x20 )
+     ,                         # ($g2 cmp $byte) > 0
+);
+
 ==> b156 <==
 # State 1
 {

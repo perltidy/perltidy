@@ -26527,7 +26527,10 @@ sub is_fragile_block_type {
                             && $rOpts_ignore_side_comment_lengths
                             && $has_comment )
                         {
-                            $max_prong_len += 2;
+                            # Updated for b1548 to use an increment of 1
+                            # instead of 2 if no space to comma.
+                            $max_prong_len +=
+                              $want_left_space{','} == WS_YES ? 2 : 1;
                         }
                         else {
                             ## no other special cases
