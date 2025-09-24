@@ -99,6 +99,12 @@ sub Die {
     croak "unexpected return from Perl::Tidy::Die";
 }
 
+sub Warn {
+    my ($msg) = @_;
+    Perl::Tidy::Warn($msg);
+    return;
+}
+
 sub Fault {
 
     my ($msg) = @_;
@@ -234,6 +240,41 @@ my (
 
 );
 
+sub check_valign_list_items {
+    my ( $rlist, $option_name ) = @_;
+
+    # Warn if obviously invalid token types or keywords occur in one of the
+    # --valign lists.  This is a crude check for valid token types and valid
+    # keywords.
+
+    # Given:
+    #   $rlist = ref to list of input items
+    #   $option_name = (optional) name of option for a warning message
+    # Return:
+    #   nothing if no errors, or
+    #   ref to list of unknown token types
+    return if ( !defined($rlist) );
+
+    my @unknown_items;
+    foreach my $item ( @{$rlist} ) {
+        next if ( Perl::Tidy::Tokenizer::is_valid_token_type($item) );
+        next if ( Perl::Tidy::Tokenizer::is_keyword($item) );
+        push @unknown_items, $item;
+    }
+    return if ( !@unknown_items );
+
+    if ($option_name) {
+        my $num = @unknown_items;
+        local $LIST_SEPARATOR = SPACE;
+        my $msg = <<EOM;
+Ignoring $num unrecognized items input with $option_name :
+@unknown_items
+EOM
+        Warn($msg);
+    }
+    return \@unknown_items;
+} ## end sub check_valign_list_items
+
 sub check_options {
 
     my ($rOpts) = @_;
@@ -258,12 +299,14 @@ sub check_options {
         # The inclusion list is only relevant if there is an exclusion list
         if ( $rOpts->{'valign-inclusion-list'} ) {
             my @vil = split /\s+/, $rOpts->{'valign-inclusion-list'};
+            check_valign_list_items( \@vil, 'valign-inclusion-list' );
             @valign_control_hash{@vil} = (1) x scalar(@vil);
         }
 
         # Note that the -vxl list is done after -vil, so -vxl has priority
         # in the event of duplicate entries.
         my @vxl = split /\s+/, $rOpts->{'valign-exclusion-list'};
+        check_valign_list_items( \@vxl, 'valign-exclusion-list' );
         @valign_control_hash{@vxl} = (0) x scalar(@vxl);
 
         # Optimization: revert to defaults if no exclusions.

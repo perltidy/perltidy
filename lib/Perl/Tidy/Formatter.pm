@@ -2246,8 +2246,48 @@ sub Q_spy {
     };
 } ## end sub Q_spy
 
+sub check_for_valid_keywords {
+    my ( $rlist, ( $option_name, $die_on_error ) ) = @_;
+
+    # Given:
+    #   $rlist = ref to list of possible keywords
+    #   ($option_name) = optional name of option to use if a warning message
+    #                    should be issued (caller should add leading dash(es))
+    #   ($die_on_error) = optional flag, true=>Die instead of Warn on error
+    # Return:
+    #   nothing if no errors, or
+    #   ref to list of unknown token types
+    # TODO:
+    #   Consider resetting $rlist to be just the valid keywords.
+    #   This would give the caller more flexibility.
+
+    return if ( !defined($rlist) );
+
+    my @unknown_words;
+    foreach my $word ( @{$rlist} ) {
+        if ( !is_keyword($word) ) {
+            push @unknown_words, $word;
+        }
+    }
+    return if ( !@unknown_words );
+
+    if ($option_name) {
+        my $num = @unknown_words;
+        local $LIST_SEPARATOR = SPACE;
+        my $msg = <<EOM;
+$num unrecognized keywords were input with $option_name :
+@unknown_words
+EOM
+        Die($msg) if ($die_on_error);
+        Warn($msg);
+    }
+    return \@unknown_words;
+} ## end sub check_for_valid_keywords
+
 sub check_for_valid_token_types {
     my ( $rlist, ( $option_name, $die_on_error ) ) = @_;
+
+    return if ( !defined($rlist) );
 
     # Given:
     #   $rlist = ref to list of possible token types
@@ -2648,6 +2688,18 @@ sub initialize_grep_and_friends {
     if ( defined($olbxl) ) {
         my @list = split_words($olbxl);
         if (@list) {
+            my @unknown = grep { $_ !~ /^(sort|map|grep|eval|\*)$/ } @list;
+            if (@unknown) {
+                my $num = @unknown;
+                local $LIST_SEPARATOR = SPACE;
+
+                my $msg = <<EOM;
+Ignoring $num unexpected words input with '--one-line-block-exclusion-list':
+@unknown
+EOM
+                ## FIXME: this should become Die after testing
+                Warn($msg);
+            }
             @is_olb_exclusion_word{@list} = (1) x scalar(@list);
         }
     }
@@ -3023,11 +3075,18 @@ sub initialize_space_after_keyword {
 
         # -nsak='*' selects all the above keywords
         if ( @q == 1 && $q[0] eq '*' ) { @q = keys %space_after_keyword }
+
+        # Warn instead of Die to simplify testing
+        else { check_for_valid_keywords( \@q, '--nospace-after-keyword' ) }
+
         @space_after_keyword{@q} = (0) x scalar(@q);
     }
 
     # then allow user to add to these defaults
     if ( my @q = split_words( $rOpts->{'space-after-keyword'} ) ) {
+
+        # Warn instead of Die to simplify testing
+        check_for_valid_keywords( \@q, '--space-after-keyword' );
         @space_after_keyword{@q} = (1) x scalar(@q);
     }
 
@@ -3149,15 +3208,15 @@ sub initialize_outdent_keyword {
     # Implement outdenting preferences for keywords
     %outdent_keyword = ();
     my @okw = split_words( $rOpts->{'outdent-keyword-list'} );
-    if ( !@okw ) {
+    if (@okw) {
+        check_for_valid_keywords( \@okw, '--outdent-keyword-list', 1 );
+    }
+    else {
         @okw = qw( next last redo goto return );    # defaults
     }
 
     # FUTURE: if not a keyword, assume that it is an identifier
     foreach (@okw) {
-        if ( !is_keyword($_) ) {
-            Die("Unexpected string '$_' in -okwl list; not a perl keyword\n");
-        }
         $outdent_keyword{$_} = 1;
     }
     return;
@@ -7211,7 +7270,8 @@ sub bad_pattern {
 
         # Construct a hash needed by the cuddled-else style
 
-        my $cuddled_string = EMPTY_STRING;
+        my $cuddled_string     = EMPTY_STRING;
+        my $cuddled_block_list = $rOpts->{'cuddled-block-list'};
         if ( $rOpts->{'cuddled-else'} ) {
 
             # set the default
@@ -7222,7 +7282,6 @@ sub bad_pattern {
             # $cuddled_string = 'if-elsif-else unless-elsif-else -continue ';
 
             # Add users other blocks to be cuddled
-            my $cuddled_block_list = $rOpts->{'cuddled-block-list'};
             if ($cuddled_block_list) {
                 $cuddled_string .= SPACE . $cuddled_block_list;
             }
@@ -7287,8 +7346,13 @@ sub bad_pattern {
             # The count gives the original word order in case we ever want it.
             $string_count++;
             my $word_count = 0;
+            my @unknown_words;
             foreach my $word (@words) {
                 next unless ($word);
+                if ( $word !~ /^\w+/ || $word =~ /^\d/ ) {
+                    push @unknown_words, $word;
+                    next;
+                }
                 if ( $no_cuddle{$word} ) {
                     Warn(
 "## Ignoring keyword '$word' in -cbl; does not seem right\n"
@@ -7302,6 +7366,22 @@ sub bad_pattern {
                 # git#9: Remove this word from the list of desired one-line
                 # blocks
                 $want_one_line_block{$word} = 0;
+            }
+
+            if (@unknown_words) {
+                local $LIST_SEPARATOR = SPACE;
+                my $num = @unknown_words;
+                my $msg = <<EOM;
+$num unrecognized block types were input with --cuddled-block-list :
+@unknown_words
+EOM
+                if ( !$cuddled_block_list ) {
+                    ## shouldn't happen: only bad words should enter via -cbl
+                    DEVEL_MODE && Fault("unexpected -cb error: $msg\n");
+                }
+
+                # FIXME: this should be Die after testing
+                Warn($msg);
             }
         }
         return;
@@ -7685,10 +7765,16 @@ sub make_keyword_group_list_pattern {
                 push @keyword_list, $word;
             }
         }
-        $keyword_group_list_pattern =
-          make_block_pattern( '-kgbl', $rOpts->{'keyword-group-blanks-list'} );
-        $keyword_group_list_comment_pattern =
-          make_block_pattern( '-kgbl', join( SPACE, @comment_list ) );
+        if (@keyword_list) {
+            check_for_valid_keywords( \@keyword_list,
+                '--keyword-group-blanks-list', 1 );
+            $keyword_group_list_pattern =
+              make_block_pattern( '-kgbl', join( SPACE, @keyword_list ) );
+        }
+        if (@comment_list) {
+            $keyword_group_list_comment_pattern =
+              make_block_pattern( '-kgbl', join( SPACE, @comment_list ) );
+        }
     }
     return;
 } ## end sub make_keyword_group_list_pattern

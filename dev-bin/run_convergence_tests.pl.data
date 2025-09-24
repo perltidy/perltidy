@@ -369,7 +369,7 @@ open( CVSLOG,
 --maximum-unexpected-errors=73
 --nomemoize
 --minimum-space-to-comment=7
---nospace-after-keyword='if our local garbage1'
+--nospace-after-keyword='if our local'
 --nowant-left-space='=~ + ||= ||= != >>= x .= -= >= | < = =~ >= / <='
 --nowant-right-space='.= &= % **= <= -= &&= =~ < //= >>= & =~ =~ x= < .='
 --one-line-block-nesting=47
@@ -579,7 +579,7 @@ my @frames
 --nopass-version-line
 --short-concatenation-item-length=91
 --show-options
---space-after-keyword='if our while garbage1'
+--space-after-keyword='if our while'
 --space-function-paren
 --nospace-keyword-paren
 --nospace-terminal-semicolon
@@ -851,7 +851,7 @@ BEGIN {
 --nopass-version-line
 --short-concatenation-item-length=91
 --show-options
---space-after-keyword='if our while garbage1'
+--space-after-keyword='if our while'
 --space-function-paren
 --nospace-keyword-paren
 --nospace-terminal-semicolon
@@ -1515,7 +1515,7 @@ __END__
 --indent-columns=6
 --maximum-line-length=22
 --short-concatenation-item-length=54
---space-after-keyword='garbage1 my my local'
+--space-after-keyword='my my local'
 --space-backslash-quote=0
 --nospace-for-semicolon
 --nospace-function-paren
@@ -2260,7 +2260,7 @@ Moose::Exporter
 --maximum-line-length=55
 --opening-paren-right
 --short-concatenation-item-length=45
---space-after-keyword='our garbage1 if garbage1'
+--space-after-keyword='our if '
 --space-function-paren
 --space-keyword-paren
 --space-terminal-semicolon
@@ -3593,7 +3593,7 @@ if (
 --indent-columns=7
 --maximum-line-length=52
 --short-concatenation-item-length=72
---space-after-keyword='my my 34 my'
+--space-after-keyword='my my my'
 --space-function-paren
 --space-keyword-paren
 --space-prototype-paren=0
@@ -4551,7 +4551,7 @@ sub receive_bgp_update_message {
 --maximum-line-length=53
 --maximum-unexpected-errors=73
 --minimum-space-to-comment=5
---nospace-after-keyword='my do do garbage1'
+--nospace-after-keyword='my do do '
 --nowant-left-space='% % - == =~ -= &= &&= &= <= < -= !~ / += =~ !~'
 --nowant-right-space='.= & &&= *= >= + = -= //= % >= & | /= &= & x'
 --one-line-block-nesting=43
@@ -6089,7 +6089,7 @@ desc   => 'Available for use by extensions'
 --nopass-version-line
 --short-concatenation-item-length=43
 --show-options
---space-after-keyword='local do garbage1 our'
+--space-after-keyword='local do our'
 --space-function-paren
 --nospace-keyword-paren
 --space-terminal-semicolon
@@ -13690,7 +13690,7 @@ Readonly::Hash my%CAPTURE_REFERENCE_ENGLISH=>
 --maximum-unexpected-errors=57
 --minimum-space-to-comment=5
 --nonon-indenting-braces
---nospace-after-keyword='garbage1 local garbage1 do'
+--nospace-after-keyword='local do'
 --nowant-left-space='-= <= |= **= /= =~ **= += &= > *= += &= **= & / >'
 --nowant-right-space='== ^= < >>= / x & |= != + x <= | <<= %= x >='
 --one-line-block-nesting=2
@@ -14749,7 +14749,7 @@ my %sound =
 --maximum-unexpected-errors=6
 --nomemoize
 --minimum-space-to-comment=1
---nospace-after-keyword='34 local while garbage1'
+--nospace-after-keyword='local while '
 --nowant-left-space='& += x= -= > <<= <<= &&= ^= x **= <= x *= ||= **= !='
 --nowant-right-space='.= //= x >>= /= += = ||= % | -= <= /= = x -= +'
 --one-line-block-nesting=15
@@ -14924,7 +14924,7 @@ foreach
 --norecombine
 --short-concatenation-item-length=71
 --show-options
---space-after-keyword='34 34 garbage1 do'
+--space-after-keyword='do'
 --space-backslash-quote=2
 --space-function-paren
 --nospace-keyword-paren
@@ -15682,7 +15682,7 @@ sub insert_into_db {
 --maximum-line-length=75
 --maximum-unexpected-errors=8
 --minimum-space-to-comment=5
---nospace-after-keyword='while garbage1 while while'
+--nospace-after-keyword='while while while'
 --nowant-left-space='-= &&= .= /= !~ == < &&= / ||= > <<= =~ += / /= &='
 --nowant-right-space='+ //= / **= -= | & !~ >>= | //= !~ /= !~ < += .='
 --one-line-block-nesting=89
@@ -15954,7 +15954,7 @@ my%where=
 --norecombine
 --short-concatenation-item-length=63
 --show-options
---space-after-keyword='while local garbage1 if'
+--space-after-keyword='while local if'
 --nospace-function-paren
 --space-keyword-paren
 --space-terminal-semicolon
@@ -16029,7 +16029,7 @@ my%where=
 --maximum-unexpected-errors=69
 --nomemoize
 --minimum-space-to-comment=8
---nospace-after-keyword='while do 34 our'
+--nospace-after-keyword='while do our'
 --nowant-left-space='||= <<= %= &= &= -= * += <<= % % <<= != &&= = += *='
 --nowant-right-space='%= |= % + += //= > <<= .= < |= | < x= .= == +'
 --one-line-block-nesting=79
@@ -16052,7 +16052,7 @@ my%where=
 --norecombine
 --short-concatenation-item-length=60
 --show-options
---space-after-keyword='34 my our do'
+--space-after-keyword='my our do'
 --nospace-for-semicolon
 --nospace-function-paren
 --nospace-keyword-paren
@@ -16267,7 +16267,7 @@ if (  defined (
 --paren-tightness=2
 --short-concatenation-item-length=5
 --show-options
---space-after-keyword='do local 34 our'
+--space-after-keyword='do local our'
 --space-backslash-quote=2
 --nospace-function-paren
 --space-keyword-paren
@@ -17086,7 +17086,7 @@ foreach my $key
 --maximum-line-length=16
 --maximum-unexpected-errors=23
 --nomemoize
---nospace-after-keyword='34 garbage1 my while'
+--nospace-after-keyword='my while'
 --nowant-left-space='*= & //= < *= += != %= * ^= % != < = /= -= >='
 --nowant-right-space='| %= &&= * -= /= <<= .= <= | > | ^= **= **= + |='
 --one-line-block-nesting=68
@@ -17105,7 +17105,7 @@ foreach my $key
 --outdent-static-block-comments
 --paren-vertical-tightness-closing=1
 --short-concatenation-item-length=53
---space-after-keyword='do 34 while while'
+--space-after-keyword='do while while'
 --space-backslash-quote=0
 --nospace-for-semicolon
 --space-function-paren
@@ -17261,7 +17261,7 @@ foreach my $key
 --nomemoize
 --minimum-space-to-comment=9
 --nonon-indenting-braces
---nospace-after-keyword='my garbage1 do my'
+--nospace-after-keyword='my do my'
 --nowant-left-space='!= <= | & == .= |= / &= ||= %= / x |= /= /= .='
 --nowant-right-space='|= += .= |= | =~ =~ - + x / &&= |= .= .= <= =='
 --one-line-block-nesting=3
@@ -17415,7 +17415,7 @@ explain
 --norecombine
 --short-concatenation-item-length=10
 --show-options
---space-after-keyword='my do local garbage1'
+--space-after-keyword='my do local'
 --nospace-for-semicolon
 --nospace-function-paren
 --nospace-keyword-paren
@@ -18217,7 +18217,7 @@ $b,$c->_div($a,$b)
 --maximum-line-length=12
 --short-concatenation-item-length=66
 --show-options
---space-after-keyword='while our 34 while'
+--space-after-keyword='while our while'
 --space-backslash-quote=2
 --nospace-function-paren
 --space-keyword-paren
@@ -18332,7 +18332,7 @@ if ($printmask
 --nomemoize
 --minimum-space-to-comment=5
 --nonon-indenting-braces
---nospace-after-keyword='34 do do do'
+--nospace-after-keyword='do do do'
 --nowant-left-space='< |= .= = ^= + **= x ^= -= != =~ >= ||= = x !~'
 --nowant-right-space='-= >>= |= < != ||= /= -= + /= %= | != //= x = .='
 --one-line-block-nesting=9
@@ -18656,7 +18656,7 @@ my ( $template, $loggedinuser, $cookie )
 --paren-vertical-tightness=1
 --nopass-version-line
 --short-concatenation-item-length=86
---space-after-keyword='my do garbage1 if'
+--space-after-keyword='my do if'
 --space-backslash-quote=2
 --space-function-paren
 --space-keyword-paren
@@ -18765,7 +18765,7 @@ while (<>)
 --maximum-line-length=28
 --maximum-unexpected-errors=71
 --minimum-space-to-comment=9
---nospace-after-keyword='garbage1 local garbage1 garbage1'
+--nospace-after-keyword='local'
 --nowant-left-space='**= <<= %= !~ **= >= ||= >>= !~ & | /= = **= ||= ||= |='
 --nowant-right-space='* & <= -= &&= != == - &= *= <<= ||= > -= ^= = **='
 --one-line-block-nesting=78
@@ -18938,7 +18938,7 @@ $cron =
 --maximum-line-length=13
 --maximum-unexpected-errors=93
 --nonon-indenting-braces
---nospace-after-keyword='while local do 34'
+--nospace-after-keyword='while local do '
 --nowant-left-space='x == =~ <= ||= += //= = <<= |= / &&= - / /= **= ||='
 --nowant-right-space='*= > > * ^= = - *= &= &&= <<= &&= /= > | |= <'
 --one-line-block-nesting=96
@@ -18960,7 +18960,7 @@ $cron =
 --norecombine
 --short-concatenation-item-length=92
 --show-options
---space-after-keyword='while garbage1 garbage1 do'
+--space-after-keyword='while do'
 --nospace-for-semicolon
 --nospace-function-paren
 --space-keyword-paren
@@ -19125,7 +19125,7 @@ my @cellbits=(
 --nopass-version-line
 --norecombine
 --short-concatenation-item-length=91
---space-after-keyword='34 local do garbage1'
+--space-after-keyword='local do '
 --space-backslash-quote=0
 --nospace-for-semicolon
 --space-function-paren
@@ -19284,7 +19284,7 @@ my (
 --maximum-line-length=12
 --short-concatenation-item-length=66
 --show-options
---space-after-keyword='while our 34 while'
+--space-after-keyword='while our while'
 --space-backslash-quote=2
 --nospace-function-paren
 --space-keyword-paren
@@ -19331,7 +19331,7 @@ my (
 --maximum-line-length=12
 --short-concatenation-item-length=66
 --show-options
---space-after-keyword='while our 34 while'
+--space-after-keyword='while our while'
 --space-backslash-quote=2
 --nospace-function-paren
 --space-keyword-paren
@@ -19594,7 +19594,7 @@ $self->{'H'}=[
 --nowant-right-space='* //= ^= x= + ||= == <= %= **= ||= >= * *= &&= /= /'
 --short-concatenation-item-length=80
 --show-options
---space-after-keyword='garbage1 while our local'
+--space-after-keyword='while our local'
 --nospace-for-semicolon
 --nospace-function-paren
 --nospace-keyword-paren
