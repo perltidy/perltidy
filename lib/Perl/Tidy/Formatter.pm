@@ -2314,7 +2314,8 @@ sub check_for_valid_token_types {
         local $LIST_SEPARATOR = SPACE;
         my $msg = <<EOM;
 $num unrecognized token types were input with $option_name :
-@unknown_types
+ @unknown_types
+Use 'perltidy -dtt' to dump a list of valid token types to standard output
 EOM
         Die($msg) if ($die_on_error);
         Warn($msg);
@@ -3075,18 +3076,14 @@ sub initialize_space_after_keyword {
 
         # -nsak='*' selects all the above keywords
         if ( @q == 1 && $q[0] eq '*' ) { @q = keys %space_after_keyword }
-
-        # Warn instead of Die to simplify testing
-        else { check_for_valid_keywords( \@q, '--nospace-after-keyword' ) }
+        else { check_for_valid_keywords( \@q, '--nospace-after-keyword', 1 ) }
 
         @space_after_keyword{@q} = (0) x scalar(@q);
     }
 
     # then allow user to add to these defaults
     if ( my @q = split_words( $rOpts->{'space-after-keyword'} ) ) {
-
-        # Warn instead of Die to simplify testing
-        check_for_valid_keywords( \@q, '--space-after-keyword' );
+        check_for_valid_keywords( \@q, '--space-after-keyword', 1 );
         @space_after_keyword{@q} = (1) x scalar(@q);
     }
 
