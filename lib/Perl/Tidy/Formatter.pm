@@ -2698,8 +2698,7 @@ sub initialize_grep_and_friends {
 Ignoring $num unexpected words input with '--one-line-block-exclusion-list':
 @unknown
 EOM
-                ## FIXME: this should become Die after testing
-                Warn($msg);
+                Die($msg);
             }
             @is_olb_exclusion_word{@list} = (1) x scalar(@list);
         }
@@ -3316,7 +3315,7 @@ sub initialize_extended_block_tightness_list {
         if (@unknown) {
             my $num = @unknown;
             local $LIST_SEPARATOR = SPACE;
-            Warn(<<EOM);
+            Die(<<EOM);
 $num unrecognized keyword(s) were input with --$long_name :
 @unknown
 EOM
@@ -7376,8 +7375,7 @@ EOM
                     DEVEL_MODE && Fault("unexpected -cb error: $msg\n");
                 }
 
-                # FIXME: this should be Die after testing
-                Warn($msg);
+                Die($msg);
             }
         }
         return;
@@ -8020,8 +8018,7 @@ sub initialize_keep_old_blank_lines_hash {
         if (@unknown_types) {
             my $num = @unknown_types;
             local $LIST_SEPARATOR = SPACE;
-            ## NOTE: use Warn instead of Die here to simplify testing
-            Warn(<<EOM);
+            Die(<<EOM);
 $num unrecognized token types were input with --$short_name :
 @unknown_types
 EOM

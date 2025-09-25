@@ -4902,18 +4902,30 @@ sub cleanup_word_list {
     }
 
     my @filtered_word_list;
+    my @bad_words;
     foreach my $word (@input_list) {
         if ($word) {
-
-            # look for obviously bad words
-            if ( $word =~ /^\d/ || $word !~ /^\w[\w\d]*$/ ) {
-                Warn("unexpected '$option_name' word '$word' - ignoring\n");
-            }
             if ( !$seen{$word} ) {
                 $seen{$word}++;
-                push @filtered_word_list, $word;
+
+                # look for obviously bad words
+                if ( $word =~ /^\d/ || $word !~ /^\w+$/ ) {
+                    push @bad_words, $word;
+                }
+                else {
+                    push @filtered_word_list, $word;
+                }
             }
         }
+    }
+    if (@bad_words) {
+        my $num = @bad_words;
+        local $LIST_SEPARATOR = SPACE;
+        my $msg = <<EOM;
+$num unrecognized words were input with $option_name :
+ @bad_words
+EOM
+        Die($msg);
     }
     $rOpts->{$option_name} = join SPACE, @filtered_word_list;
     return \%seen;
