@@ -424,7 +424,10 @@ sub check_options {
             $guess_if_method = 0;
         }
         else {
-            ## neither 'class' nor 'noclass' seen so use default
+            # At present, only 'class' and 'noclass' are valid strings
+            Die(
+"Unexpected text in --use-feature: expecting 'class' or 'noclass'\n"
+            );
         }
     }
 

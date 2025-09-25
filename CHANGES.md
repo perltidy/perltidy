@@ -2,6 +2,16 @@
 
 ## 2025 09 12.01
 
+    - This version does more extensive checking of all string input parameters
+      and will exit early if something doesn't look right.  The intention is
+      to catch input errors as early as possible.
+
+    - A warning will be issued if any of the flags '--syntax-check', '-syn' or
+      '--perl-syntax-check-flags=s', '-pscf=s' are input. These were
+      deactivated some years ago and will be removed completely in a future
+      version.  So please remove them from your perltidyrc file, or comment
+      them out.
+
     - When perltidy is run with the -html option, and pod is rendered to html
       with pod2html, the pod2html option 'backlink' could not be set in
       in previous versions due to a programming error. This has been fixed.

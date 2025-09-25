@@ -5042,9 +5042,16 @@ EOM
     }
 
     # Syntax checking is no longer supported due to concerns about executing
-    # code in BEGIN blocks.  The flag is still accepted for backwards
-    # compatibility but is ignored if set.
-    $rOpts->{'check-syntax'} = 0;
+    # code in BEGIN blocks.  These flags are still accepted for backwards
+    # compatibility but ignored. They will be deleted in a future version.
+    foreach my $optname (qw( check-syntax perl-syntax-check-flags )) {
+        if ( $rOpts->{$optname} ) {
+            Warn(
+"The option --$optname is no longer supported and should be removed\n"
+            );
+            $rOpts->{$optname} = undef;
+        }
+    }
 
     my $check_blank_count = sub {
         my ( $key, $abbrev ) = @_;
