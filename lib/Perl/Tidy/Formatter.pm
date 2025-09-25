@@ -3370,12 +3370,12 @@ sub initialize_token_break_preferences {
 
     my $optname = 'want-break-after';
     if ( my @q = split_words( $rOpts->{$optname} ) ) {
-        check_for_valid_token_types( \@q, "--$optname" );
+        check_for_valid_token_types( \@q, "--$optname", 1 );
         $break_after->(@q);
     }
     $optname = 'want-break-before';
     if ( my @q = split_words( $rOpts->{$optname} ) ) {
-        check_for_valid_token_types( \@q, "--$optname" );
+        check_for_valid_token_types( \@q, "--$optname", 1 );
         $break_before->(@q);
     }
 
@@ -3744,8 +3744,7 @@ EOM
         }
     }
 
-    # Currently Warn instead of Die on invalid token types.
-    check_for_valid_token_types( \@list, "-$short_name" );
+    check_for_valid_token_types( \@list, "-$short_name", 1 );
 
     @{$rkeep_break_hash}{@list} = (1) x scalar(@list);
 
@@ -4890,22 +4889,22 @@ sub initialize_whitespace_hashes {
 
     # implement user whitespace preferences
     if ( my @q = split_words( $rOpts->{'want-left-space'} ) ) {
-        check_for_valid_token_types( \@q, "--want-left-space" );
+        check_for_valid_token_types( \@q, "--want-left-space", 1 );
         @want_left_space{@q} = (1) x scalar(@q);
     }
 
     if ( my @q = split_words( $rOpts->{'want-right-space'} ) ) {
-        check_for_valid_token_types( \@q, "--want-right-space" );
+        check_for_valid_token_types( \@q, "--want-right-space", 1 );
         @want_right_space{@q} = (1) x scalar(@q);
     }
 
     if ( my @q = split_words( $rOpts->{'nowant-left-space'} ) ) {
-        check_for_valid_token_types( \@q, "--nowant-left-space" );
+        check_for_valid_token_types( \@q, "--nowant-left-space", 1 );
         @want_left_space{@q} = (-1) x scalar(@q);
     }
 
     if ( my @q = split_words( $rOpts->{'nowant-right-space'} ) ) {
-        check_for_valid_token_types( \@q, "--nowant-right-space" );
+        check_for_valid_token_types( \@q, "--nowant-right-space", 1 );
         @want_right_space{@q} = (-1) x scalar(@q);
     }
 
