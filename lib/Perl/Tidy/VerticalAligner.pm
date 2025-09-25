@@ -241,7 +241,7 @@ my (
 );
 
 sub check_valign_list_items {
-    my ( $rlist, $option_name ) = @_;
+    my ( $rlist, ( $option_name, $die_on_error ) ) = @_;
 
     # Warn if obviously invalid token types or keywords occur in one of the
     # --valign lists.  This is a crude check for valid token types and valid
@@ -267,9 +267,10 @@ sub check_valign_list_items {
         my $num = @unknown_items;
         local $LIST_SEPARATOR = SPACE;
         my $msg = <<EOM;
-Ignoring $num unrecognized items input with $option_name :
+$num unrecognized items input with $option_name :
 @unknown_items
 EOM
+        Die($msg) if ($die_on_error);
         Warn($msg);
     }
     return \@unknown_items;
@@ -299,14 +300,14 @@ sub check_options {
         # The inclusion list is only relevant if there is an exclusion list
         if ( $rOpts->{'valign-inclusion-list'} ) {
             my @vil = split /\s+/, $rOpts->{'valign-inclusion-list'};
-            check_valign_list_items( \@vil, 'valign-inclusion-list' );
+            check_valign_list_items( \@vil, 'valign-inclusion-list', 1 );
             @valign_control_hash{@vil} = (1) x scalar(@vil);
         }
 
         # Note that the -vxl list is done after -vil, so -vxl has priority
         # in the event of duplicate entries.
         my @vxl = split /\s+/, $rOpts->{'valign-exclusion-list'};
-        check_valign_list_items( \@vxl, 'valign-exclusion-list' );
+        check_valign_list_items( \@vxl, 'valign-exclusion-list', 1 );
         @valign_control_hash{@vxl} = (0) x scalar(@vxl);
 
         # Optimization: revert to defaults if no exclusions.
