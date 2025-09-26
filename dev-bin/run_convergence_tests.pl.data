@@ -4507,7 +4507,7 @@ sub receive_bgp_update_message {
 --break-before-paren=2
 --break-before-square-bracket-and-indent=1
 --break-before-square-bracket=2
---check-syntax
+##--check-syntax
 --closing-brace-indentation=2
 --closing-paren-indentation=1
 --closing-side-comment-else-flag=1
@@ -9961,7 +9961,7 @@ print to_json({success => $success ? 1 : 0});
 --nobreak-after-all-operators
 --break-at-old-comma-breakpoints
 --nobreak-at-old-semicolon-breakpoints
---check-syntax
+##--check-syntax
 --closing-side-comment-else-flag=1
 --closing-side-comment-interval=26
 --closing-side-comments
@@ -13657,7 +13657,7 @@ Readonly::Hash my%CAPTURE_REFERENCE_ENGLISH=>
 --break-before-paren=3
 --break-before-square-bracket-and-indent=1
 --break-before-square-bracket=1
---check-syntax
+##--check-syntax
 --closing-brace-indentation=1
 --closing-paren-indentation=3
 --closing-side-comment-else-flag=1
@@ -15905,7 +15905,7 @@ my%where=
 --break-before-paren=1
 --break-before-square-bracket-and-indent=1
 --break-before-square-bracket=3
---check-syntax
+##--check-syntax
 --closing-brace-indentation=2
 --closing-paren-indentation=1
 --closing-side-comment-else-flag=1
@@ -18300,7 +18300,7 @@ if ($printmask
 --break-before-paren=2
 --break-before-square-bracket-and-indent=1
 --break-before-square-bracket=2
---check-syntax
+##--check-syntax
 --closing-brace-indentation=2
 --closing-paren-indentation=2
 --closing-side-comment-interval=51
@@ -18909,7 +18909,7 @@ $cron =
 --break-before-paren=3
 --break-before-square-bracket-and-indent=1
 --break-before-square-bracket=2
---check-syntax
+##--check-syntax
 --closing-brace-indentation=2
 --closing-paren-indentation=1
 --closing-side-comment-else-flag=1
@@ -19082,7 +19082,7 @@ my @cellbits=(
 --break-before-paren=2
 --break-before-square-bracket-and-indent=2
 --break-before-square-bracket=3
---check-syntax
+##--check-syntax
 --closing-brace-indentation=2
 --closing-paren-indentation=2
 --closing-side-comment-interval=81

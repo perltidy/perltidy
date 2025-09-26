@@ -945,7 +945,7 @@ EOM
             'break-at-trailing-comma-types' =>
               [ '0', '1', 'm', 'b', 'f(b', 'f(m', 'f(1' ],
 
-            'use-feature' => [ 'class', ' ', 'xyzzy' ],
+            'use-feature' => [ 'class', ' ', 'noclass' ],
 
             'line-range-tidy' => [ '1:', '1:' ],
 
@@ -1105,6 +1105,8 @@ EOM
           podroot
           profile
           title
+
+          check-syntax
 
         );
 

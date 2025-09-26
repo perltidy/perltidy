@@ -306,6 +306,11 @@ sub Die {
     croak "unexpected return from Perl::Tidy::Die";
 }
 
+sub Warn {
+    my ($msg) = @_;
+    Perl::Tidy::Warn($msg);
+}
+
 sub Fault {
     my ( $self, $msg ) = @_;
 
@@ -416,16 +421,24 @@ sub check_options {
     #------------------------------------------------
 
     my $use_feature_class = 1;
-    if ( $rOpts->{'use-feature'} ) {
-        if ( $rOpts->{'use-feature'} =~ /\bnoclass\b/ ) {
+
+    my $str = $rOpts->{'use-feature'};
+    if ( length($str) ) {
+        $str =~ s/^\s+//;
+        $str =~ s/\s+$//;
+        if ( !length($str) ) {
+            ## all spaces
+        }
+        elsif ( $str =~ /\bnoclass\b/ ) {
             $use_feature_class = 0;
         }
-        elsif ( $rOpts->{'use-feature'} =~ /\bclass\b/ ) {
+        elsif ( $str =~ /\bclass\b/ ) {
             $guess_if_method = 0;
         }
         else {
             # At present, only 'class' and 'noclass' are valid strings
-            Die(
+            # This is just a Warn, for testing, but will eventually be Die
+            Warn(
 "Unexpected text in --use-feature: expecting 'class' or 'noclass'\n"
             );
         }
