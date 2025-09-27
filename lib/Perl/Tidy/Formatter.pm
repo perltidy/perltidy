@@ -2689,7 +2689,7 @@ sub initialize_grep_and_friends {
     if ( defined($olbxl) ) {
         my @list = split_words($olbxl);
         if (@list) {
-            my @unknown = grep { $_ !~ /^(sort|map|grep|eval|\*)$/ } @list;
+            my @unknown = grep { !/^(?:sort|map|grep|eval|\*)$/ } @list;
             if (@unknown) {
                 my $num = @unknown;
                 local $LIST_SEPARATOR = SPACE;

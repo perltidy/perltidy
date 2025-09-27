@@ -309,6 +309,7 @@ sub Die {
 sub Warn {
     my ($msg) = @_;
     Perl::Tidy::Warn($msg);
+    return;
 }
 
 sub Fault {

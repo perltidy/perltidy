@@ -452,16 +452,45 @@ my $Warn_count;
 my $fh_stderr;
 my $loaded_unicode_gcstring;
 my $rstatus;
+my $nag_message;
+
+# Flush any accumulated nag message(s) if possible
+sub nag_flush {
+    my ($fh) = @_;
+    if ( length($nag_message) && $Warn_count > 0 ) {
+        $fh->print($nag_message);
+        $nag_message = EMPTY_STRING;
+    }
+    return;
+} ## end sub nag_flush
+
+# Accept a warning message that will only go out if regular warnings also go
+# out.  This is useful when we want to output a non-critical error message, but
+# only if another regular error message goes out, so that test runs do not fail
+# on unimportant issues, but that the user eventually gets to see the issue.
+# For example, we might want to inform the user that a certain parameter in his
+# perltidyrc will be deprecated, but do not want that to cause a test to fail.
+sub Nag {
+    my $msg = shift;
+    $nag_message .= $msg;
+    nag_flush($fh_stderr);
+    return;
+} ## end sub Nag
 
 # Bump Warn_count only: it is essential to bump the count on all warnings, even
 # if no message goes out, so that the correct exit status is set.
 sub Warn_count_bump { $Warn_count++; return }
 
-# Output Warn message only
-sub Warn_msg { my $msg = shift; $fh_stderr->print($msg); return }
+# Output Warn message
+sub Warn_msg {
+    my $msg = shift;
+    $fh_stderr->print($msg);
+    nag_flush($fh_stderr);
+    return;
+} ## end sub Warn_msg
 
-# Output Warn message and bump Warn count
-sub Warn { my $msg = shift; $fh_stderr->print($msg); $Warn_count++; return }
+# Bump Warn count and output Warn message
+sub Warn { my $msg = shift; $Warn_count++; Warn_msg($msg); return }
 
 sub Exit {
     my $flag = shift;
@@ -703,7 +732,8 @@ sub perltidy {
     };
 
     # Fix for issue git #57
-    $Warn_count = 0;
+    $Warn_count  = 0;
+    $nag_message = EMPTY_STRING;
 
     # don't overwrite callers ARGV
     # Localization of @ARGV could be avoided by calling GetOptionsFromArray
@@ -5046,8 +5076,8 @@ EOM
     # compatibility but ignored. They will be deleted in a future version.
     foreach my $optname (qw( check-syntax perl-syntax-check-flags )) {
         if ( $rOpts->{$optname} ) {
-            Warn(
-"The option --$optname is no longer supported and should be removed\n"
+            Nag(
+"## NOTE: The option --$optname is no longer supported and should be removed\n"
             );
             $rOpts->{$optname} = undef;
         }

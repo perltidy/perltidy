@@ -397,6 +397,7 @@ sub warning {
             if ( !$fh_warnings ) {
                 Perl::Tidy::Die("couldn't open warning file '$warning_file'\n");
             }
+            Perl::Tidy::nag_flush($fh_warnings);
             Perl::Tidy::Warn_msg("## Please see file $warning_file\n")
               unless ( ref($warning_file) );
             $self->{_fh_warnings} = $fh_warnings;
