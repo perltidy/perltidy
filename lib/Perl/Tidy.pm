@@ -635,6 +635,7 @@ BEGIN {
         _postfilter_               => $i++,
         _prefilter_                => $i++,
         _rOpts_                    => $i++,
+        _rOpts_in_profile_         => $i++,
         _saw_pbp_                  => $i++,
         _teefile_stream_           => $i++,
         _user_formatter_           => $i++,
@@ -911,8 +912,9 @@ EOM
     #-------------------------
     # get command line options
     #-------------------------
-    my ( $rOpts, $config_file, $rraw_options, $roption_string,
-        $rexpansion, $roption_category, $rinteger_option_range )
+    my ( $rOpts, $config_file, $rraw_options,
+        $roption_string,        $rexpansion, $roption_category,
+        $rinteger_option_range, $rOpts_in_profile )
       = process_command_line(
         $perltidyrc_stream,  $is_Windows, $Windows_type,
         $rpending_complaint, $dump_options_type,
@@ -921,7 +923,8 @@ EOM
     # Only filenames should remain in @ARGV
     my @Arg_files = @ARGV;
 
-    $self->[_rOpts_] = $rOpts;
+    $self->[_rOpts_]            = $rOpts;
+    $self->[_rOpts_in_profile_] = $rOpts_in_profile;
 
     my $saw_pbp =
       grep { $_ eq '-pbp' || $_ eq '-perl-best-practices' } @{$rraw_options};
@@ -1043,8 +1046,12 @@ EOM
         $default_file_extension{ $rOpts->{'format'} } );
 
     # get parameters associated with the -b option
+    my $source =
+        defined($source_stream) ? $source_stream
+      : @Arg_files              ? $Arg_files[-1]
+      :                           undef;
     my ( $in_place_modify, $backup_extension, $delete_backup ) =
-      $self->check_in_place_modify( $source_stream, $destination_stream );
+      $self->check_in_place_modify( $source, $destination_stream );
 
     my $line_range_clipped = $rOpts->{'line-range-tidy'}
       && ( $self->[_line_tidy_begin_] > 1
@@ -1305,7 +1312,7 @@ sub make_file_extension {
 
 sub check_in_place_modify {
 
-    my ( $self, $source_stream, $destination_stream ) = @_;
+    my ( $self, $source, $destination_stream ) = @_;
 
     # See if --backup-and-modify-in-place (-b) is set, and if so,
     # return its associated parameters
@@ -1324,13 +1331,39 @@ sub check_in_place_modify {
     # flag may have been in a .perltidyrc file and warnings break
     # Test::NoWarnings.  See email discussion with Merijn Brand 26 Feb 2014.
     if ($in_place_modify) {
-        if (   $rOpts->{'standard-output'}
-            || $destination_stream
-            || ref($source_stream)
+        if (   $destination_stream
+            || !defined($source)
+            || ref($source)
+            || $source eq '-'
             || $rOpts->{'outfile'}
             || defined( $rOpts->{'output-path'} ) )
         {
             $in_place_modify = 0;
+        }
+
+        # But Warn or Nag for certain conflicts with -st.  This can happen for
+        # example if user chooses -pbp and -b because -st is hidden in -pbp.
+        elsif ( $rOpts->{'standard-output'} ) {
+            $in_place_modify = 0;
+
+            my $rOpts_in_profile = $self->[_rOpts_in_profile_];
+            if ( !$rOpts_in_profile->{'backup-and-modify-in-place'} ) {
+                Warn(
+"## warning: conflict of -st with -b: -st has priority; use -nst to activate -b\n"
+                );
+            }
+            elsif ( $rOpts_in_profile->{'standard-output'} ) {
+                Nag(
+"## warning: conflict of -st and -b in profile: -st has priority; use -nst to activate -b\n"
+                );
+
+            }
+            else {
+                ## keep quiet
+            }
+        }
+        else {
+            ## ok to use -b
         }
     }
 
@@ -4804,6 +4837,18 @@ EOM
         }
     }
 
+    # Save selected options seen in the profile for use in error checking
+    my %Opts_in_profile = ();
+    foreach my $opt (
+        qw(
+        backup-and-modify-in-place
+        standard-output
+        )
+      )
+    {
+        $Opts_in_profile{$opt} = $Opts{$opt};
+    }
+
     #----------------------------------------
     # now process the command line parameters
     #----------------------------------------
@@ -4834,8 +4879,9 @@ EOM
         }
     }
 
-    return ( \%Opts, $config_file, \@raw_options, $roption_string,
-        $rexpansion, $roption_category, $rinteger_option_range );
+    return ( \%Opts, $config_file, \@raw_options,
+        $roption_string,        $rexpansion, $roption_category,
+        $rinteger_option_range, \%Opts_in_profile );
 } ## end sub _process_command_line
 
 sub make_grep_alias_string {

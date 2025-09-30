@@ -293,7 +293,8 @@ the B<-b> parameter please be sure to have backups and verify that it works
 correctly in your environment and operating system.
 
 A B<-b> flag will be ignored if input is from standard input or goes to
-standard output, or if the B<-html> flag is set.
+standard output, or if a specific output filename is specified with
+B<--outfile=filename>, or if the B<-html> flag is set.
 
 In particular, if you want to use both the B<-b> flag and the
 B<--perl-best-practices> (B<-pbp>) flag, then you must put a
