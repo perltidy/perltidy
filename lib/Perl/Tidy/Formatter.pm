@@ -26679,9 +26679,8 @@ sub is_fragile_block_type {
                         # and is it a list?
                         && $ris_list_by_seqno->{$seqno}
 
-                        # NOTE: Previously we skipped if -iob was set, but
-                        # this is not strictly necessary.
-                        # && !$rOpts_ignore_old_breakpoints
+                        # if -iob is set (b1549)
+                        && !$rOpts_ignore_old_breakpoints
 
                         # and -vmll is NOT set; fixes b1325, b1537
                         # In general, -vmll and -xlp are not a good combination.

@@ -13448,6 +13448,41 @@ yxskaft(
 --extended-line-up-parentheses
 --ignore-side-comment-lengths
 
+==> b1549.in <==
+      $w_heap->coords(
+           $tile_ids[$i], $new_col *
+            $TILE_WIDTH,    #x0
+           $new_row *
+             $TILE_HEIGHT,    #y0
+           ( $new_col + 1 ) *
+             $TILE_WIDTH,     #x1
+           ( $new_row + 1 ) *
+             $TILE_HEIGHT,
+      );
+
+      $w_heap->coords(
+                     $tile_ids[$i],
+                     $new_col * $TILE_WIDTH, #x0
+                     $new_row *
+                       $TILE_HEIGHT
+                     ,    #y0
+                     (
+                        $new_col + 1
+                       ) *
+                       $TILE_WIDTH
+                     ,    #x1
+                     (
+                        $new_row + 1
+                       ) *
+                       $TILE_HEIGHT,
+      );
+
+==> b1549.par <==
+--maximum-line-length=36
+--indent-columns=3
+--ignore-old-breakpoints
+--extended-line-up-parentheses
+
 ==> b156.in <==
 # State 1
 {
