@@ -7526,6 +7526,47 @@ In this case, there are no adjacent C<?> symbols, so the nesting depth is zero.
 
 =back
 
+=item B<Use --dump-keyword-usage> to dump a list of keywords used
+
+By default, the parameter B<--dump-keyword-usage>, or B<-dku>, will write a
+list of perl builtin keywords used in a file, along with the count and the line
+numbers of the first and last occurrence.  This list can be read into a
+spreadsheet for sorting.  The list includes all builtin perl keywords which are
+used in a file, but this can be changed with the next parameter.
+
+=item B<Use --dump-keyword-usage-list=s> to select keywords to be dumped.
+
+The parameter B<--dump-keyword-usage-list=s>, or B<-dkul=s>, supplies a list of
+either builtin keywords or user function names for the previous parameter, B<-dku>.
+If this list includes a B<'*'> then all builtin keywords will be included plus any
+words in this list. Otherwise, just the words in this list will be included.
+
+For example:
+
+  perltidy -dku -dkul='goto system fileparse' ifile >ofile
+
+will dump a list of information on the occurrences of just the perl builtin
+keywords C<goto> and C<system>, plus a function named C<fileparse>.
+
+The treatment of module paths in function names is as follows:
+
+=over 4
+
+=item *
+
+If the list contains a bare word, like C<fileparse> as above, and input file
+contains calls written both with and without module paths, such as
+C<File::Basename::fileparse> and just C<fileparse>, then all versions will be
+listed, but on separate output lines in the dump.
+
+=item *
+
+If instead the input list had been expressed with a full module name path, such
+as C<File::Basename::fileparse>, then only function calls exactly matching that
+full module path would be included in the output.
+
+=back
+
 =back
 
 =head2 B<Working with MakeMaker, AutoLoader and SelfLoader>
@@ -7873,23 +7914,23 @@ The following list shows all short parameter names which allow a prefix
  atnl   aws    b      baa    baao   bar    bbao   bbb    bbc    bbs
  bl     bli    boa    boc    bok    bol    bom    bos    bot    cblx
  ce     conv   cpb    cpbw   cs     csc    cscb   cscw   csfs   dac
- dbc    dbs    dcbl   dcsc   ddf    dfsfs  dhk    dia    dior   dln
- dltc   dma    dmcp   dmr    dnl    dnt    dop    dp     dpro   drc
- dsc    dsk    dsm    dsn    dtc    dtco   dtt    duk    duv    dwic
- dwls   dwrs   dws    eos    f      fpva   frm    fs     fso    gcs
- hbc    hbcm   hbco   hbh    hbhh   hbi    hbj    hbk    hbm    hbn
- hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv    hbw    hent   hic
- hicm   hico   hih    hihh   hii    hij    hik    him    hin    hip
- hipd   hipu   hiq    his    hisc   hiv    hiw    hsc    html   ibc
- icb    icp    ils    iob    ipc    isbc   iscl   kgb    kgbd   kgbi
- kis    lal    log    lop    lp     lsl    mci    mem    nib    ohbr
- okw    ola    olc    oll    olq    opr    opt    osbc   osbr   otr
- ple    pod    pvl    q      qwaf   sac    sbc    sbl    scbb   schb
- scp    scsb   sct    se     sfp    sfs    skp    sob    sobb   sohb
- sop    sosb   sot    ssc    st     sts    t      tac    tbc    toc
- tp     tqw    trp    ts     tsc    tso    vbc    vc     viu    vmll
- vsc    vsn    vwe    w      wfc    wia    wma    wme    wmr    wn
- wnt    wsk    wuk    x      xbt    xci    xlp    xs
+ dbc    dbs    dcbl   dcsc   ddf    dfsfs  dhk    dia    dior   dku
+ dln    dltc   dma    dmcp   dmr    dnl    dnt    dop    dp     dpro
+ drc    dsc    dsk    dsm    dsn    dtc    dtco   dtt    duk    duv
+ dwic   dwls   dwrs   dws    eos    f      fpva   frm    fs     fso
+ gcs    hbc    hbcm   hbco   hbh    hbhh   hbi    hbj    hbk    hbm
+ hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv    hbw    hent
+ hic    hicm   hico   hih    hihh   hii    hij    hik    him    hin
+ hip    hipd   hipu   hiq    his    hisc   hiv    hiw    hsc    html
+ ibc    icb    icp    ils    iob    ipc    isbc   iscl   kgb    kgbd
+ kgbi   kis    lal    log    lop    lp     lsl    mci    mem    nib
+ ohbr   okw    ola    olc    oll    olq    opr    opt    osbc   osbr
+ otr    ple    pod    pvl    q      qwaf   sac    sbc    sbl    scbb
+ schb   scp    scsb   sct    se     sfp    sfs    skp    sob    sobb
+ sohb   sop    sosb   sot    ssc    st     sts    t      tac    tbc
+ toc    tp     tqw    trp    ts     tsc    tso    vbc    vc     viu
+ vmll   vsc    vsn    vwe    w      wfc    wia    wma    wme    wmr
+ wn     wnt    wsk    wuk    x      xbt    xci    xlp    xs
 
 Equivalently, the prefix 'no' or 'no-' on the corresponding long names may be
 used.

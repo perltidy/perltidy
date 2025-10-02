@@ -2,6 +2,11 @@
 
 ## 2025 09 12.01
 
+    - A new parameter --dump-keyword-usage can be used to dump a list of the
+      the perl builtin keywords used in a file. A companion flag
+      --dump-keyword-usage-list=s can be used to give a specific list of
+      keywords or user functions to be included in the list.
+
     - This version does more extensive checking of all string input parameters
       and will exit early if something doesn't look right.  The intention is
       to catch input errors as early as possible.

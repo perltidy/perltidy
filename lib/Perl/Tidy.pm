@@ -571,6 +571,73 @@ sub get_iteration_count {
     return $rstatus->{iteration_count};
 }
 
+sub check_for_valid_words {
+
+    my ($rhash) = @_;
+
+    # Given hash ref with these keys:
+    #   rlist = ref to list of possible words
+    #   option_name  =  name of option to use for a warn or die message
+    #                   (caller should add leading dash(es))
+    #   on_error =
+    #               'warn'  ? call Warn
+    #             : 'die'   ? call Die
+    #             :         just return errors
+    #   allow_module_path = true if words can have module paths with '::'
+    #   rexception_hash   = optional ref to hash of acceptable non-words
+
+    # Return (if it does not call Die):
+    #   - nothing if no errors, or
+    #   - ref to list of unknown words
+
+    return if ( !defined($rhash) );
+    my $rlist             = $rhash->{rlist};
+    my $option_name       = $rhash->{option_name};
+    my $on_error          = $rhash->{on_error};
+    my $allow_module_path = $rhash->{allow_module_path};
+    my $rexception_hash   = $rhash->{rexception_hash};
+
+    return if ( !defined($rlist) );
+    my @non_words;
+    foreach my $word ( @{$rlist} ) {
+
+        next if ( $rexception_hash && $rexception_hash->{$word} );
+        next if ( $word =~ /^\w+$/ && $word !~ /^\d/ );
+
+        # Words with a module path, like My::Module::function
+        if ( $allow_module_path && index( $word, ':' ) ) {
+            my @parts = split /::/, $word;
+            my $ok    = 1;
+            foreach my $sub_word (@parts) {
+                next if ( !length($sub_word) );
+                next if ( $sub_word =~ /^\w+$/ && $sub_word !~ /^\d/ );
+                $ok = 0;
+                last;
+            }
+            next if ($ok);
+        }
+
+        push @non_words, $word;
+    }
+
+    return if ( !@non_words );
+    return if ( !$on_error );
+    $on_error = lc($on_error);
+    if ( $on_error eq 'warn' || $on_error eq 'die' ) {
+
+        my $msg_end = $option_name ? " with $option_name" : EMPTY_STRING;
+        my $num     = @non_words;
+        local $LIST_SEPARATOR = SPACE;
+        my $msg = <<EOM;
+$num unrecognized words were input$msg_end :
+@non_words
+EOM
+        Die($msg) if ( $on_error eq 'die' );
+        Warn($msg);
+    }
+    return \@non_words;
+} ## end sub check_for_valid_words
+
 my %is_known_markup_word;
 
 BEGIN {
@@ -998,6 +1065,7 @@ EOM
         dump-unique-keys
         dump-hash-keys
         dump-similar-keys
+        dump-keyword-usage
         )
       )
     {
@@ -3978,6 +4046,8 @@ sub generate_options {
     $add_option->( 'dump-mismatched-args',            'dma',   '!' );
     $add_option->( 'dump-mismatched-returns',         'dmr',   '!' );
     $add_option->( 'dump-mixed-call-parens',          'dmcp',  '!' );
+    $add_option->( 'dump-keyword-usage',              'dku',   '!' );
+    $add_option->( 'dump-keyword-usage-list',         'dkul',  '=s' );
     $add_option->( 'dump-options',                    'dop',   '!' );
     $add_option->( 'dump-profile',                    'dpro',  '!' );
     $add_option->( 'dump-short-names',                'dsn',   '!' );
@@ -4813,11 +4883,13 @@ EOM
                 #  dump-unusual-variables
                 #  dump-want-left-space
                 #  dump-want-right-space
+                #  dump-keyword-usage
 
-                # The following two dump configuration parameters which
+                # The following dump configuration parameters which
                 # take =i or =s would still be allowed:
-                #  dump-block-minimum-lines',        'dbl',   '=i' );
-                #  dump-block-types',                'dbt',   '=s' );
+                #  dump-block-minimum-lines,        'dbl',   '=i' );
+                #  dump-block-types,                'dbt',   '=s' );
+                #  dump-keyword-usage-list,         'dkul',  '=s' );
 
                 foreach my $cmd (
                     @dump_commands,
@@ -4897,19 +4969,22 @@ sub make_grep_alias_string {
 
     # make a hash of any excluded words
     my %is_excluded_word;
-    my $exclude_string = $rOpts->{'grep-alias-exclusion-list'};
+    my $opt_name       = 'grep-alias-exclusion-list';
+    my $exclude_string = $rOpts->{$opt_name};
     if ($exclude_string) {
         $exclude_string =~ s/,/ /g;    # allow commas
         $exclude_string =~ s/^\s+//;
         $exclude_string =~ s/\s+$//;
         my @q = split /\s+/, $exclude_string;
         @is_excluded_word{@q} = (1) x scalar(@q);
-        foreach my $word (@q) {
-            next if ( $word eq '*' );
-            if ( $word =~ /^\d/ || $word =~ /[^\w]/ ) {
-                my $opt_name = 'grep-alias-exclusion-list';
-                Die("unexpected word in --$opt_name: '$word'\n");
-            }
+        if ( !$is_excluded_word{'*'} ) {
+            check_for_valid_words(
+                {
+                    rlist       => \@q,
+                    option_name => "--$opt_name",
+                    on_error    => 'die',
+                }
+            );
         }
     }
 
@@ -4930,19 +5005,24 @@ sub make_grep_alias_string {
     my %seen;
 
     foreach my $word (@word_list) {
-        if ($word) {
-            if ( $word =~ /^\d/ || $word =~ /[^\w]/ ) {
-                my $opt_name = 'grep-alias-list';
-                Die("unexpected word in --$opt_name: '$word'\n");
-            }
-            if ( !$seen{$word} && !$is_excluded_word{$word} ) {
-                $seen{$word}++;
-                push @filtered_word_list, $word;
-            }
+        if ( !$seen{$word} && !$is_excluded_word{$word} ) {
+            $seen{$word}++;
+            push @filtered_word_list, $word;
         }
     }
+
+    $opt_name = 'grep-alias-list';
+    check_for_valid_words(
+        {
+            rlist       => \@filtered_word_list,
+            option_name => "--$opt_name",
+            on_error    => 'die',
+        }
+    );
+
     my $joined_words = join SPACE, @filtered_word_list;
-    $rOpts->{'grep-alias-list'} = $joined_words;
+    $rOpts->{$opt_name} = $joined_words;
+
     return;
 } ## end sub make_grep_alias_string
 
@@ -4978,31 +5058,19 @@ sub cleanup_word_list {
     }
 
     my @filtered_word_list;
-    my @bad_words;
     foreach my $word (@input_list) {
-        if ($word) {
-            if ( !$seen{$word} ) {
-                $seen{$word}++;
-
-                # look for obviously bad words
-                if ( $word =~ /^\d/ || $word !~ /^\w+$/ ) {
-                    push @bad_words, $word;
-                }
-                else {
-                    push @filtered_word_list, $word;
-                }
-            }
+        if ( !$seen{$word} ) {
+            $seen{$word}++;
+            push @filtered_word_list, $word;
         }
     }
-    if (@bad_words) {
-        my $num = @bad_words;
-        local $LIST_SEPARATOR = SPACE;
-        my $msg = <<EOM;
-$num unrecognized words were input with $option_name :
- @bad_words
-EOM
-        Die($msg);
-    }
+    check_for_valid_words(
+        {
+            rlist       => \@filtered_word_list,
+            option_name => "--$option_name",
+            on_error    => 'die',
+        }
+    );
     $rOpts->{$option_name} = join SPACE, @filtered_word_list;
     return \%seen;
 } ## end sub cleanup_word_list

@@ -2246,6 +2246,10 @@ sub Q_spy {
     };
 } ## end sub Q_spy
 
+sub check_for_valid_words {
+    return Perl::Tidy::check_for_valid_words(@_);
+}
+
 sub check_for_valid_keywords {
     my ( $rlist, ( $option_name, $die_on_error ) ) = @_;
 
@@ -3223,28 +3227,18 @@ sub initialize_keyword_paren_inner_tightness {
     # Process and check a -kpitl=string, even if it will not be needed
     my $kpitl_key = 'keyword-paren-inner-tightness-list';
     my @kpit      = split_words( $rOpts->{$kpitl_key} );
-    if ( !@kpit ) {
-        @kpit = qw( if elsif unless while until for foreach );    # defaults
+    if (@kpit) {
+        check_for_valid_words(
+            {
+                rlist           => \@kpit,
+                option_name     => "--$kpitl_key",
+                on_error        => 'die',
+                rexception_hash => undef,
+            }
+        );
     }
     else {
-
-        # Do some very simple checks for invalid keywords and user-defined
-        # identifiers.
-        my @unknown_words;
-        foreach my $word (@kpit) {
-            if ( $word =~ /^\d/ || $word =~ /[^\w\:]/ ) {
-                push @unknown_words, $word;
-            }
-        }
-
-        if (@unknown_words) {
-            my $num = @unknown_words;
-            local $LIST_SEPARATOR = SPACE;
-            Die(<<EOM);
-$num invalid functions were input with --$kpitl_key :
-@unknown_words
-EOM
-        }
+        @kpit = qw( if elsif unless while until for foreach );    # defaults
     }
 
     # Setup hash for -kpit option
@@ -5391,7 +5385,18 @@ sub set_whitespace_flags {
 
                     # Note that this does not include functions called
                     # with '->(', so that case has to be handled separately
-                    set_container_ws_by_keyword( $last_token, $seqno );
+
+                    # Remove any leading module path name if necessary. The
+                    # -kpitl flag only accepts simple words without module
+                    # name.
+                    my $last_word = $last_token;
+                    if ( $last_type eq 'U' ) {
+                        my $pos = rindex( $last_token, ':' );
+                        if ( $pos >= 0 ) {
+                            $last_word = substr( $last_token, $pos + 1 );
+                        }
+                    }
+                    set_container_ws_by_keyword( $last_word, $seqno );
                     $ris_function_call_paren->{$seqno} = 1;
                 }
 
@@ -7265,8 +7270,9 @@ sub bad_pattern {
 
         # Construct a hash needed by the cuddled-else style
 
+        my $opt_name           = 'cuddled-block-list';
         my $cuddled_string     = EMPTY_STRING;
-        my $cuddled_block_list = $rOpts->{'cuddled-block-list'};
+        my $cuddled_block_list = $rOpts->{$opt_name};
         if ( $rOpts->{'cuddled-else'} ) {
 
             # set the default
@@ -7338,16 +7344,25 @@ sub bad_pattern {
                 $rcuddled_block_types->{$start} = {};
             }
 
+            my $rbad = check_for_valid_words(
+                {
+                    rlist       => \@words,
+                    option_name => "--$opt_name",
+                    on_error    => 'warn',
+                }
+            );
+            if ( defined($rbad) ) {
+                if ( !$cuddled_block_list ) {
+                    DEVEL_MODE && Fault("unexpected -cb error\n");
+                }
+                Die(EMPTY_STRING);
+            }
+
             # The count gives the original word order in case we ever want it.
             $string_count++;
             my $word_count = 0;
-            my @unknown_words;
             foreach my $word (@words) {
                 next unless ($word);
-                if ( $word !~ /^\w+/ || $word =~ /^\d/ ) {
-                    push @unknown_words, $word;
-                    next;
-                }
                 if ( $no_cuddle{$word} ) {
                     Warn(
 "## Ignoring keyword '$word' in -cbl; does not seem right\n"
@@ -7363,20 +7378,6 @@ sub bad_pattern {
                 $want_one_line_block{$word} = 0;
             }
 
-            if (@unknown_words) {
-                local $LIST_SEPARATOR = SPACE;
-                my $num = @unknown_words;
-                my $msg = <<EOM;
-$num unrecognized block types were input with --cuddled-block-list :
-@unknown_words
-EOM
-                if ( !$cuddled_block_list ) {
-                    ## shouldn't happen: only bad words should enter via -cbl
-                    DEVEL_MODE && Fault("unexpected -cb error: $msg\n");
-                }
-
-                Die($msg);
-            }
         }
         return;
     } ## end sub prepare_cuddled_block_types
@@ -9048,6 +9049,11 @@ EOM
 
     if ( $rOpts->{'dump-mixed-call-parens'} ) {
         $self->dump_mixed_call_parens();
+        Exit(0);
+    }
+
+    if ( $rOpts->{'dump-keyword-usage'} ) {
+        $self->dump_keyword_usage();
         Exit(0);
     }
 
@@ -15412,6 +15418,93 @@ sub block_seqno_of_paren_seqno {
         && $self->[_rblock_type_of_seqno_]->{$seqno_block} );
     return $seqno_block;
 } ## end sub block_seqno_of_paren_seqno
+
+sub dump_keyword_usage {
+    my ($self) = @_;
+
+    # Implement --dump-keyword-usage
+
+    my $opt_name = 'dump-keyword-usage';
+    return unless ( $rOpts->{$opt_name} );
+
+    my %dump_keyword_usage_list;
+    my $include_all_keywords = 1;
+    my $opt_name_list        = 'dump-keyword-usage-list';
+    my $word_list            = $rOpts->{$opt_name_list};
+    if ($word_list) {
+        $word_list =~ s/,/ /g;
+        if ( my @q = split_words($word_list) ) {
+            check_for_valid_words(
+                {
+                    rlist           => \@q,
+                    option_name     => "--$opt_name_list",
+                    on_error        => 'die',
+                    rexception_hash => { '*' => 1 },
+                }
+            );
+
+            @dump_keyword_usage_list{@q} = (1) x scalar(@q);
+            $include_all_keywords = $dump_keyword_usage_list{'*'};
+        }
+    }
+
+    my $rLL = $self->[_rLL_];
+
+    my @line_order;
+    my %call_counts;
+    foreach my $KK ( 0 .. @{$rLL} - 1 ) {
+        my $type  = $rLL->[$KK]->[_TYPE_];
+        my $token = $rLL->[$KK]->[_TOKEN_];
+        if ( $include_all_keywords && $type eq 'k' ) {
+            ## ok to include
+        }
+        elsif (%dump_keyword_usage_list) {
+
+            # 'k'=builtin keyword, 'U'=user defined sub, 'w'=unknown bareword
+            next unless ( $is_kwU{$type} );
+            if ( !$dump_keyword_usage_list{$token} ) {
+
+                # Try removing any leading module path
+                next if ( $type ne 'U' );
+                my $pos = rindex( $token, ':' );
+                next if ( $pos <= 0 );
+                my $word = substr( $token, $pos + 1 );
+                next if ( !$dump_keyword_usage_list{$word} );
+            }
+        }
+        else {
+            next;
+        }
+
+        if ( !defined( $call_counts{$token} ) ) {
+            push @line_order, $token;
+            $call_counts{$token} = { count => 1, Kfirst => $KK, Klast => $KK };
+        }
+        else {
+            $call_counts{$token}->{count}++;
+            $call_counts{$token}->{Klast} = $KK;
+        }
+    }
+
+    return if ( !@line_order );
+
+    my $input_stream_name = get_input_stream_name();
+    my $output_string     = <<EOM;
+$input_stream_name: output for --$opt_name
+keyword,count,lno_first,lno_last
+EOM
+    foreach my $key (@line_order) {
+        my $rhash    = $call_counts{$key};
+        my $count    = $rhash->{count};
+        my $Kfirst   = $rhash->{Kfirst};
+        my $Klast    = $rhash->{Klast};
+        my $ln_first = $rLL->[$Kfirst]->[_LINE_INDEX_] + 1;
+        my $ln_last  = $rLL->[$Klast]->[_LINE_INDEX_] + 1;
+        $output_string .= "$key,$count,$ln_first,$ln_last\n";
+    }
+    print {*STDOUT} $output_string;
+    return;
+} ## end sub dump_keyword_usage
 
 sub dump_mixed_call_parens {
     my ($self) = @_;
