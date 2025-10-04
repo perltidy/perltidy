@@ -8860,6 +8860,22 @@ yxskaft(
                        $TILE_HEIGHT,
       );
 
+==> b1550 <==
+   $_->then( $start_next,
+             sub { }, )
+     for @start ;
+   return
+     $class->all( @start,
+                  @wait, ) ;
+
+   $_->then( $start_next,
+             sub { }, )
+     for @start ;
+   return
+     $class->all( @start,
+                  @wait, ) ;
+
+
 ==> b156 <==
 # State 1
 {
