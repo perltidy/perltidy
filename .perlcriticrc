@@ -132,8 +132,10 @@ max_characters=250
 
 # postfix 'if' is okay if it highlights control flow
 # postfix 'unless' is likewise okay if simple and without negative terms
+# postfix 'for' is useful for initializing hashes:
+#      $hash{$_} = 1 for @list;
 [ControlStructures::ProhibitPostfixControls]
-allow = if unless
+allow = for if unless
 
 # This is a good in general but has to be turned off here because there are
 # many cases where a number has been explained in a comment or is obvious.
