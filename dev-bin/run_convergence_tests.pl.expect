@@ -8876,6 +8876,19 @@ yxskaft(
                   @wait, ) ;
 
 
+==> b1551 <==
+my %e =
+(   jisx0208 => [ qw/euc-jp shiftjis 7bit-jis iso-2022-jp iso-2022-jp-1/ ],
+
+    #
+);
+my %e =
+(   jisx0208 => [ qw/euc-jp shiftjis 7bit-jis iso-2022-jp iso-2022-jp-1/ ],
+
+    #
+);
+
+
 ==> b156 <==
 # State 1
 {

@@ -69,6 +69,7 @@ use warnings;
 use constant DEVEL_MODE   => 0;
 use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };
+use constant COMMA        => q{,};
 use constant BACKSLASH    => q{\\};
 
 { #<<< A non-indenting brace to contain all lexical variables
@@ -345,6 +346,7 @@ my (
     %is_keyword_with_special_leading_term,
     %is_s_y_m_slash,
     %is_sigil,
+    %is_comma_token,
 
     # INITIALIZER: sub check_options
     $controlled_comma_style,
@@ -1001,6 +1003,8 @@ BEGIN {
 
     @q = qw( $ & % * @ );
     @is_sigil{@q} = (1) x scalar(@q);
+
+    $is_comma_token{$_} = 1 for ( '=>', COMMA );
 
 } ## end BEGIN
 
@@ -26271,7 +26275,7 @@ sub is_fragile_block_type {
         my $length = 0;
         if (
                $KK < $K_comma
-            && $rLL->[$K_comma]->[_TYPE_] eq ','    # should be true
+            && $is_comma_token{ $rLL->[$K_comma]->[_TYPE_] }    # should be true
 
             # Ignore if terminal comma, causes instability (b1297,
             # b1330)
@@ -26799,17 +26803,18 @@ sub is_fragile_block_type {
                            $interrupted_list_rule
                         && $KK < $K_terminal
 
-                        # The line should end in a comma
+                        # The line should end in a comma-type.
                         # NOTE: this currently assumes break after comma.
                         # As long as the other call to cumulative_length..
                         # makes the same assumption we should remain stable.
-                        && $rLL->[$K_terminal]->[_TYPE_] eq ','
-
+                        # Updated to include '=>' for b1551. Also supplied the
+                        # interrupted flag to the length function
+                        && $is_comma_token{ $rLL->[$K_terminal]->[_TYPE_] }
                       )
                     {
                         $max_prong_len =
                           $self->cumulative_length_to_comma( $KK + 1,
-                            $K_terminal, $K_c );
+                            $K_terminal, $K_c, $interrupted_list_rule );
                     }
 
                     push @stack, [

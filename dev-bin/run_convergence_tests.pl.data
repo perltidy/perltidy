@@ -13506,6 +13506,30 @@ yxskaft(
 --keyword-paren-inner-tightness=2
 --break-at-old-comma-types='{'
 
+==> b1551.in <==
+my %e =
+(   jisx0208 => [ qw/euc-jp shiftjis 7bit-jis iso-2022-jp iso-2022-jp-1/ ],
+
+    #
+);
+my %e =
+(     jisx0208 =>
+           [ qw/euc-jp shiftjis 7bit-jis iso-2022-jp iso-2022-jp-1/ ],
+
+      #
+);
+
+
+==> b1551.par <==
+--maximum-line-length=76
+--continuation-indentation=5
+--break-before-paren=3
+--break-before-paren-and-indent=1
+--paren-vertical-tightness=1
+--extended-line-up-parentheses
+--square-bracket-vertical-tightness-closing=2
+--square-bracket-tightness=0
+
 ==> b156.in <==
 # State 1
 {
