@@ -40,6 +40,7 @@ use Carp;
 use constant DEVEL_MODE   => 0;
 use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };
+use constant COMMA        => q{,};
 use constant BACKSLASH    => q{\\};
 
 { #<<< A non-indenting brace to contain all lexical variables
@@ -2459,7 +2460,7 @@ EOM
 
     my %is_list_end_type;
     @q = qw( ; { } );
-    push @q, ',';
+    push @q, COMMA;
     @is_list_end_type{@q} = (1) x scalar(@q);
 
     # table showing how many quoted things to look for after quote operator..
@@ -3144,7 +3145,7 @@ EOM
           => =~ = == !~ || >= != *= .. && |= .= -= += <= %=
           ^= &&= ||= //= <=>
           #;
-        push @qZ, ',';
+        push @qZ, COMMA;
         @Z_test_hash{@qZ} = (1) x scalar(@qZ);
     }
 
@@ -3381,7 +3382,7 @@ EOM
         my $self = shift;
 
         # ','
-        if ( $last_nonblank_type eq ',' ) {
+        if ( $last_nonblank_type eq COMMA ) {
             $self->complain("Repeated ','s \n");
         }
 
@@ -4413,7 +4414,7 @@ EOM
 
         # '&&'
         $self->error_if_expecting_TERM()
-          if ( $expecting == TERM && $last_nonblank_token ne ',' );    #c015
+          if ( $expecting == TERM && $last_nonblank_token ne COMMA );    #c015
         return;
     } ## end sub do_LOGICAL_AND
 
@@ -4423,7 +4424,7 @@ EOM
 
         # '||'
         $self->error_if_expecting_TERM()
-          if ( $expecting == TERM && $last_nonblank_token ne ',' );    #c015
+          if ( $expecting == TERM && $last_nonblank_token ne COMMA );    #c015
         return;
     } ## end sub do_LOGICAL_OR
 
@@ -4966,7 +4967,7 @@ EOM
         # MIGHT be a constant, but it also might be a function taking
         # 0 or more call args.
         @qz = qw# ; ) ] } if unless #;
-        push @qz, ',';
+        push @qz, COMMA;
         @is_constant_follower{@qz} = (1) x scalar(@qz);
     }
 
@@ -6854,18 +6855,15 @@ BEGIN {
     # after package NAMESPACE, so expecting TERM)
     # Fix for c250: add new type 'S' for sub (not expecting operator)
     my @q = qw#
-      ; ! + x & ?  F J - p / Y : % f U ~ A G j L P S * . | ^ < = [ m {
-      #;
-    push @q, "\\";
-    push @q, qw#
-      > t
+      ; ! + x & ?  F J - p / Y : % f U ~ A G j L P S * . | ^ < = [ m { > t
       || >= != mm *= => .. !~ == && |= .= pp -= =~ += <= %= ^= x= ~~ ** << /=
       &= // >> ~. &. |. ^.
       ... **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~
       #;
-    push @q, ',';
-    push @q, '(';     # for completeness, not currently a token type
-    push @q, '->';    # was previously in UNKNOWN
+    push @q, BACKSLASH;
+    push @q, COMMA;
+    push @q, '(';         # for completeness, not currently a token type
+    push @q, '->';        # was previously in UNKNOWN
     @op_expected_table{@q} = (TERM) x scalar(@q);
 
     # No UNKNOWN table types:
@@ -7542,7 +7540,7 @@ sub decide_if_code_block {
 
                 # it is a comma which is not a pattern delimiter except for qw
                 (
-                    $pre_types[$j] eq ','
+                    $pre_types[$j] eq COMMA
                     && !$is_q_qq_qx_qr_s_y_tr_m{ $pre_tokens[$jbeg] }
                 )
 
@@ -8872,9 +8870,10 @@ sub do_scan_package {
 
         # These are the only characters which can (currently) form special
         # variables, like $^W: (issue c066).
-        my @q = qw{ ? A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ };
-        push @q, "\\";
-        push @q, qw{ ] ^ _ };
+        my @q = qw{
+          ? A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ ] ^ _
+        };
+        push @q, BACKSLASH;
         @is_special_variable_char{@q} = (1) x scalar(@q);
     } ## end BEGIN
 
@@ -10312,7 +10311,7 @@ sub is_possible_numerator {
 
         # /(\)|\}|\;|\&\&|\|\||and|or|while|if|unless)/
         my @q = qw( & && | || ? : + - * and or while if unless );
-        push @q, ')', '}', ']', '>', ',', ';';
+        push @q, ')', '}', ']', '>', COMMA, ';';
         @pattern_test{@q} = (1) x scalar(@q);
     } ## end BEGIN
 
@@ -10856,7 +10855,7 @@ sub find_here_doc {
                 # we have to remove any backslash before the quote character
                 # so that the here-doc-target exactly matches this string
                 next
-                  if ( $tokj eq "\\"
+                  if ( $tokj eq BACKSLASH
                     && $j < $i - 1
                     && $rtokens->[ $j + 1 ] eq $here_quote_character );
                 $here_doc_target .= $tokj;
@@ -11161,7 +11160,7 @@ BEGIN {
 
     my @q = qw# / " ' { } ( ) [ ] < > ; + - * | % ! x ~ = ? : . ^ & #;
     push @q, '#';
-    push @q, ',';
+    push @q, COMMA;
     @is_punct_char{@q} = (1) x scalar(@q);
 }
 
@@ -11755,16 +11754,13 @@ BEGIN {
     # fix for c250: added new token type 'P' and 'S'
     my @valid_token_types = qw#
       A b C G L R f h Q k t w i q n p m F pp mm U j J Y Z v P S
-      { } ( ) [ ] ; + - / * | % ! x ~ =
+      { } ( ) [ ] ; + - / * | % ! x ~ = ? : . < > ^ &
       #;
-    push @valid_token_types, "\\";
-    push @valid_token_types, qw#
-      ? : . < > ^ &
-      #;
+    push @valid_token_types, BACKSLASH;
     push( @valid_token_types, @digraphs );
     push( @valid_token_types, @trigraphs );
     push( @valid_token_types, @tetragraphs );
-    push( @valid_token_types, ( '#', ',', 'CORE::' ) );
+    push( @valid_token_types, ( '#', COMMA, 'CORE::' ) );
     @is_valid_token_type{@valid_token_types} = (1) x scalar(@valid_token_types);
 
     # a list of file test letters, as in -e (Table 3-4 of 'camel 3')
@@ -11936,16 +11932,12 @@ BEGIN {
     my @value_requestor_type = qw#
       L { ( [ ~ !~ =~ ; . .. ... A : && ! || // = + - x
       **= += -= .= /= *= %= x= &= |= ^= <<= >>= &&= ||= //=
-      <= >= == != =>
-      #;
-    push @value_requestor_type, "\\";
-    push @value_requestor_type, qw#
-      > < % * / ? & | ** <=> ~~ !~~ <<~
+      <= >= == != => > < % * / ? & | ** <=> ~~ !~~ <<~
       f F pp mm Y p m U J G j >> << ^ t
       ~. ^. |. &. ^.= |.= &.= ^^
       #;
-    push( @value_requestor_type, ',' )
-      ;    # (perl doesn't like a ',' in a qw block)
+    push @value_requestor_type, BACKSLASH;
+    push @value_requestor_type, COMMA;
 
     # NOTE: This hash is available but not currently used
     @expecting_term_types{@value_requestor_type} =

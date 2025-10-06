@@ -141,7 +141,13 @@ BEGIN {
 
 {
     # List of hash keys to prevent -duk from listing them.
-    my @unique_hash_keys_uu = qw( html-toc-extension html-src-extension * );
+    my @unique_hash_keys_uu = qw(
+      *
+      html-src-extension
+      html-toc-extension
+      allow_module_path
+      rexception_hash
+    );
 }
 
 sub DESTROY {
@@ -642,7 +648,7 @@ my %is_known_markup_word;
 
 BEGIN {
     my @q = qw( ?xml !doctype !-- html meta );
-    @is_known_markup_word{@q} = (1) x scalar(@q);
+    $is_known_markup_word{$_} = 1 for @q;
 }
 
 sub is_not_perl {
@@ -1153,9 +1159,8 @@ EOM
         {
 
             # These options can take filenames, so we will ignore them here
-            my %is_option_with_file_parameter;
-            my @qf = qw( outfile profile );
-            @is_option_with_file_parameter{@qf} = (1) x scalar(@qf);
+            my %is_option_with_file_parameter =
+              map { $_ => 1 } qw( outfile profile );
 
             # Expand an abbreviation into a long name
             my $long_name;
@@ -4976,7 +4981,7 @@ sub make_grep_alias_string {
         $exclude_string =~ s/^\s+//;
         $exclude_string =~ s/\s+$//;
         my @q = split /\s+/, $exclude_string;
-        @is_excluded_word{@q} = (1) x scalar(@q);
+        $is_excluded_word{$_} = 1 for @q;
         if ( !$is_excluded_word{'*'} ) {
             check_for_valid_words(
                 {

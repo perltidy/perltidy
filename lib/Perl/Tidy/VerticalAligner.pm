@@ -14,6 +14,7 @@ use Perl::Tidy::VerticalAligner::Line;
 use constant DEVEL_MODE   => 0;
 use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };
+use constant COMMA        => q{,};
 
 # The Perl::Tidy::VerticalAligner package collects output lines and
 # attempts to line up certain common tokens, such as => and #, which are
@@ -165,7 +166,8 @@ BEGIN {
       ralignments
     );
 
-    @valid_LINE_keys{@q} = (1) x scalar(@q);
+    $valid_LINE_keys{$_} = 1 for (@q);
+
 } ## end BEGIN
 
 BEGIN {
@@ -571,39 +573,23 @@ my %is_closing_token;
 my %is_digit_char;
 my %is_plus_or_minus;
 my %is_if_or;
-my %is_assignment;
 my %is_comma_token;
+my %is_assignment;
 my %is_good_marginal_alignment;
 
 BEGIN {
 
-    my @q = qw< { ( [ >;
-    @is_opening_token{@q} = (1) x scalar(@q);
-
-    @q = qw< } ) ] >;
-    @is_closing_token{@q} = (1) x scalar(@q);
-
-    @q = qw( 0 1 2 3 4 5 6 7 8 9 );
-    @is_digit_char{@q} = (1) x scalar(@q);
-
-    @q = qw( + - );
-    @is_plus_or_minus{@q} = (1) x scalar(@q);
-
-    @q = qw( if unless or || );
-    @is_if_or{@q} = (1) x scalar(@q);
-
-    @q = qw( = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x= ^^= );
-    @is_assignment{@q} = (1) x scalar(@q);
-
-    @q = qw( => );
-    push @q, ',';
-    @is_comma_token{@q} = (1) x scalar(@q);
+    $is_opening_token{$_} = 1 for qw# { ( [ #;
+    $is_closing_token{$_} = 1 for qw# } ) ] #;
+    $is_digit_char{$_}    = 1 for qw# 0 1 2 3 4 5 6 7 8 9 #;
+    $is_plus_or_minus{$_} = 1 for qw# + - #;
+    $is_if_or{$_}         = 1 for qw# if unless or || #;
+    $is_comma_token{$_}   = 1 for ( '=>', COMMA );
+    $is_assignment{$_}    = 1
+      for qw# = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x= ^^= #;
 
     # We can be less restrictive in marginal cases at certain "good" alignments
-    @q = qw( { ? => = );
-    push @q, (',');
-    @is_good_marginal_alignment{@q} = (1) x scalar(@q);
-
+    $is_good_marginal_alignment{$_} = 1 for ( COMMA, qw# { ? => = # );
 }
 
 #--------------------------------------------
@@ -1459,8 +1445,7 @@ sub fix_terminal_else {
 my %is_closing_block_type;
 
 BEGIN {
-    my @q = qw< } ] >;
-    @is_closing_block_type{@q} = (1) x scalar(@q);
+    $is_closing_block_type{$_} = 1 for qw# } ] #;
 }
 
 # This is a flag for testing alignment by sub sweep_left_to_right only.
@@ -2515,20 +2500,20 @@ sub sweep_left_to_right {
         # introduced (the hardwired $short_pad variable) . But for some 'good'
         # alignments we can be less restrictive.
 
-        # These are 'good' alignments, which are allowed more padding:
-        my @q = qw( => = ? if unless or || { );
-        push @q, ',';
-        @is_good_alignment_token{@q} = (0) x scalar(@q);
+        # The hash values are set so that:
+        #         if ($is_good_alignment_token{$raw_tok}) => best
+        # if defined ($is_good_alignment_token{$raw_tok}) => good or best
+
+        # Start by defining these 'good' alignments, which are allowed more
+        # padding (so note the '0' hash value here):
+        $is_good_alignment_token{$_} = 0
+          for ( COMMA, qw# => = ? if unless or || { # );
 
         # Promote a few of these to 'best', with essentially no pad limit:
         $is_good_alignment_token{'='}      = 1;
         $is_good_alignment_token{'if'}     = 1;
         $is_good_alignment_token{'unless'} = 1;
         $is_good_alignment_token{'=>'}     = 1;
-
-        # Note the hash values are set so that:
-        #         if ($is_good_alignment_token{$raw_tok}) => best
-        # if defined ($is_good_alignment_token{$raw_tok}) => good or best
 
     } ## end BEGIN
 
@@ -2838,8 +2823,7 @@ EOM
 
     # Convert deletion list to a hash to allow any order, multiple entries,
     # and avoid problems with index values out of range
-    my %delete_me;
-    @delete_me{ @{$ridel} } = (1) x scalar( @{$ridel} );
+    my %delete_me = map { $_ => 1 } @{$ridel};
 
     my $pattern_0      = $rpatterns_old->[0];
     my $field_0        = $rfields_old->[0];
@@ -3382,7 +3366,7 @@ sub delete_unmatched_tokens_main_loop {
                     # okay to delete second and higher copies of a token
 
                     # for a comma...
-                    if ( $raw_tok eq ',' ) {
+                    if ( $raw_tok eq COMMA ) {
 
                         # Do not delete commas before an equals
                         $delete_me = 0
@@ -3670,7 +3654,7 @@ sub compare_patterns {
     #   ( $a, $b ) = ( $b, $r );
     #   ( $x1, $x2 ) = ( $x2 - $q * $x1, $x1 );
     #   ( $y1, $y2 ) = ( $y2 - $q * $y1, $y1 );
-    if ( $alignment_token eq ',' ) {
+    if ( $alignment_token eq COMMA ) {
 
         # do not align commas unless they are in named
         # containers
@@ -3734,7 +3718,9 @@ sub compare_patterns {
         #  sub new { my ( $p, $v ) = @_; bless \$v, $p }
         #  sub iter { my ($x) = @_; return undef if $$x < 0; return $$x--; }
 
-        elsif ( ( index( $pat_m, ',' ) >= 0 ) ne ( index( $pat, ',' ) >= 0 ) ) {
+        elsif (
+            ( index( $pat_m, COMMA ) >= 0 ) ne ( index( $pat, COMMA ) >= 0 ) )
+        {
             $GoToMsg     = "mixed commas/no-commas before equals";
             $return_code = 1;
             if ( $lev eq $group_level ) {
@@ -3769,7 +3755,7 @@ sub fat_comma_to_comma {
     # count and commas do not.
 
     # For example, change '=>2+{-3.2' into ',2+{-3'
-    if ( $str =~ /^=>([^\.]*)/ ) { $str = ',' . $1 }
+    if ( $str =~ /^=>([^\.]*)/ ) { $str = COMMA . $1 }
     return $str;
 } ## end sub fat_comma_to_comma
 
@@ -5031,10 +5017,8 @@ BEGIN {
     # has changed things like 'print' to 'priNt' so that all 'n's are numbers.
     # The following patterns 'n' can match a signed number of interest.
     # Thus 'n'=a signed or unsigned number, 'b'=a space, '}'=one of ) ] }
-    my @q = ( 'n,', 'n,b', 'nb', 'nb}', 'nb},', 'n},', 'n};' );
-
-    @is_leading_sign_pattern{@q} = (1) x scalar(@q);
-
+    $is_leading_sign_pattern{$_} = 1
+      for ( 'n,', 'n,b', 'nb', 'nb}', 'nb},', 'n},', 'n};' );
 }
 
 sub min_max_median {
@@ -5535,8 +5519,8 @@ sub field_matches_end_pattern {
     my $field2_trim = EMPTY_STRING;
 
     # if pattern is one of: 'n,', 'n,b'
-    if ( $next_char eq ',' ) {
-        my $icomma = index( $field2, ',' );
+    if ( $next_char eq COMMA ) {
+        my $icomma = index( $field2, COMMA );
         if ( $icomma >= 0 ) {
             $field2_trim = substr( $field2, 0, $icomma );
         }
