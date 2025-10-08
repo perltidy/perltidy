@@ -5258,9 +5258,21 @@ is equivalent to setting B<-mbl=0> and B<-kbl=2>).
 
 =item B<-bbc>,  B<--blanks-before-comments>
 
-A blank line will be introduced before a full-line comment.  This is the
-default.  Use B<-nbbc> or  B<--noblanks-before-comments> to prevent
-such blank lines from being introduced.
+This parameter allows perltidy to introduce a new blank line before a full-line
+comment to improve readability.  This is the default.  Use B<-nbbc> or
+B<--noblanks-before-comments> to prevent such blank lines from being
+introduced.
+
+=item B<-bboc>,  B<--blanks-before-opening-comments>
+
+This parameter adjusts the behavior of the previous parameter, B<-bbc>, at an
+opening comment.  An opening comment is a full-line comment with an indentation
+greater than the previous line.
+
+When this parameter is on perltidy is allowed to introduce a blank line to
+improve readability.  This is the default. To prevent perltidy from introducing
+such a blank line, use B<--noblanks-before-opening-comments>, or B<-nbboc>.
+This option was added for issue git #192.
 
 =item B<-blbs=n>,  B<--blank-lines-before-subs=n>
 
@@ -7911,26 +7923,27 @@ The following list shows all short parameter names which allow a prefix
 'n' to produce the negated form:
 
  D      aia    altc   ame    anl    asbl   asc    ast    asu    atc
- atnl   aws    b      baa    baao   bar    bbao   bbb    bbc    bbs
- bl     bli    boa    boc    bok    bol    bom    bos    bot    cblx
- ce     conv   cpb    cpbw   cs     csc    cscb   cscw   csfs   dac
- dbc    dbs    dcbl   dcsc   ddf    dfsfs  dhk    dia    dior   dku
- dln    dltc   dma    dmcp   dmr    dnl    dnt    dop    dp     dpro
- drc    dsc    dsk    dsm    dsn    dtc    dtco   dtt    duk    duv
- dwic   dwls   dwrs   dws    eos    f      fpva   frm    fs     fso
- gcs    hbc    hbcm   hbco   hbh    hbhh   hbi    hbj    hbk    hbm
- hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv    hbw    hent
- hic    hicm   hico   hih    hihh   hii    hij    hik    him    hin
- hip    hipd   hipu   hiq    his    hisc   hiv    hiw    hsc    html
- ibc    icb    icp    ils    iob    ipc    isbc   iscl   kgb    kgbd
- kgbi   kis    lal    log    lop    lp     lsl    mci    mem    nib
- ohbr   okw    ola    olc    oll    olq    opr    opt    osbc   osbr
- otr    ple    pod    pvl    q      qwaf   sac    sbc    sbl    scbb
- schb   scp    scsb   sct    se     sfp    sfs    skp    sob    sobb
- sohb   sop    sosb   sot    ssc    st     sts    t      tac    tbc
- toc    tp     tqw    trp    ts     tsc    tso    vbc    vc     viu
- vmll   vsc    vsn    vwe    w      wfc    wia    wma    wme    wmr
- wn     wnt    wsk    wuk    x      xbt    xci    xlp    xs
+ atnl   aws    b      baa    baao   bar    bbao   bbb    bbc    bboc
+ bbs    bl     bli    boa    boc    bok    bol    bom    bos    bot
+ cblx   ce     conv   cpb    cpbw   cs     csc    cscb   cscw   csfs
+ dac    dbc    dbs    dcbl   dcsc   ddf    dfsfs  dhk    dia    dior
+ dku    dln    dltc   dma    dmcp   dmr    dnl    dnt    dop    dp
+ dpro   drc    dsc    dsk    dsm    dsn    dtc    dtco   dtt    duk
+ duv    dwic   dwls   dwrs   dws    eos    f      fpva   frm    fs
+ fso    gcs    hbc    hbcm   hbco   hbh    hbhh   hbi    hbj    hbk
+ hbm    hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv    hbw
+ hent   hic    hicm   hico   hih    hihh   hii    hij    hik    him
+ hin    hip    hipd   hipu   hiq    his    hisc   hiv    hiw    hsc
+ html   ibc    icb    icp    ils    iob    ipc    isbc   iscl   kgb
+ kgbd   kgbi   kis    lal    log    lop    lp     lsl    mci    mem
+ nib    ohbr   okw    ola    olc    oll    olq    opr    opt    osbc
+ osbr   otr    ple    pod    pvl    q      qwaf   sac    sbc    sbl
+ scbb   schb   scp    scsb   sct    se     sfp    sfs    skp    sob
+ sobb   sohb   sop    sosb   sot    ssc    st     sts    t      tac
+ tbc    toc    tp     tqw    trp    ts     tsc    tso    vbc    vc
+ viu    vmll   vsc    vsn    vwe    w      wfc    wia    wma    wme
+ wmr    wn     wnt    wsk    wuk    x      xbt    xci    xlp    xs
+
 
 Equivalently, the prefix 'no' or 'no-' on the corresponding long names may be
 used.

@@ -29051,6 +29051,11 @@ EOM
 
                 # never before static block comments
                 && !$is_static_block_comment
+
+                # only if allowed if this is at a new indentation level
+                && (   $rOpts->{'blanks-before-opening-comments'}
+                    || $rLL->[$K_first]->[_LEVEL_] <=
+                    $self->[_last_line_leading_level_] )
               )
             {
                 $self->flush();    # switching to new output stream

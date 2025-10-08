@@ -425,7 +425,7 @@ sub check_options {
     my $use_feature_class = 1;
 
     my $str = $rOpts->{'use-feature'};
-    if ( length($str) ) {
+    if ( defined($str) && length($str) ) {
         $str =~ s/^\s+//;
         $str =~ s/\s+$//;
         if ( !length($str) ) {

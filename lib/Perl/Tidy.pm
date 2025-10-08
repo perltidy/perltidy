@@ -3973,6 +3973,7 @@ sub generate_options {
     ########################################
     $add_option->( 'blanks-before-blocks',            'bbb',  '!' );
     $add_option->( 'blanks-before-comments',          'bbc',  '!' );
+    $add_option->( 'blanks-before-opening-comments',  'bboc', '!' );
     $add_option->( 'blank-lines-before-subs',         'blbs', '=i' );
     $add_option->( 'blank-lines-before-packages',     'blbp', '=i' );
     $add_option->( 'long-block-line-count',           'lbl',  '=i' );
@@ -4122,6 +4123,7 @@ sub generate_options {
       add-whitespace
       blanks-before-blocks
       blanks-before-comments
+      blanks-before-opening-comments
 
       keyword-group-blanks-size=5
       nokeyword-group-blanks-inside

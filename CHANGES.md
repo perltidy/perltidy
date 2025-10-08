@@ -2,6 +2,12 @@
 
 ## 2025 09 12.01
 
+    - A new switch --blanks-before-opening-comments, -bboc, has been added
+      for issue git #192.  This is on by default and allows perltidy to insert
+      a blank line before full-line comments which start at a new indentation
+      level.  Use the negated form to prevent such blank lines, -nbboc
+      or --noblanks-before-opening-comments
+
     - A new parameter --dump-keyword-usage can be used to dump a list of the
       the perl builtin keywords used in a file. A companion flag
       --dump-keyword-usage-list=s can be used to give a specific list of
