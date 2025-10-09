@@ -5269,7 +5269,7 @@ This parameter adjusts the behavior of the previous parameter, B<-bbc>, at an
 opening comment.  An opening comment is a full-line comment with an indentation
 greater than the previous line.
 
-When this parameter is on perltidy is allowed to introduce a blank line to
+When this parameter is turned on, perltidy is allowed to introduce a blank line to
 improve readability.  This is the default. To prevent perltidy from introducing
 such a blank line, use B<--noblanks-before-opening-comments>, or B<-nbboc>.
 This option was added for issue git #192.
@@ -8042,7 +8042,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20250912.01
+This man page documents perltidy version 20250912.02
 
 =head1 BUG REPORTS
 

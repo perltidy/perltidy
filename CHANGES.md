@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2025 09 12.01
+## 2025 09 12.02
 
     - A new switch --blanks-before-opening-comments, -bboc, has been added
       for issue git #192.  This is on by default and allows perltidy to insert
