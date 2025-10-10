@@ -19092,7 +19092,9 @@ sub match_trailing_comma_rule {
 
             # Patch for instability issue b1456: -boc can trick this test; so
             # skip it when deleting commas to avoid possible instability
-            # with option 'h' in combination with -atc -dtc -boc;
+            # with option 'h' in combination with -atc -dtc -boc.
+            # Updated for b1552 to check $is_permanently_broken instead of -boc
+            # for more generality, such as -atc -dtc -btct=b -iob
             elsif (
                 $trailing_comma_style eq 'h'
 
@@ -19102,8 +19104,8 @@ sub match_trailing_comma_rule {
                 # -atc is also set
                 && $rOpts_add_trailing_commas
 
-                # -boc is set and active
-                && $break_at_old_commas
+##              && $break_at_old_commas
+                && $is_permanently_broken
               )
             {
                 # ignore this test

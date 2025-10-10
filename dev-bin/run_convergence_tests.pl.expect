@@ -8889,6 +8889,14 @@ my %e =
 );
 
 
+==> b1552 <==
+    find {
+        no_chdir => 1, wanted => sub { push @files, $_ if -f },
+    }, $dir;
+    find {
+        no_chdir => 1, wanted => sub { push @files, $_ if -f },
+    }, $dir;
+
 ==> b156 <==
 # State 1
 {

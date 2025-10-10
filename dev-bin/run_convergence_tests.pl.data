@@ -13530,6 +13530,22 @@ my %e =
 --square-bracket-vertical-tightness-closing=2
 --square-bracket-tightness=0
 
+==> b1552.in <==
+    find {
+        no_chdir => 1, wanted => sub { push @files, $_ if -f },
+    }, $dir;
+    find {
+        no_chdir => 1,
+        wanted   => sub { push @files, $_ if -f }
+    }, $dir;
+
+==> b1552.par <==
+--ignore-old-breakpoints
+--want-trailing-commas='h'
+--add-trailing-commas
+--delete-trailing-commas
+--break-at-trailing-comma-types='b'
+
 ==> b156.in <==
 # State 1
 {
