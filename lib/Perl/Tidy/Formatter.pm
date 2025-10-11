@@ -43068,7 +43068,7 @@ sub xlp_tweak {
 
     my %keyword_map;
     my %operator_map;
-    my %is_k_w_n_C_bang;
+    my %is_k_w_n_C_q_bang;
     my %is_my_local_our;
     my %is_use_like;
     my %is_binary_type;
@@ -43109,36 +43109,27 @@ sub xlp_tweak {
             '/=' => '+=',
         );
 
-        %is_k_w_n_C_bang = (
-            'k' => 1,
-            'w' => 1,
-            'n' => 1,
-            'C' => 1,
-            '!' => 1,
-        );
+        $is_k_w_n_C_q_bang{$_} = 1 for qw( k w n C q ! );
 
-        # leading keywords which to skip for efficiency when making parenless
+        # Leading keywords which to skip for efficiency when making parenless
         # container names
-        my @q = qw( my local our return );
-        @is_my_local_our{@q} = (1) x scalar(@q);
+        $is_my_local_our{$_} = 1 for qw( my local our return );
 
-        # leading keywords where we should just join one token to form
+        # Leading keywords where we should just join one token to form
         # parenless name
-        @q = qw( use );
-        @is_use_like{@q} = (1) x scalar(@q);
+        $is_use_like{$_} = 1 for qw(use);
 
-        # token types which prevent using leading word as a container name
-        @q = qw{
+        # Token types which prevent using leading word as a container name
+        my @q = qw{
           x / : % . | ^ < = > || >= != *= => !~ == && |= .= -= =~ += <=
           %= ^= x= ~~ ** << /= &= // >> ~. &. |. ^.
           **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~
         };
         push @q, ',';
-        @is_binary_type{@q} = (1) x scalar(@q);
+        $is_binary_type{$_} = 1 for @q;
 
-        # token keywords which prevent using leading word as a container name
-        @q = qw( and or err eq ne cmp );
-        @is_binary_keyword{@q} = (1) x scalar(@q);
+        # Token keywords which prevent using leading word as a container name
+        $is_binary_keyword{$_} = 1 for qw( and or err eq ne cmp );
 
         # Some common function calls whose args can be aligned.  These do not
         # give good alignments if the lengths differ significantly.
@@ -43222,6 +43213,7 @@ sub xlp_tweak {
         my $depth_prev           = $depth;
         my %container_name       = ( 0 => EMPTY_STRING );
         my $saw_exclamation_mark = 0;
+        my $last_raw_tok         = EMPTY_STRING;
 
         #-------------------------------------------------------------
         # Make a container name for any uncontained commas, issue c089
@@ -43383,7 +43375,7 @@ sub xlp_tweak {
             #------------------------------------------------------------
             if ( $i > $i_start && $ralignment_type_to_go->[$i] ) {
 
-                my $tok = my $raw_tok = $ralignment_type_to_go->[$i];
+                my $tok = $last_raw_tok = $ralignment_type_to_go->[$i];
 
                 # map similar items
                 my $tok_map = $operator_map{$tok};
@@ -43391,13 +43383,13 @@ sub xlp_tweak {
 
                 # make separators in different nesting depths unique
                 # by appending the nesting depth digit.
-                if ( $raw_tok ne '#' ) {
+                if ( $last_raw_tok ne '#' ) {
                     $tok .= "$nesting_depth_to_go[$i]";
                 }
 
                 # also decorate commas with any container name to avoid
                 # unwanted cross-line alignments.
-                if ( $raw_tok eq ',' || $raw_tok eq '=>' ) {
+                if ( $last_raw_tok eq ',' || $last_raw_tok eq '=>' ) {
 
                   # If we are at an opening token which increased depth, we have
                   # to use the name from the previous depth.
@@ -43420,7 +43412,7 @@ sub xlp_tweak {
                 #    if   ( scalar @_ ) {
                 #        my ( $a, $b, $c, $d, $e, $f ) = @_;
                 #    }
-                if ( $raw_tok eq '(' ) {
+                if ( $last_raw_tok eq '(' ) {
                     if (   $ci_levels_to_go[$ibeg]
                         && $container_name{$depth} =~ /^\+(if|unless)/ )
                     {
@@ -43432,7 +43424,7 @@ sub xlp_tweak {
                 # unwanted alignments such as the following:
                 # foreach ( @{$routput_array} ) { $fh->print($_) }
                 # eval                          { $fh->close() };
-                if ( $raw_tok eq '{' && $block_type_to_go[$i] ) {
+                if ( $last_raw_tok eq '{' && $block_type_to_go[$i] ) {
                     my $block_type = $block_type_to_go[$i];
 
                     # map certain related block types to allow
@@ -43462,7 +43454,7 @@ sub xlp_tweak {
                 #    $|          = $debug = 1 if $opt_d;
                 #    $full_index = 1          if $opt_i;
 
-                if ( $raw_tok eq '=' || $raw_tok eq '=>' ) {
+                if ( $last_raw_tok eq '=' || $last_raw_tok eq '=>' ) {
                     $token_count{$tok}++;
                     if ( $token_count{$tok} > 1 ) {
                         $tok .= '.' . $token_count{$tok};
@@ -43491,7 +43483,7 @@ sub xlp_tweak {
             # Part 3: continue accumulating the next pattern
             #-----------------------------------------------
 
-            if ( $is_k_w_n_C_bang{$type} ) {
+            if ( $is_k_w_n_C_q_bang{$type} ) {
 
                 # for keywords we have to use the actual text
                 if ( $type eq 'k' ) {
@@ -43555,6 +43547,12 @@ sub xlp_tweak {
                         $type_fix = 'Q';
                     }
 
+                    # Fix for c533: change 'q' after 'A' to 'w' to improve
+                    # alignment of attributes with parens
+                    if ( $type eq 'q' && $last_raw_tok eq 'A' ) {
+                        $type_fix = 'w';
+                    }
+
                     # VSN PATCH: no longer changing 'n' to 'Q' here; this
                     # will be handled in the vertical aligner and allow
                     # the aligner to find numbers more efficiently.
@@ -43562,7 +43560,7 @@ sub xlp_tweak {
 
                     $patterns[$j] .= $type_fix;
                 }
-            } ## end elsif ( $is_k_w_n_C{$type} )
+            } ## end if ( $is_k_w_n_C_q_bang...)
 
             # everything else
             else {
