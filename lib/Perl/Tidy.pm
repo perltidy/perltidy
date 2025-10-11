@@ -146,7 +146,6 @@ BEGIN {
       html-src-extension
       html-toc-extension
       allow_module_path
-      rexception_hash
     );
 }
 
@@ -579,67 +578,113 @@ sub get_iteration_count {
 
 sub check_for_valid_words {
 
-    my ($rhash) = @_;
+    my ($rcall_hash) = @_;
 
     # Given hash ref with these keys:
-    #   rlist = ref to list of possible words
+    #   rinput_list = ref to ARRAY of possible words
     #   option_name  =  name of option to use for a warn or die message
     #                   (caller should add leading dash(es))
     #   on_error =
-    #               'warn'  ? call Warn
+    #               'warn'  ? call Warn and return ref to unknown words
     #             : 'die'   ? call Die
-    #             :         just return errors
+    #             :         return ref to list of unknown words
     #   allow_module_path = true if words can have module paths with '::'
-    #   rexception_hash   = optional ref to hash of acceptable non-words
+    #   rexceptions   = optional ref to ARRAY or HASH of acceptable non-words
+    #   rvalid_words  = optional ref to ARRAY or HASH of acceptable words
+    #      - if given, only words in this list, or rexceptions, are valid
+    #      - if not given, words must be identifier-like or be in rexceptions
 
     # Return (if it does not call Die):
     #   - nothing if no errors, or
     #   - ref to list of unknown words
 
-    return if ( !defined($rhash) );
-    my $rlist             = $rhash->{rlist};
-    my $option_name       = $rhash->{option_name};
-    my $on_error          = $rhash->{on_error};
-    my $allow_module_path = $rhash->{allow_module_path};
-    my $rexception_hash   = $rhash->{rexception_hash};
+    if ( !defined($rcall_hash) ) {
+        Fault("received undefined arg\n");
+        return;
+    }
 
-    return if ( !defined($rlist) );
-    my @non_words;
-    foreach my $word ( @{$rlist} ) {
+    my $rinput_list       = $rcall_hash->{rinput_list};
+    my $option_name       = $rcall_hash->{option_name};
+    my $on_error          = $rcall_hash->{on_error};
+    my $allow_module_path = $rcall_hash->{allow_module_path};
+    my $rexceptions       = $rcall_hash->{rexceptions};
+    my $rvalid_words      = $rcall_hash->{rvalid_words};
 
-        next if ( $rexception_hash && $rexception_hash->{$word} );
-        next if ( $word =~ /^\w+$/ && $word !~ /^\d/ );
+    return if ( !defined($rinput_list) );
+    my $msg_end = $option_name ? " with $option_name" : EMPTY_STRING;
 
-        # Words with a module path, like My::Module::function
-        if ( $allow_module_path && index( $word, ':' ) ) {
-            my @parts = split /::/, $word;
-            my $ok    = 1;
-            foreach my $sub_word (@parts) {
-                next if ( !length($sub_word) );
-                next if ( $sub_word =~ /^\w+$/ && $sub_word !~ /^\d/ );
-                $ok = 0;
-                last;
+    my $make_hash_ref = sub {
+        my ( $rthing, $key_name ) = @_;
+        if ( defined($rthing) ) {
+            my $ref = ref($rthing);
+            if ( !$ref ) {
+                Fault("expecting {$key_name} to be a ref in call '$msg_end'\n");
             }
-            next if ($ok);
+            if ( $ref eq 'ARRAY' ) {
+                $rthing = \map { $_ => 1 } @{$rthing};
+            }
+            if ( ref($rthing) ne 'HASH' ) {
+                Fault(
+"expecting {$key_name} to be a HASH or ARRAY ref in call '$msg_end\n"
+                );
+            }
         }
+        return $rthing;
+    }; ## end $make_hash_ref = sub
 
-        push @non_words, $word;
+    $rexceptions  = $make_hash_ref->( $rexceptions,  'rexceptions' );
+    $rvalid_words = $make_hash_ref->( $rvalid_words, 'rvalid_words' );
+
+    my @non_words;
+
+    # Must match specific valid words
+    if ( defined($rvalid_words) ) {
+        foreach my $word ( @{$rinput_list} ) {
+            next if ( $rexceptions && $rexceptions->{$word} );
+            if ( !$rvalid_words->{$word} ) {
+
+                # Note: not currently checking for module prefixes in this case
+                push @non_words, $word;
+            }
+        }
+    }
+
+    # Must be identifier-like words, or an exception
+    else {
+        foreach my $word ( @{$rinput_list} ) {
+
+            next if ( $rexceptions     && $rexceptions->{$word} );
+            next if ( $word =~ /^\w+$/ && $word !~ /^\d/ );
+
+            # Words with a module path, like My::Module::function
+            if ( $allow_module_path && index( $word, ':' ) ) {
+                my @parts = split /::/, $word;
+                my $ok    = 1;
+                foreach my $sub_word (@parts) {
+                    next if ( !length($sub_word) );
+                    next if ( $sub_word =~ /^\w+$/ && $sub_word !~ /^\d/ );
+                    $ok = 0;
+                    last;
+                }
+                next if ($ok);
+            }
+            push @non_words, $word;
+        }
     }
 
     return if ( !@non_words );
-    return if ( !$on_error );
-    $on_error = lc($on_error);
-    if ( $on_error eq 'warn' || $on_error eq 'die' ) {
-
-        my $msg_end = $option_name ? " with $option_name" : EMPTY_STRING;
-        my $num     = @non_words;
-        local $LIST_SEPARATOR = SPACE;
-        my $msg = <<EOM;
+    if ($on_error) {
+        $on_error = lc($on_error);
+        if ( $on_error eq 'warn' || $on_error eq 'die' ) {
+            my $num = @non_words;
+            local $LIST_SEPARATOR = SPACE;
+            my $msg = <<EOM;
 $num unrecognized words were input$msg_end :
 @non_words
 EOM
-        Die($msg) if ( $on_error eq 'die' );
-        Warn($msg);
+            Die($msg) if ( $on_error eq 'die' );
+            Warn($msg);
+        }
     }
     return \@non_words;
 } ## end sub check_for_valid_words
@@ -4987,7 +5032,7 @@ sub make_grep_alias_string {
         if ( !$is_excluded_word{'*'} ) {
             check_for_valid_words(
                 {
-                    rlist       => \@q,
+                    rinput_list => \@q,
                     option_name => "--$opt_name",
                     on_error    => 'die',
                 }
@@ -4999,7 +5044,8 @@ sub make_grep_alias_string {
     if ( $is_excluded_word{'*'} ) { $default_string = EMPTY_STRING }
 
     # combine the defaults and any input list
-    my $input_string = $rOpts->{'grep-alias-list'};
+    $opt_name = 'grep-alias-list';
+    my $input_string = $rOpts->{$opt_name};
     if ($input_string) { $input_string .= SPACE . $default_string }
     else               { $input_string = $default_string }
 
@@ -5018,10 +5064,9 @@ sub make_grep_alias_string {
         }
     }
 
-    $opt_name = 'grep-alias-list';
     check_for_valid_words(
         {
-            rlist       => \@filtered_word_list,
+            rinput_list => \@filtered_word_list,
             option_name => "--$opt_name",
             on_error    => 'die',
         }
@@ -5073,7 +5118,7 @@ sub cleanup_word_list {
     }
     check_for_valid_words(
         {
-            rlist       => \@filtered_word_list,
+            rinput_list => \@filtered_word_list,
             option_name => "--$option_name",
             on_error    => 'die',
         }

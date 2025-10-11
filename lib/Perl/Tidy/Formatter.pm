@@ -3234,10 +3234,10 @@ sub initialize_keyword_paren_inner_tightness {
     if (@kpit) {
         check_for_valid_words(
             {
-                rlist           => \@kpit,
-                option_name     => "--$kpitl_key",
-                on_error        => 'die',
-                rexception_hash => undef,
+                rinput_list => \@kpit,
+                option_name => "--$kpitl_key",
+                on_error    => 'die',
+                rexceptions => undef,
             }
         );
     }
@@ -7352,7 +7352,7 @@ sub bad_pattern {
 
             my $rbad = check_for_valid_words(
                 {
-                    rlist       => \@words,
+                    rinput_list => \@words,
                     option_name => "--$opt_name",
                     on_error    => 'warn',
                 }
@@ -15442,10 +15442,10 @@ sub dump_keyword_usage {
         if ( my @q = split_words($word_list) ) {
             check_for_valid_words(
                 {
-                    rlist           => \@q,
-                    option_name     => "--$opt_name_list",
-                    on_error        => 'die',
-                    rexception_hash => { '*' => 1 },
+                    rinput_list => \@q,
+                    option_name => "--$opt_name_list",
+                    on_error    => 'die',
+                    rexceptions => { '*' => 1 },
                 }
             );
 
