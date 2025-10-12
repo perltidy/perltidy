@@ -200,6 +200,25 @@ if ( $x == 42 ) {
 $x =~ s/42/bye/;
 print "$x\n";
 
+==> c532.in <==
+method
+  $name
+  =>
+  sub
+  {
+    ...
+  };
+method
+       $p
+       ->
+       {name}
+       =>
+       sub {
+
+       };
+
+
+
 ==> git82.in <==
 say
 $

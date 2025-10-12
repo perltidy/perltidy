@@ -2790,7 +2790,7 @@ EOM
 
     sub method_ok_here {
 
-        my $self = shift;
+        my ( $self, $next_nonblank_token ) = @_;
 
         # Return:
         #   false if this is definitely an invalid method declaration
@@ -2803,6 +2803,23 @@ EOM
         #  method paint => sub {
         #    return;
         #  };
+
+        # Assume non-method if an error would occur
+        return if ( $expecting == OPERATOR );
+
+        # Currently marking a line-ending 'method' as a bareword (fix c532)
+        return if ( $i_tok >= $max_token_index );
+
+        # If a '$' follows 'method'...
+        # Check for possible Object::Pad lexical method like
+        #  'method $var {'
+        # TODO: maybe merge this with the code below by increasing pos by 1
+        if ( $next_nonblank_token eq '$' && new_statement_ok() ) {
+            return 1;
+        }
+
+        # Otherwise, not a method if non-word follows ..
+        if ( $next_nonblank_token !~ /^[\w\:]/ ) { return }
 
         # from do_scan_sub:
         my $i_beg   = $i + 1;
@@ -5279,27 +5296,13 @@ EOM
         # 'sub' or other sub alias
         elsif ( $is_sub{$tok_kw} ) {
 
-            # Update for --use-feature=class (rt145706):
-            # We have to be extra careful to avoid misparsing other uses of
-            # 'method' in older scripts.
-            if (
-                   $tok_kw eq 'method'
+            # Guess what to do for unknown word 'method':
+            # Updated for --use-feature=class (rt145706):
+            if (   $tok_kw eq 'method'
                 && $guess_if_method
-
-                # Patch for Object::Pad lexical method like 'method $var {'
-                && !( $next_nonblank_token eq '$' && new_statement_ok() )
-              )
+                && !$self->method_ok_here($next_nonblank_token) )
             {
-                if (   $expecting == OPERATOR
-                    || $next_nonblank_token !~ /^[\w\:]/
-                    || !$self->method_ok_here() )
-                {
-                    $self->do_UNKNOWN_BAREWORD($next_nonblank_token);
-                }
-                else {
-                    initialize_subname();
-                    $self->scan_id();
-                }
+                $self->do_UNKNOWN_BAREWORD($next_nonblank_token);
             }
             else {
                 $self->error_if_expecting_OPERATOR()
