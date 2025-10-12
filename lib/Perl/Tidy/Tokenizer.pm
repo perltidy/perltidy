@@ -7561,7 +7561,11 @@ sub decide_if_code_block {
             # If this brace follows a bareword, then append a space as a signal
             # to the formatter that this may not be a block brace.  To find the
             # corresponding code in Formatter.pm search for 'b1085'.
-            $code_block_type .= SPACE if ( $code_block_type =~ /^\w/ );
+            # But not for the word 'method': fixes c534; this will cause the
+            # formatter to mark an asub block instead of a sub block.
+            if ( $code_block_type =~ /^\w/ && $code_block_type ne 'method' ) {
+                $code_block_type .= SPACE;
+            }
         }
     }
 
