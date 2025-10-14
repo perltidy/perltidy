@@ -25,6 +25,17 @@ my $PROFILES_file = "PROFILES.txt";
 my $perltidy      = "./perltidy.pl";
 my $rprofiles     = [];
 
+# Avoid messages about missing Unicode::GCString when testing
+# with old versions of perl. NOTE: when running with older
+# versions of perl, you should invoke this script with
+# perl perltidy_random_setup.pl in order to get the same
+# @INC as perltidy will get.
+my $use_unicode_gcstring = 1;
+if ( !eval { require Unicode::GCString; 1 } ) {
+    $use_unicode_gcstring = 0;
+    print "Skipping use-unicode-gcstring: did not see Unicode::GCString\n";
+}
+
 my @unused_keys_uu = qw( profiles );
 
 check_if_empty();
@@ -34,7 +45,7 @@ sub check_if_empty {
     my @files = glob('*');
     my $num   = @files;
     return if ( !$num );
-    my $dir_count;
+    my $dir_count = 0;
     foreach my $file (@files) {
         if ( -d $file ) { $dir_count++ }
     }
@@ -864,7 +875,7 @@ EOM
         my @keywords = qw(
           my our local do return while if unless and or err for foreach until
         );
-        my @colors   = qw(
+        my @colors = qw(
           ForestGreen
           SaddleBrown
           magenta4
@@ -1109,6 +1120,10 @@ EOM
           check-syntax
 
         );
+
+        if ( !$use_unicode_gcstring ) {
+            push @q, 'use-unicode-gcstring';
+        }
 
         # Added warn-unique-keys because it can produce signifcant error
         # output and has been tested

@@ -283,7 +283,6 @@ my (
     $rOpts_qw_as_function,
     $rOpts_short_concatenation_item_length,
     $rOpts_space_prototype_paren,
-    $rOpts_space_signature_paren,
     $rOpts_space_terminal_semicolon,
     $rOpts_stack_closing_block_brace,
     $rOpts_static_block_comments,
@@ -4010,7 +4009,6 @@ sub initialize_global_option_vars {
     $rOpts_short_concatenation_item_length =
       $rOpts->{'short-concatenation-item-length'};
     $rOpts_space_prototype_paren     = $rOpts->{'space-prototype-paren'};
-    $rOpts_space_signature_paren     = $rOpts->{'space-signature-paren'};
     $rOpts_space_terminal_semicolon  = $rOpts->{'space-terminal-semicolon'};
     $rOpts_stack_closing_block_brace = $rOpts->{'stack-closing-block-brace'};
     $rOpts_static_block_comments     = $rOpts->{'static-block-comments'};
@@ -4971,6 +4969,7 @@ sub set_whitespace_flags {
     my $rOpts_space_keyword_paren   = $rOpts->{'space-keyword-paren'};
     my $rOpts_space_backslash_quote = $rOpts->{'space-backslash-quote'};
     my $rOpts_space_function_paren  = $rOpts->{'space-function-paren'};
+    my $rOpts_space_signature_paren = $rOpts->{'space-signature-paren'};
 
     my $rwhitespace_flags       = [];
     my $ris_function_call_paren = {};
@@ -27142,6 +27141,15 @@ sub keep_old_blank_lines_exclusions {
     my $i_first_blank;    # first blank of a group
     my $i_last_blank;     # last blank of a group
 
+    # The following lines work around a bug in perl versions before 5.10. They
+    # define lexical versions of global values used in patterns in anonymous
+    # subs. Issue c536, discovered with random testing.
+    my $Blank_lines_after_opening_block_pattern =
+      $blank_lines_after_opening_block_pattern;
+    my $Static_side_comment_pattern = $static_side_comment_pattern;
+    my $Blank_lines_before_closing_block_pattern =
+      $blank_lines_before_closing_block_pattern;
+
     my $line_CODE_info = sub {
 
         # Given:
@@ -27238,7 +27246,7 @@ sub keep_old_blank_lines_exclusions {
             return if ( !$seqno );
             my $block_type = $rblock_type_of_seqno->{$seqno};
             if (   $block_type
-                && $block_type =~ /$blank_lines_after_opening_block_pattern/ )
+                && $block_type =~ /$Blank_lines_after_opening_block_pattern/ )
             {
 
                 # This is a match ...
@@ -27347,7 +27355,7 @@ sub keep_old_blank_lines_exclusions {
                     # A static side comment above cannot form hanging side
                     # comment below - ok to remove all blank lines.
                     my $token_top = $rLL->[$Klast_top]->[_TOKEN_];
-                    if ( $token_top =~ /$static_side_comment_pattern/ ) {
+                    if ( $token_top =~ /$Static_side_comment_pattern/ ) {
                         return 1;
                     }
 
@@ -27412,7 +27420,7 @@ sub keep_old_blank_lines_exclusions {
                 my $block_type = $rblock_type_of_seqno->{$seqno};
                 return if ( !$block_type );
                 if (
-                    $block_type =~ /$blank_lines_before_closing_block_pattern/ )
+                    $block_type =~ /$Blank_lines_before_closing_block_pattern/ )
                 {
                     return 1;
                 }
