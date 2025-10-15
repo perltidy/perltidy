@@ -837,12 +837,21 @@ EOM
         }
     } ## end sub make_profiles
 
-    sub get_random_parameters {
+    my %flag_types;
+    my %skip;
+    my @random_words;
+    my @token_types;
+    my @valign_list;
+    my @valign_exclude_all;
+    my @operators;
+    my @keywords;
+    my @colors;
+    my %option_range;
+    my %is_multiword_list;
 
-        # return a set of random parameters for perltidy
-        my @random_parameters;
+    BEGIN {
 
-        my %flag_types = (
+        %flag_types = (
             '!'  => 'BINARY FLAG',
             '=s' => 'STRING',
             '=i' => 'INTEGER',
@@ -850,9 +859,9 @@ EOM
             ':s' => 'OPTIONAL STRING',
         );
 
-        my @random_words = qw(bannanas sub subaru train 1x =+ !);
+        @random_words = qw(bannanas sub subaru train 1x =+ !);
 
-        my @token_types = qw#
+        @token_types = qw#
           A b C G L R f h Q k t w i q n p m F pp mm U j J Y Z v { } ( ) [ ] ; +
           - / * | % ! x ~ = \ ? : . < > ^ & .. :: << >> ** && .. || // -> => +=
           -= .= %= &= |= ^= *= <> <= >= == =~ !~ != ++ -- /= x= ~~ ~. |. &. ^.
@@ -861,21 +870,21 @@ EOM
         push @token_types, '#';
         push @token_types, ',';
 
-        my @valign_list = qw#
+        @valign_list = qw#
           = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
           { ( ? : ; => && || ~~ !~~ =~ !~ // <=> ->
           if unless and or err for foreach while until
           #;
         push @valign_list, ',';
 
-        my @valign_exclude_all = qw( * * );
+        @valign_exclude_all = qw( * * );
 
-        my @operators =
+        @operators =
           qw(% + - * / x != == >= <= =~ !~ < > | & = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=);
-        my @keywords = qw(
+        @keywords = qw(
           my our local do return while if unless and or err for foreach until
         );
-        my @colors = qw(
+        @colors = qw(
           ForestGreen
           SaddleBrown
           magenta4
@@ -887,7 +896,7 @@ EOM
           red
         );
 
-        my %option_range = (
+        %option_range = (
             'format'                        => [ 'tidy', 'html' ],  #, 'user' ],
             'output-line-ending'            => [ 'dos',  'win', 'mac', 'unix' ],
             'extended-block-tightness-list' => [ 'k',    't',   'kt' ],
@@ -1028,7 +1037,7 @@ EOM
             'html-color-v-string'        => \@colors,
         );
 
-        my %is_multiword_list = (
+        %is_multiword_list = (
             'want-break-after'            => 1,
             'want-break-before'           => 1,
             'want-left-space'             => 1,
@@ -1137,8 +1146,17 @@ EOM
         # Also added closing-token-indentation for same reason.
         # Added show-options because it just writes a lot of .LOG files
 
-        my %skip;
-        @skip{@q} = (1) x scalar(@q);
+        $skip{$_} = 1 for @q;
+    }
+
+    sub get_random_parameters {
+
+        # return a set of random parameters for perltidy
+        my @random_parameters;
+
+        # Fix for issue c537: exclude all warn flags in most cases to improve
+        # the chance of catching actual errors.
+        my $exclude_warn_flags = int( rand(1) + 0.8 );
 
         foreach my $parameter (@parameters) {
             my ( $name, $flag, $type ) = ( "", "", "" );
@@ -1155,6 +1173,12 @@ EOM
                 next if ( $name =~ /^dump-/ );
                 next if ( $name =~ /^stylesheet/ );
 
+                # skip --warn parameters with high probability in order to
+                # avoid missing actual errors. c537
+                if ( $exclude_warn_flags && $name =~ /^warn-/ ) {
+                    next;
+                }
+
                 # Skip all pattern lists
                 if ( $flag =~ /s$/ ) {
                     if (   $name =~ /-(list|prefix)/
@@ -1166,8 +1190,7 @@ EOM
                     }
                 }
                 my $rrange = $option_range{$name};
-                ##print "$parameter => $name  $flag $type\n";
-                my $line = "";
+                my $line   = "";
                 if ( $flag eq '!' ) {
                     my $xx     = int( rand(1) + 0.5 );
                     my $prefix = $xx == 0 ? 'no' : "";
