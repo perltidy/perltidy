@@ -5615,8 +5615,17 @@ sub set_container_ws_by_keyword {
     # treatment for its inside space.  If so we set a hash value using the
     # sequence number as key.
 
+    # Given:
+    #   $word = the function name, with any module path removed.
+    #   $seqno = the sequence number of the opening paren after the word
+
     return unless (%keyword_paren_inner_tightness);
-    if ( $word && $sequence_number ) {
+
+    # A blank word can occur if we remove the module path from a function call
+    # like 'A::(...)'. See c538.
+    return unless ($word);
+
+    if ($sequence_number) {
         my $tightness_here = $keyword_paren_inner_tightness{$word};
         if ( defined($tightness_here) && $tightness_here != 1 ) {
             my $ws_flag = $tightness_here == 0 ? WS_YES : WS_NO;
