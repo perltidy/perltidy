@@ -4312,7 +4312,7 @@ sub generate_options {
         'square-bracket-vertical-tightness'         => [ 0, 2,     0 ],
         'square-bracket-vertical-tightness-closing' => [ 0, 3,     0 ],
         'starting-indentation-level'                => [ 0, undef, undef ],
-        'timeout-in-seconds'                        => [ 0, undef, 10 ],
+        'timeout-in-seconds'                        => [ 0, undef, 5 ],
         'valign-signed-numbers-limit'               => [ 0, undef, 20 ],
         'vertical-tightness'                        => [ 0, 2,     undef ],
         'vertical-tightness-closing'                => [ 0, 3,     undef ],

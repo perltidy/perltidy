@@ -2,6 +2,9 @@
 
 ## 2025 09 12.02
 
+    - The default for --timeout-in-seconds has been reduced from 10 to 5 seconds.
+      A default value of 10 seemed excessive. It can be changed with -tos=n.
+
     - A new switch --blanks-before-opening-comments, -bboc, has been added
       for issue git #192.  This is on by default and allows perltidy to insert
       a blank line before full-line comments which start at a new indentation

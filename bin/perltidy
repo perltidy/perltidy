@@ -451,7 +451,7 @@ When the standard input supplies the input stream, and the input has not been
 received within B<n> seconds, perltidy will end with a timeout message.  The
 intention is to catch a situation where perltidy is accidentally invoked
 without a file to process and therefore waits for input from the system
-standard input (stdin), which never arrives.  The default is B<n=10> seconds.
+standard input (stdin), which never arrives.  The default is B<n=5> seconds.
 This check can be turned off with B<n=0>.
 
 =back
