@@ -7983,10 +7983,10 @@ in any way.  And, of course, it does not modify pod documents.
 
 =item B<Temporary files>
 
-Under the B<-html> option with the default B<--pod2html> flag, a temporary file is
-required to pass text to Pod::Html.  Unix systems will try to use the POSIX
-tmpnam() function.  Otherwise the file F<perltidy.TMP> will be temporarily
-created in the current working directory.
+Under the B<-html> option with the default B<--pod2html> flag, a temporary file
+is required to pass text to and from Pod::Html.  A randomly-named temporary
+file is created with C<File::Temp::tempfile> for this purpose. This file is
+removed after the data transfer.
 
 =item B<Special files when standard input is used>
 
