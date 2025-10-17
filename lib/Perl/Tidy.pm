@@ -5242,9 +5242,7 @@ EOM
     # compatibility but ignored. They will be deleted in a future version.
     foreach my $optname (qw( check-syntax perl-syntax-check-flags )) {
         if ( $rOpts->{$optname} ) {
-            Nag(
-"## NOTE: The option --$optname is no longer supported and should be removed\n"
-            );
+            Nag("## NOTE: '--$optname' is deprecated and should be removed\n");
             $rOpts->{$optname} = undef;
         }
     }
