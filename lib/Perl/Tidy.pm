@@ -2453,50 +2453,42 @@ EOM
         #--------------------------
         # prepare the output stream
         #--------------------------
-        my $output_file;
+        my $output_file = $rOpts->{'outfile'};
         my $output_name = EMPTY_STRING;
         my $actual_output_extension;
 
-        if ( $rOpts->{'outfile'} ) {
+        if ( defined($output_file) && length($output_file) ) {
 
-            if ( $number_of_files <= 1 ) {
-
-                if ( $rOpts->{'standard-output'} ) {
-                    my $saw_pbp = $self->[_saw_pbp_];
-                    my $msg     = "You may not use -o and -st together";
-                    $msg .= " (-pbp contains -st; see manual)" if ($saw_pbp);
-                    Die("$msg\n");
-                }
-
-                if ($destination_stream) {
-                    Die(
-"You may not specify a destination array and -o together\n"
-                    );
-                }
-
-                if ( defined( $rOpts->{'output-path'} ) ) {
-                    Die("You may not specify -o and -opath together\n");
-                }
-
-                if ( defined( $rOpts->{'output-file-extension'} ) ) {
-                    Die("You may not specify -o and -oext together\n");
-                }
-
-                $output_file = $rOpts->{outfile};
-                $output_name = $output_file;
-
-                # make sure user gives a file name after -o
-                if ( $output_file =~ /^-/ ) {
-                    Die("You must specify a valid filename after -o\n");
-                }
-
-                # do not overwrite input file with -o
-                if ( @input_file_stat && ( $output_file eq $input_file ) ) {
-                    Die("Use 'perltidy -b $input_file' to modify in-place\n");
-                }
-            }
-            else {
+            if ( $number_of_files > 1 ) {
                 Die("You may not use -o with more than one input file\n");
+            }
+
+            if ( $rOpts->{'standard-output'} ) {
+                my $saw_pbp = $self->[_saw_pbp_];
+                my $msg     = "You may not use -o and -st together";
+                $msg .= " (-pbp contains -st; see manual)" if ($saw_pbp);
+                Die("$msg\n");
+            }
+
+            if ($destination_stream) {
+                Die(
+                    "You may not specify a destination array and -o together\n"
+                );
+            }
+
+            if ( defined( $rOpts->{'output-path'} ) ) {
+                Die("You may not specify -o and -opath together\n");
+            }
+
+            if ( defined( $rOpts->{'output-file-extension'} ) ) {
+                Die("You may not specify -o and -oext together\n");
+            }
+
+            $output_name = $output_file;
+
+            # do not overwrite input file with -o
+            if ( @input_file_stat && ( $output_file eq $input_file ) ) {
+                Die("Use 'perltidy -b $input_file' to modify in-place\n");
             }
         }
         elsif ( $rOpts->{'standard-output'} ) {
@@ -5127,6 +5119,91 @@ sub cleanup_word_list {
     return \%seen;
 } ## end sub cleanup_word_list
 
+sub check_string_options {
+    my ($self) = @_;
+
+    # Make some basic checks for invalid characters in some user-defined
+    # strings, mostly file and directory names.
+
+    my $rOpts   = $self->[_rOpts_];
+    my $message = EMPTY_STRING;
+
+    # Options to check
+    my @options = qw(
+      backup-file-extension
+      cachedir
+      html-linked-style-sheet
+      html-src-extension
+      html-toc-extension
+      htmlroot
+      libpods
+      outfile
+      output-file-extension
+      output-path
+      podpath
+      podroot
+      title
+    );
+
+    my @html_colors = grep { /^html-color-/ } keys %{$rOpts};
+
+    # Skip selected tests
+    my %skip_leading_space_check  = map { $_ => 1 } qw( title );
+    my %skip_trailing_space_check = map { $_ => 1 } qw( title );
+    my %skip_leading_dash_check   = map { $_ => 1 } qw(
+      backup-file-extension
+      html-src-extension
+      html-toc-extension
+      output-file-extension
+      title
+    );
+
+    foreach my $option ( @options, @html_colors ) {
+        my $test_string = $rOpts->{$option};
+
+        next if ( !defined($test_string) );
+
+        # Leading space check
+        if ( !$skip_leading_space_check{$option} && $test_string =~ /^\s/ ) {
+            $message .= "$option must not contain leading spaces\n";
+        }
+
+        # Trailing space check
+        if ( !$skip_trailing_space_check{$option} && $test_string =~ /\s$/ ) {
+            $message .= "--$option must not contain trailing spaces\n";
+        }
+
+        # Printable character check
+        if ( $test_string =~ /[^[:print:]]/g ) {
+            my $pos = pos($test_string);
+            my $ch  = substr( $test_string, $pos - 1, 1 );
+            my $ord = ord($ch);
+            $message .= <<EOM;
+--$option has non-printable character(s) at character number $pos, decimal value=$ord
+EOM
+        }
+
+        # Leading dash check
+        if ( !$skip_leading_dash_check{$option}
+            && substr( $test_string, 0, 1 ) eq '-' )
+        {
+            my $hint = EMPTY_STRING;
+            if ( $option eq 'outfile' || $option eq 'output_path' ) {
+                $hint .= "; add leading path (like ./) if necessary";
+            }
+            $message .= <<EOM;
+--$option string must not begin with a dash$hint
+EOM
+        }
+    }
+
+    if ($message) {
+        Die($message);
+    }
+
+    return;
+} ## end sub check_string_options
+
 sub check_options {
 
     my ( $self, $num_files, $rinteger_option_range ) = @_;
@@ -5210,6 +5287,9 @@ EOM
             }
         }
     }
+
+    # Do some very basic checks on string options
+    $self->check_string_options();
 
     # Note that -vt, -vtc, and -cti are abbreviations. But under
     # msdos, an unquoted input parameter like vtc=1 will be
