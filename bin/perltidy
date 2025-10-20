@@ -7544,7 +7544,8 @@ By default, the parameter B<--dump-keyword-usage>, or B<-dku>, will write a
 list of perl builtin keywords used in a file, along with the count and the line
 numbers of the first and last occurrence.  This list can be read into a
 spreadsheet for sorting.  The list includes all builtin perl keywords which are
-used in a file, but this can be changed with the next parameter.
+used in a file, including quote-like operators C< qq qx qr tr q  s  y  m ` (backtick) >.
+This list can be changed with the next parameter.
 
 =item B<Use --dump-keyword-usage-list=s> to select keywords to be dumped.
 
@@ -7555,10 +7556,10 @@ words in this list. Otherwise, just the words in this list will be included.
 
 For example:
 
-  perltidy -dku -dkul='goto system fileparse' ifile >ofile
+  perltidy -dku -dkul='goto system qx fileparse' ifile >ofile
 
 will dump a list of information on the occurrences of just the perl builtin
-keywords C<goto> and C<system>, plus a function named C<fileparse>.
+keywords C<goto>, C<system>, and C<qx>, plus a function named C<fileparse>.
 
 The treatment of module paths in function names is as follows:
 

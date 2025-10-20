@@ -15453,7 +15453,7 @@ sub dump_keyword_usage {
                     rinput_list => \@q,
                     option_name => "--$opt_name_list",
                     on_error    => 'die',
-                    rexceptions => { '*' => 1 },
+                    rexceptions => { '*' => 1, '`' => 1 },
                 }
             );
 
@@ -15462,13 +15462,56 @@ sub dump_keyword_usage {
         }
     }
 
-    my $rLL = $self->[_rLL_];
+    my $rLL               = $self->[_rLL_];
+    my $ris_qwaf_by_seqno = $self->[_ris_qwaf_by_seqno_];
+
+    my %Q1 = map { $_ => 1 } qw( q  s  y  m ` );
+    my %Q2 = map { $_ => 1 } qw( qq qx qr tr );
 
     my @line_order;
     my %call_counts;
-    foreach my $KK ( 0 .. @{$rLL} - 1 ) {
-        my $type  = $rLL->[$KK]->[_TYPE_];
+    my $Kmax = @{$rLL} - 1;
+    my $type = 'b';
+    foreach my $KK ( 0 .. $Kmax ) {
+        my $type_next = $rLL->[$KK]->[_TYPE_];
+        next if ( $type_next eq 'b' );
+        my $type_last = $type;
+        $type = $type_next;
         my $token = $rLL->[$KK]->[_TOKEN_];
+
+        # Patch to include quote-like keywords, such as qx, qw, tr ...
+        # These are type 'Q' or 'q', but here we want to treat them like type
+        # 'k', so we will make them look like keywords.
+        if ( $type eq 'q' ) {
+
+            # Type 'q' is qw except after attribute colon, type 'A'
+            if ( $type_last ne 'A' && substr( $token, 0, 2 ) eq 'qw' ) {
+                $type  = 'k';
+                $token = 'qw';
+            }
+        }
+
+        if ( $type eq 'Q' ) {
+
+            # If the user set -qwaf, then words in the qw list will be marked
+            # as type 'Q'. We must ignore them, so we skip ahead.
+            if ($rOpts_qw_as_function) {
+                my $seqno_p = $self->parent_seqno_by_K($KK);
+                if ( $seqno_p && $ris_qwaf_by_seqno->{$seqno_p} ) {
+                    next;
+                }
+            }
+
+            # Type 'Q' is all other quote-like operators.
+            my $ch2 = substr( $token, 0, 2 );
+            if ( $Q2{$ch2} ) { $type = 'k'; $token = $ch2 }
+            else {
+                my $ch1 = substr( $token, 0, 1 );
+                if ( $Q1{$ch1} ) { $type = 'k'; $token = $ch2 }
+            }
+        }
+
+        # See if this token should be included in the output list
         if ( $include_all_keywords && $type eq 'k' ) {
             ## ok to include
         }
