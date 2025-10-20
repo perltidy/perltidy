@@ -15511,6 +15511,11 @@ sub dump_keyword_usage {
             }
         }
 
+        # If -qwaf is set, mark a function named 'qw' as a keyword
+        if ( $rOpts_qw_as_function && $type eq 'U' && $token eq 'qw' ) {
+            $type = 'k';
+        }
+
         # See if this token should be included in the output list
         if ( $include_all_keywords && $type eq 'k' ) {
             ## ok to include
