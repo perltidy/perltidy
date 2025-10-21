@@ -1030,9 +1030,11 @@ EOM
     #-------------------------
     # get command line options
     #-------------------------
-    my ( $rOpts, $config_file, $rraw_options,
-        $roption_string,        $rexpansion, $roption_category,
-        $rinteger_option_range, $rOpts_in_profile )
+    my (
+        $rOpts,                 $config_file,       $rraw_options,
+        $roption_string,        $rexpansion,        $roption_category,
+        $rinteger_option_range, $ris_string_option, $rOpts_in_profile
+      )
       = process_command_line(
         $perltidyrc_stream,  $is_Windows, $Windows_type,
         $rpending_complaint, $dump_options_type,
@@ -1134,7 +1136,8 @@ EOM
     #----------------------------------------
     # check parameters and their interactions
     #----------------------------------------
-    $self->check_options( $num_files, $rinteger_option_range );
+    $self->check_options( $num_files, $rinteger_option_range,
+        $ris_string_option );
 
     if ($user_formatter) {
         $rOpts->{'format'} = 'user';
@@ -4995,9 +4998,11 @@ EOM
         }
     }
 
-    return ( \%Opts, $config_file, \@raw_options,
-        $roption_string,        $rexpansion, $roption_category,
-        $rinteger_option_range, \%Opts_in_profile );
+    return (
+        \%Opts,                 $config_file,       \@raw_options,
+        $roption_string,        $rexpansion,        $roption_category,
+        $rinteger_option_range, $ris_string_option, \%Opts_in_profile
+    );
 } ## end sub _process_command_line
 
 sub make_grep_alias_string {
@@ -5120,80 +5125,78 @@ sub cleanup_word_list {
 } ## end sub cleanup_word_list
 
 sub check_string_options {
-    my ($self) = @_;
+    my ( $self, $ris_string_option ) = @_;
 
-    # Make some basic checks for invalid characters in some user-defined
-    # strings, mostly file and directory names.
+    # Make some basic checks for invalid characters in user-defined strings.
+    # More detailed checks are made later in sub check_options.
 
     my $rOpts   = $self->[_rOpts_];
     my $message = EMPTY_STRING;
 
-    # Options to check
-    my @options = qw(
-      backup-file-extension
+    my @all_string_options = grep { $ris_string_option->{$_} } keys %{$rOpts};
+    my @html_color_options = grep { /^html-color-/ } @all_string_options;
+
+    my @filename_options = qw(
       cachedir
       html-linked-style-sheet
-      html-src-extension
-      html-toc-extension
       htmlroot
       libpods
       outfile
-      output-file-extension
       output-path
       podpath
       podroot
-      title
     );
 
-    my @html_colors = grep { /^html-color-/ } keys %{$rOpts};
-
-    # Skip selected tests
-    my %skip_leading_space_check  = map { $_ => 1 } qw( title );
-    my %skip_trailing_space_check = map { $_ => 1 } qw( title );
-    my %skip_leading_dash_check   = map { $_ => 1 } qw(
+    my @file_extension_options = qw(
       backup-file-extension
       html-src-extension
       html-toc-extension
       output-file-extension
-      title
     );
 
-    foreach my $option ( @options, @html_colors ) {
-        my $test_string = $rOpts->{$option};
+    # What to check:
+    my %leading_dash_check =
+      map { $_ => 1 } ( @filename_options, @html_color_options );
+    my %leading_space_check =
+      map { $_ => 1 } ( @filename_options, @file_extension_options );
+    my %trailing_space_check = %leading_space_check;
+
+    foreach my $opt_name (@all_string_options) {
+        my $test_string = $rOpts->{$opt_name};
 
         next if ( !defined($test_string) );
 
-        # Leading space check
-        if ( !$skip_leading_space_check{$option} && $test_string =~ /^\s/ ) {
-            $message .= "$option must not contain leading spaces\n";
-        }
-
-        # Trailing space check
-        if ( !$skip_trailing_space_check{$option} && $test_string =~ /\s$/ ) {
-            $message .= "--$option must not contain trailing spaces\n";
-        }
-
-        # Printable character check
+        # Printable character check for all string options
         if ( $test_string =~ /[^[:print:]]/g ) {
             my $pos = pos($test_string);
             my $ch  = substr( $test_string, $pos - 1, 1 );
             my $ord = ord($ch);
             $message .= <<EOM;
---$option has non-printable character(s) at character number $pos, decimal value=$ord
+--$opt_name has non-printable character(s) at character number $pos, decimal value=$ord
 EOM
         }
 
         # Leading dash check
-        if ( !$skip_leading_dash_check{$option}
+        if ( $leading_dash_check{$opt_name}
             && substr( $test_string, 0, 1 ) eq '-' )
         {
             my $hint = EMPTY_STRING;
-            if ( $option eq 'outfile' || $option eq 'output_path' ) {
+            if ( $opt_name eq 'outfile' || $opt_name eq 'output_path' ) {
                 $hint .= "; add leading path (like ./) if necessary";
             }
             $message .= <<EOM;
---$option string must not begin with a dash$hint
+--$opt_name string must not begin with a dash$hint
 EOM
+        }
+
+        # Leading space checks
+        if ( $leading_space_check{$opt_name} && $test_string =~ /^\s/ ) {
+            $message .= "--$opt_name must not contain leading spaces\n";
+        }
+
+        # Trailing space check
+        if ( $trailing_space_check{$opt_name} && $test_string =~ /\s$/ ) {
+            $message .= "--$opt_name must not contain trailing spaces\n";
         }
     }
 
@@ -5206,7 +5209,7 @@ EOM
 
 sub check_options {
 
-    my ( $self, $num_files, $rinteger_option_range ) = @_;
+    my ( $self, $num_files, $rinteger_option_range, $ris_string_option ) = @_;
 
     # Check options at a high level. Note that other modules have their
     # own sub 'check_options' for lower level checking.
@@ -5289,7 +5292,7 @@ EOM
     }
 
     # Do some very basic checks on string options
-    $self->check_string_options();
+    $self->check_string_options($ris_string_option);
 
     # Note that -vt, -vtc, and -cti are abbreviations. But under
     # msdos, an unquoted input parameter like vtc=1 will be
