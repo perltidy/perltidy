@@ -11767,14 +11767,32 @@ sub dump_block_summary {
     #  --dump-block-minimum-lines=n (-dbml=n), where n is the minimum
     #    number of lines for a block to be included; default is 20.
 
-    my $ris_method_block       = $self->[_ris_method_block_];
+    my $ris_method_block = $self->[_ris_method_block_];
+
+    # default block types:
+    my @block_types = qw( sub );
+
     my $rOpts_dump_block_types = $rOpts->{'dump-block-types'};
-    if ( !defined($rOpts_dump_block_types) ) { $rOpts_dump_block_types = 'sub' }
-    $rOpts_dump_block_types =~ s/^\s+//;
-    $rOpts_dump_block_types =~ s/\s+$//;
-    my @list = split /\s+/, $rOpts_dump_block_types;
-    my %dump_block_types;
-    @dump_block_types{@list} = (1) x scalar(@list);
+    if ( defined($rOpts_dump_block_types) ) {
+        @block_types = split_words($rOpts_dump_block_types);
+
+        # Remove any trailing + sign for word checks
+        my @q = map {
+            length($_) > 1 && substr( $_, -1, 1 ) eq '+'
+              ? substr( $_, 0, -1 )
+              : $_
+        } @block_types;
+
+        check_for_valid_words(
+            {
+                rinput_list => \@q,
+                option_name => "--dump-block-types",
+                on_error    => 'die',
+                rexceptions => { '*' => 1, '+' => 1 },
+            }
+        );
+    }
+    my %dump_block_types = map { $_ => 1 } @block_types;
 
     # Get level variation info for code blocks
     my $rlevel_info = $self->find_level_info();
