@@ -15441,6 +15441,7 @@ sub dump_keyword_usage {
     my $opt_name = 'dump-keyword-usage';
     return unless ( $rOpts->{$opt_name} );
 
+    # Check --dump-keyword-usage-list
     my %dump_keyword_usage_list;
     my $include_all_keywords = 1;
     my $opt_name_list        = 'dump-keyword-usage-list';
@@ -15468,6 +15469,7 @@ sub dump_keyword_usage {
     my %Q1 = map { $_ => 1 } qw( q  s  y  m ` );
     my %Q2 = map { $_ => 1 } qw( qq qx qr tr );
 
+    # Loop over all tokens
     my @line_order;
     my %call_counts;
     my $Kmax = @{$rLL} - 1;
@@ -15479,41 +15481,44 @@ sub dump_keyword_usage {
         $type = $type_next;
         my $token = $rLL->[$KK]->[_TOKEN_];
 
-        # Patch to include quote-like keywords, such as qx, qw, tr ...
-        # These are type 'Q' or 'q', but here we want to treat them like type
-        # 'k', so we will make them look like keywords.
-        if ( $type eq 'q' ) {
+        # If -qwaf is set...
+        if ($rOpts_qw_as_function) {
 
-            # Type 'q' is qw except after attribute colon, type 'A'
-            if ( $type_last ne 'A' && substr( $token, 0, 2 ) eq 'qw' ) {
-                $type  = 'k';
-                $token = 'qw';
-            }
-        }
-
-        if ( $type eq 'Q' ) {
-
-            # If the user set -qwaf, then words in the qw list will be marked
-            # as type 'Q'. We must ignore them, so we skip ahead.
-            if ($rOpts_qw_as_function) {
+            # ...words in the qw list will be marked as type 'Q'. We must
+            # ignore them, so we skip ahead.
+            if ( $type eq 'Q' ) {
                 my $seqno_p = $self->parent_seqno_by_K($KK);
                 if ( $seqno_p && $ris_qwaf_by_seqno->{$seqno_p} ) {
                     next;
                 }
             }
 
-            # Type 'Q' is all other quote-like operators.
-            my $ch2 = substr( $token, 0, 2 );
-            if ( $Q2{$ch2} ) { $type = 'k'; $token = $ch2 }
-            else {
-                my $ch1 = substr( $token, 0, 1 );
-                if ( $Q1{$ch1} ) { $type = 'k'; $token = $ch2 }
+            # ...a function named 'qw' is actually a keyword
+            if ( $type eq 'U' && $token eq 'qw' ) {
+                $type = 'k';
             }
         }
 
-        # If -qwaf is set, mark a function named 'qw' as a keyword
-        if ( $rOpts_qw_as_function && $type eq 'U' && $token eq 'qw' ) {
-            $type = 'k';
+        # Type 'q' should be a qw list ...
+        if ( $type eq 'q' ) {
+
+            # ...except after attribute colon, type 'A'
+            if ( $type_last eq 'A' )              { next }
+            if ( substr( $token, 0, 2 ) ne 'qw' ) { next }
+            $type  = 'k';
+            $token = 'qw';
+        }
+
+        # Type 'Q' is all other quote-like operators
+        if ( $type eq 'Q' ) {
+
+            # Note that we must check 2 character tokens first;
+            # otherwise, for example, 'qx' would match 'q'.
+            my $ch1 = substr( $token, 0, 1 );
+            my $ch2 = substr( $token, 0, 2 );
+            if    ( $Q2{$ch2} ) { $type = 'k'; $token = $ch2 }
+            elsif ( $Q1{$ch1} ) { $type = 'k'; $token = $ch1 }
+            else                { next }
         }
 
         # See if this token should be included in the output list
@@ -15534,9 +15539,7 @@ sub dump_keyword_usage {
                 next if ( !$dump_keyword_usage_list{$word} );
             }
         }
-        else {
-            next;
-        }
+        else { next }
 
         if ( !defined( $call_counts{$token} ) ) {
             push @line_order, $token;
@@ -15548,6 +15551,7 @@ sub dump_keyword_usage {
         }
     }
 
+    # Report results
     return if ( !@line_order );
 
     my $input_stream_name = get_input_stream_name();
