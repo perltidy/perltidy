@@ -1187,16 +1187,16 @@ EOM
         Perl::Tidy::HtmlWriter->check_options($rOpts);
     }
 
-    # Try to catch an unusual missing string parameter error, like this:
-    #    perltidy -wvt perltidy.pl
-    # The problem is that -wvt wants a string, so it grabs 'perltidy.pl'.
-    # Then there is no output filename, so input is assumed to be stdin.
-    # This make perltidy unexpectedly wait for input. To the user, it
-    # appears that perltidy has gone into an infinite loop. Issue c312.
-    # To avoid getting this far, it is best for parameters which take a
-    # string to check the strings in one of the 'check_options' subs, and
-    # exit if there is an obvious error. This has been done for -wvt,
-    # but are undoubtedly other parameters where this problem might occur.
+    # Try to catch an unusual missing string parameter error, where the
+    # intention is to format infile.pl, like this:
+    #    perltidy -title infile.pl
+    # The problem is that -title wants a string, so it grabs 'infile.pl'.  Then
+    # there is no filename, so input is assumed to be stdin.  This make
+    # perltidy unexpectedly wait for input. To the user, it appears that
+    # perltidy has gone into an infinite loop.  For most options, but not all,
+    # previous checks for bad string input will have already caught the
+    # problem.  A timeout will eventually occur as a final backup method for
+    # catching this problem.  Issue c312.
     if ( !$num_files && @ARGV_saved > 1 ) {
         my $opt_test  = $ARGV_saved[-2];
         my $file_test = $ARGV_saved[-1];
