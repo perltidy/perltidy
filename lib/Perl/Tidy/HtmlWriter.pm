@@ -701,7 +701,8 @@ sub pod_to_html {
     }
 
     # Pod::Html requires a real temporary filename
-    my ( $fh_tmp, $tmpfile ) = File::Temp::tempfile();
+    # Added UNLINK=>1 as a backup file removal method
+    my ( $fh_tmp, $tmpfile ) = File::Temp::tempfile( UNLINK => 1 );
     if ( !$fh_tmp ) {
         Perl::Tidy::Warn(
             "unable to open temporary file $tmpfile; cannot use pod2html\n");
