@@ -150,6 +150,7 @@ my (
     %is_code_block_token,
     %is_zero_continuation_block_type,
     %is_keyword,
+    %is_TERM_keyword,
     %is_my_our_state,
     %is_package,
     %matching_end_token,
@@ -4627,11 +4628,17 @@ EOM
             }
         }
 
+        # Catch some unexpected keyword errors; c517.
+        # Note that we only check keywords for OPERATOR expected, not TERM.
+        # This is because a large number of keywords which normally expect
+        # a TERM will also take an OPERATOR.
+        if ( $expecting == OPERATOR && $is_TERM_keyword{$tok} ) {
+            $self->error_if_expecting_OPERATOR();
+        }
+
         # recognize 'use' statements, which are special
         if ( $is_use_require{$tok} ) {
             $statement_type = $tok;
-            $self->error_if_expecting_OPERATOR()
-              if ( $expecting == OPERATOR );
         }
 
         # remember my and our to check for trailing ": shared"
@@ -11785,6 +11792,10 @@ BEGIN {
     # these functions allow an identifier in the indirect object slot
     @q = qw( print printf sort exec system say );
     @is_indirect_object_taker{@q} = (1) x scalar(@q);
+
+    # Keywords which definitely produce error if an OPERATOR is expected
+    @q = qw( my our state local use require );
+    @is_TERM_keyword{@q} = (1) x scalar(@q);
 
     # Note: 'field' will be added by sub check_options if --use-feature=class
     @q = qw( my our state );
