@@ -95,6 +95,8 @@ If you want to test on random files, you should generate them first in this
 directory with 'random_file_generator.pl'.  That is currently a separate
 program but will eventually be incorporated into this program.
 
+Perl Version is $];
+
 Hit <cr> to continue, or hit control-C to quit.
 
 EOM
