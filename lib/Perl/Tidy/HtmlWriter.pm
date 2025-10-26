@@ -700,8 +700,10 @@ sub pod_to_html {
         return $success_flag;
     }
 
-    # Pod::Html requires a real temporary filename
-    # Added UNLINK=>1 as a backup file removal method
+    # Make a temporary named file for data transfer to and from Pod::Html.
+    # NOTE: It is possible to avoid a temporary file by running pod2html in
+    # a separate process and using Open3 for data transfer (c539). This works
+    # but is inefficient and more complex, so the temp file method is used.
     my ( $fh_tmp, $tmpfile ) = File::Temp::tempfile( UNLINK => 1 );
     if ( !$fh_tmp ) {
         Perl::Tidy::Warn(
