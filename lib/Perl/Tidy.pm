@@ -1130,6 +1130,11 @@ EOM
 --$opt_name expects 1 filename in the arg list but saw $num_files filenames
 EOM
             }
+            if ( $rOpts->{'outfile'} ) {
+                Die(<<EOM);
+--outfile is not allowed with --$opt_name because dump output goes to STDOUT
+EOM
+            }
         }
     }
 
