@@ -15451,6 +15451,8 @@ sub block_seqno_of_paren_seqno {
     return $seqno_block;
 } ## end sub block_seqno_of_paren_seqno
 
+use constant DEBUG_KEYWORD_USAGE => 0;
+
 sub dump_keyword_usage {
     my ($self) = @_;
 
@@ -15482,6 +15484,7 @@ sub dump_keyword_usage {
     }
 
     my $rLL               = $self->[_rLL_];
+    my $rlines            = $self->[_rlines_];
     my $ris_qwaf_by_seqno = $self->[_ris_qwaf_by_seqno_];
 
     my %Q1 = map { $_ => 1 } qw( q  s  y  m ` );
@@ -15561,12 +15564,29 @@ sub dump_keyword_usage {
 
         if ( !defined( $call_counts{$token} ) ) {
             push @line_order, $token;
-            $call_counts{$token} = { count => 1, Kfirst => $KK, Klast => $KK };
+            $call_counts{$token} = {
+                count            => 1,
+                Kfirst           => $KK,
+                Klast            => $KK,
+                line_start_count => 0
+            };
         }
         else {
             $call_counts{$token}->{count}++;
             $call_counts{$token}->{Klast} = $KK;
         }
+
+        if (DEBUG_KEYWORD_USAGE) {
+
+            # Debug info: count number of times this token starts a line
+            my $ix             = $rLL->[$KK]->[_LINE_INDEX_];
+            my $line_of_tokens = $rlines->[$ix];
+            my $rK_range       = $line_of_tokens->{_rK_range};
+            my ( $Kfirst, $Klast_uu ) = @{$rK_range};
+            my $first_on_line = defined($Kfirst) && $KK == $Kfirst ? 1 : 0;
+            $call_counts{$token}->{line_start_count}++ if ($first_on_line);
+        }
+
     }
 
     # Report results
@@ -15577,14 +15597,21 @@ sub dump_keyword_usage {
 $input_stream_name: output for --$opt_name
 keyword,count,lno_first,lno_last
 EOM
+    if (DEBUG_KEYWORD_USAGE) {
+        chomp $output_string;
+        $output_string .= ",line_starts\n";
+    }
     foreach my $key (@line_order) {
-        my $rhash    = $call_counts{$key};
-        my $count    = $rhash->{count};
-        my $Kfirst   = $rhash->{Kfirst};
-        my $Klast    = $rhash->{Klast};
-        my $ln_first = $rLL->[$Kfirst]->[_LINE_INDEX_] + 1;
-        my $ln_last  = $rLL->[$Klast]->[_LINE_INDEX_] + 1;
-        $output_string .= "$key,$count,$ln_first,$ln_last\n";
+        my $rhash            = $call_counts{$key};
+        my $count            = $rhash->{count};
+        my $Kfirst           = $rhash->{Kfirst};
+        my $Klast            = $rhash->{Klast};
+        my $line_start_count = $rhash->{line_start_count};
+        my $ln_first         = $rLL->[$Kfirst]->[_LINE_INDEX_] + 1;
+        my $ln_last          = $rLL->[$Klast]->[_LINE_INDEX_] + 1;
+        $output_string .= "$key,$count,$ln_first,$ln_last";
+        if (DEBUG_KEYWORD_USAGE) { $output_string .= ",$line_start_count" }
+        $output_string .= "\n";
     }
     print {*STDOUT} $output_string;
     return;
