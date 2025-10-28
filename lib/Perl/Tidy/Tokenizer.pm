@@ -37,11 +37,12 @@ our $VERSION = '20250912.02';
 
 use Carp;
 
-use constant DEVEL_MODE   => 0;
-use constant EMPTY_STRING => q{};
-use constant SPACE        => q{ };
-use constant COMMA        => q{,};
-use constant BACKSLASH    => q{\\};
+use constant DEVEL_MODE       => 0;
+use constant DEBUG_GUESS_MODE => 0;
+use constant EMPTY_STRING     => q{};
+use constant SPACE            => q{ };
+use constant COMMA            => q{,};
+use constant BACKSLASH        => q{\\};
 
 { #<<< A non-indenting brace to contain all lexical variables
 
@@ -3517,6 +3518,9 @@ EOM
                 $rtoken_map, $max_token_index );
 
             if ($msg) {
+                if ( 0 && DEBUG_GUESS_MODE ) {
+                    $self->warning("DEBUG_GUESS_MODE message:\n$msg\n");
+                }
                 $self->write_diagnostics("DIVIDE:$msg\n");
                 $self->write_logfile_entry($msg);
             }
@@ -3825,6 +3829,14 @@ EOM
             ( $i, $type ) =
               $self->find_angle_operator_termination( $input_line, $i,
                 $rtoken_map, $expecting, $max_token_index );
+            if ( DEBUG_GUESS_MODE && $expecting == UNKNOWN ) {
+                my $msg = "guessing that '<' is ";
+                $msg .=
+                  $type eq 'Q' ? "an angle operator" : "a less than symbol";
+                if ( $type eq 'Q' ) {
+                    $self->warning("DEBUG_GUESS_MODE message:\n$msg\n");
+                }
+            }
         }
         else {
         }
@@ -3872,7 +3884,12 @@ EOM
               $self->guess_if_pattern_or_conditional( $i, $rtokens,
                 $rtoken_type, $rtoken_map, $max_token_index );
 
-            if ($msg) { $self->write_logfile_entry($msg) }
+            if ($msg) {
+                $self->write_logfile_entry($msg);
+                if ( DEBUG_GUESS_MODE && $is_pattern ) {
+                    $self->warning("DEBUG_GUESS_MODE message:\n$msg\n");
+                }
+            }
         }
         else { $is_pattern = ( $expecting == TERM ) }
 
@@ -8022,6 +8039,16 @@ sub peek_ahead_for_nonblank_token {
 # Tokenizer guessing routines for ambiguous situations
 #######################################################################
 
+my %is_non_ternary_pretok;
+
+BEGIN {
+
+    # Some pre-tokens which cannot immediately follow a ternary '?'
+    my @q = qw# ; ? : ) } ] = > #;
+    push @q, COMMA;
+    %is_non_ternary_pretok = map { $_ => 1 } @q;
+}
+
 sub guess_if_pattern_or_conditional {
 
     my ( $self, $i, $rtokens, $rtoken_type, $rtoken_map_uu, $max_token_index )
@@ -8039,13 +8066,35 @@ sub guess_if_pattern_or_conditional {
     # USES GLOBAL VARIABLES: $last_nonblank_token
 
     my $is_pattern = 0;
-    my $msg        = "guessing that ? after '$last_nonblank_token' starts a ";
+    my $msg =
+"guessing that ? after type='$last_nonblank_type' token='$last_nonblank_token' starts a ";
 
     if ( $i >= $max_token_index ) {
         $msg .= "conditional (no end to pattern found on the line)\n";
         $is_pattern = 0;
         return ( $is_pattern, $msg );
     }
+
+    # See if we can rule out a ternary operator here before proceeding. c547.
+    my ( $next_nonblank_token, $i_next_uu ) =
+      find_next_nonblank_token_on_this_line( $i, $rtokens, $max_token_index );
+    if (
+        !(
+            $is_non_ternary_pretok{$next_nonblank_token}
+            || ( $last_nonblank_type eq 'k' && $last_nonblank_token eq 'split' )
+        )
+      )
+    {
+        # A ternary cannot be ruled out here. We will assume this is a ternary
+        # operator since '?' as pattern delimiter is deprecated.
+        $is_pattern = 0;
+        $msg .= "conditional (cannot rule it out)";
+        return ( $is_pattern, $msg );
+    }
+
+    # If we get here, then we either have a ternary with a syntax error or some
+    # ancient code which uses ? as a pattern delimiter. We will only select the
+    # pattern delimiter if we can find its matching closing delimiter.
 
     my $ibeg = $i;
     $i = $ibeg + 1;
@@ -8323,7 +8372,6 @@ sub guess_if_here_doc {
         if ( !defined($line) ) {
             $here_doc_expected = -1;    # hit eof without seeing target
             $msg .= " -- must be shift; target $next_token not in file\n";
-
         }
         else {                          # still unsure..taking a wild guess
 
@@ -8335,6 +8383,9 @@ sub guess_if_here_doc {
             else {
                 $msg .=
                   " -- guessing it's a shift ($next_token is a constant)\n";
+            }
+            if (DEBUG_GUESS_MODE) {
+                $self->warning("DEBUG_GUESS_MODE message:\n$msg\n");
             }
         }
     }
