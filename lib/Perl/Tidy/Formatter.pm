@@ -15568,7 +15568,7 @@ sub dump_keyword_usage {
                 count            => 1,
                 Kfirst           => $KK,
                 Klast            => $KK,
-                line_start_count => 0
+                line_start_count => 0,
             };
         }
         else {

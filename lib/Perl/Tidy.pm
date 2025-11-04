@@ -742,6 +742,7 @@ BEGIN {
         _display_name_             => $i++,
         _file_extension_separator_ => $i++,
         _fileroot_                 => $i++,
+        _is_pure_ascii_data_       => $i++,
         _is_encoded_data_          => $i++,
         _length_function_          => $i++,
         _line_separator_default_   => $i++,
@@ -1939,6 +1940,9 @@ sub get_decoded_string_buffer {
     my $decoded_input_as = EMPTY_STRING;
     $rstatus->{'char_mode_source'} = 0;
 
+    my $is_pure_ascii_data = !( ${$rinput_string} =~ /[^[:ascii:]]/ );
+    $self->[_is_pure_ascii_data_] = $is_pure_ascii_data;
+
     # Case 1: If Perl is already in a character-oriented mode for this
     # string rather than a byte-oriented mode.  Normally, this happens if
     # the caller has decoded a utf8 string before calling perltidy.  But it
@@ -1973,7 +1977,7 @@ sub get_decoded_string_buffer {
         # using an incorrect decoding.
 
         my $decoder;
-        if ( ${$rinput_string} =~ /[^[:ascii:]]/ ) {
+        if ( !$is_pure_ascii_data ) {
             $decoder = guess_encoding( ${$rinput_string}, 'utf8' );
         }
         if ( $decoder && ref($decoder) ) {
@@ -2973,6 +2977,7 @@ sub process_iteration_layer {
     my $display_name       = $self->[_display_name_];
     my $fileroot           = $self->[_fileroot_];
     my $is_encoded_data    = $self->[_is_encoded_data_];
+    my $is_pure_ascii_data = $self->[_is_pure_ascii_data_];
     my $length_function    = $self->[_length_function_];
     my $logger_object      = $self->[_logger_object_];
     my $rOpts              = $self->[_rOpts_];
@@ -3099,6 +3104,9 @@ sub process_iteration_layer {
                 extension          => $self->[_actual_output_extension_],
                 html_toc_extension => $html_toc_extension,
                 html_src_extension => $html_src_extension,
+                is_encoded_data    => $is_encoded_data,
+                is_pure_ascii_data => $is_pure_ascii_data,
+                logger_object      => $logger_object,
             );
         }
         elsif ( $rOpts->{'format'} eq 'tidy' ) {
@@ -4135,6 +4143,7 @@ sub generate_options {
     ########################################
     # Based on their known order
     $category = 12;    # HTML properties
+    $add_option->( 'use-pod-simple', 'ups', '!' );
     foreach my $opt (@option_string) {
         my $long_name = $opt;
         $long_name =~ s/(!|=.*|:.*)$//;

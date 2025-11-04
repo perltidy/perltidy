@@ -19,12 +19,17 @@ use constant SPACE        => q{ };
 
 { #<<< A non-indenting brace to contain all lexical variables
 
+my @unique_hash_keys_uu = qw(use-pod-simple);
+
 # class variables
 my (
 
     # INITIALIZER: BEGIN block
     $missing_html_entities,
+
+    # INITIALIZER: sub new
     $missing_pod_html,
+    $loaded_pod_simple,
 
     # INITIALIZER: BEGIN block
     %short_to_long_names,
@@ -51,10 +56,6 @@ BEGIN {
         $missing_html_entities = $EVAL_ERROR ? $EVAL_ERROR : 1;
     }
 
-    $missing_pod_html = EMPTY_STRING;
-    if ( !eval { require Pod::Html; 1 } ) {
-        $missing_pod_html = $EVAL_ERROR ? $EVAL_ERROR : 1;
-    }
 } ## end BEGIN
 
 sub AUTOLOAD {
@@ -94,6 +95,9 @@ sub new {
         extension          => undef,
         html_toc_extension => undef,
         html_src_extension => undef,
+        is_encoded_data    => undef,
+        is_pure_ascii_data => undef,
+        logger_object      => undef,
     );
     my %args = ( %defaults, @arglist );
 
@@ -102,6 +106,9 @@ sub new {
     my $extension          = $args{extension};
     my $html_toc_extension = $args{html_toc_extension};
     my $html_src_extension = $args{html_src_extension};
+    my $is_encoded_data    = $args{is_encoded_data};
+    my $is_pure_ascii_data = $args{is_pure_ascii_data};
+    my $logger_object      = $args{logger_object};
 
     my $html_fh = Perl::Tidy::streamhandle( $html_file, 'w' );
     if ( !$html_fh ) {
@@ -144,14 +151,48 @@ PRE_END
             undef $rOpts->{'pod2html'};
         }
         else {
-            if ($missing_pod_html) {
-                Perl::Tidy::Warn(
-"unable to find Pod::Html; cannot use pod2html\n-npod disables this message\n"
-                );
+
+            # Load a Pod to Html translator
+            my $log_message = EMPTY_STRING;
+            if ( !defined($loaded_pod_simple) && $rOpts->{'use-pod-simple'} ) {
+                if ( !eval { require Pod::Simple::XHTML; 1 } ) {
+                    $loaded_pod_simple = 0;
+                    $log_message .= <<EOM;
+Unable to loaded 'Pod::Simple::XHTML' as requested with flag '--use-pod-simple':
+$EVAL_ERROR
+EOM
+                }
+                else {
+                    $loaded_pod_simple = 1;
+                    $log_message .= <<EOM;
+Loaded Pod::Simple::XHTML as requested with flag '--use-pod-simple'.
+EOM
+                }
+            }
+
+            # Load Pod::Html if needed
+            if ( !$loaded_pod_simple && !defined($missing_pod_html) ) {
+                $missing_pod_html = EMPTY_STRING;
+                if ( !eval { require Pod::Html; 1 } ) {
+                    $missing_pod_html = $EVAL_ERROR ? $EVAL_ERROR : 1;
+                    $log_message .= <<EOM;
+Unable to loaded 'Pod::Html':
+$EVAL_ERROR
+EOM
+                }
+            }
+
+            if ( !$loaded_pod_simple && $missing_pod_html ) {
+                $log_message .= <<EOM;
+unable to find Pod::Html; cannot use pod2html\n-npod disables this message
+EOM
                 undef $rOpts->{'pod2html'};
             }
             else {
                 $html_pod_fh = Perl::Tidy::IOScalar->new( \$pod_string, 'w' );
+            }
+            if ( $log_message && $logger_object ) {
+                $logger_object->write_logfile_entry($log_message);
             }
         }
     }
@@ -206,6 +247,9 @@ PRE_END
         _rpackage_stack    => [],                   # stack to check for package
                                                     # name changes
         _rlast_level       => \$last_level,         # brace indentation level
+
+        _is_encoded_data    => $is_encoded_data,    # true for utf-8 source
+        _is_pure_ascii_data => $is_pure_ascii_data,
     }, $class;
 } ## end sub new
 
@@ -687,98 +731,33 @@ sub set_default_properties {
 
 sub pod_to_html {
 
-    # Use Pod::Html to process the pod and make the page
+    # Convert the pod to html
     # then merge the perltidy code sections into it.
     # return 1 if success, 0 otherwise
     my ( $self, $pod_string, $css_string, $toc_string, $rpre_string_stack ) =
       @_;
-    my $title        = $self->{_title};
-    my $success_flag = 0;
+    my $title              = $self->{_title};
+    my $is_encoded_data    = $self->{_is_encoded_data};
+    my $is_pure_ascii_data = $self->{_is_pure_ascii_data};
+    my $success_flag       = 0;
 
     # don't try to use pod2html if no pod
     if ( !$pod_string ) {
         return $success_flag;
     }
 
-    # Make a temporary named file for data transfer to and from Pod::Html.
-    # NOTE: It is possible to avoid a temporary file by running pod2html in
-    # a separate process and using Open3 for data transfer (c539). This works
-    # but is inefficient and more complex, so the temp file method is used.
-    my ( $fh_tmp, $tmpfile ) = File::Temp::tempfile( UNLINK => 1 );
-    if ( !$fh_tmp ) {
-        Perl::Tidy::Warn(
-            "unable to open temporary file $tmpfile; cannot use pod2html\n");
+    my $rhtml_string;
+    if ($loaded_pod_simple) {
+        $rhtml_string = $self->pod_to_html_simple($pod_string);
+    }
+    elsif ( !$missing_pod_html ) {
+        $rhtml_string = $self->pod_to_html_old($pod_string);
+    }
+    else {
         return $success_flag;
     }
 
-    #------------------------------------------------------------------
-    # Warning: a temporary file is open; we have to clean up if
-    # things go bad.  From here on all returns should be by going to
-    # RETURN so that the temporary file gets unlinked.
-    #------------------------------------------------------------------
-
-    # write the pod text to the temporary file
-    $fh_tmp->print($pod_string);
-
-    if ( !$fh_tmp->close() ) {
-        Perl::Tidy::Warn(
-            "unable to close temporary file $tmpfile; cannot use pod2html\n");
-        return $success_flag;
-    }
-
-    # Hand off the pod to pod2html.
-    # Note that we can use the same temporary filename for input and output
-    # because of the way pod2html works.
-    {
-
-        my @args;
-        push @args, "--infile=$tmpfile", "--outfile=$tmpfile", "--title=$title";
-
-        # Flags with string args:
-        # "cachedir=s", "htmlroot=s", "libpods=s", "podpath=s", "podroot=s"
-        # Note: -css=s is handled by perltidy itself
-        # Note: backlink=s was incorrectly in this list up to v20250912:
-        #   backlink can now be input as 'podbacklink', below
-        foreach my $kw (qw( cachedir htmlroot libpods podpath podroot )) {
-            if ( $rOpts->{$kw} ) { push @args, "--$kw=$rOpts->{$kw}" }
-        }
-
-        # Toggle switches; these have extra leading 'pod'
-        # "header!", "index!", "recurse!", "quiet!", "verbose!", "backlink!'
-        # See note above regarding the change for backlink.
-        foreach my $kw (
-            qw( podheader podindex podrecurse podquiet podverbose podbacklink ))
-        {
-            my $kwd = $kw;    # allows us to strip 'pod'
-            if    ( $rOpts->{$kw} ) { $kwd =~ s/^pod//; push @args, "--$kwd" }
-            elsif ( defined( $rOpts->{$kw} ) ) {
-                $kwd =~ s/^pod//;
-                push @args, "--no$kwd";
-            }
-            else {
-                # user did not set this keyword
-            }
-        }
-
-        # "flush",
-        my $kw = 'podflush';
-        if ( $rOpts->{$kw} ) { $kw =~ s/^pod//; push @args, "--$kw" }
-
-        # Must clean up if pod2html dies (it can);
-        # Be careful not to overwrite callers __DIE__ routine
-        local $SIG{__DIE__} = sub {
-            unlink($tmpfile) if ( -e $tmpfile );
-            Perl::Tidy::Die( $_[0] );
-        };
-
-        Pod::Html::pod2html(@args);
-    }
-    $fh_tmp = IO::File->new( $tmpfile, 'r' );
-    if ( !$fh_tmp ) {
-
-        # this error shouldn't happen ... we just used this filename
-        Perl::Tidy::Warn(
-            "unable to open temporary file $tmpfile; cannot use pod2html\n");
+    if ( !$rhtml_string ) {
         return $success_flag;
     }
 
@@ -806,10 +785,29 @@ sub pod_to_html {
         my $date = localtime;
         $timestamp = "on $date";
     }
-    while ( defined( my $line = $fh_tmp->getline() ) ) {
+
+    my @html_lines = split /^/, ${$rhtml_string};
+    my $saw_charset;
+    my $want_charset;
+    if ( $is_encoded_data || $is_pure_ascii_data ) {
+        $want_charset = 'utf-8';
+    }
+    else {
+        $want_charset = 'ISO-8859-1';
+    }
+    foreach my $line (@html_lines) {
 
         if ( $line =~ /^\s*<html>\s*$/i ) {
             $html_print->("<!-- Generated by perltidy $timestamp -->\n");
+            $html_print->($line);
+        }
+
+        # Fix the charset if necessary
+        elsif ( !$saw_charset && $line =~ /^\s*<meta.*charset=([\w\-]+)/i ) {
+            $saw_charset = $1;
+            if ( uc($saw_charset) ne uc($want_charset) ) {
+                $line =~ s/$saw_charset/$want_charset/;
+            }
             $html_print->($line);
         }
 
@@ -967,7 +965,9 @@ sub pod_to_html {
         Perl::Tidy::Warn("Did not see </body> in pod2html output\n");
         $success_flag = 0;
     }
-    if ( !$saw_index ) {
+
+    # Added check on $in_toc to handle small files without an index at all
+    if ( !$saw_index && defined($in_toc) ) {
         Perl::Tidy::Warn("Did not find INDEX END in pod2html output\n");
         $success_flag = 0;
     }
@@ -976,21 +976,163 @@ sub pod_to_html {
         $html_fh->close();
     }
 
-    # note that we have to unlink tmpfile before making frames
-    # because the tmpfile may be one of the names used for frames
-    if ( -e $tmpfile ) {
-        if ( !unlink($tmpfile) ) {
-            Perl::Tidy::Warn(
-                "couldn't unlink temporary file $tmpfile: $OS_ERROR\n");
-            $success_flag = 0;
-        }
-    }
-
     if ( $success_flag && $rOpts->{'frames'} ) {
         $self->make_frame( \@toc );
     }
     return $success_flag;
 } ## end sub pod_to_html
+
+sub pod_to_html_old {
+
+    my ( $self, $pod_string ) = @_;
+
+    # Use Pod::Html to process pod text
+    # Given:
+    #    $pod_string = string with pod to process
+    # Return:
+    #    $rhtml_string = ref to string with pod as html, or
+    #                   undef if error
+
+    my $is_encoded_data    = $self->{_is_encoded_data};
+    my $is_pure_ascii_data = $self->{_is_pure_ascii_data};
+
+    # Make a temporary named file for data transfer to and from Pod::Html.
+    # NOTE: It is possible to avoid a temporary file by running pod2html in
+    # a separate process and using Open3 for data transfer (c539). This works
+    # but is more complex, so the temp file method is used. A better way
+    # to avoid temp files is to set -ups which uses Pod::Simple::XHTML.
+    my ( $fh_tmp, $tmpfile ) = File::Temp::tempfile( UNLINK => 1 );
+    if ( !$fh_tmp ) {
+        Perl::Tidy::Warn(
+            "unable to open temporary file $tmpfile; cannot use pod2html\n");
+        return;
+    }
+
+    if ($is_encoded_data) { binmode $fh_tmp, ":raw:encoding(UTF-8)" }
+    else                  { binmode $fh_tmp }
+
+    # Pod::Html wants to see =encoding if not pure ascii
+    if ($is_encoded_data) {
+        $pod_string = "\n=encoding UTF-8\n\n$pod_string";
+    }
+    elsif ( !$is_pure_ascii_data ) {
+
+        # Pod::Html assumes encoding=CP1252
+        $pod_string = "\n=encoding CP1252\n\n$pod_string";
+    }
+    else {
+        ## no '=encoding' needed for pure ascii
+    }
+
+    # write the pod text to the temporary file
+    $fh_tmp->print($pod_string);
+
+    if ( !$fh_tmp->close() ) {
+        Perl::Tidy::Warn(
+            "unable to close temporary file $tmpfile; cannot use pod2html\n");
+        return;
+    }
+
+    # Hand off the pod to pod2html.
+    # Note that we can use the same temporary filename for input and output
+    # because of the way pod2html works.
+    {
+        my $title = $self->{_title};
+        my @args;
+        push @args, "--infile=$tmpfile", "--outfile=$tmpfile", "--title=$title";
+
+        # Flags with string args:
+        # "cachedir=s", "htmlroot=s", "libpods=s", "podpath=s", "podroot=s"
+        # Note: -css=s is handled by perltidy itself
+        # Note: backlink=s was incorrectly in this list up to v20250912:
+        #   backlink can now be input as 'podbacklink', below
+        foreach my $kw (qw( cachedir htmlroot libpods podpath podroot )) {
+            if ( $rOpts->{$kw} ) { push @args, "--$kw=$rOpts->{$kw}" }
+        }
+
+        # Toggle switches; these have extra leading 'pod'
+        # "header!", "index!", "recurse!", "quiet!", "verbose!", "backlink!'
+        # See note above regarding the change for backlink.
+        foreach my $kw (
+            qw( podheader podindex podrecurse podquiet podverbose podbacklink ))
+        {
+            my $kwd = $kw;    # allows us to strip 'pod'
+            if    ( $rOpts->{$kw} ) { $kwd =~ s/^pod//; push @args, "--$kwd" }
+            elsif ( defined( $rOpts->{$kw} ) ) {
+                $kwd =~ s/^pod//;
+                push @args, "--no$kwd";
+            }
+            else {
+                # user did not set this keyword
+            }
+        }
+
+        # "flush",
+        my $kw = 'podflush';
+        if ( $rOpts->{$kw} ) { $kw =~ s/^pod//; push @args, "--$kw" }
+
+        # Must clean up if pod2html dies (it can);
+        # Be careful not to overwrite callers __DIE__ routine
+        local $SIG{__DIE__} = sub {
+            unlink($tmpfile) if ( -e $tmpfile );
+            Perl::Tidy::Die( $_[0] );
+        };
+
+        Pod::Html::pod2html(@args);
+    }
+
+    my $rhtml_string;
+    if ( open( my $fh, '<', $tmpfile ) ) {
+        local $INPUT_RECORD_SEPARATOR = undef;
+        if ($is_encoded_data) { binmode $fh, ":raw:encoding(UTF-8)"; }
+        else                  { binmode $fh }
+        my $buf = <$fh>;
+        $rhtml_string = \$buf;
+        $fh->close() or Warn("Cannot close $tmpfile\n");
+    }
+    else {
+        # this error shouldn't happen ... we just used this filename
+        Perl::Tidy::Warn(
+            "unable to open temporary file $tmpfile; cannot use Pod::Html\n");
+        return;
+    }
+    if ( -e $tmpfile ) {
+        if ( !unlink($tmpfile) ) {
+            Perl::Tidy::Warn(
+                "couldn't unlink temporary file $tmpfile: $OS_ERROR\n");
+            return;
+        }
+    }
+    return $rhtml_string;
+} ## end sub pod_to_html_old
+
+sub pod_to_html_simple {
+
+    my ( $self, $pod_string ) = @_;
+
+    # Use Pod::Simple::XHTML to process pod text
+    # Given:
+    #    $pod_string = string with pod to process
+    # Return:
+    #    $rhtml_string = ref to string with pod as html, or
+    #                   undef if error
+    my $is_pure_ascii_data = $self->{_is_pure_ascii_data};
+    my $html_string;
+    my $psx = Pod::Simple::XHTML->new;
+
+    # make an index
+    $psx->index(1);
+
+    # Tell parser to expect characters, not octets, and ignore =encoding
+    # if not a pure ascii file.
+    if ( !$is_pure_ascii_data ) {
+        $psx->parse_characters(1);
+    }
+
+    $psx->output_string( \$html_string );
+    $psx->parse_string_document($pod_string);
+    return \$html_string;
+} ## end sub pod_to_html_simple
 
 sub make_frame {
 
@@ -1171,7 +1313,7 @@ sub change_anchor_names {
 } ## end sub change_anchor_names
 
 sub close_html_file {
-    my $self = shift;
+    my ($self) = @_;
     return unless ( $self->{_html_file_opened} );
 
     my $html_fh     = $self->{_html_fh};
@@ -1455,7 +1597,8 @@ sub escape_html {
 sub finish_formatting {
 
     # called after last line
-    my $self = shift;
+    my ( $self, $rtokenization_info_uu ) = @_;
+    ## FIXME: check for and handle severe error
     $self->close_html_file();
     return;
 } ## end sub finish_formatting
