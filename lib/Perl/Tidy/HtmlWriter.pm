@@ -13,13 +13,15 @@ use Carp;
 use English qw( -no_match_vars );
 use File::Basename;
 use File::Temp qw();
+use Encode     ();
 
 use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };
 
 { #<<< A non-indenting brace to contain all lexical variables
 
-my @unique_hash_keys_uu = qw(use-pod-simple);
+# list of keys used just once, to avoid perltidy warning:
+my @unique_hash_keys_uu = qw(use-pod-formatter);
 
 # class variables
 my (
@@ -27,9 +29,8 @@ my (
     # INITIALIZER: BEGIN block
     $missing_html_entities,
 
-    # INITIALIZER: sub new
-    $missing_pod_html,
-    $loaded_pod_simple,
+    # INITIALIZER: sub load_pod_formatter
+    $loaded_pod_formatter,
 
     # INITIALIZER: BEGIN block
     %short_to_long_names,
@@ -42,6 +43,7 @@ my (
     %html_bold,
     %html_color,
     %html_italic,
+    $log_message,
 
 );
 
@@ -143,58 +145,17 @@ PRE_END
         push @pre_string_stack, \$pre_string;
     }
 
-    # pod text gets diverted if the 'pod2html' is used
-    my $html_pod_fh;
+    # Output any log message created by sub check_options
+    if ( $log_message && $logger_object ) {
+        $logger_object->write_logfile_entry($log_message);
+        $log_message = EMPTY_STRING;
+    }
+
+    # pod text gets diverted if the 'pod2html' is used and possible
     my $pod_string;
+    my $html_pod_fh;
     if ( $rOpts->{'pod2html'} ) {
-        if ( $rOpts->{'html-pre-only'} ) {
-            undef $rOpts->{'pod2html'};
-        }
-        else {
-
-            # Load a Pod to Html translator
-            my $log_message = EMPTY_STRING;
-            if ( !defined($loaded_pod_simple) && $rOpts->{'use-pod-simple'} ) {
-                if ( !eval { require Pod::Simple::XHTML; 1 } ) {
-                    $loaded_pod_simple = 0;
-                    $log_message .= <<EOM;
-Unable to loaded 'Pod::Simple::XHTML' as requested with flag '--use-pod-simple':
-$EVAL_ERROR
-EOM
-                }
-                else {
-                    $loaded_pod_simple = 1;
-                    $log_message .= <<EOM;
-Loaded Pod::Simple::XHTML as requested with flag '--use-pod-simple'.
-EOM
-                }
-            }
-
-            # Load Pod::Html if needed
-            if ( !$loaded_pod_simple && !defined($missing_pod_html) ) {
-                $missing_pod_html = EMPTY_STRING;
-                if ( !eval { require Pod::Html; 1 } ) {
-                    $missing_pod_html = $EVAL_ERROR ? $EVAL_ERROR : 1;
-                    $log_message .= <<EOM;
-Unable to loaded 'Pod::Html':
-$EVAL_ERROR
-EOM
-                }
-            }
-
-            if ( !$loaded_pod_simple && $missing_pod_html ) {
-                $log_message .= <<EOM;
-unable to find Pod::Html; cannot use pod2html\n-npod disables this message
-EOM
-                undef $rOpts->{'pod2html'};
-            }
-            else {
-                $html_pod_fh = Perl::Tidy::IOScalar->new( \$pod_string, 'w' );
-            }
-            if ( $log_message && $logger_object ) {
-                $logger_object->write_logfile_entry($log_message);
-            }
-        }
+        $html_pod_fh = Perl::Tidy::IOScalar->new( \$pod_string, 'w' );
     }
 
     my $toc_filename;
@@ -637,8 +598,112 @@ sub check_options {
         }
     }
     $rOpts_html_entities = $rOpts->{'html-entities'};
+
+    if ( $rOpts->{'pod2html'} ) {
+        if ( $rOpts->{'html-pre-only'} ) {
+            undef $rOpts->{'pod2html'};
+        }
+        else {
+            load_pod_formatter();
+            if ( !$loaded_pod_formatter ) {
+                undef $rOpts->{'pod2html'};
+            }
+        }
+    }
+
     return;
 } ## end sub check_options
+
+sub load_pod_formatter {
+
+    # Load a Pod to Html formatter
+    # Define global variables:
+    #   $loaded_pod_formatter
+    #      = name of pod formatter found, or
+    #      = empty string if not found
+    #   $log_message = log message to write for first file
+
+    # Global variables:
+    $log_message          = EMPTY_STRING;
+    $loaded_pod_formatter = EMPTY_STRING;
+
+    return if ( !$rOpts->{'pod2html'} );
+
+    my %formatters = (
+        'Pod::Simple::XHTML' => 3,
+        'Pod::Simple::HTML'  => 1,
+        'Pod::Html'          => 2,
+    );
+
+    my $use_pod_formatter = $rOpts->{'use-pod-formatter'};
+    if ($use_pod_formatter) {
+        my @q  = keys %formatters;
+        my %ok = map { $_ => 1 } @q;
+        if ( !$ok{$use_pod_formatter} ) {
+            Perl::Tidy::Die(
+                "--use-pod-formatter=$use_pod_formatter must be one of @q\n");
+        }
+        $formatters{$use_pod_formatter} = 1 + keys %formatters;
+    }
+
+    my @sorted = sort { $formatters{$b} <=> $formatters{$a} } keys %formatters;
+
+    foreach my $formatter (@sorted) {
+        if ( $formatter eq 'Pod::Simple::XHTML' ) {
+            if ( !eval { require Pod::Simple::XHTML; 1 } ) {
+                $log_message .= <<EOM;
+Unable to load $formatter
+EOM
+                next;
+            }
+            else {
+                $loaded_pod_formatter = $formatter;
+                $log_message .= <<EOM;
+Loaded $formatter
+EOM
+                last;
+            }
+        }
+        if ( $formatter eq 'Pod::Simple::HTML' ) {
+            if ( !eval { require Pod::Simple::HTML; 1 } ) {
+                $log_message .= <<EOM;
+Unable to load $formatter
+EOM
+                next;
+            }
+            else {
+                $loaded_pod_formatter = $formatter;
+                $log_message .= <<EOM;
+Loaded $formatter
+EOM
+                last;
+            }
+        }
+        if ( $formatter eq 'Pod::Html' ) {
+            if ( !eval { require Pod::Html; 1 } ) {
+                $log_message .= <<EOM;
+Unable to load $formatter
+EOM
+                next;
+            }
+            else {
+                $loaded_pod_formatter = $formatter;
+                $log_message .= <<EOM;
+Loaded $formatter
+EOM
+                last;
+            }
+        }
+    }
+
+    if ( !$loaded_pod_formatter ) {
+        $log_message .= <<EOM;
+unable to find a pod formatter; cannot use pod2html\n-npod disables this message
+EOM
+    }
+
+    return;
+} ## end sub load_pod_formatter
 
 sub write_style_sheet_file {
 
@@ -747,13 +812,17 @@ sub pod_to_html {
     }
 
     my $rhtml_string;
-    if ($loaded_pod_simple) {
+    if ( $loaded_pod_formatter eq 'Pod::Simple::XHTML' ) {
         $rhtml_string = $self->pod_to_html_simple($pod_string);
     }
-    elsif ( !$missing_pod_html ) {
+    elsif ( $loaded_pod_formatter eq 'Pod::Simple::HTML' ) {
+        $rhtml_string = $self->pod_to_html_simple($pod_string);
+    }
+    elsif ( $loaded_pod_formatter eq 'Pod::Html' ) {
         $rhtml_string = $self->pod_to_html_old($pod_string);
     }
     else {
+        # Looks like a pod formatter could not be loaded
         return $success_flag;
     }
 
@@ -876,13 +945,13 @@ sub pod_to_html {
         }
 
         # must track <ul> depth level for new pod2html
-        elsif ( $line =~ /\s*<ul>\s*$/i && $in_toc eq 'UL' ) {
+        elsif ( $line =~ /\s*<ul>\s*$/i && $in_toc && $in_toc eq 'UL' ) {
             $ul_level++;
             $html_print->($line);
         }
 
         # Check for end of index, for new pod2html
-        elsif ( $line =~ /\s*<\/ul>/i && $in_toc eq 'UL' ) {
+        elsif ( $line =~ /\s*<\/ul>/i && $in_toc && $in_toc eq 'UL' ) {
             $ul_level--;
             $html_print->($line);
 
@@ -936,7 +1005,7 @@ sub pod_to_html {
         }
 
         # Copy any remaining code section before the </body> tag
-        elsif ( $line =~ /^\s*<\/body>\s*$/i ) {
+        elsif ( $line =~ /^\s*<\/body>/i ) {
             $saw_body_end = 1;
             if ( @{$rpre_string_stack} ) {
                 if ( $self->{_pod_cut_count} <= 1 ) {
@@ -1011,13 +1080,17 @@ sub pod_to_html_old {
     if ($is_encoded_data) { binmode $fh_tmp, ":raw:encoding(UTF-8)" }
     else                  { binmode $fh_tmp }
 
+    my $pod_is_pure_ascii_data = !( $pod_string =~ /[^[:ascii:]]/ );
+
     # Pod::Html wants to see =encoding if not pure ascii
-    if ($is_encoded_data) {
+    if ($pod_is_pure_ascii_data) {
+
+        # no '=encoding' needed for pure ascii pod text
+    }
+    elsif ($is_encoded_data) {
         $pod_string = "\n=encoding UTF-8\n\n$pod_string";
     }
     elsif ( !$is_pure_ascii_data ) {
-
-        # Pod::Html assumes encoding=CP1252
         $pod_string = "\n=encoding CP1252\n\n$pod_string";
     }
     else {
@@ -1110,27 +1183,59 @@ sub pod_to_html_simple {
 
     my ( $self, $pod_string ) = @_;
 
-    # Use Pod::Simple::XHTML to process pod text
+    # Use Pod::Simple::HTML or Pod::Simple::XHTML to process pod text
     # Given:
     #    $pod_string = string with pod to process
     # Return:
     #    $rhtml_string = ref to string with pod as html, or
     #                   undef if error
     my $is_pure_ascii_data = $self->{_is_pure_ascii_data};
+    my $is_encoded_data    = $self->{_is_encoded_data};
     my $html_string;
-    my $psx = Pod::Simple::XHTML->new;
+
+    my $psx;
+    if ( $loaded_pod_formatter eq 'Pod::Simple::HTML' ) {
+        $psx = Pod::Simple::HTML->new;
+    }
+    elsif ( $loaded_pod_formatter eq 'Pod::Simple::XHTML' ) {
+        $psx = Pod::Simple::XHTML->new;
+    }
+    else {
+        # Shouldn't happen
+        return \$html_string;
+    }
 
     # make an index
-    $psx->index(1);
+    $psx->index(1)
+      if ( $psx->can('index') );
 
-    # Tell parser to expect characters, not octets, and ignore =encoding
-    # if not a pure ascii file.
+    my $pass_octets;
     if ( !$is_pure_ascii_data ) {
-        $psx->parse_characters(1);
+
+        # Tell parser to expect characters, not octets, and ignore =encoding if
+        # not a pure ascii file, if possible.
+        if ( 0 && $psx->can('parse_characters') ) {
+            $psx->parse_characters(1);
+        }
+
+        # Otherwise, add =encoding and pass octets
+        else {
+            if ($is_encoded_data) {
+                $pass_octets = 1;
+                $pod_string  = "\n=encoding UTF-8\n\n$pod_string";
+                $pod_string  = Encode::encode( 'UTF-8', $pod_string );
+            }
+            else {
+                $pod_string = "\n=encoding CP1252\n\n$pod_string";
+            }
+        }
     }
 
     $psx->output_string( \$html_string );
     $psx->parse_string_document($pod_string);
+    if ($pass_octets) {
+        $html_string = Encode::decode( 'UTF-8', $html_string );
+    }
     return \$html_string;
 } ## end sub pod_to_html_simple
 
@@ -1382,10 +1487,11 @@ ENDCSS
     # -----------------------------------------------------------
     if ( $rOpts->{'pod2html'} ) {
         my $rpod_string = $self->{_rpod_string};
-        $self->pod_to_html(
+        my $success     = $self->pod_to_html(
             ${$rpod_string}, $css_string,
             ${$rtoc_string}, $rpre_string_stack
-        ) && return;
+        );
+        return if ($success);
     }
 
     # --------------------------------------------------

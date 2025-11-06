@@ -4143,7 +4143,7 @@ sub generate_options {
     ########################################
     # Based on their known order
     $category = 12;    # HTML properties
-    $add_option->( 'use-pod-simple', 'ups', '!' );
+    $add_option->( 'use-pod-formatter', 'upf', '=s' );
     foreach my $opt (@option_string) {
         my $long_name = $opt;
         $long_name =~ s/(!|=.*|:.*)$//;

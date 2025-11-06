@@ -3,6 +3,7 @@
   - Untar the file (in /tmp) and take a look at the
     contents.  Be sure it does not have unwanted files.
    - If necessary, remove MANIFEST, fix MANIFEST.SKIP and run make manifest again
+   - perlbrew list  (to list installed versions)
    - Test with perl-5.8.1
     - perlbrew use perl-5.8.1
     - perl Makefile.PL; make; make test
