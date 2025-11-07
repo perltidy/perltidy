@@ -2,6 +2,12 @@
 
 ## 2025 09 12.02
 
+    - When the -html option is used with the default --pod2html setting,
+      perltidy will look for a pod-to-html formatter in this order:
+      Pod::Simple::XHTML, Pod::Simple::HTML, and Pod::Html.  A preferred
+      formatter can be selected with --use-pod-formatter=s. Previously
+      the only option was Pod::Html.
+
     - The default for --timeout-in-seconds has been reduced from 10 to 5 seconds.
       A default value of 10 seemed excessive. It can be changed with -tos=n.
 

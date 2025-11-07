@@ -629,12 +629,14 @@ sub load_pod_formatter {
 
     return if ( !$rOpts->{'pod2html'} );
 
+    # Built-in search order is higher values to lower values
     my %formatters = (
         'Pod::Simple::XHTML' => 3,
         'Pod::Simple::HTML'  => 1,
         'Pod::Html'          => 2,
     );
 
+    # Start search with any user-selected formatter
     my $use_pod_formatter = $rOpts->{'use-pod-formatter'};
     if ($use_pod_formatter) {
         my @q  = keys %formatters;
@@ -1214,7 +1216,7 @@ sub pod_to_html_simple {
 
         # Tell parser to expect characters, not octets, and ignore =encoding if
         # not a pure ascii file, if possible.
-        if ( 0 && $psx->can('parse_characters') ) {
+        if ( $psx->can('parse_characters') ) {
             $psx->parse_characters(1);
         }
 

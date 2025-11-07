@@ -7640,39 +7640,93 @@ pod2html (see next item).
 
 =item  The B<-pod>, or B<--pod2html> flag
 
-There are two options for formatting pod documentation.  The default is
-to pass the pod through the Pod::Html module (which forms the basis of
-the pod2html utility).  Any code sections are formatted by perltidy, and
-the results then merged.  Note: perltidy creates a temporary file when
-Pod::Html is used; see L<"FILES">.  Also, Pod::Html creates temporary
-files for its cache.
+For code which contains pod documentation, there are two formatting options:
+
+=over 4
+
+=item *
+
+Use B<-npod>, or B<--nopod2html>, if the pod documentation should not have
+special formatting. It will be displayed in italics (or whatever the stylesheet
+indicates), without special html markup.  This is useful, for example, if pod
+is being used as an alternative way to write comments, or if it is confusing to
+have both code and documentation formatted in a single file.
+
+=item *
+
+Use B<-pod>, or B<--pod2html>, if the pod documentation should be formatted
+with a pod-to-html formatter. B<This is the Default>.  In this case, any code
+sections are formatted by perltidy, and the results then merged.  The pod
+formatter which is used can be controlled with the parameter described in the
+next section.
 
 NOTE: Perltidy counts the number of C<=cut> lines, and either moves the
 pod text to the top of the html file if there is one C<=cut>, or leaves
 the pod text in its original order (interleaved with code) otherwise.
 
-Most of the flags accepted by pod2html may be included in the perltidy
-command line, and they will be passed to pod2html.  In some cases,
-the flags have a prefix C<pod> to emphasize that they are for the
-pod2html, and this prefix will be removed before they are passed to
-pod2html.  The flags which have the additional C<pod> prefix are:
+=back
+
+=item Use B<--use-pod-formatter=s>, or B<-upf=s> to select a preferred pod formatter
+
+Perltidy will by default search for a pod formatter in the following order:
+
+=over 4
+
+=item *
+B<Pod::Simple::XHTML>
+
+=item *
+B<Pod::Simple::HTML>
+
+=item *
+B<Pod::Html>
+
+=back
+
+This default will normally result in the best choice.  But if a different
+formatter is available and preferred, it can be selected by setting
+B<--use-pod-formatter=s>, where B<s> is the name of one of the above three
+formatters.
+
+The formatter which is actually selected when B<-html> is used can be found by
+adding the B<-log> parameter to create a F<.LOG> file with this information.
+
+For example, if for some reason B<Pod::Simple::HTML> is selected by default and
+not working correctly, the older formatter B<Pod::Html> could be selected with
+
+  --use-pod-formatter='Pod::Html'
+
+=item B<Some notes on the Pod::Html formatter>
+
+B<Pod::Html> is the oldest pod formatter and is normally available on all
+installations. However it has some limitations and issues which make the
+B<Pod::Simple> formatters preferable.
+
+One of the problems with B<Pod::Html> is that perltidy must create a temporary
+file when B<Pod::Html> is used; see L<"FILES">.  Also, B<Pod::Html> creates
+temporary files for its cache. Temporary files are not needed with either of
+the B<Pod::Simple> formatters.
+
+Another problem is that B<Pod::Html> does not correctly render the multiple
+angle-bracket notation.
+
+Most of the flags accepted by the C<pod2html> utility may be included in the
+perltidy command line, and they will be passed to B<Pod::Html::pod2html>.  In
+some cases, the flags have a prefix C<pod> to emphasize that they are for the
+C<pod2html>, and this prefix will be removed before they are passed to C<pod2html>.
+The flags which have the additional C<pod> prefix are:
 
    --[no]podheader --[no]podindex --[no]podrecurse --[no]podquiet
    --[no]podverbose --podflush --[no]podbacklink
 
-The flags which are unchanged from their use in pod2html are:
+The flags which are unchanged from their use in C<pod2html> are:
 
    --cachedir=s --htmlroot=s --libpods=s --title=s
    --podpath=s --podroot=s
 
 where 's' is an appropriate character string.  Not all of these flags are
-available in older versions of Pod::Html.  See your Pod::Html documentation for
-more information.
-
-The alternative, indicated with B<-npod>, is not to use Pod::Html, but
-rather to format pod text in italics (or whatever the stylesheet
-indicates), without special html markup.  This is useful, for example,
-if pod is being used as an alternative way to write comments.
+available in older versions of B<Pod::Html>.  See your B<Pod::Html>
+documentation for more information.
 
 =item  The B<-frm>, or B<--frames> flag
 
@@ -7984,10 +8038,11 @@ in any way.  And, of course, it does not modify pod documents.
 
 =item B<Temporary files>
 
-Under the B<-html> option with the default B<--pod2html> flag, a temporary file
-is required to pass text to and from Pod::Html.  A randomly-named temporary
-file is created with C<File::Temp::tempfile> for this purpose. This file is
-removed after the data transfer.
+Under the B<-html> option with the default B<--pod2html> flag, and if
+B<Pod::Html> is selected as the pod formatter, a temporary file is required to
+pass text to and from C<Pod::Html>.  A randomly-named temporary file is created
+with C<File::Temp::tempfile> for this purpose. This file is removed after the
+data transfer.
 
 =item B<Special files when standard input is used>
 
