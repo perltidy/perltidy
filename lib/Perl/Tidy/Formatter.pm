@@ -10363,6 +10363,7 @@ EOM
             }
             else {
                 ## Shouldn't happen
+                DEVEL_MODE && Fault("shouldn't happen\n");
             }
         }
         else {
@@ -12776,7 +12777,11 @@ sub set_maximum_field_count {
     my $rmaximum_field_count_by_seqno = {};
     foreach my $seqno ( keys %{$ris_list_by_seqno} ) {
         my $K_opening = $K_opening_container->{$seqno};
-        next if ( !defined($K_opening) );    ## shouldn't happen
+        if ( !defined($K_opening) ) {
+            ## shouldn't happen: every sequence number should have an opening
+            DEVEL_MODE && Fault("seqno=$seqno has no opening\n");
+            next;
+        }
         my $token         = $rLL->[$K_opening]->[_TOKEN_];
         my $rpacked_flags = $maximum_field_count_control_hash{$token};
         next if ( !$rpacked_flags );
@@ -14193,9 +14198,9 @@ EOM
                 my $level = $rLL->[$Kx]->[_LEVEL_];
                 next if ( $level > $level_start );
                 if ( $level < $level_start ) {
-                    ## shouldn't happen
+                    ## shouldn't happen: level jump out of container
                     my $lno = $rLL->[$Kx]->[_LINE_INDEX_] + 1;
-                    DEBUG_USE_CONSTANT
+                    ( DEBUG_USE_CONSTANT || DEVEL_MODE )
                       && Fault("$lno: level=$level > start=$level_start\n");
                     return;
                 }
@@ -18226,7 +18231,7 @@ sub add_phantom_semicolon {
 
     # Find the most recent token in the new token list
     my $Kp = $self->K_previous_nonblank( undef, $rLL_new );
-    return unless ( defined($Kp) );    # shouldn't happen except for bad input
+    return unless ( defined($Kp) );    # shouldn't happen unless syntax error
 
     my $type_p          = $rLL_new->[$Kp]->[_TYPE_];
     my $token_p         = $rLL_new->[$Kp]->[_TOKEN_];
@@ -27456,7 +27461,14 @@ sub keep_old_blank_lines_exclusions {
                     # We should have a side comment above by the preliminary
                     # check
                     my $type_top = $rLL->[$Klast_top]->[_TYPE_];
-                    return 1 if ( $type_top ne '#' );    ## shouldn't happen
+                    if ( $type_top ne '#' ) {
+                        ## shouldn't happen
+                        DEVEL_MODE
+                          && Fault(
+"expecting side comment but found type '$type_top'\n"
+                          );
+                        return 1;
+                    }
 
                     # A static side comment above cannot form hanging side
                     # comment below - ok to remove all blank lines.
@@ -30033,7 +30045,11 @@ sub tight_paren_follows {
 
     # we should only be called at a closing block
     my $seqno_i = $rLL->[$K_ic]->[_TYPE_SEQUENCE_];
-    return unless ($seqno_i);    # shouldn't happen;
+    if ( !$seqno_i ) {
+        ## shouldn't happen:
+        DEVEL_MODE && Fault("bad call: K_ic=$K_ic gave seqno=$seqno_i\n");
+        return;
+    }
 
     # This only applies if the next nonblank is a ')'
     my $K_oc = $self->K_next_nonblank($K_ic);
@@ -32256,8 +32272,7 @@ sub cuddled_paren_brace {
         # and closing parens are in this batch.
         my $i_mate = $mate_index_to_go[$ir_nm];
         if ( !defined($i_mate) ) {
-
-            # Strange, cannot make a symmetric break. Shouldn't get here.
+            ## the opening paren was in a previous batch
             return;
         }
 
@@ -45112,7 +45127,7 @@ sub set_vertical_tightness_flags {
             && !$self->[_rbreak_container_]
             ->{ $type_sequence_to_go[$ibeg_next] }    # b1498, b977, b1303
             && $types_to_go[$iend] ne '#'
-          )    # for safety, shouldn't happen!
+          )
         {
             my $cvt   = $closing_vertical_tightness{$token_next};
             my $seqno = $type_sequence_to_go[$ibeg_next];

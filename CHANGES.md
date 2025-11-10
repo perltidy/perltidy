@@ -6,7 +6,10 @@
       perltidy will look for a pod-to-html formatter in this order:
       Pod::Simple::XHTML, Pod::Simple::HTML, and Pod::Html.  A preferred
       formatter can be selected with --use-pod-formatter=s. Previously
-      the only option was Pod::Html.
+      the only option was Pod::Html, and it can still be selected with
+      --use-pod-formatter="Pod::Html". The reason for this update is
+      that this older formatter has limitations. This update also
+      allows formatting of pod text with non-ascii characters.
 
     - The default for --timeout-in-seconds has been reduced from 10 to 5 seconds.
       A default value of 10 seemed excessive. It can be changed with -tos=n.

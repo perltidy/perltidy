@@ -642,8 +642,11 @@ sub load_pod_formatter {
         my @q  = keys %formatters;
         my %ok = map { $_ => 1 } @q;
         if ( !$ok{$use_pod_formatter} ) {
-            Perl::Tidy::Die(
-                "--use-pod-formatter=$use_pod_formatter must be one of @q\n");
+            my $str = join ', ', @q;
+            Perl::Tidy::Die(<<EOM);
+--use-pod-formatter='$use_pod_formatter' not recognized; expecting one of:
+  $str
+EOM
         }
         $formatters{$use_pod_formatter} = 1 + keys %formatters;
     }
@@ -815,10 +818,12 @@ sub pod_to_html {
 
     my $rhtml_string;
     if ( $loaded_pod_formatter eq 'Pod::Simple::XHTML' ) {
-        $rhtml_string = $self->pod_to_html_simple($pod_string);
+        my $psx = Pod::Simple::XHTML->new;
+        $rhtml_string = $self->pod_to_html_simple( $pod_string, $psx );
     }
     elsif ( $loaded_pod_formatter eq 'Pod::Simple::HTML' ) {
-        $rhtml_string = $self->pod_to_html_simple($pod_string);
+        my $psx = Pod::Simple::HTML->new;
+        $rhtml_string = $self->pod_to_html_simple( $pod_string, $psx );
     }
     elsif ( $loaded_pod_formatter eq 'Pod::Html' ) {
         $rhtml_string = $self->pod_to_html_old($pod_string);
@@ -1183,11 +1188,12 @@ sub pod_to_html_old {
 
 sub pod_to_html_simple {
 
-    my ( $self, $pod_string ) = @_;
+    my ( $self, $pod_string, $psx ) = @_;
 
     # Use Pod::Simple::HTML or Pod::Simple::XHTML to process pod text
     # Given:
     #    $pod_string = string with pod to process
+    #    $psx = either Pod::Simple::HTML->new or Pod::Simple::XHTML->new
     # Return:
     #    $rhtml_string = ref to string with pod as html, or
     #                   undef if error
@@ -1195,22 +1201,11 @@ sub pod_to_html_simple {
     my $is_encoded_data    = $self->{_is_encoded_data};
     my $html_string;
 
-    my $psx;
-    if ( $loaded_pod_formatter eq 'Pod::Simple::HTML' ) {
-        $psx = Pod::Simple::HTML->new;
-    }
-    elsif ( $loaded_pod_formatter eq 'Pod::Simple::XHTML' ) {
-        $psx = Pod::Simple::XHTML->new;
-    }
-    else {
-        # Shouldn't happen
-        return \$html_string;
-    }
-
-    # make an index
+    # make an index if possible
     $psx->index(1)
       if ( $psx->can('index') );
 
+    # pass characters if possible, otherwise pass octets
     my $pass_octets;
     if ( !$is_pure_ascii_data ) {
 
@@ -1235,6 +1230,7 @@ sub pod_to_html_simple {
 
     $psx->output_string( \$html_string );
     $psx->parse_string_document($pod_string);
+
     if ($pass_octets) {
         $html_string = Encode::decode( 'UTF-8', $html_string );
     }
@@ -1704,9 +1700,14 @@ sub escape_html {
 
 sub finish_formatting {
 
-    # called after last line
+    # Called after last line to do the actual html formatting.
     my ( $self, $rtokenization_info_uu ) = @_;
-    ## FIXME: check for and handle severe error
+
+    # Given:
+    #   $rtokenization_info, a hash with error info
+
+    # Go ahead and try to format as html in all cases, even if there
+    # are syntax errors.
     $self->close_html_file();
     return;
 } ## end sub finish_formatting

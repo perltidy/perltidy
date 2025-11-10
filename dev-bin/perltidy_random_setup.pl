@@ -796,7 +796,7 @@ EOM
             } ## end while (1)
         }
         my $max_cases =
-          get_num( "Number of new random profiles to generate", 10000 );
+          get_num( "Number of new random profiles to generate", 2000 );
         for ( 1 .. $max_cases ) {
             $case += 1;
             my $profile = "profile.$case";
@@ -1158,7 +1158,7 @@ EOM
 
         # Fix for issue c537: exclude all warn flags in most cases to improve
         # the chance of catching actual errors.
-        my $exclude_warn_flags = int( rand(1) + 0.8 );
+        my $exclude_warn_flags = int( rand(1) + 0.9 );
 
         foreach my $parameter (@parameters) {
             my ( $name, $flag, $type ) = ( "", "", "" );

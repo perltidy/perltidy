@@ -7683,14 +7683,15 @@ B<Pod::Html>
 
 =back
 
-This default will normally result in the best choice.  But if a different
+Older versions of perl should at least have B<Pod::Html>, and newer versions
+will have all of them.  The formatter which is actually selected when B<-html>
+is used can be found by adding the B<-log> parameter to create a F<.LOG> file
+with this information.
+
+The default will normally result in the best choice.  But if a different
 formatter is available and preferred, it can be selected by setting
 B<--use-pod-formatter=s>, where B<s> is the name of one of the above three
 formatters.
-
-The formatter which is actually selected when B<-html> is used can be found by
-adding the B<-log> parameter to create a F<.LOG> file with this information.
-
 For example, if for some reason B<Pod::Simple::HTML> is selected by default and
 not working correctly, the older formatter B<Pod::Html> could be selected with
 
@@ -7703,12 +7704,8 @@ installations. However it has some limitations and issues which make the
 B<Pod::Simple> formatters preferable.
 
 One of the problems with B<Pod::Html> is that perltidy must create a temporary
-file when B<Pod::Html> is used; see L<"FILES">.  Also, B<Pod::Html> creates
-temporary files for its cache. Temporary files are not needed with either of
-the B<Pod::Simple> formatters.
-
-Another problem is that B<Pod::Html> does not correctly render the multiple
-angle-bracket notation.
+file when B<Pod::Html> is used; see L<"FILES">.  Temporary files are not needed
+with either of the B<Pod::Simple> formatters.
 
 Most of the flags accepted by the C<pod2html> utility may be included in the
 perltidy command line, and they will be passed to B<Pod::Html::pod2html>.  In
