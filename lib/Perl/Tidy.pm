@@ -676,11 +676,15 @@ sub check_for_valid_words {
     if ($on_error) {
         $on_error = lc($on_error);
         if ( $on_error eq 'warn' || $on_error eq 'die' ) {
-            my $num = @non_words;
-            local $LIST_SEPARATOR = SPACE;
+            my $num         = @non_words;
+            my $str         = join SPACE, @non_words;
+            my $max_str_len = 120;
+            if ( length($str) > $max_str_len - 1 ) {
+                $str = substr( $str, 0, $max_str_len - 4 ) . "...";
+            }
             my $msg = <<EOM;
 $num unrecognized words were input$msg_end :
-@non_words
+ $str
 EOM
             Die($msg) if ( $on_error eq 'die' );
             Warn($msg);
@@ -1584,7 +1588,7 @@ sub backup_method_copy {
     my ( $read_time, $write_time ) = @input_file_stat[ _atime_, _mtime_ ];
     if ( defined($write_time) ) {
         utime( $read_time, $write_time, $backup_file )
-          || Warn("error setting times for backup file '$backup_file'\n");
+          || Warn("error setting mtime for backup file '$backup_file'\n");
     }
 
     # Open the original input file for writing ... opening with ">" will
@@ -1625,7 +1629,7 @@ EOM
     # Keep original modification time if no change (rt#145999)
     if ( !$self->[_input_output_difference_] && defined($write_time) ) {
         utime( $read_time, $write_time, $input_file )
-          || Warn("error setting times for '$input_file'\n");
+          || Warn("error setting mtime for '$input_file'\n");
     }
 
     #---------------------------------------------------------
@@ -1763,7 +1767,7 @@ EOM
     my ( $read_time, $write_time ) = @input_file_stat[ _atime_, _mtime_ ];
     if ( !$self->[_input_output_difference_] && defined($write_time) ) {
         utime( $read_time, $write_time, $input_file )
-          || Warn("error setting times for '$input_file'\n");
+          || Warn("error setting mtime for '$input_file'\n");
     }
 
     #---------------------------------------------------------
@@ -2137,7 +2141,8 @@ sub get_line_separator_default {
 
     my $line_separator_default = "\n";
 
-    my $ole = $rOpts->{'output-line-ending'};
+    my $opt_ole = 'output-line-ending';
+    my $ole     = $rOpts->{$opt_ole};
     if ($ole) {
         my %endings = (
             dos  => $CRLF,
@@ -2156,9 +2161,10 @@ EOM
         }
 
         # Check for conflict with -ple
-        if ( $rOpts->{'preserve-line-endings'} ) {
-            Warn("Ignoring -ple; conflicts with -ole\n");
-            $rOpts->{'preserve-line-endings'} = undef;
+        my $opt_ple = 'preserve-line-endings';
+        if ( $rOpts->{$opt_ple} ) {
+            Warn("Ignoring '--$opt_ple': conflicts with '--$opt_ole'\n");
+            $rOpts->{$opt_ple} = undef;
         }
     }
 
@@ -2477,9 +2483,13 @@ EOM
 
             if ( $rOpts->{'standard-output'} ) {
                 my $saw_pbp = $self->[_saw_pbp_];
-                my $msg     = "You may not use -o and -st together";
-                $msg .= " (-pbp contains -st; see manual)" if ($saw_pbp);
-                Die("$msg\n");
+                my $msg     = "You may not use -o and -st together\n";
+                if ($saw_pbp) {
+                    $msg .= <<EOM;
+Note: -pbp is set and includes -st (see manual); use -nst to turn it off
+EOM
+                }
+                Die("$msg");
             }
 
             if ($destination_stream) {
@@ -2508,7 +2518,7 @@ EOM
                 my $saw_pbp = $self->[_saw_pbp_];
                 my $msg =
                   "You may not specify a destination array and -st together\n";
-                $msg .= " (-pbp contains -st; see manual)" if ($saw_pbp);
+                $msg .= " (note: -pbp contains -st; see manual)" if ($saw_pbp);
                 Die("$msg\n");
             }
             $output_file = '-';
@@ -2925,7 +2935,7 @@ EOM
     }
 
     #-------------------------------------------------------------
-    # handle --preserve-line-endings or -output-line-endings flags
+    # handle --preserve-line-endings or -output-line-ending flags
     #-------------------------------------------------------------
     # The native line separator has been used in all intermediate
     # iterations and filter operations until here so that string
@@ -3221,7 +3231,7 @@ EOM
                             $convergence_log_message)
                           if ($diagnostics_object);
 
-# Uncomment to search for blinking states
+# Uncomment to search for blinking states:
 # Warn( "$display_name: blinking; iter $iter same as for $saw_md5{$digest}\n" );
 
                     }
@@ -3382,7 +3392,6 @@ EOM
             }
           )
         {
-
             Warn(
 "Error attempting to encode output string ref; encoding not done\n"
             );
@@ -4815,7 +4824,7 @@ sub _process_command_line {
     );
 
     if ( $saw_dump_profile && $saw_ignore_profile ) {
-        Warn("No profile to dump because of -npro\n");
+        Warn("No profile to dump because of -npro setting\n");
         Exit(1);
     }
 
@@ -5344,16 +5353,19 @@ EOM
         }
     }
 
+    my $MAX_BLANK_COUNT   = 100;
     my $check_blank_count = sub {
         my ( $key, $abbrev ) = @_;
         if ( $rOpts->{$key} ) {
             if ( $rOpts->{$key} < 0 ) {
                 $rOpts->{$key} = 0;
-                Warn("negative value of $abbrev, setting 0\n");
+                Warn("negative value of $abbrev, resetting to 0\n");
             }
-            if ( $rOpts->{$key} > 100 ) {
-                Warn("unreasonably large value of $abbrev, reducing\n");
-                $rOpts->{$key} = 100;
+            if ( $rOpts->{$key} > $MAX_BLANK_COUNT ) {
+                Warn(
+"unreasonably large value of $abbrev, reducing to $MAX_BLANK_COUNT\n"
+                );
+                $rOpts->{$key} = $MAX_BLANK_COUNT;
             }
         }
         return;
@@ -5427,17 +5439,20 @@ EOM
         }
     }
 
-    # set a default tabsize to be used in guessing the starting indentation
+    # Set a default tabsize to be used in guessing the starting indentation
     # level if and only if this run does not use tabs and the old code does
     # use tabs
+    my $MAX_DEFAULT_TABSIZE = 20;
     if ( $rOpts->{'default-tabsize'} ) {
         if ( $rOpts->{'default-tabsize'} < 0 ) {
-            Warn("negative value of -dt, setting 0\n");
+            Warn("negative value of -dt, resetting to 0\n");
             $rOpts->{'default-tabsize'} = 0;
         }
-        if ( $rOpts->{'default-tabsize'} > 20 ) {
-            Warn("unreasonably large value of -dt, reducing\n");
-            $rOpts->{'default-tabsize'} = 20;
+        if ( $rOpts->{'default-tabsize'} > $MAX_DEFAULT_TABSIZE ) {
+            Warn(
+"unreasonably large value of -dt, reducing to $MAX_DEFAULT_TABSIZE\n"
+            );
+            $rOpts->{'default-tabsize'} = $MAX_DEFAULT_TABSIZE;
         }
     }
     else {

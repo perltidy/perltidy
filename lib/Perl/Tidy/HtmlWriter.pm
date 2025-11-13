@@ -12,8 +12,7 @@ our $VERSION = '20250912.02';
 use Carp;
 use English qw( -no_match_vars );
 use File::Basename;
-use File::Temp qw();
-use Encode     ();
+use Encode ();
 
 use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };
@@ -1073,10 +1072,11 @@ sub pod_to_html_old {
     my $is_pure_ascii_data = $self->{_is_pure_ascii_data};
 
     # Make a temporary named file for data transfer to and from Pod::Html.
-    # NOTE: It is possible to avoid a temporary file by running pod2html in
-    # a separate process and using Open3 for data transfer (c539). This works
-    # but is more complex, so the temp file method is used. A better way
-    # to avoid temp files is to set -ups which uses Pod::Simple::XHTML.
+    # NOTE: For perl perl-5.10 and later, the default will use one of the
+    # Pod::Simple formatters instead. These formatters do not require temp
+    # files.  So this routine will not normally be used, unless specifically
+    # requested with the -ups flag, or if running on perl-5.8.x. (c539).
+    use File::Temp qw();
     my ( $fh_tmp, $tmpfile ) = File::Temp::tempfile( UNLINK => 1 );
     if ( !$fh_tmp ) {
         Perl::Tidy::Warn(
