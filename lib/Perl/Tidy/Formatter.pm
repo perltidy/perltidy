@@ -2427,7 +2427,8 @@ sub check_options {
     # We should put an upper bound on any -sil=n value. Otherwise enormous
     # files could be created by mistake.
     for ( $rOpts->{'starting-indentation-level'} ) {
-        if ( $_ && $_ > 100 ) {
+        my $MAX_SIL = 100;
+        if ( $_ && $_ > $MAX_SIL ) {
             Warn(<<EOM);
 The value --starting-indentation-level=$_ is very large; a mistake? resetting to 0;
 EOM
@@ -3557,28 +3558,22 @@ sub check_tabs {
     # At present, tabs are not compatible with the line-up-parentheses style
     # (it would be possible to entab the total leading whitespace
     # just prior to writing the line, if desired).
-    if ( $rOpts->{'line-up-parentheses'} && $rOpts->{'tabs'} ) {
-        Warn(<<EOM);
-Conflict: -t (tabs) cannot be used with the -lp  option; ignoring -t; see -et.
+    return if ( !$rOpts->{'tabs'} );
+    foreach my $opt (
+        qw(
+        line-up-parentheses
+        outdent-keywords
+        outdent-labels
+        )
+      )
+    {
+        if ( $rOpts->{$opt} ) {
+            Warn(<<EOM);
+Conflict: -t (tabs) cannot be used with '--$opt'; ignoring -t; see -et.
 EOM
-        $rOpts->{'tabs'} = 0;
+            $rOpts->{'tabs'} = 0;
+        }
     }
-
-    # tabs are not compatible with outdenting..
-    if ( $rOpts->{'outdent-keywords'} && $rOpts->{'tabs'} ) {
-        Warn(<<EOM);
-Conflict: -t (tabs) cannot be used with the -okw options; ignoring -t; see -et.
-EOM
-        $rOpts->{'tabs'} = 0;
-    }
-
-    if ( $rOpts->{'outdent-labels'} && $rOpts->{'tabs'} ) {
-        Warn(<<EOM);
-Conflict: -t (tabs) cannot be used with the -ola  option; ignoring -t; see -et.
-EOM
-        $rOpts->{'tabs'} = 0;
-    }
-
     return;
 } ## end sub check_tabs
 
@@ -7367,7 +7362,7 @@ sub bad_pattern {
             );
             if ( defined($rbad) ) {
                 if ( !$cuddled_block_list ) {
-                    DEVEL_MODE && Fault("unexpected -cb error\n");
+                    DEVEL_MODE && Fault("unexpected --$opt_name error\n");
                 }
                 Die(EMPTY_STRING);
             }
@@ -7510,8 +7505,7 @@ sub make_non_indenting_brace_pattern {
     $non_indenting_brace_pattern = '^#<<<\s';
 
     # allow the user to change it
-    if ( $rOpts->{'non-indenting-brace-prefix'} ) {
-        my $prefix = $rOpts->{'non-indenting-brace-prefix'};
+    if ( my $prefix = $rOpts->{'non-indenting-brace-prefix'} ) {
         $prefix =~ s/^\s+//;
         if ( $prefix !~ /^#/ ) {
             Die("ERROR: the -nibp parameter '$prefix' must begin with '#'\n");
@@ -7897,8 +7891,7 @@ sub make_static_side_comment_pattern {
     $static_side_comment_pattern = '^##';
 
     # allow the user to change it
-    if ( $rOpts->{'static-side-comment-prefix'} ) {
-        my $prefix = $rOpts->{'static-side-comment-prefix'};
+    if ( my $prefix = $rOpts->{'static-side-comment-prefix'} ) {
         $prefix =~ s/^\s+//;
         my $pattern = '^' . $prefix;
         if ( bad_pattern($pattern) ) {
@@ -10327,7 +10320,12 @@ EOM
 
             return if ( length($token_last) < 2 );
 
-            # Assume that this is not a multiline Q, since this is a hash key.
+            # Skip a multiline Q used as a hash key (c551).
+            if ( $KK_last_nb > 0 && $rLL->[ $KK_last_nb - 1 ]->[_TYPE_] eq 'Q' )
+            {
+                return;
+            }
+
             my $is_interpolated;
             my $ch0 = substr( $token_last, 0, 1 );
             if ( $ch0 eq '"' ) {
@@ -10363,7 +10361,14 @@ EOM
             }
             else {
                 ## Shouldn't happen
-                DEVEL_MODE && Fault("shouldn't happen\n");
+                my $lno = $rLL->[$KK]->[_LINE_INDEX_] + 1;
+                DEVEL_MODE && Fault(<<EOM);
+We shouldn't get here:
+input line=$lno K=$KK type=$type_KK
+type_last=$type_last
+tok_last=$token_last
+EOM
+                return;
             }
         }
         else {
