@@ -2568,6 +2568,10 @@ EOM
 
     sub scan_bare_identifier {
         my $self = shift;
+
+        # Scan a token starting with an alphanumeric variable or package
+        # separator, :: or '.
+
         ( $i, $tok, $type, $prototype ) = $self->scan_bare_identifier_do(
 
             $input_line,
@@ -2582,6 +2586,9 @@ EOM
     } ## end sub scan_bare_identifier
 
     sub scan_identifier {
+
+        # Scan for an identifier following a sigil or -> or other
+        # identifier prefix, such as '::'
 
         my $self = shift;
 
@@ -2959,6 +2966,9 @@ EOM
 
     sub scan_id {
         my $self = shift;
+
+        # Scan for a sub or package name
+
         ( $i, $tok, $type, $id_scan_state ) = $self->scan_id_do(
 
             $input_line,
@@ -4569,6 +4579,8 @@ EOM
 
         my $self = shift;
 
+        # We are at a pretoken starting with 'x' where an operator is expected
+
         if ( $tok eq 'x' ) {
             if ( $rtokens->[ $i + 1 ] eq '=' ) {    # x=
                 $tok  = 'x=';
@@ -4597,6 +4609,8 @@ EOM
     sub do_USE_CONSTANT {
 
         my $self = shift;
+
+        # We just saw 'use constant' and must look ahead
 
         $self->scan_bare_identifier();
         my ( $next_nonblank_tok2, $i_next2_uu ) =
@@ -4737,6 +4751,8 @@ EOM
 
         my $self = shift;
 
+        # We have arrived at a quote operator: q, qq, qw, qx, qr, s, y, tr, m
+
         if ( $expecting == OPERATOR ) {
 
             # Be careful not to call an error for a qw quote
@@ -4785,6 +4801,8 @@ EOM
     sub do_UNKNOWN_BAREWORD {
 
         my ( $self, $next_nonblank_token ) = @_;
+
+        # We have encountered a bareword which needs more work to classify
 
         $self->scan_bare_identifier();
 
@@ -7958,7 +7976,7 @@ sub check_final_nesting_depths {
             my $hint = EMPTY_STRING;
             if ( $cd_aa == 1 ) {
                 $hint =
-                  " (its closing $closing_brace_names[$aa] was not found)";
+                  " .. did not find its closing $closing_brace_names[$aa]";
             }
             my $msg = <<"EOM";
 Final nesting depth of $opening_brace_names[$aa]s is $cd_aa
@@ -8836,6 +8854,8 @@ sub do_scan_package {
 
     my ( $self, $rcall_hash ) = @_;
 
+    # Parse a package name.
+
     my $input_line      = $rcall_hash->{input_line};
     my $i               = $rcall_hash->{i};
     my $i_beg           = $rcall_hash->{i_beg};
@@ -8845,7 +8865,6 @@ sub do_scan_package {
     my $rtoken_map      = $rcall_hash->{rtoken_map};
     my $max_token_index = $rcall_hash->{max_token_index};
 
-    # Parse a package name.
     # This is called with $i_beg equal to the index of the first nonblank
     # token following a 'package' token.
     # USES GLOBAL VARIABLES: $current_package,
@@ -9849,6 +9868,8 @@ EOM
 
         my ( $self, $rcall_hash ) = @_;
 
+        # Parse a sub name and prototype.
+
         my $input_line      = $rcall_hash->{input_line};
         my $i               = $rcall_hash->{i};
         my $i_beg           = $rcall_hash->{i_beg};
@@ -9860,8 +9881,6 @@ EOM
         my $max_token_index = $rcall_hash->{max_token_index};
 
         my $id_prefix = $rcall_hash->{is_lexical_method} ? '$' : EMPTY_STRING;
-
-        # Parse a sub name and prototype.
 
         # At present there are three basic CALL TYPES which are
         # distinguished by the starting value of '$tok':

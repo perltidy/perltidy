@@ -1417,6 +1417,9 @@ sub change_anchor_names {
 
 sub close_html_file {
     my ($self) = @_;
+
+    # Finish writing an html output file and close it
+
     return unless ( $self->{_html_file_opened} );
 
     my $html_fh     = $self->{_html_fh};
@@ -1571,6 +1574,9 @@ HTML_END
 
 sub markup_tokens {
     my ( $self, $rtokens, $rtoken_type, $rlevels ) = @_;
+
+    # Loop to add html markup to all tokens
+
     my ( @colored_tokens, $type, $token, $level );
     my $rlast_level    = $self->{_rlast_level};
     my $rpackage_stack = $self->{_rpackage_stack};
@@ -1653,6 +1659,11 @@ sub markup_tokens {
 sub markup_html_element {
     my ( $self, $token, $type ) = @_;
 
+    # Add html markup to a single token
+    # Given:
+    #   $token = the token text
+    #   $type  = the token type
+
     return $token if ( $type eq 'b' );         # skip a blank token
     return $token if ( $token =~ /^\s*$/ );    # skip a blank line
     $token = escape_html($token);
@@ -1715,6 +1726,11 @@ sub finish_formatting {
 sub write_line {
 
     my ( $self, $line_of_tokens ) = @_;
+
+    # Given:
+    #    $line_of_tokens = a tokenized line from the input stream
+    # Markup the line as html and output it
+
     return unless ( $self->{_html_file_opened} );
     my $html_pre_fh = $self->{_html_pre_fh};
     my $line_type   = $line_of_tokens->{_line_type};

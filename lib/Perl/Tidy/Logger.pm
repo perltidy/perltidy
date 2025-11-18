@@ -296,7 +296,11 @@ sub make_line_information_string {
 } ## end sub make_line_information_string
 
 sub logfile_output {
+
     my ( $self, $prompt, $msg ) = @_;
+
+    # Write a message to the log file
+
     return if ( $self->{_block_log_output} );
 
     my $routput_array = $self->{_output_array};

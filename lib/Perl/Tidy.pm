@@ -615,6 +615,9 @@ sub check_for_valid_words {
 
     my $make_hash_ref = sub {
         my ( $rthing, $key_name ) = @_;
+
+        # If user supplied an array ref, make a corresponding hash ref
+
         if ( defined($rthing) ) {
             my $ref = ref($rthing);
             if ( !$ref ) {
@@ -4649,13 +4652,14 @@ my %process_command_line_cache;
 
 sub process_command_line {
 
+    # Use Getopt::Long to scan the command line for input parameters.
+    # This is the outer sub which handles memoization
+
     my @q = @_;
     my (
         $perltidyrc_stream,     $is_Windows_uu, $Windows_type_uu,
         $rpending_complaint_uu, $dump_options_type
     ) = @q;
-
-    # This is the outer sub which handles memoization
 
     my $use_cache = !defined($perltidyrc_stream) && !$dump_options_type;
     if ($use_cache) {
@@ -4686,6 +4690,7 @@ sub _process_command_line {
         $rpending_complaint, $dump_options_type
     ) = @_;
 
+    # Use Getopt::Long to scan the command line for input parameters.
     # This is the inner sub which actually processes the command line
 
     use Getopt::Long;
@@ -5356,6 +5361,9 @@ EOM
     my $MAX_BLANK_COUNT   = 100;
     my $check_blank_count = sub {
         my ( $key, $abbrev ) = @_;
+
+        # Check certain user input for unreasonable numbers of blank lines
+
         if ( $rOpts->{$key} ) {
             if ( $rOpts->{$key} < 0 ) {
                 $rOpts->{$key} = 0;

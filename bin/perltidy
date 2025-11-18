@@ -5952,9 +5952,9 @@ aligned.
         'square-bracket-tightness' => [ 0, 2 ],
     );
 
-Vertical alignment is implemented by locally increasing an existing blank space
-to produce alignment with an adjacent line.  It cannot occur if there is no
-blank space to increase.  So if a particular space is removed by one of the
+Vertical alignment is implemented by locally widening an existing blank space
+in a line to produce alignment with an adjacent line.  It cannot occur if there
+is no blank space to widen.  So if a particular space is removed by one of the
 existing controls then vertical alignment cannot occur.
 
 For example, if we remove the space before the "fat commas" in the above

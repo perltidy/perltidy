@@ -1469,7 +1469,10 @@ EOM
     } ## end BEGIN
 
     sub check_line_hashes {
-        my $self   = shift;
+        my $self = shift;
+
+        # Verify that the line hashes do not have any unknown keys.
+
         my $rlines = $self->[_rlines_];
 
         # Note that the keys ending in _0 are only required when a logfile
@@ -2295,8 +2298,6 @@ EOM
 sub check_for_valid_token_types {
     my ( $rlist, ( $option_name, $die_on_error ) ) = @_;
 
-    return if ( !defined($rlist) );
-
     # Given:
     #   $rlist = ref to list of possible token types
     #   ($option_name) = optional name of option to use if a warning message
@@ -2308,6 +2309,8 @@ sub check_for_valid_token_types {
     # TODO:
     #   Consider resetting $rlist to be just the valid types.
     #   This would give the caller more flexibility.
+
+    return if ( !defined($rlist) );
 
     my @unknown_types;
     foreach my $type ( @{$rlist} ) {
@@ -3335,6 +3338,9 @@ sub initialize_token_break_preferences {
 
     my $break_after = sub {
         my @toks = @_;
+
+        # Swap bond strengths if necessary to break after selected operators
+
         foreach my $tok (@toks) {
             if ( $tok eq '?' ) { $tok = ':' }    # patch to coordinate ?/:
             if ( $tok eq ',' ) { $controlled_comma_style = 1 }
@@ -3350,6 +3356,9 @@ sub initialize_token_break_preferences {
 
     my $break_before = sub {
         my @toks = @_;
+
+        # Swap bond strengths if necessary to break before selected operators
+
         foreach my $tok (@toks) {
             if ( $tok eq ',' ) { $controlled_comma_style = 1 }
             my $lbs = $left_bond_strength{$tok};
@@ -4975,6 +4984,15 @@ sub set_whitespace_flags {
     # function to return $ws for a signature paren following a sub
     my $ws_signature_paren = sub {
         my ($jj) = @_;
+
+        # Given:
+        #   $jj = index of a '(' following a sub name or 'sub' keyword
+        # Return:
+        #   $ws = whitespace flag for space before this paren
+        # For example:
+        #   sub circle ( $xc, $yc, $rad )
+        #             ^-------------------------space here?
+
         my $ws;
         if ( $rOpts_space_signature_paren == 1 ) {
 
@@ -20479,7 +20497,7 @@ sub detect_comments {
                   if ( $jmax > 0 || $rLL->[$Klast]->[_TYPE_] ne '#' );
 
                 # Count nonblank comment text
-                if ( $rLL->[$Klast]->[_TOKEN_] =~ /\w/ ) {
+                if ( $rLL->[$Klast]->[_TOKEN_] =~ /[\w\'\"]/ ) {
                     $count++;
                     last if ( !$want_full_count );
                 }
@@ -20727,7 +20745,7 @@ sub count_sub_input_args {
         if ( $type eq '#' ) {
             if ( !$KK_first_code ) {
                 my $token = $rLL->[$KK]->[_TOKEN_];
-                if ( $token =~ /\w/ ) {
+                if ( $token =~ /[\w\'\"]/ ) {
                     $pre_arg_comment_count++;
 
                     # Set the count in case of early return which does
@@ -22342,6 +22360,9 @@ sub cross_check_sub_calls {
 
     my $push_call_arg_warning = sub {
         my ( $letter, $note ) = @_;
+
+        # Save a one-line message for a call arg mismatch issue
+
         my $shift_count = $shift_count_min;
         if ( $shift_count_min ne '*' && $shift_count_min ne $shift_count_max ) {
             $shift_count = "$shift_count_min-$shift_count_max";
@@ -22360,6 +22381,9 @@ sub cross_check_sub_calls {
 
     my $push_return_warning = sub {
         my ( $letter, $note, $lno_return ) = @_;
+
+        # Save a one-line message for a mismatch return issue
+
         my $return_count = $return_count_min;
         if (   $return_count_min ne '*'
             && $return_count_min ne $return_count_max )
@@ -24761,6 +24785,13 @@ sub weld_nested_quotes {
 
     my $is_single_quote = sub {
         my ( $Kbeg, $Kend, $quote_type ) = @_;
+
+        # Given:
+        #  $Kbeg, $Kend = range of token indexes of a quote container
+        #  $quote_type = type of the quote
+        # Return:
+        #  true container does not contain another quote of the same type
+        #  false otherwise
         foreach my $K ( $Kbeg .. $Kend ) {
             my $test_type = $rLL->[$K]->[_TYPE_];
             next   if ( $test_type eq 'b' );
@@ -27219,6 +27250,10 @@ EOM
 sub set_excluded_lp_containers {
 
     my ($self) = @_;
+
+    # If -lp (or -xlp) formatting is used, scan all containers and mark
+    # any which should not use -lp formatting
+
     return unless ($rOpts_line_up_parentheses);
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
@@ -41994,6 +42029,9 @@ sub make_HSC_vertical_alignments {
 sub make_vertical_alignments {
     my ($self) = @_;
 
+    # Scan this output batch and mark any vertical alignment tokens.
+    # These are needed for the vertical alignment operations.
+
     my $this_batch = $self->[_this_batch_];
     my $ri_first   = $this_batch->[_ri_first_];
     my $ri_last    = $this_batch->[_ri_last_];
@@ -46008,13 +46046,14 @@ sub add_closing_side_comment {
 
     my ($self) = @_;
 
+    # add closing side comments after closing block braces if -csc used
+
     my $rLL        = $self->[_rLL_];
     my $this_batch = $self->[_this_batch_];
 
     my $ri_first = $this_batch->[_ri_first_];
     my $ri_last  = $this_batch->[_ri_last_];
 
-    # add closing side comments after closing block braces if -csc used
     my ( $closing_side_comment, $cscw_block_comment );
 
     #---------------------------------------------------------------
