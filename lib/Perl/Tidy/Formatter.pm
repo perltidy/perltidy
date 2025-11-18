@@ -157,14 +157,14 @@ EOM
 sub Fault_Warn {
     my ($msg) = @_;
 
-    # This is the same as Fault except that it calls Warn instead of Die
-    # and returns.
+    # This is the same as Fault except that, if DEVEL_MODE is not set,
+    # it calls Warn instead of Die and returns.
     my ( $package0_uu, $filename0_uu, $line0,    $subroutine0_uu ) = caller(0);
     my ( $package1_uu, $filename1,    $line1,    $subroutine1 )    = caller(1);
     my ( $package2_uu, $filename2_uu, $line2_uu, $subroutine2 )    = caller(2);
     my $input_stream_name = get_input_stream_name();
 
-    Warn(<<EOM);
+    my $error_message = <<EOM;
 ==============================================================================
 While operating on input stream with name: '$input_stream_name'
 A fault was detected at line $line0 of sub '$subroutine1'
@@ -175,7 +175,8 @@ This is probably an error introduced by a recent programming change.
 Perl::Tidy::Formatter.pm reports VERSION='$VERSION'.
 ==============================================================================
 EOM
-
+    Die($error_message) if (DEVEL_MODE);
+    Warn($error_message);
     return;
 } ## end sub Fault_Warn
 
