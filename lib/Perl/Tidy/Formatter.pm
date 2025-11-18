@@ -3502,23 +3502,6 @@ EOM
 ##        );
     }
 
-    #-----------------------------------------------------------
-    # The combination -xlp -xci and ci>i can be unstable (b1466)
-    #-----------------------------------------------------------
-    # Deactivated: the fix for b1501 also fixed b1466 in a simpler way.
-    # So this block can eventually be removed.
-    if (   0
-        && $rOpts->{'extended-line-up-parentheses'}
-        && $rOpts->{'extended-continuation-indentation'}
-        && $rOpts->{'continuation-indentation'} > $rOpts->{'indent-columns'}
-        && $rOpts->{'indent-columns'} > 1 )
-    {
-        $rOpts->{'continuation-indentation'} = $rOpts->{'indent-columns'};
-        ## This combination is only likely to occur during random testing, so
-        ## skip the warning.
-        ##Warn("The combination -xlp -xci -ci>-i can be unstable; reducing ci\n");
-    }
-
     return;
 } ## end sub initialize_line_up_parentheses
 
