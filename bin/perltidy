@@ -7688,7 +7688,7 @@ will have all of them.  The formatter which is actually selected when B<-html>
 is used can be found by adding the B<-log> parameter to create a F<.LOG> file
 with this information.
 
-The default will normally result in the best choice.  But if a different
+The default is usually the best choice.  But if a different
 formatter is available and preferred, it can be selected by setting
 B<--use-pod-formatter=s>, where B<s> is the name of one of the above three
 formatters.
@@ -8040,6 +8040,10 @@ B<Pod::Html> is selected as the pod formatter, a temporary file is required to
 pass text to and from C<Pod::Html>.  A randomly-named temporary file is created
 with C<File::Temp::tempfile> for this purpose. This file is removed after the
 data transfer.
+
+A temporary file is not normally needed for perl versions 5.10 and later unless
+B<Pod::Html> is specifically requested with the B<--use-pod-formatter>
+parameter.
 
 =item B<Special files when standard input is used>
 

@@ -28,6 +28,7 @@ use constant LONG_MESSAGE => 256;
 # Maximum number of little messages; probably need not be changed.
 use constant MAX_NAG_MESSAGES => 6;
 
+# List of hash keys to prevent -duk from listing them.
 my @unique_hash_keys_uu = qw( indent-columns );
 
 sub AUTOLOAD {

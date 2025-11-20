@@ -19,7 +19,7 @@ use constant SPACE        => q{ };
 
 { #<<< A non-indenting brace to contain all lexical variables
 
-# list of keys used just once, to avoid perltidy warning:
+# List of hash keys to prevent -duk from listing them.
 my @unique_hash_keys_uu = qw(use-pod-formatter);
 
 # class variables

@@ -345,7 +345,7 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
             if ( open( $fh, '<', $synfile ) ) {
                 my @lines     = <$fh>;
                 my $syntax_ok = @lines && $lines[-1] =~ /syntax OK/i;
-                if ( $case == 1 ) {
+                if ( $case == $np_beg ) {
                     $starting_syntax_ok = $syntax_ok;
                     unlink($synfile);
                     if ($syntax_ok) {
@@ -376,7 +376,7 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
         if ( -e $efile ) {
             rename $efile, "$chkfile.ERR";
             $err = 1;
-            if ( $case == 1 ) {
+            if ( $case == $np_beg ) {
                 $has_starting_error = 1;
             }
             else {
