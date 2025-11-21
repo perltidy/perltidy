@@ -4696,6 +4696,8 @@ EOM
             {
                 $self->warning(
                     "expecting '$tok' to follow one of 'if|elsif|unless'\n");
+                ## set flag to prevent formatting and avoid instability (b1553)
+                $self->[_in_trouble_] = 1;
             }
         }
 
@@ -4723,6 +4725,8 @@ EOM
                 $self->warning(
 "expecting '$tok' to follow one of 'if|elsif|unless|case|when'\n"
                 );
+                ## set flag to prevent formatting and avoid instability (b1553)
+                $self->[_in_trouble_] = 1;
             }
         }
 
