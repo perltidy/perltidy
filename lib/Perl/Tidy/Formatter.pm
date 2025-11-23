@@ -4156,7 +4156,7 @@ sub initialize_line_length_vars {
             (
                 $maximum_text_length_at_level[$level] -
                   $rOpts_continuation_indentation - $const
-            ) / $denom
+            ) / $denom,
         );
         last if ( $remaining_cycles <= 3 );    # 2 does not work
         $stress_level_beta = $level;
@@ -5137,9 +5137,15 @@ sub set_whitespace_flags {
 
                         # slow check
                         else {
-                            $ws =
-                              ws_in_container( $j, $j_closing, $rLL, $type,
-                                $token, $last_token );
+                            $ws = ws_in_container(
+
+                                $j,
+                                $j_closing,
+                                $rLL,
+                                $type,
+                                $token,
+                                $last_token,
+                            );
                             if ( $ws == WS_NO ) {
                                 $j_tight_closing_paren = $j_closing;
                             }
@@ -10592,7 +10598,7 @@ EOM
                         $lno,                "$id",
                         "$key",              $total_count,
                         $unique_count_pre_q, $unique_count_post_q,
-                        $issue_warning
+                        $issue_warning,
                       ];
                 }
             }
@@ -13008,7 +13014,7 @@ sub set_CODE_type {
                         # warn of duplicate starting comment lines, git #118
                         warning(
 "Already in format-skipping section which started at line $In_format_skipping_section\n",
-                            $input_line_no
+                            $input_line_no,
                         );
                     }
                 }
@@ -18448,9 +18454,16 @@ sub add_trailing_comma {
       @{$trailing_comma_add_rule};
 
     # see if the user wants a trailing comma here
-    my $match =
-      $self->match_trailing_comma_rule( $KK, $Kfirst, $Kp,
-        $trailing_comma_style, $paren_flag, $stable_flag, 1 );
+    my $match = $self->match_trailing_comma_rule(
+
+        $KK,
+        $Kfirst,
+        $Kp,
+        $trailing_comma_style,
+        $paren_flag,
+        $stable_flag,
+        1,
+    );
 
     # Do not add if this would cause excess line length and possible
     # instability.  This is b1458 fix method 1.  This is more general than fix
@@ -18532,9 +18545,16 @@ sub delete_trailing_comma {
       @{$trailing_comma_delete_rule};
 
     # See if the user wants this trailing comma
-    my $match =
-      $self->match_trailing_comma_rule( $KK, $Kfirst, $Kp,
-        $trailing_comma_style, $paren_flag, $stable_flag, 0 );
+    my $match = $self->match_trailing_comma_rule(
+
+        $KK,
+        $Kfirst,
+        $Kp,
+        $trailing_comma_style,
+        $paren_flag,
+        $stable_flag,
+        0,
+    );
 
     # Patch: the --noadd-whitespace flag can cause instability in complex
     # structures. In this case do not delete the comma. Fixes b1409.
@@ -18847,9 +18867,17 @@ BEGIN {
 
 sub match_trailing_comma_rule {
 
-    my ( $self, $KK, $Kfirst, $Kp, $trailing_comma_style, $paren_flag,
-        $stable_flag, $if_add )
-      = @_;
+    my (
+        $self,
+
+        $KK,
+        $Kfirst,
+        $Kp,
+        $trailing_comma_style,
+        $paren_flag,
+        $stable_flag,
+        $if_add,
+    ) = @_;
 
     # Decide if a trailing comma rule is matched.
 
@@ -24846,7 +24874,7 @@ sub weld_nested_quotes {
             $is_single_quote->(
                 $Kinner_opening + 1,
                 $Kinner_closing - 1,
-                $next_type
+                $next_type,
             )
           );
 
@@ -26957,7 +26985,7 @@ sub is_fragile_block_type {
                         $iline,
                         $KK,
                         $K_c,
-                        $interrupted_list_rule
+                        $interrupted_list_rule,
                     ];
                 }
 
@@ -29500,7 +29528,7 @@ EOM
             my (
                 $block_type,       $type_sequence,
                 $is_opening_BLOCK, $is_closing_BLOCK,
-                $nobreak_BEFORE_BLOCK
+                $nobreak_BEFORE_BLOCK,
             );
 
             if ( $rtoken_vars->[_TYPE_SEQUENCE_] ) {
@@ -38471,8 +38499,13 @@ EOM
         #--------------------------------------------
         # Section B4B: Go ahead and format as a table
         #--------------------------------------------
-        $self->write_formatted_table( $number_of_fields, $comma_count,
-            $rcomma_index, $use_separate_first_term );
+        $self->write_formatted_table(
+
+            $number_of_fields,
+            $comma_count,
+            $rcomma_index,
+            $use_separate_first_term,
+        );
 
         return;
     } ## end sub break_multiline_list
@@ -38794,12 +38827,19 @@ EOM
 
         # Find the best-looking number of fields.
         # This will be our second guess, if possible.
-        my ( $number_of_fields_best, $ri_ragged_break_list,
-            $new_identifier_count )
-          = $self->study_list_complexity(
-            $ri_term_begin, $ri_term_end, $ritem_lengths,
-            $max_width,     $maximum_field_count
-          );
+        my (
+            $number_of_fields_best,
+            $ri_ragged_break_list,
+            $new_identifier_count,
+
+        ) = $self->study_list_complexity(
+
+            $ri_term_begin,
+            $ri_term_end,
+            $ritem_lengths,
+            $max_width,
+            $maximum_field_count,
+        );
 
         if (   $number_of_fields_best != 0
             && $number_of_fields_best < $number_of_fields_max )
@@ -39023,9 +39063,14 @@ EOM
     sub write_formatted_table {
 
         # Write a table of comma separated items with fixed number of fields
-        my ( $self, $number_of_fields, $comma_count, $rcomma_index,
-            $use_separate_first_term )
-          = @_;
+        my (
+            $self,
+
+            $number_of_fields,
+            $comma_count,
+            $rcomma_index,
+            $use_separate_first_term,
+        ) = @_;
 
         write_logfile_entry(
             "List: auto formatting with $number_of_fields fields/row\n");
@@ -39054,9 +39099,15 @@ EOM
 
 sub study_list_complexity {
 
-    my ( $self, $ri_term_begin, $ri_term_end, $ritem_lengths, $max_width,
-        $maximum_field_count )
-      = @_;
+    my (
+        $self,
+
+        $ri_term_begin,
+        $ri_term_end,
+        $ritem_lengths,
+        $max_width,
+        $maximum_field_count,
+    ) = @_;
 
     # Look for complex tables which should be formatted with one term per line.
     # Returns the following:
@@ -44419,7 +44470,7 @@ sub make_paren_name {
         # Return variables:
         my (
             $opening_indentation, $opening_offset,
-            $is_leading,          $opening_exists
+            $is_leading,          $opening_exists,
         );
 
         # Honor any flag to reduce -ci set by the -bbxi=n option
@@ -44488,13 +44539,13 @@ sub make_paren_name {
             # opening token
             (
                 $opening_indentation, $opening_offset,
-                $is_leading,          $opening_exists
+                $is_leading,          $opening_exists,
               )
               = $self->get_opening_indentation(
 
                 $ibeg_weld_fix,
                 $rindentation_list,
-                $seqno_qw_closing
+                $seqno_qw_closing,
 
               );
 
@@ -44638,7 +44689,7 @@ sub make_paren_name {
                 {
                     (
                         $opening_indentation, $opening_offset,
-                        $is_leading,          $opening_exists
+                        $is_leading,          $opening_exists,
                       )
                       = $self->get_opening_indentation( $ibeg,
                         $rindentation_list, undef );
@@ -44663,7 +44714,7 @@ sub make_paren_name {
             {
                 (
                     $opening_indentation, $opening_offset,
-                    $is_leading,          $opening_exists
+                    $is_leading,          $opening_exists,
                   )
                   = $self->get_opening_indentation( $ibeg, $rindentation_list,
                     undef );
@@ -44783,7 +44834,7 @@ sub make_paren_name {
         elsif ( $type_beg eq ':' ) {
             (
                 $opening_indentation, $opening_offset,
-                $is_leading,          $opening_exists
+                $is_leading,          $opening_exists,
               )
               = $self->get_opening_indentation( $ibeg,
                 $rindentation_list, undef );
@@ -44849,7 +44900,7 @@ sub get_opening_indentation {
 
         $i_closing,
         $rindentation_list,
-        $qw_seqno
+        $qw_seqno,
 
     ) = @_;
 
@@ -45013,7 +45064,7 @@ sub set_vertical_tightness_flags {
         $vt_seqno,
         $vt_valid_flag,
         $vt_min_lines,
-        $vt_max_lines
+        $vt_max_lines,
     );
 
     # get the sequence numbers of the ends of this line
@@ -45774,7 +45825,7 @@ sub set_vertical_tightness_flags {
                             # save any leading text before we enter this block
                             $rblock_leading_text->{$type_sequence} = [
                                 $leading_block_text,
-                                $rleading_block_if_elsif_text
+                                $rleading_block_if_elsif_text,
                             ];
                             $block_opening_line_number{$type_sequence} =
                               $leading_block_text_line_number;
@@ -46198,7 +46249,7 @@ sub add_closing_side_comment {
                         }
                         warning(
 "perltidy -cscw replaced: $tokens_to_go[$max_index_to_go]\n",
-                            $msg_line_number
+                            $msg_line_number,
                         );
 
                         # save the old side comment in a new trailing block

@@ -2545,7 +2545,7 @@ EOM
             push @{$rht},
               [
                 $tokenizer->[_here_doc_target_],
-                $tokenizer->[_here_quote_character_]
+                $tokenizer->[_here_quote_character_],
               ];
             if ( $tokenizer->[_rhere_target_list_] ) {
                 push @{$rht}, @{ $tokenizer->[_rhere_target_list_] };
@@ -2580,7 +2580,7 @@ EOM
             $type,
             $prototype,
             $rtoken_map,
-            $max_token_index
+            $max_token_index,
         );
         return;
     } ## end sub scan_bare_identifier
@@ -2599,7 +2599,7 @@ EOM
             $type,
             $id_scan_state,
             $identifier,
-            my $split_pretoken_flag
+            my $split_pretoken_flag,
 
         ) = $self->scan_complex_identifier(
 
@@ -2609,7 +2609,7 @@ EOM
             $rtokens,
             $max_token_index,
             $expecting,
-            $rparen_type->[$paren_depth]
+            $rparen_type->[$paren_depth],
         );
 
         # Check for signal to fix a special variable adjacent to a keyword,
@@ -2976,7 +2976,7 @@ EOM
             $rtokens,
             $rtoken_map,
             $id_scan_state,
-            $max_token_index
+            $max_token_index,
         );
         return;
     } ## end sub scan_id
@@ -3522,10 +3522,18 @@ EOM
             $is_pattern = 0;
         }
         elsif ( $expecting == UNKNOWN ) {    # indeterminate, must guess..
-            my $msg;
-            ( $is_pattern, $msg ) =
-              $self->guess_if_pattern_or_division( $i, $rtokens, $rtoken_type,
-                $rtoken_map, $max_token_index );
+            (
+                $is_pattern,
+                my $msg,
+
+            ) = $self->guess_if_pattern_or_division(
+
+                $i,
+                $rtokens,
+                $rtoken_type,
+                $rtoken_map,
+                $max_token_index,
+            );
 
             if ($msg) {
                 if ( 0 && DEBUG_GUESS_MODE ) {
@@ -3836,9 +3844,14 @@ EOM
 
         # '<' - angle operator or less than?
         if ( $expecting != OPERATOR ) {
-            ( $i, $type ) =
-              $self->find_angle_operator_termination( $input_line, $i,
-                $rtoken_map, $expecting, $max_token_index );
+            ( $i, $type ) = $self->find_angle_operator_termination(
+
+                $input_line,
+                $i,
+                $rtoken_map,
+                $expecting,
+                $max_token_index,
+            );
             if ( DEBUG_GUESS_MODE && $expecting == UNKNOWN ) {
                 my $msg = "guessing that '<' is ";
                 $msg .=
@@ -3889,10 +3902,18 @@ EOM
             #      ?(.*)? && (print $1,"\n");
             # In current versions it would have to be written with slashes:
             #      /(.*)/ && (print $1,"\n");
-            my $msg;
-            ( $is_pattern, $msg ) =
-              $self->guess_if_pattern_or_conditional( $i, $rtokens,
-                $rtoken_type, $rtoken_map, $max_token_index );
+            (
+                $is_pattern,
+                my $msg,
+
+            ) = $self->guess_if_pattern_or_conditional(
+
+                $i,
+                $rtokens,
+                $rtoken_type,
+                $rtoken_map,
+                $max_token_index,
+            );
 
             if ($msg) {
                 $self->write_logfile_entry($msg);
@@ -4248,14 +4269,23 @@ EOM
 
         # '<<' = maybe a here-doc?
         if ( $expecting != OPERATOR ) {
-            my ( $found_target, $here_doc_target, $here_quote_character,
-                $saw_error );
-            (
-                $found_target, $here_doc_target, $here_quote_character, $i,
-                $saw_error
-              )
-              = $self->find_here_doc( $expecting, $i, $rtokens, $rtoken_type,
-                $rtoken_map, $max_token_index );
+            my (
+                $found_target,
+                $here_doc_target,
+                $here_quote_character,
+                $i_return,
+                $saw_error,
+
+            ) = $self->find_here_doc(
+
+                $expecting,
+                $i,
+                $rtokens,
+                $rtoken_type,
+                $rtoken_map,
+                $max_token_index,
+            );
+            $i = $i_return;
 
             if ($found_target) {
                 push @{$rhere_target_list},
@@ -4314,14 +4344,23 @@ EOM
         return
           if ( $i >= $max_token_index );  # here-doc not possible if end of line
         if ( $expecting != OPERATOR ) {
-            my ( $found_target, $here_doc_target, $here_quote_character,
-                $saw_error );
-            (
-                $found_target, $here_doc_target, $here_quote_character, $i,
-                $saw_error
-              )
-              = $self->find_here_doc( $expecting, $i, $rtokens, $rtoken_type,
-                $rtoken_map, $max_token_index );
+            my (
+                $found_target,
+                $here_doc_target,
+                $here_quote_character,
+                $i_return,
+                $saw_error,
+
+            ) = $self->find_here_doc(
+
+                $expecting,
+                $i,
+                $rtokens,
+                $rtoken_type,
+                $rtoken_map,
+                $max_token_index,
+            );
+            $i = $i_return;
 
             if ($found_target) {
 
@@ -6524,7 +6563,7 @@ EOM
         # Arrays to hold token values for this line:
         my (
             @output_levels,     @output_block_type, @output_type_sequence,
-            @output_token_type, @output_tokens
+            @output_token_type, @output_tokens,
         );
 
         $line_of_tokens->{_nesting_tokens_0} = $nesting_token_string;
@@ -8287,7 +8326,7 @@ sub guess_if_pattern_or_division {
         $quote_character,
         $quote_pos,
         $quote_depth,
-        $quoted_string
+        $quoted_string,
       )
       = $self->follow_quoted_string(
 
@@ -8298,7 +8337,7 @@ sub guess_if_pattern_or_division {
         $quote_character,
         $quote_pos,
         $quote_depth,
-        $max_token_index
+        $max_token_index,
       );
 
     # if we didn't find an ending / on this line ..
@@ -8431,7 +8470,7 @@ sub scan_bare_identifier_do {
         $type,
         $prototype,
         $rtoken_map,
-        $max_token_index
+        $max_token_index,
 
     ) = @_;
 
@@ -8670,7 +8709,7 @@ sub scan_id_do {
         $rtokens,
         $rtoken_map,
         $id_scan_state,
-        $max_token_index
+        $max_token_index,
 
     ) = @_;
 
@@ -9577,7 +9616,7 @@ sub do_scan_package {
             $rtokens,
             $max_token_index,
             $expecting,
-            $container_type
+            $container_type,
 
         ) = @_;
 
@@ -9845,7 +9884,7 @@ EOM
             $type,
             $id_scan_state,
             $identifier,
-            $split_pretoken_flag
+            $split_pretoken_flag,
         );
     } ## end sub scan_complex_identifier
 } ## end closure for sub scan_complex_identifier
@@ -10864,7 +10903,7 @@ sub find_here_doc {
         $rtokens,
         $rtoken_type,
         $rtoken_map_uu,
-        $max_token_index
+        $max_token_index,
 
     ) = @_;
 
@@ -10910,7 +10949,7 @@ sub find_here_doc {
             $here_quote_character,
             $quote_pos,
             $quote_depth,
-            $quoted_string
+            $quoted_string,
           )
           = $self->follow_quoted_string(
 
@@ -10921,7 +10960,7 @@ sub find_here_doc {
             $here_quote_character,
             $quote_pos,
             $quote_depth,
-            $max_token_index
+            $max_token_index,
           );
 
         if ($in_quote) {    # didn't find end of quote, so no target found
@@ -11032,7 +11071,7 @@ sub do_quote {
             $quote_character,
             $quote_pos,
             $quote_depth,
-            $quoted_string
+            $quoted_string,
           )
           = $self->follow_quoted_string(
 
@@ -11043,7 +11082,7 @@ sub do_quote {
             $quote_character,
             $quote_pos,
             $quote_depth,
-            $max_token_index
+            $max_token_index,
           );
         $quoted_string_2 .= $quoted_string;
         if ( $in_quote == 1 ) {
@@ -11064,7 +11103,7 @@ sub do_quote {
             $quote_character,
             $quote_pos,
             $quote_depth,
-            $quoted_string
+            $quoted_string,
           )
           = $self->follow_quoted_string(
 
@@ -11075,7 +11114,7 @@ sub do_quote {
             $quote_character,
             $quote_pos,
             $quote_depth,
-            $max_token_index
+            $max_token_index,
           );
         $quoted_string_1 .= $quoted_string;
         if ( $in_quote == 1 ) {
