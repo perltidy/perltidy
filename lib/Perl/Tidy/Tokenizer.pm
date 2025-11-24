@@ -822,6 +822,15 @@ sub warning {
     return;
 } ## end sub warning
 
+sub warning_no_format {
+    my ( $self, $msg ) = @_;
+
+    # Issue a warning message and also set a flag to prevent formatting
+    # this file.
+    $self->warning($msg);
+    $self->[_in_trouble_] = 1;
+} ## end sub warning_no_format
+
 sub get_input_stream_name {
 
     my $self = shift;
@@ -4733,10 +4742,9 @@ EOM
 
               )
             {
-                $self->warning(
+                ## prevent formatting and avoid instability (b1553)
+                $self->warning_no_format(
                     "expecting '$tok' to follow one of 'if|elsif|unless'\n");
-                ## set flag to prevent formatting and avoid instability (b1553)
-                $self->[_in_trouble_] = 1;
             }
         }
 
@@ -4761,11 +4769,10 @@ EOM
 
               )
             {
-                $self->warning(
+                ## prevent formatting and avoid instability (b1553)
+                $self->warning_no_format(
 "expecting '$tok' to follow one of 'if|elsif|unless|case|when'\n"
                 );
-                ## set flag to prevent formatting and avoid instability (b1553)
-                $self->[_in_trouble_] = 1;
             }
         }
 
@@ -6032,10 +6039,9 @@ EOM
                     && $rformat_skipping_list->[-1]->[0] == $on_off )
                 {
                     my $lno_last = $rformat_skipping_list->[-1]->[1];
-                    $self->warning(
+                    $self->warning_no_format(
 "consecutive format-skipping start markers - see line $lno_last\n"
                     );
-                    $self->[_in_trouble_] = 1;
                 }
                 push @{$rformat_skipping_list}, [ $on_off, $lno, $input_line ];
                 $self->[_in_format_skipping_] = $lno;
@@ -6060,10 +6066,9 @@ EOM
                     && $rformat_skipping_list->[-1]->[0] == $on_off )
                 {
                     my $lno_last = $rformat_skipping_list->[-1]->[1];
-                    $self->warning(
+                    $self->warning_no_format(
 "consecutive format-skipping end markers - see line $lno_last\n"
                     );
-                    $self->[_in_trouble_] = 1;
                 }
 
                 push @{$rformat_skipping_list}, [ $on_off, $lno, $input_line ];
