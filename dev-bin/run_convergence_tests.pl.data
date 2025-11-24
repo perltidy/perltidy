@@ -20165,3 +20165,10 @@ push @paths, qw(
 
 ==> c507.par <==
 -xlp -l=70 -wn
+
+==> c557.in <==
+   Wall %
+   Now I'm
+
+==> c557.par <==
+-naws

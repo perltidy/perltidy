@@ -5789,6 +5789,7 @@ EOM
     my %essential_whitespace_filter_l2;
     my %essential_whitespace_filter_r2;
     my %is_type_with_space_before_bareword;
+    my %is_plus_minus_percent_star;
     my %is_special_variable_char;
     my %is_digit_char;
 
@@ -5845,6 +5846,9 @@ EOM
         #      $opts{rdonly} = (($opts{mode} & O_ACCMODE) == O_RDONLY);
         @q = qw( Q & );
         @is_type_with_space_before_bareword{@q} = (1) x scalar(@q);
+
+        @q = qw( + - % * );
+        @is_plus_minus_percent_star{@q} = (1) x scalar(@q);
 
         # These are the only characters which can (currently) form special
         # variables, like $^W: (issue c066, c068).
@@ -5998,8 +6002,9 @@ EOM
                 # converted into unary plus and minus on next pass through the
                 # tokenizer. This can lead to blinkers: cases b660 b670 b780
                 # b781 b787 b788 b790 So we keep a space unless the +/- clearly
-                # follows an operator
-                || ( ( $typel eq '+' || $typel eq '-' )
+                # follows an operator.  Added % * added to avoid changing
+                # tokenization in ambiguous cases (c557).
+                || (   $is_plus_minus_percent_star{$typel}
                     && $typell !~ /^[niC\)\}\]R]$/ )
 
                 # keep a space between a token ending in '$' and any word;
