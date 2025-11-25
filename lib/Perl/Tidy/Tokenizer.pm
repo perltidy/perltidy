@@ -828,6 +828,7 @@ sub warning_do_not_format {
     # Issue a warning message and set a flag to skip formatting this file.
     $self->warning($msg);
     $self->[_do_not_format_] = 1;
+    return;
 } ## end sub warning_do_not_format
 
 sub get_input_stream_name {
