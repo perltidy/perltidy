@@ -396,11 +396,11 @@ BEGIN {
     # Fix for c250: added new type 'P', formerly 'i'
     # ( but package statements will eventually be split into 'k' and 'i')
     my @identifier = qw< i t U C Y Z G P :: CORE::>;
-    @token_short_names{@identifier} = ('i') x scalar(@identifier);
+    $token_short_names{$_} = 'i' for (@identifier);
 
     # These token types will be called 'structure'
     my @structure = qw< { } >;
-    @token_short_names{@structure} = ('s') x scalar(@structure);
+    $token_short_names{$_} = 's' for (@structure);
 
     # OLD NOTES: save for reference
     # Any of these could be added later if it would be useful.

@@ -786,34 +786,32 @@ BEGIN {
     my @q;
 
     @q = qw( = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x= ^^= );
-    @is_assignment{@q} = (1) x scalar(@q);
+    $is_assignment{$_} = 1 for (@q);
 
     # a hash needed by break_lists for efficiency:
     push @q, qw{ ; < > ~ f };
-    @is_non_list_type{@q} = (1) x scalar(@q);
+    $is_non_list_type{$_} = 1 for (@q);
 
     @q = qw( is if unless and or err last next redo return );
-    @is_if_unless_and_or_last_next_redo_return{@q} = (1) x scalar(@q);
+    $is_if_unless_and_or_last_next_redo_return{$_} = 1 for (@q);
 
     # These block types may have text between the keyword and opening
     # curly.  Note: 'else' does not, but must be included to allow trailing
     # if/elsif text to be appended.
     # patch for SWITCH/CASE: added 'case' and 'when'
     @q = qw( if elsif else unless while until for foreach case when catch );
-    @is_if_elsif_else_unless_while_until_for_foreach{@q} =
-      (1) x scalar(@q);
+    $is_if_elsif_else_unless_while_until_for_foreach{$_} = 1 for (@q);
 
     # These can either have the BLOCK form or trailing modifier form:
     @q = qw( if unless while until for foreach );
-    @is_if_unless_while_until_for_foreach{@q} =
-      (1) x scalar(@q);
+    $is_if_unless_while_until_for_foreach{$_} = 1 for (@q);
 
     # These can have several forms
     @q = qw( for foreach );
-    @is_for_foreach{@q} = (1) x scalar(@q);
+    $is_for_foreach{$_} = 1 for (@q);
 
     @q = qw( last next redo return );
-    @is_last_next_redo_return{@q} = (1) x scalar(@q);
+    $is_last_next_redo_return{$_} = 1 for (@q);
 
     # Map related block names into a common name to allow vertical alignment
     # used by sub make_alignment_patterns. Note: this is normally unchanged,
@@ -831,22 +829,22 @@ BEGIN {
     );
 
     @q = qw( if unless );
-    @is_if_unless{@q} = (1) x scalar(@q);
+    $is_if_unless{$_} = 1 for (@q);
 
     @q = qw( if elsif );
-    @is_if_elsif{@q} = (1) x scalar(@q);
+    $is_if_elsif{$_} = 1 for (@q);
 
     @q = qw( if unless elsif );
-    @is_if_unless_elsif{@q} = (1) x scalar(@q);
+    $is_if_unless_elsif{$_} = 1 for (@q);
 
     @q = qw( if unless elsif else );
-    @is_if_unless_elsif_else{@q} = (1) x scalar(@q);
+    $is_if_unless_elsif_else{$_} = 1 for (@q);
 
     @q = qw( elsif else );
-    @is_elsif_else{@q} = (1) x scalar(@q);
+    $is_elsif_else{$_} = 1 for (@q);
 
     @q = qw( and or err );
-    @is_and_or{@q} = (1) x scalar(@q);
+    $is_and_or{$_} = 1 for (@q);
 
     # Identify certain operators which often occur in chains.
     # Note: the minus (-) causes a side effect of padding of the first line in
@@ -855,7 +853,7 @@ BEGIN {
     #   -variable    => \$TRANS
     # This usually improves appearance so it seems ok.
     @q = qw( && || and or : ? . + - * / );
-    @is_chain_operator{@q} = (1) x scalar(@q);
+    $is_chain_operator{$_} = 1 for (@q);
 
     # Operators that the user can request break before or after.
     # Note that some are keywords
@@ -872,7 +870,7 @@ BEGIN {
       while     until    for   foreach given    when
       default
     );
-    @is_block_without_semicolon{@q} = (1) x scalar(@q);
+    $is_block_without_semicolon{$_} = 1 for (@q);
 
     # We will allow semicolons to be added within these block types
     # as well as sub and package blocks.
@@ -885,30 +883,30 @@ BEGIN {
     # 4. Test files: blktype.t, blktype1.t, semicolon.t
     @q = qw( BEGIN END CHECK INIT AUTOLOAD DESTROY UNITCHECK continue if elsif
       else unless do while until eval for foreach );
-    @ok_to_add_semicolon_for_block_type{@q} = (1) x scalar(@q);
+    $ok_to_add_semicolon_for_block_type{$_} = 1 for (@q);
 
     # 'L' is token for opening { at hash key
     @q = qw< L { ( [ >;
-    @is_opening_type{@q} = (1) x scalar(@q);
+    $is_opening_type{$_} = 1 for (@q);
 
     # 'R' is token for closing } at hash key
     @q = qw< R } ) ] >;
-    @is_closing_type{@q} = (1) x scalar(@q);
+    $is_closing_type{$_} = 1 for (@q);
 
     @q = qw< { ( [ >;
-    @is_opening_token{@q} = (1) x scalar(@q);
+    $is_opening_token{$_} = 1 for (@q);
 
     @q = qw< } ) ] >;
-    @is_closing_token{@q} = (1) x scalar(@q);
+    $is_closing_token{$_} = 1 for (@q);
 
     @q = qw( ? : );
-    @is_ternary{@q} = (1) x scalar(@q);
+    $is_ternary{$_} = 1 for (@q);
 
     @q = qw< { ( [ ? >;
-    @is_opening_sequence_token{@q} = (1) x scalar(@q);
+    $is_opening_sequence_token{$_} = 1 for (@q);
 
     @q = qw< } ) ] : >;
-    @is_closing_sequence_token{@q} = (1) x scalar(@q);
+    $is_closing_sequence_token{$_} = 1 for (@q);
 
     %matching_token = (
         '{' => '}',
@@ -924,85 +922,85 @@ BEGIN {
 
     # a hash needed by sub break_lists for labeling containers
     @q = qw( k => && || ? : . );
-    @is_container_label_type{@q} = (1) x scalar(@q);
+    $is_container_label_type{$_} = 1 for (@q);
 
     @q = qw( die confess croak warn );
-    @is_die_confess_croak_warn{@q} = (1) x scalar(@q);
+    $is_die_confess_croak_warn{$_} = 1 for (@q);
 
     @q = qw( my our local );
-    @is_my_our_local{@q} = (1) x scalar(@q);
+    $is_my_our_local{$_} = 1 for (@q);
 
     # Braces -bbht etc must follow these. Note: experimentation with
     # including a simple comma shows that it adds little and can lead
     # to poor formatting in complex lists.
     @q = qw( = => );
-    @is_equal_or_fat_comma{@q} = (1) x scalar(@q);
+    $is_equal_or_fat_comma{$_} = 1 for (@q);
 
     # Removed 'h' (no longer needed after updated b1523)
     @q = qw( => ; f );
     push @q, ',';
-    @is_counted_type{@q} = (1) x scalar(@q);
+    $is_counted_type{$_} = 1 for (@q);
 
     # Tokens where --keep-old-break-xxx flags make soft breaks instead
     # of hard breaks.  See b1433 and b1436.
     # NOTE: $type is used as the hash key for now; if other container tokens
     # are added it might be necessary to use a token/type mixture.
     @q = qw# -> ? : && || + - / * #;
-    @is_soft_keep_break_type{@q} = (1) x scalar(@q);
+    $is_soft_keep_break_type{$_} = 1 for (@q);
 
     # these functions allow an identifier in the indirect object slot
     @q = qw( print printf sort exec system say );
-    @is_indirect_object_taker{@q} = (1) x scalar(@q);
+    $is_indirect_object_taker{$_} = 1 for (@q);
 
     # Define here tokens which may follow the closing brace of a do statement
     # on the same line, as in:
     #   } while ( $something);
     my @dof = qw( until while unless if ; : );
     push @dof, ',';
-    @is_do_follower{@dof} = (1) x scalar(@dof);
+    $is_do_follower{$_} = 1 for (@dof);
 
     # what can follow a multi-line anonymous sub definition closing curly:
     my @asf = qw# ; : => or and  && || ~~ !~~ ) #;
     push @asf, ',';
-    @is_anon_sub_brace_follower{@asf} = (1) x scalar(@asf);
+    $is_anon_sub_brace_follower{$_} = 1 for (@asf);
 
     # what can follow a one-line anonymous sub closing curly:
     # one-line anonymous subs also have ']' here...
     # see tk3.t and PP.pm
     my @asf1 = qw#  ; : => or and  && || ) ] ~~ !~~ #;
     push @asf1, ',';
-    @is_anon_sub_1_brace_follower{@asf1} = (1) x scalar(@asf1);
+    $is_anon_sub_1_brace_follower{$_} = 1 for (@asf1);
 
     # What can follow a closing curly of a block
     # which is not an if/elsif/else/do/sort/map/grep/eval/sub
     # Testfiles: 'Toolbar.pm', 'Menubar.pm', bless.t, '3rules.pl'
     my @obf = qw#  ; : => or and  && || ) #;
     push @obf, ',';
-    @is_other_brace_follower{@obf} = (1) x scalar(@obf);
+    $is_other_brace_follower{$_} = 1 for (@obf);
 
     # 'k'=builtin keyword, 'U'=user defined sub, 'w'=unknown bareword
     @q = qw( k w U );
-    @is_kwU{@q} = (1) x scalar(@q);
+    $is_kwU{$_} = 1 for (@q);
 
     # regular expression match operators
     @q = qw( =~ !~);
-    @is_re_match_op{@q} = (1) x scalar(@q);
+    $is_re_match_op{$_} = 1 for (@q);
 
     @q = qw ( my state our );
-    @is_my_state_our{@q} = (1) x scalar(@q);
+    $is_my_state_our{$_} = 1 for (@q);
 
     # These keywords have prototypes which allow a special leading item
     # followed by a list
     @q =
       qw( chmod formline grep join kill map pack printf push sprintf unshift );
-    @is_keyword_with_special_leading_term{@q} = (1) x scalar(@q);
+    $is_keyword_with_special_leading_term{$_} = 1 for (@q);
 
     # used to check for certain token quote types
     @q = qw( s y m / );
-    @is_s_y_m_slash{@q} = (1) x scalar(@q);
+    $is_s_y_m_slash{$_} = 1 for (@q);
 
     @q = qw( $ & % * @ );
-    @is_sigil{@q} = (1) x scalar(@q);
+    $is_sigil{$_} = 1 for (@q);
 
     $is_comma_token{$_} = 1 for ( '=>', COMMA );
 
@@ -1465,7 +1463,7 @@ EOM
           _nesting_tokens_0
         );
 
-        @valid_line_hash{@valid_line_keys} = (1) x scalar(@valid_line_keys);
+        $valid_line_hash{$_} = 1 for (@valid_line_keys);
     } ## end BEGIN
 
     sub check_line_hashes {
@@ -2694,7 +2692,7 @@ sub initialize_grep_and_friends {
     %is_sort_map_grep = ();
 
     my @q = qw( sort map grep );
-    @is_sort_map_grep{@q} = (1) x scalar(@q);
+    $is_sort_map_grep{$_} = 1 for (@q);
 
     my $olbxl = $rOpts->{'one-line-block-exclusion-list'};
     my %is_olb_exclusion_word;
@@ -2712,7 +2710,7 @@ Ignoring $num unexpected words input with '--one-line-block-exclusion-list':
 EOM
                 Die($msg);
             }
-            @is_olb_exclusion_word{@list} = (1) x scalar(@list);
+            $is_olb_exclusion_word{$_} = 1 for (@list);
         }
     }
 
@@ -2734,10 +2732,10 @@ EOM
 
     if (@grep_aliases) {
 
-        @is_sort_map_grep{@grep_aliases} = (1) x scalar(@grep_aliases);
+        $is_sort_map_grep{$_} = 1 for (@grep_aliases);
 
         if ( $want_one_line_block{'grep'} ) {
-            @want_one_line_block{@grep_aliases} = (1) x scalar(@grep_aliases);
+            $want_one_line_block{$_} = 1 for (@grep_aliases);
         }
     }
 
@@ -2758,7 +2756,7 @@ EOM
     @q = qw( grep keys map reverse sort split );
     push @q, @grep_aliases;
     %is_keyword_returning_list = ();
-    @is_keyword_returning_list{@q} = (1) x scalar(@q);
+    $is_keyword_returning_list{$_} = 1 for (@q);
 
     # This code enables vertical alignment of grep aliases for testing.  It has
     # not been found to be beneficial, so it is off by default.  But it is
@@ -3089,13 +3087,13 @@ sub initialize_space_after_keyword {
         if ( @q == 1 && $q[0] eq '*' ) { @q = keys %space_after_keyword }
         else { check_for_valid_keywords( \@q, '--nospace-after-keyword', 1 ) }
 
-        @space_after_keyword{@q} = (0) x scalar(@q);
+        $space_after_keyword{$_} = 0 for (@q);
     }
 
     # then allow user to add to these defaults
     if ( my @q = split_words( $rOpts->{'space-after-keyword'} ) ) {
         check_for_valid_keywords( \@q, '--space-after-keyword', 1 );
-        @space_after_keyword{@q} = (1) x scalar(@q);
+        $space_after_keyword{$_} = 1 for (@q);
     }
 
     return;
@@ -3278,8 +3276,8 @@ sub initialize_extended_block_tightness_list {
     # We will build the selection in %hash
     # By default the option is 'on' for keywords only (-xbtl='k')
     my %hash;
-    @hash{@k_list} = (1) x scalar(@k_list);
-    @hash{@t_list} = (0) x scalar(@t_list);
+    $hash{$_} = 1 for (@k_list);
+    $hash{$_} = 0 for (@t_list);
 
     # This can be overridden with -xbtl="..."
     my $long_name = 'extended-block-tightness-list';
@@ -3288,7 +3286,7 @@ sub initialize_extended_block_tightness_list {
         my @unknown;
 
         # Turn everything off
-        @hash{@all} = (0) x scalar(@all);
+        $hash{$_} = 0 for (@all);
 
         # Then turn on selections
         foreach my $word (@words) {
@@ -3298,17 +3296,17 @@ sub initialize_extended_block_tightness_list {
 
             # 'k' turns on all keywords
             elsif ( $word eq 'k' ) {
-                @hash{@k_list} = (1) x scalar(@k_list);
+                $hash{$_} = 1 for (@k_list);
             }
 
             # 't' turns on all symbols
             elsif ( $word eq 't' ) {
-                @hash{@t_list} = (1) x scalar(@t_list);
+                $hash{$_} = 1 for (@t_list);
             }
 
             # 'kt' same as 'k' and 't' for convenience
             elsif ( $word eq 'kt' ) {
-                @hash{@all} = (1) x scalar(@all);
+                $hash{$_} = 1 for (@all);
             }
 
             # Anything else is an error
@@ -3516,7 +3514,7 @@ sub initialize_pack_operator_types {
     ##my @ok = qw( -> . && || and or : ? + - * / );
     my @ok = qw( -> . );
     my %is_ok;
-    @is_ok{@ok} = (1) x scalar(@ok);
+    $is_ok{$_} = 1 for (@ok);
 
     my $long_name = 'pack-operator-types';
     my %hash;
@@ -3730,7 +3728,7 @@ EOM
 
     check_for_valid_token_types( \@list, "-$short_name", 1 );
 
-    @{$rkeep_break_hash}{@list} = (1) x scalar(@list);
+    $rkeep_break_hash->{$_} = 1 for (@list);
 
     foreach my $key ( keys %flags ) {
         my $flag = $flags{$key};
@@ -3807,14 +3805,13 @@ sub initialize_multiple_token_tightness {
     # Note that 'qw' will be translated into the actual token type 'q'
     my %is_type_option;
     my @type_options = qw( <<>> qw Q h );
-    @is_type_option{@type_options} = (1) x scalar(@type_options);
+    $is_type_option{$_} = 1 for (@type_options);
 
     # These are valid input words subtypes of token type 'Q'.
     # Note qw must be treated specially and is in the previous list.
     my %is_Q_subtype_option;
     my @Q_subtype_options = qw( q qq qx qr s y tr m );
-    @is_Q_subtype_option{@Q_subtype_options} =
-      (1) x scalar(@Q_subtype_options);
+    $is_Q_subtype_option{$_} = 1 for (@Q_subtype_options);
 
     my %is_valid_term = ( %is_type_option, %is_Q_subtype_option );
 
@@ -4210,7 +4207,7 @@ sub initialize_trailing_comma_break_rules {
         my %rule_hash;
         my @q = @{$rvalid_flags};
         my %is_valid_flag;
-        @is_valid_flag{@q} = (1) x scalar(@q);
+        $is_valid_flag{$_} = 1 for (@q);
 
         # handle the common case of a single control character, like -btct='b'
         if ( length($option) == 1 ) {
@@ -4419,7 +4416,7 @@ sub initialize_trailing_comma_rules {
         my %rule_hash;
         my @q = @{$rvalid_flags};
         my %is_valid_flag;
-        @is_valid_flag{@q} = (1) x scalar(@q);
+        $is_valid_flag{$_} = 1 for (@q);
 
         # handle the common case of a single control character, like -wtc='b'
         if ( length($option) == 1 ) {
@@ -4789,18 +4786,13 @@ sub initialize_whitespace_hashes {
     # may be overridden by any user settings specified by the
     # -wls and -wrs parameters.  However the binary_whitespace_rules
     # are hardwired and have priority.
-    @want_left_space{@spaces_both_sides} =
-      (1) x scalar(@spaces_both_sides);
-    @want_right_space{@spaces_both_sides} =
-      (1) x scalar(@spaces_both_sides);
-    @want_left_space{@spaces_left_side} =
-      (1) x scalar(@spaces_left_side);
-    @want_right_space{@spaces_left_side} =
-      (-1) x scalar(@spaces_left_side);
-    @want_left_space{@spaces_right_side} =
-      (-1) x scalar(@spaces_right_side);
-    @want_right_space{@spaces_right_side} =
-      (1) x scalar(@spaces_right_side);
+    $want_left_space{$_}  = WS_YES for (@spaces_both_sides);
+    $want_right_space{$_} = WS_YES for (@spaces_both_sides);
+    $want_left_space{$_}  = WS_YES for (@spaces_left_side);
+    $want_right_space{$_} = WS_NO  for (@spaces_left_side);
+    $want_left_space{$_}  = WS_NO  for (@spaces_right_side);
+    $want_right_space{$_} = WS_YES for (@spaces_right_side);
+
     $want_left_space{'->'}      = WS_NO;
     $want_right_space{'->'}     = WS_NO;
     $want_left_space{'**'}      = WS_NO;
@@ -4861,34 +4853,34 @@ sub initialize_whitespace_hashes {
 
     # user controls
     if ( !$rOpts->{'space-for-semicolon'} ) {
-        $want_left_space{'f'} = -1;
+        $want_left_space{'f'} = WS_NO;
     }
 
     ## NOTE: cannot use the following because $rOpts_ vars not initialized
     ## if ($rOpts_space_terminal_semicolon) {
     if ( $rOpts->{'space-terminal-semicolon'} ) {
-        $want_left_space{';'} = 1;
+        $want_left_space{';'} = WS_YES;
     }
 
     # implement user whitespace preferences
     if ( my @q = split_words( $rOpts->{'want-left-space'} ) ) {
         check_for_valid_token_types( \@q, "--want-left-space", 1 );
-        @want_left_space{@q} = (1) x scalar(@q);
+        $want_left_space{$_} = WS_YES for (@q);
     }
 
     if ( my @q = split_words( $rOpts->{'want-right-space'} ) ) {
         check_for_valid_token_types( \@q, "--want-right-space", 1 );
-        @want_right_space{@q} = (1) x scalar(@q);
+        $want_right_space{$_} = WS_YES for (@q);
     }
 
     if ( my @q = split_words( $rOpts->{'nowant-left-space'} ) ) {
         check_for_valid_token_types( \@q, "--nowant-left-space", 1 );
-        @want_left_space{@q} = (-1) x scalar(@q);
+        $want_left_space{$_} = WS_NO for (@q);
     }
 
     if ( my @q = split_words( $rOpts->{'nowant-right-space'} ) ) {
         check_for_valid_token_types( \@q, "--nowant-right-space", 1 );
-        @want_right_space{@q} = (-1) x scalar(@q);
+        $want_right_space{$_} = WS_NO for (@q);
     }
 
     return;
@@ -4907,14 +4899,14 @@ BEGIN {
     # Be sure to update it when adding new checks in its block.
     my @q = qw( k w C m - Q );
     push @q, '#';
-    @is_special_ws_type{@q} = (1) x scalar(@q);
+    $is_special_ws_type{$_} = 1 for (@q);
 
     # These hashes replace slower regex tests
     @q = qw( w C U G -> );
-    @is_wCUG_arrow{@q} = (1) x scalar(@q);
+    $is_wCUG_arrow{$_} = 1 for (@q);
 
     @q = qw( w i );
-    @is_wi{@q} = (1) x scalar(@q);
+    $is_wi{$_} = 1 for (@q);
 
 } ## end BEGIN
 
@@ -5800,17 +5792,17 @@ EOM
         # NOTE: This hash is like the global %is_sort_map_grep, but it ignores
         # grep aliases on purpose, since here we are looking parens, not braces
         @q = qw( sort grep map );
-        @is_sort_grep_map{@q} = (1) x scalar(@q);
+        $is_sort_grep_map{$_} = 1 for (@q);
 
         @q = qw{
           .. :: << >> ** && || // -> => += -=
           .= %= &= |= ^= *= <> <= >= == =~ !~
           != ++ -- /= x= ~~ ~. |. &. ^. ^^
         };
-        @is_digraph{@q} = (1) x scalar(@q);
+        $is_digraph{$_} = 1 for (@q);
 
         @q = qw( ... **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~ );
-        @is_trigraph{@q} = (1) x scalar(@q);
+        $is_trigraph{$_} = 1 for (@q);
 
         # These are used as a speedup filters for sub is_essential_whitespace.
 
@@ -5820,22 +5812,22 @@ EOM
         push @q, ',';
         push @q, ')';
         push @q, '(';
-        @essential_whitespace_filter_l1{@q} = (1) x scalar(@q);
+        $essential_whitespace_filter_l1{$_} = 1 for (@q);
 
         # BUT some might if followed by these right token types
         @q = qw( pp mm << <<= h );
-        @essential_whitespace_filter_r1{@q} = (1) x scalar(@q);
+        $essential_whitespace_filter_r1{$_} = 1 for (@q);
 
         # Filter 2:
         # These right side filters usually do not require a space
         @q = qw( ; ] R } );
         push @q, ',';
         push @q, ')';
-        @essential_whitespace_filter_r2{@q} = (1) x scalar(@q);
+        $essential_whitespace_filter_r2{$_} = 1 for (@q);
 
         # BUT some might if followed by these left token types
         @q = qw( h Z );
-        @essential_whitespace_filter_l2{@q} = (1) x scalar(@q);
+        $essential_whitespace_filter_l2{$_} = 1 for (@q);
 
         # Keep a space between certain types and any bareword:
         # Q: keep a space between a quote and a bareword to prevent the
@@ -5845,20 +5837,20 @@ EOM
         #    between '&' and 'O_ACCMODE', producing a syntax error [File.pm]
         #      $opts{rdonly} = (($opts{mode} & O_ACCMODE) == O_RDONLY);
         @q = qw( Q & );
-        @is_type_with_space_before_bareword{@q} = (1) x scalar(@q);
+        $is_type_with_space_before_bareword{$_} = 1 for (@q);
 
         @q = qw( + - % * );
-        @is_plus_minus_percent_star{@q} = (1) x scalar(@q);
+        $is_plus_minus_percent_star{$_} = 1 for (@q);
 
         # These are the only characters which can (currently) form special
         # variables, like $^W: (issue c066, c068).
         @q = qw{ ? A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ };
         push @q, "\\";
         push @q, (qw{  ] ^ _ });
-        @is_special_variable_char{@q} = (1) x scalar(@q);
+        $is_special_variable_char{$_} = 1 for (@q);
 
         @q = qw( 0 1 2 3 4 5 6 7 8 9 );
-        @is_digit_char{@q} = (1) x scalar(@q);
+        $is_digit_char{$_} = 1 for (@q);
 
     } ## end BEGIN
 
@@ -6238,10 +6230,10 @@ EOM
 
         my @q;
         @q = qw( if unless while until for foreach );
-        @is_good_keyword_breakpoint{@q} = (1) x scalar(@q);
+        $is_good_keyword_breakpoint{$_} = 1 for (@q);
 
         @q = qw/ ( [ { } ] ) /;
-        @is_container_token{@q} = (1) x scalar(@q);
+        $is_container_token{$_} = 1 for (@q);
 
         # The decision about where to break a line depends upon a "bond
         # strength" between tokens.  The LOWER the bond strength, the MORE
@@ -6327,8 +6319,8 @@ EOM
 
         # try not to break on exponentiation
         @q                       = qw# ** .. ... <=> #;
-        @left_bond_strength{@q}  = (STRONG) x scalar(@q);
-        @right_bond_strength{@q} = (STRONG) x scalar(@q);
+        $left_bond_strength{$_}  = STRONG for (@q);
+        $right_bond_strength{$_} = STRONG for (@q);
 
         # The comma-arrow has very low precedence but not a good break point
         $left_bond_strength{'=>'}  = NO_BREAK;
@@ -6355,22 +6347,20 @@ EOM
         $right_bond_strength{'P'} = NOMINAL;
 
         # breaking AFTER modulus operator is ok:
-        @q = qw< % >;
-        @left_bond_strength{@q} = (STRONG) x scalar(@q);
-        @right_bond_strength{@q} =
-          ( 0.1 * NOMINAL + 0.9 * STRONG ) x scalar(@q);
+        @q                       = qw< % >;
+        $left_bond_strength{$_}  = STRONG                           for (@q);
+        $right_bond_strength{$_} = ( 0.1 * NOMINAL + 0.9 * STRONG ) for (@q);
 
         # Break AFTER math operators * and /
         @q                       = qw< * / x  >;
-        @left_bond_strength{@q}  = (STRONG) x scalar(@q);
-        @right_bond_strength{@q} = (NOMINAL) x scalar(@q);
+        $left_bond_strength{$_}  = STRONG  for (@q);
+        $right_bond_strength{$_} = NOMINAL for (@q);
 
         # Break AFTER weakest math operators + and -
         # Make them weaker than * but a bit stronger than '.'
-        @q = qw< + - >;
-        @left_bond_strength{@q} = (STRONG) x scalar(@q);
-        @right_bond_strength{@q} =
-          ( 0.91 * NOMINAL + 0.09 * WEAK ) x scalar(@q);
+        @q                       = qw< + - >;
+        $left_bond_strength{$_}  = STRONG                           for (@q);
+        $right_bond_strength{$_} = ( 0.91 * NOMINAL + 0.09 * WEAK ) for (@q);
 
         # Define left strength of unary plus and minus (fixes case b511)
         $left_bond_strength{p} = $left_bond_strength{'+'};
@@ -6383,8 +6373,8 @@ EOM
 
         # breaking BEFORE these is just ok:
         @q                       = qw# >> << #;
-        @right_bond_strength{@q} = (STRONG) x scalar(@q);
-        @left_bond_strength{@q}  = (NOMINAL) x scalar(@q);
+        $right_bond_strength{$_} = STRONG  for (@q);
+        $left_bond_strength{$_}  = NOMINAL for (@q);
 
         # breaking before the string concatenation operator seems best
         # because it can be hard to see at the end of a line
@@ -6392,21 +6382,19 @@ EOM
         $left_bond_strength{'.'}  = 0.9 * NOMINAL + 0.1 * WEAK;
 
         @q                       = qw< } ] ) R >;
-        @left_bond_strength{@q}  = (STRONG) x scalar(@q);
-        @right_bond_strength{@q} = (NOMINAL) x scalar(@q);
+        $left_bond_strength{$_}  = STRONG  for (@q);
+        $right_bond_strength{$_} = NOMINAL for (@q);
 
         # make these a little weaker than nominal so that they get
         # favored for end-of-line characters
-        @q = qw< != == =~ !~ ~~ !~~ >;
-        @left_bond_strength{@q} = (STRONG) x scalar(@q);
-        @right_bond_strength{@q} =
-          ( 0.9 * NOMINAL + 0.1 * WEAK ) x scalar(@q);
+        @q                       = qw< != == =~ !~ ~~ !~~ >;
+        $left_bond_strength{$_}  = STRONG                         for (@q);
+        $right_bond_strength{$_} = ( 0.9 * NOMINAL + 0.1 * WEAK ) for (@q);
 
         # break AFTER these
-        @q = qw# < >  | & >= <= #;
-        @left_bond_strength{@q} = (VERY_STRONG) x scalar(@q);
-        @right_bond_strength{@q} =
-          ( 0.8 * NOMINAL + 0.2 * WEAK ) x scalar(@q);
+        @q                       = qw# < >  | & >= <= #;
+        $left_bond_strength{$_}  = VERY_STRONG                    for (@q);
+        $right_bond_strength{$_} = ( 0.8 * NOMINAL + 0.2 * WEAK ) for (@q);
 
         # breaking either before or after a quote is ok
         # but bias for breaking before a quote
@@ -6429,9 +6417,8 @@ EOM
         @q = qw( = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x= );
 
         # Default is to break AFTER various assignment operators
-        @left_bond_strength{@q} = (STRONG) x scalar(@q);
-        @right_bond_strength{@q} =
-          ( 0.4 * WEAK + 0.6 * VERY_WEAK ) x scalar(@q);
+        $left_bond_strength{$_}  = STRONG                           for (@q);
+        $right_bond_strength{$_} = ( 0.4 * WEAK + 0.6 * VERY_WEAK ) for (@q);
 
         # Default is to break BEFORE '&&' and '||' and '//'
         # set strength of '||' to same as '=' so that chains like
@@ -6478,8 +6465,8 @@ EOM
 
         # remaining digraphs and trigraphs not defined above
         @q                       = qw( :: <> ++ -- );
-        @left_bond_strength{@q}  = (WEAK) x scalar(@q);
-        @right_bond_strength{@q} = (STRONG) x scalar(@q);
+        $left_bond_strength{$_}  = WEAK   for (@q);
+        $right_bond_strength{$_} = STRONG for (@q);
 
         # Set bond strengths of certain keywords
         # make 'or', 'err', 'and' slightly weaker than a ','
@@ -6489,13 +6476,13 @@ EOM
         $left_bond_strength{'xor'} = VERY_WEAK - 0.01;
 
         @q = qw( ne eq );
-        @left_bond_strength{@q} = (NOMINAL) x scalar(@q);
+        $left_bond_strength{$_} = NOMINAL for (@q);
 
         @q = qw( lt gt le ge );
-        @left_bond_strength{@q} = ( 0.9 * NOMINAL + 0.1 * STRONG ) x scalar(@q);
+        $left_bond_strength{$_} = ( 0.9 * NOMINAL + 0.1 * STRONG ) for (@q);
 
         @q = qw( and or err xor ne eq );
-        @right_bond_strength{@q} = (NOMINAL) x scalar(@q);
+        $right_bond_strength{$_} = NOMINAL for (@q);
 
         $right_bond_strength{'{'} = WEAK;
         $left_bond_strength{'{'}  = VERY_STRONG;
@@ -7285,7 +7272,7 @@ sub bad_pattern {
     # Add keywords here which really should not be cuddled
     BEGIN {
         my @q = qw( if unless for foreach while );
-        @no_cuddle{@q} = (1) x scalar(@q);
+        $no_cuddle{$_} = 1 for (@q);
     }
 
     sub prepare_cuddled_block_types {
@@ -7672,7 +7659,7 @@ sub make_sub_matching_pattern {
         # $ASUB_PATTERN - with a regex (old method, slow)
         # %matches_ASUB - with a hash lookup (new method, faster)
 
-        @matches_ASUB{@words} = (1) x scalar(@words);
+        $matches_ASUB{$_} = 1 for (@words);
         my $alias_list = join '|', keys %matches_ASUB;
         $SUB_PATTERN  =~ s/sub/\($alias_list\)/;
         $ASUB_PATTERN =~ s/sub/\($alias_list\)/;
@@ -7992,10 +7979,10 @@ sub initialize_keep_old_blank_lines_hash {
     my %bottom;
 
     my @q = qw( }b {b cb );
-    @top{@q} = (1) x scalar(@q);
+    $top{$_} = 1 for (@q);
 
     @q = qw( b{ b} bs bp bc );
-    @bottom{@q} = (1) x scalar(@q);
+    $bottom{$_} = 1 for (@q);
 
     my @unknown_types;
 
@@ -9121,7 +9108,7 @@ my %is_loop_type;
 
 BEGIN {
     my @q = qw( for foreach while do until );
-    @is_loop_type{@q} = (1) x scalar(@q);
+    $is_loop_type{$_} = 1 for (@q);
 }
 
 sub find_level_info {
@@ -9259,10 +9246,10 @@ sub find_loop_label {
 
     BEGIN {
         my @q = (qw( && || ||= &&= ? <<= >>= ));
-        @is_mccabe_logic_operator{@q} = (1) x scalar(@q);
+        $is_mccabe_logic_operator{$_} = 1 for (@q);
 
         @q = (qw( and or xor if else elsif unless until while for foreach ));
-        @is_mccabe_logic_keyword{@q} = (1) x scalar(@q);
+        $is_mccabe_logic_keyword{$_} = 1 for (@q);
     } ## end BEGIN
 
     sub find_mccabe_count {
@@ -9894,7 +9881,7 @@ sub scan_hash_keys {
     # See https://perldoc.perl.org/perlref
     my %is_typeglob_slot_key;
     my @q = qw( SCALAR ARRAY HASH CODE IO FILEHANDLE GLOB FORMAT NAME PACKAGE );
-    @is_typeglob_slot_key{@q} = (1) x scalar(@q);
+    $is_typeglob_slot_key{$_} = 1 for (@q);
 
     # Table of keys of hashes which are always available
     my %is_fixed_key = (
@@ -10753,7 +10740,7 @@ EOM
     my %is_special_check_type = ( %is_opening_type, %is_closing_type );
     @q = qw( => Q q k U w h ; );
     push @q, ',';
-    @is_special_check_type{@q} = (1) x scalar(@q);
+    $is_special_check_type{$_} = 1 for (@q);
 
     # Values defined during token scan:
     my @K_start_qw_list;
@@ -10766,7 +10753,7 @@ EOM
     my %is_GetOptions_call_by_seqno;
     my %is_GetOptions_call;
     @q = qw( GetOptions GetOptionsFromArray GetOptionsFromString );
-    @is_GetOptions_call{@q} = (1) x scalar(@q);
+    $is_GetOptions_call{$_} = 1 for (@q);
 
     #----------------------------------------------------------------
     # PHASE 1: loop over all tokens to find hash keys and save quotes
@@ -11987,12 +11974,12 @@ sub set_ci {
     # with a similar name (removed '?' and ':' to fix t007 and others)
     my %is_logical_container_for_ci;
     my @q = qw# if elsif unless while and or err not && | || ! #;
-    @is_logical_container_for_ci{@q} = (1) x scalar(@q);
+    $is_logical_container_for_ci{$_} = 1 for (@q);
 
     # This is slightly different from a tokenizer hash with a similar name:
     my %is_container_label_type_for_ci;
     @q = qw# k && | || ? : ! #;
-    @is_container_label_type_for_ci{@q} = (1) x scalar(@q);
+    $is_container_label_type_for_ci{$_} = 1 for (@q);
 
     # Undo ci of closing list paren followed by these binary operators:
     # - initially defined for issue t027, then
@@ -12004,12 +11991,12 @@ sub set_ci {
     #   See also @is_binary_type
     my %bin_op_type;
     @q = qw# . ** -> + - / * = != ^ < > % >= <= =~ !~ <=> x #;
-    @bin_op_type{@q} = (1) x scalar(@q);
+    $bin_op_type{$_} = 1 for (@q);
 
     my %is_list_end_type;
     @q = qw( ; { } );
     push @q, ',';
-    @is_list_end_type{@q} = (1) x scalar(@q);
+    $is_list_end_type{$_} = 1 for (@q);
 
     my $rLL    = $self->[_rLL_];
     my $Klimit = $self->[_Klimit_];
@@ -15077,7 +15064,7 @@ EOM
 
         my %is_exempted_global_name;
         my @q = qw( $VERSION @EXPORT @EXPORT_OK %EXPORT_TAGS @ISA $AUTOLOAD );
-        @is_exempted_global_name{@q} = (1) x scalar(@q);
+        $is_exempted_global_name{$_} = 1 for (@q);
 
         @warnings =
           sort { $a->{K} <=> $b->{K} || $a->{letter} cmp $b->{letter} }
@@ -15161,7 +15148,7 @@ sub initialize_warn_hash {
     return $rwarn_hash unless ($user_option_string);
 
     my %is_valid_option;
-    @is_valid_option{ @{$rall_opts} } = (1) x scalar( @{$rall_opts} );
+    $is_valid_option{$_} = 1 for ( @{$rall_opts} );
 
     # allow comma separators
     $user_option_string =~ s/,/ /g;
@@ -15501,7 +15488,7 @@ sub dump_keyword_usage {
                 }
             );
 
-            @dump_keyword_usage_list{@q} = (1) x scalar(@q);
+            $dump_keyword_usage_list{$_} = 1 for (@q);
             $include_all_keywords = $dump_keyword_usage_list{'*'};
         }
     }
@@ -15653,7 +15640,7 @@ sub dump_mixed_call_parens {
     my %skip_keywords;
     my @q = qw( my our local state
       and cmp continue do else elsif eq ge gt le lt ne not or xor );
-    @skip_keywords{@q} = (1) x scalar(@q);
+    $skip_keywords{$_} = 1 for (@q);
 
     my %call_counts;
     foreach my $KK ( 0 .. @{$rLL} - 1 ) {
@@ -15752,7 +15739,7 @@ sub initialize_call_paren_style {
                     Warn("'$word' occurs in both -nwcp and -wcp, using -wcp\n");
                 }
             }
-            @call_paren_style{@q} = ($iter) x scalar(@q);
+            $call_paren_style{$_} = $iter for (@q);
         }
     }
     return;
@@ -16308,26 +16295,26 @@ BEGIN {
 
     # added 'U' to fix cases b1125 b1126 b1127
     my @q = qw( w U );
-    @wU{@q} = (1) x scalar(@q);
+    $wU{$_} = 1 for (@q);
 
     @q = qw( w i q Q G C Z );
-    @wiq{@q} = (1) x scalar(@q);
+    $wiq{$_} = 1 for (@q);
 
     @q = qw( w i t );    # for c250: added new types 'P', 'S', formerly 'i'
-    @is_wit{@q} = (1) x scalar(@q);
+    $is_wit{$_} = 1 for (@q);
 
     # Parens following these keywords will not be marked as lists. Note that
     # 'for' is not included and is handled separately, by including 'f' in the
     # hash %is_counted_type, since it may or may not be a c-style for loop.
     @q = qw( if elsif unless and or );
-    @is_nonlist_keyword{@q} = (1) x scalar(@q);
+    $is_nonlist_keyword{$_} = 1 for (@q);
 
     # Parens following these types will not be marked as lists
     @q = qw( && || );
-    @is_nonlist_type{@q} = (1) x scalar(@q);
+    $is_nonlist_type{$_} = 1 for (@q);
 
     @q = qw( = == != );
-    @is_unexpected_equals{@q} = (1) x scalar(@q);
+    $is_unexpected_equals{$_} = 1 for (@q);
 
     # We can always skip expensive length_function->() calls for these
     # ascii token types
@@ -16343,7 +16330,7 @@ BEGIN {
       ? : . < > ^ &
       #;
     push @q, ',';
-    @is_ascii_type{@q} = (1) x scalar(@q);
+    $is_ascii_type{$_} = 1 for (@q);
 
 } ## end BEGIN
 
@@ -18424,7 +18411,7 @@ my %is_b_i_h;
 
 BEGIN {
     my @q = qw( b i h );
-    @is_b_i_h{@q} = (1) x scalar(@q);
+    $is_b_i_h{$_} = 1 for (@q);
 }
 
 sub add_trailing_comma {
@@ -18867,7 +18854,7 @@ my %is_not_list_paren;
 BEGIN {
     ## trailing comma logic ignores opening parens preceded by these tokens
     my @q = qw# if elsif unless while and or err not && | || ? : ! . #;
-    @is_not_list_paren{@q} = (1) x scalar(@q);
+    $is_not_list_paren{$_} = 1 for (@q);
 }
 
 sub match_trailing_comma_rule {
@@ -19791,12 +19778,12 @@ BEGIN {
       ref     scalar  shift   sin    sqrt     srand
       state   uc      ucfirst undef  xor
     );
-    @is_non_interfering_keyword{@q} = (1) x scalar(@q);
+    $is_non_interfering_keyword{$_} = 1 for (@q);
 
     # Builtin keywords possibly taking multiple parameters but returning a
     # scalar value. These can be handled if the args are in parens.
     @q = qw( substr join atan2 );
-    @is_keyword_returning_scalar{@q} = (1) x scalar(@q);
+    $is_keyword_returning_scalar{$_} = 1 for (@q);
 }
 
 sub count_list_elements {
@@ -20257,11 +20244,11 @@ my %is_array_sigil;
 
 BEGIN {
     my @q = qw( shift pop );
-    @is_shift_pop{@q}    = (1) x scalar(@q);
+    $is_shift_pop{$_}    = 1 for (@q);
     @q                   = qw( $ * & );
-    @is_scalar_sigil{@q} = (1) x scalar(@q);
+    $is_scalar_sigil{$_} = 1 for (@q);
     @q                   = qw( @ % );
-    @is_array_sigil{@q}  = (1) x scalar(@q);
+    $is_array_sigil{$_}  = 1 for (@q);
 }
 
 sub count_prototype_args {
@@ -23779,11 +23766,11 @@ BEGIN {
 
     # types needed for welding RULE 6
     my @q = qw# => -> { ( [ #;
-    @type_ok_after_bareword{@q} = (1) x scalar(@q);
+    $type_ok_after_bareword{$_} = 1 for (@q);
 
     # these types do not 'like' to be separated from a following paren
     @q = qw( w i q Q G C Z U );
-    @has_tight_paren{@q} = (1) x scalar(@q);
+    $has_tight_paren{$_} = 1 for (@q);
 } ## end BEGIN
 
 use constant DEBUG_WELD => 0;
@@ -26339,7 +26326,7 @@ my %is_handle_type;
 
 BEGIN {
     my @q = qw( w C U G i k => );
-    @is_handle_type{@q} = (1) x scalar(@q);
+    $is_handle_type{$_} = 1 for (@q);
 
     my $i = 0;
     use constant {
@@ -30206,7 +30193,7 @@ my %is_brace_semicolon_colon;
 
 BEGIN {
     my @q = qw( { } ; : );
-    @is_brace_semicolon_colon{@q} = (1) x scalar(@q);
+    $is_brace_semicolon_colon{$_} = 1 for (@q);
 }
 
 sub starting_one_line_block {
@@ -30741,7 +30728,7 @@ sub compare_indentation_levels {
         my @q = @all_operators;
 
         push @q, ',';
-        @break_before_or_after_token{@q} = (1) x scalar(@q);
+        $break_before_or_after_token{$_} = 1 for (@q);
     } ## end BEGIN
 
     sub set_fake_breakpoint {
@@ -31107,7 +31094,7 @@ EOM
     BEGIN {
         my @q = qw# L { ( [ R ] ) } ? : f => #;
         push @q, ',';
-        @quick_filter{@q} = (1) x scalar(@q);
+        $quick_filter{$_} = 1 for (@q);
     }
 
     sub grind_batch_of_CODE {
@@ -32094,8 +32081,8 @@ sub break_method_call_chains {
     # See if these are part of a call chain
     my @insert_list;
     my %is_end_i;
-    @is_end_i{ @{$ri_left} }  = (1) x scalar( @{$ri_left} );
-    @is_end_i{ @{$ri_right} } = (1) x scalar( @{$ri_right} );
+    $is_end_i{$_} = 1 for ( @{$ri_left} );
+    $is_end_i{$_} = 1 for ( @{$ri_right} );
     my $one = !$want_break_before{'->'} ? 0 : 1;
     foreach my $ii (@i_arrow_breaks) {
 
@@ -32419,13 +32406,13 @@ EOM
         # all cases break on seeing commas at same level
         my @q = qw( => );
         push @q, ',';
-        @{$ris_comma_token}{@q} = (1) x scalar(@q);
+        $ris_comma_token->{$_} = 1 for (@q);
 
         # Non-ternary text also breaks on seeing any of qw(? : || or )
         # Example: we would not want to break at any of these .'s
         #  : "<A HREF=\"#item_" . htmlify( 0, $s2 ) . "\">$str</A>"
         push @q, qw( or || ? : );
-        @{$ris_break_token}{@q} = (1) x scalar(@q);
+        $ris_break_token->{$_} = 1 for (@q);
     } ## end BEGIN
 
     sub in_same_container_i {
@@ -32636,16 +32623,16 @@ sub break_equals {
 
         my @q;
         @q = qw( && || );
-        @is_amp_amp{@q} = (1) x scalar(@q);
+        $is_amp_amp{$_} = 1 for (@q);
 
         @q = qw( + - * / );
-        @is_math_op{@q} = (1) x scalar(@q);
+        $is_math_op{$_} = 1 for (@q);
 
         @q = qw( + - );
-        @is_plus_minus{@q} = (1) x scalar(@q);
+        $is_plus_minus{$_} = 1 for (@q);
 
         @q = qw( * / );
-        @is_mult_div{@q} = (1) x scalar(@q);
+        $is_mult_div{$_} = 1 for (@q);
     } ## end BEGIN
 
     sub Debug_dump_breakpoints {
@@ -35327,7 +35314,7 @@ my %is_dot_and_or;
 
 BEGIN {
     my @q = qw( . && || );
-    @is_dot_and_or{@q} = (1) x scalar(@q);
+    $is_dot_and_or{$_} = 1 for (@q);
 }
 
 sub break_lines_inner_loop {
@@ -36137,7 +36124,7 @@ sub do_colon_breaks {
 
         my @q = qw# k R } ) ] Y Z U w i q Q .
           = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x= #;
-        @is_uncontained_comma_break_included_type{@q} = (1) x scalar(@q);
+        $is_uncontained_comma_break_included_type{$_} = 1 for (@q);
     } ## end BEGIN
 
     sub do_uncontained_comma_breaks {
@@ -36307,18 +36294,18 @@ EOM
 
     BEGIN {
         my @q = qw# if elsif unless while and or err not && | || ? : ! #;
-        @is_logical_container{@q} = (1) x scalar(@q);
+        $is_logical_container{$_} = 1 for (@q);
 
         # Filters to allow most tokens to skip past tedious if-elsif blocks
         %quick_filter_A     = %is_assignment;
         @q                  = qw( || && f k );
-        @quick_filter_A{@q} = (1) x scalar(@q);
+        $quick_filter_A{$_} = 1 for (@q);
 
         %quick_filter_B = %is_assignment;
         @q              = qw# => . ; < > ~ #;
         push @q, ',';
         push @q, 'f';    # added for ';' for issue c154
-        @quick_filter_B{@q} = (1) x scalar(@q);
+        $quick_filter_B{$_} = 1 for (@q);
 
     } ## end BEGIN
 
@@ -36904,14 +36891,14 @@ EOM
         # b1450: old breaks at 'eq' and related operators are poor
         my @q = qw( == <= >= != );
 
-        @poor_types{@q}       = (1) x scalar(@q);
-        @poor_next_types{@q}  = (1) x scalar(@q);
+        $poor_types{$_}       = 1 for (@q);
+        $poor_next_types{$_}  = 1 for (@q);
         $poor_types{'L'}      = 1;
         $poor_next_types{'R'} = 1;
 
         @q                      = qw( eq ne le ge lt gt );
-        @poor_keywords{@q}      = (1) x scalar(@q);
-        @poor_next_keywords{@q} = (1) x scalar(@q);
+        $poor_keywords{$_}      = 1 for (@q);
+        $poor_next_keywords{$_} = 1 for (@q);
     } ## end BEGIN
 
     sub examine_old_breakpoint {
@@ -37804,12 +37791,12 @@ BEGIN {
 
     # Added 'w' to fix b1172
     my @q = qw( k w i Z -> );
-    @is_kwiZ{@q} = (1) x scalar(@q);
+    $is_kwiZ{$_} = 1 for (@q);
 
     # added = for b1211
     @q = qw< ( [ { L R } ] ) = b >;
     push @q, ',';
-    @is_key_type{@q} = (1) x scalar(@q);
+    $is_key_type{$_} = 1 for (@q);
 } ## end BEGIN
 
 use constant DEBUG_FIND_START => 0;
@@ -39648,12 +39635,12 @@ sub get_available_spaces_to_go {
 
     BEGIN {
         my @q = qw< } ) ] >;
-        @hash_test1{@q} = (1) x scalar(@q);
+        $hash_test1{$_} = 1 for (@q);
         @q = qw( : ? f );
         push @q, ',';
-        @hash_test2{@q} = (1) x scalar(@q);
+        $hash_test2{$_} = 1 for (@q);
         @q              = qw( . || && );
-        @hash_test3{@q} = (1) x scalar(@q);
+        $hash_test3{$_} = 1 for (@q);
     } ## end BEGIN
 
     # shared variables, re-initialized for each batch
@@ -41459,24 +41446,24 @@ EOM
           = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
           { ? : => && || ~~ !~~ =~ !~ // <=> -> ^^= A
           #;
-        @is_vertical_alignment_type{@q} = (1) x scalar(@q);
+        $is_vertical_alignment_type{$_} = 1 for (@q);
 
         # These 'tokens' are not aligned. We need this to remove [
         # from the above list because it has type ='{'
         @q = qw( [ );
-        @is_not_vertical_alignment_token{@q} = (1) x scalar(@q);
+        $is_not_vertical_alignment_token{$_} = 1 for (@q);
 
         # these are the only types aligned at a line end
         @q = qw( && || => );
-        @is_terminal_alignment_type{@q} = (1) x scalar(@q);
+        $is_terminal_alignment_type{$_} = 1 for (@q);
 
         # these tokens only align at line level
         @q = ( '{', '(' );
-        @is_low_level_alignment_token{@q} = (1) x scalar(@q);
+        $is_low_level_alignment_token{$_} = 1 for (@q);
 
         # eq and ne were removed from this list to improve alignment chances
         @q = qw( if unless and or err for foreach while until );
-        @is_vertical_alignment_keyword{@q} = (1) x scalar(@q);
+        $is_vertical_alignment_keyword{$_} = 1 for (@q);
     } ## end BEGIN
 
     # These are the main return variables. They are closure variables
@@ -41630,7 +41617,7 @@ EOM
 
     BEGIN {
         my @q = qw( . ? : );
-        @is_dot_question_colon{@q} = (1) x scalar(@q);
+        $is_dot_question_colon{$_} = 1 for (@q);
     }
 
     sub set_vertical_alignment_markers_token_loop {
@@ -42545,7 +42532,7 @@ sub undo_contained_ci {
     BEGIN {
 
         my @q = qw( + - * / );
-        @is_math_op{@q} = (1) x scalar(@q);
+        $is_math_op{$_} = 1 for (@q);
     }
 
     sub set_logical_padding {
@@ -44990,7 +44977,7 @@ my %is_uncovered_operator;
 # b1060, b1499
 BEGIN {
     my @q = qw( ? : && || );
-    @is_uncovered_operator{@q} = (1) x scalar(@q);
+    $is_uncovered_operator{$_} = 1 for (@q);
 }
 
 sub set_vertical_tightness_flags {
