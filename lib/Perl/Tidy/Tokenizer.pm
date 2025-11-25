@@ -217,7 +217,7 @@ BEGIN {
         _in_end_                             => $i++,
         _in_format_                          => $i++,
         _in_error_                           => $i++,
-        _in_trouble_                         => $i++,
+        _do_not_format_                      => $i++,
         _warning_count_                      => $i++,
         _html_tag_count_                     => $i++,
         _in_pod_                             => $i++,
@@ -598,7 +598,7 @@ EOM
     # _in_code_skipping_     flag set if we are in a code skipping section
     # _in_format_skipping_   flag set if we are in a format skipping section
     # _in_error_             flag set if we saw severe error (binary in script)
-    # _in_trouble_           set if we saw a troublesome lexical like 'my sub s'
+    # _do_not_format_        flag set if formatting should be skipped
     # _warning_count_        number of calls to logger sub warning
     # _html_tag_count_       number of apparent html tags seen (indicates html)
     # _in_data_              flag set if we are in __DATA__ section
@@ -621,7 +621,7 @@ EOM
     $self->[_in_end_]               = 0;
     $self->[_in_format_]            = 0;
     $self->[_in_error_]             = 0;
-    $self->[_in_trouble_]           = 0;
+    $self->[_do_not_format_]        = 0;
     $self->[_warning_count_]        = 0;
     $self->[_html_tag_count_]       = 0;
     $self->[_in_pod_]               = 0;
@@ -822,14 +822,13 @@ sub warning {
     return;
 } ## end sub warning
 
-sub warning_no_format {
+sub warning_do_not_format {
     my ( $self, $msg ) = @_;
 
-    # Issue a warning message and also set a flag to prevent formatting
-    # this file.
+    # Issue a warning message and set a flag to skip formatting this file.
     $self->warning($msg);
-    $self->[_in_trouble_] = 1;
-} ## end sub warning_no_format
+    $self->[_do_not_format_] = 1;
+} ## end sub warning_do_not_format
 
 sub get_input_stream_name {
 
@@ -953,11 +952,11 @@ sub report_tokenization_errors {
     # set severe error flag if tokenizer has encountered file reading problems
     # (i.e. unexpected binary characters)
     # or code which may not be formatted correctly (such as 'my sub q')
-    # The difference between _in_error_ and _in_trouble_ is that
+    # The difference between _in_error_ and _do_not_format_ is that
     # _in_error_ stops the tokenizer immediately whereas
-    # _in_trouble_ lets the tokenizer finish so that all errors are seen
+    # _do_not_format_ lets the tokenizer finish so that all errors are seen
     # Both block formatting and cause the input stream to be output verbatim.
-    my $severe_error = $self->[_in_error_] || $self->[_in_trouble_];
+    my $severe_error = $self->[_in_error_] || $self->[_do_not_format_];
 
     # And do not format if it looks like an html file (c209)
     $severe_error ||= $self->[_html_tag_count_] && $self->[_warning_count_];
@@ -4743,7 +4742,7 @@ EOM
               )
             {
                 ## prevent formatting and avoid instability (b1553)
-                $self->warning_no_format(
+                $self->warning_do_not_format(
                     "expecting '$tok' to follow one of 'if|elsif|unless'\n");
             }
         }
@@ -4770,7 +4769,7 @@ EOM
               )
             {
                 ## prevent formatting and avoid instability (b1553)
-                $self->warning_no_format(
+                $self->warning_do_not_format(
 "expecting '$tok' to follow one of 'if|elsif|unless|case|when'\n"
                 );
             }
@@ -6039,7 +6038,7 @@ EOM
                     && $rformat_skipping_list->[-1]->[0] == $on_off )
                 {
                     my $lno_last = $rformat_skipping_list->[-1]->[1];
-                    $self->warning_no_format(
+                    $self->warning_do_not_format(
 "consecutive format-skipping start markers - see line $lno_last\n"
                     );
                 }
@@ -6066,7 +6065,7 @@ EOM
                     && $rformat_skipping_list->[-1]->[0] == $on_off )
                 {
                     my $lno_last = $rformat_skipping_list->[-1]->[1];
-                    $self->warning_no_format(
+                    $self->warning_do_not_format(
 "consecutive format-skipping end markers - see line $lno_last\n"
                     );
                 }
@@ -10039,7 +10038,7 @@ EOM
                     ## OLD CODING, before improved handling of lexical subs:
                     ## This may end badly, it is safest to avoid formatting.
                     ## For an example, see perl527/lexsub.t (issue c203)
-                    ## $self->[_in_trouble_] = 1;
+                    ## $self->[_do_not_format_] = 1;
                 }
             }
             else {
