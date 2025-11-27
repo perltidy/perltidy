@@ -23454,31 +23454,18 @@ sub find_nested_pairs {
     return unless ( defined($rLL) && @{$rLL} );
     my $Num = @{$rLL};
 
-    my $K_opening_container  = $self->[_K_opening_container_];
-    my $K_closing_container  = $self->[_K_closing_container_];
-    my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
-    my $rK_next_seqno_by_K   = $self->[_rK_next_seqno_by_K_];
+    my $K_closing_container = $self->[_K_closing_container_];
 
     # We define an array of pairs of nested containers
     my @nested_pairs;
-
-    # Names of calling routines can either be marked as 'i' or 'w',
-    # and they may invoke a sub call with an '->'. We will consider
-    # any consecutive string of such types as a single unit when making
-    # weld decisions.  We also allow a leading !
-    my $is_name_type = {
-        'i'  => 1,
-        'w'  => 1,
-        'U'  => 1,
-        '->' => 1,
-        '!'  => 1,
-    };
 
     # Loop over all closing container tokens
     foreach my $inner_seqno ( keys %{$K_closing_container} ) {
         my $K_inner_closing = $K_closing_container->{$inner_seqno};
 
-        # See if it is immediately followed by another, outer closing token
+        #----------------------------------------
+        # STEP 1: Look for nesting closing tokens
+        #----------------------------------------
         my $K_outer_closing = $K_inner_closing + 1;
         $K_outer_closing += 1
           if ( $K_outer_closing < $Num
@@ -23487,6 +23474,13 @@ sub find_nested_pairs {
         next if ( $K_outer_closing >= $Num );
         my $outer_seqno = $rLL->[$K_outer_closing]->[_TYPE_SEQUENCE_];
         next if ( !$outer_seqno );
+
+        # Require sequence numbers which differ by no more than 2.
+        # The only weld case where the diff is not 1 is where there is
+        # a sub signature.
+        my $diff = $inner_seqno - $outer_seqno;
+        next if ( $diff < 1 || $diff > 2 );
+
         my $token_outer_closing = $rLL->[$K_outer_closing]->[_TOKEN_];
         next if ( !$is_closing_token{$token_outer_closing} );
 
@@ -23496,11 +23490,69 @@ sub find_nested_pairs {
             next if ( $rtype_count->{','} || $rtype_count->{';'} );
         }
 
-        # Now we have to check the opening tokens.
+        #---------------------------------------------------
+        # STEP 2: Look for sufficiently close opening tokens
+        #---------------------------------------------------
+        my $weld_ok = $self->weld_opening_check( $inner_seqno, $outer_seqno );
+        if ($weld_ok) {
+            push @nested_pairs,
+              [ $inner_seqno, $outer_seqno, $K_inner_closing ];
+        }
+    }
+
+    #------------------------------------
+    # Make the final list of nested pairs
+    #------------------------------------
+
+    # The weld routine expects the pairs in order in the form
+    #   [$seqno_inner, $seqno_outer]
+    # And they must be in the same order as the inner closing tokens
+    # (otherwise, welds of three or more adjacent tokens will not work).  The K
+    # value of this inner closing token has temporarily been stored for
+    # sorting.
+    @nested_pairs =
+
+      # Drop the K index after sorting (it would cause trouble downstream)
+      map { [ $_->[0], $_->[1] ] }
+
+      # Sort on the K values
+      sort { $a->[2] <=> $b->[2] } @nested_pairs;
+
+    return \@nested_pairs;
+} ## end sub find_nested_pairs
+
+{    ## BEGIN closure weld_opening_check
+
+    # Names of calling routines can either be marked as 'i' or 'w',
+    # and they may invoke a sub call with an '->'. We will consider
+    # any consecutive string of such types as a single unit when making
+    # weld decisions.  We also allow a leading !
+    my %is_name_type = map { $_ => 1 } qw( i w U -> ! );
+
+    sub weld_opening_check {
+
+        my ( $self, $inner_seqno, $outer_seqno ) = @_;
+
+        # Look at a pair of opening tokens and see if a weld is possible.
+        # The corresponding closing tokens should have already been checked
+        # and found to be nesting.
+
+        # Given:
+        #  ($inner_seqno, $outer_seqno) = pair of sequence numbers to test
+        # Return:
+        #   false if weld not possible
+        #   true if weld is possible
+
+        my $rLL                  = $self->[_rLL_];
+        my $K_opening_container  = $self->[_K_opening_container_];
+        my $K_closing_container  = $self->[_K_closing_container_];
+        my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
+        my $rK_next_seqno_by_K   = $self->[_rK_next_seqno_by_K_];
+
         my $K_outer_opening = $K_opening_container->{$outer_seqno};
         my $K_inner_opening = $K_opening_container->{$inner_seqno};
-        next if ( !defined($K_outer_opening) );
-        next if ( !defined($K_inner_opening) );
+        return if ( !defined($K_outer_opening) );
+        return if ( !defined($K_inner_opening) );
 
         my $inner_blocktype = $rblock_type_of_seqno->{$inner_seqno};
         my $outer_blocktype = $rblock_type_of_seqno->{$outer_seqno};
@@ -23508,7 +23560,7 @@ sub find_nested_pairs {
         # Verify that the inner opening token is the next container after the
         # outer opening token.
         my $K_io_check = $rK_next_seqno_by_K->[$K_outer_opening];
-        next unless ( defined($K_io_check) );
+        return unless ( defined($K_io_check) );
         if ( $K_io_check != $K_inner_opening ) {
 
             # The inner opening container does not immediately follow the outer
@@ -23527,14 +23579,14 @@ sub find_nested_pairs {
             #   | |
             #  ic oc
 
-            next if ( !$inner_blocktype || $inner_blocktype ne 'sub' );
-            next if ( $rLL->[$K_io_check]->[_TOKEN_] ne '(' );
+            return if ( !$inner_blocktype || $inner_blocktype ne 'sub' );
+            return if ( $rLL->[$K_io_check]->[_TOKEN_] ne '(' );
             my $seqno_signature = $rLL->[$K_io_check]->[_TYPE_SEQUENCE_];
-            next unless ( defined($seqno_signature) );
+            return unless ( defined($seqno_signature) );
             my $K_signature_closing = $K_closing_container->{$seqno_signature};
-            next unless ( defined($K_signature_closing) );
+            return unless ( defined($K_signature_closing) );
             my $K_test = $rK_next_seqno_by_K->[$K_signature_closing];
-            next
+            return
               unless ( defined($K_test) && $K_test == $K_inner_opening );
 
             # OK, we have arrived at 'io' in the above diagram.  We should put
@@ -23551,15 +23603,14 @@ sub find_nested_pairs {
             # in the signature.
 
             my $Kdiff = $K_signature_closing - $K_io_check;
-            next if ( $Kdiff > 4 );
+            return if ( $Kdiff > 4 );
 
             # backup comma count test; but we cannot get here with Kdiff<=4
             my $rtc = $self->[_rtype_count_by_seqno_]->{$seqno_signature};
-            next if ( $rtc && $rtc->{','} );
+            return if ( $rtc && $rtc->{','} );
         }
 
-        # Yes .. this is a possible nesting pair.
-        # They can be separated by a small amount.
+        # The two opening tokens can be separated by a small amount.
         my $K_diff = $K_inner_opening - $K_outer_opening;
 
         # Count the number of nonblank characters separating them.
@@ -23572,7 +23623,7 @@ sub find_nested_pairs {
               && Fault(
 "unexpected negative index diff=$K_diff = Kio-Koo =$K_inner_opening - $K_outer_opening"
               );
-            next;
+            return;
         }
         my $nonblank_count = 0;
         my $type;
@@ -23598,7 +23649,7 @@ sub find_nested_pairs {
             my $last_is_name = $is_name;
             $type = $rLL->[$Kn]->[_TYPE_];
             if ( $type eq '#' ) { $saw_comment = 1; last }
-            $is_name = $is_name_type->{$type};
+            $is_name = $is_name_type{$type};
             next if ( $is_name && $last_is_name );
 
             # do not count a possible leading - of bareword hash key
@@ -23609,7 +23660,7 @@ sub find_nested_pairs {
         }
 
         # Do not weld across a comment .. fix for c058.
-        next if ($saw_comment);
+        return if ($saw_comment);
 
         # Patch for b1104: do not weld to a paren preceded by sort/map/grep
         # because the special line break rules may cause a blinking state
@@ -23625,58 +23676,33 @@ sub find_nested_pairs {
 
         my $token_oo = $rLL->[$K_outer_opening]->[_TOKEN_];
 
-        if (
+        return (
 
             # 1: adjacent opening containers, like: do {{
             $nonblank_count == 1
 
-            # 2. anonymous sub + prototype or sig:  )->then( sub ($code) {
-            # ... but it seems best not to stack two structural blocks, like
-            # this
-            #    sub make_anon_with_my_sub { sub {
-            # because it probably hides the structure a little too much.
-            || (   $inner_blocktype
+              # 2. anonymous sub + prototype or sig:  )->then( sub ($code) {
+              # ... but it seems best not to stack two structural blocks, like
+              # this
+              #    sub make_anon_with_my_sub { sub {
+              # because it probably hides the structure a little too much.
+              || ( $inner_blocktype
                 && $inner_blocktype eq 'sub'
                 && $rLL->[$Kn_first]->[_TOKEN_] eq 'sub'
                 && !$outer_blocktype )
 
-            # 3. short item following opening paren, like:  fun( yyy (
-            || $nonblank_count == 2 && $token_oo eq '('
+              # 3. short item following opening paren, like:  fun( yyy (
+              || $nonblank_count == 2 && $token_oo eq '('
 
-            # 4. weld around fat commas, if requested (git #108), such as
-            #     elf->call_method( method_name_foo => {
-            || (   $type eq '=>'
+              # 4. weld around fat commas, if requested (git #108), such as
+              #     elf->call_method( method_name_foo => {
+              || ( $type eq '=>'
                 && $nonblank_count <= 3
                 && %weld_fat_comma_rules
                 && $weld_fat_comma_rules{$token_oo} )
-          )
-        {
-            push @nested_pairs,
-              [ $inner_seqno, $outer_seqno, $K_inner_closing ];
-        }
-        next;
-    }
-
-    #------------------------------------
-    # Make the final list of nested pairs
-    #------------------------------------
-
-    # The weld routine expects the pairs in order in the form
-    #   [$seqno_inner, $seqno_outer]
-    # And they must be in the same order as the inner closing tokens
-    # (otherwise, welds of three or more adjacent tokens will not work).  The K
-    # value of this inner closing token has temporarily been stored for
-    # sorting.
-    @nested_pairs =
-
-      # Drop the K index after sorting (it would cause trouble downstream)
-      map { [ $_->[0], $_->[1] ] }
-
-      # Sort on the K values
-      sort { $a->[2] <=> $b->[2] } @nested_pairs;
-
-    return \@nested_pairs;
-} ## end sub find_nested_pairs
+        );
+    } ## end sub weld_opening_check
+}    ## END closure weld_opening_check
 
 sub match_paren_control_flag {
 
