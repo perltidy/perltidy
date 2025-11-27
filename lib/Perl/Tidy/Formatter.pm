@@ -5528,14 +5528,17 @@ sub set_whitespace_flags {
                 my $wl = $want_left_space{$type};
                 my $wr = $want_right_space{$last_type};
                 if ( !defined($wl) ) {
-                    $ws = defined($wr) ? $wr : 0;
+                    $ws = defined($wr) ? $wr : WS_OPTIONAL;
                 }
-                elsif ( !defined($wr) ) {
+                elsif ( !defined($wr)
+                    || $wr == $wl
+                    || $wr == WS_OPTIONAL
+                    || $wl == WS_NO )
+                {
                     $ws = $wl;
                 }
                 else {
-                    $ws =
-                      ( ( $wl == $wr ) || ( $wl == -1 ) || !$wr ) ? $wl : $wr;
+                    $ws = $wr;
                 }
             }
         }
@@ -5559,7 +5562,7 @@ sub set_whitespace_flags {
             && $type eq 'Q'
             && $rOpts_qw_as_function )
         {
-            $ws = 1;
+            $ws = WS_YES;
         }
 
         $rwhitespace_flags->[$j] = $ws;
