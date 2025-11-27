@@ -166,7 +166,7 @@ BEGIN {
       ralignments
     );
 
-    $valid_LINE_keys{$_} = 1 for (@q);
+    $valid_LINE_keys{$_} = 1 for @q;
 
 } ## end BEGIN
 
@@ -303,14 +303,14 @@ sub check_options {
         if ( $rOpts->{'valign-inclusion-list'} ) {
             my @vil = split /\s+/, $rOpts->{'valign-inclusion-list'};
             check_valign_list_items( \@vil, 'valign-inclusion-list', 1 );
-            $valign_control_hash{$_} = 1 for (@vil);
+            $valign_control_hash{$_} = 1 for @vil;
         }
 
         # Note that the -vxl list is done after -vil, so -vxl has priority
         # in the event of duplicate entries.
         my @vxl = split /\s+/, $rOpts->{'valign-exclusion-list'};
         check_valign_list_items( \@vxl, 'valign-exclusion-list', 1 );
-        $valign_control_hash{$_} = 0 for (@vxl);
+        $valign_control_hash{$_} = 0 for @vxl;
 
         # Optimization: revert to defaults if no exclusions.
         # This could happen with -vxl='  ' and any -vil list

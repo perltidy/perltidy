@@ -496,7 +496,7 @@ sub check_options {
         # Note that 'grep-alias-list' has been preprocessed to be a trimmed,
         # space-separated list
         my @q = split /\s+/, $rOpts->{'grep-alias-list'};
-        $is_grep_alias{$_} = 1 for (@q);
+        $is_grep_alias{$_} = 1 for @q;
     }
 
     $rOpts_starting_indentation_level = $rOpts->{'starting-indentation-level'};
@@ -2426,41 +2426,41 @@ EOM
 
     my %is_logical_container;
     @q = qw( if elsif unless while and or err not && ! || for foreach );
-    $is_logical_container{$_} = 1 for (@q);
+    $is_logical_container{$_} = 1 for @q;
 
     my %is_binary_type;
     @q = qw( || && );
-    $is_binary_type{$_} = 1 for (@q);
+    $is_binary_type{$_} = 1 for @q;
 
     my %is_binary_keyword;
     @q = qw( and or err eq ne cmp );
-    $is_binary_keyword{$_} = 1 for (@q);
+    $is_binary_keyword{$_} = 1 for @q;
 
     # 'L' is token for opening { at hash key
     my %is_opening_type;
     @q = qw< L { ( [ >;
-    $is_opening_type{$_} = 1 for (@q);
+    $is_opening_type{$_} = 1 for @q;
 
     my %is_opening_or_ternary_type;
     push @q, '?';
-    $is_opening_or_ternary_type{$_} = 1 for (@q);
+    $is_opening_or_ternary_type{$_} = 1 for @q;
 
     # 'R' is token for closing } at hash key
     my %is_closing_type;
     @q = qw< R } ) ] >;
-    $is_closing_type{$_} = 1 for (@q);
+    $is_closing_type{$_} = 1 for @q;
 
     my %is_closing_or_ternary_type;
     push @q, ':';
-    $is_closing_or_ternary_type{$_} = 1 for (@q);
+    $is_closing_or_ternary_type{$_} = 1 for @q;
 
     my %is_redo_last_next_goto;
     @q = qw( redo last next goto );
-    $is_redo_last_next_goto{$_} = 1 for (@q);
+    $is_redo_last_next_goto{$_} = 1 for @q;
 
     my %is_use_require;
     @q = qw( use require );
-    $is_use_require{$_} = 1 for (@q);
+    $is_use_require{$_} = 1 for @q;
 
     # This hash holds the array index in $self for these keywords:
     # Fix for issue c035: removed 'format' from this hash
@@ -2472,7 +2472,7 @@ EOM
     my %is_list_end_type;
     @q = qw( ; { } );
     push @q, COMMA;
-    $is_list_end_type{$_} = 1 for (@q);
+    $is_list_end_type{$_} = 1 for @q;
 
     # table showing how many quoted things to look for after quote operator..
     # s, y, tr have 2 (pattern and replacement)
@@ -2491,7 +2491,7 @@ EOM
 
     my %is_for_foreach;
     @q = qw( for foreach );
-    $is_for_foreach{$_} = 1 for (@q);
+    $is_for_foreach{$_} = 1 for @q;
 
     # These keywords may introduce blocks after parenthesized expressions,
     # in the form:
@@ -2500,11 +2500,11 @@ EOM
     my %is_blocktype_with_paren;
     @q =
       qw(if elsif unless while until for foreach switch case given when catch);
-    $is_blocktype_with_paren{$_} = 1 for (@q);
+    $is_blocktype_with_paren{$_} = 1 for @q;
 
     my %is_case_default;
     @q = qw( case default );
-    $is_case_default{$_} = 1 for (@q);
+    $is_case_default{$_} = 1 for @q;
 
     #------------------------
     # end of tokenizer hashes
@@ -3184,7 +3184,7 @@ EOM
           ^= &&= ||= //= <=>
           #;
         push @qZ, COMMA;
-        $Z_test_hash{$_} = 1 for (@qZ);
+        $Z_test_hash{$_} = 1 for @qZ;
     }
 
     sub do_DOLLAR_SIGN {
@@ -5062,22 +5062,22 @@ EOM
 
     BEGIN {
         my @qz = qw( w i U C );
-        $is_wiUC{$_} = 1 for (@qz);
+        $is_wiUC{$_} = 1 for @qz;
 
         @qz = qw( use require no );
-        $is_use_require_no{$_} = 1 for (@qz);
+        $is_use_require_no{$_} = 1 for @qz;
 
         # These pre-token types after a bareword imply that it
         # is not a constant, except when '(' is followed by ')'.
         @qz = qw# ( [ { $ @ " ' m #;
-        $is_function_follower{$_} = 1 for (@qz);
+        $is_function_follower{$_} = 1 for @qz;
 
         # These pre-token types after a bareword imply that it
         # MIGHT be a constant, but it also might be a function taking
         # 0 or more call args.
         @qz = qw# ; ) ] } if unless #;
         push @qz, COMMA;
-        $is_constant_follower{$_} = 1 for (@qz);
+        $is_constant_follower{$_} = 1 for @qz;
     }
 
     sub do_BAREWORD {
@@ -5894,7 +5894,7 @@ EOM
 
     BEGIN {
         my @qZ = qw( -> Z );
-        $is_arrow_or_Z{$_} = 1 for (@qZ);
+        $is_arrow_or_Z{$_} = 1 for @qZ;
     }
 
     sub tokenize_this_line {
@@ -6957,7 +6957,7 @@ BEGIN {
     push @q, COMMA;
     push @q, '(';         # for completeness, not currently a token type
     push @q, '->';        # was previously in UNKNOWN
-    $op_expected_table{$_} = TERM for (@q);
+    $op_expected_table{$_} = TERM for @q;
 
     # No UNKNOWN table types:
     #  removed '->' for c030, now always TERM
@@ -6971,17 +6971,17 @@ BEGIN {
     # Fix for c250: added 'i' because new type 'P' was added
     @q = qw( -- C h R ++ ] Q <> i );
     push @q, ')';
-    $op_expected_table{$_} = OPERATOR for (@q);
+    $op_expected_table{$_} = OPERATOR for @q;
 
     # Fix for git #62: added '*' and '%'
     @q = qw( < ? * % );
-    $is_weird_parsing_rule_exception{$_} = 1 for (@q);
+    $is_weird_parsing_rule_exception{$_} = 1 for @q;
 
     @q = qw<) $>;
-    $is_paren_dollar{$_} = 1 for (@q);
+    $is_paren_dollar{$_} = 1 for @q;
 
     @q = qw( n v );
-    $is_n_v{$_} = 1 for (@q);
+    $is_n_v{$_} = 1 for @q;
 
 } ## end BEGIN
 
@@ -7716,10 +7716,10 @@ my %is_R_closing_sb;
 BEGIN {
 
     my @q = qw< $ & % * @ ) >;
-    $is_sigil_or_paren{$_} = 1 for (@q);
+    $is_sigil_or_paren{$_} = 1 for @q;
 
     @q = qw( R ] );
-    $is_R_closing_sb{$_} = 1 for (@q);
+    $is_R_closing_sb{$_} = 1 for @q;
 } ## end BEGIN
 
 sub is_non_structural_brace {
@@ -8243,11 +8243,11 @@ BEGIN {
 
     # Constants like 'pi' in Trig.pm are common
     my @q = qw( pi pi2 pi4 pip2 pip4 );
-    $is_known_constant{$_} = 1 for (@q);
+    $is_known_constant{$_} = 1 for @q;
 
     # parenless calls of 'ok' are common
     @q = qw( ok );
-    $is_known_function{$_} = 1 for (@q);
+    $is_known_function{$_} = 1 for @q;
 } ## end BEGIN
 
 sub guess_if_pattern_or_division {
@@ -9006,7 +9006,7 @@ sub do_scan_package {
           ? A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ ] ^ _
         };
         push @q, BACKSLASH;
-        $is_special_variable_char{$_} = 1 for (@q);
+        $is_special_variable_char{$_} = 1 for @q;
     } ## end BEGIN
 
     # These are the possible states for this scanner:
@@ -10444,7 +10444,7 @@ sub is_possible_numerator {
         # /(\)|\}|\;|\&\&|\|\||and|or|while|if|unless)/
         my @q = qw( & && | || ? : + - * and or while if unless );
         push @q, ')', '}', ']', '>', COMMA, ';';
-        $pattern_test{$_} = 1 for (@q);
+        $pattern_test{$_} = 1 for @q;
     } ## end BEGIN
 
     sub pattern_expected {
@@ -11293,7 +11293,7 @@ BEGIN {
     my @q = qw# / " ' { } ( ) [ ] < > ; + - * | % ! x ~ = ? : . ^ & #;
     push @q, '#';
     push @q, COMMA;
-    $is_punct_char{$_} = 1 for (@q);
+    $is_punct_char{$_} = 1 for @q;
 }
 
 sub follow_quoted_string {
@@ -11867,19 +11867,19 @@ BEGIN {
       .. :: << >> ** && || // -> => += -= .= %= &= |= ^= *= <>
       <= >= == =~ !~ != ++ -- /= x= ~~ ~. |. &. ^. ^^
       #;
-    $is_digraph{$_} = 1 for (@digraphs);
+    $is_digraph{$_} = 1 for @digraphs;
 
     @q = qw(
       . : < > * & | / - = + -  %  ^ !  x ~
     );
-    $can_start_digraph{$_} = 1 for (@q);
+    $can_start_digraph{$_} = 1 for @q;
 
     my @trigraphs =
       qw( ... **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~ ^^= );
-    $is_trigraph{$_} = 1 for (@trigraphs);
+    $is_trigraph{$_} = 1 for @trigraphs;
 
     my @tetragraphs = qw( <<>> );
-    $is_tetragraph{$_} = 1 for (@tetragraphs);
+    $is_tetragraph{$_} = 1 for @tetragraphs;
 
     # make a hash of all valid token types for self-checking the tokenizer
     # (adding NEW_TOKENS : select a new character and add to this list)
@@ -11893,7 +11893,7 @@ BEGIN {
     push( @valid_token_types, @trigraphs );
     push( @valid_token_types, @tetragraphs );
     push( @valid_token_types, ( '#', COMMA, 'CORE::' ) );
-    $is_valid_token_type{$_} = 1 for (@valid_token_types);
+    $is_valid_token_type{$_} = 1 for @valid_token_types;
 
     # a list of file test letters, as in -e (Table 3-4 of 'camel 3')
     my @file_test_operators =
@@ -11904,19 +11904,19 @@ BEGIN {
     # followed by a block, that block MAY BE followed by an operator.
     # Smartmatch operator ~~ may be followed by anonymous hash or array ref
     @q = qw( do eval );
-    $is_block_operator{$_} = 1 for (@q);
+    $is_block_operator{$_} = 1 for @q;
 
     # these functions allow an identifier in the indirect object slot
     @q = qw( print printf sort exec system say );
-    $is_indirect_object_taker{$_} = 1 for (@q);
+    $is_indirect_object_taker{$_} = 1 for @q;
 
     # Keywords which definitely produce error if an OPERATOR is expected
     @q = qw( my our state local use require );
-    $is_TERM_keyword{$_} = 1 for (@q);
+    $is_TERM_keyword{$_} = 1 for @q;
 
     # Note: 'field' will be added by sub check_options if --use-feature=class
     @q = qw( my our state );
-    $is_my_our_state{$_} = 1 for (@q);
+    $is_my_our_state{$_} = 1 for @q;
 
     # These tokens may precede a code block
     # patched for SWITCH/CASE/CATCH.  Actually these could be removed
@@ -11930,23 +11930,23 @@ BEGIN {
       map       grep     sort  switch case     given
       when      default  catch try    finally
     );
-    $is_code_block_token{$_} = 1 for (@q);
+    $is_code_block_token{$_} = 1 for @q;
 
     # These block types terminate statements and do not need a trailing
     # semicolon; patched for SWITCH/CASE/;  This may be updated in sub
     # check_options.
     @q = qw( } { BEGIN END CHECK INIT AUTOLOAD DESTROY UNITCHECK continue ;
       if elsif else unless while until for foreach switch case given when );
-    $is_zero_continuation_block_type{$_} = 1 for (@q);
+    $is_zero_continuation_block_type{$_} = 1 for @q;
 
     # Note: this hash was formerly named '%is_not_zero_continuation_block_type'
     # to contrast it with the block types in '%is_zero_continuation_block_type'
     # Note: added 'sub' for anonymous sub blocks (c443)
     @q = qw( sort map grep eval do sub );
-    $is_sort_map_grep_eval_do_sub{$_} = 1 for (@q);
+    $is_sort_map_grep_eval_do_sub{$_} = 1 for @q;
 
     @q = qw( sort map grep );
-    $is_sort_map_grep{$_} = 1 for (@q);
+    $is_sort_map_grep{$_} = 1 for @q;
 
     %is_grep_alias = ();
 
@@ -12029,7 +12029,7 @@ BEGIN {
     my @extra_vr = qw( constant vars );
     push( @value_requestor, @extra_vr );
 
-    $expecting_term_token{$_} = 1 for (@value_requestor);
+    $expecting_term_token{$_} = 1 for @value_requestor;
 
     # this list contains keywords which do not look for arguments,
     # so that they might be followed by an operator, or at least
@@ -12050,14 +12050,14 @@ BEGIN {
 
     push( @operator_requestor, @extra_or );
 
-    $expecting_operator_token{$_} = 1 for (@operator_requestor);
+    $expecting_operator_token{$_} = 1 for @operator_requestor;
 
     # these token TYPES expect trailing operator but not a term
     # note: ++ and -- are post-increment and decrement, 'C' = constant
     my @operator_requestor_types = qw( ++ -- C <> q );
 
     # NOTE: This hash is available but not currently used
-    $expecting_operator_types{$_} = 1 for (@operator_requestor_types);
+    $expecting_operator_types{$_} = 1 for @operator_requestor_types;
 
     # these token TYPES consume values (terms)
     # note: pp and mm are pre-increment and decrement
@@ -12073,7 +12073,7 @@ BEGIN {
     push @value_requestor_type, COMMA;
 
     # NOTE: This hash is available but not currently used
-    $expecting_term_types{$_} = 1 for (@value_requestor_type);
+    $expecting_term_types{$_} = 1 for @value_requestor_type;
 
     # Note: the following valid token types are not assigned here to
     # hashes requesting to be followed by values or terms, but are
@@ -12083,7 +12083,7 @@ BEGIN {
     # For simple syntax checking, it is nice to have a list of operators which
     # will really be unhappy if not followed by a term.  This includes most
     # of the above...
-    $really_want_term{$_} = 1 for (@value_requestor_type);
+    $really_want_term{$_} = 1 for @value_requestor_type;
 
     # with these exceptions...
     delete $really_want_term{'U'}; # user sub, depends on prototype
@@ -12091,11 +12091,11 @@ BEGIN {
     delete $really_want_term{'Y'}; # indirect object, too risky to check syntax;
                                    # let perl do it
     @q = qw( q qq qx qr s y tr m );
-    $is_q_qq_qx_qr_s_y_tr_m{$_} = 1 for (@q);
+    $is_q_qq_qx_qr_s_y_tr_m{$_} = 1 for @q;
 
     # Note added 'qw' here
     @q = qw( q qq qw qx qr s y tr m );
-    $is_q_qq_qw_qx_qr_s_y_tr_m{$_} = 1 for (@q);
+    $is_q_qq_qw_qx_qr_s_y_tr_m{$_} = 1 for @q;
 
     # Quote modifiers:
     # original ref: camel 3 p 147,
@@ -12122,22 +12122,22 @@ BEGIN {
 
     # Note: 'class' will be added by sub check_options if -use-feature=class
     @q = qw( package );
-    $is_package{$_} = 1 for (@q);
+    $is_package{$_} = 1 for @q;
 
     @q = qw( if elsif unless );
-    $is_if_elsif_unless{$_} = 1 for (@q);
+    $is_if_elsif_unless{$_} = 1 for @q;
 
     @q = qw( ; t );
-    $is_semicolon_or_t{$_} = 1 for (@q);
+    $is_semicolon_or_t{$_} = 1 for @q;
 
     @q = qw( if elsif unless case when );
-    $is_if_elsif_unless_case_when{$_} = 1 for (@q);
+    $is_if_elsif_unless_case_when{$_} = 1 for @q;
 
     # Hash of other possible line endings which may occur.
     # Keep these coordinated with the regex where this is used.
     # Note: chr(13) = chr(015)="\r".
     @q = ( chr(13), chr(29), chr(26) );
-    $other_line_endings{$_} = 1 for (@q);
+    $other_line_endings{$_} = 1 for @q;
 
     # These keywords are handled specially in the tokenizer code:
     my @special_keywords =
@@ -12170,7 +12170,7 @@ BEGIN {
     );
 
     # NOTE: This hash is available but not currently used
-    $is_keyword_taking_list{$_} = 1 for (@keyword_taking_list);
+    $is_keyword_taking_list{$_} = 1 for @keyword_taking_list;
 
     # perl functions which may be unary operators.
 
@@ -12178,7 +12178,7 @@ BEGIN {
     # can follow one of these keywords.
     @q = qw( chomp eof eval fc lc pop shift uc undef );
 
-    $is_keyword_rejecting_slash_as_pattern_delimiter{$_} = 1 for (@q);
+    $is_keyword_rejecting_slash_as_pattern_delimiter{$_} = 1 for @q;
 
     # These are keywords for which an arg may optionally be omitted.  They are
     # currently only used to disambiguate a ? used as a ternary from one used
@@ -12199,7 +12199,7 @@ BEGIN {
       uc       ucfirst  umask     undef     unlink  warn
       write
     );
-    $is_keyword_taking_optional_arg{$_} = 1 for (@keywords_taking_optional_arg);
+    $is_keyword_taking_optional_arg{$_} = 1 for @keywords_taking_optional_arg;
 
     # This list is used to decide if a pattern delimited by question marks,
     # ?pattern?, can follow one of these keywords.  Note that from perl 5.22
@@ -12209,7 +12209,7 @@ BEGIN {
     # in older versions it could be a pattern.  The guessing algorithm will
     # decide.  We are combining two lists here to simplify the test.
     @q = ( @keywords_taking_optional_arg, @operator_requestor );
-    $is_keyword_rejecting_question_as_pattern_delimiter{$_} = 1 for (@q);
+    $is_keyword_rejecting_question_as_pattern_delimiter{$_} = 1 for @q;
 
     # These are not used in any way yet
     #    my @unused_keywords = qw(
@@ -12228,7 +12228,7 @@ BEGIN {
     #  ARGV DATA ENV SIG STDERR STDIN STDOUT
     #  __DATA__ __END__
 
-    $is_keyword{$_} = 1 for (@Keywords);
+    $is_keyword{$_} = 1 for @Keywords;
 
     %matching_end_token = (
         '{' => '}',
