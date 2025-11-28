@@ -40,6 +40,10 @@
       in previous versions due to a programming error. This has been fixed.
       This setting can now be made by giving perltidy the flag '--podbacklink'.
 
+    - The option --delete-weld-interfering-commas, or -dwic, has been
+      made much more accurate, in the sense that it makes fewer unnecessary
+      comma deletions.
+
 ## 2025 09 12
 
     - Fix git #191, where a new check to escape whitespace in a qw() quote

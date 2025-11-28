@@ -18666,8 +18666,9 @@ sub delete_weld_interfering_comma {
 
     # The containers must be nesting (i.e., sequence numbers must differ by 1 )
     if ( $seqno_pp && $is_closing_type{$type_pp} ) {
-        if ( $seqno_pp == $type_sequence + 1 ) {
-
+        if (   $seqno_pp == $type_sequence + 1
+            && $self->weld_opening_ok( $seqno_pp, $type_sequence, $rLL_new ) )
+        {
             # remove the ',' from the top of the new token list
             return $self->unstore_last_nonblank_token(',');
         }
@@ -19034,7 +19035,8 @@ sub match_trailing_comma_rule {
         # Do not add a comma which will be deleted by
         # --delete-weld-interfering commas (b1471)
         if (   $is_nesting_right
-            && $rOpts_delete_weld_interfering_commas )
+            && $rOpts_delete_weld_interfering_commas
+            && $self->weld_opening_ok( $seqno_pp, $type_sequence, $rLL_new ) )
         {
             return;
         }
@@ -23493,7 +23495,7 @@ sub find_nested_pairs {
         #---------------------------------------------------
         # STEP 2: Look for sufficiently close opening tokens
         #---------------------------------------------------
-        my $weld_ok = $self->weld_opening_check( $inner_seqno, $outer_seqno );
+        my $weld_ok = $self->weld_opening_ok( $inner_seqno, $outer_seqno );
         if ($weld_ok) {
             push @nested_pairs,
               [ $inner_seqno, $outer_seqno, $K_inner_closing ];
@@ -23521,7 +23523,7 @@ sub find_nested_pairs {
     return \@nested_pairs;
 } ## end sub find_nested_pairs
 
-{    ## BEGIN closure weld_opening_check
+{    ## BEGIN closure weld_opening_ok
 
     # Names of calling routines can either be marked as 'i' or 'w',
     # and they may invoke a sub call with an '->'. We will consider
@@ -23529,85 +23531,132 @@ sub find_nested_pairs {
     # weld decisions.  We also allow a leading !
     my %is_name_type = map { $_ => 1 } qw( i w U -> ! );
 
-    sub weld_opening_check {
+    sub weld_opening_ok {
 
-        my ( $self, $inner_seqno, $outer_seqno ) = @_;
+        my ( $self, $inner_seqno, $outer_seqno, ($rLL) ) = @_;
 
         # Look at a pair of opening tokens and see if a weld is possible.
-        # The corresponding closing tokens should have already been checked
-        # and found to be nesting.
+        # The corresponding closing tokens should have already been checked.
 
         # Given:
         #  ($inner_seqno, $outer_seqno) = pair of sequence numbers to test
+        #  $rLL = (optional) token array to allow calls with $rLL_new during
+        #     respace operations.  This is for -dwic calls, update c561.
+        #     NOTE: If $rLL is supplied, sequence numbers must differ by just 1.
         # Return:
+        #   true if weld is possible for this pair
         #   false if weld not possible
-        #   true if weld is possible
 
-        my $rLL                  = $self->[_rLL_];
-        my $K_opening_container  = $self->[_K_opening_container_];
-        my $K_closing_container  = $self->[_K_closing_container_];
+        my $seqno_diff = $inner_seqno - $outer_seqno;
+        if ( $seqno_diff < 1 ) {
+
+            # Caller may have inner and outer numbers switched
+            DEVEL_MODE && Fault("seqno_diff=$seqno_diff should be >=1\n");
+            return;
+        }
+
+        if ( !defined($rLL) ) {
+
+            # Regular call to find a pair to weld must use the normal _rLL_
+            $rLL = $self->[_rLL_];
+        }
+        else {
+
+            # $rLL_new must be supplied for -dwic calls during respace ops.
+            # And $seqno_diff must be 1 since $self->[_rK_next_seqno_by_K_]
+            # does not get defined until after respace operations. This is
+            # only needed for sub signatures, so this rare type of weld
+            # cannot have its commas removed with the -dwic flag.
+
+            # Example of call with -dwic:
+            #   {exports => ['foo'],};
+            #   |           |      |
+            #   |           |      ^-------dwic calls are to check this comma
+            #   outer_      inner_seqno
+
+            if ( $seqno_diff != 1 ) {
+                DEVEL_MODE && Fault("seqno_diff=$seqno_diff should be 1\n");
+                return;
+            }
+        }
+
+        # These data structures correspond to K values in $rLL_new during
+        # respace ops, and in $rLL after respace ops:
+        my $K_opening_container = $self->[_K_opening_container_];
+        my $K_closing_container = $self->[_K_closing_container_];
+
+        # This structure is fixed and always available:
         my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
-        my $rK_next_seqno_by_K   = $self->[_rK_next_seqno_by_K_];
 
         my $K_outer_opening = $K_opening_container->{$outer_seqno};
         my $K_inner_opening = $K_opening_container->{$inner_seqno};
         return if ( !defined($K_outer_opening) );
         return if ( !defined($K_inner_opening) );
 
-        my $inner_blocktype = $rblock_type_of_seqno->{$inner_seqno};
-        my $outer_blocktype = $rblock_type_of_seqno->{$outer_seqno};
-
         # Verify that the inner opening token is the next container after the
         # outer opening token.
-        my $K_io_check = $rK_next_seqno_by_K->[$K_outer_opening];
-        return unless ( defined($K_io_check) );
-        if ( $K_io_check != $K_inner_opening ) {
+        # NOTE: This uses data structures that are not available during
+        # respace operations. So calls during respace should only be
+        # made with sequence numbers which differ by 1.
+        my $inner_blocktype = $rblock_type_of_seqno->{$inner_seqno};
+        my $outer_blocktype = $rblock_type_of_seqno->{$outer_seqno};
+        if ( $seqno_diff > 1 ) {
 
-            # The inner opening container does not immediately follow the outer
-            # opening container, but we may still allow a weld if they are
-            # separated by a sub signature.  For example, we may have something
-            # like this, where $K_io_check may be at the first 'x' instead of
-            # 'io'.  So we need to hop over the signature and see if we arrive
-            # at 'io'.
+            # Note: _rK_next_seqno_by_K_ is not available during respace ops,
+            # so $seqno_diff must be 1 for respace ops to avoid getting here.
+            my $rK_next_seqno_by_K = $self->[_rK_next_seqno_by_K_];
+            my $K_io_check         = $rK_next_seqno_by_K->[$K_outer_opening];
+            return unless ( defined($K_io_check) );
+            if ( $K_io_check != $K_inner_opening ) {
 
-            #            oo               io
-            #             |     x       x |
-            #   $obj->then( sub ( $code ) {
-            #       ...
-            #       return $c->render(text => '', status => $code);
-            #   } );
-            #   | |
-            #  ic oc
+                # The inner opening container does not immediately follow the
+                # outer opening container, but we may still allow a weld if
+                # they are separated by a sub signature.  For example, we may
+                # have something like this, where $K_io_check may be at the
+                # first 'x' instead of 'io'.  So we need to hop over the
+                # signature and see if we arrive at 'io'.
 
-            return if ( !$inner_blocktype || $inner_blocktype ne 'sub' );
-            return if ( $rLL->[$K_io_check]->[_TOKEN_] ne '(' );
-            my $seqno_signature = $rLL->[$K_io_check]->[_TYPE_SEQUENCE_];
-            return unless ( defined($seqno_signature) );
-            my $K_signature_closing = $K_closing_container->{$seqno_signature};
-            return unless ( defined($K_signature_closing) );
-            my $K_test = $rK_next_seqno_by_K->[$K_signature_closing];
-            return
-              unless ( defined($K_test) && $K_test == $K_inner_opening );
+                #            oo               io
+                #             |     x       x |
+                #   $obj->then( sub ( $code ) {
+                #       ...
+                #       return $c->render(text => '', status => $code);
+                #   } );
+                #   | |
+                #  ic oc
 
-            # OK, we have arrived at 'io' in the above diagram.  We should put
-            # a limit on the length or complexity of the signature here.  There
-            # is no perfect way to do this, one way is to put a limit on token
-            # count.  For consistency with older versions, we should allow a
-            # signature with a single variable to weld, but not with
-            # multiple variables.  A single variable as in 'sub ($code) {' can
-            # have a $Kdiff of 2 to 4, depending on spacing.
+                return if ( !$inner_blocktype || $inner_blocktype ne 'sub' );
+                return if ( $rLL->[$K_io_check]->[_TOKEN_] ne '(' );
+                my $seqno_signature = $rLL->[$K_io_check]->[_TYPE_SEQUENCE_];
+                return unless ( defined($seqno_signature) );
+                my $K_signature_closing =
+                  $K_closing_container->{$seqno_signature};
+                return unless ( defined($K_signature_closing) );
+                my $K_test = $rK_next_seqno_by_K->[$K_signature_closing];
+                return
+                  unless ( defined($K_test) && $K_test == $K_inner_opening );
 
-            # But two variables like 'sub ($v1,$v2) {' can have a diff of 4 to
-            # 7, depending on spacing. So to keep formatting consistent with
-            # previous versions, we will also avoid welding if there is a comma
-            # in the signature.
+                # OK, we have arrived at 'io' in the above diagram.  We should
+                # put a limit on the length or complexity of the signature
+                # here.  There is no perfect way to do this, one way is to put
+                # a limit on token count.  For consistency with older versions,
+                # we should allow a signature with a single variable to weld,
+                # but not with multiple variables.  A single variable as in
+                # 'sub ($code) {' can have a $Kdiff of 2 to 4, depending on
+                # spacing.
 
-            my $Kdiff = $K_signature_closing - $K_io_check;
-            return if ( $Kdiff > 4 );
+                # But two variables like 'sub ($v1,$v2) {' can have a diff of 4
+                # to 7, depending on spacing. So to keep formatting consistent
+                # with previous versions, we will also avoid welding if there
+                # is a comma in the signature.
 
-            # backup comma count test; but we cannot get here with Kdiff<=4
-            my $rtc = $self->[_rtype_count_by_seqno_]->{$seqno_signature};
-            return if ( $rtc && $rtc->{','} );
+                my $Kdiff = $K_signature_closing - $K_io_check;
+                return if ( $Kdiff > 4 );
+
+                # backup comma count test; but we cannot get here with Kdiff<=4
+                my $rtc = $self->[_rtype_count_by_seqno_]->{$seqno_signature};
+                return if ( $rtc && $rtc->{','} );
+            }
         }
 
         # The two opening tokens can be separated by a small amount.
@@ -23701,8 +23750,8 @@ sub find_nested_pairs {
                 && %weld_fat_comma_rules
                 && $weld_fat_comma_rules{$token_oo} )
         );
-    } ## end sub weld_opening_check
-}    ## END closure weld_opening_check
+    } ## end sub weld_opening_ok
+}    ## END closure weld_opening_ok
 
 sub match_paren_control_flag {
 
