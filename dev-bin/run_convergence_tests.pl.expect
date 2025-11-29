@@ -8897,6 +8897,17 @@ my %e =
         no_chdir => 1, wanted => sub { push @files, $_ if -f },
     }, $dir;
 
+==> b1554 <==
+my @data=
+         (
+         [     qw( Mon  Tue  Wed  Thu  Fri )],[     33,24,23,19,21],
+         );
+
+my @data=
+         (
+         [     qw( Mon  Tue  Wed  Thu  Fri )],[     33,24,23,19,21],
+         );
+
 ==> b156 <==
 # State 1
 {

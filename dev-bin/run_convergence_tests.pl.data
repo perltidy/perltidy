@@ -13546,6 +13546,28 @@ my %e =
 --delete-trailing-commas
 --break-at-trailing-comma-types='b'
 
+==> b1554.in <==
+my @data=
+         (
+         [     qw( Mon  Tue  Wed  Thu  Fri )],[     33,24,23,19,21],
+         );
+
+my @data=
+        (
+                 [     qw( Mon  Tue  Wed  Thu  Fri )],
+                 [     33,24,23,19,21],
+        );
+
+==> b1554.par <==
+--maximum-line-length=75
+--indent-columns=9
+--continuation-indentation=8
+--noadd-whitespace
+--extended-continuation-indentation
+--break-before-paren=1
+--break-before-paren-and-indent=2
+--break-at-trailing-comma-types='1'
+
 ==> b156.in <==
 # State 1
 {

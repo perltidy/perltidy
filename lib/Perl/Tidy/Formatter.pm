@@ -25739,6 +25739,9 @@ EOM
         # a non-terminal line-ending comma
         elsif ($has_list_with_lec) { }
 
+        # or if the container will be broken (b1554)
+        elsif ( $self->[_rbreak_container_]->{$seqno} ) { }
+
         # Otherwise, we are considering a single container...
         else {
 
