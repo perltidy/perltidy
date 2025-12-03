@@ -2466,7 +2466,7 @@ sub sweep_left_to_right {
     #------------------------------
     # Step 3: Execute the task list
     #------------------------------
-    do_left_to_right_sweep(
+    tap_dancer(
         {
             rlines      => $rlines,
             rgroups     => $rgroups,
@@ -2479,7 +2479,7 @@ sub sweep_left_to_right {
     return;
 } ## end sub sweep_left_to_right
 
-{    ## closure for sub do_left_to_right_sweep
+{    ## closure for sub tap_dancer
 
     my %is_good_alignment_token;
 
@@ -2521,7 +2521,7 @@ sub sweep_left_to_right {
 
         my ($rcall_hash) = @_;
 
-        # This is a sub called by sub do_left_to_right_sweep to
+        # This is a sub called by sub tap_dancer to
         # move the alignment column of token $itok to $col_want for a
         # sequence of groups.
 
@@ -2562,12 +2562,12 @@ sub sweep_left_to_right {
         return;
     } ## end sub move_to_common_column
 
-    sub do_left_to_right_sweep {
+    sub tap_dancer {
 
         my ($rcall_hash) = @_;
 
-        # This is the worker routine for sub 'sweep_left_to_right'. Make
-        # vertical alignments by sweeping from left to right over groups
+        # This is the worker routine for sub 'sweep_left_to_right'. It makes
+        # vertical alignments as it sweeps from left to right over groups
         # of lines which have been located and prepared by the caller.
 
         my $rlines      = $rcall_hash->{rlines};
@@ -2782,7 +2782,7 @@ sub sweep_left_to_right {
         } ## end loop over tasks
 
         return;
-    } ## end sub do_left_to_right_sweep
+    } ## end sub tap_dancer
 }
 
 sub delete_selected_tokens {

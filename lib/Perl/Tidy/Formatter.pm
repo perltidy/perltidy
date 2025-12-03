@@ -37090,8 +37090,8 @@ EOM
                     my $skip =
                          $next_nonblank_token eq 'while'
                       && $i == 0
-                      && $token == '1'
-                      && $type eq 'n';
+                      && $type eq 'n'
+                      && $token eq '1';
 
                     $i_want_previous_break = $i
                       if ( !$skip );
