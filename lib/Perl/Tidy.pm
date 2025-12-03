@@ -4023,15 +4023,17 @@ sub generate_options {
     ########################################
     $category = 7;    # Retaining or ignoring existing line breaks
     ########################################
-    $add_option->( 'break-at-old-keyword-breakpoints',   'bok', '!' );
-    $add_option->( 'break-at-old-logical-breakpoints',   'bol', '!' );
-    $add_option->( 'break-at-old-method-breakpoints',    'bom', '!' );
-    $add_option->( 'break-at-old-semicolon-breakpoints', 'bos', '!' );
-    $add_option->( 'break-at-old-ternary-breakpoints',   'bot', '!' );
-    $add_option->( 'break-at-old-attribute-breakpoints', 'boa', '!' );
-    $add_option->( 'keep-old-breakpoints-before',        'kbb', '=s' );
-    $add_option->( 'keep-old-breakpoints-after',         'kba', '=s' );
-    $add_option->( 'ignore-old-breakpoints',             'iob', '!' );
+    $add_option->( 'break-at-old-keyword-breakpoints',   'bok',  '!' );
+    $add_option->( 'break-at-old-logical-breakpoints',   'bol',  '!' );
+    $add_option->( 'break-at-old-method-breakpoints',    'bom',  '!' );
+    $add_option->( 'break-at-old-semicolon-breakpoints', 'bos',  '!' );
+    $add_option->( 'break-at-old-ternary-breakpoints',   'bot',  '!' );
+    $add_option->( 'break-at-old-attribute-breakpoints', 'boa',  '!' );
+    $add_option->( 'break-at-old-trailing-conditionals', 'botc', '!' );
+    $add_option->( 'break-at-old-trailing-loops',        'botl', '!' );
+    $add_option->( 'keep-old-breakpoints-before',        'kbb',  '=s' );
+    $add_option->( 'keep-old-breakpoints-after',         'kba',  '=s' );
+    $add_option->( 'ignore-old-breakpoints',             'iob',  '!' );
 
     ########################################
     $category = 8;    # Blank line control
@@ -4196,6 +4198,8 @@ sub generate_options {
       nokeyword-group-blanks-delete
 
       break-at-old-logical-breakpoints
+      break-at-old-trailing-conditionals
+      break-at-old-trailing-loops
       break-at-old-ternary-breakpoints
       break-at-old-attribute-breakpoints
       break-at-old-keyword-breakpoints

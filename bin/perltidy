@@ -4991,32 +4991,82 @@ maximum line length.
 
 =over 4
 
+=item B<-botc>,  B<--break-at-old-trailing-conditionals>
+
+A statement which is broken at one of the trailing conditional
+modifiers
+
+   if unless
+
+will remain broken by default.
+For example, the following input statement will remain unchanged with
+default formatting, even though it could fit on a single line:
+
+    return
+      if ( !defined($Kgw) || $Kgw < 0 || $Kgw > $Klimit );
+
+To make perltidy ignore the old C<if> break and thus flatten the statement
+we can use B<-nbotc>:
+
+    # perltidy -nbotc
+    return if ( !defined($Kgw) || $Kgw < 0 || $Kgw > $Klimit );
+
+=item B<-botl>,  B<--break-at-old-trailing-loops>
+
+Likewise, a statement which is broken at one of the trailing loop
+modifiers
+
+   for foreach while until
+
+will remain broken by default.
+For example, the following input statement will remain unchanged with
+default formatting, even though it could fit a single line:
+
+    $is_digit{$_} = 1
+      for qw( 0 1 2 3 4 5 6 7 8 9 );
+
+To make perltidy ignore the old C<for> break and thus flatten the statement
+we can use B<-nbotl>:
+
+    # perltidy -nbotl
+    $is_digit{$_} = 1 for qw( 0 1 2 3 4 5 6 7 8 9 );
+
 =item B<-bol>,  B<--break-at-old-logical-breakpoints>
 
-By default, if a logical expression is broken at a C<&&>, C<||>, C<and>,
-or C<or>, then the container will remain broken.  Also, breaks
-at internal keywords C<if> and C<unless> will normally be retained.
-To prevent this, and thus form longer lines, use B<-nbol>.
+By default, if a logical expression within a container is broken at a C<&&>,
+C<||>, C<and>, or C<or>, then the container will remain broken.  To prevent
+this, and thus form longer lines, use B<-nbol>.
 
-Please note that this flag does not duplicate old logical breakpoints.  They
-are merely used as a hint with this flag that a statement should remain
-broken.  Without this flag, perltidy will normally try to combine relatively
-short expressions into a single line.
+For example, given this snippet with a breakpoint at the C<&&>:
 
-For example, given this snippet:
+    if (   defined($Kqw)
+        && $Kqw >= 0 && $Kqw <= $Klimit )
+    {
+        ...;
+    }
 
-    return unless $cmd = $cmd || ($dot
-        && $Last) || &prompt('|');
+the default result will keep the if parens open:
 
     # perltidy -bol [default]
-    return
-      unless $cmd = $cmd
-      || ( $dot
-        && $Last )
-      || &prompt('|');
+    if (   defined($Kqw)
+        && $Kqw >= 0
+        && $Kqw <= $Klimit )
+    {
+        ...;
+    }
+
+Note that this flag does not exactly duplicate old logical breakpoints.
+Rather, they are merely used as a hint that a statement should remain broken.
+Without this flag, perltidy will normally try to combine relatively short
+expressions into a single line.
+
+To cause old logical breakpoints to be ignored and thus achieve more compact
+expressions use the negated parameter B<-nbol>:
 
     # perltidy -nbol
-    return unless $cmd = $cmd || ( $dot && $Last ) || &prompt('|');
+    if ( defined($Kqw) && $Kqw >= 0 && $Kqw <= $Klimit ) {
+        ...;
+    }
 
 =item B<-bom>,  B<--break-at-old-method-breakpoints>
 
@@ -7977,25 +8027,25 @@ The following list shows all short parameter names which allow a prefix
  D      aia    altc   ame    anl    asbl   asc    ast    asu    atc
  atnl   aws    b      baa    baao   bar    bbao   bbb    bbc    bboc
  bbs    bl     bli    boa    boc    bok    bol    bom    bos    bot
- cblx   ce     conv   cpb    cpbw   cs     csc    cscb   cscw   csfs
- dac    dbc    dbs    dcbl   dcsc   ddf    dfsfs  dhk    dia    dior
- dku    dln    dltc   dma    dmcp   dmr    dnl    dnt    dop    dp
- dpro   drc    dsc    dsk    dsm    dsn    dtc    dtco   dtt    duk
- duv    dwic   dwls   dwrs   dws    eos    f      fpva   frm    fs
- fso    gcs    hbc    hbcm   hbco   hbh    hbhh   hbi    hbj    hbk
- hbm    hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv    hbw
- hent   hic    hicm   hico   hih    hihh   hii    hij    hik    him
- hin    hip    hipd   hipu   hiq    his    hisc   hiv    hiw    hsc
- html   ibc    icb    icp    ils    iob    ipc    isbc   iscl   kgb
- kgbd   kgbi   kis    lal    log    lop    lp     lsl    mci    mem
- nib    ohbr   okw    ola    olc    oll    olq    opr    opt    osbc
- osbr   otr    ple    pod    pvl    q      qwaf   sac    sbc    sbl
- scbb   schb   scp    scsb   sct    se     sfp    sfs    skp    sob
- sobb   sohb   sop    sosb   sot    ssc    st     sts    t      tac
- tbc    toc    tp     tqw    trp    ts     tsc    tso    vbc    vc
- viu    vmll   vsc    vsn    vwe    w      wfc    wia    wma    wme
- wmr    wn     wnt    wsk    wuk    x      xbt    xci    xlp    xs
-
+ botc   botl   cblx   ce     conv   cpb    cpbw   cs     csc    cscb
+ cscw   csfs   dac    dbc    dbs    dcbl   dcsc   ddf    dfsfs  dhk
+ dia    dior   dku    dln    dltc   dma    dmcp   dmr    dnl    dnt
+ dop    dp     dpro   drc    dsc    dsk    dsm    dsn    dtc    dtco
+ dtt    duk    duv    dwic   dwls   dwrs   dws    eos    f      fpva
+ frm    fs     fso    gcs    hbc    hbcm   hbco   hbh    hbhh   hbi
+ hbj    hbk    hbm    hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc
+ hbv    hbw    hent   hic    hicm   hico   hih    hihh   hii    hij
+ hik    him    hin    hip    hipd   hipu   hiq    his    hisc   hiv
+ hiw    hsc    html   ibc    icb    icp    ils    iob    ipc    isbc
+ iscl   kgb    kgbd   kgbi   kis    lal    log    lop    lp     lsl
+ mci    mem    nib    ohbr   okw    ola    olc    oll    olq    opr
+ opt    osbc   osbr   otr    ple    pod    pvl    q      qwaf   sac
+ sbc    sbl    scbb   schb   scp    scsb   sct    se     sfp    sfs
+ skp    sob    sobb   sohb   sop    sosb   sot    ssc    st     sts
+ t      tac    tbc    toc    tp     tqw    trp    ts     tsc    tso
+ vbc    vc     viu    vmll   vsc    vsn    vwe    w      wfc    wia
+ wma    wme    wmr    wn     wnt    wsk    wuk    x      xbt    xci
+ xlp    xs
 
 Equivalently, the prefix 'no' or 'no-' on the corresponding long names may be
 used.

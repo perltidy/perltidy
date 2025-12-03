@@ -239,6 +239,8 @@ my (
     $rOpts_break_at_old_comma_breakpoints,
     $rOpts_break_at_old_keyword_breakpoints,
     $rOpts_break_at_old_logical_breakpoints,
+    $rOpts_break_at_old_trailing_conditionals,
+    $rOpts_break_at_old_trailing_loops,
     $rOpts_break_at_old_semicolon_breakpoints,
     $rOpts_break_at_old_ternary_breakpoints,
     $rOpts_break_open_compact_parens,
@@ -3931,6 +3933,10 @@ sub initialize_global_option_vars {
       $rOpts->{'break-at-old-keyword-breakpoints'};
     $rOpts_break_at_old_logical_breakpoints =
       $rOpts->{'break-at-old-logical-breakpoints'};
+    $rOpts_break_at_old_trailing_conditionals =
+      $rOpts->{'break-at-old-trailing-conditionals'};
+    $rOpts_break_at_old_trailing_loops =
+      $rOpts->{'break-at-old-trailing-loops'};
     $rOpts_break_at_old_semicolon_breakpoints =
       $rOpts->{'break-at-old-semicolon-breakpoints'};
     $rOpts_break_at_old_ternary_breakpoints =
@@ -36636,13 +36642,8 @@ EOM
                             }
                         }
                     }
-                    elsif ( $token eq 'if' || $token eq 'unless' ) {
+                    elsif ( $is_if_unless{$token} ) {
                         push @{ $rand_or_list[$depth]->[4] }, $i;
-                        if ( ( $i == $i_line_start || $i == $i_line_end )
-                            && $rOpts_break_at_old_logical_breakpoints )
-                        {
-                            $self->set_forced_breakpoint($i);
-                        }
                     }
                     else {
                         ## not one of: 'and' 'or' 'if' 'unless'
@@ -36971,7 +36972,7 @@ EOM
             $i_old_assignment_break )
           = @_;
 
-        # Look at an old breakpoint and set/update certain flags:
+        # Look at an old breakpoint and set/update break request flags:
 
         # Given indexes of three tokens in this batch:
         #   $i_next_nonblank        - index of the next nonblank token
@@ -37012,59 +37013,103 @@ EOM
         $i_line_end   = $i;
         $i_line_start = $i_next_nonblank;
 
-        #---------------------------------------
-        # Do we want to break before this token?
-        #---------------------------------------
+        #---------------------------
+        # Look BACK for a good break
+        #---------------------------
+        if ( $is_assignment{$type} ) {
+            $i_old_assignment_break = $i;
+        }
+        elsif ( $type eq 'k' ) {
+            if ( $is_if_unless{$token} ) {
+                if ($rOpts_break_at_old_trailing_conditionals) {
+                    $i_want_previous_break = $i;
+                }
+            }
+        }
+        else {
+            ## no other ending type checks for now
+        }
+
+        #----------------------------
+        # Look AHEAD for a good break
+        #----------------------------
+        # Is this a line-starting old assignment break?
+        if ( $is_assignment{$next_nonblank_type} ) {
+            $i_old_assignment_break = $i_next_nonblank;
+        }
 
         # Break before certain keywords if user broke there and
         # this is a 'safe' break point. The idea is to retain
         # any preferred breaks for sequential list operations,
         # like a schwartzian transform.
-        if ($rOpts_break_at_old_keyword_breakpoints) {
-            if (
-                   $next_nonblank_type eq 'k'
-                && $is_keyword_returning_list{$next_nonblank_token}
-                && (   $type =~ /^[=\)\]\}Riw]$/
-                    || $type eq 'k' && $is_keyword_returning_list{$token} )
-              )
+        elsif ( $next_nonblank_type eq 'k' ) {
+
+            # Keywords returning a list: grep keys map reverse sort split
+            if ( $is_keyword_returning_list{$next_nonblank_token} ) {
+                if (
+                    $rOpts_break_at_old_keyword_breakpoints
+                    && (   $type =~ /^[=\)\]\}Riw]$/
+                        || $type eq 'k' && $is_keyword_returning_list{$token} )
+                  )
+                {
+
+                    # we actually have to set this break next time through
+                    # the loop because if we are at a closing token (such
+                    # as '}') which forms a one-line block, this break might
+                    # get undone.
+
+                    # But do not do this at an '=' if:
+                    # - the user wants breaks before an equals (b434 b903)
+                    # - or -naws is set (can be unstable, see b1354)
+                    my $skip = $type eq '='
+                      && ( $want_break_before{$type}
+                        || !$rOpts_add_whitespace );
+
+                    $i_want_previous_break = $i
+                      unless ($skip);
+                }
+            }
+
+            # Trailing statement conditionals: if unless
+            elsif ( $is_if_unless{$next_nonblank_token} ) {
+                if ($rOpts_break_at_old_trailing_conditionals) {
+                    $i_want_previous_break = $i;
+                }
+            }
+
+            # Trailing statement loop modifiers: while until for foreach
+            # (note that the previous test checked for: if unless)
+            elsif (
+                $is_if_unless_while_until_for_foreach{$next_nonblank_token} )
             {
+                # do not break between a closing block and a loop keyword
+                if ( $rOpts_break_at_old_trailing_loops
+                    && ( $token ne '}' || $type ne '}' ) )
+                {
+                    # Exception: 'while' following starting line with '1'
+                    my $skip =
+                         $next_nonblank_token eq 'while'
+                      && $i == 0
+                      && $token == '1'
+                      && $type eq 'n';
 
-                # we actually have to set this break next time through
-                # the loop because if we are at a closing token (such
-                # as '}') which forms a one-line block, this break might
-                # get undone.
-
-                # But do not do this at an '=' if:
-                # - the user wants breaks before an equals (b434 b903)
-                # - or -naws is set (can be unstable, see b1354)
-                my $skip = $type eq '='
-                  && ( $want_break_before{$type}
-                    || !$rOpts_add_whitespace );
-
-                $i_want_previous_break = $i
-                  unless ($skip);
-
+                    $i_want_previous_break = $i
+                      if ( !$skip );
+                }
+            }
+            else {
+                ## no other special keywords
             }
         }
 
         # Break before attributes if user broke there
-        if ($rOpts_break_at_old_attribute_breakpoints) {
-            if ( $next_nonblank_type eq 'A' ) {
+        elsif ( $next_nonblank_type eq 'A' ) {
+            if ($rOpts_break_at_old_attribute_breakpoints) {
                 $i_want_previous_break = $i;
             }
         }
-
-        #---------------------------------
-        # Is this an old assignment break?
-        #---------------------------------
-        if ( $is_assignment{$type} ) {
-            $i_old_assignment_break = $i;
-        }
-        elsif ( $is_assignment{$next_nonblank_type} ) {
-            $i_old_assignment_break = $i_next_nonblank;
-        }
         else {
-            ## not old assignment break
+            ## no other line-leading tokens to check
         }
 
         return ( $i_want_previous_break, $i_old_assignment_break );

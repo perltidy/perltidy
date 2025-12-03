@@ -2,6 +2,23 @@
 
 ## 2025 09 12.02
 
+    - Two new parameters have been added for following old line breakpoints
+      at statement modifiers: --break-at-old-trailing-loops, or -botl, and
+      --break-at-old-trailing-conditionals, or -botc.  These are both true
+      by default. Parameter -botc will cause existing line breaks at trailing
+      'for', 'foreach', 'while', 'until' to be retained.
+      Likewise, parameter -botl will cause line breaks at
+      trailing 'if', 'unless' to be retained. Previously, the parameter
+      --break-at-old-logical-breakpoints caused trailing 'if' and 'unless'
+      line breaks to be retained.
+
+      The new defaults should not cause changes to existing code because they
+      only keep breaks which already exist. However, to make this version
+      behave like the previous version do the following:
+
+      (1) set -nbotl
+      (2) if -nbol was set, then also set -nbotc
+
     - When the -html option is used with the default --pod2html setting,
       perltidy will look for a pod-to-html formatter in this order:
       Pod::Simple::XHTML, Pod::Simple::HTML, and Pod::Html.  A preferred
