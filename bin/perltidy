@@ -492,9 +492,6 @@ long lines may sometimes be broken at a length less than B<n> characters
 because some of the line break decisions employ small tolerances
 to prevent formatting instabilities.
 
-The default length of 80 comes from the past when this was the standard CRT
-screen width.  Many programmers prefer to increase this to something like 120.
-
 Setting B<-l=0> is equivalent to setting B<-l=(a very large number)>.  But this is
 not recommended because, for example, a very long list will be formatted in a
 single long line.
@@ -4983,7 +4980,7 @@ is possible, the output style follows the input style.  For example, if
 a short logical container is broken in the input script, then the
 default behavior is for it to remain broken in the output script.
 
-Most of the parameters in this section would only be required for a
+Many of the parameters in this section would only be required for a
 one-time conversion of a script from short container lengths to longer
 container lengths.  The opposite effect, of converting long container
 lengths to shorter lengths, can be obtained by temporarily using a short
@@ -4991,22 +4988,59 @@ maximum line length.
 
 =over 4
 
+=item B<-iob>,  B<--ignore-old-breakpoints>
+
+This flag is a master switch which tells perltidy to ignore all line
+breakpoints in the input script to the maximum extend possible.  This will tend
+to produce the longest possible statements and containers, regardless of type,
+which do not exceed the line length limit.
+
+To illustrate, consider the following input text:
+
+    has subcmds => (
+        is => 'ro',
+        default => sub { [] },
+    );
+
+The default formatting will keep the container broken, which is probably
+what the user prefers:
+
+    # perltidy [default]
+    has subcmds => (
+        is      => 'ro',
+        default => sub { [] },
+    );
+
+But if old breakpoints are ignored, the list will be flattened:
+
+    # perltidy -iob
+    has subcmds => ( is => 'ro', default => sub { [] }, );
+
+Even if this is parameter is not used globally, it provides a convenient way to
+flatten selected lists from within an editor.
+
+Rather than ignoring all old breakpoints, it is possible to selectively control
+which breakpoints to follow or ignore with the controls which follow.
+
+But note that B<--ignore-old-breakpoints> is a top level control and, if set,
+has priority over any settings of the specific lower level controls named
+B<--break-at-old-...> and B<--keep-old-breakpoints-...>.
+
 =item B<-botc>,  B<--break-at-old-trailing-conditionals>
 
-A statement which is broken at one of the trailing conditional
-modifiers
+A statement which is broken at one of the trailing conditional modifiers
 
    if unless
 
 will remain broken by default.
-For example, the following input statement will remain unchanged with
-default formatting, even though it could fit on a single line:
+For example, the following input lines will remain unchanged with
+default formatting, even though they could fit on a single line:
 
     return
       if ( !defined($Kgw) || $Kgw < 0 || $Kgw > $Klimit );
 
 To make perltidy ignore the old C<if> break and thus flatten the statement
-we can use B<-nbotc>:
+we can use the negative of this parameter, B<-nbotc>:
 
     # perltidy -nbotc
     return if ( !defined($Kgw) || $Kgw < 0 || $Kgw > $Klimit );
@@ -5226,40 +5260,6 @@ B<NOTE>: A request to break before an opening container, such as B<-kbb='('>,
 will be silently ignored because it can lead to formatting instability.
 Likewise, a request to break after a closing container, such as B<-kba>=')',
 will also be silently ignored.
-
-=item B<-iob>,  B<--ignore-old-breakpoints>
-
-Use this flag to tell perltidy to ignore existing line breaks to the
-maximum extent possible.  This will tend to produce the longest possible
-containers, regardless of type, which do not exceed the line length
-limit.  But please note that this parameter has priority over all
-other parameters requesting that certain old breakpoints be kept.
-
-To illustrate, consider the following input text:
-
-    has subcmds => (
-        is => 'ro',
-        default => sub { [] },
-    );
-
-The default formatting will keep the container broken, giving
-
-    # perltidy [default]
-    has subcmds => (
-        is      => 'ro',
-        default => sub { [] },
-    );
-
-If old breakpoints are ignored, the list will be flattened:
-
-    # perltidy -iob
-    has subcmds => ( is => 'ro', default => sub { [] }, );
-
-Besides flattening lists, this parameter also applies to lines broken
-at certain logical breakpoints such as 'if' and 'or'.
-
-Even if this is parameter is not used globally, it provides a convenient way to
-flatten selected lists from within an editor.
 
 =item B<-kis>,  B<--keep-interior-semicolons>
 
@@ -6034,7 +6034,7 @@ negative B<-novalign> is an alias for B<-nvc -nvsc -nvbc>.
 
 =item B<Controlling code alignment with --valign-code or -vc>
 
-The B<-vc> flag enables alignment of code symbols such as <=>.  The default is B<-vc>.
+The B<-vc> flag enables alignment of code symbols such as B<=>.  The default is B<-vc>.
 For detailed control of which symbols to align, see the B<-valign-exclude-list> parameter
 below.
 
