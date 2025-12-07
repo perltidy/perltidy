@@ -8908,6 +8908,23 @@ my @data=
          [     qw( Mon  Tue  Wed  Thu  Fri )],[     33,24,23,19,21],
          );
 
+==> b1556 <==
+    push @img,
+      $self->_get_asset_controller_urls(
+                                  $c->controller( 'Assets::RapidApp::Misc' ),
+                                  (
+                                    qw( images/rapidapp_powered_logo_tiny.png )
+                                  ),
+      );
+
+    push @img,
+      $self->_get_asset_controller_urls(
+                                  $c->controller( 'Assets::RapidApp::Misc' ),
+                                  (
+                                    qw( images/rapidapp_powered_logo_tiny.png )
+                                  ),
+      );
+
 ==> b156 <==
 # State 1
 {

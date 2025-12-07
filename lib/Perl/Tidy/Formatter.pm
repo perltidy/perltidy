@@ -27135,11 +27135,17 @@ EOM
                         }
                     }
 
-                    # Store the result.  Some extra space, '2', allows for
-                    # length of an opening token, inside space, comma, ...
-                    # This constant has been tuned to give good overall
-                    # results.
+                    # Some extra space, '2', allows for length of an opening
+                    # token, inside space, comma, ...  This constant has been
+                    # tuned to give good overall results.
                     $collapsed_len += 2;
+
+                    # Add 2 more spaces for leading 'qw' if this is a qw list
+                    # created with -qwaf (b1556)
+                    if ( $self->[_ris_qwaf_by_seqno_]->{$seqno} ) {
+                        $collapsed_len += 2;
+                    }
+
                     $rcollapsed_length_by_seqno->{$seqno} = $collapsed_len;
 
                     # Restart scanning the lower level prong

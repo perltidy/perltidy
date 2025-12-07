@@ -13568,6 +13568,29 @@ my @data=
 --break-before-paren-and-indent=2
 --break-at-trailing-comma-types='1'
 
+==> b1556.in <==
+    push @img,
+      $self->_get_asset_controller_urls(
+                                    $c->controller( 'Assets::RapidApp::Misc' ),
+                                    (
+                                      qw( images/rapidapp_powered_logo_tiny.png
+                                      )
+                                    ),
+      );
+
+    push @img,
+      $self->_get_asset_controller_urls(
+                                  $c->controller( 'Assets::RapidApp::Misc' ),
+                                  (
+                                    qw( images/rapidapp_powered_logo_tiny.png )
+                                  ),
+      );
+
+==> b1556.par <==
+--extended-line-up-parentheses
+--paren-tightness=0
+--qw-as-function
+
 ==> b156.in <==
 # State 1
 {
