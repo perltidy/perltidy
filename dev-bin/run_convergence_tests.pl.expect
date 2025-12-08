@@ -8944,6 +8944,15 @@ push @record, [
                                   ),
       );
 
+==> b1557 <==
+run_sub (
+          ->$blah{ say "ok 5" ; }
+) ;
+
+run_sub (
+          ->$blah{ say "ok 5" ; }
+) ;
+
 ==> b156 <==
 # State 1
 {

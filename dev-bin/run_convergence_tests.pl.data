@@ -13614,6 +13614,21 @@ push @record, [
 --paren-tightness=0
 --qw-as-function
 
+==> b1557.in <==
+run_sub (
+         ->$blah{ say "ok 5" ; } ) ;
+
+run_sub ( ->$blah{ say "ok 5" ; }
+) ;
+
+==> b1557.par <==
+--maximum-line-length=36
+--paren-vertical-tightness=1
+--extended-line-up-parentheses
+--space-function-paren
+--space-terminal-semicolon
+--keep-old-breakpoints-before='->'
+
 ==> b156.in <==
 # State 1
 {

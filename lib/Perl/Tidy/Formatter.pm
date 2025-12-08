@@ -8,7 +8,7 @@
 #   STEP 1: initialize or re-initialize Formatter with user options
 #     Perl::Tidy::Formatter::check_options($rOpts);
 #
-#   STEP 2: crate a tokenizer for the source stream
+#   STEP 2: create a tokenizer for the source stream
 #
 #   STEP 3: create a formatter for the destination stream
 #     my $formatter = Perl::Tidy::Formatter->new(
@@ -3467,7 +3467,7 @@ EOM
             $rOpts->{'whitespace-cycle'} = 0;
         }
 
-        # Keep -pvtc<2 in certain edge cases invloving -xlp (b1555).
+        # Keep -pvtc < 2 in certain edge cases involving -xlp (b1555).
         # See b1469 for similar logic.
         if (
             $rOpts->{'extended-line-up-parentheses'}
@@ -25576,6 +25576,7 @@ sub break_before_list_opening_containers {
         # it might be best if all cases use this logic, but that would change
         # existing formatting.
         if ( $break_option == 2 ) {
+
             my $b1469 = $rOpts_continuation_indentation > $rOpts_indent_columns
               && $rOpts_extended_continuation_indentation;
 
@@ -45225,10 +45226,15 @@ sub set_vertical_tightness_flags {
         my $iend_next       = $ri_last->[ $nline + 1 ];
         my $interline_space = ( $types_to_go[ $ibeg_next - 1 ] eq 'b' ) ? 1 : 0;
 
+        my $Kbeg_next = $K_to_go[$ibeg_next];
+
         if (
                $type_sequence_to_go[$iend]
             && !$block_type_to_go[$iend]
             && $is_opening_token{$token_end}
+
+            # give priority to --keep-old-breakpoints (b1557)
+            && !$self->[_rbreak_before_Kfirst_]->{$Kbeg_next}
 
             # minimal fix for b1503; this also works ok without the 'w' check
             # but that changes more existing code.
