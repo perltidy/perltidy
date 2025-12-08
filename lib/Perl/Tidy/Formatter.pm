@@ -3466,6 +3466,24 @@ Conflict: -wc cannot currently be used with the -lp option; ignoring -wc
 EOM
             $rOpts->{'whitespace-cycle'} = 0;
         }
+
+        # Keep -pvtc<2 in certain edge cases invloving -xlp (b1555).
+        # See b1469 for similar logic.
+        if (
+            $rOpts->{'extended-line-up-parentheses'}
+            && (
+                (
+                    $rOpts->{'continuation-indentation'} >
+                    $rOpts->{'indent-columns'}
+                )
+                || $rOpts->{'variable-maximum-line-length'}
+            )
+          )
+        {
+            if ( $rOpts->{'paren-vertical-tightness-closing'} == 2 ) {
+                $rOpts->{'paren-vertical-tightness-closing'} = 1;
+            }
+        }
     }
 
     #-----------------------------------------------------------
@@ -25558,7 +25576,6 @@ sub break_before_list_opening_containers {
         # it might be best if all cases use this logic, but that would change
         # existing formatting.
         if ( $break_option == 2 ) {
-
             my $b1469 = $rOpts_continuation_indentation > $rOpts_indent_columns
               && $rOpts_extended_continuation_indentation;
 

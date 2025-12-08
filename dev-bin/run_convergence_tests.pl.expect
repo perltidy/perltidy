@@ -8908,6 +8908,25 @@ my @data=
          [     qw( Mon  Tue  Wed  Thu  Fri )],[     33,24,23,19,21],
          );
 
+==> b1555 <==
+push @record, [
+    map {
+           $_->getAttribute( 'code' ), $_->textContent
+            }
+            $field_node->getChildrenByTagName(
+                                               '*'
+            ),
+];
+
+push @record, [
+    map {
+           $_->getAttribute( 'code' ), $_->textContent
+            }
+            $field_node->getChildrenByTagName(
+                                               '*'
+            ),
+];
+
 ==> b1556 <==
     push @img,
       $self->_get_asset_controller_urls(

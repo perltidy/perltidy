@@ -13568,6 +13568,29 @@ my @data=
 --break-before-paren-and-indent=2
 --break-at-trailing-comma-types='1'
 
+==> b1555.in <==
+push @record, [
+       map {
+              $_->getAttribute( 'code' ), $_->textContent
+       } $field_node->getChildrenByTagName(
+                                                   '*' ),
+];
+
+push @record, [
+    map {
+           $_->getAttribute( 'code' ), $_->textContent
+            }
+            $field_node->getChildrenByTagName( '*' ),
+];
+
+==> b1555.par <==
+--maximum-line-length=54
+--indent-columns=7
+--continuation-indentation=8
+--extended-line-up-parentheses
+--paren-vertical-tightness-closing=2
+--paren-tightness=0
+
 ==> b1556.in <==
     push @img,
       $self->_get_asset_controller_urls(
