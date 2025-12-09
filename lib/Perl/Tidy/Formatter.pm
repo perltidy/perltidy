@@ -603,7 +603,7 @@ BEGIN {
         _rtype_count_by_seqno_      => $i++,
         _ris_function_call_paren_   => $i++,
         _rlec_count_by_seqno_       => $i++,
-        _ris_broken_container_      => $i++,
+        _rline_diff_by_seqno_       => $i++,
         _ris_permanently_broken_    => $i++,
         _rblank_and_comment_count_  => $i++,
         _rhas_list_                 => $i++,
@@ -1055,7 +1055,6 @@ sub new {
     initialize_get_final_indentation();
     initialize_postponed_breakpoint();
     initialize_batch_variables();
-    initialize_write_line();
 
     my $vertical_aligner_object = Perl::Tidy::VerticalAligner->new(
         rOpts              => $rOpts,
@@ -1141,7 +1140,7 @@ sub new {
     $self->[_rtype_count_by_seqno_]      = {};
     $self->[_ris_function_call_paren_]   = {};
     $self->[_rlec_count_by_seqno_]       = {};
-    $self->[_ris_broken_container_]      = {};
+    $self->[_rline_diff_by_seqno_]       = {};
     $self->[_ris_permanently_broken_]    = {};
     $self->[_rblank_and_comment_count_]  = {};
     $self->[_rhas_list_]                 = {};
@@ -1253,6 +1252,8 @@ sub new {
 
     $self->[_save_logfile_] =
       defined($logger_object) && $logger_object->get_save_logfile();
+
+    $self->initialize_write_line();
 
     # Be sure all variables in $self have been initialized above.  To find the
     # correspondence of index numbers and array names, copy a list to a file
@@ -8084,7 +8085,15 @@ EOM
     my $last_ending_in_quote;
     my $added_seqno_count;
 
+    # Local variables for improved efficiency
+    my $K_opening_container;
+    my $K_closing_container;
+    my $rI_opening;
+    my $rI_closing;
+
     sub initialize_write_line {
+
+        my ($self) = shift;
 
         $nesting_depth = undef;
 
@@ -8099,6 +8108,11 @@ EOM
         %new_seqno_from_old_seqno = ();
         $last_ending_in_quote     = 0;
         $added_seqno_count        = 0;
+
+        $K_opening_container = $self->[_K_opening_container_];
+        $K_closing_container = $self->[_K_closing_container_];
+        $rI_opening          = $self->[_rI_opening_];
+        $rI_closing          = $self->[_rI_closing_];
 
         return;
     } ## end sub initialize_write_line
@@ -8510,7 +8524,7 @@ EOM
             # update relevant seqno hashes
             $rdepth_of_opening_seqno->[$seqno] = $nesting_depth;
             $nesting_depth++;
-            $self->[_rI_opening_]->[$seqno] = @{$rSS};
+            $rI_opening->[$seqno] = @{$rSS};
 
             if ( $level_words > $self->[_maximum_level_] ) {
                 my $input_line_no = $line_of_tokens->{_line_number};
@@ -8524,7 +8538,7 @@ EOM
             push @{$rLL}, $rtoken_qw;
 
             # make and push the '(' with the new sequence number
-            $self->[_K_opening_container_]->{$seqno} = @{$rLL};
+            $K_opening_container->{$seqno} = @{$rLL};
             my $rtoken_opening = copy_token_as_type( $rtoken_q, '{', '(' );
             $rtoken_opening->[_TYPE_SEQUENCE_] = $seqno;
             push @{$rLL}, $rtoken_opening;
@@ -8615,9 +8629,9 @@ EOM
             }
 
             my $seqno = $in_qw_seqno;
-            $self->[_K_closing_container_]->{$seqno} = @{$rLL};
-            $nesting_depth = $rdepth_of_opening_seqno->[$seqno];
-            $self->[_rI_closing_]->[$seqno] = @{$rSS};
+            $K_closing_container->{$seqno} = @{$rLL};
+            $nesting_depth                 = $rdepth_of_opening_seqno->[$seqno];
+            $rI_closing->[$seqno]          = @{$rSS};
             push @{$rSS}, -1 * $seqno;
 
             # make the ')'
@@ -8744,9 +8758,9 @@ EOM
                             "$line_number: seqno=$seqno last=$last_new_seqno\n"
                         );
                     }
-                    $last_new_seqno                          = $seqno;
-                    $self->[_K_opening_container_]->{$seqno} = @{$rLL};
-                    $rdepth_of_opening_seqno->[$seqno]       = $nesting_depth;
+                    $last_new_seqno                    = $seqno;
+                    $K_opening_container->{$seqno}     = @{$rLL};
+                    $rdepth_of_opening_seqno->[$seqno] = $nesting_depth;
                     $nesting_depth++;
 
                     # Save a sequenced block type at its opening token.
@@ -8803,9 +8817,9 @@ EOM
 $line_number: No opening token seen for closing token = '$token' at seq=$seqno at depth=$opening_depth
 EOM
                     }
-                    $self->[_K_closing_container_]->{$seqno} = @{$rLL};
-                    $nesting_depth                           = $opening_depth;
-                    $sign                                    = -1;
+                    $K_closing_container->{$seqno} = @{$rLL};
+                    $nesting_depth                 = $opening_depth;
+                    $sign                          = -1;
                 }
                 elsif ( $token eq '?' ) {
                     if ($added_seqno_count) {
@@ -8843,7 +8857,7 @@ EOM
                 }
 
                 if ( $sign > 0 ) {
-                    $self->[_rI_opening_]->[$seqno] = @{$rSS};
+                    $rI_opening->[$seqno] = @{$rSS};
 
                     # For efficiency, we find the maximum level of
                     # opening tokens of any type.  The actual maximum
@@ -8857,7 +8871,7 @@ EOM
                     }
                 }
                 else {
-                    $self->[_rI_closing_]->[$seqno] = @{$rSS};
+                    $rI_closing->[$seqno] = @{$rSS};
                 }
                 push @{$rSS}, $sign * $seqno;
                 $tokary[_TYPE_SEQUENCE_] = $seqno;
@@ -16379,7 +16393,7 @@ my $rhas_code_block;
 my $rhas_list;
 my $rhas_ternary;
 my $ris_assigned_structure;
-my $ris_broken_container;
+my $rline_diff_by_seqno;
 my $ris_excluded_lp_container;
 my $ris_list_by_seqno;
 my $ris_permanently_broken;
@@ -16474,7 +16488,7 @@ sub initialize_respace_tokens_closure {
     $rhas_list                 = $self->[_rhas_list_];
     $rhas_ternary              = $self->[_rhas_ternary_];
     $ris_assigned_structure    = $self->[_ris_assigned_structure_];
-    $ris_broken_container      = $self->[_ris_broken_container_];
+    $rline_diff_by_seqno       = $self->[_rline_diff_by_seqno_];
     $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
     $ris_list_by_seqno         = $self->[_ris_list_by_seqno_];
     $ris_permanently_broken    = $self->[_ris_permanently_broken_];
@@ -17570,7 +17584,7 @@ EOM
         my $lx_open   = $rLL_new->[$K_opening]->[_LINE_INDEX_];
         my $lx_close  = $rLL_new->[$K_closing]->[_LINE_INDEX_];
         my $line_diff = $lx_close - $lx_open;
-        $ris_broken_container->{$seqno} = $line_diff;
+        $rline_diff_by_seqno->{$seqno} = $line_diff;
 
         # See if this is a list
         my $is_list;
@@ -19144,7 +19158,7 @@ sub match_trailing_comma_rule {
     }
 
     # multiline commas: first and last commas on different lines
-    # Note that _ris_broken_container_ also stores the line diff
+    # Note that _rline_diff_by_seqno_ also stores the line diff
     # but it is not available at this early stage.
     my $line_diff_commas = $iline_last_comma - $iline_first_comma;
     my $has_multiline_commas =
@@ -23321,7 +23335,7 @@ sub weld_cuddled_blocks {
     return unless ( defined($rLL) && @{$rLL} );
 
     my $rbreak_container          = $self->[_rbreak_container_];
-    my $ris_broken_container      = $self->[_ris_broken_container_];
+    my $rline_diff_by_seqno       = $self->[_rline_diff_by_seqno_];
     my $ris_cuddled_closing_brace = $self->[_ris_cuddled_closing_brace_];
     my $K_closing_container       = $self->[_K_closing_container_];
 
@@ -23386,7 +23400,7 @@ sub weld_cuddled_blocks {
 
                 # The preceding block must be on multiple lines so that its
                 # closing brace will start a new line.
-                if (   !$ris_broken_container->{$closing_seqno}
+                if (   !$rline_diff_by_seqno->{$closing_seqno}
                     && !$rbreak_container->{$closing_seqno} )
                 {
                     next unless ( $CBO == 2 );
@@ -25141,7 +25155,7 @@ sub mark_short_nested_blocks {
     my $K_opening_container     = $self->[_K_opening_container_];
     my $K_closing_container     = $self->[_K_closing_container_];
     my $rbreak_container        = $self->[_rbreak_container_];
-    my $ris_broken_container    = $self->[_ris_broken_container_];
+    my $rline_diff_by_seqno     = $self->[_rline_diff_by_seqno_];
     my $rshort_nested           = $self->[_rshort_nested_];
     my $rblock_type_of_seqno    = $self->[_rblock_type_of_seqno_];
     my $rK_sequenced_token_list = $self->[_rK_sequenced_token_list_];
@@ -25211,7 +25225,7 @@ sub mark_short_nested_blocks {
 
         # require that this block be entirely on one line
         next
-          if ( $ris_broken_container->{$type_sequence}
+          if ( $rline_diff_by_seqno->{$type_sequence}
             || $rbreak_container->{$type_sequence} );
 
         # See if this block fits on one line of allowed length (which may
@@ -25469,7 +25483,7 @@ sub break_before_list_opening_containers {
     # Loop over all opening container tokens
     my $K_opening_container       = $self->[_K_opening_container_];
     my $K_closing_container       = $self->[_K_closing_container_];
-    my $ris_broken_container      = $self->[_ris_broken_container_];
+    my $rline_diff_by_seqno       = $self->[_rline_diff_by_seqno_];
     my $ris_permanently_broken    = $self->[_ris_permanently_broken_];
     my $rhas_list                 = $self->[_rhas_list_];
     my $rhas_broken_list_with_lec = $self->[_rhas_broken_list_with_lec_];
@@ -25636,7 +25650,7 @@ sub break_before_list_opening_containers {
         # will stay broken, so can be treated as if it had a list with lec.
         $has_list_with_lec ||=
              $has_list
-          && $ris_broken_container->{$seqno}
+          && $rline_diff_by_seqno->{$seqno}
           && $rlec_count_by_seqno->{$seqno};
 
         DEBUG_BBX
@@ -25748,7 +25762,7 @@ EOM
         # the container will really be broken.
 
         # Only consider containers already broken
-        next if ( !$ris_broken_container->{$seqno} );
+        next if ( !$rline_diff_by_seqno->{$seqno} );
 
         # Patch to fix issue b1305: the combination of -naws and ci>i appears
         # to cause an instability.  It should almost never occur in practice.
@@ -26929,7 +26943,7 @@ sub is_fragile_block_type {
         my $ris_permanently_broken     = $self->[_ris_permanently_broken_];
         my $ris_list_by_seqno          = $self->[_ris_list_by_seqno_];
         my $rhas_broken_list           = $self->[_rhas_broken_list_];
-        my $ris_broken_container       = $self->[_ris_broken_container_];
+        my $rline_diff_by_seqno        = $self->[_rline_diff_by_seqno_];
         my $rmax_closing_vertical_tightness =
           $self->[_rmax_closing_vertical_tightness_];
 
@@ -26984,7 +26998,7 @@ sub is_fragile_block_type {
                     # interrupted_list_rule to oscillate.
                     if (   $has_vtc2
                         && $ris_list_by_seqno->{$seqno}
-                        && $ris_broken_container->{$seqno}
+                        && $rline_diff_by_seqno->{$seqno}
                         && !$ris_permanently_broken->{$seqno}
                         && @stack
                         && defined( $stack[-1]->[_interrupted_list_rule_] )
@@ -37510,7 +37524,7 @@ EOM
             # This fixes case b1314.
             my $indentation = $leading_spaces_to_go[$i_opening_minus];
             if ( ref($indentation)
-                && $self->[_ris_broken_container_]->{$type_sequence} )
+                && $self->[_rline_diff_by_seqno_]->{$type_sequence} )
             {
                 my $lp_spaces  = $indentation->get_spaces();
                 my $std_spaces = $indentation->get_standard_spaces();
@@ -37575,7 +37589,7 @@ EOM
                 # ..either on the same old line if not ignoring old breakpoints
                 # (updated tests to fix b1528)
                 $rOpts_ignore_old_breakpoints
-                || !$self->[_ris_broken_container_]->{$type_sequence}
+                || !$self->[_rline_diff_by_seqno_]->{$type_sequence}
 
                 # ... or user wants to form long blocks with arrows
                 # check on _rbreak_container_ added for b1500
