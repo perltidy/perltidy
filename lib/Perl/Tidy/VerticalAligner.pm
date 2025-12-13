@@ -2304,6 +2304,7 @@ sub sweep_left_to_right {
     # So far we have divided the lines into groups having an equal number of
     # identical alignments.  Here we are going to look for common leading
     # alignments between the different groups and align them when possible.
+
     # For example, the three lines below are in three groups because each line
     # has a different number of commas.  In this routine we will sweep from
     # left to right, aligning the leading commas as we go, but stopping if we

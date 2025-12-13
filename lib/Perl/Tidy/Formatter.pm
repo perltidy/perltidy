@@ -343,6 +343,7 @@ my (
     %is_anon_sub_1_brace_follower,
     %is_other_brace_follower,
     %is_kwU,
+    %is_kwUi_arrow,
     %is_re_match_op,
     %is_my_state_our,
     %is_keyword_with_special_leading_term,
@@ -514,6 +515,10 @@ my (
     $stress_level_alpha,
     $stress_level_beta,
     $high_stress_level,
+
+    # Keep -vtc stable
+    # INITIALIZER: check_options
+    $throttle_vtc,
 
     # Total number of sequence items in a weld, for quick checks
     # INITIALIZER: weld_containers
@@ -983,6 +988,9 @@ BEGIN {
     # 'k'=builtin keyword, 'U'=user defined sub, 'w'=unknown bareword
     @q = qw( k w U );
     $is_kwU{$_} = 1 for @q;
+
+    @q = qw( k w U i -> );
+    $is_kwUi_arrow{$_} = 1 for @q;
 
     # regular expression match operators
     @q = qw( =~ !~);
@@ -2503,6 +2511,35 @@ EOM
 
     initialize_keep_old_blank_lines_hash();
 
+    # Look for interaction issues
+
+    # The unusual combination -pvtc=2 -dws -naws can be unstable.
+    # This fixes b1282, b1283.
+    if ( $rOpts_delete_old_whitespace
+        && !$rOpts_add_whitespace )
+    {
+        foreach ( keys %closing_vertical_tightness ) {
+            if ( $closing_vertical_tightness{$_} == 2 ) {
+                $closing_vertical_tightness{$_} = 1;
+            }
+        }
+    }
+
+    # Keep -vtc < 2 in certain edge cases involving -xlp (b1555).
+    if (
+        $rOpts->{'extended-line-up-parentheses'}
+        && (
+            (
+                $rOpts->{'continuation-indentation'} >
+                $rOpts->{'indent-columns'}
+            )
+            || $rOpts->{'variable-maximum-line-length'}
+        )
+      )
+    {
+        $throttle_vtc = 1;
+    }
+
     return;
 } ## end sub check_options
 
@@ -3466,24 +3503,6 @@ EOM
 Conflict: -wc cannot currently be used with the -lp option; ignoring -wc
 EOM
             $rOpts->{'whitespace-cycle'} = 0;
-        }
-
-        # Keep -pvtc < 2 in certain edge cases involving -xlp (b1555).
-        # See b1469 for similar logic.
-        if (
-            $rOpts->{'extended-line-up-parentheses'}
-            && (
-                (
-                    $rOpts->{'continuation-indentation'} >
-                    $rOpts->{'indent-columns'}
-                )
-                || $rOpts->{'variable-maximum-line-length'}
-            )
-          )
-        {
-            if ( $rOpts->{'paren-vertical-tightness-closing'} == 2 ) {
-                $rOpts->{'paren-vertical-tightness-closing'} = 1;
-            }
         }
     }
 
@@ -45178,6 +45197,8 @@ sub set_vertical_tightness_flags {
     #   %stack_closing_token
     #   %stack_opening_token
 
+    my $rLL = $self->[_rLL_];
+
     # Pull out needed batch variables
     my $this_batch = $self->[_this_batch_];
     my $ri_first   = $this_batch->[_ri_first_];
@@ -45360,13 +45381,35 @@ sub set_vertical_tightness_flags {
                 $cvt = $self->[_ris_assigned_structure_]->{$seqno} ? 0 : 1;
             }
 
-            # The unusual combination -pvtc=2 -dws -naws can be unstable.
-            # This fixes b1282, b1283.  This can be moved to set_options.
+            # Patch for issue b1555:
+            # Reduce cvt=2 to 1 for with unusual combinations of parameters
+            # with -xlp.  Basically we are looking for a 2-line shear of a
+            # function call with no good interior breaks.
+            # Check 1: Restrict to parens without commas, which are good breaks
             if (   $cvt == 2
-                && $rOpts_delete_old_whitespace
-                && !$rOpts_add_whitespace )
+                && $throttle_vtc
+                && $token_next eq ')'
+                && !$self->[_ris_list_by_seqno_]->{$seqno} )
             {
-                $cvt = 1;
+
+                # Check 2: Restrict to containers without sub-containers:
+                my $K_opening = $self->[_K_opening_container_]->{$seqno};
+                my $Knext     = $self->[_rK_next_seqno_by_K_]->[$K_opening];
+                if ( $Knext == $K_to_go[$ibeg_next] ) {
+
+                    # Check 3: further restrict this fix to something that
+                    # looks like a function call paren with no good interior
+                    # breakpoint.  Another possible test would be to look for
+                    # an interior blank between tokens within the parens.
+                    my $K_opening_m = $self->K_previous_code($K_opening);
+                    my $type_opening_m =
+                      defined($K_opening_m)
+                      ? $rLL->[$K_opening_m]->[_TYPE_]
+                      : 'b';
+                    if ( $is_kwUi_arrow{$type_opening_m} ) {
+                        $cvt = 1;
+                    }
+                }
             }
 
             # Fix for b1379, b1380, b1381, b1382, b1384 part 2,
