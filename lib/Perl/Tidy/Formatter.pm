@@ -2526,6 +2526,7 @@ EOM
     }
 
     # Keep -vtc < 2 in certain edge cases involving -xlp (b1555).
+    $throttle_vtc = 0;
     if (
         $rOpts->{'extended-line-up-parentheses'}
         && (
