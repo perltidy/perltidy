@@ -43486,9 +43486,10 @@ sub xlp_tweak {
         $is_use_like{$_} = 1 for qw(use);
 
         # Token types which prevent using leading word as a container name
+        # Removed unary string bitwise negation operator '~.' in c566
         my @q = qw{
           x / : % . | ^ < = > || >= != *= => !~ == && |= .= -= =~ += <=
-          %= ^= x= ~~ ** << /= &= // >> ~. &. |. ^.
+          %= ^= x= ~~ ** << /= &= // >> &. |. ^.
           **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~
         };
         push @q, ',';

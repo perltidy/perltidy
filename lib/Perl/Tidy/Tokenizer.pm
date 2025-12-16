@@ -138,7 +138,11 @@ my (
     %is_trigraph,
     %is_valid_token_type,
     %other_line_endings,
-    %really_want_term,
+    %is_binary_operator_type,
+    %is_binary_keyword,
+    %is_binary_or_unary_operator_type,
+    %is_binary_or_unary_keyword,
+    %is_not_a_TERM_producer_type,
     @closing_brace_names,
     @opening_brace_names,
 
@@ -1327,6 +1331,23 @@ sub get_line {
         $self->[_input_line_index_next_] = $line_index;
     }
 
+    # End of file .. check if file ends in a binary operator (c565)
+    else {
+        if (
+            $is_binary_or_unary_operator_type{$last_nonblank_type}
+            || (   $last_nonblank_type eq 'k'
+                && $is_binary_or_unary_keyword{$last_nonblank_token} )
+          )
+        {
+            $self->warning(
+                "Unexpected EOF at operator '$last_nonblank_token'\n");
+
+            # avoid repeating this message
+            $last_nonblank_token = ';';
+            $last_nonblank_type  = ';';
+        }
+    }
+
     $self->[_line_of_text_] = $input_line;
 
     return if ( !defined($input_line) );
@@ -2424,18 +2445,6 @@ EOM
 
     my @q;
 
-    my %is_logical_container;
-    @q = qw( if elsif unless while and or err not && ! || for foreach );
-    $is_logical_container{$_} = 1 for @q;
-
-    my %is_binary_type;
-    @q = qw( || && );
-    $is_binary_type{$_} = 1 for @q;
-
-    my %is_binary_keyword;
-    @q = qw( and or err eq ne cmp );
-    $is_binary_keyword{$_} = 1 for @q;
-
     # 'L' is token for opening { at hash key
     my %is_opening_type;
     @q = qw< L { ( [ >;
@@ -2468,11 +2477,6 @@ EOM
         '__END__'  => _in_end_,
         '__DATA__' => _in_data_,
     );
-
-    my %is_list_end_type;
-    @q = qw( ; { } );
-    push @q, COMMA;
-    $is_list_end_type{$_} = 1 for @q;
 
     # table showing how many quoted things to look for after quote operator..
     # s, y, tr have 2 (pattern and replacement)
@@ -3091,24 +3095,50 @@ EOM
         return $number;
     } ## end sub scan_number_fast
 
-    # a sub to warn if token found where term expected
     sub error_if_expecting_TERM {
         my $self = shift;
-        if ( $expecting == TERM ) {
-            if ( $really_want_term{$last_nonblank_type} ) {
-                $self->report_unexpected(
-                    {
-                        found           => $tok,
-                        expecting       => "term",
-                        i_tok           => $i_tok,
-                        last_nonblank_i => $last_nonblank_i,
-                        rpretoken_map   => $rtoken_map,
-                        rpretoken_type  => $rtoken_type,
-                        input_line      => $input_line,
-                    }
-                );
-                return 1;
-            }
+
+        # Issue a warning if a binary operator is missing a term to operate on
+
+        # This should only be called if a term is expected here
+        if ( $expecting != TERM ) { return }
+
+        # Be sure a TERM is definitely required ..
+        if (
+
+            # .. following a binary operator token type, like '='
+            $is_binary_or_unary_operator_type{$last_nonblank_type}
+
+            # .. or following a binary keyword operator, like 'and'
+            || (   $last_nonblank_type eq 'k'
+                && $is_binary_or_unary_keyword{$last_nonblank_token} )
+
+            # .. or for a binary operator following something like a ';'
+            || (   $is_not_a_TERM_producer_type{$last_nonblank_type}
+                && $is_binary_operator_type{$tok} )
+          )
+        {
+
+            # We must exclude error checking in sub signatures which have some
+            # unusual syntax.  For example the following syntax is okay within
+            # a signature:
+            #   sub mysub ($=,) {...}
+            #   $ = undef
+            my $ct = $rparen_type->[$paren_depth];
+            if ( $ct && $ct =~ /^sub\b/ ) { return }
+
+            $self->report_unexpected(
+                {
+                    found           => $tok,
+                    expecting       => "term",
+                    i_tok           => $i_tok,
+                    last_nonblank_i => $last_nonblank_i,
+                    rpretoken_map   => $rtoken_map,
+                    rpretoken_type  => $rtoken_type,
+                    input_line      => $input_line,
+                }
+            );
+            return 1;
         }
         return;
     } ## end sub error_if_expecting_TERM
@@ -3153,26 +3183,6 @@ EOM
     #------------------
     # Tokenization subs
     #------------------
-    sub do_GREATER_THAN_SIGN {
-
-        my $self = shift;
-
-        # '>'
-        $self->error_if_expecting_TERM()
-          if ( $expecting == TERM );
-        return;
-    } ## end sub do_GREATER_THAN_SIGN
-
-    sub do_VERTICAL_LINE {
-
-        my $self = shift;
-
-        # '|'
-        $self->error_if_expecting_TERM()
-          if ( $expecting == TERM );
-        return;
-    } ## end sub do_VERTICAL_LINE
-
     # An identifier in possible indirect object location followed by any of
     # these tokens: -> , ; } (plus others) is not an indirect object. Fix c257.
     my %Z_test_hash;
@@ -3430,7 +3440,7 @@ EOM
             $self->warning("Unexpected leading ',' after a '('\n");
         }
         else {
-            # no complaints about the comma
+            ## Error check added in update c565, moved to end of $code loop.
         }
 
         # patch for operator_expected: note if we are in the list (use.t)
@@ -3464,6 +3474,9 @@ EOM
                 $type = 'f';
                 $rparen_semicolon_count->[$paren_depth]++;
             }
+        }
+        else {
+            ## Error check added in update c565, moved to end of $code loop.
         }
         return;
     } ## end sub do_SEMICOLON
@@ -3997,12 +4010,6 @@ EOM
         # '.' =  what kind of . ?
         if ( $expecting != OPERATOR ) {
             $self->scan_number();
-            if ( $type eq '.' ) {
-                $self->error_if_expecting_TERM()
-                  if ( $expecting == TERM );
-            }
-        }
-        else {
         }
         return;
     } ## end sub do_DOT
@@ -4250,15 +4257,6 @@ EOM
                     $self->warning("Possible syntax error near '{^'\n");
                 }
             }
-
-            else {
-                if ( !$self->error_if_expecting_TERM() ) {
-
-                    # Something like this is valid but strange:
-                    # undef ^I;
-                    $self->complain("The '^' seems unusual here\n");
-                }
-            }
         }
         return;
     } ## end sub do_CARAT_SIGN
@@ -4500,36 +4498,6 @@ EOM
 
         return;
     } ## end sub do_MINUS_MINUS
-
-    sub do_LOGICAL_AND {
-
-        my $self = shift;
-
-        # '&&'
-        $self->error_if_expecting_TERM()
-          if ( $expecting == TERM && $last_nonblank_token ne COMMA );    #c015
-        return;
-    } ## end sub do_LOGICAL_AND
-
-    sub do_LOGICAL_OR {
-
-        my $self = shift;
-
-        # '||'
-        $self->error_if_expecting_TERM()
-          if ( $expecting == TERM && $last_nonblank_token ne COMMA );    #c015
-        return;
-    } ## end sub do_LOGICAL_OR
-
-    sub do_SLASH_SLASH {
-
-        my $self = shift;
-
-        # '//'
-        $self->error_if_expecting_TERM()
-          if ( $expecting == TERM );
-        return;
-    } ## end sub do_SLASH_SLASH
 
     sub do_DIGITS {
 
@@ -5441,6 +5409,11 @@ EOM
         # start rescanning we will be expecting a token of type TERM.
         # We will switch to type 'k' before outputting the tokens.
         elsif ( defined( $is_END_DATA{$tok_kw} ) ) {
+
+            # Warn if this follows an operator expecting a term (c565)
+            $self->error_if_expecting_TERM()
+              if ( $expecting == TERM );
+
             $type = ';';    # make tokenizer look for TERM next
 
             # Remember that we are in one of these three sections
@@ -5812,8 +5785,6 @@ EOM
     # ------------------------------------------------------------
     my $tokenization_code = {
 
-        '>'   => \&do_GREATER_THAN_SIGN,
-        '|'   => \&do_VERTICAL_LINE,
         '$'   => \&do_DOLLAR_SIGN,
         '('   => \&do_LEFT_PARENTHESIS,
         ')'   => \&do_RIGHT_PARENTHESIS,
@@ -5845,12 +5816,14 @@ EOM
         '++'  => \&do_PLUS_PLUS,
         '=>'  => \&do_FAT_COMMA,
         '--'  => \&do_MINUS_MINUS,
-        '&&'  => \&do_LOGICAL_AND,
-        '||'  => \&do_LOGICAL_OR,
-        '//'  => \&do_SLASH_SLASH,
 
         # No special code for these types yet, but syntax checks
         # could be added.
+        ##  '&&'  => \&do_LOGICAL_AND,
+        ##  '||'  => \&do_LOGICAL_OR,
+        ##  '>'   => \&do_GREATER_THAN_SIGN,
+        ##  '|'   => \&do_VERTICAL_LINE,
+        ##  '//'  => \&do_SLASH_SLASH,
         ##  '!'   => undef,
         ##  '!='  => undef,
         ##  '!~'  => undef,
@@ -5920,19 +5893,16 @@ EOM
         #-------------------------------------
         # Check for start of pod documentation
         #-------------------------------------
-        if ( substr( $untrimmed_input_line, 0, 1 ) eq '='
+        if (   !$in_quote
+            && substr( $untrimmed_input_line, 0, 1 ) eq '='
             && $untrimmed_input_line =~ /^=[A-Za-z_]/ )
         {
 
-            # Must not be in multi-line quote
-            # and must not be in an equation
+            # Must not be in an equation where an '=' could be expected.
+            # Perl has additional restrictions which are not checked here.
             my $blank_after_Z = 1;
-            if (
-                !$in_quote
-                && ( $self->operator_expected( '=', 'b', $blank_after_Z ) ==
-                    TERM )
-              )
-            {
+            $expecting = $self->operator_expected( '=', 'b', $blank_after_Z );
+            if ( $expecting == TERM ) {
                 $self->[_in_pod_] = 1;
                 return;
             }
@@ -6385,6 +6355,25 @@ EOM
 
                 # check for special cases which cannot be combined
 
+                # Smartmatch is being deprecated, but may exist in older
+                # scripts.
+                if ( $test_tok eq '~~' ) {
+
+                    # Do not combine first two of something like '~~~~~'
+                    my $repeated =
+                      $i + 2 > $max_token_index || $rtokens->[ $i + 2 ] eq '~';
+
+                    # FIXME: Patch for error in expecting (c566)
+                    # This should be moved into sub operator_expected
+                    $expecting =
+                      $last_nonblank_type eq '}'
+                      ? OPERATOR
+                      : $self->operator_expected( $tok, '~', undef );
+                    if ( $repeated || $expecting == TERM ) {
+                        $combine_ok = 0;
+                    }
+                }
+
                 # '//' must be defined_or operator if an operator is expected.
                 # TODO: Code for other ambiguous digraphs (/=, x=, **, *=)
                 # could be migrated here for clarity
@@ -6395,22 +6384,29 @@ EOM
                 # after type 'Z' (possible file handle).  The reason is that
                 # sub operator_expected gives TERM expected here, which is
                 # wrong in this case.
-                if ( $test_tok eq '//' && $last_nonblank_type ne 'Z' ) {
+                elsif ( $test_tok eq '//' ) {
+                    if ( $last_nonblank_type ne 'Z' ) {
 
-                    # note that here $tok = '/' and the next tok and type is '/'
-                    my $blank_after_Z;
-                    $expecting =
-                      $self->operator_expected( $tok, '/', $blank_after_Z );
+                        # note that here $tok = '/' and the next tok and type
+                        # is '/'
+                        my $blank_after_Z;
+                        $expecting =
+                          $self->operator_expected( $tok, '/', $blank_after_Z );
 
-                    # Patched for RT#101547, was 'unless ($expecting==OPERATOR)'
-                    $combine_ok = 0 if ( $expecting == TERM );
+                        # Patched for RT#101547, was
+                        #   'unless ($expecting==OPERATOR)'
+                        $combine_ok = 0 if ( $expecting == TERM );
+                    }
                 }
 
                 # Patch for RT #114359: mis-parsing of "print $x ** 0.5;
                 # Accept the digraphs '**' only after type 'Z'
                 # Otherwise postpone the decision.
-                if ( $test_tok eq '**' ) {
+                elsif ( $test_tok eq '**' ) {
                     if ( $last_nonblank_type ne 'Z' ) { $combine_ok = 0 }
+                }
+                else {
+                    ## no other special cases
                 }
 
                 if (
@@ -6510,6 +6506,18 @@ EOM
             if ($code) {
                 $code->($self);
                 redo if ($in_quote);
+            }
+
+            # Check for a non-TERM where a TERM is expected. Note that this
+            # checks all symbols, even those without a $code (update c566)
+            if ( $expecting == TERM ) {
+                my $is_not_term =
+                     $type eq ';'
+                  || $type eq ','
+                  || $is_binary_operator_type{$type};
+                if ($is_not_term) {
+                    $self->error_if_expecting_TERM();
+                }
             }
         }    ## End main tokenizer loop
 
@@ -7181,6 +7189,8 @@ sub operator_expected {
         if ( $tok eq '?' ) {
             return UNKNOWN;
         }
+
+        ##FIXME: consider returning OPERATOR for ')' and ']' and 'R' (c566)
         return TERM;
 
     } ## end type '}'
@@ -12080,16 +12090,44 @@ BEGIN {
     # instead currently hard-coded into sub operator_expected:
     # ) -> :: Q R Z ] b h i k n v w } #
 
-    # For simple syntax checking, it is nice to have a list of operators which
-    # will really be unhappy if not followed by a term.  This includes most
-    # of the above...
-    $really_want_term{$_} = 1 for @value_requestor_type;
+    # A syntax error will occur if following operators are not followed by a
+    # TERM (with an exception made for tokens in sub signatures).
+    # NOTE: this list does not include unary operator '!'
 
-    # with these exceptions...
-    delete $really_want_term{'U'}; # user sub, depends on prototype
-    delete $really_want_term{'F'}; # file test works on $_ if no following term
-    delete $really_want_term{'Y'}; # indirect object, too risky to check syntax;
-                                   # let perl do it
+    # Note the following omissions from the syntax checking operators below
+    # 'U' = user sub, depends on prototype
+    # 'F' = file test works on $_ if no following term
+    # 'Y' = indirect object, too risky to check syntax
+
+    my @binary_ops = qw#
+      !~ =~ . .. : && || // = + - x
+      **= += -= .= /= *= %= x= &= |= ^= <<= >>= &&= ||= //=
+      <= >= == != > < % * / ? & | ** <=> ~~ !~~ <<~
+      >> << ^
+      ^. |. &. ^.= |.= &.= ^^
+      #;
+    $is_binary_operator_type{$_} = 1 for @binary_ops;
+
+    # Note: omitting unary file test type 'F' here because it assumes $_
+    my @unary_ops = qw# ! ~ ~. m p mm pp #;
+    $is_binary_operator_type{$_} = 1 for @binary_ops;
+    push @unary_ops, BACKSLASH;
+    $is_binary_or_unary_operator_type{$_} = 1 for ( @binary_ops, @unary_ops );
+
+    my @binary_keywords = qw( and or err eq ne cmp );
+    $is_binary_keyword{$_} = 1 for @binary_keywords;
+
+    $is_binary_or_unary_keyword{$_} = 1 for ( @binary_keywords, 'not' );
+
+    # A syntax error occurs if a binary operator follows any of these types:
+    # FIXME: In most cases a comma could be included, but there is a problem
+    # to be resolved with commas which end parenless calls; see c015, c565.
+    # NOTE: the 'not' keyword could be added to a corresponding _keyword list
+    # NOTE: label 'j' omitted, for example: -f $file ? redo BLOCK : last BLOCK;
+    # NOTE: Removed 'A': fixes git162.t
+    @q = qw< L { [ ( ; f J t >;
+    $is_not_a_TERM_producer_type{$_} = 1 for ( @q, @unary_ops );
+
     @q = qw( q qq qx qr s y tr m );
     $is_q_qq_qx_qr_s_y_tr_m{$_} = 1 for @q;
 
