@@ -3096,7 +3096,7 @@ EOM
     } ## end sub scan_number_fast
 
     sub error_if_expecting_TERM {
-        my $self = shift;
+        my ($self) = @_;
 
         # Issue a warning if a binary operator is missing a term to operate on
 
@@ -3974,6 +3974,13 @@ EOM
             {
                 $expecting = TERM;
             }
+            elsif ( $last_nonblank_type eq '}' ) {
+                ## NOTE: safest guess is TERM, but could look ahead
+                $expecting = TERM;
+            }
+            else {
+                ##
+            }
         }
 
         if ( $expecting == TERM ) {
@@ -4101,7 +4108,7 @@ EOM
         elsif ( $expecting == OPERATOR ) {
         }
         else {
-            if ( $next_type eq 'w' ) { $type = 'p' }
+            if ( $next_type eq 'w' || $next_type eq '{' ) { $type = 'p' }
         }
         return;
     } ## end sub do_PLUS_SIGN
@@ -6359,18 +6366,18 @@ EOM
                 # scripts.
                 if ( $test_tok eq '~~' ) {
 
-                    # Do not combine first two of something like '~~~~~'
-                    my $repeated =
-                      $i + 2 > $max_token_index || $rtokens->[ $i + 2 ] eq '~';
+                    # Do not combine if a TERM is required
+                    if ( $self->operator_expected( $tok, '~', undef ) == TERM )
+                    {
 
-                    # FIXME: Patch for error in expecting (c566)
-                    # This should be moved into sub operator_expected
-                    $expecting =
-                      $last_nonblank_type eq '}'
-                      ? OPERATOR
-                      : $self->operator_expected( $tok, '~', undef );
-                    if ( $repeated || $expecting == TERM ) {
-                        $combine_ok = 0;
+                        # block types ';' may actually be hash refs, c567
+                        if ( $last_nonblank_type eq '}' ) {
+                            my $blk = $rbrace_type->[ $brace_depth + 1 ];
+                            if ( !$blk || $blk ne ';' ) { $combine_ok = 0 }
+                        }
+                        else {
+                            $combine_ok = 0;
+                        }
                     }
                 }
 
@@ -7140,60 +7147,50 @@ sub operator_expected {
 
     if ( $last_nonblank_type eq '}' ) {
 
-        # handle something after 'do' and 'eval'
-        if ( $is_block_operator{$last_nonblank_token} ) {
-
-            # something like $a = do { BLOCK } / 2;
-            return OPERATOR;    # block mode following }
-        }
-
-        #       $last_nonblank_token =~ /^(\)|\$|\-\>)/
-        if ( $is_paren_dollar{ substr( $last_nonblank_token, 0, 1 ) }
-            || substr( $last_nonblank_token, 0, 2 ) eq '->' )
-        {
-            if ( $last_nonblank_token eq '$' ) { return UNKNOWN }
+        #-------------------------------------------
+        # Section 2B1: Closing structural ')' or ']'
+        #-------------------------------------------
+        if ( $last_nonblank_token eq ')' || $last_nonblank_token eq ']' ) {
             return OPERATOR;
         }
 
-        # Check for smartmatch operator before preceding brace or square
-        # bracket.  For example, at the ? after the ] in the following
-        # expressions we are expecting an operator:
-        #
-        # qr/3/ ~~ ['1234'] ? 1 : 0;
-        # map { $_ ~~ [ '0', '1' ] ? 'x' : 'o' } @a;
-        if ( $last_nonblank_token eq '~~' ) {
+        #-------------------------------------
+        # Section 2B2: Closing block brace '}'
+        #-------------------------------------
+        my $blk = $rbrace_type->[ $brace_depth + 1 ];
+
+        # Non-blocks
+        if ( !defined($blk) ) {
             return OPERATOR;
         }
 
-        # A right brace here indicates the end of a simple block.  All
-        # non-structural right braces have type 'R' all braces associated with
-        # block operator keywords have been given those keywords as
-        # "last_nonblank_token" and caught above.  (This statement is order
-        # dependent, and must come after checking $last_nonblank_token).
-
-        # patch for dor.t (defined or).
-        if (   $tok eq '/'
-            && $next_type eq '/'
-            && $last_nonblank_token eq ']' )
-        {
-            return OPERATOR;
-        }
-
-        # Patch for RT #116344: misparse a ternary operator after an
-        # anonymous hash, like this:
-        #   return ref {} ? 1 : 0;
-        # The right brace should really be marked type 'R' in this case,
-        # and it is safest to return an UNKNOWN here. Expecting a TERM will
-        # cause the '?' to always be interpreted as a pattern delimiter
-        # rather than introducing a ternary operator.
-        if ( $tok eq '?' ) {
+        # Unidentified block type
+        if ( !$blk ) {
             return UNKNOWN;
         }
 
-        ##FIXME: consider returning OPERATOR for ')' and ']' and 'R' (c566)
-        return TERM;
+        # Blocks followed by a TERM
+        if (   $is_zero_continuation_block_type{$blk}
+            || $is_sort_map_grep{$blk}
+            || $is_grep_alias{$blk}
+            || substr( $blk, -1, 1 ) eq ':'       && $blk =~ /^\w+:$/
+            || substr( $blk,  0, 3 ) eq 'sub'     && $blk =~ /^sub\s/
+            || substr( $blk,  0, 7 ) eq 'package' && $blk =~ /^package\s/ )
+        {
+            return TERM;
+        }
 
-    } ## end type '}'
+        # Blocks followed by an OPERATOR
+        #    do eval sub
+        if (   $is_block_operator{$blk}
+            || $is_sub{$blk} )
+        {
+            return OPERATOR;
+        }
+
+        # Any other block type.  Let lower level routines decide what to do.
+        return UNKNOWN;
+    }
 
     #-------------------------------
     # Section 2C: number or v-string
