@@ -3967,7 +3967,7 @@ EOM
 
         # '*' = typeglob, or multiply?
 
-        # Guess based on next token.  See also c035, and versions before 2026-
+        # Guess based on next token.  See also c036, and versions before 2026-
         if ( $expecting == UNKNOWN && $next_type ne 'b' ) {
 
             # Check for a normal glob, like *OUT:
