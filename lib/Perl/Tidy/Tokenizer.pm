@@ -7185,7 +7185,12 @@ sub operator_expected {
             return OPERATOR;
         }
 
-        # Any other block type.  Let lower level routines decide what to do.
+        # Any other block type is marked UNKNOWN to be safe (c566).
+        # For example, a block type marked ';' could be a hash ref:
+        #    { map { $_ => 'x' } keys %main:: } ~~ \%main::;
+        # The tokenizer would have to analyze the contents to distinguish
+        # between a block closure and a hash ref brace in this case.  So mark
+        # this as UNKNOWN and let the lower level routines figure it out.
         return UNKNOWN;
     }
 
@@ -12114,8 +12119,8 @@ BEGIN {
     $is_binary_or_unary_keyword{$_} = 1 for ( @binary_keywords, 'not' );
 
     # A syntax error occurs if a binary operator follows any of these types:
-    # FIXME: In most cases a comma could be included, but there is a problem
-    # to be resolved with commas which end parenless calls; see c015, c565.
+    # NOTE: a ',' cannot be included because of parenless calls (c015).
+    # For example this is valid: print "hello\n", && print "goodbye\n";
     # NOTE: the 'not' keyword could be added to a corresponding _keyword list
     # NOTE: label 'j' omitted, for example: -f $file ? redo BLOCK : last BLOCK;
     # NOTE: Removed 'A': fixes git162.t

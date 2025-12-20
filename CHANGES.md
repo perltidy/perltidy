@@ -2,19 +2,22 @@
 
 ## 2025 09 12.02
 
-    - Two new parameters have been added for following old line breakpoints
-      at statement modifiers: --break-at-old-trailing-loops, or -botl, and
-      --break-at-old-trailing-conditionals, or -botc.  These are both true
-      by default. Parameter -botc will cause existing line breaks at trailing
+    - Two new parameters have been added to cause perltidy to follow old line
+      breakpoints at statement modifiers:
+         --break-at-old-trailing-loops, or -botl, and
+         --break-at-old-trailing-conditionals, or -botc.
+      These are both true by default.
+      Parameter -botc will cause existing line breaks at trailing
       'for', 'foreach', 'while', 'until' to be retained.
-      Likewise, parameter -botl will cause line breaks at
-      trailing 'if', 'unless' to be retained. Previously, the parameter
+      Likewise, parameter -botl will cause line breaks at trailing 'if',
+      'unless' to be retained. Previously, the parameter
       --break-at-old-logical-breakpoints caused trailing 'if' and 'unless'
-      line breaks to be retained.
+      line breaks to be retained. This update is a generalization of
+      that feature to all trailing statement modifier types.
 
       The new defaults should not cause changes to existing code because they
       only keep breaks which already exist. However, to make this version
-      behave like the previous version do the following:
+      behave exactly like the previous version do the following:
 
       (1) set -nbotl
       (2) if -nbol was set, then also set -nbotc
@@ -26,7 +29,7 @@
       the only option was Pod::Html, and it can still be selected with
       --use-pod-formatter="Pod::Html". The reason for this update is
       that this older formatter has limitations. This update also
-      allows formatting of pod text with non-ascii characters.
+      allows formatting of pod text containing non-ascii characters.
 
     - The default for --timeout-in-seconds has been reduced from 10 to 5 seconds.
       A default value of 10 seemed excessive. It can be changed with -tos=n.
@@ -2023,7 +2026,7 @@
     - RT #128216, Minor update to prevent inserting unwanted blank line at
       indentation level change.  This should not change existing scripts.
 
-    - RT #81852: Improved indentation when quoted word (qw) lists are 
+    - RT #81852: Improved indentation when quoted word (qw) lists are
       nested within other containers using the --weld-nested (-wn) flag.
       The example given previously (below) is now closer to what it would
       be with a simple list instead of qw:
