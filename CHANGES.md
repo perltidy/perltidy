@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2025 09 12.02
+## 2025 09 12.03
 
     - Two new parameters have been added to cause perltidy to follow old line
       breakpoints at statement modifiers:
