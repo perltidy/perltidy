@@ -3966,20 +3966,17 @@ EOM
         my $self = shift;
 
         # '*' = typeglob, or multiply?
-        if ( $expecting == UNKNOWN ) {
-            if (   $last_nonblank_type eq 'Z'
-                && $next_type ne 'b'
-                && $next_type ne '('
-                && $next_type ne '#' )    # Fix c036
-            {
-                $expecting = TERM;
-            }
-            elsif ( $last_nonblank_type eq '}' ) {
-                ## NOTE: safest guess is TERM, but could look ahead
+
+        # Guess based on next token.  See also c035, and versions before 2026-
+        if ( $expecting == UNKNOWN && $next_type ne 'b' ) {
+
+            # Check for a normal glob, like *OUT:
+            if ( $next_tok =~ /^[_A-Za-z]/ ) {
                 $expecting = TERM;
             }
             else {
-                ##
+                ## Could check for glob of a simple punctuation variable here
+                ## by looking ahead one more character
             }
         }
 
