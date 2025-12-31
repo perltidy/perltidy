@@ -52,6 +52,9 @@
 --delete-trailing-commas
 --add-trailing-commas
 
+# this is optional but usually gives a cleaner look
+--delete-weld-interfering-commas
+
 # require arrows
 --add-interbracket-arrows
 --interbracket-arrow-style=']->{ }->{ }->[ ]->['
