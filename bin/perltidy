@@ -6915,7 +6915,7 @@ The B<non-indenting-braces> side comment C<#<<<> is not required but will keep
 the indentation of the old code unchanged.
 
 This check is only applied to package statements which are not enclosed in
-block braces in order avoid warnings at temporary package changes.
+block braces. This avoids warnings at temporary package changes.
 
 =item B<u: unused variables>
 

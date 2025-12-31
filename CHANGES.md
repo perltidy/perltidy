@@ -2,37 +2,33 @@
 
 ## 2025 09 12.03
 
-    - Two new parameters have been added to cause perltidy to follow old line
-      breakpoints at statement modifiers:
-         --break-at-old-trailing-loops, or -botl, and
-         --break-at-old-trailing-conditionals, or -botc.
-      These are both true by default.
-      Parameter -botc will cause existing line breaks at trailing
-      'for', 'foreach', 'while', 'until' to be retained.
-      Likewise, parameter -botl will cause line breaks at trailing 'if',
-      'unless' to be retained. Previously, the parameter
-      --break-at-old-logical-breakpoints caused trailing 'if' and 'unless'
-      line breaks to be retained. This update is a generalization of
-      that feature to all trailing statement modifier types.
+    - A new parameter --break-at-old-trailing-loops, or -botl, keeps
+      existing line breaks at these trailing loop control keywords:
+         'for', 'foreach', 'while', 'until'.
 
-      The new defaults should not cause changes to existing code because they
-      only keep breaks which already exist. However, to make this version
-      behave exactly like the previous version do the following:
+      This is the default. These are often good break points, even for
+      short statements. For example, given the following two input lines:
 
-      (1) set -nbotl
-      (2) if -nbol was set, then also set -nbotc
+        FindExt::scan_ext("../$_")
+          foreach qw(cpan dist ext);
 
-    - When the -html option is used with the default --pod2html setting,
-      perltidy will look for a pod-to-html formatter in this order:
-      Pod::Simple::XHTML, Pod::Simple::HTML, and Pod::Html.  A preferred
-      formatter can be selected with --use-pod-formatter=s. Previously
-      the only option was Pod::Html, and it can still be selected with
-      --use-pod-formatter="Pod::Html". The reason for this update is
-      that this older formatter has limitations. This update also
-      allows formatting of pod text containing non-ascii characters.
+      The new default keeps two lines. The previous version flattened the
+      statement, since it fits on a single line:
 
-    - The default for --timeout-in-seconds has been reduced from 10 to 5 seconds.
-      A default value of 10 seemed excessive. It can be changed with -tos=n.
+        FindExt::scan_ext("../$_") foreach qw(cpan dist ext);
+
+      Use -nbotl to deactivate this new option.
+
+    - A new paameter --break-at-old-trailing-conditionals, or -botc keeps
+      existing line breaks at trailing these conditional control keywords
+          'if', 'unless'.
+
+      This is the default.  The capability was previously handled by
+      parameter --break-at-old-logical-breakpoints, or -bol, which also
+      controls logical breakpoints, such as '&&', and is true by default.
+      This change is made to simplify the input.
+
+      Use -nbotc to deactivate this option.
 
     - A new switch --blanks-before-opening-comments, -bboc, has been added
       for issue git #192.  This is on by default and allows perltidy to insert
@@ -40,29 +36,37 @@
       level.  Use the negated form to prevent such blank lines, -nbboc
       or --noblanks-before-opening-comments
 
-    - A new parameter --dump-keyword-usage can be used to dump a list of the
-      the perl builtin keywords used in a file. A companion flag
+    - A new parameter --dump-keyword-usage, or -dku, can be used to dump a
+      list of the the perl builtin keywords used in a file. A companion flag
       --dump-keyword-usage-list=s can be used to give a specific list of
       keywords or user functions to be included in the list.
+
+    - When the -html option is used with the default --pod2html setting,
+      perltidy will look for a pod-to-html formatter in this order:
+      Pod::Simple::XHTML, Pod::Simple::HTML, and Pod::Html.  A preferred
+      formatter can be selected with --use-pod-formatter=s. Previously
+      the only option was Pod::Html, and it can still be selected with
+      --use-pod-formatter="Pod::Html". The reason for this update is
+      that this older formatter has limitations, and requires the
+      creation of a temporary file for data transfer. This update also
+      allows formatting of pod text containing non-ascii characters.
+
+    - When perltidy is run with the -html option, and pod is rendered to html
+      with Pod::Html, the pod2html option 'backlink' could not be set in
+      in previous versions due to a programming error. This has been fixed.
+      This setting can now be made by giving perltidy the flag '--podbacklink'.
+
+    - The default for --timeout-in-seconds is reduced from 10 to 5 seconds.
+      A default value of 10 seemed excessive. It can be changed with -tos=n.
+
+    - The option --delete-weld-interfering-commas, or -dwic, has been
+      made much more accurate. It now makes fewer unnecessary comma deletions.
 
     - This version does more extensive checking of all string input parameters
       and will exit early if something doesn't look right.  The intention is
       to catch input errors as early as possible.
 
-    - A warning will be issued if any of the flags '--syntax-check', '-syn' or
-      '--perl-syntax-check-flags=s', '-pscf=s' are input. These were
-      deactivated some years ago and will be removed completely in a future
-      version.  So please remove them from your perltidyrc file, or comment
-      them out.
-
-    - When perltidy is run with the -html option, and pod is rendered to html
-      with pod2html, the pod2html option 'backlink' could not be set in
-      in previous versions due to a programming error. This has been fixed.
-      This setting can now be made by giving perltidy the flag '--podbacklink'.
-
-    - The option --delete-weld-interfering-commas, or -dwic, has been
-      made much more accurate, in the sense that it makes fewer unnecessary
-      comma deletions.
+    - This version has some improved checks for syntax errors.
 
 ## 2025 09 12
 
