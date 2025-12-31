@@ -952,7 +952,8 @@ BEGIN {
     # of hard breaks.  See b1433 and b1436.
     # NOTE: $type is used as the hash key for now; if other container tokens
     # are added it might be necessary to use a token/type mixture.
-    @q = qw# -> ? : && || + - / * #;
+    # Added type 'w' for b1559.
+    @q = qw# -> ? : && || + - / * w #;
     $is_soft_keep_break_type{$_} = 1 for @q;
 
     # these functions allow an identifier in the indirect object slot

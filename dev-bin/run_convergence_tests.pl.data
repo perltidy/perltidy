@@ -13629,6 +13629,30 @@ run_sub ( ->$blah{ say "ok 5" ; }
 --space-terminal-semicolon
 --keep-old-breakpoints-before='->'
 
+==> b1559.in <==
+my $array_ref=
+  $sth->fetchall_arrayref ({
+    name     => 1,
+    location => 1
+  });
+
+my $array_ref= $sth->fetchall_arrayref ({
+                           name     => 1,
+                           location => 1
+});
+
+==> b1559.par <==
+--maximum-line-length=41
+--indent-columns=9
+--weld-nested-containers
+--extended-line-up-parentheses
+--space-function-paren
+--paren-tightness=2
+--nowant-left-space='&= + = &&= - += & x !='
+--stack-closing-paren
+--stack-opening-hash-brace
+--keep-old-breakpoints-before='w'
+
 ==> b156.in <==
 # State 1
 {

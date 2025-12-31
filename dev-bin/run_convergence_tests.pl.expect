@@ -7228,16 +7228,16 @@ L2hos
 
 ==> b1424 <==
 $registry->add_type_constraint( Moose::Meta::TypeConstraint::Parameterizable
-                                  ->new( $a = 1;
-                                         $b = 1;
+                             ->new( $a = 1;
+                                    $b = 1;
 
-                                  ) );
+                                ) );
 
 $registry->add_type_constraint( Moose::Meta::TypeConstraint::Parameterizable
-                                  ->new( $a = 1;
-                                         $b = 1;
+                             ->new( $a = 1;
+                                    $b = 1;
 
-                                  ) );
+                                ) );
 
 
 ==> b1425 <==
@@ -8952,6 +8952,19 @@ run_sub (
 run_sub (
           ->$blah{ say "ok 5" ; }
 ) ;
+
+==> b1559 <==
+my $array_ref=
+  $sth->fetchall_arrayref ({
+                            name => 1,
+                            location => 1
+  });
+
+my $array_ref=
+  $sth->fetchall_arrayref ({
+                            name => 1,
+                            location => 1
+  });
 
 ==> b156 <==
 # State 1
