@@ -19,7 +19,7 @@
 
       Use -nbotl to deactivate this new option.
 
-    - A new paameter --break-at-old-trailing-conditionals, or -botc keeps
+    - A new parameter --break-at-old-trailing-conditionals, or -botc keeps
       existing line breaks at trailing these conditional control keywords
           'if', 'unless'.
 
