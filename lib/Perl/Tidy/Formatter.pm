@@ -37538,35 +37538,44 @@ EOM
             my $i_opening_minus = $self->find_token_starting_list($i_opening);
 
             my $excess = $self->excess_line_length( $i_opening_minus, $i );
-
-            # Use standard spaces for indentation of lists in -lp mode
-            # if it gives a longer line length. This helps to avoid an
-            # instability due to forming and breaking one-line blocks.
-            # This fixes case b1314.
-            my $indentation = $leading_spaces_to_go[$i_opening_minus];
-            if ( ref($indentation)
-                && $self->[_rline_diff_by_seqno_]->{$type_sequence} )
-            {
-                my $lp_spaces  = $indentation->get_spaces();
-                my $std_spaces = $indentation->get_standard_spaces();
-                my $diff       = $std_spaces - $lp_spaces;
-                if ( $diff > 0 ) { $excess += $diff }
-            }
-
-            my $tol = $length_tol;
+            my $tol    = $length_tol;
 
             # boost tol for an -lp container
-            if (
-                   $lp_tol_boost
-                && $lp_object
-                && ( $rOpts_extended_continuation_indentation
-                    || !$self->[_ris_list_by_seqno_]->{$type_sequence} )
-              )
-            {
-                $tol += $lp_tol_boost;
+            if ($rOpts_line_up_parentheses) {
+
+                # Use standard spaces for indentation of lists in -lp mode
+                # if it gives a longer line length. This helps to avoid an
+                # instability due to forming and breaking one-line blocks.
+                # This fixes case b1314.
+                # Modification for b1558: replaced the following check:
+                #    && $self->[_rline_diff_by_seqno_]->{$type_sequence} )
+                # with a check for a list with a comma (not just '=>'), since
+                # these are invariants.
+                my $indentation = $leading_spaces_to_go[$i_opening_minus];
+                my $is_list = $self->[_ris_list_by_seqno_]->{$type_sequence};
+                my $dtol = 0;
+
+                if ( ref($indentation) && $is_list ) {
+                    my $lp_spaces  = $indentation->get_spaces();
+                    my $std_spaces = $indentation->get_standard_spaces();
+                    my $diff       = $std_spaces - $lp_spaces;
+                    if ( $diff > 0 ) { $dtol = $diff }
+                }
+
+                if (
+                       $lp_tol_boost
+                    && $lp_object
+                    && ( $rOpts_extended_continuation_indentation
+                        || !$is_list )
+                  )
+                {
+                    $dtol = max( $dtol, $lp_tol_boost );
+                }
+
+                $tol += $dtol;
             }
 
-            # Patch to avoid blinking with -bbxi=2 and -cab=2
+            # OLD: Patch to avoid blinking with -bbxi=2 and -cab=2
             # in which variations in -ci cause unstable formatting
             # in edge cases. We just always add one ci level so that
             # the formatting is independent of the -BBX results.
@@ -37582,7 +37591,6 @@ EOM
             }
 
             $is_long_term = $excess + $tol > 0;
-
         }
 
         # We've set breaks after all comma-arrows.  Now we have to

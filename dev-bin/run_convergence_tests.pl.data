@@ -13629,6 +13629,44 @@ run_sub ( ->$blah{ say "ok 5" ; }
 --space-terminal-semicolon
 --keep-old-breakpoints-before='->'
 
+==> b1558.in <==
+         $c->bind(
+                  'room',
+                  '<Enter>' => [
+                        sub {
+                                 my ( $c, @args ) = @_;
+                                 my $id = $c->find( 'withtag' => 'current' );
+                                 $mkFloor::currentRoom =
+                                   $mkFloor::floorLabels{
+                                          $c->find( 'withtag', 'current' )
+                                   }
+                                   if defined $id;
+                                 $c->idletasks;
+                        }
+                  ]
+         );
+
+         $c->bind(
+                  'room',
+                  '<Enter>' => [
+                        sub {
+                                 my ( $c, @args ) = @_;
+                                 my $id = $c->find( 'withtag' => 'current' );
+                                 $mkFloor::currentRoom =
+                                   $mkFloor::floorLabels{ $c->find(
+                                                     'withtag', 'current' ) }
+                                   if defined $id;
+                                 $c->idletasks;
+                        }
+                  ]
+         );
+
+
+==> b1558.par <==
+--maximum-line-length=77
+--indent-columns=9
+--extended-line-up-parentheses
+
 ==> b1559.in <==
 my $array_ref=
   $sth->fetchall_arrayref ({

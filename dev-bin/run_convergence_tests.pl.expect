@@ -1855,11 +1855,7 @@ my @boolfunc =
 
 ==> b1057a <==
        is_deeply(
-                 [
-                   $it->halt_tap(
-                                 {control => {details => 0}}
-                   )
-                 ],
+                 [$it->halt_tap({control => {details => 0}})],
                  [[OUT_STD, "Bail out!  0\n"]],
                  "falsy details"
        );
@@ -2823,8 +2819,10 @@ __END__
 ==> b1095 <==
         use Moose -traits=>
             [
-             'My::Trait'=>
-             {-alias=>{reversed_name=>'reversed',},-excludes=>'reversed_name',},
+             'My::Trait'=>{
+                           -alias=>{reversed_name=>'reversed',},
+                           -excludes=>'reversed_name',
+             },
             ];
 
         use Moose -traits=>
@@ -5077,12 +5075,10 @@ $obj= {
                      );
 
               # S2
-              $n
-                     += (
-                           $b
-                           = sysread( $data,    ${*$data},
-                                      $blksize, $l )
-                     );
+              $n += (
+                       $b
+                       = sysread( $data, ${*$data}, $blksize, $l )
+              );
 
 ==> b1230 <==
     # S1
@@ -5900,7 +5896,9 @@ my $file = $menubar->Menubutton(
        [
           [  Cascade    => '~View',
              -menuitems =>
-             [  [ Button => '~widget',     -command => [ \&view_widget_code, __FILE__ ] ],
+             [
+                [  Button => '~widget', -command => [ \&view_widget_code, __FILE__ ]
+                ],
                 [ Button => '~WidgetDemo', -command => [ \&view_widget_code, $wd ] ],
              ],    # end cascade menuitems
           ],    # end view cascade
@@ -7008,17 +7006,13 @@ $cmd[$i] =
 
 
 ==> b1402 <==
-ok (  3,
-      int(
-            at ( sum ( conv2d ( $b, $a, { Boundary => 'Reflect' } ) - $ans ) )
-      ) == 0
-);
+ok ( 3,
+      int( at ( sum ( conv2d ( $b, $a, { Boundary => 'Reflect' } ) - $ans ) ) )
+        == 0 );
 
-ok (  3,
-      int(
-            at ( sum ( conv2d ( $b, $a, { Boundary => 'Reflect' } ) - $ans ) )
-      ) == 0
-);
+ok ( 3,
+      int( at ( sum ( conv2d ( $b, $a, { Boundary => 'Reflect' } ) - $ans ) ) )
+        == 0 );
 
 
 ==> b1403 <==
@@ -7479,20 +7473,16 @@ $last = after (
 
 
 ==> b1444 <==
-                  while (  my ( $k, $v )
-                           = each %{
-                                    $self->{channels}->{$chk}->{device_cache}
-                           }
-                         )
+                  while ( my ( $k, $v )
+                           = each %{ $self->{channels}->{$chk}->{device_cache}
+                           } )
                   {
                            ...;
                   }
 
-                  while (  my ( $k, $v )
-                           = each %{
-                                    $self->{channels}->{$chk}->{device_cache}
-                           }
-                         )
+                  while ( my ( $k, $v )
+                           = each %{ $self->{channels}->{$chk}->{device_cache}
+                           } )
                   {
                            ...;
                   }
@@ -8912,19 +8902,15 @@ my @data=
 push @record, [
     map {
            $_->getAttribute( 'code' ), $_->textContent
-            }
-            $field_node->getChildrenByTagName(
-                                               '*'
-            ),
+    } $field_node->getChildrenByTagName(
+                                                '*' ),
 ];
 
 push @record, [
     map {
            $_->getAttribute( 'code' ), $_->textContent
-            }
-            $field_node->getChildrenByTagName(
-                                               '*'
-            ),
+    } $field_node->getChildrenByTagName(
+                                                '*' ),
 ];
 
 ==> b1556 <==
@@ -8952,6 +8938,40 @@ run_sub (
 run_sub (
           ->$blah{ say "ok 5" ; }
 ) ;
+
+==> b1558 <==
+         $c->bind(
+                  'room',
+                  '<Enter>' => [
+                        sub {
+                                 my ( $c, @args ) = @_;
+                                 my $id = $c->find( 'withtag' => 'current' );
+                                 $mkFloor::currentRoom =
+                                   $mkFloor::floorLabels{
+                                          $c->find( 'withtag', 'current' )
+                                   }
+                                   if defined $id;
+                                 $c->idletasks;
+                        }
+                  ]
+         );
+
+         $c->bind(
+                  'room',
+                  '<Enter>' => [
+                        sub {
+                                 my ( $c, @args ) = @_;
+                                 my $id = $c->find( 'withtag' => 'current' );
+                                 $mkFloor::currentRoom =
+                                   $mkFloor::floorLabels{
+                                          $c->find( 'withtag', 'current' )
+                                   }
+                                   if defined $id;
+                                 $c->idletasks;
+                        }
+                  ]
+         );
+
 
 ==> b1559 <==
 my $array_ref=
@@ -11500,7 +11520,9 @@ foreach my $x (
                 $features->{$name}=
                   {
                     description=>$origin->{$name}{description},
-                    prereqs=>_prereqs_from_1(undef,undef,$origin->{$name}),};
+                    prereqs=>
+                      _prereqs_from_1(undef,undef,$origin->{$name}
+                      ),};
 
 ==> b939 <==
       # State 1
