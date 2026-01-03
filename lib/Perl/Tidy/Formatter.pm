@@ -1030,7 +1030,6 @@ sub new {
     my ( $class, @arglist ) = @_;
     if ( @arglist % 2 ) { croak "Odd number of items in arg hash list\n" }
 
-    # we are given an object with a write_line() method to take lines
     my %defaults = (
         sink_object        => undef,
         diagnostics_object => undef,
@@ -1041,30 +1040,23 @@ sub new {
     );
     my %args = ( %defaults, @arglist );
 
+    my $sink_object        = $args{sink_object};
+    my $diagnostics_object = $args{diagnostics_object};
+    my $logger_object      = $args{logger_object};
     my $length_function    = $args{length_function};
     my $is_encoded_data    = $args{is_encoded_data};
     my $fh_tee             = $args{fh_tee};
-    my $logger_object      = $args{logger_object};
-    my $diagnostics_object = $args{diagnostics_object};
 
-    # we create another object with a get_line() and peek_ahead() method
-    my $sink_object = $args{sink_object};
+    # Be sure we have a sink_object to receive formatted lines
+    if ( !defined($sink_object) ) {
+        Fault("Did not receive a sink_object\n");
+    }
+
+    # Create a FileWriter object to receive lines from the vertical aligner
     my $file_writer_object =
       Perl::Tidy::FileWriter->new( $sink_object, $rOpts, $logger_object );
 
-    # initialize closure variables...
-    set_logger_object($logger_object);
-    set_diagnostics_object($diagnostics_object);
-    initialize_lp_vars();
-    initialize_csc_vars();
-    initialize_break_lists();
-    initialize_undo_ci();
-    initialize_process_line_of_CODE();
-    initialize_grind_batch_of_CODE();
-    initialize_get_final_indentation();
-    initialize_postponed_breakpoint();
-    initialize_batch_variables();
-
+    # Create a VerticalAligner object to receive lines from the formatter
     my $vertical_aligner_object = Perl::Tidy::VerticalAligner->new(
         rOpts              => $rOpts,
         file_writer_object => $file_writer_object,
@@ -1072,25 +1064,72 @@ sub new {
         diagnostics_object => $diagnostics_object,
     );
 
-    write_logfile_entry("\nStarting tokenization pass...\n");
-
-    if ( $rOpts->{'entab-leading-whitespace'} ) {
-        write_logfile_entry(
-"Leading whitespace will be entabbed with $rOpts->{'entab-leading-whitespace'} spaces per tab\n"
-        );
-    }
-    elsif ( $rOpts->{'tabs'} ) {
-        write_logfile_entry("Indentation will be with a tab character\n");
-    }
-    else {
-        write_logfile_entry(
-            "Indentation will be with $rOpts->{'indent-columns'} spaces\n");
-    }
-
     # Initialize the $self array reference.
     # To add an item, first add a constant index in the BEGIN block above.
     my $self = [];
     bless $self, $class;
+
+    # Initialize self vars taking specific initial values
+    $self->[_length_function_]         = $length_function;
+    $self->[_is_encoded_data_]         = $is_encoded_data;
+    $self->[_fh_tee_]                  = $fh_tee;
+    $self->[_sink_object_]             = $sink_object;
+    $self->[_file_writer_object_]      = $file_writer_object;
+    $self->[_vertical_aligner_object_] = $vertical_aligner_object;
+    $self->[_logger_object_]           = $logger_object;
+    $self->[_save_logfile_] =
+      defined($logger_object) && $logger_object->get_save_logfile();
+    $self->[_saw_VERSION_in_this_file_] = !$rOpts->{'pass-version-line'};
+
+    # Initialize all other self vars
+    $self->initialize_self_vars();
+
+    # Initialize closure variables...
+    $self->initialize_closure_variables($diagnostics_object);
+
+    # Be sure all variables in $self have been initialized above.  To find the
+    # correspondence of index numbers and array names, copy a list to a file
+    # and use the unix 'nl' command to number lines 1..
+    my @non_existant;
+    foreach ( 0 .. _LAST_SELF_INDEX_ ) {
+        if ( !exists $self->[$_] ) {
+            push @non_existant, $_;
+        }
+    }
+    if (@non_existant) {
+        Fault("These indexes in self not initialized: (@non_existant)\n");
+    }
+
+    # Safety check..this is not a class
+    if ( _increment_count() > 1 ) {
+        confess
+"Attempt to create more than 1 object in $class, which is not a true class yet\n";
+    }
+
+    # Ready to start formatting
+    if ($logger_object) {
+        write_logfile_entry("\nStarting tokenization pass...\n");
+
+        if ( $rOpts->{'entab-leading-whitespace'} ) {
+            write_logfile_entry(
+"Leading whitespace will be entabbed with $rOpts->{'entab-leading-whitespace'} spaces per tab\n"
+            );
+        }
+        elsif ( $rOpts->{'tabs'} ) {
+            write_logfile_entry("Indentation will be with a tab character\n");
+        }
+        else {
+            write_logfile_entry(
+                "Indentation will be with $rOpts->{'indent-columns'} spaces\n");
+        }
+    }
+
+    return $self;
+} ## end sub new
+
+sub initialize_self_vars {
+
+    my ($self) = @_;
 
     # Basic data structures...
     $self->[_rlines_] = [];    # = ref to array of lines of the file
@@ -1171,39 +1210,29 @@ sub new {
     $self->[_ris_list_by_seqno_]         = {};
     $self->[_ris_cuddled_closing_brace_] = {};
 
-    $self->[_rbreak_container_] = {};                 # prevent one-line blocks
-    $self->[_rshort_nested_]    = {};                 # blocks not forced open
-    $self->[_length_function_]  = $length_function;
-    $self->[_is_encoded_data_]  = $is_encoded_data;
-
-    # Some objects...
-    $self->[_fh_tee_]                  = $fh_tee;
-    $self->[_sink_object_]             = $sink_object;
-    $self->[_file_writer_object_]      = $file_writer_object;
-    $self->[_vertical_aligner_object_] = $vertical_aligner_object;
-    $self->[_logger_object_]           = $logger_object;
+    $self->[_rbreak_container_] = {};    # prevent one-line blocks
+    $self->[_rshort_nested_]    = {};    # blocks not forced open
 
     # Memory of processed text...
-    $self->[_ris_special_identifier_token_]    = {};
-    $self->[_last_line_leading_level_]         = 0;
-    $self->[_last_line_leading_type_]          = '#';
-    $self->[_last_output_short_opening_token_] = 0;
-    $self->[_added_semicolon_count_]           = 0;
-    $self->[_first_added_semicolon_at_]        = 0;
-    $self->[_last_added_semicolon_at_]         = 0;
-    $self->[_deleted_semicolon_count_]         = 0;
-    $self->[_first_deleted_semicolon_at_]      = 0;
-    $self->[_last_deleted_semicolon_at_]       = 0;
-    $self->[_embedded_tab_count_]              = 0;
-    $self->[_first_embedded_tab_at_]           = 0;
-    $self->[_last_embedded_tab_at_]            = 0;
-    $self->[_first_tabbing_disagreement_]      = 0;
-    $self->[_last_tabbing_disagreement_]       = 0;
-    $self->[_tabbing_disagreement_count_]      = 0;
-    $self->[_in_tabbing_disagreement_]         = 0;
-    $self->[_saw_VERSION_in_this_file_]        = !$rOpts->{'pass-version-line'};
-    $self->[_saw_use_strict_]                  = 0;
-    $self->[_saw_END_or_DATA_]                 = 0;
+    $self->[_ris_special_identifier_token_]     = {};
+    $self->[_last_line_leading_level_]          = 0;
+    $self->[_last_line_leading_type_]           = '#';
+    $self->[_last_output_short_opening_token_]  = 0;
+    $self->[_added_semicolon_count_]            = 0;
+    $self->[_first_added_semicolon_at_]         = 0;
+    $self->[_last_added_semicolon_at_]          = 0;
+    $self->[_deleted_semicolon_count_]          = 0;
+    $self->[_first_deleted_semicolon_at_]       = 0;
+    $self->[_last_deleted_semicolon_at_]        = 0;
+    $self->[_embedded_tab_count_]               = 0;
+    $self->[_first_embedded_tab_at_]            = 0;
+    $self->[_last_embedded_tab_at_]             = 0;
+    $self->[_first_tabbing_disagreement_]       = 0;
+    $self->[_last_tabbing_disagreement_]        = 0;
+    $self->[_tabbing_disagreement_count_]       = 0;
+    $self->[_in_tabbing_disagreement_]          = 0;
+    $self->[_saw_use_strict_]                   = 0;
+    $self->[_saw_END_or_DATA_]                  = 0;
     $self->[_first_brace_tabbing_disagreement_] = undef;
     $self->[_in_brace_tabbing_disagreement_]    = undef;
 
@@ -1259,33 +1288,26 @@ sub new {
     $self->[_rseqno_arrow_call_chain_start_] = {};
     $self->[_rarrow_call_chain_]             = {};
 
-    $self->[_save_logfile_] =
-      defined($logger_object) && $logger_object->get_save_logfile();
+    return;
+} ## end sub initialize_self_vars
 
+sub initialize_closure_variables {
+    my ( $self, $diagnostics_object ) = @_;
+    my $logger_object = $self->[_logger_object_];
+    set_logger_object($logger_object);
+    set_diagnostics_object($diagnostics_object);
+    initialize_lp_vars();
+    initialize_csc_vars();
+    initialize_break_lists();
+    initialize_undo_ci();
+    initialize_process_line_of_CODE();
+    initialize_grind_batch_of_CODE();
+    initialize_get_final_indentation();
+    initialize_postponed_breakpoint();
+    initialize_batch_variables();
     $self->initialize_write_line();
-
-    # Be sure all variables in $self have been initialized above.  To find the
-    # correspondence of index numbers and array names, copy a list to a file
-    # and use the unix 'nl' command to number lines 1..
-    if (DEVEL_MODE) {
-        my @non_existant;
-        foreach ( 0 .. _LAST_SELF_INDEX_ ) {
-            if ( !exists $self->[$_] ) {
-                push @non_existant, $_;
-            }
-        }
-        if (@non_existant) {
-            Fault("These indexes in self not initialized: (@non_existant)\n");
-        }
-    }
-
-    # Safety check..this is not a class yet
-    if ( _increment_count() > 1 ) {
-        confess
-"Attempt to create more than 1 object in $class, which is not a true class yet\n";
-    }
-    return $self;
-} ## end sub new
+    return;
+} ## end sub initialize_closure_variables
 
 ######################################
 # CODE SECTION 2: Some Basic Utilities
@@ -37553,7 +37575,7 @@ EOM
                 # these are invariants.
                 my $indentation = $leading_spaces_to_go[$i_opening_minus];
                 my $is_list = $self->[_ris_list_by_seqno_]->{$type_sequence};
-                my $dtol = 0;
+                my $dtol    = 0;
 
                 if ( ref($indentation) && $is_list ) {
                     my $lp_spaces  = $indentation->get_spaces();
