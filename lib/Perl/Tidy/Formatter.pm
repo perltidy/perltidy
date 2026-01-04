@@ -15719,12 +15719,16 @@ sub dump_mixed_call_parens {
     my $opt_name = 'dump-mixed-call-parens';
     return unless ( $rOpts->{$opt_name} );
 
-    my $rLL = $self->[_rLL_];
+    my $rLL                 = $self->[_rLL_];
+    my $K_closing_container = $self->[_K_closing_container_];
 
     my %skip_keywords;
     my @q = qw( my our local state
       and cmp continue do else elsif eq ge gt le lt ne not or xor );
     $skip_keywords{$_} = 1 for @q;
+
+    my %is_brace_or_semicolon;
+    $is_brace_or_semicolon{$_} = 1 for qw( { } ; );
 
     my %call_counts;
     foreach my $KK ( 0 .. @{$rLL} - 1 ) {
@@ -15752,6 +15756,13 @@ sub dump_mixed_call_parens {
         {
             my $seqno = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
             next if ( $self->block_seqno_of_paren_seqno($seqno) );
+
+            # Be sure the parens enclose a complete statement, not like this:
+            #   return $class if ($old_quote - $new_quote) == 0;
+            my $Kc      = $K_closing_container->{$seqno};
+            my $Kc_n    = $self->K_next_code($Kc);
+            my $token_n = defined($Kc_n) ? $rLL->[$Kc_n]->[_TOKEN_] : ';';
+            next if ( !$is_brace_or_semicolon{$token_n} );
         }
 
         if ( !defined( $call_counts{$token} ) ) {
