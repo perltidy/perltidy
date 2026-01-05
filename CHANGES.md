@@ -71,7 +71,7 @@
     - Fixed issue with --dump-mixed-call-parens. A trailing statement modifier
       such as the following 'if' was incorrectly being counted as having parens:
 
-	return $class if ($old_quote - $new_quote) == 0;
+        return $class if ($old_quote - $new_quote) == 0;
 
 ## 2025 09 12
 

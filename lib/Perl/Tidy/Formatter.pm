@@ -952,8 +952,7 @@ BEGIN {
     # of hard breaks.  See b1433 and b1436.
     # NOTE: $type is used as the hash key for now; if other container tokens
     # are added it might be necessary to use a token/type mixture.
-    # Added type 'w' for b1559.
-    @q = qw# -> ? : && || + - / * w #;
+    @q = qw# -> ? : && || + - / * #;
     $is_soft_keep_break_type{$_} = 1 for @q;
 
     # these functions allow an identifier in the indirect object slot
@@ -23068,6 +23067,17 @@ sub check_for_old_break {
     if ( !$seqno ) {
         my $type = $rLL->[$KK]->[_TYPE_];
         if ( $rkeep_break_hash->{$type} ) {
+
+            # Type 'w' not allowed in a list if -lp is set
+            # .. fix for b1559, b1560, b1561
+            if ( $type eq 'w' && $rOpts_line_up_parentheses ) {
+                my $seqno_parent      = $self->parent_seqno_by_K($KK);
+                my $ris_list_by_seqno = $self->[_ris_list_by_seqno_];
+                if ( $seqno_parent && $ris_list_by_seqno->{$seqno_parent} ) {
+                    return;
+                }
+            }
+
             $rbreak_hash->{$KK} = $is_soft_keep_break_type{$type} ? 2 : 1;
 
             # Update the permanently broken flag for a non-sequenced token.

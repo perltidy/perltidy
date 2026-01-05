@@ -13730,6 +13730,32 @@ __END__
 --variable-maximum-line-length
 --weld-nested-containers
 
+==> b1561.in <==
+    $_[
+      0
+      ]
+      = Win32::ChangeNotify
+      ->_new(
+        @_[
+          1 .. 3
+        ]
+      );
+
+    $_[
+      0
+      ] =
+      Win32::ChangeNotify
+      ->_new(
+        @_[
+          1 .. 3
+        ]
+      );
+
+==> b1561.par <==
+--maximum-line-length=20
+--break-before-all-operators
+--keep-old-breakpoints-before='w ]'
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar
