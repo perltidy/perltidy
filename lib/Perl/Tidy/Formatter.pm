@@ -637,6 +637,7 @@ BEGIN {
         _sink_object_               => $i++,
         _file_writer_object_        => $i++,
         _vertical_aligner_object_   => $i++,
+        _diagnostics_object_        => $i++,
         _logger_object_             => $i++,
         _radjusted_levels_          => $i++,
 
@@ -1075,6 +1076,7 @@ sub new {
     $self->[_sink_object_]             = $sink_object;
     $self->[_file_writer_object_]      = $file_writer_object;
     $self->[_vertical_aligner_object_] = $vertical_aligner_object;
+    $self->[_diagnostics_object_]      = $diagnostics_object;
     $self->[_logger_object_]           = $logger_object;
     $self->[_save_logfile_] =
       defined($logger_object) && $logger_object->get_save_logfile();
@@ -1084,7 +1086,7 @@ sub new {
     $self->initialize_self_vars();
 
     # Initialize closure variables...
-    $self->initialize_closure_variables($diagnostics_object);
+    $self->initialize_closure_variables();
 
     # Be sure all variables in $self have been initialized above.  To find the
     # correspondence of index numbers and array names, copy a list to a file
@@ -1291,10 +1293,9 @@ sub initialize_self_vars {
 } ## end sub initialize_self_vars
 
 sub initialize_closure_variables {
-    my ( $self, $diagnostics_object ) = @_;
+    my ($self) = @_;
     my $logger_object = $self->[_logger_object_];
     set_logger_object($logger_object);
-    set_diagnostics_object($diagnostics_object);
     initialize_lp_vars();
     initialize_csc_vars();
     initialize_break_lists();
@@ -1520,6 +1521,9 @@ EOM
 } ## end closure check_line_hashes
 
 {    ## begin closure for logger routines
+
+    # TODO: eliminate this closure; first need to convert all callers,
+    # including Fault* to $self-> calls. Put input_stream_name in $self.
     my $logger_object;
 
     # Called once per file to initialize the logger object
@@ -1587,24 +1591,15 @@ EOM
 
 } ## end closure for logger routines
 
-{    ## begin closure for diagnostics routines
-    my $diagnostics_object;
-
-    # Called once per file to initialize the diagnostics object
-    sub set_diagnostics_object {
-        $diagnostics_object = shift;
-        return;
+# Available for debugging but not normally used
+sub write_diagnostics {
+    my ( $self, $msg, $line_number ) = @_;
+    my $diagnostics_object = $self->[_diagnostics_object_];
+    if ($diagnostics_object) {
+        $diagnostics_object->write_diagnostics( $msg, $line_number );
     }
-
-    # Available for debugging but not currently used:
-    sub write_diagnostics {
-        my ( $msg, $line_number ) = @_;
-        if ($diagnostics_object) {
-            $diagnostics_object->write_diagnostics( $msg, $line_number );
-        }
-        return;
-    } ## end sub write_diagnostics
-} ## end closure for diagnostics routines
+    return;
+} ## end sub write_diagnostics
 
 sub get_convergence_check {
     my ($self) = @_;
