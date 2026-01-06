@@ -127,20 +127,23 @@ sub Warn {
 }
 
 sub Fault {
-    my ($msg) = @_;
+    my ( $msg, $stay_alive ) = @_;
 
     # This routine is called for errors that really should not occur
     # except if there has been a bug introduced by a recent program change.
     # Please add comments at calls to Fault to explain why the call
     # should not occur, and where to look to fix it.
-    my ( $package0_uu, $filename0_uu, $line0,    $subroutine0_uu ) = caller(0);
-    my ( $package1_uu, $filename1,    $line1,    $subroutine1 )    = caller(1);
-    my ( $package2_uu, $filename2_uu, $line2_uu, $subroutine2 )    = caller(2);
-    my $pkg = __PACKAGE__;
 
+    # Given:
+    #   $msg = error message
+    #   $stay_alive = optional flag. If true, and DEVEL_MODE is not set, then
+    #      call Warn instead of Die and return.
+    my ( $package0_uu, $filename0_uu, $line0, $subroutine0_uu ) = caller(0);
+    my ( $package1_uu, $filename1, $line1, $subroutine1 )       = caller(1);
+    my ( $package2_uu, $filename2_uu, $line2_uu, $subroutine2 ) = caller(2);
+    my $pkg               = __PACKAGE__;
     my $input_stream_name = get_input_stream_name();
-
-    Die(<<EOM);
+    my $error_message     = <<EOM;
 ==============================================================================
 While operating on input stream with name: '$input_stream_name'
 A fault was detected at line $line0 of sub '$subroutine1'
@@ -151,34 +154,14 @@ This is probably an error introduced by a recent programming change.
 $pkg reports VERSION='$VERSION'.
 ==============================================================================
 EOM
+
+    if ( $stay_alive && !DEVEL_MODE ) {
+        Warn($error_message);
+        return;
+    }
+    Die($error_message);
     croak "unexpected return from sub Die";
 } ## end sub Fault
-
-sub Fault_Warn {
-    my ($msg) = @_;
-
-    # This is the same as Fault except that, if DEVEL_MODE is not set,
-    # it calls Warn instead of Die and returns.
-    my ( $package0_uu, $filename0_uu, $line0,    $subroutine0_uu ) = caller(0);
-    my ( $package1_uu, $filename1,    $line1,    $subroutine1 )    = caller(1);
-    my ( $package2_uu, $filename2_uu, $line2_uu, $subroutine2 )    = caller(2);
-    my $input_stream_name = get_input_stream_name();
-
-    my $error_message = <<EOM;
-==============================================================================
-While operating on input stream with name: '$input_stream_name'
-A fault was detected at line $line0 of sub '$subroutine1'
-in file '$filename1'
-which was called from line $line1 of sub '$subroutine2'
-Message: '$msg'
-This is probably an error introduced by a recent programming change.
-Perl::Tidy::Formatter.pm reports VERSION='$VERSION'.
-==============================================================================
-EOM
-    Die($error_message) if (DEVEL_MODE);
-    Warn($error_message);
-    return;
-} ## end sub Fault_Warn
 
 sub Exit {
     my ($msg) = @_;
@@ -639,6 +622,7 @@ BEGIN {
         _vertical_aligner_object_   => $i++,
         _diagnostics_object_        => $i++,
         _logger_object_             => $i++,
+        _input_stream_name_         => $i++,
         _radjusted_levels_          => $i++,
 
         _ris_special_identifier_token_    => $i++,
@@ -1081,6 +1065,10 @@ sub new {
     $self->[_save_logfile_] =
       defined($logger_object) && $logger_object->get_save_logfile();
     $self->[_saw_VERSION_in_this_file_] = !$rOpts->{'pass-version-line'};
+    $self->[_input_stream_name_] =
+      defined($logger_object)
+      ? $logger_object->get_input_stream_name()
+      : EMPTY_STRING;
 
     # Initialize all other self vars
     $self->initialize_self_vars();
@@ -11371,7 +11359,7 @@ sub dump_unique_keys {
     $self->scan_hash_keys($rhash);
     my $output_string = $rhash->{unique};
     if ($output_string) {
-        my $input_stream_name = get_input_stream_name();
+        my $input_stream_name = $self->[_input_stream_name_];
         chomp $output_string;
         print {*STDOUT} <<EOM;
 ==> $input_stream_name <==
@@ -11808,7 +11796,7 @@ sub dump_similar_keys {
     $self->scan_hash_keys($rhash);
     my $output_string = $rhash->{similar};
     if ($output_string) {
-        my $input_stream_name = get_input_stream_name();
+        my $input_stream_name = $self->[_input_stream_name_];
         chomp $output_string;
         print {*STDOUT} <<EOM;
 ==> $input_stream_name <==
@@ -11828,7 +11816,7 @@ sub dump_hash_keys {
     $self->scan_hash_keys($rhash);
     my $output_string = $rhash->{all};
     if ($output_string) {
-        my $input_stream_name = get_input_stream_name();
+        my $input_stream_name = $self->[_input_stream_name_];
         chomp $output_string;
         print {*STDOUT} <<EOM;
 ==> $input_stream_name <==
@@ -11898,7 +11886,7 @@ sub dump_block_summary {
 
     return unless (@all_blocks);
 
-    my $input_stream_name = get_input_stream_name();
+    my $input_stream_name = $self->[_input_stream_name_];
 
     # Get code and comment line counts
     my ( $rcode_line_count, $rcomment_line_count ) =
@@ -13537,7 +13525,7 @@ sub is_complete_script {
         'plx' => 1,
         't'   => 1,
     );
-    my $input_stream_name = get_input_stream_name();
+    my $input_stream_name = $self->[_input_stream_name_];
 
     # look for a file extension
     my $pos_dot        = rindex( $input_stream_name, '.' );
@@ -15166,7 +15154,7 @@ sub dump_unusual_variables {
     my ( $rlines, $issue_type_string ) = $self->scan_variable_usage();
     return unless ( $rlines && @{$rlines} );
 
-    my $input_stream_name = get_input_stream_name();
+    my $input_stream_name = $self->[_input_stream_name_];
 
     # output for multiple types
     my $output_string = <<EOM;
@@ -15680,7 +15668,7 @@ sub dump_keyword_usage {
     # Report results
     return if ( !@line_order );
 
-    my $input_stream_name = get_input_stream_name();
+    my $input_stream_name = $self->[_input_stream_name_];
     my $output_string     = <<EOM;
 $input_stream_name: output for --$opt_name
 keyword,count,lno_first,lno_last
@@ -15786,7 +15774,7 @@ sub dump_mixed_call_parens {
           || $a->{name} cmp $b->{name}
       } @mixed_counts;
 
-    my $input_stream_name = get_input_stream_name();
+    my $input_stream_name = $self->[_input_stream_name_];
     my $output_string     = <<EOM;
 $input_stream_name: output for --dump-mixed-call-parens
 use -wcp=s and/or nwcp=s to find line numbers, where s is a string of words
@@ -16728,8 +16716,10 @@ sub respace_tokens {
         # error.
         if ( defined($last_K_out) ) {
             if ( $Kfirst != $last_K_out + 1 ) {
-                Fault_Warn(
-                    "Program Bug: last K out was $last_K_out but Kfirst=$Kfirst"
+                my $stay_alive = 1;
+                Fault(
+"Program Bug: last K out was $last_K_out but Kfirst=$Kfirst",
+                    $stay_alive
                 );
                 $severe_error = 1;
                 return ( $severe_error, $rqw_lines );
@@ -19662,8 +19652,9 @@ EOM
     # here indicates some kind of bug has been introduced into the above loops.
     # There is not good way to keep going; we better stop here.
     if ( $Knext <= $Kmax ) {
-        Fault_Warn(
-            "unexpected tokens at end of file when reconstructing lines");
+        my $stay_alive = 1;
+        Fault( "unexpected tokens at end of file when reconstructing lines",
+            $stay_alive );
         $severe_error = 1;
         return ( $severe_error, $rqw_lines );
     }
@@ -20296,7 +20287,7 @@ sub count_list_elements {
             # which will interfere with counting args
             if (DEBUG_COUNT) {
                 my $lno               = $rLL->[$KK]->[_LINE_INDEX_] + 1;
-                my $input_stream_name = get_input_stream_name();
+                my $input_stream_name = $self->[_input_stream_name_];
                 print {*STDERR}
 "DEBUG_COUNT: file $input_stream_name line=$lno type=$type tok=$token token_Kn=$token_Kn\n";
             }
@@ -22912,7 +22903,7 @@ sub dump_mismatched_args {
     my $rhash         = $self->cross_check_sub_calls();
     my $output_string = $rhash->{call_arg_warning_output};
     if ($output_string) {
-        my $input_stream_name = get_input_stream_name();
+        my $input_stream_name = $self->[_input_stream_name_];
         chomp $output_string;
         print {*STDOUT} <<EOM;
 $input_stream_name: output for --dump-mismatched-args
@@ -22929,7 +22920,7 @@ sub dump_mismatched_returns {
     my $rhash         = $self->cross_check_sub_calls();
     my $output_string = $rhash->{return_warning_output};
     if ($output_string) {
-        my $input_stream_name = get_input_stream_name();
+        my $input_stream_name = $self->[_input_stream_name_];
         chomp $output_string;
         print {*STDOUT} <<EOM;
 $input_stream_name: output for --dump-mismatched-returns
@@ -23009,7 +23000,7 @@ sub dump_nested_ternaries {
     my $opt_name      = 'dump-nested-ternaries';
     my $output_string = $self->find_nested_ternaries();
     if ($output_string) {
-        my $input_stream_name = get_input_stream_name();
+        my $input_stream_name = $self->[_input_stream_name_];
         chomp $output_string;
         print {*STDOUT} <<EOM;
 $input_stream_name: output for --$opt_name
