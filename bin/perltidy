@@ -7569,7 +7569,7 @@ we get
 
         ? ? : : ? :
 
-Since there is a sequence of two adjacent C<?> symbols, the maximum nesting depth is 1.
+Since there is a sequence of two adjacent C<?> symbols, the maximum nesting depth is 2-1=1.
 
 =item *
 
@@ -7585,6 +7585,14 @@ we get
         ? ( ? : ) : ? :
 
 In this case, there are no adjacent C<?> symbols, so the nesting depth is zero.
+
+=item *
+
+Note that in the following diagram, if "Value_if_true" is a nested ternary, and
+"Value_if_false" is not, then inverting the "Condition" test can produce a
+more-readable linear chain of tests, similar to an if-elsif- chain.
+
+  Condition ? Value_if_true : Value_if_false
 
 =back
 
@@ -8149,7 +8157,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20250912.03
+This man page documents perltidy version 20260109
 
 =head1 BUG REPORTS
 
@@ -8159,7 +8167,7 @@ To report a new bug or problem, use the "issues" link on this page.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2000-2025 by Steve Hancock
+Copyright (c) 2000-2026 by Steve Hancock
 
 =head1 LICENSE
 

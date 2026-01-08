@@ -1,5 +1,77 @@
 <h1>Perltidy Change Log</h1>
 
+<h2>2026 01 09</h2>
+
+<pre><code>- A new parameter --break-at-old-trailing-loops, or -botl, keeps
+  existing line breaks at these trailing loop control keywords:
+     'for', 'foreach', 'while', 'until'.
+
+  This is the default. For example, given the following two input lines:
+
+    FindExt::scan_ext("../$_")
+      foreach qw(cpan dist ext);
+
+  The new default keeps two lines. The previous version flattened the
+  statement, since it fits on a single line:
+
+    FindExt::scan_ext("../$_") foreach qw(cpan dist ext);
+
+  Use -nbotl to deactivate this new option.
+
+- A related new parameter --break-at-old-trailing-conditionals, or -botc
+  keeps existing line breaks at trailing conditional control keywords:
+
+      'if', 'unless'.
+
+  This is the default.  The capability was previously handled by
+  parameter --break-at-old-logical-breakpoints, or -bol, which was also
+  true by default, but which also also controls logical breakpoints,
+  such as '&amp;&amp;'. This change simplifies the input.
+
+  Use -nbotc to deactivate this option.
+
+- A new switch --blanks-before-opening-comments, -bboc, has been added
+  for issue git #192.  This is on by default and allows perltidy to insert
+  a blank line before full-line comments which start at a new indentation
+  level.  Use the negated form to prevent such blank lines, -nbboc
+  or --noblanks-before-opening-comments
+
+- A new parameter --dump-keyword-usage, or -dku, can be used to dump a
+  list of the the perl builtin keywords used in a file. A companion flag
+  --dump-keyword-usage-list=s can be used to give a specific list of
+  keywords or user functions to be included in the list.
+
+- When the -html option is used with the default --pod2html setting,
+  perltidy will look for a pod-to-html formatter in this order:
+  Pod::Simple::XHTML, Pod::Simple::HTML, and Pod::Html.  A preferred
+  formatter can be selected with --use-pod-formatter=s. Previously
+  the only option was Pod::Html, and it can still be selected with
+  --use-pod-formatter="Pod::Html". The reason for this update is
+  that this older formatter has limitations, and requires the
+  creation of a temporary file for data transfer. This update also
+  allows formatting of pod text containing non-ascii characters.
+
+- When perltidy is run with the -html option, and pod is rendered to html
+  with Pod::Html, the pod2html option 'backlink' could not be set in
+  in previous versions due to a programming error. This has been fixed.
+  This setting can now be made by giving perltidy the flag '--podbacklink'.
+
+- The default for --timeout-in-seconds is reduced from 10 to 5 seconds.
+  A default value of 10 seemed excessive. It can be changed with -tos=n.
+
+- The option --delete-weld-interfering-commas, or -dwic, has been
+  made much more accurate. It now makes fewer unnecessary comma deletions.
+
+- This version does more extensive checking of all string input parameters
+  and will exit early on an error.  The intention is to catch input errors
+  as early as possible.
+
+- Fixed issue with --dump-mixed-call-parens. A trailing statement modifier
+  such as the following 'if' was incorrectly being counted as having parens:
+
+    return $class if ($old_quote - $new_quote) == 0;
+</code></pre>
+
 <h2>2025 09 12</h2>
 
 <pre><code>- Fix git #191, where a new check to escape whitespace in a qw() quote
@@ -1990,7 +2062,7 @@ signatures.  Reformatting with the current version will fix the problem.
 - RT #128216, Minor update to prevent inserting unwanted blank line at
   indentation level change.  This should not change existing scripts.
 
-- RT #81852: Improved indentation when quoted word (qw) lists are 
+- RT #81852: Improved indentation when quoted word (qw) lists are
   nested within other containers using the --weld-nested (-wn) flag.
   The example given previously (below) is now closer to what it would
   be with a simple list instead of qw:

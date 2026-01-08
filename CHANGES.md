@@ -1,13 +1,12 @@
 # Perltidy Change Log
 
-## 2025 09 12.03
+## 2026 01 09
 
     - A new parameter --break-at-old-trailing-loops, or -botl, keeps
       existing line breaks at these trailing loop control keywords:
          'for', 'foreach', 'while', 'until'.
 
-      This is the default. These are often good break points, even for
-      short statements. For example, given the following two input lines:
+      This is the default. For example, given the following two input lines:
 
         FindExt::scan_ext("../$_")
           foreach qw(cpan dist ext);
@@ -19,14 +18,15 @@
 
       Use -nbotl to deactivate this new option.
 
-    - A new parameter --break-at-old-trailing-conditionals, or -botc keeps
-      existing line breaks at trailing these conditional control keywords
+    - A related new parameter --break-at-old-trailing-conditionals, or -botc
+      keeps existing line breaks at trailing conditional control keywords:
+
           'if', 'unless'.
 
       This is the default.  The capability was previously handled by
-      parameter --break-at-old-logical-breakpoints, or -bol, which also
-      controls logical breakpoints, such as '&&', and is true by default.
-      This change is made to simplify the input.
+      parameter --break-at-old-logical-breakpoints, or -bol, which was also
+      true by default, but which also also controls logical breakpoints,
+      such as '&&'. This change simplifies the input.
 
       Use -nbotc to deactivate this option.
 
@@ -63,10 +63,8 @@
       made much more accurate. It now makes fewer unnecessary comma deletions.
 
     - This version does more extensive checking of all string input parameters
-      and will exit early if something doesn't look right.  The intention is
-      to catch input errors as early as possible.
-
-    - This version has some improved checks for syntax errors.
+      and will exit early on an error.  The intention is to catch input errors
+      as early as possible.
 
     - Fixed issue with --dump-mixed-call-parens. A trailing statement modifier
       such as the following 'if' was incorrectly being counted as having parens:

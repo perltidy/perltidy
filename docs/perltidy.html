@@ -258,7 +258,7 @@
 
 <p><b>Please Note</b>: Writing back to the input file increases the risk of data loss or corruption in the event of a software or hardware malfunction. Before using the <b>-b</b> parameter please be sure to have backups and verify that it works correctly in your environment and operating system.</p>
 
-<p>A <b>-b</b> flag will be ignored if input is from standard input or goes to standard output, or if the <b>-html</b> flag is set.</p>
+<p>A <b>-b</b> flag will be ignored if input is from standard input or goes to standard output, or if a specific output filename is specified with <b>--outfile=filename</b>, or if the <b>-html</b> flag is set.</p>
 
 <p>In particular, if you want to use both the <b>-b</b> flag and the <b>--perl-best-practices</b> (<b>-pbp</b>) flag, then you must put a <b>--nostandard-output</b> (<b>-nst</b>) flag after the <b>-pbp</b> flag because it contains a <b>--standard-output</b> flag as one of its components, which means that output will go to the standard output stream.</p>
 
@@ -372,7 +372,7 @@
 <dt id="tos-n---timeout-in-seconds-n"><b>-tos=n</b>, <b>--timeout-in-seconds=n</b></dt>
 <dd>
 
-<p>When the standard input supplies the input stream, and the input has not been received within <b>n</b> seconds, perltidy will end with a timeout message. The intention is to catch a situation where perltidy is accidentally invoked without a file to process and therefore waits for input from the system standard input (stdin), which never arrives. The default is <b>n=10</b> seconds. This check can be turned off with <b>n=0</b>.</p>
+<p>When the standard input supplies the input stream, and the input has not been received within <b>n</b> seconds, perltidy will end with a timeout message. The intention is to catch a situation where perltidy is accidentally invoked without a file to process and therefore waits for input from the system standard input (stdin), which never arrives. The default is <b>n=5</b> seconds. This check can be turned off with <b>n=0</b>.</p>
 
 </dd>
 </dl>
@@ -407,8 +407,6 @@
 <dd>
 
 <p>The default maximum line length is <b>n=80</b> characters. Perltidy will try to find line break points to keep lines below this length. However, long quotes and side comments may cause lines to exceed this length. And long lines may sometimes be broken at a length less than <b>n</b> characters because some of the line break decisions employ small tolerances to prevent formatting instabilities.</p>
-
-<p>The default length of 80 comes from the past when this was the standard CRT screen width. Many programmers prefer to increase this to something like 120.</p>
 
 <p>Setting <b>-l=0</b> is equivalent to setting <b>-l=(a very large number)</b>. But this is not recommended because, for example, a very long list will be formatted in a single long line.</p>
 
@@ -3873,31 +3871,109 @@
 
 <p>Several additional parameters are available for controlling the extent to which line breaks in the input script influence the output script. In most cases, the default parameter values are set so that, if a choice is possible, the output style follows the input style. For example, if a short logical container is broken in the input script, then the default behavior is for it to remain broken in the output script.</p>
 
-<p>Most of the parameters in this section would only be required for a one-time conversion of a script from short container lengths to longer container lengths. The opposite effect, of converting long container lengths to shorter lengths, can be obtained by temporarily using a short maximum line length.</p>
+<p>Many of the parameters in this section would only be required for a one-time conversion of a script from short container lengths to longer container lengths. The opposite effect, of converting long container lengths to shorter lengths, can be obtained by temporarily using a short maximum line length.</p>
 
 <dl>
 
+<dt id="iob---ignore-old-breakpoints"><b>-iob</b>, <b>--ignore-old-breakpoints</b></dt>
+<dd>
+
+<p>This flag is a master switch which tells perltidy to ignore all line breakpoints in the input script to the maximum extend possible. This will tend to produce the longest possible statements and containers, regardless of type, which do not exceed the line length limit.</p>
+
+<p>To illustrate, consider the following input text:</p>
+
+<pre><code>    has subcmds =&gt; (
+        is =&gt; &#39;ro&#39;,
+        default =&gt; sub { [] },
+    );</code></pre>
+
+<p>The default formatting will keep the container broken, which is probably what the user prefers:</p>
+
+<pre><code>    # perltidy [default]
+    has subcmds =&gt; (
+        is      =&gt; &#39;ro&#39;,
+        default =&gt; sub { [] },
+    );</code></pre>
+
+<p>But if old breakpoints are ignored, the list will be flattened:</p>
+
+<pre><code>    # perltidy -iob
+    has subcmds =&gt; ( is =&gt; &#39;ro&#39;, default =&gt; sub { [] }, );</code></pre>
+
+<p>Even if this is parameter is not used globally, it provides a convenient way to flatten selected lists from within an editor.</p>
+
+<p>Rather than ignoring all old breakpoints, it is possible to selectively control which breakpoints to follow or ignore with the controls which follow.</p>
+
+<p>But note that <b>--ignore-old-breakpoints</b> is a top level control and, if set, has priority over any settings of the specific lower level controls named <b>--break-at-old-...</b> and <b>--keep-old-breakpoints-...</b>.</p>
+
+</dd>
+<dt id="botc---break-at-old-trailing-conditionals"><b>-botc</b>, <b>--break-at-old-trailing-conditionals</b></dt>
+<dd>
+
+<p>A statement which is broken at one of the trailing conditional modifiers</p>
+
+<pre><code>   if unless</code></pre>
+
+<p>will remain broken by default. For example, the following input lines will remain unchanged with default formatting, even though they could fit on a single line:</p>
+
+<pre><code>    return
+      if ( !defined($Kgw) || $Kgw &lt; 0 || $Kgw &gt; $Klimit );</code></pre>
+
+<p>To make perltidy ignore the old <code>if</code> break and thus flatten the statement we can use the negative of this parameter, <b>-nbotc</b>:</p>
+
+<pre><code>    # perltidy -nbotc
+    return if ( !defined($Kgw) || $Kgw &lt; 0 || $Kgw &gt; $Klimit );</code></pre>
+
+</dd>
+<dt id="botl---break-at-old-trailing-loops"><b>-botl</b>, <b>--break-at-old-trailing-loops</b></dt>
+<dd>
+
+<p>Likewise, a statement which is broken at one of the trailing loop modifiers</p>
+
+<pre><code>   for foreach while until</code></pre>
+
+<p>will remain broken by default. For example, the following input statement will remain unchanged with default formatting, even though it could fit a single line:</p>
+
+<pre><code>    $is_digit{$_} = 1
+      for qw( 0 1 2 3 4 5 6 7 8 9 );</code></pre>
+
+<p>To make perltidy ignore the old <code>for</code> break and thus flatten the statement we can use <b>-nbotl</b>:</p>
+
+<pre><code>    # perltidy -nbotl
+    $is_digit{$_} = 1 for qw( 0 1 2 3 4 5 6 7 8 9 );</code></pre>
+
+</dd>
 <dt id="bol---break-at-old-logical-breakpoints"><b>-bol</b>, <b>--break-at-old-logical-breakpoints</b></dt>
 <dd>
 
-<p>By default, if a logical expression is broken at a <code>&amp;&amp;</code>, <code>||</code>, <code>and</code>, or <code>or</code>, then the container will remain broken. Also, breaks at internal keywords <code>if</code> and <code>unless</code> will normally be retained. To prevent this, and thus form longer lines, use <b>-nbol</b>.</p>
+<p>By default, if a logical expression within a container is broken at a <code>&amp;&amp;</code>, <code>||</code>, <code>and</code>, or <code>or</code>, then the container will remain broken. To prevent this, and thus form longer lines, use <b>-nbol</b>.</p>
 
-<p>Please note that this flag does not duplicate old logical breakpoints. They are merely used as a hint with this flag that a statement should remain broken. Without this flag, perltidy will normally try to combine relatively short expressions into a single line.</p>
+<p>For example, given this snippet with a breakpoint at the <code>&amp;&amp;</code>:</p>
 
-<p>For example, given this snippet:</p>
+<pre><code>    if (   defined($Kqw)
+        &amp;&amp; $Kqw &gt;= 0 &amp;&amp; $Kqw &lt;= $Klimit )
+    {
+        ...;
+    }</code></pre>
 
-<pre><code>    return unless $cmd = $cmd || ($dot
-        &amp;&amp; $Last) || &amp;prompt(&#39;|&#39;);
+<p>the default result will keep the if parens open:</p>
 
-    # perltidy -bol [default]
-    return
-      unless $cmd = $cmd
-      || ( $dot
-        &amp;&amp; $Last )
-      || &amp;prompt(&#39;|&#39;);
+<pre><code>    # perltidy -bol [default]
+    if (   defined($Kqw)
+        &amp;&amp; $Kqw &gt;= 0
+        &amp;&amp; $Kqw &lt;= $Klimit )
+    {
+        ...;
+    }</code></pre>
 
-    # perltidy -nbol
-    return unless $cmd = $cmd || ( $dot &amp;&amp; $Last ) || &amp;prompt(&#39;|&#39;);</code></pre>
+<p>Note that this flag does not exactly duplicate old logical breakpoints. Rather, they are merely used as a hint that a statement should remain broken. Without this flag, perltidy will normally try to combine relatively short expressions into a single line.</p>
+
+<p>To cause old logical breakpoints to be ignored and thus achieve more compact expressions use the negated parameter <b>-nbol</b>:</p>
+
+<pre><code>    # perltidy -nbol
+    if ( defined($Kqw) &amp;&amp; $Kqw &gt;= 0 &amp;&amp; $Kqw &lt;= $Klimit ) {
+        ...;
+    }</code></pre>
 
 </dd>
 <dt id="bom---break-at-old-method-breakpoints"><b>-bom</b>, <b>--break-at-old-method-breakpoints</b></dt>
@@ -4040,36 +4116,6 @@
 <p><b>NOTE</b>: A request to break before an opening container, such as <b>-kbb=&#39;(&#39;</b>, will be silently ignored because it can lead to formatting instability. Likewise, a request to break after a closing container, such as <b>-kba</b>=&#39;)&#39;, will also be silently ignored.</p>
 
 </dd>
-<dt id="iob---ignore-old-breakpoints"><b>-iob</b>, <b>--ignore-old-breakpoints</b></dt>
-<dd>
-
-<p>Use this flag to tell perltidy to ignore existing line breaks to the maximum extent possible. This will tend to produce the longest possible containers, regardless of type, which do not exceed the line length limit. But please note that this parameter has priority over all other parameters requesting that certain old breakpoints be kept.</p>
-
-<p>To illustrate, consider the following input text:</p>
-
-<pre><code>    has subcmds =&gt; (
-        is =&gt; &#39;ro&#39;,
-        default =&gt; sub { [] },
-    );</code></pre>
-
-<p>The default formatting will keep the container broken, giving</p>
-
-<pre><code>    # perltidy [default]
-    has subcmds =&gt; (
-        is      =&gt; &#39;ro&#39;,
-        default =&gt; sub { [] },
-    );</code></pre>
-
-<p>If old breakpoints are ignored, the list will be flattened:</p>
-
-<pre><code>    # perltidy -iob
-    has subcmds =&gt; ( is =&gt; &#39;ro&#39;, default =&gt; sub { [] }, );</code></pre>
-
-<p>Besides flattening lists, this parameter also applies to lines broken at certain logical breakpoints such as &#39;if&#39; and &#39;or&#39;.</p>
-
-<p>Even if this is parameter is not used globally, it provides a convenient way to flatten selected lists from within an editor.</p>
-
-</dd>
 <dt id="kis---keep-interior-semicolons"><b>-kis</b>, <b>--keep-interior-semicolons</b></dt>
 <dd>
 
@@ -4110,7 +4156,15 @@
 <dt id="bbc---blanks-before-comments"><b>-bbc</b>, <b>--blanks-before-comments</b></dt>
 <dd>
 
-<p>A blank line will be introduced before a full-line comment. This is the default. Use <b>-nbbc</b> or <b>--noblanks-before-comments</b> to prevent such blank lines from being introduced.</p>
+<p>This parameter allows perltidy to introduce a new blank line before a full-line comment to improve readability. This is the default. Use <b>-nbbc</b> or <b>--noblanks-before-comments</b> to prevent such blank lines from being introduced.</p>
+
+</dd>
+<dt id="bboc---blanks-before-opening-comments"><b>-bboc</b>, <b>--blanks-before-opening-comments</b></dt>
+<dd>
+
+<p>This parameter adjusts the behavior of the previous parameter, <b>-bbc</b>, at an opening comment. An opening comment is a full-line comment with an indentation greater than the previous line.</p>
+
+<p>When this parameter is turned on, perltidy is allowed to introduce a blank line to improve readability. This is the default. To prevent perltidy from introducing such a blank line, use <b>--noblanks-before-opening-comments</b>, or <b>-nbboc</b>. This option was added for issue git #192.</p>
 
 </dd>
 <dt id="blbs-n---blank-lines-before-subs-n"><b>-blbs=n</b>, <b>--blank-lines-before-subs=n</b></dt>
@@ -4612,7 +4666,7 @@
         &#39;square-bracket-tightness&#39; =&gt; [ 0, 2 ],
     );</code></pre>
 
-<p>Vertical alignment is implemented by locally increasing an existing blank space to produce alignment with an adjacent line. It cannot occur if there is no blank space to increase. So if a particular space is removed by one of the existing controls then vertical alignment cannot occur.</p>
+<p>Vertical alignment is implemented by locally widening an existing blank space in a line to produce alignment with an adjacent line. It cannot occur if there is no blank space to widen. So if a particular space is removed by one of the existing controls then vertical alignment cannot occur.</p>
 
 <p>For example, if we remove the space before the &quot;fat commas&quot; in the above example, vertical alignment cannot occur:</p>
 
@@ -4638,7 +4692,7 @@
 <dt id="Controlling-code-alignment-with---valign-code-or--vc"><b>Controlling code alignment with --valign-code or -vc</b></dt>
 <dd>
 
-<p>The <b>-vc</b> flag enables alignment of code symbols such as &lt;=&gt;. The default is <b>-vc</b>. For detailed control of which symbols to align, see the <b>-valign-exclude-list</b> parameter below.</p>
+<p>The <b>-vc</b> flag enables alignment of code symbols such as <b>=</b>. The default is <b>-vc</b>. For detailed control of which symbols to align, see the <b>-valign-exclude-list</b> parameter below.</p>
 
 </dd>
 <dt id="Controlling-side-comment-alignment-with---valign-side-comments-or--vsc"><b>Controlling side comment alignment with --valign-side-comments or -vsc</b></dt>
@@ -5277,7 +5331,7 @@
 
 <p>The <b>non-indenting-braces</b> side comment <code>#&lt;&lt;&lt;</code> is not required but will keep the indentation of the old code unchanged.</p>
 
-<p>This check is only applied to package statements which are not enclosed in block braces in order avoid warnings at temporary package changes.</p>
+<p>This check is only applied to package statements which are not enclosed in block braces. This avoids warnings at temporary package changes.</p>
 
 </dd>
 <dt id="u:-unused-variables"><b>u: unused variables</b></dt>
@@ -5780,7 +5834,7 @@
 
 <pre><code>        ? ? : : ? :</code></pre>
 
-<p>Since there is a sequence of two adjacent <code>?</code> symbols, the maximum nesting depth is 1.</p>
+<p>Since there is a sequence of two adjacent <code>?</code> symbols, the maximum nesting depth is 2-1=1.</p>
 
 </li>
 <li><p>Parentheses around a term cause its depth to be reset to zero. The parentheses might be for a function call, or just for grouping. So one way to avoid a warning for a certain ternary is to introduce parentheses. For example, modifying the above example to be</p>
@@ -5792,6 +5846,41 @@
 <pre><code>        ? ( ? : ) : ? :</code></pre>
 
 <p>In this case, there are no adjacent <code>?</code> symbols, so the nesting depth is zero.</p>
+
+</li>
+<li><p>Note that in the following diagram, if &quot;Value_if_true&quot; is a nested ternary, and &quot;Value_if_false&quot; is not, then inverting the &quot;Condition&quot; test can produce a more-readable linear chain of tests, similar to an if-elsif- chain.</p>
+
+<pre><code>  Condition ? Value_if_true : Value_if_false</code></pre>
+
+</li>
+</ul>
+
+</dd>
+<dt id="Use---dump-keyword-usage-to-dump-a-list-of-keywords-used"><b>Use --dump-keyword-usage</b> to dump a list of keywords used</dt>
+<dd>
+
+<p>By default, the parameter <b>--dump-keyword-usage</b>, or <b>-dku</b>, will write a list of perl builtin keywords used in a file, along with the count and the line numbers of the first and last occurrence. This list can be read into a spreadsheet for sorting. The list includes all builtin perl keywords which are used in a file, including quote-like operators <code> qq qx qr tr q s y m ` (backtick) </code>. This list can be changed with the next parameter.</p>
+
+</dd>
+<dt id="Use---dump-keyword-usage-list-s-to-select-keywords-to-be-dumped"><b>Use --dump-keyword-usage-list=s</b> to select keywords to be dumped.</dt>
+<dd>
+
+<p>The parameter <b>--dump-keyword-usage-list=s</b>, or <b>-dkul=s</b>, supplies a list of either builtin keywords or user function names for the previous parameter, <b>-dku</b>. If this list includes a <b>&#39;*&#39;</b> then all builtin keywords will be included plus any words in this list. Otherwise, just the words in this list will be included.</p>
+
+<p>For example:</p>
+
+<pre><code>  perltidy -dku -dkul=&#39;goto system qx fileparse&#39; ifile &gt;ofile</code></pre>
+
+<p>will dump a list of information on the occurrences of just the perl builtin keywords <code>goto</code>, <code>system</code>, and <code>qx</code>, plus a function named <code>fileparse</code>.</p>
+
+<p>The treatment of module paths in function names is as follows:</p>
+
+<ul>
+
+<li><p>If the list contains a bare word, like <code>fileparse</code> as above, and input file contains calls written both with and without module paths, such as <code>File::Basename::fileparse</code> and just <code>fileparse</code>, then all versions will be listed, but on separate output lines in the dump.</p>
+
+</li>
+<li><p>If instead the input list had been expressed with a full module name path, such as <code>File::Basename::fileparse</code>, then only function calls exactly matching that full module path would be included in the output.</p>
 
 </li>
 </ul>
@@ -5844,23 +5933,64 @@
 <dt id="The--pod-or---pod2html-flag">The <b>-pod</b>, or <b>--pod2html</b> flag</dt>
 <dd>
 
-<p>There are two options for formatting pod documentation. The default is to pass the pod through the Pod::Html module (which forms the basis of the pod2html utility). Any code sections are formatted by perltidy, and the results then merged. Note: perltidy creates a temporary file when Pod::Html is used; see <a href="#FILES">&quot;FILES&quot;</a>. Also, Pod::Html creates temporary files for its cache.</p>
+<p>For code which contains pod documentation, there are two formatting options:</p>
+
+<ul>
+
+<li><p>Use <b>-npod</b>, or <b>--nopod2html</b>, if the pod documentation should not have special formatting. It will be displayed in italics (or whatever the stylesheet indicates), without special html markup. This is useful, for example, if pod is being used as an alternative way to write comments, or if it is confusing to have both code and documentation formatted in a single file.</p>
+
+</li>
+<li><p>Use <b>-pod</b>, or <b>--pod2html</b>, if the pod documentation should be formatted with a pod-to-html formatter. <b>This is the Default</b>. In this case, any code sections are formatted by perltidy, and the results then merged. The pod formatter which is used can be controlled with the parameter described in the next section.</p>
 
 <p>NOTE: Perltidy counts the number of <code>=cut</code> lines, and either moves the pod text to the top of the html file if there is one <code>=cut</code>, or leaves the pod text in its original order (interleaved with code) otherwise.</p>
 
-<p>Most of the flags accepted by pod2html may be included in the perltidy command line, and they will be passed to pod2html. In some cases, the flags have a prefix <code>pod</code> to emphasize that they are for the pod2html, and this prefix will be removed before they are passed to pod2html. The flags which have the additional <code>pod</code> prefix are:</p>
+</li>
+</ul>
+
+</dd>
+<dt id="Use---use-pod-formatter-s-or--upf-s-to-select-a-preferred-pod-formatter">Use <b>--use-pod-formatter=s</b>, or <b>-upf=s</b> to select a preferred pod formatter</dt>
+<dd>
+
+<p>Perltidy will by default search for a pod formatter in the following order:</p>
+
+<ul>
+
+<li><p><b>Pod::Simple::XHTML</b></p>
+
+</li>
+<li><p><b>Pod::Simple::HTML</b></p>
+
+</li>
+<li><p><b>Pod::Html</b></p>
+
+</li>
+</ul>
+
+<p>Older versions of perl should at least have <b>Pod::Html</b>, and newer versions will have all of them. The formatter which is actually selected when <b>-html</b> is used can be found by adding the <b>-log</b> parameter to create a <i>.LOG</i> file with this information.</p>
+
+<p>The default is usually the best choice. But if a different formatter is available and preferred, it can be selected by setting <b>--use-pod-formatter=s</b>, where <b>s</b> is the name of one of the above three formatters. For example, if for some reason <b>Pod::Simple::HTML</b> is selected by default and not working correctly, the older formatter <b>Pod::Html</b> could be selected with</p>
+
+<pre><code>  --use-pod-formatter=&#39;Pod::Html&#39;</code></pre>
+
+</dd>
+<dt id="Some-notes-on-the-Pod::Html-formatter"><b>Some notes on the Pod::Html formatter</b></dt>
+<dd>
+
+<p><b>Pod::Html</b> is the oldest pod formatter and is normally available on all installations. However it has some limitations and issues which make the <b>Pod::Simple</b> formatters preferable.</p>
+
+<p>One of the problems with <b>Pod::Html</b> is that perltidy must create a temporary file when <b>Pod::Html</b> is used; see <a href="#FILES">&quot;FILES&quot;</a>. Temporary files are not needed with either of the <b>Pod::Simple</b> formatters.</p>
+
+<p>Most of the flags accepted by the <code>pod2html</code> utility may be included in the perltidy command line, and they will be passed to <b>Pod::Html::pod2html</b>. In some cases, the flags have a prefix <code>pod</code> to emphasize that they are for the <code>pod2html</code>, and this prefix will be removed before they are passed to <code>pod2html</code>. The flags which have the additional <code>pod</code> prefix are:</p>
 
 <pre><code>   --[no]podheader --[no]podindex --[no]podrecurse --[no]podquiet
-   --[no]podverbose --podflush</code></pre>
+   --[no]podverbose --podflush --[no]podbacklink</code></pre>
 
-<p>The flags which are unchanged from their use in pod2html are:</p>
+<p>The flags which are unchanged from their use in <code>pod2html</code> are:</p>
 
-<pre><code>   --backlink=s --cachedir=s --htmlroot=s --libpods=s --title=s
+<pre><code>   --cachedir=s --htmlroot=s --libpods=s --title=s
    --podpath=s --podroot=s</code></pre>
 
-<p>where &#39;s&#39; is an appropriate character string. Not all of these flags are available in older versions of Pod::Html. See your Pod::Html documentation for more information.</p>
-
-<p>The alternative, indicated with <b>-npod</b>, is not to use Pod::Html, but rather to format pod text in italics (or whatever the stylesheet indicates), without special html markup. This is useful, for example, if pod is being used as an alternative way to write comments.</p>
+<p>where &#39;s&#39; is an appropriate character string. Not all of these flags are available in older versions of <b>Pod::Html</b>. See your <b>Pod::Html</b> documentation for more information.</p>
 
 </dd>
 <dt id="The--frm-or---frames-flag">The <b>-frm</b>, or <b>--frames</b> flag</dt>
@@ -6041,26 +6171,27 @@
 <p>The following list shows all short parameter names which allow a prefix &#39;n&#39; to produce the negated form:</p>
 
 <pre><code> D      aia    altc   ame    anl    asbl   asc    ast    asu    atc
- atnl   aws    b      baa    baao   bar    bbao   bbb    bbc    bbs
- bl     bli    boa    boc    bok    bol    bom    bos    bot    cblx
- ce     conv   cpb    cpbw   cs     csc    cscb   cscw   csfs   dac
- dbc    dbs    dcbl   dcsc   ddf    dfsfs  dhk    dia    dior   dln
- dltc   dma    dmcp   dmr    dnl    dnt    dop    dp     dpro   drc
- dsc    dsk    dsm    dsn    dtc    dtco   dtt    duk    duv    dwic
- dwls   dwrs   dws    eos    f      fpva   frm    fs     fso    gcs
- hbc    hbcm   hbco   hbh    hbhh   hbi    hbj    hbk    hbm    hbn
- hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv    hbw    hent   hic
- hicm   hico   hih    hihh   hii    hij    hik    him    hin    hip
- hipd   hipu   hiq    his    hisc   hiv    hiw    hsc    html   ibc
- icb    icp    ils    iob    ipc    isbc   iscl   kgb    kgbd   kgbi
- kis    lal    log    lop    lp     lsl    mci    mem    nib    ohbr
- okw    ola    olc    oll    olq    opr    opt    osbc   osbr   otr
- ple    pod    pvl    q      qwaf   sac    sbc    sbl    scbb   schb
- scp    scsb   sct    se     sfp    sfs    skp    sob    sobb   sohb
- sop    sosb   sot    ssc    st     sts    t      tac    tbc    toc
- tp     tqw    trp    ts     tsc    tso    vbc    vc     viu    vmll
- vsc    vsn    vwe    w      wfc    wia    wma    wme    wmr    wn
- wnt    wsk    wuk    x      xbt    xci    xlp    xs</code></pre>
+ atnl   aws    b      baa    baao   bar    bbao   bbb    bbc    bboc
+ bbs    bl     bli    boa    boc    bok    bol    bom    bos    bot
+ botc   botl   cblx   ce     conv   cpb    cpbw   cs     csc    cscb
+ cscw   csfs   dac    dbc    dbs    dcbl   dcsc   ddf    dfsfs  dhk
+ dia    dior   dku    dln    dltc   dma    dmcp   dmr    dnl    dnt
+ dop    dp     dpro   drc    dsc    dsk    dsm    dsn    dtc    dtco
+ dtt    duk    duv    dwic   dwls   dwrs   dws    eos    f      fpva
+ frm    fs     fso    gcs    hbc    hbcm   hbco   hbh    hbhh   hbi
+ hbj    hbk    hbm    hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc
+ hbv    hbw    hent   hic    hicm   hico   hih    hihh   hii    hij
+ hik    him    hin    hip    hipd   hipu   hiq    his    hisc   hiv
+ hiw    hsc    html   ibc    icb    icp    ils    iob    ipc    isbc
+ iscl   kgb    kgbd   kgbi   kis    lal    log    lop    lp     lsl
+ mci    mem    nib    ohbr   okw    ola    olc    oll    olq    opr
+ opt    osbc   osbr   otr    ple    pod    pvl    q      qwaf   sac
+ sbc    sbl    scbb   schb   scp    scsb   sct    se     sfp    sfs
+ skp    sob    sobb   sohb   sop    sosb   sot    ssc    st     sts
+ t      tac    tbc    toc    tp     tqw    trp    ts     tsc    tso
+ vbc    vc     viu    vmll   vsc    vsn    vwe    w      wfc    wia
+ wma    wme    wmr    wn     wnt    wsk    wuk    x      xbt    xci
+ xlp    xs</code></pre>
 
 <p>Equivalently, the prefix &#39;no&#39; or &#39;no-&#39; on the corresponding long names may be used.</p>
 
@@ -6093,7 +6224,9 @@
 <dt id="Temporary-files"><b>Temporary files</b></dt>
 <dd>
 
-<p>Under the <b>-html</b> option with the default <b>--pod2html</b> flag, a temporary file is required to pass text to Pod::Html. Unix systems will try to use the POSIX tmpnam() function. Otherwise the file <i>perltidy.TMP</i> will be temporarily created in the current working directory.</p>
+<p>Under the <b>-html</b> option with the default <b>--pod2html</b> flag, and if <b>Pod::Html</b> is selected as the pod formatter, a temporary file is required to pass text to and from <code>Pod::Html</code>. A randomly-named temporary file is created with <code>File::Temp::tempfile</code> for this purpose. This file is removed after the data transfer.</p>
+
+<p>A temporary file is not normally needed for perl versions 5.10 and later unless <b>Pod::Html</b> is specifically requested with the <b>--use-pod-formatter</b> parameter.</p>
 
 </dd>
 <dt id="Special-files-when-standard-input-is-used"><b>Special files when standard input is used</b></dt>
@@ -6138,7 +6271,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20250912</p>
+<p>This man page documents perltidy version 20260109</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 
@@ -6148,7 +6281,7 @@
 
 <h1 id="COPYRIGHT">COPYRIGHT</h1>
 
-<p>Copyright (c) 2000-2025 by Steve Hancock</p>
+<p>Copyright (c) 2000-2026 by Steve Hancock</p>
 
 <h1 id="LICENSE">LICENSE</h1>
 

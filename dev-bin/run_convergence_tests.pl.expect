@@ -9015,6 +9015,27 @@ __END__
           }
 }
 
+==> b1561 <==
+    $_[
+      0
+      ] =
+      Win32::ChangeNotify
+      ->_new(
+        @_[
+          1 .. 3
+        ]
+      );
+
+    $_[
+      0
+      ] =
+      Win32::ChangeNotify
+      ->_new(
+        @_[
+          1 .. 3
+        ]
+      );
+
 ==> b163 <==
 # State 1
 Readonly::Scalar

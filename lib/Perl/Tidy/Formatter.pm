@@ -77,7 +77,7 @@ use constant BACKSLASH    => q{\\};
 use Carp;
 use English    qw( -no_match_vars );
 use List::Util qw( min max first );    # min, max first are in Perl 5.8
-our $VERSION = '20250912.03';
+our $VERSION = '20260109';
 
 # List of hash keys to prevent -duk from listing them.
 # 'Unicode::Collate::Locale' is in the data for scan_unique_keys
@@ -127,7 +127,7 @@ sub Warn {
 }
 
 sub Fault {
-    my ( $msg, $stay_alive ) = @_;
+    my ( $msg, ($stay_alive) ) = @_;
 
     # This routine is called for errors that really should not occur
     # except if there has been a bug introduced by a recent program change.
