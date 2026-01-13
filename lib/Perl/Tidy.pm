@@ -136,7 +136,7 @@ BEGIN {
     # then the Release version must be bumped, and it is probably past time for
     # a release anyway.
 
-    $VERSION = '20260109';
+    $VERSION = '20260109.01';
 } ## end BEGIN
 
 {
@@ -459,6 +459,14 @@ my $loaded_unicode_gcstring;
 my $rstatus;
 my $nag_message;
 
+sub get_input_stream_name {
+
+    # Make input stream name available for Fault calls
+    my $display_name      = $rstatus->{'input_name'};
+    my $input_stream_name = $display_name ? $display_name : "??";
+    return $input_stream_name;
+} ## end sub get_input_stream_name
+
 # Flush any accumulated nag message(s) if possible
 sub nag_flush {
     my ($fh) = @_;
@@ -518,13 +526,12 @@ sub Fault {
     # except if there has been a bug introduced by a recent program change.
     # Please add comments at calls to Fault to explain why the call
     # should not occur, and where to look to fix it.
-    my ( $package0_uu, $filename0_uu, $line0,    $subroutine0_uu ) = caller(0);
-    my ( $package1_uu, $filename1,    $line1,    $subroutine1 )    = caller(1);
-    my ( $package2_uu, $filename2_uu, $line2_uu, $subroutine2 )    = caller(2);
-    my $pkg = __PACKAGE__;
+    my ( $package0_uu, $filename0_uu, $line0, $subroutine0_uu ) = caller(0);
+    my ( $package1_uu, $filename1, $line1, $subroutine1 )       = caller(1);
+    my ( $package2_uu, $filename2_uu, $line2_uu, $subroutine2 ) = caller(2);
+    my $pkg               = __PACKAGE__;
+    my $input_stream_name = get_input_stream_name();
 
-    my $input_stream_name = $rstatus->{'input_name'};
-    $input_stream_name = '(unknown)' unless ($input_stream_name);
     Die(<<EOM);
 ==============================================================================
 While operating on input stream with name: '$input_stream_name'
@@ -846,7 +853,7 @@ sub perltidy {
         opt_encode_output  => EMPTY_STRING,
         opt_max_iterations => EMPTY_STRING,
 
-        input_name        => EMPTY_STRING,
+        input_name        => '(unknown)',
         output_name       => EMPTY_STRING,
         char_mode_source  => 0,
         char_mode_used    => 0,
@@ -3130,6 +3137,7 @@ sub process_iteration_layer {
                 length_function    => $length_function,
                 is_encoded_data    => $is_encoded_data,
                 fh_tee             => $fh_tee,
+                display_name       => $display_name,
             );
         }
         else {

@@ -33,7 +33,7 @@ use strict;
 use warnings;
 use English qw( -no_match_vars );
 
-our $VERSION = '20260109';
+our $VERSION = '20260109.01';
 
 use Carp;
 
@@ -62,9 +62,6 @@ use constant ORD_TAB           => 9;
 use constant ORD_SPACE         => 32;
 use constant ORD_PRINTABLE_MIN => 33;
 use constant ORD_PRINTABLE_MAX => 126;
-
-# A limit on message length when problems are detected
-use constant LONG_MESSAGE => 256;
 
 # GLOBAL VARIABLES which change during tokenization:
 # These could also be stored in $self but it is more convenient and
@@ -320,28 +317,17 @@ sub Warn {
 }
 
 sub Fault {
-    my ( $self, $msg ) = @_;
+    my ($msg) = @_;
 
     # This routine is called for errors that really should not occur
     # except if there has been a bug introduced by a recent program change.
     # Please add comments at calls to Fault to explain why the call
     # should not occur, and where to look to fix it.
-    my ( $package0_uu, $filename0_uu, $line0,    $subroutine0_uu ) = caller(0);
-    my ( $package1_uu, $filename1,    $line1,    $subroutine1 )    = caller(1);
-    my ( $package2_uu, $filename2_uu, $line2_uu, $subroutine2 )    = caller(2);
-    my $pkg = __PACKAGE__;
-
-    # Catch potential error of Fault not called as a method
-    my $input_stream_name;
-    if ( !ref($self) ) {
-        $msg = "Fault not called as a method - please fix\n";
-        if ( $self && length($self) < LONG_MESSAGE ) { $msg .= $self }
-        $self              = undef;
-        $input_stream_name = "(UNKNOWN)";
-    }
-    else {
-        $input_stream_name = $self->get_input_stream_name();
-    }
+    my ( $package0_uu, $filename0_uu, $line0, $subroutine0_uu ) = caller(0);
+    my ( $package1_uu, $filename1, $line1, $subroutine1 )       = caller(1);
+    my ( $package2_uu, $filename2_uu, $line2_uu, $subroutine2 ) = caller(2);
+    my $pkg               = __PACKAGE__;
+    my $input_stream_name = Perl::Tidy::get_input_stream_name();
 
     Die(<<EOM);
 ==============================================================================
@@ -729,7 +715,7 @@ sub make_source_array {
     if ( !$rsource ) {
 
         # shouldn't happen: this should have been checked in sub new
-        $self->Fault(<<EOM);
+        Fault(<<EOM);
 sub Perl::Tidy::Tokenizer::new received a 'source_object' parameter which is not a reference;
 'source_object' must be a reference to a STRING, ARRAY, or object with a 'getline' method
 EOM
@@ -782,8 +768,7 @@ EOM
         my $ntr = @trimmed_lines;
         my $utr = @{$rinput_lines};
         DEVEL_MODE
-          && $self->Fault(
-            "trimmed / untrimmed line counts differ: $ntr / $utr\n");
+          && Fault("trimmed / untrimmed line counts differ: $ntr / $utr\n");
 
         # Otherwise we can safely continue with undefined trimmed lines.  They
         # will be detected and fixed later.
@@ -834,18 +819,6 @@ sub warning_do_not_format {
     $self->[_do_not_format_] = 1;
     return;
 } ## end sub warning_do_not_format
-
-sub get_input_stream_name {
-
-    my $self = shift;
-
-    my $input_stream_name = EMPTY_STRING;
-    my $logger_object     = $self->[_logger_object_];
-    if ($logger_object) {
-        $input_stream_name = $logger_object->get_input_stream_name();
-    }
-    return $input_stream_name;
-} ## end sub get_input_stream_name
 
 sub complain {
 
@@ -2407,7 +2380,7 @@ sub prepare_for_a_new_file {
 
         # Shouldn't get here - bad call parameters
         if (DEVEL_MODE) {
-            $self->Fault(<<EOM);
+            Fault(<<EOM);
 While working near line number $input_line_number, bad arg '$tok' passed to sub split_pretoken()
 EOM
         }
@@ -4325,7 +4298,7 @@ EOM
                     # shouldn't happen..arriving here implies an error in
                     # the logic in sub 'find_here_doc'
                     if (DEVEL_MODE) {
-                        $self->Fault(<<EOM);
+                        Fault(<<EOM);
 Program bug; didn't find here doc target
 EOM
                     }
@@ -4402,7 +4375,7 @@ EOM
                     # shouldn't happen..arriving here implies an error in
                     # the logic in sub 'find_here_doc'
                     if (DEVEL_MODE) {
-                        $self->Fault(<<EOM);
+                        Fault(<<EOM);
 Program bug; didn't find here doc target
 EOM
                     }
@@ -4516,7 +4489,7 @@ EOM
 
             # shouldn't happen - we should always get a number
             if (DEVEL_MODE) {
-                $self->Fault(<<EOM);
+                Fault(<<EOM);
 non-number beginning with digit--program bug
 EOM
             }
@@ -5621,7 +5594,7 @@ EOM
                 }
                 else {
                     DEVEL_MODE
-                      && $self->Fault(
+                      && Fault(
 "unexpected saved here target near line $input_line_number\n"
                       );
                 }
@@ -6117,7 +6090,7 @@ EOM
         {
 
             # Shouldn't happen if calling sub did trim operation correctly.
-            DEVEL_MODE && $self->Fault(<<EOM);
+            DEVEL_MODE && Fault(<<EOM);
 leading blank at line
 $input_line
 EOM
@@ -6748,7 +6721,7 @@ EOM
 
                     # The tokenizer should only be assigning sequence numbers
                     # to types { [ ( ? ) ] } :
-                    DEVEL_MODE && $self->Fault(<<EOM);
+                    DEVEL_MODE && Fault(<<EOM);
 unexpected sequence number on token type $type_i with pre-tok=$tok_i
 EOM
                 }
@@ -6795,8 +6768,7 @@ EOM
                 next if ( $numc > 0 );
 
                 # Should not happen unless @{$rtoken_map} is corrupted
-                $self->Fault(
-                    "number of characters is '$numc' but should be >0\n");
+                Fault("number of characters is '$numc' but should be >0\n");
             }
 
             # Form and store the final token of this line
@@ -6807,8 +6779,7 @@ EOM
                 if ( $numc <= 0 ) {
 
                     # check '$rtoken_map' and '$routput_token_list'
-                    $self->Fault(
-                        "Number of Characters is '$numc' but should be >0\n");
+                    Fault("Number of Characters is '$numc' but should be >0\n");
                 }
 
                 # Make sure we didn't gain or lose any characters
@@ -6818,7 +6789,7 @@ EOM
                     my $len_test  = length($test_line);
 
                     # check '$rtoken_map' and '$routput_token_list'
-                    $self->Fault(<<EOM);
+                    Fault(<<EOM);
 Reconstructed line difers from input; input_length=$len_input test_length=$len_test
 input:'$input_line'
 test :'$test_line'
@@ -8851,7 +8822,7 @@ sub scan_id_do {
 
         # shouldn't happen:
         if (DEVEL_MODE) {
-            $self->Fault(<<EOM);
+            Fault(<<EOM);
 Program bug in scan_id: undefined type but scan_state=$id_scan_state
 EOM
         }
@@ -9707,7 +9678,7 @@ sub do_scan_package {
                 # shouldn't happen: bad call parameter
                 my $msg =
 "Program bug detected: scan_complex_identifier received bad starting token = '$tok'\n";
-                if (DEVEL_MODE) { $self->Fault($msg) }
+                if (DEVEL_MODE) { Fault($msg) }
                 if ( !$self->[_in_error_] ) {
                     $self->warning($msg);
                     $self->[_in_error_] = 1;
@@ -9726,7 +9697,7 @@ sub do_scan_package {
 
             # check for a valid starting state
             if ( DEVEL_MODE && !$is_returnable_scan_state{$id_scan_state} ) {
-                $self->Fault(<<EOM);
+                Fault(<<EOM);
 Unexpected starting scan state in sub scan_complex_identifier: '$id_scan_state'
 EOM
             }
@@ -9751,7 +9722,7 @@ EOM
                 # unknown state - should not happen
                 else {
                     if (DEVEL_MODE) {
-                        $self->Fault(<<EOM);
+                        Fault(<<EOM);
 Unknown scan state in sub scan_complex_identifier: '$id_scan_state'
 Scan state at sub entry was '$id_scan_state_begin'
 EOM
@@ -10551,7 +10522,7 @@ sub find_angle_operator_termination {
     # shouldn't happen - we shouldn't be here if operator is expected
     else {
         if (DEVEL_MODE) {
-            $self->Fault(<<EOM);
+            Fault(<<EOM);
 Bad call to find_angle_operator_termination
 EOM
         }
@@ -10634,7 +10605,7 @@ EOM
             # If this happens, it may be necessary to split the pretoken.
             if ($error) {
                 if (DEVEL_MODE) {
-                    $self->Fault(<<EOM);
+                    Fault(<<EOM);
 unexpected error condition returned by inverse_pretoken_map
 EOM
                 }
@@ -10772,7 +10743,7 @@ sub scan_number_do {
     # Look for bad starting characters; Shouldn't happen..
     if ( $first_char !~ /[\d\.\+\-Ee]/ ) {
         if (DEVEL_MODE) {
-            $self->Fault(<<EOM);
+            Fault(<<EOM);
 Program bug - scan_number given bad first character = '$first_char'
 EOM
         }
