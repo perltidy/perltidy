@@ -1388,7 +1388,10 @@ sub fix_terminal_else {
     my $jparen    = 0;
     my $tok_paren = '(' . $depth_brace;
     my $tok_test  = $rtokens_old->[$jparen];
-    return if ( $tok_test ne $tok_paren );    # shouldn't happen
+    if ( $tok_test ne $tok_paren ) {
+        ## no opening paren - possible syntax error - give up.
+        return;
+    }
 
     # Now find the opening block brace
     my ($jbrace);
@@ -1399,7 +1402,10 @@ sub fix_terminal_else {
             last;
         }
     }
-    return if ( !defined($jbrace) );          # shouldn't happen
+    if ( !defined($jbrace) ) {
+        ## no opening brace - possible syntax error - give up.
+        return;
+    }
 
     # Now splice the tokens and patterns of the previous line
     # into the else line to insure a match.  Add empty fields
@@ -2012,7 +2018,10 @@ sub _flush_group_lines {
         $grp_level  = $group_level;
         $rgroups    = [];
         initialize_for_new_rgroup();
-        return unless ( @{$rlines} );    # shouldn't happen
+        if ( !@{$rlines} ) {
+            DEVEL_MODE && Fault("Unexpected empty alignment group\n");
+            return;
+        }
 
         # Unset the _end_group flag for the last line if it set because it
         # is not needed and can causes problems for -lp formatting
@@ -3039,7 +3048,6 @@ sub make_alignment_info {
     #----------------
     my $rline_hashes = [];
     my @equals_info;
-    my @line_info;    # no longer used
     my $jmax         = @{$rnew_lines} - 1;
     my $max_lev_diff = 0;
     foreach my $line ( @{$rnew_lines} ) {
@@ -3087,8 +3095,7 @@ sub make_alignment_info {
             $i++;
         }
         push @{$rline_hashes}, $rhash;
-        push @equals_info,     [ $i_eq,    $tok_eq, $pat_eq ];
-        push @line_info,       [ $lev_min, $lev_max ];
+        push @equals_info,     [ $i_eq, $tok_eq, $pat_eq ];
         if ( defined($lev_min) ) {
             my $lev_diff = $lev_max - $lev_min;
             if ( $lev_diff > $max_lev_diff ) { $max_lev_diff = $lev_diff }
@@ -3392,14 +3399,14 @@ sub delete_unmatched_tokens_main_loop {
                         }
                     }
                 }
-            }    # End loop over alignment tokens
+            }    ## End loop over alignment tokens
 
             # Process all deletion requests for this line
             if (@idel) {
                 delete_selected_tokens( $line, \@idel );
             }
-        }    # End loop over lines
-    } ## end main loop over subgroups
+        }    ## End loop over lines
+    }    ## End main loop over subgroups
 
     return;
 } ## end sub delete_unmatched_tokens_main_loop
@@ -4520,8 +4527,8 @@ sub is_marginal_match {
     if ( $is_assignment{$raw_tokb} ) {
 
         # undo marginal flag if first line is semicolon terminated
-        # and leading patters match
-        if ($sc_term0) {    # && $sc_term1) {
+        # and leading patterns match
+        if ($sc_term0) {
             $is_marginal = $pat0 ne $pat1;
         }
     }

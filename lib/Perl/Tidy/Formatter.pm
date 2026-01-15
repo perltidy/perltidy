@@ -479,6 +479,9 @@ my (
     $keyword_group_list_pattern,
     $keyword_group_list_comment_pattern,
 
+    # INITIALIZER: sub make_delete_side_comments_exception_pattern
+    $delete_side_comment_exception_pattern,
+
     # INITIALIZER: sub initialize_keep_old_blank_lines_hash
     %keep_old_blank_lines_exceptions,
 
@@ -2391,6 +2394,8 @@ sub check_options {
     make_blank_line_pattern();
 
     make_keyword_group_list_pattern();
+
+    make_delete_side_comments_exception_pattern();
 
     prepare_cuddled_block_types();
 
@@ -7999,6 +8004,41 @@ EOM
     return;
 } ## end sub make_closing_side_comment_prefix
 
+sub make_delete_side_comments_exception_pattern {
+
+    # Create the pattern used to find side comments which should be ignored
+    # if -dsc is set. Leave the pattern undefined if not used.
+    $delete_side_comment_exception_pattern = undef;
+
+    my $dscxp_string = $rOpts->{'delete-side-comments-exception-pattern'};
+
+    # -dscxp=0 or an empty string is equivalent to not defining -dscxp
+    return if ( !$dscxp_string );
+
+    # And a string of spaces is equivalent to not defining -dscxp
+    return if ( $dscxp_string =~ /^\s*$/ );
+
+    # Otherwise, the pattern must begin with '#'
+    if (   substr( $dscxp_string, 0, 1 ) ne '#'
+        && substr( $dscxp_string, 0, 2 ) ne '\#' )
+    {
+        Die(<<EOM);
+-dscxp string = '$dscxp_string' must begin with '#' or '\\#'
+Note that some shells require escaping # symbols with backslashes
+EOM
+    }
+
+    my $pattern = '^' . $dscxp_string;
+    if ( bad_pattern($pattern) ) {
+        Die(
+"ERROR: -dscxp='$dscxp_string' causes the invalid regex '$pattern'\n"
+        );
+    }
+
+    $delete_side_comment_exception_pattern = $pattern;
+    return;
+} ## end sub make_delete_side_comments_exception_pattern
+
 sub initialize_keep_old_blank_lines_hash {
 
     # Initialize the control hash for --keep-old-blank-lines-exceptions
@@ -8930,7 +8970,7 @@ EOM
         # Values needed by Logger if a logfile is saved:
         if ( $self->[_save_logfile_] ) {
             $line_of_tokens->{_level_0}    = $rlevels->[0];
-            $line_of_tokens->{_ci_level_0} = 0;               # fix later
+            $line_of_tokens->{_ci_level_0} = 0;    # temp value, updated later
             $line_of_tokens->{_nesting_blocks_0} =
               $line_of_tokens_old->{_nesting_blocks_0};
             $line_of_tokens->{_nesting_tokens_0} =
@@ -16265,19 +16305,29 @@ EOM
             next;
         }
 
-        my $delete_side_comment =
-             $rOpts_delete_side_comments
-          && ( $Klast > $Kfirst || $CODE_type eq 'HSC' )
-          && (!$CODE_type
-            || $CODE_type eq 'HSC'
-            || $CODE_type eq 'IO'
-            || $CODE_type eq 'NIN' );
+        my $delete_side_comment;
 
-        # Do not delete special control side comments
-        if ( $rseqno_non_indenting_brace_by_ix->{$ix} ) {
-            $delete_side_comment = 0;
+        # SECTION 1: implement -dsc if requested
+        if ($rOpts_delete_side_comments) {
+
+            # First approximation
+            $delete_side_comment = ( $Klast > $Kfirst || $CODE_type eq 'HSC' )
+              && (!$CODE_type
+                || $CODE_type eq 'HSC'
+                || $CODE_type eq 'IO'
+                || $CODE_type eq 'NIN' );
+
+            # Second approximation: see if excluded with -dscxp
+            if (   $delete_side_comment
+                && defined($delete_side_comment_exception_pattern)
+                && $rLL->[$Klast]->[_TOKEN_] =~
+                /$delete_side_comment_exception_pattern/ )
+            {
+                $delete_side_comment = 0;
+            }
         }
 
+        # SECTION 2: implement -dcsc if requested
         if (
                $rOpts_delete_closing_side_comments
             && !$delete_side_comment
@@ -16317,6 +16367,14 @@ EOM
             }
         } ## end if ( $rOpts_delete_closing_side_comments...)
 
+        # SECTION 3: never delete special control side comments
+        if (   $delete_side_comment
+            && $rseqno_non_indenting_brace_by_ix->{$ix} )
+        {
+            $delete_side_comment = 0;
+        }
+
+        # SECTION 4: delete this side comment if requested and allowed
         if ($delete_side_comment) {
 
             # We are actually just changing the side comment to a blank.
@@ -16339,7 +16397,7 @@ EOM
             # If we delete a hanging side comment the line becomes blank.
             if ( $CODE_type eq 'HSC' ) { $line_of_tokens->{_code_type} = 'BL' }
         }
-    }
+    }    ## End loop over all side comments
     return;
 } ## end sub delete_side_comments
 
@@ -16795,7 +16853,7 @@ sub respace_tokens {
                     $ris_permanently_broken );
             }
         }
-    }    # End line loop
+    }    ## End line loop
 
     # finalize data structures
     $self->respace_post_loop_ops();
@@ -17537,7 +17595,7 @@ EOM
         }
         $self->store_token($rtoken_vars);
 
-    }    # End token loop
+    }    ## End token loop
 
     return;
 } ## end sub respace_tokens_inner_loop
@@ -32092,8 +32150,9 @@ EOM
         $nline = $#{$ri_last};
     }
 
-    $rindentation_list->[0] =
-      $nline;    # save line number to start looking next call
+    # save line number to start looking next call
+    $rindentation_list->[0] = $nline;
+
     my $ibeg       = $ri_first->[$nline];
     my $offset     = token_sequence_length( $ibeg, $i_opening ) - 1;
     my $is_leading = ( $ibeg == $i_opening );
@@ -38277,7 +38336,7 @@ EOM
 
         my (
 
-            $self,    #
+            $self,
 
             $number_of_fields_best,
             $rhash_IN,
@@ -46294,8 +46353,9 @@ sub add_closing_side_comment {
 
     # add closing side comments after closing block braces if -csc used
 
-    my $rLL        = $self->[_rLL_];
-    my $this_batch = $self->[_this_batch_];
+    my $rLL             = $self->[_rLL_];
+    my $length_function = $self->[_length_function_];
+    my $this_batch      = $self->[_this_batch_];
 
     my $ri_first = $this_batch->[_ri_first_];
     my $ri_last  = $this_batch->[_ri_last_];
@@ -46514,7 +46574,10 @@ sub add_closing_side_comment {
             # switch to the new csc (unless we deleted it!)
             if ($token) {
 
-                my $len_tok = length($token); # NOTE: length no longer important
+                my $len_tok =
+                    $length_function
+                  ? $length_function->($token)
+                  : length($token);
                 my $added_len =
                   $len_tok - $token_lengths_to_go[$max_index_to_go];
 

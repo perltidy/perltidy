@@ -4082,6 +4082,9 @@ sub generate_options {
     $add_option->( 'delete-closing-side-comments', 'dcsc', '!' );
     $add_option->( 'delete-pod',                   'dp',   '!' );
     $add_option->( 'delete-side-comments',         'dsc',  '!' );
+
+    $add_option->( 'delete-side-comments-exception-pattern', 'dscxp', '=s' );
+
     $add_option->( 'tee-block-comments',           'tbc',  '!' );
     $add_option->( 'tee-pod',                      'tp',   '!' );
     $add_option->( 'tee-side-comments',            'tsc',  '!' );
