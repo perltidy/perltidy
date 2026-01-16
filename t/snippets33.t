@@ -8,6 +8,7 @@
 #5 dfsfs.dfsfs2
 #6 c226.c226
 #7 c226.def
+#8 comments.comments6
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -28,7 +29,11 @@ BEGIN {
         'boct' => <<'----------',
 -boc -boct='f( ;'
 ----------
-        'c226'   => "-xci",
+        'c226'      => "-xci",
+        'comments6' => <<'----------',
+# testing --delete-side-comments and --delete-side-comments-exclusion-pattern
+-dsc -dscxp='\#\#'
+----------
         'def'    => "",
         'dfsfs1' => "-dsc",
         'dfsfs2' => <<'----------',
@@ -83,6 +88,102 @@ my $prefix = substr $exception,
                     }
                     : $_
             } @_;
+----------
+
+        'comments' => <<'----------',
+#!/usr/bin/perl -w
+# an initial hash bang line cannot be deleted with -dp
+#<<< format skipping of first code can cause an error message in perltidy v20210625
+my $rvar = [ [ 1, 2, 3 ], [ 4, 5, 6 ] ];
+#>>>
+sub length { return length($_[0]) }    # side comment
+                             # hanging side comment
+                             # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
+
+# a blank will be inserted to prevent forming a hanging side comment
+sub macro_get_names { #
+# 
+# %name = macro_get_names();  (key=macrohandle, value=macroname)
+#
+##local(%name);  # a static block comment without indentation
+   local(%name)=();  ## a static side comment to test -ssc
+
+ # a spaced block comment to test -isbc
+   for (0..$#mac_ver) {
+      # a very long comment for testing the parameter --nooutdent-long-comments (or -nolc)
+      $name{$_} = $mac_ext[$idx{$mac_exti[$_]}];
+      $vmsfile =~ s/;[\d\-]*$//; # very long side comment; Clip off version number; we can use a newer version as well
+
+   }
+   %name;
+} 
+
+
+
+    @month_of_year = ( 
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct',
+    ##  'Dec', 'Nov'   [a static block comment with indentation]
+        'Nov', 'Dec');
+
+
+{    # this side comment will not align
+    my $IGNORE = 0;    # This is a side comment
+                       # This is a hanging side comment
+                       # And so is this
+
+    # A blank line interrupts the hsc's; this is a block comment
+
+}
+
+# side comments at different indentation levels should not normally be aligned
+{ { { { { ${msg} = "Hello World!"; print "My message: ${msg}\n"; } } #end level 4
+        } # end level 3
+    } # end level 2
+} # end level 1
+
+
+#<<<  do not let perltidy touch this unless -nfs is set
+    my @list = (1,
+                1, 1,
+                1, 2, 1,
+                1, 3, 3, 1,
+                1, 4, 6, 4, 1,);
+#>>>
+
+#<<  test alternate format skipping string
+    my @list = (1,
+                1, 1,
+                1, 2, 1,
+                1, 3, 3, 1,
+                1, 4, 6, 4, 1,);
+#>>
+
+    local $Test::Builder::Level = $Test::Builder::Level + 1; ## no critic (Variables::ProhibitPackageVars)
+
+    ## no critic (ValuesAndExpressions::RequireInterpolationOfMetachars)
+
+
+
+# some blank lines follow
+
+
+
+=pod
+Some pod before __END__ to delete with -dp
+=cut
+
+
+__END__
+
+
+# text following __END__, not a comment
+
+
+=pod
+Some pod after __END__ to delete with -dp and trim with -trp     
+=cut
+
+
 ----------
 
         'dfsfs' => <<'----------',
@@ -242,6 +343,97 @@ my @list2;
                   : $_
             } @_;
 #7...........
+        },
+
+        'comments.comments6' => {
+            source => "comments",
+            params => "comments6",
+            expect => <<'#8...........',
+#!/usr/bin/perl -w
+# an initial hash bang line cannot be deleted with -dp
+#<<< format skipping of first code can cause an error message in perltidy v20210625
+my $rvar = [ [ 1, 2, 3 ], [ 4, 5, 6 ] ];
+#>>>
+sub length { return length( $_[0] ) }
+
+# a blank will be inserted to prevent forming a hanging side comment
+sub macro_get_names {
+    #
+    # %name = macro_get_names();  (key=macrohandle, value=macroname)
+    #
+##local(%name);  # a static block comment without indentation
+    local (%name) = ();    ## a static side comment to test -ssc
+
+    # a spaced block comment to test -isbc
+    for ( 0 .. $#mac_ver ) {
+
+# a very long comment for testing the parameter --nooutdent-long-comments (or -nolc)
+        $name{$_} = $mac_ext[ $idx{ $mac_exti[$_] } ];
+        $vmsfile =~ s/;[\d\-]*$//;
+
+    }
+    %name;
+}
+
+@month_of_year = (
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct',
+    ##  'Dec', 'Nov'   [a static block comment with indentation]
+    'Nov', 'Dec'
+);
+
+{
+    my $IGNORE = 0;
+
+    # A blank line interrupts the hsc's; this is a block comment
+
+}
+
+# side comments at different indentation levels should not normally be aligned
+{
+    {
+        {
+            {
+                { ${msg} = "Hello World!"; print "My message: ${msg}\n"; }
+            }
+        }
+    }
+}
+
+#<<<  do not let perltidy touch this unless -nfs is set
+    my @list = (1,
+                1, 1,
+                1, 2, 1,
+                1, 3, 3, 1,
+                1, 4, 6, 4, 1,);
+#>>>
+
+#<<  test alternate format skipping string
+my @list = ( 1, 1, 1, 1, 2, 1, 1, 3, 3, 1, 1, 4, 6, 4, 1, );
+
+#>>
+
+local $Test::Builder::Level = $Test::Builder::Level + 1;    ## no critic (Variables::ProhibitPackageVars)
+
+## no critic (ValuesAndExpressions::RequireInterpolationOfMetachars)
+
+# some blank lines follow
+
+=pod
+Some pod before __END__ to delete with -dp
+=cut
+
+__END__
+
+
+# text following __END__, not a comment
+
+
+=pod
+Some pod after __END__ to delete with -dp and trim with -trp     
+=cut
+
+
+#8...........
         },
     };
 

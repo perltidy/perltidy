@@ -2,6 +2,20 @@
 
 ## 2026 01 09.01
 
+    - When --delete-side-comments or --delete-block-comments are used to delete
+      comments, comments of the form '## no critic' are not deleted unless
+      --ignore-perlcritic-comments, or -ipc, is also set.
+
+    - A new parameter --delete-side-comments-exclusion-pattern=s, or -dscxp=s,
+      is available to prevent the --delete-side-comments parameter from deleting
+      certain side comments.  The string s defines the leading characters of
+      comments which should not be deleted by -dsc. The manual has details.
+      One use is to prevent -dsc from deleting closing side comments, which
+      begin with two hash symbols. The command to do this is
+
+            perltidy -dsc -dscxp='\#\#' file.pl
+
+      The backslashes are required to get the string past a command line shell.
 
 ## 2026 01 09
 

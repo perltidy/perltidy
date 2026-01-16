@@ -1,0 +1,2 @@
+# testing --delete-side-comments and --delete-side-comments-exclusion-pattern
+-dsc -dscxp='\#\#'

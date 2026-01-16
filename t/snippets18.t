@@ -443,7 +443,7 @@ my @list = ( 1, 1, 1, 1, 2, 1, 1, 3, 3, 1, 1, 4, 6, 4, 1, );
 
 #>>
 
-local $Test::Builder::Level = $Test::Builder::Level + 1;
+local $Test::Builder::Level = $Test::Builder::Level + 1;    ## no critic (Variables::ProhibitPackageVars)
 
 ## no critic (ValuesAndExpressions::RequireInterpolationOfMetachars)
 

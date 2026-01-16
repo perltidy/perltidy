@@ -10,8 +10,8 @@ sub macro_get_names {
     #
     # %name = macro_get_names();  (key=macrohandle, value=macroname)
     #
-    ##local(%name);  # a static block comment without indentation
-    local (%name) = ();
+##local(%name);  # a static block comment without indentation
+    local (%name) = ();    ## a static side comment to test -ssc
 
     # a spaced block comment to test -isbc
     for ( 0 .. $#mac_ver ) {
@@ -26,7 +26,6 @@ sub macro_get_names {
 
 @month_of_year = (
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct',
-
     ##  'Dec', 'Nov'   [a static block comment with indentation]
     'Nov', 'Dec'
 );

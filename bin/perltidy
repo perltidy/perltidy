@@ -6358,14 +6358,62 @@ Two commands which remove comments (but not pod) are: B<-dbc> or
 B<--delete-block-comments> and B<-dsc> or  B<--delete-side-comments>.
 (Hanging side comments will be deleted with side comments here.)
 
-When side comments are deleted, any special control side comments for
-non-indenting braces will be retained unless they are deactivated with
+The negatives of these commands also work, and are the defaults.
+
+B<--delete-block-comments>, or B<-dbc>, deletes all full-line comments except the following:
+
+=over 4
+
+=item *
+
+Comments controlling B<format skipping> and B<code skipping>
+
+=item *
+
+Comments of the form B<'## no critic'> unless B<--ignore-perlcritic-comments>, or B<-ipc>, is
+also set.
+
+=item *
+
+Any leading 'hash-bang' will be retained.
+
+=item *
+
+If the B<-x> flag is used, any system commands before a leading hash-bang
+will be retained (even if they are in the form of comments).
+
+=back
+
+B<--delete-side-comments>, or B<-dsc>, deletes all side comments except the following:
+
+=over 4
+
+=item *
+
+Any special control side comments for
+B<non-indenting braces> will be retained unless they are deactivated with
 a B<-nnib> flag.
 
-The negatives of these commands also work, and are the defaults.  When
-block comments are deleted, any leading 'hash-bang' will be retained.
-Also, if the B<-x> flag is used, any system commands before a leading
-hash-bang will be retained (even if they are in the form of comments).
+=item *
+
+Comments of the form B<'## no critic'> unless B<--ignore-perlcritic-comments>, or B<-ipc>, is
+also set.
+
+=item *
+
+Side comments which match a pattern defined by
+B<--delete-side-comments-exception-pattern>, if it is defined (see next
+section).
+
+=back
+
+B<--delete-side-comments-exclusion-pattern=s>, or B<-dscxp=s>, defines an optional string B<s> of leading characters which, if matched by a side comment, causes any B<-dsc> command not to delete that comment. The first character(s) must be B<'#'> or B<'\#'>. For example, the following commands tell perltidy to delete side comments except those beginning with two hash symbols:
+
+    perltidy -dsc -dscxp='\#\#' file.pl
+
+The backslashes are typically required before the hash symbols to get them past
+a command line shell.  The string B<s> is treated by perltidy as a regex
+pattern.
 
 =item B<Writing selected text to a file>
 

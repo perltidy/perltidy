@@ -1,3 +1,5 @@
+package Perl::Tidy::Formatter;
+
 ####################################################################
 #
 # The Perl::Tidy::Formatter package adds indentation, whitespace, and
@@ -61,7 +63,6 @@
 # CODE SECTION 1: Preliminary code and global definitions up to sub new
 #######################################################################
 
-package Perl::Tidy::Formatter;
 use strict;
 use warnings;
 
@@ -237,6 +238,7 @@ my (
     $rOpts_delete_closing_side_comments,
     $rOpts_delete_old_whitespace,
     $rOpts_delete_side_comments,
+    $rOpts_delete_block_comments,
     $rOpts_delete_trailing_commas,
     $rOpts_delete_lone_trailing_commas,
     $rOpts_delete_weld_interfering_commas,
@@ -3988,6 +3990,7 @@ sub initialize_global_option_vars {
     $rOpts_extended_continuation_indentation =
       $rOpts->{'extended-continuation-indentation'};
     $rOpts_delete_side_comments   = $rOpts->{'delete-side-comments'};
+    $rOpts_delete_block_comments  = $rOpts->{'delete-block-comments'};
     $rOpts_delete_trailing_commas = $rOpts->{'delete-trailing-commas'};
     $rOpts_delete_lone_trailing_commas =
       $rOpts->{'delete-lone-trailing-commas'};
@@ -16279,8 +16282,7 @@ sub delete_side_comments {
         my $line_of_tokens = $rlines->[$ix];
         my $line_type      = $line_of_tokens->{_line_type};
 
-        # This fault shouldn't happen because we only saved CODE lines with
-        # side comments in the TASK 1 loop above.
+        # Only CODE lines should be in @{$rix_side_comments}
         if ( $line_type ne 'CODE' ) {
             if (DEVEL_MODE) {
                 my $lno = $ix + 1;
@@ -16295,6 +16297,7 @@ EOM
         my $rK_range  = $line_of_tokens->{_rK_range};
         my ( $Kfirst, $Klast ) = @{$rK_range};
 
+        # Lines must end with comments in @{$rix_side_comments}
         if ( !defined($Kfirst) || $rLL->[$Klast]->[_TYPE_] ne '#' ) {
             if (DEVEL_MODE) {
                 my $lno = $ix + 1;
@@ -16305,40 +16308,49 @@ EOM
             next;
         }
 
-        my $delete_side_comment;
+        # Comments must be side comments in @{$rix_side_comments}
+        my $is_side_comment = ( $Klast > $Kfirst || $CODE_type eq 'HSC' )
+          && (!$CODE_type
+            || $CODE_type eq 'HSC'
+            || $CODE_type eq 'IO'
+            || $CODE_type eq 'NIN' );
 
-        # SECTION 1: implement -dsc if requested
-        if ($rOpts_delete_side_comments) {
-
-            # First approximation
-            $delete_side_comment = ( $Klast > $Kfirst || $CODE_type eq 'HSC' )
-              && (!$CODE_type
-                || $CODE_type eq 'HSC'
-                || $CODE_type eq 'IO'
-                || $CODE_type eq 'NIN' );
-
-            # Second approximation: see if excluded with -dscxp
-            if (   $delete_side_comment
-                && defined($delete_side_comment_exception_pattern)
-                && $rLL->[$Klast]->[_TOKEN_] =~
-                /$delete_side_comment_exception_pattern/ )
-            {
-                $delete_side_comment = 0;
+        if ( !$is_side_comment ) {
+            if (DEVEL_MODE) {
+                my $lno = $ix + 1;
+                Fault(<<EOM);
+Did not find side comment near line $lno while deleting side comments
+EOM
+                next;
             }
         }
 
-        # SECTION 2: implement -dcsc if requested
-        if (
-               $rOpts_delete_closing_side_comments
+        my $token = $rLL->[$Klast]->[_TOKEN_];
+
+        # Never delete special control side comments
+        next if ( $rseqno_non_indenting_brace_by_ix->{$ix} );
+
+        # Do not delete '## no critic' side comments
+        next
+          if ( !$rOpts_ignore_perlcritic_comments
+            && length($token) > 10
+            && substr( $token, 1, 1 ) eq '#'
+            && $token =~ /^##\s*no\s+critic\b/ );
+
+        my $delete_side_comment;
+
+        # CASE 1: implement -dsc if requested
+        if ($rOpts_delete_side_comments) {
+            $delete_side_comment =
+              defined($delete_side_comment_exception_pattern)
+              && $token =~ /$delete_side_comment_exception_pattern/ ? 0 : 1;
+        }
+
+        # CASE 2: implement -dcsc if requested
+        if (   $rOpts_delete_closing_side_comments
             && !$delete_side_comment
-            && $Klast > $Kfirst
-            && (  !$CODE_type
-                || $CODE_type eq 'HSC'
-                || $CODE_type eq 'IO'
-                || $CODE_type eq 'NIN' )
-          )
+            && $Klast > $Kfirst )
         {
-            my $token  = $rLL->[$Klast]->[_TOKEN_];
             my $K_m    = $Klast - 1;
             my $type_m = $rLL->[$K_m]->[_TYPE_];
             if ( $type_m eq 'b' && $K_m > $Kfirst ) { $K_m-- }
@@ -16367,36 +16379,29 @@ EOM
             }
         } ## end if ( $rOpts_delete_closing_side_comments...)
 
-        # SECTION 3: never delete special control side comments
-        if (   $delete_side_comment
-            && $rseqno_non_indenting_brace_by_ix->{$ix} )
-        {
-            $delete_side_comment = 0;
-        }
+        next if ( !$delete_side_comment );
 
-        # SECTION 4: delete this side comment if requested and allowed
-        if ($delete_side_comment) {
+        # OK to delete this side comment:
 
-            # We are actually just changing the side comment to a blank.
-            # This may produce multiple blanks in a row, but sub respace_tokens
-            # will check for this and fix it.
-            $rLL->[$Klast]->[_TYPE_]  = 'b';
-            $rLL->[$Klast]->[_TOKEN_] = SPACE;
+        # We are actually just changing the side comment to a blank.
+        # This may produce multiple blanks in a row, but sub respace_tokens
+        # will check for this and fix it.
+        $rLL->[$Klast]->[_TYPE_]  = 'b';
+        $rLL->[$Klast]->[_TOKEN_] = SPACE;
 
-            # The -io option outputs the line text, so we have to update
-            # the line text so that the comment does not reappear.
-            if ( $CODE_type eq 'IO' ) {
-                my $line = EMPTY_STRING;
-                foreach my $KK ( $Kfirst .. $Klast - 1 ) {
-                    $line .= $rLL->[$KK]->[_TOKEN_];
-                }
-                $line =~ s/\s+$//;
-                $line_of_tokens->{_line_text} = $line . "\n";
+        # The -io option outputs the line text, so we have to update
+        # the line text so that the comment does not reappear.
+        if ( $CODE_type eq 'IO' ) {
+            my $line = EMPTY_STRING;
+            foreach my $KK ( $Kfirst .. $Klast - 1 ) {
+                $line .= $rLL->[$KK]->[_TOKEN_];
             }
-
-            # If we delete a hanging side comment the line becomes blank.
-            if ( $CODE_type eq 'HSC' ) { $line_of_tokens->{_code_type} = 'BL' }
+            $line =~ s/\s+$//;
+            $line_of_tokens->{_line_text} = $line . "\n";
         }
+
+        # If we delete a hanging side comment the line becomes blank.
+        if ( $CODE_type eq 'HSC' ) { $line_of_tokens->{_code_type} = 'BL' }
     }    ## End loop over all side comments
     return;
 } ## end sub delete_side_comments
@@ -29389,9 +29394,20 @@ EOM
         #------------------------------------
         if ($is_block_comment) {
 
-            if ( $rOpts->{'delete-block-comments'} ) {
-                $self->flush();
-                return;
+            if ($rOpts_delete_block_comments) {
+
+                # do not delete '## no critic' comments
+                my $token = $rLL->[$K_last]->[_TOKEN_];
+                my $is_no_critic =
+                     !$rOpts_ignore_perlcritic_comments
+                  && length($token) > 10
+                  && substr( $token, 1, 1 ) eq '#'
+                  && $token =~ /^##\s*no\s+critic\b/;
+
+                if ( !$is_no_critic ) {
+                    $self->flush();
+                    return;
+                }
             }
 
             $index_start_one_line_block = undef;

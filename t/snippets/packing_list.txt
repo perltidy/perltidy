@@ -506,6 +506,7 @@
 ../snippets33.t	dfsfs.dfsfs2
 ../snippets33.t	c226.c226
 ../snippets33.t	c226.def
+../snippets33.t	comments.comments6
 ../snippets4.t	gnu1.gnu
 ../snippets4.t	gnu2.def
 ../snippets4.t	gnu2.gnu
