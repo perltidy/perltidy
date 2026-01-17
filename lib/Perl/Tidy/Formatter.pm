@@ -16278,7 +16278,14 @@ sub delete_side_comments {
     my $rseqno_non_indenting_brace_by_ix =
       $self->[_rseqno_non_indenting_brace_by_ix_];
 
+    my %is_deletable_CODE_type;
+    $is_deletable_CODE_type{$_} = 1 for qw(HSC NIN IO VER);
+
     foreach my $ix ( @{$rix_side_comments} ) {
+
+        # Never delete special control side comments
+        next if ( $rseqno_non_indenting_brace_by_ix->{$ix} );
+
         my $line_of_tokens = $rlines->[$ix];
         my $line_type      = $line_of_tokens->{_line_type};
 
@@ -16297,8 +16304,14 @@ EOM
         my $rK_range  = $line_of_tokens->{_rK_range};
         my ( $Kfirst, $Klast ) = @{$rK_range};
 
-        # Lines must end with comments in @{$rix_side_comments}
-        if ( !defined($Kfirst) || $rLL->[$Klast]->[_TYPE_] ne '#' ) {
+        # Be sure this line ends in a side comment. Note that 'HSC' lines
+        # are special: they may only have one token.
+        if (   !defined($Kfirst)
+            || $rLL->[$Klast]->[_TYPE_] ne '#'
+            || ( $Klast <= $Kfirst && $CODE_type ne 'HSC' ) )
+        {
+
+            # The caller passed a bad array @{$rix_side_comments}
             if (DEVEL_MODE) {
                 my $lno = $ix + 1;
                 Fault(<<EOM);
@@ -16308,27 +16321,10 @@ EOM
             next;
         }
 
-        # Comments must be side comments in @{$rix_side_comments}
-        my $is_side_comment = ( $Klast > $Kfirst || $CODE_type eq 'HSC' )
-          && (!$CODE_type
-            || $CODE_type eq 'HSC'
-            || $CODE_type eq 'IO'
-            || $CODE_type eq 'NIN' );
-
-        if ( !$is_side_comment ) {
-            if (DEVEL_MODE) {
-                my $lno = $ix + 1;
-                Fault(<<EOM);
-Did not find side comment near line $lno while deleting side comments
-EOM
-                next;
-            }
-        }
+        # Only delete side comments from certain non-blank CODE types
+        next if ( $CODE_type && !$is_deletable_CODE_type{$CODE_type} );
 
         my $token = $rLL->[$Klast]->[_TOKEN_];
-
-        # Never delete special control side comments
-        next if ( $rseqno_non_indenting_brace_by_ix->{$ix} );
 
         # Do not delete '## no critic' side comments
         next
