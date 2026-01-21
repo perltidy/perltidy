@@ -1129,7 +1129,7 @@ EOM
           title
 
           check-syntax
-          delete-closing-side-comments-exception-pattern
+          delete-side-comments-exception-pattern
 
         );
 

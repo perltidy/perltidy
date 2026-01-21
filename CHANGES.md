@@ -2,6 +2,9 @@
 
 ## 2026 01 09.01
 
+    - Fix issue git #195, where --want-break-before=s and --want-break-after=s
+      incorrectly rejected a string 's' with keywords 'and' and 'or'.
+
     - When --delete-side-comments or --delete-block-comments are used to delete
       comments, comments of the form '## no critic' are not deleted unless
       --ignore-perlcritic-comments, or -ipc, is also set.

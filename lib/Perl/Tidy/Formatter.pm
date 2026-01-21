@@ -2315,7 +2315,7 @@ sub check_for_valid_token_types {
 
     my @unknown_types;
     foreach my $type ( @{$rlist} ) {
-        if ( !is_valid_token_type($type) ) {
+        if ( !is_valid_token_type($type) && !is_keyword($type) ) {
             push @unknown_types, $type;
         }
     }
@@ -2325,7 +2325,7 @@ sub check_for_valid_token_types {
         my $num = @unknown_types;
         local $LIST_SEPARATOR = SPACE;
         my $msg = <<EOM;
-$num unrecognized token types were input with $option_name :
+$num unrecognized token types or keywords were input with $option_name :
  @unknown_types
 Use 'perltidy -dtt' to dump a list of valid token types to standard output
 EOM
