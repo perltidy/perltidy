@@ -2297,13 +2297,14 @@ EOM
 } ## end sub check_for_valid_keywords
 
 sub check_for_valid_token_types {
-    my ( $rlist, ( $option_name, $die_on_error ) ) = @_;
+    my ( $rlist, $option_name, ( $die_on_error, $rkeyword_list ) ) = @_;
 
     # Given:
     #   $rlist = ref to list of possible token types
-    #   ($option_name) = optional name of option to use if a warning message
-    #                    should be issued (caller should add leading dash(es))
+    #   $option_name = name of option to use if a warning message
+    #                  should be issued (caller should add leading dash(es))
     #   ($die_on_error) = optional flag, true=>Die instead of Warn on error
+    #   ($rkeyword_list) = optional ref to list of acceptable keywords
     # Return:
     #   nothing if no errors, or
     #   ref to list of unknown token types
@@ -2313,9 +2314,14 @@ sub check_for_valid_token_types {
 
     return if ( !defined($rlist) );
 
+    my %in_keyword_list;
+    if ( defined($rkeyword_list) ) {
+        $in_keyword_list{$_} = 1 for @{$rkeyword_list};
+    }
+
     my @unknown_types;
     foreach my $type ( @{$rlist} ) {
-        if ( !is_valid_token_type($type) && !is_keyword($type) ) {
+        if ( !is_valid_token_type($type) && !$in_keyword_list{$type} ) {
             push @unknown_types, $type;
         }
     }
@@ -3408,14 +3414,21 @@ sub initialize_token_break_preferences {
     $break_before->(@all_operators)
       if ( $rOpts->{'break-before-all-operators'} );
 
+    # These keywords are accepted by -wbb and -wba (fixes git #195):
+    my @ok = qw( and eq err ge gt le lt ne or xor );
+
+    # We will die on an error, although it would be safe to keep going
+    # because invalid types are ignored.
+    my $die_on_error = 1;
+
     my $optname = 'want-break-after';
     if ( my @q = split_words( $rOpts->{$optname} ) ) {
-        check_for_valid_token_types( \@q, "--$optname", 1 );
+        check_for_valid_token_types( \@q, "--$optname", $die_on_error, \@ok );
         $break_after->(@q);
     }
     $optname = 'want-break-before';
     if ( my @q = split_words( $rOpts->{$optname} ) ) {
-        check_for_valid_token_types( \@q, "--$optname", 1 );
+        check_for_valid_token_types( \@q, "--$optname", $die_on_error, \@ok );
         $break_before->(@q);
     }
 
