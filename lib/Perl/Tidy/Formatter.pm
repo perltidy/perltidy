@@ -2331,11 +2331,12 @@ sub check_for_valid_token_types {
         my $num = @unknown_types;
         local $LIST_SEPARATOR = SPACE;
         my $msg = <<EOM;
-$num unrecognized token types or keywords were input with $option_name :
+$num unrecognized token types or keywords input with $option_name :
  @unknown_types
 Use 'perltidy -dtt' to dump a list of valid token types to standard output
 EOM
         Die($msg) if ($die_on_error);
+        $msg = "Ignoring " . $msg;
         Warn($msg);
     }
     return \@unknown_types;
@@ -3417,9 +3418,8 @@ sub initialize_token_break_preferences {
     # These keywords are accepted by -wbb and -wba (fixes git #195):
     my @ok = qw( and eq err ge gt le lt ne or xor );
 
-    # We will die on an error, although it would be safe to keep going
-    # because invalid types are ignored.
-    my $die_on_error = 1;
+    # It is safe to keep going because invalid types are ignored.
+    my $die_on_error = 0;
 
     my $optname = 'want-break-after';
     if ( my @q = split_words( $rOpts->{$optname} ) ) {
