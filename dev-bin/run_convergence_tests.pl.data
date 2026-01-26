@@ -13756,6 +13756,25 @@ __END__
 --break-before-all-operators
 --keep-old-breakpoints-before='w ]'
 
+==> b1562.in <==
+    my $notebook =
+      $ow->NoteBook(
+                    -background => $config{"ColorBG"},  #
+                    -inactivebackground =>
+                      $config{"ColorEntry"},            #
+      );
+
+    my $notebook =
+      $ow->NoteBook(
+           -background         => $config{"ColorBG"},   #
+           -inactivebackground => $config{"ColorEntry"}
+           ,                                            #
+      );
+
+==> b1562.par <==
+--maximum-line-length=57
+--extended-line-up-parentheses
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar

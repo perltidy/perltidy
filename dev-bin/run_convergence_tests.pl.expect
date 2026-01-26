@@ -9036,6 +9036,21 @@ __END__
         ]
       );
 
+==> b1562 <==
+    my $notebook =
+      $ow->NoteBook(
+           -background         => $config{"ColorBG"},   #
+           -inactivebackground =>
+             $config{"ColorEntry"},                     #
+      );
+
+    my $notebook =
+      $ow->NoteBook(
+           -background         => $config{"ColorBG"},   #
+           -inactivebackground =>
+             $config{"ColorEntry"},                     #
+      );
+
 ==> b163 <==
 # State 1
 Readonly::Scalar

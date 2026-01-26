@@ -6612,6 +6612,12 @@ EOM
         $binary_bond_strength{'R}'}->{'[['} = 0.9 * STRONG + 0.1 * NOMINAL;
         $binary_bond_strength{'R}'}->{'L{'} = 0.9 * STRONG + 0.1 * NOMINAL;
 
+        # avoid break before a comma, added for b1562
+        $binary_bond_strength{'R}'}->{','} = 0.1 * STRONG + 0.9 * NOMINAL;
+        $binary_bond_strength{'}}'}->{','} = 0.1 * STRONG + 0.9 * NOMINAL;
+        $binary_bond_strength{']]'}->{','} = 0.1 * STRONG + 0.9 * NOMINAL;
+        $binary_bond_strength{'))'}->{','} = 0.1 * STRONG + 0.9 * NOMINAL;
+
         # increase strength to the point where a break in the following
         # will be after the opening paren rather than at the arrow:
         #    $a->$b($c);
