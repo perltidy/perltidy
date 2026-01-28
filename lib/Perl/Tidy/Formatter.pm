@@ -8661,14 +8661,11 @@ EOM
         # make and push closing sequenced item ')'
         if ($closing) {
 
-            # OPTIONAL: remove a previous comma if it is the only one. This can
+            # Remove a previous comma if it is the only one. This can
             # happen if this closing paren starts a new line and there was just
-            # one word in the qw list. The reason for doing this would be
-            # to avoid possible instability, but none is currently known. b1491.
-            # This has been tested but is currently inactive because it has not
-            # been found to be necessary.
-            if (   0
-                && !@words
+            # one word in the qw list. This was tested in b1491 and activated
+            # for b1567.
+            if (  !@words
                 && $in_qw_comma_count == 1
                 && $rLL->[-1]->[_TYPE_] eq ',' )
             {

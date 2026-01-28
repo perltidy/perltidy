@@ -13775,6 +13775,25 @@ __END__
 --maximum-line-length=57
 --extended-line-up-parentheses
 
+==> b1567.in <==
+@ISA =
+    qw(
+         IO::ScalarArray
+    )
+    ; # also gets us new_tie  :-)
+
+@ISA =
+    qw( IO::ScalarArray )
+    ; # also gets us new_tie  :-)
+
+==> b1567.par <==
+--maximum-line-length=25
+--indent-columns=9
+--continuation-indentation=4
+--paren-vertical-tightness-closing=2
+--paren-tightness=0
+--qw-as-function
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar

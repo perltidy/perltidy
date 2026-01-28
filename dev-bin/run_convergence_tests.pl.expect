@@ -8092,8 +8092,8 @@ $hr->set_uri_schemes([
     Net::FTP::I) ;
 
 @ISA =
-      qw(Net::FTP::I
-      ) ;
+      qw(
+    Net::FTP::I) ;
 
 ==> b1485 <==
 use
@@ -9050,6 +9050,19 @@ __END__
            -inactivebackground =>
              $config{"ColorEntry"},                     #
       );
+
+==> b1567 <==
+@ISA =
+    qw(
+         IO::ScalarArray
+    )
+    ; # also gets us new_tie  :-)
+
+@ISA =
+    qw(
+         IO::ScalarArray
+    )
+    ; # also gets us new_tie  :-)
 
 ==> b163 <==
 # State 1
