@@ -13794,6 +13794,25 @@ __END__
 --paren-tightness=0
 --qw-as-function
 
+==> b1568.in <==
+sub DialSelectedEntry {
+    my ( $entry, $user, $pass ) = @_;
+    my $found = 0;
+
+    local $_;
+}
+
+sub dialSelectedEntry {
+    my ( $entry, $user, $pass ) = @_;
+    my $found = 0;
+    local $_;
+}
+
+==> b1568.par <==
+--keep-old-blank-lines=0
+--keyword-group-blanks-size='2.8'
+--keyword-group-blanks-inside
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar

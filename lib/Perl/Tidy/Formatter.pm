@@ -28296,7 +28296,12 @@ EOM
                 # if there are blank lines, we require that at least $num lines
                 # be non-blank up to the boundary with the next subgroup.
                 my $nog_b = my $nog_e = 1;
-                if ( @iblanks && !$rOpts_kgb_delete ) {
+
+                # Added -kobl check for b1568
+                if (   @iblanks
+                    && !$rOpts_kgb_delete
+                    && $rOpts->{'keep-old-blank-lines'} )
+                {
                     my $j_bb = $j_b + $num - 1;
                     my ( $i_bb_uu, $tok_bb_uu, $count_bb ) = @{ $group[$j_bb] };
                     $nog_b = $count_bb - $count_b + 1 == $num;

@@ -9064,6 +9064,21 @@ __END__
     )
     ; # also gets us new_tie  :-)
 
+==> b1568 <==
+sub DialSelectedEntry {
+    my ( $entry, $user, $pass ) = @_;
+    my $found = 0;
+
+    local $_;
+}
+
+sub dialSelectedEntry {
+    my ( $entry, $user, $pass ) = @_;
+    my $found = 0;
+
+    local $_;
+}
+
 ==> b163 <==
 # State 1
 Readonly::Scalar
