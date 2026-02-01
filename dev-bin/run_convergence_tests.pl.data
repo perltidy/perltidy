@@ -13775,6 +13775,84 @@ __END__
 --maximum-line-length=57
 --extended-line-up-parentheses
 
+==> b1564.in <==
+my ($self) = $class->SUPER::new(
+        yyrules => [
+                [
+                        'item', 1,
+                        sub {
+                                if ( $_[1] ) {
+                                        my ( $k, $v );
+                                        while ( ( $k, $v ) = each( %{ $_[1] } ) ) {
+                                                if ( $k eq "email_" ) {
+                                                        if (
+                                                                defined $groups{'_default_'}
+                                                                ->{"email_work"} )
+                                                        {
+                                                                $k = "email_home";
+                                                        }
+                                                }
+                                        }
+                                }
+                        },
+                ],
+                [
+                     'addressparts',
+                     5,
+                     sub { { "address", $_[1], "address2", $_[3], "street", $_[5] } },
+                ],
+                [
+                        'addressparts',
+                        7,
+                        sub { {
+                             "address", $_[1], "address2", $_[3],
+                             "street",  $_[5], "city",     $_[7]
+                        } },
+                ],
+        ],
+        @_,
+);
+my ($self) = $class->SUPER::new(
+        yyrules => [
+            [
+              'item', 1,
+              sub {
+                      if ( $_[1] ) {
+                              my ( $k, $v );
+                              while ( ( $k, $v ) = each( %{ $_[1] } ) ) {
+                                      if ( $k eq "email_" ) {
+                                              if (
+                                                    defined $groups{'_default_'}
+                                                    ->{"email_work"} )
+                                              {
+                                                      $k = "email_home";
+                                              }
+                                      }
+                              }
+                      }
+              },
+            ],
+            [
+               'addressparts',
+               5,
+               sub { { "address", $_[1], "address2", $_[3], "street", $_[5] } },
+            ],
+            [
+               'addressparts',
+               7,
+               sub { { "address", $_[1], "address2", $_[3], "street", $_[5], "city", $_[7] } },
+            ],
+        ],
+        @_,
+);
+
+==> b1564.par <==
+--maximum-line-length=95
+--indent-columns=8
+--weld-nested-containers
+--extended-continuation-indentation
+--extended-line-up-parentheses
+
 ==> b1565.in <==
       {
          user =>

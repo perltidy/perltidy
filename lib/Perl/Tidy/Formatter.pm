@@ -26579,6 +26579,14 @@ sub is_fragile_block_type {
     # - sub process_line where variable '$rbrace_follower' is set
     # - sub process_line_inner_loop where variable '$is_opening_BLOCK' is set,
 
+    # one-line subs welded right can reform after breaking: b1564
+    if ( $total_weld_count && $block_type eq 'sub' ) {
+        my $KK_o = $self->[_K_opening_container_]->{$seqno};
+        if ( defined($KK_o) && defined( $self->[_rK_weld_right_]->{$KK_o} ) ) {
+            return 0;
+        }
+    }
+
     if (   $is_sort_map_grep_eval{$block_type}
         || $block_type eq 't'
         || $self->[_rshort_nested_]->{$seqno} )
