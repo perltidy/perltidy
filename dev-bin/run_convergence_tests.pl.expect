@@ -5875,36 +5875,42 @@ my %MyTokens =
 ==> b1298 <==
 # S1
 my $file = $menubar->Menubutton(
-     qw/-text File -underline 0 -menuitems/ =>
-       [
-          [  Cascade    => '~View',
-             -menuitems =>
-             [
-                [  Button => '~widget', -command => [ \&view_widget_code, __FILE__ ]
-                ],
-                [ Button => '~WidgetDemo', -command => [ \&view_widget_code, $wd ] ],
-             ],    # end cascade menuitems
-          ],    # end view cascade
-          [ Separator => '' ],
-          [ Button    => '~Quit', -command => [ \&exit ] ],
-       ]
+                                 qw/-text File -underline 0 -menuitems/ =>
+                                 [
+                                    [  Cascade    => '~View',
+                                       -menuitems =>
+                                       [
+                                          [  Button   => '~widget',
+                                             -command => [ \&view_widget_code, __FILE__ ]
+                                          ],
+                                          [  Button   => '~WidgetDemo',
+                                             -command => [ \&view_widget_code, $wd ]
+                                          ],
+                                       ],    # end cascade menuitems
+                                    ],    # end view cascade
+                                    [ Separator => '' ],
+                                    [ Button    => '~Quit', -command => [ \&exit ] ],
+                                 ]
 )->grid(qw/-sticky w/);
 
 # S2
 my $file = $menubar->Menubutton(
-     qw/-text File -underline 0 -menuitems/ =>
-       [
-          [  Cascade    => '~View',
-             -menuitems =>
-             [
-                [  Button => '~widget', -command => [ \&view_widget_code, __FILE__ ]
-                ],
-                [ Button => '~WidgetDemo', -command => [ \&view_widget_code, $wd ] ],
-             ],    # end cascade menuitems
-          ],    # end view cascade
-          [ Separator => '' ],
-          [ Button    => '~Quit', -command => [ \&exit ] ],
-       ]
+                                 qw/-text File -underline 0 -menuitems/ =>
+                                 [
+                                    [  Cascade    => '~View',
+                                       -menuitems =>
+                                       [
+                                          [  Button   => '~widget',
+                                             -command => [ \&view_widget_code, __FILE__ ]
+                                          ],
+                                          [  Button   => '~WidgetDemo',
+                                             -command => [ \&view_widget_code, $wd ]
+                                          ],
+                                       ],    # end cascade menuitems
+                                    ],    # end view cascade
+                                    [ Separator => '' ],
+                                    [ Button    => '~Quit', -command => [ \&exit ] ],
+                                 ]
 )->grid(qw/-sticky w/);
 
 ==> b1299 <==
@@ -9051,6 +9057,82 @@ __END__
              $config{"ColorEntry"},                     #
       );
 
+==> b1565 <==
+      {
+         user =>
+           {
+             isa => ['My::LDAPConnect', 'SPOPS::LDAP::MultiDatasource'],
+             field => [
+
+             ],
+           },
+      };
+
+      {
+         user =>
+           {
+             isa => ['My::LDAPConnect', 'SPOPS::LDAP::MultiDatasource'],
+             field => [
+
+             ],
+           },
+      };
+
+==> b1565a <==
+      my $config =
+        {
+          user =>
+          {
+            datasource => ['main', 'remote'],
+            class      => 'My::LDAPUser',
+            isa => ['My::LDAPConnect', 'SPOPS::LDAP::MultiDatasource'],
+            field => [
+                      qw/ cn sn givenname displayname mail
+                      telephonenumber objectclass uid ou /
+            ],
+            ldap_base_dn => 'ou=People',
+            multivalue   => ['objectclass'],
+            id_field     => 'uid',
+          },
+        };
+
+      my $config =
+        {
+          user =>
+          {
+            datasource => ['main', 'remote'],
+            class      => 'My::LDAPUser',
+            isa => ['My::LDAPConnect', 'SPOPS::LDAP::MultiDatasource'],
+            field => [
+                      qw/ cn sn givenname displayname mail
+                      telephonenumber objectclass uid ou /
+            ],
+            ldap_base_dn => 'ou=People',
+            multivalue   => ['objectclass'],
+            id_field     => 'uid',
+          },
+        };
+
+==> b1566 <==
+    $heap->{pipe_wheel} =
+      POE::Wheel::ReadWrite->new(
+                InputHandle => $heap->{pipe_read} =
+                $a_read,
+                OutputHandle =>
+                $heap->{pipe_write} = $b_write,
+
+                #
+      );
+    $heap->{pipe_wheel} =
+      POE::Wheel::ReadWrite->new(
+                InputHandle => $heap->{pipe_read} =
+                $a_read,
+                OutputHandle =>
+                $heap->{pipe_write} = $b_write,
+
+                #
+      );
+
 ==> b1567 <==
 @ISA =
     qw(
@@ -9078,6 +9160,34 @@ sub dialSelectedEntry {
 
     local $_;
 }
+
+==> b1569 <==
+      return $self->{Prefix}
+        . "  " . join '  ',
+        @values;
+
+      return $self->{Prefix}
+        . "  " . join '  ',
+        @values;
+
+==> b1570 <==
+%EXPORT_TAGS = (
+
+       locale_h => [
+             qw(LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY LC_MESSAGES LC_ALL)],
+
+       libintl_h => [qw(gettext textdomain bindtextdomain dcgettext dgettext)],
+
+);
+
+%EXPORT_TAGS = (
+
+       locale_h => [
+             qw(LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY LC_MESSAGES LC_ALL)],
+
+       libintl_h => [qw(gettext textdomain bindtextdomain dcgettext dgettext)],
+
+);
 
 ==> b163 <==
 # State 1

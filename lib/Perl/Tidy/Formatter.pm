@@ -322,6 +322,7 @@ my (
     %is_my_our_local,
     %is_soft_keep_break_type,
     %is_indirect_object_taker,
+    %is_binary_operator_type,
     @all_operators,
     %is_do_follower,
     %is_anon_sub_brace_follower,
@@ -859,6 +860,15 @@ BEGIN {
       = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
       . : ? && || and or err xor
     };
+
+    my @binary_ops = qw#
+      !~ =~ . .. : && || // = + - x
+      **= += -= .= /= *= %= x= &= |= ^= <<= >>= &&= ||= //=
+      <= >= == != > < % * / ? & | ** <=> ~~ !~~ <<~
+      >> << ^
+      ^. |. &. ^.= |.= &.= ^^
+      #;
+    $is_binary_operator_type{$_} = 1 for @binary_ops;
 
     # We can remove semicolons after blocks preceded by these keywords
     @q = qw(
@@ -26733,6 +26743,107 @@ sub is_fragile_block_type {
         my $K_start_multiline_qw;
         my $level_start_multiline_qw = 0;
 
+        my $skip_line_length_sum = sub {
+            my ( $K_first, $K_terminal ) = @_;
+
+            # Decide if it is ok to include the full line length for a line
+            # ending in a comma in interrupted mode.  This is always ok in a
+            # simple list of comma-separated items, but in some rare, unusual
+            # cases it can lead to instability.
+
+            # Given:
+            #  $K_first, $K_last = index range of the current line
+            # Return:
+            #  true  => skip use of full line length (possible instablity)
+            #  false => ok to use full line length
+
+            # Okay if previous CODE token is a comma or opening container
+            return if ( $last_nonblank_type eq ',' );
+            return if ( $is_opening_type{$last_nonblank_type} );
+
+            # or last line ended in a comment,
+            my $K_prev = $self->K_previous_nonblank($K_first);
+            return if ( !$K_prev );
+            my $type_prev = $rLL->[$K_prev]->[_TYPE_];
+            return if ( $type_prev eq '#' );
+
+            # or this line begins with a comma,
+            my $type_first = $rLL->[$K_first]->[_TYPE_];
+            return if ( $type_first eq ',' );
+
+            # or a continued quote,
+            return if ( $type_first eq 'Q' && $type_prev eq 'Q' );
+            return if ( $type_first eq 'q' && $type_prev eq 'q' );
+
+            # or was a blank line.
+            my $ln      = $rLL->[$K_first]->[_LINE_INDEX_];
+            my $ln_prev = $rLL->[$K_prev]->[_LINE_INDEX_];
+            return if ( $ln_prev < $ln - 1 );
+
+            # Otherwise, skip if the last line did not end in '=>'
+            if ( $last_nonblank_type ne '=>' ) { return 1 }
+
+            # Decide if a line following a '=>' can be stable.
+            # We have to scan the line for weak tokens, like ',' and '='
+
+            my $K_test = $K_first - 1;
+            while ( ++$K_test < $K_terminal ) {
+
+                my $type = $rLL->[$K_test]->[_TYPE_];
+                next if ( $type eq 'b' );
+
+                # Check for issue b1566:
+                # where a line with a weak binary operator can be unstable, i.e.
+
+                #   OutputHandle => $heap->{pipe_write} =
+                #     $b_write,
+
+                #   OutputHandle =>
+                #   $heap->{pipe_write} = $b_write,
+
+                # The b1566 instability is caused by the '=' which is weak.
+                # For generality we check for any binary operator.
+                if ( $is_binary_operator_type{$type} ) { return 1 }
+
+                # Check for a container
+                my $seqno = $rLL->[$K_test]->[_TYPE_SEQUENCE_];
+                if ( $is_opening_type{$type} ) {
+
+                    # Check for issue b1565:
+                    # where the one-line block formatting could be unstable due
+                    # to alternating length estimates if the line is an intact
+                    # list preceded by a '=>' on the previous line, like this:
+                    #      isa =>
+                    #      ['My::LDAPConnect', 'SPOPS::LDAP::MultiDatasource'],
+                    # Deactivated: replaced with more general fix b1565a
+                    if (   0
+                        && $K_test == $K_first
+                        && $self->[_ris_list_by_seqno_]->{$seqno} )
+                    {
+                        return 1;
+                    }
+
+                    # Skip past this container
+                    my $Kc = $self->[_K_closing_container_]->{$seqno};
+                    if ( $Kc && $Kc > $K_test ) {
+                        $K_test = $Kc;
+                        next;
+                    }
+
+                    # Safety exit, shouldn't happen
+                    if (DEVEL_MODE) {
+                        my $lno = $rLL->[$K_test]->[_LINE_INDEX_] + 1;
+                        Fault(
+                            "Bad loop indexes near line $lno, seqno=$seqno\n");
+                    }
+                    return 1;
+                }
+            } ## end while ( ++$K_test < $K_terminal)
+
+            # Ok, no problems detected
+            return;
+        }; ## end $skip_line_length_sum = sub
+
         xlp_collapsed_lengths_initialize();
 
         #--------------------------------
@@ -26952,12 +27063,11 @@ sub is_fragile_block_type {
                                 }
                             }
                         }
-                    }
+                    }    # END patch for issue b1408
 
-                    #--------------------------
-                    # END patch for issue b1408
-                    #--------------------------
-                    if ( $rLL->[$K_terminal]->[_TYPE_] eq ',' ) {
+                    if ( $rLL->[$K_terminal]->[_TYPE_] eq ','
+                        && !$skip_line_length_sum->( $K_first, $K_terminal ) )
+                    {
 
                         # Fix for b1536a: add $is_interrupted flag
                         my $is_interrupted = 1;
@@ -27093,10 +27203,21 @@ sub is_fragile_block_type {
                     }
                     else {
                         if ( $is_handle_type{$last_nonblank_type} ) {
-                            $handle_len = $len;
-                            $handle_len += 1
-                              if ( $KK > 0
-                                && $rLL->[ $KK - 1 ]->[_TYPE_] eq 'b' );
+
+                            # Do not add a handle length if this could be a
+                            # force break before this token due to -bbhb.
+                            # b1565, b1565a, b1570.
+                            if (   $last_nonblank_type eq '=>'
+                                && $break_before_container_types{$token} )
+                            {
+                                ##
+                            }
+                            else {
+                                $handle_len = $len;
+                                $handle_len += 1
+                                  if ( $KK > 0
+                                    && $rLL->[ $KK - 1 ]->[_TYPE_] eq 'b' );
+                            }
                         }
                     }
 
@@ -36278,6 +36399,34 @@ sub do_colon_breaks {
         return;
     } ## end sub check_for_new_minimum_depth
 
+    sub binary_operator_break_location {
+        my ( $type_ii, $token_ii ) = @_;
+
+        # Given:
+        #   $type_ii = token type
+        #   $token_ii = token text
+        # Returns:
+        #  -1 if want break before this binary operator
+        #   1 if want break after this binary operator
+        #   0 if neither
+        my $tok_ii = $type_ii;
+        if ( $type_ii ne 'k' ) {
+            return 0 if ( !$is_binary_operator_type{$type_ii} );
+        }
+        else {
+            $tok_ii = $token_ii;
+            return 0 if ( !$is_and_or{$tok_ii} );
+        }
+        my $lbs = $left_bond_strength{$tok_ii};
+        return 0 if ( !defined($lbs) );
+        my $rbs = $right_bond_strength{$tok_ii};
+        return 0 if ( !defined($rbs) );
+
+        return -1 if ( $rbs > $lbs );
+        return 1  if ( $rbs < $lbs );
+        return 0;
+    } ## end sub binary_operator_break_location
+
     sub set_comma_breakpoints {
 
         my ( $self, $i, $dd, $rbond_strength_bias ) = @_;
@@ -36500,17 +36649,27 @@ EOM
                     # the token could also be checked if type_m eq 'k'
                     if ( $is_uncontained_comma_break_included_type{$type_m} ) {
 
-                        # Rule added to fix b1449:
-                        # Do not break before a '?' if -nbot is set
-                        # Otherwise, we may alternately arrive here and
-                        # set the break, or not, depending on the input.
-                        my $no_break;
+                        my $no_break = 0;
                         my $ibreak_p = $inext_to_go[$ibreak_m];
-                        if (  !$rOpts_break_at_old_ternary_breakpoints
-                            && $ibreak_p <= $max_index_to_go )
-                        {
+                        if ( $ibreak_p <= $max_index_to_go ) {
                             my $type_p = $types_to_go[$ibreak_p];
-                            $no_break = $type_p eq '?';
+
+                            # Rule added to fix b1449:
+                            # Do not break before a '?' if -nbot is set
+                            # Otherwise, we may alternately arrive here and
+                            # set the break, or not, depending on the input.
+                            if ( !$rOpts_break_at_old_ternary_breakpoints ) {
+                                $no_break = $type_p eq '?';
+                            }
+
+                            # Fix for b1569: do not break at a binary operator
+                            # if this disagrees with break preferences.
+                            $no_break ||=
+                              binary_operator_break_location( $type_m,
+                                $tokens_to_go[$ibreak_m] ) < 0;
+                            $no_break ||=
+                              binary_operator_break_location( $type_p,
+                                $tokens_to_go[$ibreak_p] ) > 0;
                         }
 
                         $self->set_forced_breakpoint($ibreak)

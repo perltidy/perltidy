@@ -13775,6 +13775,115 @@ __END__
 --maximum-line-length=57
 --extended-line-up-parentheses
 
+==> b1565.in <==
+      {
+         user =>
+           {
+              isa =>
+              ['My::LDAPConnect', 'SPOPS::LDAP::MultiDatasource'],
+              field => [
+
+              ],
+           },
+      };
+
+      {
+            user =>
+              {
+                    isa => [
+                            'My::LDAPConnect',
+                            'SPOPS::LDAP::MultiDatasource'
+                    ],
+                    field => [
+
+                    ],
+              },
+      };
+
+==> b1565.par <==
+--maximum-line-length=72
+--indent-columns=6
+--extended-continuation-indentation
+--extended-line-up-parentheses
+--break-before-hash-brace=3
+--square-bracket-tightness=2
+
+==> b1565a.in <==
+      my $config =
+        {
+          user =>
+          {
+            datasource => ['main', 'remote'],
+            class      => 'My::LDAPUser',
+            isa => ['My::LDAPConnect', 'SPOPS::LDAP::MultiDatasource'],
+            field => [
+                      qw/ cn sn givenname displayname mail
+                      telephonenumber objectclass uid ou /
+            ],
+            ldap_base_dn => 'ou=People',
+            multivalue   => ['objectclass'],
+            id_field     => 'uid',
+          },
+        };
+
+      my $config =
+        {
+              user =>
+              {
+                    datasource => ['main', 'remote'],
+                    class      => 'My::LDAPUser',
+                    isa        => [
+                            'My::LDAPConnect',
+                            'SPOPS::LDAP::MultiDatasource'
+                    ],
+                    field => [
+                              qw/ cn sn givenname displayname mail
+                              telephonenumber objectclass uid ou /
+                    ],
+                    ldap_base_dn => 'ou=People',
+                    multivalue   => ['objectclass'],
+                    id_field     => 'uid',
+              },
+        };
+
+==> b1565a.par <==
+--maximum-line-length=72
+--indent-columns=6
+--extended-continuation-indentation
+--extended-line-up-parentheses
+--break-before-hash-brace=3
+--square-bracket-tightness=2
+--keep-old-breakpoints-after='{'
+
+==> b1566.in <==
+    $heap->{pipe_wheel} =
+      POE::Wheel::ReadWrite->new(
+        InputHandle => $heap->{pipe_read} =
+        $a_read,
+        OutputHandle => $heap->{pipe_write} =
+        $b_write,
+
+        #
+      );
+    $heap->{pipe_wheel} =
+      POE::Wheel::ReadWrite->new(
+                InputHandle => $heap->{pipe_read} =
+                $a_read,
+                OutputHandle =>
+                $heap->{pipe_write} = $b_write,
+
+                #
+      );
+
+==> b1566.par <==
+--maximum-line-length=51
+--indent-columns=2
+--extended-continuation-indentation
+--extended-line-up-parentheses
+--paren-tightness=2
+--break-at-old-comma-breakpoints
+--want-break-after='='
+
 ==> b1567.in <==
 @ISA =
     qw(
@@ -13812,6 +13921,47 @@ sub dialSelectedEntry {
 --keep-old-blank-lines=0
 --keyword-group-blanks-size='2.8'
 --keyword-group-blanks-inside
+
+==> b1569.in <==
+      return
+          $self->{Prefix}
+        . "  "
+        . join '  ',
+        @values;
+
+      return $self->{Prefix}
+        . "  " . join '  ',
+        @values;
+
+==> b1569.par <==
+--maximum-line-length=29
+--indent-columns=6
+--want-break-after='.'
+
+==> b1570.in <==
+%EXPORT_TAGS = (
+
+    locale_h =>
+        [qw(LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY LC_MESSAGES LC_ALL)],
+
+    libintl_h => [qw(gettext textdomain bindtextdomain dcgettext dgettext)],
+
+);
+
+%EXPORT_TAGS = (
+
+       locale_h => [
+             qw(LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY LC_MESSAGES LC_ALL)],
+
+       libintl_h => [qw(gettext textdomain bindtextdomain dcgettext dgettext)],
+
+);
+
+==> b1570.par <==
+--continuation-indentation=4
+--variable-maximum-line-length
+--extended-line-up-parentheses
+--break-before-square-bracket=3
 
 ==> b163.in <==
 # State 1
