@@ -18,7 +18,7 @@ package Perl::Tidy::Diagnostics;
 use strict;
 use warnings;
 use English qw( -no_match_vars );
-our $VERSION = '20260109.01';
+our $VERSION = '20260204';
 
 use constant EMPTY_STRING => q{};
 

@@ -4962,9 +4962,46 @@
 
 <p>Two commands which remove comments (but not pod) are: <b>-dbc</b> or <b>--delete-block-comments</b> and <b>-dsc</b> or <b>--delete-side-comments</b>. (Hanging side comments will be deleted with side comments here.)</p>
 
-<p>When side comments are deleted, any special control side comments for non-indenting braces will be retained unless they are deactivated with a <b>-nnib</b> flag.</p>
+<p>The negatives of these commands also work, and are the defaults.</p>
 
-<p>The negatives of these commands also work, and are the defaults. When block comments are deleted, any leading &#39;hash-bang&#39; will be retained. Also, if the <b>-x</b> flag is used, any system commands before a leading hash-bang will be retained (even if they are in the form of comments).</p>
+<p><b>--delete-block-comments</b>, or <b>-dbc</b>, deletes all full-line comments except the following:</p>
+
+<ul>
+
+<li><p>Comments controlling <b>format skipping</b> and <b>code skipping</b></p>
+
+</li>
+<li><p>Comments of the form <b>&#39;## no critic&#39;</b> unless <b>--ignore-perlcritic-comments</b>, or <b>-ipc</b>, is also set.</p>
+
+</li>
+<li><p>Any leading &#39;hash-bang&#39; will be retained.</p>
+
+</li>
+<li><p>If the <b>-x</b> flag is used, any system commands before a leading hash-bang will be retained (even if they are in the form of comments).</p>
+
+</li>
+</ul>
+
+<p><b>--delete-side-comments</b>, or <b>-dsc</b>, deletes all side comments except the following:</p>
+
+<ul>
+
+<li><p>Any special control side comments for <b>non-indenting braces</b> will be retained unless they are deactivated with a <b>-nnib</b> flag.</p>
+
+</li>
+<li><p>Comments of the form <b>&#39;## no critic&#39;</b> unless <b>--ignore-perlcritic-comments</b>, or <b>-ipc</b>, is also set.</p>
+
+</li>
+<li><p>Side comments which match a pattern defined by <b>--delete-side-comments-exception-pattern</b>, if it is defined (see next section).</p>
+
+</li>
+</ul>
+
+<p><b>--delete-side-comments-exclusion-pattern=s</b>, or <b>-dscxp=s</b>, defines an optional string <b>s</b> of leading characters which, if matched by a side comment, causes any <b>-dsc</b> command not to delete that comment. The first character(s) must be <b>&#39;#&#39;</b> or <b>&#39;\#&#39;</b>. For example, the following commands tell perltidy to delete side comments except those beginning with two hash symbols:</p>
+
+<pre><code>    perltidy -dsc -dscxp=&#39;\#\#&#39; file.pl</code></pre>
+
+<p>The backslashes are typically required before the hash symbols to get them past a command line shell. The string <b>s</b> is treated by perltidy as a regex pattern.</p>
 
 </dd>
 <dt id="Writing-selected-text-to-a-file"><b>Writing selected text to a file</b></dt>
@@ -6271,7 +6308,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20260109</p>
+<p>This man page documents perltidy version 20260204</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

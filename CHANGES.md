@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2026 01 09.01
+## 2026 02 04
 
     - Fix issue git #195, where --want-break-before=s and --want-break-after=s
       incorrectly rejected a string 's' with keywords 'and' and 'or'.
