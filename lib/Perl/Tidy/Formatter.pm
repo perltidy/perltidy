@@ -26762,7 +26762,7 @@ sub is_fragile_block_type {
             # Given:
             #  $K_first, $K_last = index range of the current line
             # Return:
-            #  true  => skip use of full line length (possible instablity)
+            #  true  => skip use of full line length (possible instability)
             #  false => ok to use full line length
 
             # Okay if previous CODE token is a comma or opening container
@@ -36670,11 +36670,8 @@ EOM
                                 $no_break = $type_p eq '?';
                             }
 
-                            # Fix for b1569: do not break at a binary operator
-                            # if this disagrees with break preferences.
-                            $no_break ||=
-                              binary_operator_break_location( $type_m,
-                                $tokens_to_go[$ibreak_m] ) < 0;
+                            # Do not break ahead of a binary operator which
+                            # disagrees with break preferences (b1569).
                             $no_break ||=
                               binary_operator_break_location( $type_p,
                                 $tokens_to_go[$ibreak_p] ) > 0;
