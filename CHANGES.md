@@ -2,6 +2,20 @@
 
 ## 2026 02 04.01
 
+    - Parameters --break-before-all-operators and --break-after-all-operators
+      now include control of the following bitwise operators:
+
+           |.= &.= ^.= &. ^. |.
+
+      Breaks around these operators can be individually controlled with
+      --want-break-before and --want-break-after.
+
+    - If a long line needs to break at the caret operator, '^', the break will
+      now be after the operator rather than before it.  This should have been
+      the default. Use --want-break-before='^' to keep breaks before this operator.
+
+## 2026 02 04
+
     - Fix issue git #195, where --want-break-before=s and --want-break-after=s
       incorrectly rejected a string 's' with keywords 'and' and 'or'.
 

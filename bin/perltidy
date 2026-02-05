@@ -3872,8 +3872,8 @@ B<-bbao> or B<--break-before-all-operators>.
 
 The B<-baao> flag sets the default to be to break after all of the following operators:
 
-    % + - * / x != == >= <= =~ !~ < > | &
-    = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
+    % + - * / x != == >= <= =~ !~ < > | & ^ |. &. ^.
+    = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x= |.= &.= ^.=
     . : ? && || and or err xor
 
 and the B<-bbao> flag sets the default to break before all of these operators.

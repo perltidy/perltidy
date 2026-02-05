@@ -322,8 +322,7 @@ my (
     %is_my_our_local,
     %is_soft_keep_break_type,
     %is_indirect_object_taker,
-    %is_binary_operator_type,
-    @all_operators,
+    %is_binary_operator_token,
     %is_do_follower,
     %is_anon_sub_brace_follower,
     %is_anon_sub_1_brace_follower,
@@ -388,6 +387,7 @@ my (
     # INITIALIZER: sub initialize_token_break_preferences
     %want_break_before,
     %break_before_container_types,
+    %is_weak_binary_operator_token,
 
     # INITIALIZER: sub initialize_space_after_keyword
     %space_after_keyword,
@@ -783,7 +783,9 @@ BEGIN {
     # Initialize constant hashes ...
     my @q;
 
-    @q = qw( = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x= ^^= );
+    # Added bitwise operators in c582.
+    @q = qw( = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x= ^^=
+      |.= &.= ^.= );
     $is_assignment{$_} = 1 for @q;
 
     # a hash needed by break_lists for efficiency:
@@ -853,22 +855,21 @@ BEGIN {
     @q = qw( && || and or : ? . + - * / );
     $is_chain_operator{$_} = 1 for @q;
 
-    # Operators that the user can request break before or after.
-    # Note that some are keywords
-    @all_operators = qw{
-      % + - * / x != == >= <= =~ !~ < > | &
-      = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
-      . : ? && || and or err xor
-    };
-
-    my @binary_ops = qw#
+    # Note that this hash includes both binary operator tokens and types so it
+    # can be used with both tokens and types, with appropriate checks.
+    # Removed '<<~' which arrives from tokenizer as type 'h'
+    my @binops = qw#
       !~ =~ . .. : && || // = + - x
       **= += -= .= /= *= %= x= &= |= ^= <<= >>= &&= ||= //=
-      <= >= == != > < % * / ? & | ** <=> ~~ !~~ <<~
+      <= >= == != > < % * / ? & | ** <=> ~~ !~~
       >> << ^
       ^. |. &. ^.= |.= &.= ^^
+      and or xor err
       #;
-    $is_binary_operator_type{$_} = 1 for @binary_ops;
+    push @binops, COMMA;
+    ## Added '->' for git #171.
+    push @binops, '->';
+    $is_binary_operator_token{$_} = 1 for @binops;
 
     # We can remove semicolons after blocks preceded by these keywords
     @q = qw(
@@ -3385,6 +3386,7 @@ sub initialize_token_break_preferences {
     # Initialize these global hashes defining break preferences:
     # %want_break_before
     # %break_before_container_types
+    # %is_weak_binary_operator_token
 
     my $break_after = sub {
         my @toks = @_;
@@ -3421,6 +3423,14 @@ sub initialize_token_break_preferences {
         return;
     }; ## end $break_before = sub
 
+    # Operators for which the user can control breaks with these controls.
+    # Note that some are keywords.
+    my @all_operators = qw{
+      % + - * / x != == >= <= =~ !~ < > | & ^ |. &. ^.
+      = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x= |.= &.= ^.=
+      . : ? && || and or err xor
+    };
+
     $break_after->(@all_operators) if ( $rOpts->{'break-after-all-operators'} );
     $break_before->(@all_operators)
       if ( $rOpts->{'break-before-all-operators'} );
@@ -3443,11 +3453,18 @@ sub initialize_token_break_preferences {
     }
 
     # Make note if breaks are before certain key types
-    # Added '->' for git #171.
     %want_break_before = ();
-    foreach my $tok ( @all_operators, ',', '->' ) {
-        $want_break_before{$tok} =
-          $left_bond_strength{$tok} < $right_bond_strength{$tok};
+
+    foreach my $tok ( keys %is_binary_operator_token ) {
+        my $lbs = $left_bond_strength{$tok};
+        my $rbs = $right_bond_strength{$tok};
+        if ( defined($lbs) && defined($rbs) ) {
+
+            $want_break_before{$tok} =
+              $left_bond_strength{$tok} < $right_bond_strength{$tok};
+
+            $is_weak_binary_operator_token{$tok} = $lbs <= WEAK || $rbs <= WEAK;
+        }
     }
 
     # Coordinate ?/: breaks, which must be similar
@@ -6457,8 +6474,12 @@ EOM
         $left_bond_strength{$_}  = STRONG                         for @q;
         $right_bond_strength{$_} = ( 0.9 * NOMINAL + 0.1 * WEAK ) for @q;
 
-        # break AFTER these
-        @q                       = qw# < >  | & >= <= #;
+        # break AFTER these.
+        # Added missing '^', plus bitwise concatenation &. ^. |. in c582.
+        @q = qw#
+          < > | & >= <=
+          ^ &. ^. |.
+          #;
         $left_bond_strength{$_}  = VERY_STRONG                    for @q;
         $right_bond_strength{$_} = ( 0.8 * NOMINAL + 0.2 * WEAK ) for @q;
 
@@ -6481,6 +6502,9 @@ EOM
 
         # assignment operators
         @q = qw( = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x= );
+
+        # add newer bitwise assignment operators, c582
+        push @q, qw( |.= &.= ^.= );
 
         # Default is to break AFTER various assignment operators
         $left_bond_strength{$_}  = STRONG                           for @q;
@@ -26810,8 +26834,7 @@ sub is_fragile_block_type {
                 #   $heap->{pipe_write} = $b_write,
 
                 # The b1566 instability is caused by the '=' which is weak.
-                # For generality we check for any binary operator.
-                if ( $is_binary_operator_type{$type} ) { return 1 }
+                if ( $is_weak_binary_operator_token{$type} ) { return 1 }
 
                 # Check for a container
                 my $seqno = $rLL->[$K_test]->[_TYPE_SEQUENCE_];
@@ -31078,20 +31101,6 @@ sub compare_indentation_levels {
     # my $forced_breakpoint_undo_count;
     # my $index_max_forced_break;
 
-    # Break before or after certain tokens based on user settings
-    my %break_before_or_after_token;
-
-    BEGIN {
-
-        # Updated to use all operators. This fixes case b1054
-        # Here is the previous simplified version:
-        ## my @q = qw( . : ? and or xor && || );
-        my @q = @all_operators;
-
-        push @q, ',';
-        $break_before_or_after_token{$_} = 1 for @q;
-    } ## end BEGIN
-
     sub set_fake_breakpoint {
 
         # Just bump up the breakpoint count as a signal that there are breaks.
@@ -31211,7 +31220,7 @@ EOM
 
         # For certain tokens, use user settings to decide if we break before or
         # after it
-        if ( $break_before_or_after_token{$token}
+        if ( $is_binary_operator_token{$token}
             && ( $type eq $token || $type eq 'k' ) )
         {
             if ( $want_break_before{$token} && $i >= 0 ) { $i-- }
@@ -36407,34 +36416,6 @@ sub do_colon_breaks {
         return;
     } ## end sub check_for_new_minimum_depth
 
-    sub binary_operator_break_location {
-        my ( $type_ii, $token_ii ) = @_;
-
-        # Given:
-        #   $type_ii = token type
-        #   $token_ii = token text
-        # Returns:
-        #  -1 if want break before this binary operator
-        #   1 if want break after this binary operator
-        #   0 if neither
-        my $tok_ii = $type_ii;
-        if ( $type_ii ne 'k' ) {
-            return 0 if ( !$is_binary_operator_type{$type_ii} );
-        }
-        else {
-            $tok_ii = $token_ii;
-            return 0 if ( !$is_and_or{$tok_ii} );
-        }
-        my $lbs = $left_bond_strength{$tok_ii};
-        return 0 if ( !defined($lbs) );
-        my $rbs = $right_bond_strength{$tok_ii};
-        return 0 if ( !defined($rbs) );
-
-        return -1 if ( $rbs > $lbs );
-        return 1  if ( $rbs < $lbs );
-        return 0;
-    } ## end sub binary_operator_break_location
-
     sub set_comma_breakpoints {
 
         my ( $self, $i, $dd, $rbond_strength_bias ) = @_;
@@ -36660,7 +36641,8 @@ EOM
                         my $no_break = 0;
                         my $ibreak_p = $inext_to_go[$ibreak_m];
                         if ( $ibreak_p <= $max_index_to_go ) {
-                            my $type_p = $types_to_go[$ibreak_p];
+                            my $type_p  = $types_to_go[$ibreak_p];
+                            my $token_p = $tokens_to_go[$ibreak_p];
 
                             # Rule added to fix b1449:
                             # Do not break before a '?' if -nbot is set
@@ -36673,8 +36655,9 @@ EOM
                             # Do not break ahead of a binary operator which
                             # disagrees with break preferences (b1569).
                             $no_break ||=
-                              binary_operator_break_location( $type_p,
-                                $tokens_to_go[$ibreak_p] ) > 0;
+                                 $is_binary_operator_token{$token_p}
+                              && ( $type_p eq $token_p || $type_p eq 'k' )
+                              && !$want_break_before{$token_p};
                         }
 
                         $self->set_forced_breakpoint($ibreak)
