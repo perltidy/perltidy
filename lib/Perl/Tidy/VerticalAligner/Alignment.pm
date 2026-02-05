@@ -9,7 +9,7 @@ package Perl::Tidy::VerticalAligner::Alignment;
 use strict;
 use warnings;
 
-our $VERSION = '20260204';
+our $VERSION = '20260204.01';
 
 sub new {
 
