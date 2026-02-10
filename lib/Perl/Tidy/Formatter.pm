@@ -24431,6 +24431,13 @@ sub weld_nested_containers {
             next;
         }
 
+        # Set a flag indicating if there nothing between the opening tokens.
+        # These welds make good sandwich structures.
+        my $Kdiff                   = $Kinner_opening - $Kouter_opening;
+        my $adjacent_opening_tokens = $Kdiff == 1
+          || ( $Kdiff == 2
+            && $rLL->[ $Kouter_opening + 1 ]->[_TYPE_] eq 'b' );
+
         # RULE: do not weld to a square bracket which does not contain commas
         if ( $inner_opening->[_TYPE_] eq '[' ) {
             my $rtype_count = $self->[_rtype_count_by_seqno_]->{$inner_seqno};
@@ -24440,12 +24447,7 @@ sub weld_nested_containers {
             #      curr_opt ( @beg [2,5] )
             # It will not break into the desired sandwich structure.
             # This fixes case b109, 110.
-            my $Kdiff = $Kinner_opening - $Kouter_opening;
-            next if ( $Kdiff > 2 );
-            next
-              if ( $Kdiff == 2
-                && $rLL->[ $Kouter_opening + 1 ]->[_TYPE_] ne 'b' );
-
+            next if ( !$adjacent_opening_tokens );
         }
 
         # RULE: Avoid welding under stress.  The idea is that we need to have a
@@ -24752,12 +24754,23 @@ EOM
         # The effect of this change on typical code is very minimal.  Sometimes
         # it may take a second iteration to converge, but this gives protection
         # against blinking.
-        if (   !$do_not_weld_rule
+        if (
+               !$do_not_weld_rule
             && !$is_one_line_weld
-            && $iline_ic == $iline_io )
+            && $iline_ic == $iline_io
+            && (
+                # do not weld if the opening containers are separated
+                $iline_oo != $iline_io
+
+                # or if the opening is a paren and not adjacent to the inner
+                # (added adjacent check after '(' for b1571)
+                # This tends to produce desirable sandwich blocks, while at the
+                # same time avoiding instability and welding to a sub block.
+                || ( $token_oo eq '(' && !$adjacent_opening_tokens )
+            )
+          )
         {
-            $do_not_weld_rule = 2
-              if ( $token_oo eq '(' || $iline_oo != $iline_io );
+            $do_not_weld_rule = 2;
         }
 
         # DO-NOT-WELD RULE 2A:

@@ -14041,6 +14041,40 @@ sub dialSelectedEntry {
 --extended-line-up-parentheses
 --break-before-square-bracket=3
 
+==> b1571.in <==
+              print(
+                     'xxx',
+                     table (
+                             'yyy',
+                             Tr ( [
+                                 th ( [ 'Total', sprintf '$%.2f', $total ] )
+                             ] )
+                     )
+              );
+
+              print(
+                     'xxx',
+                     table (
+                             'yyy',
+                             Tr ( [
+                                   th (
+                                        [
+                                          'Total', sprintf '$%.2f', $total
+                                        ]
+                                   )
+                             ] )
+                     )
+              );
+
+==> b1571.par <==
+--maximum-line-length=76
+--indent-columns=7
+--continuation-indentation=1
+--weld-nested-containers
+--extended-line-up-parentheses
+--space-function-paren
+--break-at-old-comma-types='f('
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar

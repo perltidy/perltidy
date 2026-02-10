@@ -3785,8 +3785,8 @@ my @schedule = (
 ==> b1143 <==
     {
         $crc =
-         ( $crc >> 8 )
-         ^ autodin_ii_table
+         ( $crc >> 8 ) ^
+         autodin_ii_table
          ->[ (
              $crc ^ $byte ) &
          0xff ];
@@ -3794,8 +3794,8 @@ my @schedule = (
 
     {
         $crc =
-         ( $crc >> 8 )
-         ^ autodin_ii_table
+         ( $crc >> 8 ) ^
+         autodin_ii_table
          ->[ (
              $crc ^ $byte ) &
          0xff ];
@@ -4663,15 +4663,15 @@ print
     # S1
     $_[0]eq$_[1]
       or($_[1]=~/^([!~])(.)([\x00-\xff]*)/)
-      and($1 eq '!')
-      ^(eval{($_[2]."::".$_[0])=~/$2$3/;});
+      and($1 eq '!')^
+      (eval{($_[2]."::".$_[0])=~/$2$3/;});
 
     # S2
 
     $_[0]eq$_[1]
       or($_[1]=~/^([!~])(.)([\x00-\xff]*)/)
-      and($1 eq '!')
-      ^(eval{($_[2]."::".$_[0])=~/$2$3/;});
+      and($1 eq '!')^
+      (eval{($_[2]."::".$_[0])=~/$2$3/;});
 
 
 ==> b1192 <==
@@ -9256,6 +9256,27 @@ sub dialSelectedEntry {
        libintl_h => [qw(gettext textdomain bindtextdomain dcgettext dgettext)],
 
 );
+
+==> b1571 <==
+              print(
+                     'xxx',
+                     table (
+                             'yyy',
+                             Tr ( [
+                                 th ( [ 'Total', sprintf '$%.2f', $total ] )
+                             ] )
+                     )
+              );
+
+              print(
+                     'xxx',
+                     table (
+                             'yyy',
+                             Tr ( [
+                                 th ( [ 'Total', sprintf '$%.2f', $total ] )
+                             ] )
+                     )
+              );
 
 ==> b163 <==
 # State 1

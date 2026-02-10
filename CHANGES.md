@@ -13,6 +13,17 @@
     - If a long line needs to break at the caret operator, '^', the break will
       now be after the operator rather than before it.  This should have been
       the default. Use --want-break-before='^' to keep breaks before this operator.
+      For example:
+
+            # new default breaks long lines after a '^'
+            $state->[$kk] =
+              $state->[ $kk - 18 ] ^ ( ( $state->[$kk] >> 1 ) & 0x7fffffff ) ^
+              $mag01[ $state->[$kk] & 1 ];
+
+            # previous default, and current version with perltidy -wbb='^'
+            $state->[$kk] =
+              $state->[ $kk - 18 ] ^ ( ( $state->[$kk] >> 1 ) & 0x7fffffff )
+              ^ $mag01[ $state->[$kk] & 1 ];
 
 ## 2026 02 04
 
