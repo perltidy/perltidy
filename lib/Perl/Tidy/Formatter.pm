@@ -27643,16 +27643,91 @@ sub set_excluded_lp_containers {
     return unless ( defined($rLL) && @{$rLL} );
 
     my $K_opening_container       = $self->[_K_opening_container_];
+    my $K_closing_container       = $self->[_K_closing_container_];
     my $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
     my $rblock_type_of_seqno      = $self->[_rblock_type_of_seqno_];
 
-    foreach my $seqno ( keys %{$K_opening_container} ) {
+    # For -lp mode: mark anonymous subs which are is in a list of some type. We
+    # use this to selectively turn off -lp mode below (c586).
+    my %is_asub_in_list;
+    if ($rOpts_extended_continuation_indentation) {
+        foreach my $seqno ( keys %{$rblock_type_of_seqno} ) {
+            next if ( $rblock_type_of_seqno->{$seqno} ne 'sub' );
 
-        # code blocks are always excluded by the -lp coding so we can skip them
-        next if ( $rblock_type_of_seqno->{$seqno} );
+            my $Ko    = $K_opening_container->{$seqno};
+            my $Ko_p  = $self->K_previous_code($Ko);
+            my $Ko_pp = $self->K_previous_code($Ko_p);
+            next if ( !defined($Ko_pp) );
+            my $type_o_pp = $rLL->[$Ko_pp]->[_TYPE_];
+
+            # Skip a sub for which:
+            # (1)  'sub' is preceded by '=' or ';' or '{'
+            if ( $type_o_pp eq ';' || $type_o_pp eq '=' || $type_o_pp eq '{' ) {
+
+                # AND (2) the closing brace IS followed by ';' or '}'
+                my $Kc   = $K_closing_container->{$seqno};
+                my $Kc_n = $self->K_next_code($Kc);
+                next if ( !$Kc_n );
+                my $type_c_n = $rLL->[$Kc_n]->[_TYPE_];
+                next if ( $type_c_n eq ';' );
+                my $seqno_c_n = $rLL->[$Kc_n]->[_TYPE_SEQUENCE_];
+                next
+                  if ( $type_c_n eq '}'
+                    && $seqno_c_n
+                    && $rblock_type_of_seqno->{$seqno_c_n} );
+            }
+
+            $is_asub_in_list{$seqno} = 1;
+        }
+    }
+
+    my $K_end_current_asub = -1;
+    foreach my $seqno ( sort { $a <=> $b } keys %{$K_opening_container} ) {
 
         my $KK = $K_opening_container->{$seqno};
         next unless ( defined($KK) );
+
+        # code blocks are always excluded by the -lp coding so we can skip them
+        if ( ( my $block_type = $rblock_type_of_seqno->{$seqno} ) ) {
+
+            # For -xci, it improves formatting to turn off -lp formatting for
+            # the paren layer control of if-like blocks. Otherwise, extra ci
+            # can be left in some broken control lists because -lp cannot undo
+            # unwanted ci (c586, and see related b1466 update for -xci)
+            next if ( !%is_asub_in_list );
+
+            # If we are entering an anonymous sub which is in a list of some
+            # kind, save its closing index.
+            if ( $is_asub_in_list{$seqno} ) {
+                my $Kc = $K_closing_container->{$seqno};
+                if ( $Kc && $Kc > $K_end_current_asub ) {
+                    $K_end_current_asub = $Kc;
+                    next;
+                }
+            }
+
+            # If we are entering a block which is preceded by a parenthesized
+            # control layer, and also inside of an anomyous sub...
+            if (   $KK < $K_end_current_asub
+                && $is_if_unless_while_until_for_foreach{$block_type} )
+            {
+
+                # ... exclude -lp formatting for the paren control layer:
+                #      if ( ... ) { ...
+                #               ^ ^
+                #    $K_paren___| |___ $KK
+
+                my $K_paren = $self->K_previous_code($KK);
+                next
+                  if ( !defined($K_paren)
+                    || $rLL->[$K_paren]->[_TOKEN_] ne ')' );
+                my $seqno_paren = $rLL->[$K_paren]->[_TYPE_SEQUENCE_];
+                if ( defined($seqno_paren) ) {
+                    $ris_excluded_lp_container->{$seqno_paren} = 1;
+                }
+            }
+            next;
+        }
 
         # see if a user exclusion rule turns off -lp for this container
         if ( $self->is_excluded_lp($KK) ) {

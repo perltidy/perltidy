@@ -7898,8 +7898,8 @@ sub new{
                               while(($k,$v,)=each(%{$_[3]})){
                                    if($k eq"email_"){
                                         if(
-                                                   defined$groups{$_[1]}
-                                                   ->{"email_work"})
+                                             defined$groups{$_[1]}
+                                             ->{"email_work"})
                                         {
                                              $k="email_home";
                                         }
@@ -9068,8 +9068,8 @@ my ($self) = $class->SUPER::new(
                               while ( ( $k, $v ) = each( %{ $_[1] } ) ) {
                                       if ( $k eq "email_" ) {
                                               if (
-                                                    defined $groups{'_default_'}
-                                                    ->{"email_work"} )
+                                                      defined $groups{'_default_'}
+                                                      ->{"email_work"} )
                                               {
                                                       $k = "email_home";
                                               }
@@ -9101,8 +9101,8 @@ my ($self) = $class->SUPER::new(
                               while ( ( $k, $v ) = each( %{ $_[1] } ) ) {
                                       if ( $k eq "email_" ) {
                                               if (
-                                                    defined $groups{'_default_'}
-                                                    ->{"email_work"} )
+                                                      defined $groups{'_default_'}
+                                                      ->{"email_work"} )
                                               {
                                                       $k = "email_home";
                                               }
