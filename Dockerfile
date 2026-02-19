@@ -1,0 +1,10 @@
+FROM perl:5.42.0-slim AS builder
+COPY . /work
+WORKDIR /work
+# Install to a "private" base dir for easy copying without duplication in the final image
+RUN perl Makefile.PL INSTALL_BASE=/usr/src/app && make install
+
+FROM perl:5.42.0-slim
+COPY --from=builder /usr/src/app /usr/src/app
+ENTRYPOINT ["env", "PERL5LIB=/usr/src/app/lib/perl5", "/usr/src/app/bin/perltidy"]
+CMD ["--help"]

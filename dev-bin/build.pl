@@ -865,6 +865,7 @@ sub update_version_number {
         $bin_path . "perltidy",
     );
     push @sources, "CHANGES.md";
+    push @sources, ".pre-commit-hooks.yaml";
     my @more = qw(
       Tidy/Debugger.pm
       Tidy/Diagnostics.pm
@@ -1583,6 +1584,9 @@ EOM
             $ftmp->print($line);
             next;
         }
+
+	# TODO .pre-commit-hooks.yaml has a line like this (note: not to be done for .yy dev versions)
+	#   entry: ghcr.io/perltidy/perltidy:xxxxxxxx ...
 
         # looking for VERSION in pod
         if ($is_pod_file) {
