@@ -1562,8 +1562,9 @@ sub update_VERSION {
         return;
     }
     my $in_pod;
-    my $is_md_file  = $source_file eq 'CHANGES.md';
-    my $is_pod_file = !$is_md_file && $source_file !~ /\.pm/;
+    my $is_md_file               = $source_file eq 'CHANGES.md';
+    my $is_pre_commit_hooks_file = $source_file eq '.pre-commit-hooks.yaml';
+    my $is_pod_file              = !$is_md_file && !$is_pre_commit_hooks_file && $source_file !~ /\.pm/;
     while ( my $line = <$fh> ) {
 
         # Look for and turn off any of the form:
@@ -1584,9 +1585,6 @@ EOM
             $ftmp->print($line);
             next;
         }
-
-	# TODO .pre-commit-hooks.yaml has a line like this (note: not to be done for .yy dev versions)
-	#   entry: ghcr.io/perltidy/perltidy:xxxxxxxx ...
 
         # looking for VERSION in pod
         if ($is_pod_file) {
@@ -1633,6 +1631,20 @@ EOM
                     $spaced_new_VERSION = "$1 $2 $3";
                 }
                 $new_VERSION_line = "## $spaced_new_VERSION";
+                $line             = $new_VERSION_line . "\n";
+            }
+        }
+
+        # looking for version in pre-commit hook config
+        elsif ($is_pre_commit_hooks_file) {
+            # .pre-commit-hooks.yaml has a line like this
+            #   entry: ... ghcr.io/perltidy/perltidy:202602024 ...
+            if ( $line =~
+                 m|^(\s+entry:.*\sghcr\.io/perltidy/perltidy:) \S+ (.+)|x )
+            {
+                $old_VERSION_line = $line;
+                chomp $old_VERSION_line;
+                $new_VERSION_line = $1 . $new_VERSION . $2;
                 $line             = $new_VERSION_line . "\n";
             }
         }
