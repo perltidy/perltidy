@@ -5,6 +5,7 @@ WORKDIR /work
 RUN perl Makefile.PL INSTALL_BASE=/usr/src/app && make install
 
 FROM perl:5.42.0-slim
+ENV PATH=/usr/src/app/bin:$PATH PERL5LIB=/usr/src/app/lib/perl5
 COPY --from=builder /usr/src/app /usr/src/app
-ENTRYPOINT ["env", "PERL5LIB=/usr/src/app/lib/perl5", "/usr/src/app/bin/perltidy"]
+ENTRYPOINT ["perltidy"]
 CMD ["--help"]
