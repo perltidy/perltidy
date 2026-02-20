@@ -7,3 +7,12 @@
   types: [perl]
   stages: [pre-commit, pre-merge-commit, pre-push, manual]
   minimum_pre_commit_version: 3.2.0 # for "new" names in stages
+- id: perltidy-docker
+  name: perltidy
+  description: Run the perltidy source code formatter on Perl source files
+  entry: ghcr.io/perltidy/perltidy:20260204 /usr/src/app/bin/perltidy --nostandard-output --backup-and-modify-in-place
+  args: [--standard-error-output, --backup-file-extension=/]
+  language: docker_image
+  types: [perl]
+  stages: [pre-commit, pre-merge-commit, pre-push, manual]
+  minimum_pre_commit_version: 3.2.0 # for "new" names in stages
