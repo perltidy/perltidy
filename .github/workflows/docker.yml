@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]"
+      - "[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].[0-9][0-9]"
 
 permissions: {}
 
@@ -34,5 +35,8 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7,linux/ppc64le,linux/riscv64,linux/s390x
           tags: |
             ghcr.io/${{ github.repository_owner }}/perltidy:${{ github.ref_name }}
-            ghcr.io/${{ github.repository_owner }}/perltidy:latest
+            ${{ case(
+                contains(github.ref_name,'.'), '',
+                format('ghcr.io/{0}/perltidy:latest', github.repository_owner)
+            ) }}
           push: true
