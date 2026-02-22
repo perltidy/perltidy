@@ -3,6 +3,7 @@ bin/perltidy
 BUGS.md
 CHANGES.md
 COPYING
+Dockerfile
 docs/BugLog.html
 docs/ChangeLog.html
 docs/ci_update.md

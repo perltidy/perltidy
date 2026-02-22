@@ -1,0 +1,5 @@
+sub foo {
+    some_function_name(
+        sub { return some_function_name( 'foo', 'bar', 'baz', 'foobar', 'foobaz', '1234567' ); }, );
+}
+

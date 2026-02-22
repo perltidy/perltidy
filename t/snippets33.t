@@ -9,6 +9,8 @@
 #6 c226.c226
 #7 c226.def
 #8 comments.comments6
+#9 git197.def
+#10 git197.git197
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -39,6 +41,11 @@ BEGIN {
         'dfsfs2' => <<'----------',
 -dsc
 -ndfsfs
+----------
+        'git197' => <<'----------',
+--maximum-line-length=100
+--continuation-indentation=4
+--extended-continuation-indentation
 ----------
     };
 
@@ -201,6 +208,14 @@ my @list2; # this will be deleted with -dsc
              1, 2, 1,
              1, 3, 3, 1,
              1, 4, 6, 4, 1,);
+----------
+
+        'git197' => <<'----------',
+sub foo {
+    some_function_name(
+        sub { return some_function_name( 'foo', 'bar', 'baz', 'foobar', 'foobaz', '1234567' ); }, );
+}
+
 ----------
     };
 
@@ -434,6 +449,34 @@ Some pod after __END__ to delete with -dp and trim with -trp
 
 
 #8...........
+        },
+
+        'git197.def' => {
+            source => "git197",
+            params => "def",
+            expect => <<'#9...........',
+sub foo {
+    some_function_name(
+        sub {
+            return some_function_name( 'foo', 'bar', 'baz', 'foobar', 'foobaz',
+                '1234567' );
+        },
+    );
+}
+
+#9...........
+        },
+
+        'git197.git197' => {
+            source => "git197",
+            params => "git197",
+            expect => <<'#10...........',
+sub foo {
+    some_function_name(
+        sub { return some_function_name( 'foo', 'bar', 'baz', 'foobar', 'foobaz', '1234567' ); }, );
+}
+
+#10...........
         },
     };
 

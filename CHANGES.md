@@ -2,6 +2,12 @@
 
 ## 2026 02 04.01
 
+    - Fixed issue git #197, where long lines could be broken before reaching
+      the maximum line length in some edge cases when
+      --extended-continuation-indentation is set.
+
+    - Implemented issue git #27, docker image for perltidy.
+
     - Parameters --break-before-all-operators and --break-after-all-operators
       now include control of the following bitwise operators:
 

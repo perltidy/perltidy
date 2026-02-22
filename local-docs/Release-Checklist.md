@@ -24,6 +24,7 @@
    - 100 cpu hours for a new integer **release candidate** for CPAN
   - review tickets at [rt.cpan.org](https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy)
   - review the issues at [github](https://github.com/perltidy/perltidy/issues/)
+  - check for pull requests
   - be sure builds at github and Appveyor are clean for all version of perl
 
 - Basic steps to build a **new version**

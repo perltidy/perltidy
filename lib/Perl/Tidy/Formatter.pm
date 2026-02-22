@@ -12139,6 +12139,23 @@ sub set_ci {
     push @q, ',';
     $is_list_end_type{$_} = 1 for @q;
 
+    my %is_nobreak_opening_paren_type;
+    my %is_nobreak_opening_hash_brace_type;
+
+    # Opening parens and hash braces are tightly bound to certain preceding
+    # token types, so we can use ci =0 to improve -xci (fixes git #197) (see
+    # %binary_bond_strength).
+    # This has essentially no effect unless -xci is set, so skip if -xci.
+    # This can cause some needless small changes for -lp, so skip -lp
+    # for now.
+    # TODO: but consider eventually activating this for -lp
+    if ( $rOpts_extended_continuation_indentation
+        && !$rOpts_line_up_parentheses )
+    {
+        $is_nobreak_opening_paren_type{$_}      = 1 for qw( C U w );
+        $is_nobreak_opening_hash_brace_type{$_} = 1 for qw( t i S );
+    }
+
     my $rLL    = $self->[_rLL_];
     my $Klimit = $self->[_Klimit_];
     return unless ( defined($Klimit) );
@@ -12704,6 +12721,22 @@ sub set_ci {
                         # Undo ci at a chain of indexes or hash keys
                         if ( $token ne '(' && $last_type eq '}' ) {
                             $ci_this = $ci_close = $ci_last;
+                        }
+
+                        # Undo ci at at a bonded paren (fix git #197)
+                        if (   $token eq '('
+                            && $ci_last == 0
+                            && $is_nobreak_opening_paren_type{$last_type} )
+                        {
+                            $ci_this = $ci_last;
+                        }
+
+                        # Undo ci at at a bonded hash brace
+                        if (   $type eq 'L'
+                            && $ci_last == 0
+                            && $is_nobreak_opening_hash_brace_type{$last_type} )
+                        {
+                            $ci_this = $ci_last;
                         }
                     }
                 }
@@ -27707,7 +27740,7 @@ sub set_excluded_lp_containers {
             }
 
             # If we are entering a block which is preceded by a parenthesized
-            # control layer, and also inside of an anomyous sub...
+            # control layer, and also inside of an anonymous sub...
             if (   $KK < $K_end_current_asub
                 && $is_if_unless_while_until_for_foreach{$block_type} )
             {
