@@ -869,8 +869,7 @@ qq|$CALC->_str(scalar($CALC->_div(\$x, \$y))) = 3|
             exists(
                 $reusable_builtins{
                     $call
-                }
-            )) ;
+                })) ;
 
         # S2
 
@@ -880,8 +879,7 @@ qq|$CALC->_str(scalar($CALC->_div(\$x, \$y))) = 3|
             exists(
                 $reusable_builtins{
                     $call
-                }
-            )) ;
+                })) ;
 
 ==> b1008 <==
     # Use test.pro.bak
@@ -4050,11 +4048,13 @@ name   => 'Just includes',
         }
 
 ==> b1163 <==
-      @EXPORT = (
-            @{ $EXPORT_TAGS{standard} },);
+      @EXPORT
+            = (@{ $EXPORT_TAGS{standard} },
+            );
 
-      @EXPORT = (
-            @{ $EXPORT_TAGS{standard} },);
+      @EXPORT
+            = (@{ $EXPORT_TAGS{standard} },
+            );
 
 ==> b1164 <==
  my @displayable =

@@ -1,3 +1,5 @@
+package Perl::Tidy::Tokenizer;
+
 #####################################################################
 #
 # Perl::Tidy::Tokenizer reads a source and breaks it into a stream of tokens
@@ -28,7 +30,6 @@
 #
 ########################################################################
 
-package Perl::Tidy::Tokenizer;
 use strict;
 use warnings;
 use English qw( -no_match_vars );
@@ -265,6 +266,7 @@ BEGIN {
         _show_indentation_table_             => $i++,
         _rnon_indenting_brace_stack_         => $i++,
         _rbareword_info_                     => $i++,
+        _rsaw_unknown_syntax_in_seqno_       => $i++,
     };
 } ## end BEGIN
 
@@ -653,6 +655,7 @@ EOM
     $self->[_rnon_indenting_brace_stack_]         = [];
     $self->[_show_indentation_table_]             = 0;
     $self->[_rbareword_info_]                     = {};
+    $self->[_rsaw_unknown_syntax_in_seqno_]       = {};
 
     $self->[_rclosing_brace_indentation_hash_] = {
         valid                 => undef,
@@ -3365,9 +3368,14 @@ EOM
 
         my $self = shift;
 
-        # ')'
         ( $type_sequence, $indent_flag ) =
           $self->decrease_nesting_depth( PAREN, $rtoken_map->[$i_tok] );
+
+        # ')'
+        if ( $expecting == TERM ) {
+            $self->error_if_expecting_TERM()
+              if ( !$self->[_rsaw_unknown_syntax_in_seqno_]->{$type_sequence} );
+        }
 
         my $rvars = $rparen_vars->[$paren_depth];
         if ( defined($rvars) ) {
@@ -3573,6 +3581,12 @@ EOM
         my $self = shift;
 
         # '{'
+        if ( 0 && $next_tok eq '%' ) {
+            ## c583: Spot for possible future check for a '{% ' which starts
+            ## a simple macro. If there is a matching closing '%}' on this
+            ## line then mark the whole structure as a quote.
+        }
+
         # if we just saw a ')', we will label this block with
         # its type.  We need to do this to allow sub
         # code_block_type to determine if this brace starts a
@@ -3785,6 +3799,16 @@ EOM
         }
         ( $type_sequence, $indent_flag ) =
           $self->decrease_nesting_depth( BRACE, $rtoken_map->[$i_tok] );
+
+        if ( $expecting == TERM ) {
+            $self->error_if_expecting_TERM()
+              if (
+                !$self->[_rsaw_unknown_syntax_in_seqno_]->{$type_sequence}
+
+                # c583: no error check at a possible end-of-macro combo '%}'
+                && $last_nonblank_type ne '%'
+              );
+        }
 
         if ( $rbrace_structural_type->[$brace_depth] eq 'L' ) {
             $type = 'R';
@@ -4050,6 +4074,10 @@ EOM
         elsif ( !$rcurrent_depth->[QUESTION_COLON] ) {
             $type = 'A';
             $self->[_in_attribute_list_] = 1;
+
+            # and set a flag to skip error messages
+            $self->[_rsaw_unknown_syntax_in_seqno_]
+              ->{ $next_sequence_number - 1 } = 1;
         }
 
         # otherwise, it should be part of a ?/: operator
@@ -4139,6 +4167,11 @@ EOM
         ( $type_sequence, $indent_flag ) =
           $self->decrease_nesting_depth( SQUARE_BRACKET,
             $rtoken_map->[$i_tok] );
+
+        if ( $expecting == TERM ) {
+            $self->error_if_expecting_TERM()
+              if ( !$self->[_rsaw_unknown_syntax_in_seqno_]->{$type_sequence} );
+        }
 
         if ( $rsquare_bracket_structural_type->[$square_bracket_depth] eq '{' )
         {
