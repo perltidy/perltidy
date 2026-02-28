@@ -25189,19 +25189,17 @@ sub weld_nested_quotes {
             next;
         }
 
+        # Tolerance adjusted from >=0 to >0 for b1572
         my $length =
           $rLL->[$Kinner_opening]->[_CUMULATIVE_LENGTH_] - $starting_lentot;
-        my $excess = $length + $multiline_tol - $maximum_text_length;
-
-        my $excess_max = ( $is_old_weld ? $multiline_tol : 0 );
-        if ( $excess >= $excess_max ) {
-            $do_not_weld = 1;
-        }
+        my $excess = $length - $maximum_text_length;
+        $do_not_weld =
+          $is_old_weld ? $excess > 0 : $excess + $multiline_tol > 0;
 
         if (DEBUG_WELD) {
             if ( !$is_old_weld ) { $is_old_weld = EMPTY_STRING }
             $Msg .=
-"excess=$excess>=$excess_max, multiline_tol=$multiline_tol, is_old_weld='$is_old_weld'\n";
+"excess=$excess, multiline_tol=$multiline_tol, is_old_weld='$is_old_weld'\n";
         }
 
         # Check weld exclusion rules for outer container

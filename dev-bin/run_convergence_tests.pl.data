@@ -14075,6 +14075,36 @@ sub dialSelectedEntry {
 --space-function-paren
 --break-at-old-comma-types='f('
 
+==> b1572.in <==
+use constant SOAP_CLASSES => [ qw(
+             Bric::SOAP::Auth
+             Bric::SOAP::Story
+             Bric::SOAP::Media
+             Bric::SOAP::Template
+             Bric::SOAP::Element
+             Bric::SOAP::Category
+             Bric::SOAP::Workflow
+        ) ];
+
+use constant SOAP_CLASSES =>
+     [ qw(
+       Bric::SOAP::Auth
+       Bric::SOAP::Story
+       Bric::SOAP::Media
+       Bric::SOAP::Template
+       Bric::SOAP::Element
+       Bric::SOAP::Category
+       Bric::SOAP::Workflow
+     ) ];
+
+==> b1572.par <==
+--maximum-line-length=35
+--continuation-indentation=5
+--weld-nested-containers
+--extended-line-up-parentheses
+--square-bracket-vertical-tightness-closing=1
+--stack-opening-paren
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar

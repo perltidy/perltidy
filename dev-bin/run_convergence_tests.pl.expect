@@ -9278,6 +9278,29 @@ sub dialSelectedEntry {
                      )
               );
 
+==> b1572 <==
+use constant SOAP_CLASSES =>
+     [ qw(
+       Bric::SOAP::Auth
+       Bric::SOAP::Story
+       Bric::SOAP::Media
+       Bric::SOAP::Template
+       Bric::SOAP::Element
+       Bric::SOAP::Category
+       Bric::SOAP::Workflow
+     ) ];
+
+use constant SOAP_CLASSES =>
+     [ qw(
+       Bric::SOAP::Auth
+       Bric::SOAP::Story
+       Bric::SOAP::Media
+       Bric::SOAP::Template
+       Bric::SOAP::Element
+       Bric::SOAP::Category
+       Bric::SOAP::Workflow
+     ) ];
+
 ==> b163 <==
 # State 1
 Readonly::Scalar
