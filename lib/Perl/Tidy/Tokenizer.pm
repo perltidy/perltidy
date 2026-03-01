@@ -265,6 +265,7 @@ BEGIN {
         _rclosing_brace_indentation_hash_    => $i++,
         _show_indentation_table_             => $i++,
         _rnon_indenting_brace_stack_         => $i++,
+        _rseqno_at_depth_                    => $i++,
         _rbareword_info_                     => $i++,
         _rsaw_unknown_syntax_in_seqno_       => $i++,
     };
@@ -653,6 +654,7 @@ EOM
     $self->[_maximum_level_]                      = 0;
     $self->[_true_brace_error_count_]             = 0;
     $self->[_rnon_indenting_brace_stack_]         = [];
+    $self->[_rseqno_at_depth_]                    = [SEQ_ROOT];
     $self->[_show_indentation_table_]             = 0;
     $self->[_rbareword_info_]                     = {};
     $self->[_rsaw_unknown_syntax_in_seqno_]       = {};
@@ -4076,8 +4078,8 @@ EOM
             $self->[_in_attribute_list_] = 1;
 
             # and set a flag to skip error messages
-            $self->[_rsaw_unknown_syntax_in_seqno_]
-              ->{ $next_sequence_number - 1 } = 1;
+            my $seqno = $self->[_rseqno_at_depth_]->[$total_depth];
+            $self->[_rsaw_unknown_syntax_in_seqno_]->{$seqno} = 1 if ($seqno);
         }
 
         # otherwise, it should be part of a ?/: operator
@@ -7842,6 +7844,12 @@ sub increase_nesting_depth {
 
     # make a new unique sequence number
     my $seqno = $next_sequence_number++;
+
+    # Remember the type sequence number at the current depth,
+    # but do not overwrite the root sequence number.
+    if ( $total_depth > 0 ) {
+        $self->[_rseqno_at_depth_]->[$total_depth] = $seqno;
+    }
 
     $rcurrent_sequence_number->[$aa]->[$cd_aa] = $seqno;
 
