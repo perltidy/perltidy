@@ -9220,14 +9220,18 @@ EOM
     # Implement any welding needed for the -wn or -cb options
     $self->weld_containers();
 
-    # Collect info needed to implement the -xlp style
-    $self->xlp_collapsed_lengths()
-      if ( $rOpts_line_up_parentheses && $rOpts_extended_line_up_parentheses );
-
     # Locate small nested blocks which should not be broken
     $self->mark_short_nested_blocks();
 
     $self->special_indentation_adjustments();
+
+    # Collect info needed to implement the -xlp style.  Do this before
+    # ->extended-ci() to avoid needless changes to existing coding.
+    $self->xlp_collapsed_lengths()
+      if ( $rOpts_line_up_parentheses && $rOpts_extended_line_up_parentheses );
+
+    $self->extended_ci()
+      if ($rOpts_extended_continuation_indentation);
 
     # Verify that the main token array looks OK.  If this ever causes a fault
     # then place similar checks before the sub calls above to localize the
@@ -25482,9 +25486,6 @@ sub special_indentation_adjustments {
     # Adjust continuation indentation if -bli is set
     $self->bli_adjustment();
 
-    $self->extended_ci()
-      if ($rOpts_extended_continuation_indentation);
-
     # Now clip any starting or adjusted levels to be non-negative
     $self->clip_adjusted_levels($min_starting_level);
 
@@ -27239,6 +27240,8 @@ sub is_fragile_block_type {
         my $rline_diff_by_seqno        = $self->[_rline_diff_by_seqno_];
         my $rmax_closing_vertical_tightness =
           $self->[_rmax_closing_vertical_tightness_];
+        my $rbreak_before_container_by_seqno =
+          $self->[_rbreak_before_container_by_seqno_];
 
         #----------------------------------
         # Loop over tokens on this line ...
@@ -27281,9 +27284,9 @@ sub is_fragile_block_type {
 
                             # Do not add a handle length if this could be a
                             # force break before this token due to -bbhb.
-                            # b1565, b1565a, b1570.
+                            # See tests b1565, b1565a, b1570, b1572, b1573.
                             if (   $last_nonblank_type eq '=>'
-                                && $break_before_container_types{$token} )
+                                && $rbreak_before_container_by_seqno->{$seqno} )
                             {
                                 ##
                             }

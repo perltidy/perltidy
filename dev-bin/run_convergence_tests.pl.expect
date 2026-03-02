@@ -9241,19 +9241,19 @@ sub dialSelectedEntry {
 ==> b1570 <==
 %EXPORT_TAGS = (
 
-       locale_h => [
-             qw(LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY LC_MESSAGES LC_ALL)],
+    locale_h =>
+        [qw(LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY LC_MESSAGES LC_ALL)],
 
-       libintl_h => [qw(gettext textdomain bindtextdomain dcgettext dgettext)],
+    libintl_h => [qw(gettext textdomain bindtextdomain dcgettext dgettext)],
 
 );
 
 %EXPORT_TAGS = (
 
-       locale_h => [
-             qw(LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY LC_MESSAGES LC_ALL)],
+    locale_h =>
+        [qw(LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY LC_MESSAGES LC_ALL)],
 
-       libintl_h => [qw(gettext textdomain bindtextdomain dcgettext dgettext)],
+    libintl_h => [qw(gettext textdomain bindtextdomain dcgettext dgettext)],
 
 );
 
@@ -9300,6 +9300,26 @@ use constant SOAP_CLASSES =>
        Bric::SOAP::Category
        Bric::SOAP::Workflow
      ) ];
+
+==> b1573 <==
+%EXPORT_TAGS = (
+         Search => [
+             qw(ib dbi nib nsb ndb gb ram_on version ngb)
+         ],
+         NDb => [
+             qw(ndb nsb ngb nver nping nzing nging nsing
+               exist_sb sb)
+         ],
+);
+%EXPORT_TAGS = (
+         Search => [
+             qw(ib dbi nib nsb ndb gb ram_on version ngb)
+         ],
+         NDb => [
+             qw(ndb nsb ngb nver nping nzing nging nsing
+               exist_sb sb)
+         ],
+);
 
 ==> b163 <==
 # State 1

@@ -14105,6 +14105,31 @@ use constant SOAP_CLASSES =>
 --square-bracket-vertical-tightness-closing=1
 --stack-opening-paren
 
+==> b1573.in <==
+%EXPORT_TAGS = (
+         Search =>
+       [qw(ib dbi nib nsb ndb gb ram_on version ngb)],
+         NDb => [
+             qw(ndb nsb ngb nver nping nzing nging nsing
+               exist_sb sb)
+         ],
+);
+%EXPORT_TAGS = (
+         Search => [
+             qw(ib dbi nib nsb ndb gb ram_on version ngb)
+         ],
+         NDb => [
+             qw(ndb nsb ngb nver nping nzing nging nsing
+               exist_sb sb)
+         ],
+);
+
+==> b1573.par <==
+--maximum-line-length=57
+--indent-columns=9
+--extended-line-up-parentheses
+--break-before-square-bracket=1
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar
