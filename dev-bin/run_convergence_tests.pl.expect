@@ -7479,16 +7479,20 @@ $last = after (
 
 
 ==> b1444 <==
-                  while ( my ( $k, $v )
-                           = each %{ $self->{channels}->{$chk}->{device_cache}
-                           } )
+                  while (  my ( $k, $v )
+                           = each %{
+                                    $self->{channels}->{$chk}->{device_cache}
+                           }
+                         )
                   {
                            ...;
                   }
 
-                  while ( my ( $k, $v )
-                           = each %{ $self->{channels}->{$chk}->{device_cache}
-                           } )
+                  while (  my ( $k, $v )
+                           = each %{
+                                    $self->{channels}->{$chk}->{device_cache}
+                           }
+                         )
                   {
                            ...;
                   }
@@ -9320,6 +9324,42 @@ use constant SOAP_CLASSES =>
                exist_sb sb)
          ],
 );
+
+==> b1574 <==
+$a =
+        new Net::ICal::Alarm(
+            action  => 'EMAIL',
+            trigger => "300",
+
+            #trigger => "19970317T133000Z",
+            #trigger => new Net::ICal::Trigger ("19970317T133000Z"),
+            #trigger => new Net::ICal::Trigger (
+            #   new Net::ICal::Duration ("-PT5M"),
+            #   related => 'END'),
+            attendee => [
+                       new Net::ICal::Attendee("mailto:alice\@wonderland.net")
+            ],
+            summary     => "mail subject.",
+            description => "mail content."
+        );
+
+$a =
+        new Net::ICal::Alarm(
+            action  => 'EMAIL',
+            trigger => "300",
+
+            #trigger => "19970317T133000Z",
+            #trigger => new Net::ICal::Trigger ("19970317T133000Z"),
+            #trigger => new Net::ICal::Trigger (
+            #   new Net::ICal::Duration ("-PT5M"),
+            #   related => 'END'),
+            attendee => [
+                       new Net::ICal::Attendee("mailto:alice\@wonderland.net")
+            ],
+            summary     => "mail subject.",
+            description => "mail content."
+        );
+
 
 ==> b163 <==
 # State 1

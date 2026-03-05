@@ -288,6 +288,7 @@ my (
     $rOpts_extended_block_tightness,
     $rOpts_extended_line_up_parentheses,
     $rOpts_warn_unique_keys_cutoff,
+    $throttle_vtc,
 
     # Static hashes
     # INITIALIZER: BEGIN block
@@ -504,10 +505,6 @@ my (
     $stress_level_alpha,
     $stress_level_beta,
     $high_stress_level,
-
-    # Keep -vtc stable
-    # INITIALIZER: check_options
-    $throttle_vtc,
 
     # Total number of sequence items in a weld, for quick checks
     # INITIALIZER: weld_containers
@@ -2537,22 +2534,6 @@ EOM
         }
     }
 
-    # Keep -vtc < 2 in certain edge cases involving -xlp (b1555).
-    $throttle_vtc = 0;
-    if (
-        $rOpts->{'extended-line-up-parentheses'}
-        && (
-            (
-                $rOpts->{'continuation-indentation'} >
-                $rOpts->{'indent-columns'}
-            )
-            || $rOpts->{'variable-maximum-line-length'}
-        )
-      )
-    {
-        $throttle_vtc = 1;
-    }
-
     return;
 } ## end sub check_options
 
@@ -4142,6 +4123,12 @@ sub initialize_global_option_vars {
         '}' => $rOpts->{'stack-closing-hash-brace'},
         ']' => $rOpts->{'stack-closing-square-bracket'},
     );
+
+    # Set flag to keep -vtc < 2 in certain edge cases involving -xlp (b1555)
+    $throttle_vtc = $rOpts_extended_line_up_parentheses
+      && ( ( $rOpts_continuation_indentation > $rOpts_indent_columns )
+        || $rOpts_variable_maximum_line_length );
+
     return;
 } ## end sub initialize_global_option_vars
 
@@ -36455,9 +36442,7 @@ sub do_colon_breaks {
         # This fixed these three cases, and allowed the tolerances to be
         # reduced to continue to fix all other known cases of instability.
         # This gives the current tolerance formulation.
-
         $lp_tol_boost = 0;
-
         if ($rOpts_line_up_parentheses) {
 
             # boost tol for combination -lp -xci
@@ -37917,6 +37902,7 @@ EOM
             # boost tol for an -lp container
             if ($rOpts_line_up_parentheses) {
 
+                # Part 1:
                 # Use standard spaces for indentation of lists in -lp mode
                 # if it gives a longer line length. This helps to avoid an
                 # instability due to forming and breaking one-line blocks.
@@ -37924,7 +37910,7 @@ EOM
                 # Modification for b1558: replaced the following check:
                 #    && $self->[_rline_diff_by_seqno_]->{$type_sequence} )
                 # with a check for a list with a comma (not just '=>'), since
-                # these are invariants.
+                # these are invariants. But see update for b1574 below.
                 my $indentation = $leading_spaces_to_go[$i_opening_minus];
                 my $is_list = $self->[_ris_list_by_seqno_]->{$type_sequence};
                 my $dtol    = 0;
@@ -37936,16 +37922,18 @@ EOM
                     if ( $diff > 0 ) { $dtol = $diff }
                 }
 
-                if (
-                       $lp_tol_boost
-                    && $lp_object
-                    && ( $rOpts_extended_continuation_indentation
-                        || !$is_list )
-                  )
-                {
-                    $dtol = max( $dtol, $lp_tol_boost );
-                }
+                # For containers under -lp control with -xci
+                if ( $lp_tol_boost && $lp_object ) {
 
+                    # Part 2a: include minimum tol for -lp -xci -vmll
+                    $dtol = max( $dtol, $lp_tol_boost );
+
+                    # Part 2b: for -lp -xci, use at least -ci as tol for broken
+                    # containers to keep them broken (b1574)
+                    if ( $self->[_rline_diff_by_seqno_]->{$type_sequence} ) {
+                        $dtol = max( $dtol, $rOpts_continuation_indentation );
+                    }
+                }
                 $tol += $dtol;
             }
 

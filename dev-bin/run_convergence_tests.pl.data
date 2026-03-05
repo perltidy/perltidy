@@ -14130,6 +14130,47 @@ use constant SOAP_CLASSES =>
 --extended-line-up-parentheses
 --break-before-square-bracket=1
 
+==> b1574.in <==
+$a =
+        new Net::ICal::Alarm(
+            action  => 'EMAIL',
+            trigger => "300",
+
+            #trigger => "19970317T133000Z",
+            #trigger => new Net::ICal::Trigger ("19970317T133000Z"),
+            #trigger => new Net::ICal::Trigger (
+            #   new Net::ICal::Duration ("-PT5M"),
+            #   related => 'END'),
+            attendee =>
+            [ new Net::ICal::Attendee("mailto:alice\@wonderland.net") ],
+            summary     => "mail subject.",
+            description => "mail content."
+        );
+
+$a = new Net::ICal::Alarm(
+         action  => 'EMAIL',
+         trigger => "300",
+
+         #trigger => "19970317T133000Z",
+         #trigger => new Net::ICal::Trigger ("19970317T133000Z"),
+         #trigger => new Net::ICal::Trigger (
+         #   new Net::ICal::Duration ("-PT5M"),
+         #   related => 'END'),
+         attendee => [
+                       new Net::ICal::Attendee("mailto:alice\@wonderland.net")
+         ],
+         summary     => "mail subject.",
+         description => "mail content."
+);
+
+
+==> b1574.par <==
+--maximum-line-length=78
+--indent-columns=9
+--continuation-indentation=8
+--extended-continuation-indentation
+--extended-line-up-parentheses
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar
