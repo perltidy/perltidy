@@ -389,6 +389,17 @@ EOM
     return;
 } ## end sub check_keys
 
+sub vertical_alignment_ok {
+    my ($tok) = @_;
+
+    # Return 1 if alignment ok
+    # Return 0 if do not align
+    return 1 if ( !%valign_control_hash );
+    my $align_ok = $valign_control_hash{$tok};
+    $align_ok = $valign_control_default unless ( defined($align_ok) );
+    return $align_ok;
+} ## end sub vertical_alignment_ok
+
 sub new {
 
     my ( $class, @arglist ) = @_;

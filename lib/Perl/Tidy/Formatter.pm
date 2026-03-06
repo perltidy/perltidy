@@ -283,6 +283,7 @@ my (
     $rOpts_valign_code,
     $rOpts_valign_side_comments,
     $rOpts_valign_if_unless,
+    $rOpts_valign_comparison_operators,
     $rOpts_valign_wide_equals,
     $rOpts_whitespace_cycle,
     $rOpts_extended_block_tightness,
@@ -1304,6 +1305,7 @@ sub initialize_all_closures {
     initialize_closure_get_final_indentation();
     initialize_closure_postponed_breakpoint();
     initialize_closure_batch_variables();
+    initialize_closure_vertical_alignment_markers();
     $self->initialize_closure_write_line();
     return;
 } ## end sub initialize_all_closures
@@ -4066,7 +4068,9 @@ sub initialize_global_option_vars {
     $rOpts_valign_code               = $rOpts->{'valign-code'};
     $rOpts_valign_side_comments      = $rOpts->{'valign-side-comments'};
     $rOpts_valign_if_unless          = $rOpts->{'valign-if-unless'};
-    $rOpts_valign_wide_equals        = $rOpts->{'valign-wide-equals'};
+    $rOpts_valign_comparison_operators =
+      $rOpts->{'valign-comparison-operators'};
+    $rOpts_valign_wide_equals = $rOpts->{'valign-wide-equals'};
     $rOpts_variable_maximum_line_length =
       $rOpts->{'variable-maximum-line-length'};
     $rOpts_warn_unique_keys_cutoff = $rOpts->{'warn-unique-keys-cutoff'};
@@ -41975,7 +41979,12 @@ EOM
     my %is_terminal_alignment_type;
     my %is_low_level_alignment_token;
 
-    BEGIN {
+    # These are the main return variables. They are closure variables
+    # for efficient access by sub .._token_loop needs.
+    my $ralignment_type_to_go;
+    my $ralignment_counts;
+
+    sub initialize_closure_vertical_alignment_markers {
 
         my @q;
 
@@ -42001,14 +42010,19 @@ EOM
         $is_low_level_alignment_token{$_} = 1 for @q;
 
         # eq and ne were removed from this list to improve alignment chances
-        @q = qw( if unless and or err for foreach while until );
-        $is_vertical_alignment_keyword{$_} = 1 for @q;
-    } ## end BEGIN
+        @q = qw( if and or err for foreach while until );
 
-    # These are the main return variables. They are closure variables
-    # for efficient access by sub .._token_loop needs.
-    my $ralignment_type_to_go;
-    my $ralignment_counts;
+        # Align 'cmp' and 'unless' unless requested not to. These are
+        # special because they may map into '<=>' and 'if', so we have
+        # to do this early. Added for update c581.
+        foreach (qw(cmp unless)) {
+            if ( Perl::Tidy::VerticalAligner::vertical_alignment_ok($_) ) {
+                push @q, $_;
+            }
+        }
+
+        $is_vertical_alignment_keyword{$_} = 1 for @q;
+    } ## end sub initialize_closure_vertical_alignment_markers
 
     sub set_vertical_alignment_markers {
 
@@ -42305,6 +42319,10 @@ EOM
                     # token types see '%operator_map'.
                     if ( $token eq 'unless' && $rOpts_valign_if_unless ) {
                         $alignment_type = 'if';
+                    }
+                    if ( $token eq 'cmp' && $rOpts_valign_comparison_operators )
+                    {
+                        $alignment_type = '<=>';
                     }
                 }
             }

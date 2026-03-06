@@ -71,9 +71,10 @@ BEGIN {
         'rt140025'  => "-lp -xci -ci=4 -ce",
         'vxl1'      => <<'----------',
 -vxl='='
+-nvco
 ----------
         'vxl2' => <<'----------',
--vxl='*' -vil='='
+-vxl='*' -vil='= <=>'
 ----------
         'xlp1' => "-xlp",
     };
@@ -276,6 +277,11 @@ my $cmd;
 $co_description = ($color) ? 'bold cyan' : '';          # description
 $co_prompt      = ($color) ? 'bold green' : '';         # prompt
 $co_unused      = ($color) ? 'on_green' : 'reverse';    # unused
+
+sub sortName       { $a->{"file"} cmp $b->{"file"}; }
+sub sortNameNoCase { uc( $a->{"file"} ) cmp uc( $b->{"file"} ); }
+sub sortSize       { $b->{"size"} <=> $a->{"size"}; }
+sub sortDate       { $b->{"mtime"} <=> $a->{"mtime"}; }
 ----------
 
         'xlp1' => <<'----------',
@@ -743,6 +749,11 @@ my $test_var =
 $co_description = ($color) ? 'bold cyan'  : '';           # description
 $co_prompt      = ($color) ? 'bold green' : '';           # prompt
 $co_unused      = ($color) ? 'on_green'   : 'reverse';    # unused
+
+sub sortName       { $a->{"file"}       cmp $b->{"file"}; }
+sub sortNameNoCase { uc( $a->{"file"} ) cmp uc( $b->{"file"} ); }
+sub sortSize       { $b->{"size"}       <=> $a->{"size"}; }
+sub sortDate       { $b->{"mtime"}      <=> $a->{"mtime"}; }
 #16...........
         },
 
@@ -755,6 +766,11 @@ $co_unused      = ($color) ? 'on_green'   : 'reverse';    # unused
 $co_description = ($color) ? 'bold cyan' : '';     # description
 $co_prompt = ($color) ? 'bold green' : '';         # prompt
 $co_unused = ($color) ? 'on_green' : 'reverse';    # unused
+
+sub sortName       { $a->{"file"}       cmp $b->{"file"}; }
+sub sortNameNoCase { uc( $a->{"file"} ) cmp uc( $b->{"file"} ); }
+sub sortSize       { $b->{"size"}  <=> $a->{"size"}; }
+sub sortDate       { $b->{"mtime"} <=> $a->{"mtime"}; }
 #17...........
         },
 
@@ -767,6 +783,11 @@ $co_unused = ($color) ? 'on_green' : 'reverse';    # unused
 $co_description = ($color) ? 'bold cyan' : '';          # description
 $co_prompt      = ($color) ? 'bold green' : '';         # prompt
 $co_unused      = ($color) ? 'on_green' : 'reverse';    # unused
+
+sub sortName { $a->{"file"} cmp $b->{"file"}; }
+sub sortNameNoCase { uc( $a->{"file"} ) cmp uc( $b->{"file"} ); }
+sub sortSize { $b->{"size"} <=> $a->{"size"}; }
+sub sortDate { $b->{"mtime"} <=> $a->{"mtime"}; }
 #18...........
         },
 

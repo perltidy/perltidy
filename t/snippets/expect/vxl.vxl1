@@ -3,3 +3,8 @@
 $co_description = ($color) ? 'bold cyan' : '';     # description
 $co_prompt = ($color) ? 'bold green' : '';         # prompt
 $co_unused = ($color) ? 'on_green' : 'reverse';    # unused
+
+sub sortName       { $a->{"file"}       cmp $b->{"file"}; }
+sub sortNameNoCase { uc( $a->{"file"} ) cmp uc( $b->{"file"} ); }
+sub sortSize       { $b->{"size"}  <=> $a->{"size"}; }
+sub sortDate       { $b->{"mtime"} <=> $a->{"mtime"}; }

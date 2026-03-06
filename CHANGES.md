@@ -2,6 +2,31 @@
 
 ## 2026 02 04.01
 
+    - Vertical alignment now occurs by default for the string comparison
+      operator 'cmp', and these align with any numeric comparison
+      operators '<=>' by default. Previously the 'cmp' operator was not
+      vertically aligned.  A new control switch --valign-comparison-operators
+      can be negated to cause any 'cmp' operators not to align with any
+      '<=>' operators.  To illustrate the options:
+
+        # Old default, or new version with --valign-exclusion-list='cmp'
+        sub sortName       { $a->{"file"} cmp $b->{"file"}; }
+        sub sortNameNoCase { uc( $a->{"file"} ) cmp uc( $b->{"file"} ); }
+        sub sortSize       { $b->{"size"}  <=> $a->{"size"}; }
+        sub sortDate       { $b->{"mtime"} <=> $a->{"mtime"}; }
+
+        # New default:
+        sub sortName       { $a->{"file"}       cmp $b->{"file"}; }
+        sub sortNameNoCase { uc( $a->{"file"} ) cmp uc( $b->{"file"} ); }
+        sub sortSize       { $b->{"size"}       <=> $a->{"size"}; }
+        sub sortDate       { $b->{"mtime"}      <=> $a->{"mtime"}; }
+
+        # New version with --novalign-comparison-operators
+        sub sortName       { $a->{"file"}       cmp $b->{"file"}; }
+        sub sortNameNoCase { uc( $a->{"file"} ) cmp uc( $b->{"file"} ); }
+        sub sortSize       { $b->{"size"}  <=> $a->{"size"}; }
+        sub sortDate       { $b->{"mtime"} <=> $a->{"mtime"}; }
+
     - Fixed issue git #197, where long lines could be broken before reaching
       the maximum line length in some edge cases when
       --extended-continuation-indentation is set.

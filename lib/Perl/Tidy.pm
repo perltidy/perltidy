@@ -1,4 +1,5 @@
-#
+package Perl::Tidy;
+
 ###########################################################
 #
 #    perltidy - a perl script indenter and formatter
@@ -51,8 +52,6 @@
 #        see the CHANGES file.
 #
 ############################################################
-
-package Perl::Tidy;
 
 # perlver reports minimum version needed is 5.8.1
 # 5.004 needed for IO::File
@@ -3910,6 +3909,7 @@ sub generate_options {
     $add_option->( 'valign-exclusion-list',                     'vxl',   '=s' );
     $add_option->( 'valign-inclusion-list',                     'vil',   '=s' );
     $add_option->( 'valign-if-unless',                          'viu',   '!' );
+    $add_option->( 'valign-comparison-operators',               'vco',   '!' );
     $add_option->( 'valign-signed-numbers',                     'vsn',   '!' );
     $add_option->( 'valign-signed-numbers-limit',               'vsnl',  '=i' );
     $add_option->( 'valign-wide-equals',                        'vwe',   '!' );
@@ -4255,6 +4255,7 @@ sub generate_options {
       nouse-unicode-gcstring
       valign-code
       valign-block-comments
+      valign-comparison-operators
       valign-side-comments
       valign-signed-numbers
       space-for-semicolon

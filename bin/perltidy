@@ -6065,7 +6065,7 @@ of the tokens ',', '=', and '=>', but many other alignments are possible and are
 
   = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x= ^^=
   { ( ? : , ; => && || ~~ !~~ =~ !~ // <=> -> q
-  if unless and or err for foreach while until
+  if unless and or err for foreach while until cmp
 
 These alignment types correspond to perl symbols, operators and keywords except
 for 'q', which refers to the special case of alignment in a 'use' statement of
@@ -6142,6 +6142,23 @@ postfix B<if> for purposes of alignment, and thus they align:
   print "Would need: @DepList\n"     if ( @DepList and !$Quiet );
   print "Output:\n"                  unless $Quiet;
   print join( "\n", @Output ) . "\n" unless $Quiet;
+
+=item B<< Aligning cmp and <=> with --valign-comparison-operators or -vco >>
+
+By default, the string comparison operator B<cmp> aligns with the numeric comparison operator B<< <=> >>.  To prevent this, use the negative of this parameter.
+For example,
+
+  # perltidy [DEFAULT]
+  sub sortName       { $a->{"file"}       cmp $b->{"file"}; }
+  sub sortNameNoCase { uc( $a->{"file"} ) cmp uc( $b->{"file"} ); }
+  sub sortSize       { $b->{"size"}       <=> $a->{"size"}; }
+  sub sortDate       { $b->{"mtime"}      <=> $a->{"mtime"}; }
+
+  # perltidy -nvco
+  sub sortName       { $a->{"file"}       cmp $b->{"file"}; }
+  sub sortNameNoCase { uc( $a->{"file"} ) cmp uc( $b->{"file"} ); }
+  sub sortSize       { $b->{"size"}  <=> $a->{"size"}; }
+  sub sortDate       { $b->{"mtime"} <=> $a->{"mtime"}; }
 
 =item B<Aligning signed numbers with --valign-signed-numbers or -vsn>
 
