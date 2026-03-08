@@ -15875,7 +15875,7 @@ sub dump_mixed_call_parens {
     my @sorted =
       sort {
         lc( $a->{type} ) cmp lc( $b->{type} )
-          || $a->{name} cmp $b->{name}
+          || $a->{name}  cmp $b->{name}
       } @mixed_counts;
 
     my $input_stream_name = $self->[_input_stream_name_];
@@ -37933,8 +37933,12 @@ EOM
                     $dtol = max( $dtol, $lp_tol_boost );
 
                     # Part 2b: for -lp -xci, use at least -ci as tol for broken
-                    # containers to keep them broken (b1574)
-                    if ( $self->[_rline_diff_by_seqno_]->{$type_sequence} ) {
+                    # containers to keep them broken (b1574) if the parent is
+                    # permanently broken.
+                    my $seqno_p = $parent_seqno_to_go[$i_opening] || SEQ_ROOT;
+                    if (   $self->[_ris_permanently_broken_]->{$seqno_p}
+                        && $self->[_rline_diff_by_seqno_]->{$type_sequence} )
+                    {
                         $dtol = max( $dtol, $rOpts_continuation_indentation );
                     }
                 }

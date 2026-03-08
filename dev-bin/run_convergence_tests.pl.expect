@@ -7479,20 +7479,16 @@ $last = after (
 
 
 ==> b1444 <==
-                  while (  my ( $k, $v )
-                           = each %{
-                                    $self->{channels}->{$chk}->{device_cache}
-                           }
-                         )
+                  while ( my ( $k, $v )
+                           = each %{ $self->{channels}->{$chk}->{device_cache}
+                           } )
                   {
                            ...;
                   }
 
-                  while (  my ( $k, $v )
-                           = each %{
-                                    $self->{channels}->{$chk}->{device_cache}
-                           }
-                         )
+                  while ( my ( $k, $v )
+                           = each %{ $self->{channels}->{$chk}->{device_cache}
+                           } )
                   {
                            ...;
                   }
@@ -9360,6 +9356,12 @@ $a =
             description => "mail content."
         );
 
+
+==> b1575 <==
+            $temp_x = $span->{ gen_cell_position( $col,
+                                                  $row ) };
+            $temp_x = $span->{ gen_cell_position( $col,
+                                                  $row ) };
 
 ==> b163 <==
 # State 1

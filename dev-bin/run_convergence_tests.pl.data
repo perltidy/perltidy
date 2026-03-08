@@ -14171,6 +14171,20 @@ $a = new Net::ICal::Alarm(
 --extended-continuation-indentation
 --extended-line-up-parentheses
 
+==> b1575.in <==
+            $temp_x = $span->{
+                gen_cell_position(         $col, $row )
+            };
+            $temp_x = $span->{ gen_cell_position( $col,
+                                                  $row ) };
+
+==> b1575.par <==
+--maximum-line-length=60
+--continuation-indentation=8
+--extended-continuation-indentation
+--extended-line-up-parentheses
+-wbb='='
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar
