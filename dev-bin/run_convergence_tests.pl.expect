@@ -5667,7 +5667,8 @@ use overload
 
 
 ==> b1275 <==
-    $$d{"month_abb"} = [
+    $$d{"month_abb"} =
+       [
            [
                "sty.", "lut.", "mar.", "kwi.", "maj", "cze.", "lip.", "sie.", "wrz.", "paz.", "lis.", "gru."
            ], [
@@ -5675,7 +5676,8 @@ use overload
            ]
        ];
 
-    $$d{"month_abb"} = [
+    $$d{"month_abb"} =
+       [
            [
                "sty.", "lut.", "mar.", "kwi.", "maj", "cze.", "lip.", "sie.", "wrz.", "paz.", "lis.", "gru."
            ], [
@@ -9362,6 +9364,43 @@ $a =
                                                   $row ) };
             $temp_x = $span->{ gen_cell_position( $col,
                                                   $row ) };
+
+==> b1576 <==
+    my $file =
+      $menubar->Menubutton(
+         qw/-text File -relief raised -menuitems/ =>
+           [
+            [
+              -command => [ \&puts, 'Open' ]
+            ], [
+              qw/Cascade ~Aircraft -menuitems/ =>
+                [
+                [
+                  qw/Radiobutton B-52  -variable/ =>
+                    \$aircraft
+                ]
+                ]
+            ],
+           ]
+      );
+
+    my $file =
+      $menubar->Menubutton(
+         qw/-text File -relief raised -menuitems/ =>
+           [
+            [
+              -command => [ \&puts, 'Open' ]
+            ], [
+              qw/Cascade ~Aircraft -menuitems/ =>
+                [
+                [
+                  qw/Radiobutton B-52  -variable/ =>
+                    \$aircraft
+                ]
+                ]
+            ],
+           ]
+      );
 
 ==> b163 <==
 # State 1

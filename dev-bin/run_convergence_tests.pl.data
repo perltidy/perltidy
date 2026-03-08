@@ -14185,6 +14185,47 @@ $a = new Net::ICal::Alarm(
 --extended-line-up-parentheses
 -wbb='='
 
+==> b1576.in <==
+    my $file =
+      $menubar->Menubutton(
+         qw/-text File -relief raised -menuitems/ =>
+           [
+            [
+              -command => [ \&puts, 'Open' ]
+            ], [
+              qw/Cascade ~Aircraft -menuitems/ => [
+                [
+                  qw/Radiobutton B-52  -variable/ =>
+                    \$aircraft
+                ]
+                ]
+            ],
+           ]
+      );
+
+    my $file = $menubar->Menubutton(
+        qw/-text File -relief raised -menuitems/ =>
+          [
+            [
+               -command => [ \&puts, 'Open' ]
+            ], [
+                qw/Cascade ~Aircraft -menuitems/ =>
+                  [
+                    [
+                        qw/Radiobutton B-52  -variable/
+                          => \$aircraft
+                    ]
+                  ]
+            ],
+          ]
+    );
+
+==> b1576.par <==
+--maximum-line-length=52
+--extended-line-up-parentheses
+--break-before-square-bracket=1
+--opening-square-bracket-right
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar
