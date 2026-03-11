@@ -45608,9 +45608,6 @@ sub set_vertical_tightness_flags {
     my $ibeg = $ri_first->[$nline];
     my $iend = $ri_last->[$nline];
 
-    # Fix for b1503
-    my $is_under_stress = $levels_to_go[$ibeg] > $high_stress_level;
-
     # Define these values for each vertical tightness type:
     my (
 
@@ -45658,9 +45655,11 @@ sub set_vertical_tightness_flags {
         my $ibeg_next       = $ri_first->[ $nline + 1 ];
         my $token_end       = $tokens_to_go[$iend];
         my $iend_next       = $ri_last->[ $nline + 1 ];
-        my $interline_space = ( $types_to_go[ $ibeg_next - 1 ] eq 'b' ) ? 1 : 0;
+        my $interline_space = $types_to_go[ $ibeg_next - 1 ] eq 'b' ? 1 : 0;
 
-        my $Kbeg_next = $K_to_go[$ibeg_next];
+        my $Kbeg_next      = $K_to_go[$ibeg_next];
+        my $token_beg_next = $tokens_to_go[$ibeg_next];
+        my $seqno_beg_next = $type_sequence_to_go[$ibeg_next];
 
         if (
                $seqno_end
@@ -45670,9 +45669,13 @@ sub set_vertical_tightness_flags {
             # give priority to --keep-old-breakpoints (b1557)
             && !$self->[_rbreak_before_Kfirst_]->{$Kbeg_next}
 
-            # minimal fix for b1503; this also works ok without the 'w' check
-            # but that changes more existing code.
-            && !( $is_under_stress && $types_to_go[$ibeg_next] eq 'w' )
+            # Fix for b1503: skip if under stress; this also works ok without
+            # the 'w' check, but that changes more existing code.
+            && !(
+                   $levels_to_go[$ibeg] > $high_stress_level
+                && $types_to_go[$ibeg_next] eq 'w'
+            )
+
             && (
                 $opening_vertical_tightness{$token_end} > 0
 
@@ -45697,18 +45700,12 @@ sub set_vertical_tightness_flags {
 
                 # Turn off -vt if the next line ends in a closing token. This
                 # avoids an instability with one-line welds (b1183).
-                if ( $is_closing_type{$type_end_next} ) {
-                    $ovt = 0;
-                }
-
                 # Turn off -vt if the next line ends in an opening token. This
                 # avoids an instability (b1460).
-                elsif ( $is_opening_type{$type_end_next} ) {
+                if (   $is_closing_type{$type_end_next}
+                    || $is_opening_type{$type_end_next} )
+                {
                     $ovt = 0;
-                }
-
-                # neither opening nor closing
-                else {
                 }
             }
 
@@ -45761,23 +45758,22 @@ sub set_vertical_tightness_flags {
         # Look for Type 2, first token of next line is a non-block closing
         # token .. and be sure this line does not have a side comment
         #--------------------------------------------------------------
-        my $token_next = $tokens_to_go[$ibeg_next];
-        my $seqno_next = $type_sequence_to_go[$ibeg_next];
         if (
-               $seqno_next
+               $seqno_beg_next
             && !$block_type_to_go[$ibeg_next]
-            && $is_closing_token{$token_next}
-            ##   b1498, b977, b1303
-            && !$self->[_rbreak_container_]->{$seqno_next}
+            && $is_closing_token{$token_beg_next}
+            ##   b1498, b977, b1303:
+            && !$self->[_rbreak_container_]->{$seqno_beg_next}
             && $types_to_go[$iend] ne '#'
           )
         {
-            my $cvt = $closing_vertical_tightness{$token_next};
+            my $cvt = $closing_vertical_tightness{$token_beg_next};
 
             # Implement cvt=3: like cvt=0 for assigned structures, like cvt=1
             # otherwise.  Added for rt136417.
             if ( $cvt == 3 ) {
-                $cvt = $self->[_ris_assigned_structure_]->{$seqno_next} ? 0 : 1;
+                $cvt =
+                  $self->[_ris_assigned_structure_]->{$seqno_beg_next} ? 0 : 1;
             }
 
             # Patch for issue b1555:
@@ -45787,14 +45783,15 @@ sub set_vertical_tightness_flags {
             # Check 1: Restrict to parens without commas, which are good breaks
             if (   $cvt == 2
                 && $throttle_vtc
-                && $token_next eq ')'
-                && !$self->[_ris_list_by_seqno_]->{$seqno_next} )
+                && $token_beg_next eq ')'
+                && !$self->[_ris_list_by_seqno_]->{$seqno_beg_next} )
             {
 
                 # Check 2: Restrict to containers without sub-containers:
-                my $K_opening = $self->[_K_opening_container_]->{$seqno_next};
-                my $Knext     = $self->[_rK_next_seqno_by_K_]->[$K_opening];
-                if ( $Knext == $K_to_go[$ibeg_next] ) {
+                my $K_opening =
+                  $self->[_K_opening_container_]->{$seqno_beg_next};
+                my $Knext = $self->[_rK_next_seqno_by_K_]->[$K_opening];
+                if ( $Knext == $Kbeg_next ) {
 
                     # Check 3: further restrict this fix to something that
                     # looks like a function call paren with no good interior
@@ -45817,20 +45814,22 @@ sub set_vertical_tightness_flags {
             # Reducing -cvt>0 to =0 fixes stability for -wtc=b in b1381,1382.
             # Reducing -cvt>0 to =0 fixes stability for -wtc=m in b1384
             if (   $cvt
-                && $self->[_ris_bare_trailing_comma_by_seqno_]->{$seqno_next} )
+                && $self->[_ris_bare_trailing_comma_by_seqno_]
+                ->{$seqno_beg_next} )
             {
                 $cvt = 0;
             }
 
             if (
                 defined(
-                    $self->[_rmax_closing_vertical_tightness_]->{$seqno_next}
+                    $self->[_rmax_closing_vertical_tightness_]
+                      ->{$seqno_beg_next}
                 )
               )
             {
-                $cvt =
-                  min( $cvt,
-                    $self->[_rmax_closing_vertical_tightness_]->{$seqno_next} );
+                $cvt = min( $cvt,
+                    $self->[_rmax_closing_vertical_tightness_]
+                      ->{$seqno_beg_next} );
             }
 
             # Fix c473, in which a qwaf paren joined a backslash, like this:
@@ -45840,9 +45839,9 @@ sub set_vertical_tightness_flags {
             # So turn off vertical tightness if the ')' follows a backslash
             if (
                    $cvt
-                && $self->[_ris_qwaf_by_seqno_]->{$seqno_next}
+                && $self->[_ris_qwaf_by_seqno_]->{$seqno_beg_next}
                 && defined(
-                    $self->[_rtightness_override_by_seqno_]->{$seqno_next}
+                    $self->[_rtightness_override_by_seqno_]->{$seqno_beg_next}
                 )
               )
             {
@@ -45867,10 +45866,10 @@ sub set_vertical_tightness_flags {
 
                             # allow closing up 2-line method calls
                             || (   $rOpts_line_up_parentheses
-                                && $token_next eq ')'
-                                && $seqno_next
-                                && $self->[_rlp_object_by_seqno_]->{$seqno_next}
-                            )
+                                && $token_beg_next eq ')'
+                                && $seqno_beg_next
+                                && $self->[_rlp_object_by_seqno_]
+                                ->{$seqno_beg_next} )
                         )
                     )
                 )
@@ -45904,9 +45903,9 @@ sub set_vertical_tightness_flags {
                     # using a large number.
                     if (   $rOpts_line_up_parentheses
                         && $total_weld_count
-                        && $seqno_next
-                        && $self->[_rlp_object_by_seqno_]->{$seqno_next}
-                        && $self->is_welded_at_seqno($seqno_next) )
+                        && $seqno_beg_next
+                        && $self->[_rlp_object_by_seqno_]->{$seqno_beg_next}
+                        && $self->is_welded_at_seqno($seqno_beg_next) )
                     {
                         $min_lines  = 1;
                         $max_lines  = $cvt ? 0 : 1;
@@ -45916,7 +45915,7 @@ sub set_vertical_tightness_flags {
                     $vt_type         = 2;
                     $vt_opening_flag = 0;
                     $vt_closing_flag = $interline_space;
-                    $vt_seqno        = $seqno_next;
+                    $vt_seqno        = $seqno_beg_next;
                     $vt_valid_flag   = $valid_flag;
                     $vt_min_lines    = $min_lines;
                     $vt_max_lines    = $max_lines;
@@ -45943,7 +45942,7 @@ sub set_vertical_tightness_flags {
         # as here, so it is best to leave this unchanged for now.
         #--------------------------------------------------------------
         if (
-            $opening_token_right{ $tokens_to_go[$ibeg_next] }
+            $opening_token_right{$token_beg_next}
 
             # previous line is not opening
             # (use -sot to combine with it)
@@ -45969,12 +45968,12 @@ sub set_vertical_tightness_flags {
             && !(
                    $is_assignment{ $types_to_go[$iend] }
                 && $rOpts_line_up_parentheses
-                && $seqno_next
-                && $self->[_rlp_object_by_seqno_]->{$seqno_next}
+                && $seqno_beg_next
+                && $self->[_rlp_object_by_seqno_]->{$seqno_beg_next}
             )
 
             # looks bad if we align vertically with the wrong container
-            && $tokens_to_go[$ibeg] ne $tokens_to_go[$ibeg_next]
+            && $tokens_to_go[$ibeg] ne $token_beg_next
 
             # give -kba priority over -otr (b1445)
             && !$self->[_rbreak_after_Klast_]->{ $K_to_go[$iend] }
@@ -45988,15 +45987,16 @@ sub set_vertical_tightness_flags {
 
             # fix b1576
             && !(
-                   $seqno_next
-                && $self->[_rbreak_before_container_by_seqno_]->{$seqno_next}
+                   $seqno_beg_next
+                && $self->[_rbreak_before_container_by_seqno_]
+                ->{$seqno_beg_next}
             )
           )
         {
             $vt_type         = 2;
             $vt_opening_flag = 0;
             $vt_closing_flag = $interline_space;
-            $vt_seqno        = $seqno_next;
+            $vt_seqno        = $seqno_beg_next;
             $vt_valid_flag   = 1;
             $vt_min_lines    = 0;
             $vt_max_lines    = 0;
@@ -46007,29 +46007,30 @@ sub set_vertical_tightness_flags {
         # Stacking of opening and closing tokens (Type 2)
         #--------------------------------------------------------------
         my $stackable;
-        my $token_beg_next = $tokens_to_go[$ibeg_next];
+        my $token_beg_next_fixed = $token_beg_next;
 
         # patch to make something like 'qw(' behave like an opening paren
         # (aran.t)
         if ( $types_to_go[$ibeg_next] eq 'q' ) {
-            if ( $token_beg_next =~ /^qw\s*([\[\(\{])$/ ) {
-                $token_beg_next = $1;
+            if ( $token_beg_next_fixed =~ /^qw\s*([\[\(\{])$/ ) {
+                $token_beg_next_fixed = $1;
             }
         }
 
         if (   $is_closing_token{$token_end}
-            && $is_closing_token{$token_beg_next} )
+            && $is_closing_token{$token_beg_next_fixed} )
         {
 
             # avoid instability of combo -bom and -sct; b1179
-            my $bom = $seqno_next && $self->[_rbreak_container_]->{$seqno_next};
-            $stackable = $stack_closing_token{$token_beg_next}
+            my $bom =
+              $seqno_beg_next && $self->[_rbreak_container_]->{$seqno_beg_next};
+            $stackable = $stack_closing_token{$token_beg_next_fixed}
               unless ( $block_type_to_go[$ibeg_next] || $bom );
         }
         elsif ($is_opening_token{$token_end}
-            && $is_opening_token{$token_beg_next} )
+            && $is_opening_token{$token_beg_next_fixed} )
         {
-            $stackable = $stack_opening_token{$token_beg_next}
+            $stackable = $stack_opening_token{$token_beg_next_fixed}
               unless ( $block_type_to_go[$ibeg_next] );    # shouldn't happen
         }
         else {
@@ -46058,7 +46059,7 @@ sub set_vertical_tightness_flags {
                 $vt_type         = 2;
                 $vt_opening_flag = 0;
                 $vt_closing_flag = $interline_space;
-                $vt_seqno        = $seqno_next;
+                $vt_seqno        = $seqno_beg_next;
                 $vt_valid_flag   = 1;
                 $vt_min_lines    = 0;
                 $vt_max_lines    = 0;
