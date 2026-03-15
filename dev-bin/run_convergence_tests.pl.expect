@@ -6127,40 +6127,40 @@ WriteMakefile(
 ==> b1314 <==
 # S1
 WriteMakefile(
-     'NAME'         => 'Gimp::Net',
-     'VERSION_FROM' => '../Gimp.pm',
+        'NAME'         => 'Gimp::Net',
+        'VERSION_FROM' => '../Gimp.pm',
 
 #'INC'	=> "$INC1 $CPPFLAGS $pdl_inc $cfg{GLIB_CFLAGS} $CFLAGS",
-     'INC'      => "$INC1 $CPPFLAGS $pdl_inc $CFLAGS",
-     'DEFINE'   => "$DEFINE1 $DEFS",
-     'TYPEMAPS' =>
-           [ "$topdir/typemap", @pdl_typemaps ],
+        'INC' => "$INC1 $CPPFLAGS $pdl_inc $CFLAGS",
+        'DEFINE'   => "$DEFINE1 $DEFS",
+        'TYPEMAPS' =>
+              [ "$topdir/typemap", @pdl_typemaps ],
 
 #dynamic_lib	=> { OTHERLDFLAGS => "$LDFLAGS $LIBS $cfg{GLIB_LIBS}" },
-     dynamic_lib =>
-           { OTHERLDFLAGS => "$LDFLAGS $LIBS" },
-     'PM' => {
-               'Net.pm' => '$(INST_LIBDIR)/Net.pm',
-     },
+        dynamic_lib =>
+              { OTHERLDFLAGS => "$LDFLAGS $LIBS" },
+        'PM' => {
+                'Net.pm' => '$(INST_LIBDIR)/Net.pm',
+        },
 );
 
 # S2
 WriteMakefile(
-     'NAME'         => 'Gimp::Net',
-     'VERSION_FROM' => '../Gimp.pm',
+        'NAME'         => 'Gimp::Net',
+        'VERSION_FROM' => '../Gimp.pm',
 
 #'INC'	=> "$INC1 $CPPFLAGS $pdl_inc $cfg{GLIB_CFLAGS} $CFLAGS",
-     'INC'      => "$INC1 $CPPFLAGS $pdl_inc $CFLAGS",
-     'DEFINE'   => "$DEFINE1 $DEFS",
-     'TYPEMAPS' =>
-           [ "$topdir/typemap", @pdl_typemaps ],
+        'INC' => "$INC1 $CPPFLAGS $pdl_inc $CFLAGS",
+        'DEFINE'   => "$DEFINE1 $DEFS",
+        'TYPEMAPS' =>
+              [ "$topdir/typemap", @pdl_typemaps ],
 
 #dynamic_lib	=> { OTHERLDFLAGS => "$LDFLAGS $LIBS $cfg{GLIB_LIBS}" },
-     dynamic_lib =>
-           { OTHERLDFLAGS => "$LDFLAGS $LIBS" },
-     'PM' => {
-               'Net.pm' => '$(INST_LIBDIR)/Net.pm',
-     },
+        dynamic_lib =>
+              { OTHERLDFLAGS => "$LDFLAGS $LIBS" },
+        'PM' => {
+                'Net.pm' => '$(INST_LIBDIR)/Net.pm',
+        },
 );
 
 ==> b1315 <==
@@ -8685,26 +8685,35 @@ print Data::Dumper->Dump(
                         host => $hostname,
 
                         fanart =>
-                         get_art(
-                                  $images, 'fanart', 'backdrops'
-                         ),
+                         get_art( $images, 'fanart', 'backdrops' ),
                         coverfile =>
-                         get_art(
-                                  $images, 'coverart', 'posters'
-                         ),
+                         get_art( $images, 'coverart', 'posters' ),
                    };
                   my $movie_data
                    = {
                         host => $hostname,
 
                         fanart =>
-                         get_art(
-                                  $images, 'fanart', 'backdrops'
-                         ),
+                         get_art( $images, 'fanart', 'backdrops' ),
                         coverfile =>
-                         get_art(
-                                  $images, 'coverart', 'posters'
-                         ),
+                         get_art( $images, 'coverart', 'posters' ),
+                   };
+
+==> b1539a <==
+                  my $movie_data
+                   = {
+                        studio =>
+                         $info->{production_companies}->[0]->{name},
+
+                        title => $info->{title},
+                   };
+
+                  my $movie_data
+                   = {
+                        studio =>
+                         $info->{production_companies}->[0]->{name},
+
+                        title => $info->{title},
                    };
 
 ==> b1540 <==
@@ -9131,20 +9140,22 @@ my ($self) = $class->SUPER::new(
       {
          user =>
            {
-             isa => ['My::LDAPConnect', 'SPOPS::LDAP::MultiDatasource'],
-             field => [
+              isa =>
+              ['My::LDAPConnect', 'SPOPS::LDAP::MultiDatasource'],
+              field => [
 
-             ],
+              ],
            },
       };
 
       {
          user =>
            {
-             isa => ['My::LDAPConnect', 'SPOPS::LDAP::MultiDatasource'],
-             field => [
+              isa =>
+              ['My::LDAPConnect', 'SPOPS::LDAP::MultiDatasource'],
+              field => [
 
-             ],
+              ],
            },
       };
 
@@ -9401,6 +9412,25 @@ $a =
             ],
            ]
       );
+
+==> b1578 <==
+                runtime (
+                    sprintf(
+                        "sv_setsv($left, %s);",
+                        &$operator ( $left,
+                            $right )
+
+                    )
+                );
+
+                runtime (
+                    sprintf(
+                        "sv_setsv($left, %s);",
+                        &$operator ( $left,
+                            $right )
+
+                    )
+                );
 
 ==> b163 <==
 # State 1

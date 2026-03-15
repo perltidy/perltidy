@@ -26664,6 +26664,7 @@ sub is_fragile_block_type {
     my $len;
     my $last_nonblank_type;
     my @stack;
+    ## This variable can eventually be removed due to update b1578:
     my $has_vtc2;
 
     sub xlp_collapsed_lengths_initialize {
@@ -26684,6 +26685,7 @@ sub is_fragile_block_type {
         ];
 
         # Note if vertical-tightness-closing=2 is set for any container type
+        ## This block can eventually be removed:
         $has_vtc2 = 0;
         if (%closing_vertical_tightness) {
             foreach my $tok (qw< ) ] } >) {
@@ -26851,6 +26853,21 @@ sub is_fragile_block_type {
             # Otherwise, skip if the last line did not end in '=>'
             if ( $last_nonblank_type ne '=>' ) { return 1 }
 
+            # Alternate fix for b1539, part 1
+            # Skip at ending like '),' where the list has a comma
+            #   fanart =>
+            #       get_art( $images, 'fanart', 'backdrops' ),
+            my $Kt_m = $self->K_previous_nonblank($K_terminal);
+            if (   $Kt_m
+                && $Kt_m > $K_first
+                && $is_closing_type{ $rLL->[$Kt_m]->[_TYPE_] } )
+            {
+                my $seqno = $rLL->[$Kt_m]->[_TYPE_SEQUENCE_];
+                if ( $rtype_count_by_seqno->{$seqno}->{','} ) {
+                    return 1;
+                }
+            }
+
             # Decide if a line following a '=>' can be stable.
             # We have to scan the line for weak tokens, like ',' and '='
 
@@ -26871,6 +26888,9 @@ sub is_fragile_block_type {
 
                 # The b1566 instability is caused by the '=' which is weak.
                 if ( $is_weak_binary_operator_token{$type} ) { return 1 }
+
+                # Alternate fix for b1539, part 2: include '->' as fragile
+                if ( $type eq '->' ) { return 1 }
 
                 # Check for a container
                 my $seqno = $rLL->[$K_test]->[_TYPE_SEQUENCE_];
@@ -27294,7 +27314,10 @@ sub is_fragile_block_type {
                     # Turn off vtc=2 locally to avoid causing a list to form a
                     # one-line block in a broken list, and thus causing the
                     # interrupted_list_rule to oscillate.
-                    if (   $has_vtc2
+                    # Deactivated for b1578; see alternate b1539 fixes
+                    # **This if block and $has_vtc2 can eventually be removed
+                    if (   0
+                        && $has_vtc2
                         && $ris_list_by_seqno->{$seqno}
                         && $rline_diff_by_seqno->{$seqno}
                         && !$ris_permanently_broken->{$seqno}
@@ -27339,11 +27362,11 @@ sub is_fragile_block_type {
                       )
                     {
 
-                        # Is it an intact list? Added to fix issue b1298, b1366
-                        # but this can switch on and off and cause instability
-                        # so we have to be very careful...
-                        $interrupted_list_rule =
-                          $rhas_broken_list->{$seqno} ? 0 : 1;
+                        # Old fix for b1298, b1366, removed to fix b1578:
+                        # $interrupted_list_rule =
+                        #  $rhas_broken_list->{$seqno} ? 0 : 1;
+
+                        $interrupted_list_rule = 1;
                     }
 
                     my $K_c = $K_closing_container->{$seqno};
