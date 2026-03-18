@@ -9432,6 +9432,18 @@ $a =
                     )
                 );
 
+==> b1579 <==
+       my %opts
+        = (
+          kff => ( defined $4 ? $4 : undef )
+          ,    # end field
+        );
+       my %opts
+        = (
+          kff => ( defined $4 ? $4 : undef )
+          ,    # end field
+        );
+
 ==> b163 <==
 # State 1
 Readonly::Scalar

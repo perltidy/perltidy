@@ -14274,6 +14274,26 @@ $a = new Net::ICal::Alarm(
 --extended-line-up-parentheses
 --space-function-paren
 
+==> b1579.in <==
+       my %opts
+        = (
+          kff => ( defined $4 ? $4 : undef )
+          ,    # end field
+        );
+       my %opts
+        = (
+             kff =>
+              ( defined $4 ? $4 : undef ),   # end field
+        );
+
+==> b1579.par <==
+--maximum-line-length=46
+--indent-columns=7
+--continuation-indentation=1
+--extended-line-up-parentheses
+--break-before-all-operators
+--ignore-side-comment-lengths
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar

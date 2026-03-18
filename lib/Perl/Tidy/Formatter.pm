@@ -27152,15 +27152,45 @@ sub is_fragile_block_type {
                         }
                     }    # END patch for issue b1408
 
-                    if ( $rLL->[$K_terminal]->[_TYPE_] eq ','
-                        && !$skip_line_length_sum->( $K_first, $K_terminal ) )
+                    # Look for a line which ends in a comma...
+                    my $K_comma;
+                    if ( $rLL->[$K_terminal]->[_TYPE_] eq ',' ) {
+                        $K_comma = $K_terminal;
+                    }
+                    else {
+
+                        # .. or is followed by a line which has a leading comma
+                        # followed by a side comment under -iscl control.
+                        # Added for b1579; updates b1525.
+                        if (   $rOpts_ignore_side_comment_lengths
+                            && !$has_comment
+                            && $iline + 1 < @{$rlines} )
+                        {
+                            my $line_of_tokens_next = $rlines->[ $iline + 1 ];
+                            my ( $K_first_next, $K_terminal_next ) =
+                              @{ $line_of_tokens_next->{_rK_range} };
+                            if (
+                                   $K_first_next
+                                && $rLL->[$K_first_next]->[_TYPE_] eq ','
+                                && $rLL->[$K_terminal_next]->[_TYPE_] eq '#'
+                                && ( $self->K_next_nonblank($K_first_next) ==
+                                    $K_terminal_next )
+                              )
+                            {
+                                $K_comma = $K_first_next;
+                            }
+                        }
+                    }
+
+                    if ( $K_comma
+                        && !$skip_line_length_sum->( $K_first, $K_comma ) )
                     {
 
                         # Fix for b1536a: add $is_interrupted flag
                         my $is_interrupted = 1;
                         my $length =
                           $self->cumulative_length_to_comma( $K_first,
-                            $K_terminal, $K_c, $is_interrupted );
+                            $K_comma, $K_c, $is_interrupted );
 
                         # Fix for b1331: at a broken => item, include the
                         # length of the previous half of the item plus one for
@@ -27174,7 +27204,9 @@ sub is_fragile_block_type {
 
                         # Fix for b1525: avoid instability for a leading comma
                         # in interrupted mode when -iscl is set
-                        elsif ($K_terminal == $K_first
+                        # FIXME: the next two blocks can be deleted
+                        elsif ( 0
+                            && $K_terminal == $K_first
                             && $rOpts_ignore_side_comment_lengths
                             && $has_comment )
                         {
@@ -27247,7 +27279,6 @@ sub is_fragile_block_type {
         my $rcollapsed_length_by_seqno = $self->[_rcollapsed_length_by_seqno_];
         my $ris_permanently_broken     = $self->[_ris_permanently_broken_];
         my $ris_list_by_seqno          = $self->[_ris_list_by_seqno_];
-        my $rhas_broken_list           = $self->[_rhas_broken_list_];
         my $rline_diff_by_seqno        = $self->[_rline_diff_by_seqno_];
         my $rmax_closing_vertical_tightness =
           $self->[_rmax_closing_vertical_tightness_];
