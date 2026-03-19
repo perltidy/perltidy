@@ -14294,6 +14294,27 @@ $a = new Net::ICal::Alarm(
 --break-before-all-operators
 --ignore-side-comment-lengths
 
+==> b1581.in <==
+$dbh = DBI->connect(
+                   undef, undef, undef,
+                   {
+
+                   },
+);
+$dbh = DBI->connect(
+                   undef, undef,
+                   undef,
+                   {
+
+                   },
+);
+
+
+==> b1581.par <==
+--maximum-line-length=41
+--extended-line-up-parentheses
+--ignore-side-comment-lengths
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar

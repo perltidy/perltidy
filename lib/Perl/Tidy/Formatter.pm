@@ -38656,6 +38656,21 @@ EOM
         # columns of, say, just 0's.
         my $small_length = 10;    # 2 + actual maximum length wanted
 
+        # Interrupted lists using -xlp must use a smaller value to minimize the
+        # chance of instability when collapsed lengths are pre-calculated using
+        # the full line lengths (b1581).
+        if (   $interrupted
+            && $rOpts_extended_line_up_parentheses
+            && ref( $leading_spaces_to_go[$i_first_comma] ) )
+        {
+
+            # A safe option is to turn this feature off with a value '2':
+            #    $small_length = 2;
+            # But a value of '7' is currently used to minimize changes to
+            # existing formatting. This could be reduced if necessary:
+            $small_length = 7;
+        }
+
         # We'll insert a break in long runs of small terms to
         # allow alignment in uniform tables.
         my $skipped_count = 0;

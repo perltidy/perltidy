@@ -9072,7 +9072,8 @@ __END__
 my ($self) = $class->SUPER::new(
         yyrules => [
             [
-              'item', 1,
+              'item',
+              1,
               sub {
                       if ( $_[1] ) {
                               my ( $k, $v );
@@ -9105,7 +9106,8 @@ my ($self) = $class->SUPER::new(
 my ($self) = $class->SUPER::new(
         yyrules => [
             [
-              'item', 1,
+              'item',
+              1,
               sub {
                       if ( $_[1] ) {
                               my ( $k, $v );
@@ -9443,6 +9445,21 @@ $a =
           kff => ( defined $4 ? $4 : undef )
           ,    # end field
         );
+
+==> b1581 <==
+$dbh = DBI->connect(
+                   undef, undef, undef,
+                   {
+
+                   },
+);
+$dbh = DBI->connect(
+                   undef, undef, undef,
+                   {
+
+                   },
+);
+
 
 ==> b163 <==
 # State 1
