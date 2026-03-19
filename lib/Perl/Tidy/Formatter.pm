@@ -26853,21 +26853,6 @@ sub is_fragile_block_type {
             # Otherwise, skip if the last line did not end in '=>'
             if ( $last_nonblank_type ne '=>' ) { return 1 }
 
-            # Alternate fix for b1539, part 1
-            # Skip at ending like '),' where the list has a comma
-            #   fanart =>
-            #       get_art( $images, 'fanart', 'backdrops' ),
-            my $Kt_m = $self->K_previous_nonblank($K_terminal);
-            if (   $Kt_m
-                && $Kt_m > $K_first
-                && $is_closing_type{ $rLL->[$Kt_m]->[_TYPE_] } )
-            {
-                my $seqno = $rLL->[$Kt_m]->[_TYPE_SEQUENCE_];
-                if ( $rtype_count_by_seqno->{$seqno}->{','} ) {
-                    return 1;
-                }
-            }
-
             # Decide if a line following a '=>' can be stable.
             # We have to scan the line for weak tokens, like ',' and '='
 
@@ -26889,12 +26874,34 @@ sub is_fragile_block_type {
                 # The b1566 instability is caused by the '=' which is weak.
                 if ( $is_weak_binary_operator_token{$type} ) { return 1 }
 
-                # Alternate fix for b1539, part 2: include '->' as fragile
-                if ( $type eq '->' ) { return 1 }
+                # Alternate fix for b1539a, part 2: include '}->' as fragile
+                # Note: it also works to just check for '->'
+                if ( $type eq '->' ) {
+                    my $Kt_m = $self->K_previous_nonblank($K_test);
+                    if (   $Kt_m
+                        && $Kt_m > $K_first
+                        && $is_closing_type{ $rLL->[$Kt_m]->[_TYPE_] } )
+                    {
+                        return 1;
+                    }
+                }
 
                 # Check for a container
                 my $seqno = $rLL->[$K_test]->[_TYPE_SEQUENCE_];
+                next if ( !$seqno );
                 if ( $is_opening_type{$type} ) {
+
+                    # Look back for one of -> } ) ]
+                    # which indicate a weak point in the line
+                    my $Kt_m = $self->K_previous_nonblank($K_test);
+                    if (   $Kt_m
+                        && $Kt_m > $K_first )
+                    {
+                        my $type_m = $Kt_m ? $rLL->[$Kt_m]->[_TYPE_] : 'b';
+                        if ( $type_m eq '->' || $is_closing_type{$type_m} ) {
+                            return 1;
+                        }
+                    }
 
                     # Check for issue b1565:
                     # where the one-line block formatting could be unstable due
@@ -26903,6 +26910,7 @@ sub is_fragile_block_type {
                     #      isa =>
                     #      ['My::LDAPConnect', 'SPOPS::LDAP::MultiDatasource'],
                     # Deactivated: replaced with more general fix b1565a
+                    # FIXME: delete this block
                     if (   0
                         && $K_test == $K_first
                         && $self->[_ris_list_by_seqno_]->{$seqno} )
@@ -26913,6 +26921,15 @@ sub is_fragile_block_type {
                     # Skip past this container
                     my $Kc = $self->[_K_closing_container_]->{$seqno};
                     if ( $Kc && $Kc > $K_test ) {
+
+                        # Alternate fix for b1539, part 1
+                        # Skip a list which has a comma
+                        #   fanart =>
+                        #       get_art( $images, 'fanart', 'backdrops' ),
+                        my $rtype_count = $rtype_count_by_seqno->{$seqno};
+                        if ( $rtype_count && $rtype_count->{','} ) {
+                            return 1;
+                        }
                         $K_test = $Kc;
                         next;
                     }
@@ -27346,7 +27363,7 @@ sub is_fragile_block_type {
                     # one-line block in a broken list, and thus causing the
                     # interrupted_list_rule to oscillate.
                     # Deactivated for b1578; see alternate b1539 fixes
-                    # **This if block and $has_vtc2 can eventually be removed
+                    # **FIXME: This block and var $has_vtc2 can be deleted
                     if (   0
                         && $has_vtc2
                         && $ris_list_by_seqno->{$seqno}
