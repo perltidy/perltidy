@@ -14251,6 +14251,58 @@ $a = new Net::ICal::Alarm(
 --break-before-square-bracket=1
 --opening-square-bracket-right
 
+==> b1577.in <==
+    bless {
+        VALID => {
+                     map { $xxx, 1 }
+                     qw( flags cachesize maxkeypage minkeypage psize
+                     compare prefix lorder )
+                 },
+        ;
+    }, $pkg;
+    bless {
+        VALID => {
+                   map { $xxx, 1 } qw( flags cachesize maxkeypage minkeypage psize
+                   compare prefix lorder )
+                 },
+        ;
+    }, $pkg;
+
+==> b1577.par <==
+--maximum-line-length=75
+--continuation-indentation=9
+--variable-maximum-line-length
+--extended-continuation-indentation
+--extended-line-up-parentheses
+--keep-old-breakpoints-before='k'
+
+==> b1577a.in <==
+    bless {
+        VALID => {
+
+                     map { $xxx, 1 }
+                     qw( flags cachesize maxkeypage minkeypage psize
+                     compare prefix lorder )
+                 },
+        ;
+    }, $pkg;
+
+    bless {
+        VALID => {
+
+                   map { $xxx, 1 } qw( flags cachesize maxkeypage minkeypage psize
+                   compare prefix lorder )
+                 },
+        ;
+    }, $pkg;
+
+==> b1577a.par <==
+--maximum-line-length=75
+--continuation-indentation=9
+--variable-maximum-line-length
+--extended-continuation-indentation
+--extended-line-up-parentheses
+
 ==> b1578.in <==
                 runtime (
                     sprintf(

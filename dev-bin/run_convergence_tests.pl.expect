@@ -9415,6 +9415,41 @@ $a =
            ]
       );
 
+==> b1577 <==
+    bless {
+        VALID => {
+                   map { $xxx, 1 } qw( flags cachesize maxkeypage minkeypage psize
+                   compare prefix lorder )
+                 },
+        ;
+    }, $pkg;
+    bless {
+        VALID => {
+                   map { $xxx, 1 } qw( flags cachesize maxkeypage minkeypage psize
+                   compare prefix lorder )
+                 },
+        ;
+    }, $pkg;
+
+==> b1577a <==
+    bless {
+        VALID => {
+
+                   map { $xxx, 1 } qw( flags cachesize maxkeypage minkeypage psize
+                   compare prefix lorder )
+                 },
+        ;
+    }, $pkg;
+
+    bless {
+        VALID => {
+
+                   map { $xxx, 1 } qw( flags cachesize maxkeypage minkeypage psize
+                   compare prefix lorder )
+                 },
+        ;
+    }, $pkg;
+
 ==> b1578 <==
                 runtime (
                     sprintf(

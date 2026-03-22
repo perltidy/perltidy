@@ -26948,6 +26948,48 @@ sub is_fragile_block_type {
             return;
         }; ## end $skip_line_length_sum = sub
 
+        my $continue_multiline_q = sub {
+            my ($KK) = @_;
+
+            # Continuing a multiline q at index $KK
+            my $level    = $rLL->[$KK]->[_LEVEL_];
+            my $ci_level = $rLL->[$KK]->[_CI_LEVEL_];
+            $len = $rLL->[$KK]->[_CUMULATIVE_LENGTH_];
+            if ( $KK > 0 ) { $len -= $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_] }
+
+            # We may have to add the spaces of one level or ci level
+            # ...  it depends on the -xci flag, the -wn flag,
+            # and if the qw uses a container token as the quote
+            # delimiter.
+
+            # First rule: add ci if there is a $ci_level
+            if ($ci_level) {
+                $len += $rOpts_continuation_indentation;
+            }
+
+            # Second rule: otherwise, look for an extra indentation
+            # level from the start and add one indentation level if
+            # found.
+            else {
+                if ( $level > $level_start_multiline_qw ) {
+                    $len += $rOpts_indent_columns;
+                }
+            }
+
+            if ( $len > $max_prong_len ) { $max_prong_len = $len }
+            return;
+        }; ## end $continue_multiline_q = sub
+
+        my $start_multiline_q = sub {
+            my ($KK) = @_;
+
+            # Starting a new multiline q at index $KK
+            $K_start_multiline_qw     = $KK;
+            $level_start_multiline_qw = $rLL->[$KK]->[_LEVEL_];
+            $continue_multiline_q->($KK);
+            return;
+        }; ## end $start_multiline_q = sub
+
         xlp_collapsed_lengths_initialize();
 
         #--------------------------------
@@ -26995,63 +27037,23 @@ sub is_fragile_block_type {
             my $K_begin_loop = $K_first;
             if ( $rLL->[$K_first]->[_TYPE_] eq 'q' ) {
 
-                my $KK       = $K_first;
-                my $level    = $rLL->[$KK]->[_LEVEL_];
-                my $ci_level = $rLL->[$KK]->[_CI_LEVEL_];
-
-                # remember the level of the start
+                # Check for start of multiline qw
                 if ( !defined($K_start_multiline_qw) ) {
-                    $K_start_multiline_qw     = $K_first;
-                    $level_start_multiline_qw = $level;
-                    my $seqno_qw =
-                      $self->[_rstarting_multiline_qw_seqno_by_K_]
-                      ->{$K_start_multiline_qw};
-                    if ( !$seqno_qw ) {
-                        my $Kp = $self->K_previous_nonblank($K_first);
-                        if ( defined($Kp) && $rLL->[$Kp]->[_TYPE_] eq 'q' ) {
-
-                            $K_start_multiline_qw = $Kp;
-                            $level_start_multiline_qw =
-                              $rLL->[$K_start_multiline_qw]->[_LEVEL_];
-                        }
-                        else {
-
-                            # Fix for b1319, b1320
-                            $K_start_multiline_qw = undef;
+                    if ( $K_last == $K_first ) {
+                        my $Kn = $self->K_next_nonblank($K_first);
+                        if ( defined($Kn) && $rLL->[$Kn]->[_TYPE_] eq 'q' ) {
+                            $start_multiline_q->($K_first);
+                            $last_nonblank_type = 'q';
+                            next;
                         }
                     }
                 }
 
-                if ( defined($K_start_multiline_qw) ) {
-                    $len = $rLL->[$KK]->[_CUMULATIVE_LENGTH_] -
-                      $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
-
-                    # We may have to add the spaces of one level or ci level
-                    # ...  it depends on the -xci flag, the -wn flag,
-                    # and if the qw uses a container token as the quote
-                    # delimiter.
-
-                    # First rule: add ci if there is a $ci_level
-                    if ($ci_level) {
-                        $len += $rOpts_continuation_indentation;
-                    }
-
-                    # Second rule: otherwise, look for an extra indentation
-                    # level from the start and add one indentation level if
-                    # found.
-                    else {
-                        if ( $level > $level_start_multiline_qw ) {
-                            $len += $rOpts_indent_columns;
-                        }
-                    }
-
-                    if ( $len > $max_prong_len ) { $max_prong_len = $len }
-
+                # Continuing multiline qw
+                else {
+                    $continue_multiline_q->($K_first);
                     $last_nonblank_type = 'q';
-
-                    $K_begin_loop = $K_first + 1;
-
-                    # We can skip to the next line if more tokens
+                    $K_begin_loop       = $K_first + 1;
                     next if ( $K_begin_loop > $K_last );
                 }
             }
@@ -27065,8 +27067,10 @@ sub is_fragile_block_type {
                 }
             }
             else {
+                ## just types 'q' and 'Q' needed special processing
             }
 
+            # If we get here, any multiline qw term has ended
             $K_start_multiline_qw = undef;
 
             # Find the terminal token, before any side comment
@@ -27261,6 +27265,17 @@ sub is_fragile_block_type {
                     $len = $rLL->[$K_last]->[_CUMULATIVE_LENGTH_] - $len0;
                     if ( $len > $max_prong_len ) { $max_prong_len = $len }
                 }
+            }
+
+            # Check for start of a multiline qw
+            elsif ( $last_nonblank_type eq 'q' && $K_last > $K_first ) {
+                my $Kn = $self->K_next_nonblank($K_last);
+                if ( $Kn && $rLL->[$Kn]->[_TYPE_] eq 'q' ) {
+                    $start_multiline_q->($K_last);
+                }
+            }
+            else {
+                ## no other special ending checks
             }
 
         } ## end loop over lines
