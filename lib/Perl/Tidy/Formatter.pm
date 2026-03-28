@@ -25756,6 +25756,31 @@ sub break_before_list_opening_containers {
 
         my $ci = $rLL->[$KK]->[_CI_LEVEL_];
 
+        # Fix for stability of the combination -xlp -bbxx=.. (b1583).
+        # The task is to keep '$rbreak_before_container_by_seqno' stable
+        # to allow -xlp to calculate stable collapsed lengths.
+        # The main issue is to ignore switching between lines like:
+        #       -command => [ \&view_widget_code, __FILE__ ]
+        # and:
+        #       -command =>
+        #          [ \&view_widget_code, __FILE__ ]
+        # Previously this could cause the break flag to oscillate, and
+        # the collapse length estimates to oscillate.
+        if ( $rOpts_extended_line_up_parentheses && $break_option == 1 ) {
+            my $iline    = $rLL->[$KK]->[_LINE_INDEX_];
+            my $rK_range = $rlines->[$iline]->{_rK_range};
+            my ( $Kfirst, $Klast_uu ) = @{$rK_range};
+
+            # The line should start with the opening container ...
+            next if ( $KK != $Kfirst );
+
+            # ... and the container should span multiple lines
+            next if ( $rline_diff_by_seqno->{$seqno} < 2 );
+
+            # Now do the checks for option 2 to be sure this is a good break
+            $break_option = 2;
+        }
+
         #--------------------------------------------
         # New coding for option 2 (break if complex).
         #--------------------------------------------

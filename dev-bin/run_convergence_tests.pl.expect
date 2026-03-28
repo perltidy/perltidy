@@ -9496,6 +9496,37 @@ $dbh = DBI->connect(
 );
 
 
+==> b1583 <==
+my $file =
+  $menubar->Menubutton(
+           qw/-text File -underline 0 -menuitems/ => [
+                                                      [
+                                                        -menuitems => [
+                                                             [
+                                                               Button   => '~widget',
+                                                               -command =>
+                                                                 [ \&view_widget_code, __FILE__ ]
+                                                             ],
+                                                        ],
+                                                      ],
+           ]
+  )->grid(qw/-sticky w/);
+
+my $file =
+  $menubar->Menubutton(
+           qw/-text File -underline 0 -menuitems/ => [
+                                                      [
+                                                        -menuitems => [
+                                                             [
+                                                               Button   => '~widget',
+                                                               -command =>
+                                                                 [ \&view_widget_code, __FILE__ ]
+                                                             ],
+                                                        ],
+                                                      ],
+           ]
+  )->grid(qw/-sticky w/);
+
 ==> b163 <==
 # State 1
 Readonly::Scalar

@@ -14367,6 +14367,42 @@ $dbh = DBI->connect(
 --extended-line-up-parentheses
 --ignore-side-comment-lengths
 
+==> b1583.in <==
+my $file =
+  $menubar->Menubutton(
+           qw/-text File -underline 0 -menuitems/ => [
+                                                      [
+                                                        -menuitems => [
+                                                             [
+                                                               Button   => '~widget',
+                                                               -command =>
+                                                                 [ \&view_widget_code, __FILE__ ]
+                                                             ],
+                                                        ],
+                                                      ],
+           ]
+  )->grid(qw/-sticky w/);
+
+my $file =
+  $menubar->Menubutton(
+                        qw/-text File -underline 0 -menuitems/ => [
+                                [
+                                  -menuitems => [
+                                                  [
+                                                    Button   => '~widget',
+                                                    -command => [ \&view_widget_code, __FILE__ ]
+                                                  ],
+                                  ],
+                                ],
+                        ]
+  )->grid(qw/-sticky w/);
+
+==> b1583.par <==
+--maximum-line-length=98
+--extended-line-up-parentheses
+--break-before-square-bracket=1
+--keep-old-breakpoints-before='i'
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar
