@@ -2,6 +2,14 @@
 
 ## 2026 02 04.01
 
+    - Add input parameter --blank-lines-prevent-cuddles, or -blpc, to
+      allow user to break a cuddled chain with a blank line. Previously,
+      the only way to prevent an unwanted cuddle was to insert a comment.
+
+    - Fixed issue git #205. In some rare cases of cuddled formatting, the
+      cuddled style could unexpectedly continue from an if-chain into
+      a sort/map/grep block.
+
     - Vertical alignment now occurs by default for the string comparison
       operator 'cmp', and these align with any numeric comparison
       operators '<=>' by default. Previously the 'cmp' operator was not

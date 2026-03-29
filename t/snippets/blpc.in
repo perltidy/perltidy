@@ -1,0 +1,12 @@
+sub baz {
+    if ($foo) {
+        print "foo\n";
+    }
+
+    elsif ('x') {
+        #
+    }
+    else {
+        print "fo\n";
+    }
+}

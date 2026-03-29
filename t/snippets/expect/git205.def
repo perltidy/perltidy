@@ -1,0 +1,10 @@
+sub baz {
+    if ($foo) {
+        print "foo\n";
+
+    }
+    else {
+        print "fo\n";
+    }
+    grep { $_ > 1 } qw(3 2 1 0);
+}

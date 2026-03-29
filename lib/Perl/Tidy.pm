@@ -3958,6 +3958,7 @@ sub generate_options {
     $category = 5;    # Linebreak controls
     ########################################
     $add_option->( 'add-newlines',                            'anl',   '!' );
+    $add_option->( 'blank-lines-prevent-cuddles',             'blpc',  '!' );
     $add_option->( 'block-brace-vertical-tightness',          'bbvt',  '=i' );
     $add_option->( 'block-brace-vertical-tightness-list',     'bbvtl', '=s' );
     $add_option->( 'brace-follower-vertical-tightness',       'bfvt',  '=i' );

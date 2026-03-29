@@ -11,6 +11,10 @@
 #8 comments.comments6
 #9 git197.def
 #10 git197.git197
+#11 blpc.blpc
+#12 blpc.def
+#13 git205.def
+#14 git205.git205
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -28,6 +32,10 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
+        'blpc' => <<'----------',
+-blpc
+-ce
+----------
         'boct' => <<'----------',
 -boc -boct='f( ;'
 ----------
@@ -47,12 +55,31 @@ BEGIN {
 --continuation-indentation=4
 --extended-continuation-indentation
 ----------
+        'git205' => <<'----------',
+--cuddled-blocks 
+--cuddled-block-list=sort,map,grep
+----------
     };
 
     ############################
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'blpc' => <<'----------',
+sub baz {
+    if ($foo) {
+        print "foo\n";
+    }
+
+    elsif ('x') { 
+        #
+    }
+    else {
+        print "fo\n";
+    }
+}
+----------
 
         'boct' => <<'----------',
 my @list = (
@@ -216,6 +243,19 @@ sub foo {
         sub { return some_function_name( 'foo', 'bar', 'baz', 'foobar', 'foobaz', '1234567' ); }, );
 }
 
+----------
+
+        'git205' => <<'----------',
+sub baz {
+    if ($foo) {
+        print "foo\n";
+
+    }
+    else {
+        print "fo\n";
+    }
+    grep { $_ > 1 } qw(3 2 1 0);
+}
 ----------
     };
 
@@ -477,6 +517,76 @@ sub foo {
 }
 
 #10...........
+        },
+
+        'blpc.blpc' => {
+            source => "blpc",
+            params => "blpc",
+            expect => <<'#11...........',
+sub baz {
+    if ($foo) {
+        print "foo\n";
+    }
+
+    elsif ('x') {
+        #
+    } else {
+        print "fo\n";
+    }
+}
+#11...........
+        },
+
+        'blpc.def' => {
+            source => "blpc",
+            params => "def",
+            expect => <<'#12...........',
+sub baz {
+    if ($foo) {
+        print "foo\n";
+    }
+
+    elsif ('x') {
+        #
+    }
+    else {
+        print "fo\n";
+    }
+}
+#12...........
+        },
+
+        'git205.def' => {
+            source => "git205",
+            params => "def",
+            expect => <<'#13...........',
+sub baz {
+    if ($foo) {
+        print "foo\n";
+
+    }
+    else {
+        print "fo\n";
+    }
+    grep { $_ > 1 } qw(3 2 1 0);
+}
+#13...........
+        },
+
+        'git205.git205' => {
+            source => "git205",
+            params => "git205",
+            expect => <<'#14...........',
+sub baz {
+    if ($foo) {
+        print "foo\n";
+
+    } else {
+        print "fo\n";
+    }
+    grep { $_ > 1 } qw(3 2 1 0);
+}
+#14...........
         },
     };
 

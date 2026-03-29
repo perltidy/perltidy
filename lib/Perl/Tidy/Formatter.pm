@@ -23512,9 +23512,10 @@ sub weld_cuddled_blocks {
     # A stack to remember open chains at all levels: This is a hash rather than
     # an array for safety because negative levels can occur in files with
     # errors.  This allows us to keep processing with negative levels.
-    # $in_chain{$level} = [$chain_type, $type_sequence];
+    # $in_chain{$level} = [$chain_type, $type_sequence, $block_type];
     my %in_chain;
-    my $CBO = $rOpts->{'cuddled-break-option'};
+    my $CBO  = $rOpts->{'cuddled-break-option'};
+    my $BLPC = $rOpts->{'blank-lines-prevent-cuddles'};
 
     # loop over structure items to find cuddled pairs
     my $level = 0;
@@ -23565,8 +23566,33 @@ sub weld_cuddled_blocks {
                 # we are in a chain and are at an opening block brace.
                 # See if we are welding this opening brace with the previous
                 # block brace.  Get their identification numbers:
-                my $closing_seqno = $in_chain{$level}->[1];
-                my $opening_seqno = $type_sequence;
+                my $closing_seqno      = $in_chain{$level}->[1];
+                my $closing_block_type = $in_chain{$level}->[2];
+
+                # Keep 'if' chains separate from others; see git #205
+                if ( $is_if_unless_elsif_else{$closing_block_type}
+                    && !$is_if_unless_elsif_else{$block_type} )
+                {
+                    next;
+                }
+
+                my $Ko = $K_closing_container->{$closing_seqno};
+                my $Kon;
+                if ( defined($Ko) ) {
+                    $Kon = $self->K_next_nonblank($Ko);
+                }
+
+                # We can weld the closing brace to its following word
+                # unless it is a comment
+                next if ( !defined($Kon) );
+                next if ( $rLL->[$Kon]->[_TYPE_] eq '#' );
+
+                # Allow a blank line after a closing container to break chain
+                if ($BLPC) {
+                    my $lx_close = $rLL->[$Ko]->[_LINE_INDEX_];
+                    my $lx_next  = $rLL->[$Kon]->[_LINE_INDEX_];
+                    next if ( $lx_next - $lx_close > 1 );
+                }
 
                 # The preceding block must be on multiple lines so that its
                 # closing brace will start a new line.
@@ -23577,32 +23603,20 @@ sub weld_cuddled_blocks {
                     $rbreak_container->{$closing_seqno} = 1;
                 }
 
-                # We can weld the closing brace to its following word ..
-                my $Ko = $K_closing_container->{$closing_seqno};
-                my $Kon;
-                if ( defined($Ko) ) {
-                    $Kon = $self->K_next_nonblank($Ko);
-                }
+                # OK to weld these two tokens...
+                $rK_weld_right->{$Ko} = $Kon;
+                $rK_weld_left->{$Kon} = $Ko;
 
-                # ..unless it is a comment
-                if ( defined($Kon) && $rLL->[$Kon]->[_TYPE_] ne '#' ) {
+                # Set flag that we want to break the next container
+                # so that the cuddled line is balanced.
+                $rbreak_container->{$type_sequence} = 1
+                  if ($CBO);
 
-                    # OK to weld these two tokens...
-                    $rK_weld_right->{$Ko} = $Kon;
-                    $rK_weld_left->{$Kon} = $Ko;
-
-                    # Set flag that we want to break the next container
-                    # so that the cuddled line is balanced.
-                    $rbreak_container->{$opening_seqno} = 1
-                      if ($CBO);
-
-                    # Remember which braces are cuddled.
-                    # The closing brace is used to set adjusted indentations.
-                    # The opening brace is not yet used but might eventually
-                    # be needed in setting adjusted indentation.
-                    $ris_cuddled_closing_brace->{$closing_seqno} = 1;
-
-                }
+                # Remember which braces are cuddled.
+                # The closing brace is used to set adjusted indentations.
+                # The opening brace is not yet used but might eventually
+                # be needed in setting adjusted indentation.
+                $ris_cuddled_closing_brace->{$closing_seqno} = 1;
 
             }
             else {
@@ -23610,11 +23624,11 @@ sub weld_cuddled_blocks {
                 # We are not in a chain. Start a new chain if we see the
                 # starting block type.
                 if ( $rcuddled_block_types->{$block_type} ) {
-                    $in_chain{$level} = [ $block_type, $type_sequence ];
+                    $in_chain{$level} =
+                      [ $block_type, $type_sequence, $block_type ];
                 }
                 else {
-                    $block_type = '*';
-                    $in_chain{$level} = [ $block_type, $type_sequence ];
+                    $in_chain{$level} = [ '*', $type_sequence, $block_type ];
                 }
             }
         }
@@ -23637,10 +23651,13 @@ sub weld_cuddled_blocks {
                     # we are sure that an opening brace for this follows.
                     $in_chain{$level}->[1] = $type_sequence;
                 }
-                else { $in_chain{$level} = undef }
+                else {
+                    $in_chain{$level} = undef;
+                }
             }
         }
         else {
+
             # not a curly brace
         }
     }
@@ -42152,6 +42169,7 @@ EOM
         }
 
         $is_vertical_alignment_keyword{$_} = 1 for @q;
+        return;
     } ## end sub initialize_closure_vertical_alignment_markers
 
     sub set_vertical_alignment_markers {

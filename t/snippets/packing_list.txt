@@ -629,3 +629,7 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
+../snippets33.t	blpc.blpc
+../snippets33.t	blpc.def
+../snippets33.t	git205.def
+../snippets33.t	git205.git205
