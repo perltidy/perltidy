@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2026 02 04.01
+## 2026 02 04.02
 
     - Add input parameter --blank-lines-prevent-cuddles, or -blpc, to
       allow user to break a cuddled chain with a blank line. Previously,

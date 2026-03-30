@@ -11,7 +11,7 @@ package Perl::Tidy::IOScalar;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '20260204.01';
+our $VERSION = '20260204.02';
 
 use constant DEVEL_MODE   => 0;
 use constant EMPTY_STRING => q{};
