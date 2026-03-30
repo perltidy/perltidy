@@ -113,6 +113,9 @@ EOM
     }
     $fh_module->close();
 
+    # insert a blank line before the next package statement
+    $fh_out->print("\n");
+
     if (@non_ascii) {
         my $num = @non_ascii;
         my ( $lno_first, $pos_first ) = @{ $non_ascii[0] };
