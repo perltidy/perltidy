@@ -1,3 +1,5 @@
+package Perl::Tidy::VerticalAligner::Line;
+
 #####################################################################
 #
 # The Perl::Tidy::VerticalAligner::Line class supplies an object to
@@ -6,7 +8,6 @@
 #
 #####################################################################
 
-package Perl::Tidy::VerticalAligner::Line;
 use strict;
 use warnings;
 

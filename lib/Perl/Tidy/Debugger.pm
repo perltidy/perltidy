@@ -1,10 +1,11 @@
+package Perl::Tidy::Debugger;
+
 #####################################################################
 #
 # The Perl::Tidy::Debugger class shows line tokenization
 #
 #####################################################################
 
-package Perl::Tidy::Debugger;
 use strict;
 use warnings;
 use English qw( -no_match_vars );

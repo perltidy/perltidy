@@ -1,3 +1,5 @@
+package Perl::Tidy::IOScalarArray;
+
 #####################################################################
 #
 # This is a stripped down version of IO::ScalarArray
@@ -10,7 +12,7 @@
 # for that.
 #
 #####################################################################
-package Perl::Tidy::IOScalarArray;
+
 use strict;
 use warnings;
 use Carp;

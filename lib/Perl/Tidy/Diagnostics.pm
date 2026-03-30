@@ -1,3 +1,5 @@
+package Perl::Tidy::Diagnostics;
+
 #####################################################################
 #
 # The Perl::Tidy::Diagnostics class writes the DIAGNOSTICS file, which is
@@ -14,7 +16,6 @@
 #
 #####################################################################
 
-package Perl::Tidy::Diagnostics;
 use strict;
 use warnings;
 use English qw( -no_match_vars );

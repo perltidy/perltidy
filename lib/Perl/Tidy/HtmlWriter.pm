@@ -1,10 +1,11 @@
+package Perl::Tidy::HtmlWriter;
+
 #####################################################################
 #
 # The Perl::Tidy::HtmlWriter class writes a copy of the input stream in html
 #
 #####################################################################
 
-package Perl::Tidy::HtmlWriter;
 use strict;
 use warnings;
 our $VERSION = '20260204.01';

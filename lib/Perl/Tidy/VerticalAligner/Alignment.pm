@@ -1,3 +1,5 @@
+package Perl::Tidy::VerticalAligner::Alignment;
+
 #####################################################################
 #
 # the Perl::Tidy::VerticalAligner::Alignment class holds information
@@ -5,7 +7,6 @@
 #
 #####################################################################
 
-package Perl::Tidy::VerticalAligner::Alignment;
 use strict;
 use warnings;
 

@@ -1,3 +1,5 @@
+package Perl::Tidy::FileWriter;
+
 #####################################################################
 #
 # The Perl::Tidy::FileWriter class writes the output file created
@@ -13,7 +15,6 @@
 #
 #####################################################################
 
-package Perl::Tidy::FileWriter;
 use strict;
 use warnings;
 our $VERSION = '20260204.01';
