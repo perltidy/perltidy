@@ -26706,8 +26706,6 @@ sub is_fragile_block_type {
     my $len;
     my $last_nonblank_type;
     my @stack;
-    ## This variable can eventually be removed due to update b1578:
-    my $has_vtc2;
 
     sub xlp_collapsed_lengths_initialize {
 
@@ -26725,18 +26723,6 @@ sub is_fragile_block_type {
             undef,       # $K_c,
             undef,       # $interrupted_list_rule
         ];
-
-        # Note if vertical-tightness-closing=2 is set for any container type
-        ## This block can eventually be removed:
-        $has_vtc2 = 0;
-        if (%closing_vertical_tightness) {
-            foreach my $tok (qw< ) ] } >) {
-                my $cvt = $closing_vertical_tightness{$tok};
-                next if ( !$cvt || $cvt != 2 );
-                $has_vtc2 = 1;
-                last;
-            }
-        }
 
         return;
     } ## end sub xlp_collapsed_lengths_initialize
@@ -26943,21 +26929,6 @@ sub is_fragile_block_type {
                         if ( $type_m eq '->' || $is_closing_type{$type_m} ) {
                             return 1;
                         }
-                    }
-
-                    # Check for issue b1565:
-                    # where the one-line block formatting could be unstable due
-                    # to alternating length estimates if the line is an intact
-                    # list preceded by a '=>' on the previous line, like this:
-                    #      isa =>
-                    #      ['My::LDAPConnect', 'SPOPS::LDAP::MultiDatasource'],
-                    # Deactivated: replaced with more general fix b1565a
-                    # FIXME: delete this block
-                    if (   0
-                        && $K_test == $K_first
-                        && $self->[_ris_list_by_seqno_]->{$seqno} )
-                    {
-                        return 1;
                     }
 
                     # Skip past this container
@@ -27264,23 +27235,6 @@ sub is_fragile_block_type {
                         if ( $length > $max_prong_len ) {
                             $max_prong_len = $length;
                         }
-
-                        # Fix for b1525: avoid instability for a leading comma
-                        # in interrupted mode when -iscl is set
-                        # FIXME: the next two blocks can be deleted
-                        elsif ( 0
-                            && $K_terminal == $K_first
-                            && $rOpts_ignore_side_comment_lengths
-                            && $has_comment )
-                        {
-                            # Updated for b1548 to use an increment of 1
-                            # instead of 2 if no space to comma.
-                            $max_prong_len +=
-                              $want_left_space{','} == WS_YES ? 2 : 1;
-                        }
-                        else {
-                            ## no other special cases
-                        }
                     }
                 }
             }
@@ -27353,9 +27307,6 @@ sub is_fragile_block_type {
         my $rcollapsed_length_by_seqno = $self->[_rcollapsed_length_by_seqno_];
         my $ris_permanently_broken     = $self->[_ris_permanently_broken_];
         my $ris_list_by_seqno          = $self->[_ris_list_by_seqno_];
-        my $rline_diff_by_seqno        = $self->[_rline_diff_by_seqno_];
-        my $rmax_closing_vertical_tightness =
-          $self->[_rmax_closing_vertical_tightness_];
         my $rbreak_before_container_by_seqno =
           $self->[_rbreak_before_container_by_seqno_];
 
@@ -27413,24 +27364,6 @@ sub is_fragile_block_type {
                                     && $rLL->[ $KK - 1 ]->[_TYPE_] eq 'b' );
                             }
                         }
-                    }
-
-                    # b1539 fix; see also b1541:
-                    # Turn off vtc=2 locally to avoid causing a list to form a
-                    # one-line block in a broken list, and thus causing the
-                    # interrupted_list_rule to oscillate.
-                    # Deactivated for b1578; see alternate b1539 fixes
-                    # **FIXME: This block and var $has_vtc2 can be deleted
-                    if (   0
-                        && $has_vtc2
-                        && $ris_list_by_seqno->{$seqno}
-                        && $rline_diff_by_seqno->{$seqno}
-                        && !$ris_permanently_broken->{$seqno}
-                        && @stack
-                        && defined( $stack[-1]->[_interrupted_list_rule_] )
-                        && $stack[-1]->[_interrupted_list_rule_] == 0 )
-                    {
-                        $rmax_closing_vertical_tightness->{$seqno} = 0;
                     }
 
                     # Set a flag if the 'Interrupted List Rule' will be applied
