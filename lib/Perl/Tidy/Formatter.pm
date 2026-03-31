@@ -3508,6 +3508,7 @@ EOM
         # This is not needed if b1507 Option 4 is set, but it improves
         # formatting in some marginal cases (see b1466). This is deactivated
         # with c486.
+        # FIXME: this unused block can be removed
         if (   0
             && !$rOpts->{'add-whitespace'}
             && $rOpts->{'extended-line-up-parentheses'}
@@ -3530,6 +3531,7 @@ EOM
     # The -vmll and -lp parameters do not really work well together.
     # This is a very crude fix for an unusual parameter combination.
     # DEACTIVATED with b1520: no longer needed, but retain for history
+    # FIXME: this unused block can be removed
     if (   0
         && $rOpts->{'variable-maximum-line-length'}
         && $rOpts->{'line-up-parentheses'}
@@ -7048,6 +7050,7 @@ EOM
             # where the previous token was 'open' and there was no line break.
             # Even this could eventually be removed if it causes instability.
 
+            # FIXME: this unused block can be removed
             if ( $type eq '{' ) {
 
                 # Update 2: Deactivated to fix b1508, where the 'open' case was
@@ -8536,6 +8539,7 @@ EOM
             # removed.
             # NOTE: The update for b1491 also fixes cases b1482-6 in a
             # more general way, so this test can be deactivated.
+            # FIXME: this unused block can be removed
             if (   0
                 && !$rOpts_add_whitespace
                 && $level_words >= $high_stress_level )
@@ -8588,6 +8592,7 @@ EOM
         # NOTE: this instability has been fixed by following the input
         # whitespace within parens, but keep this code for a while in case the
         # issue arises in the future (b1487).
+        # FIXME: this unused block can be removed
         if (   0
             && !$rOpts_add_whitespace
             && $rOpts_line_up_parentheses
@@ -18789,6 +18794,7 @@ sub delete_trailing_comma {
     # previous fix which locally changed the cab value. The method here
     # is more robust.
     # DEACTIVATED and replaced with b1535
+    # FIXME: this unused block can be removed
     if (   0
         && !$match
         && $rOpts_add_trailing_commas
@@ -19528,6 +19534,7 @@ sub match_trailing_comma_rule {
             # DEACTIVATED: This was causing instability and replaced as part
             # of b1529, which turns off comma deletions if -cab=3 -atc -lp
             # instead of changing -cab=3.
+            # FIXME: this unused block can be removed
             if ( 0 && $rOpts_comma_arrow_breakpoints == 3 ) {
                 $self->[_roverride_cab3_]->{$type_sequence} = 0;
             }
@@ -23189,6 +23196,7 @@ sub check_for_old_break {
             # Update the permanently broken flag for a non-sequenced token.
             # First added in b1538; soft break check added for b1540.
             # Deactivated for b1543 to avoid problems with -xlp
+            # FIXME: this unused block can be removed
             if ( 0 && !$is_soft_keep_break_type{$type} ) {
                 my $seqno_parent           = $self->parent_seqno_by_K($KK);
                 my $ris_permanently_broken = $self->[_ris_permanently_broken_];
@@ -23240,6 +23248,7 @@ EOM
                 # Update the permanently broken flag for a sequenced token.
                 # First added in b1538; soft break check added for b1540.
                 # Removed for b1541, b1542 to avoid problems with -xlp
+                # FIXME: this unused block can be removed
                 if ( 0 && !$is_soft_keep_break_type{$type} ) {
                     my $seqno_parent =
                       (      $is_opening_type{$type} && $break_after
@@ -30284,6 +30293,7 @@ EOM
                     # NOTE: **This test can eventually be removed**
                     # The fix for b1515 prevents a phantom semicolon for
                     # a one-line block with -nasc, so this check has no effect.
+                    # FIXME: this unused block can be removed
                     if (   0
                         && $rOpts_space_terminal_semicolon
                         && !$rOpts_add_semicolons )
@@ -38013,6 +38023,7 @@ EOM
             # Fixes cases b1137 b1149 b1150 b1155 b1158 b1159 b1160
             # b1161 b1166 b1167 b1168
             # Deactivated after fix b1528, no longer necessary (c511)
+            # FIXME: this unused block can be removed
             if (   0
                 && !$ci_levels_to_go[$i_opening]
                 && $self->[_rbreak_before_container_by_seqno_]->{$type_sequence}
@@ -38162,6 +38173,7 @@ EOM
         # If this flag is set, we will implement it by pretending we did not
         # see the opening structure, since in that case parens always get
         # opened up.  NOTE: deactivated, eventually to be deleted.
+        # FIXME: this unused block can be removed
         if (   0
             && $saw_opening_structure
             && $rOpts_break_open_compact_parens )
@@ -38561,6 +38573,7 @@ EOM
         my $tol           = 0;
 
         # Deactivated extra tols after update 1528; no longer necessary (c509)
+        # FIXME: this unused block can be removed
         if (   0
             && $break_before_container_types{$opening_token}
             && $container_indentation_options{$opening_token}
@@ -40231,6 +40244,7 @@ sub get_available_spaces_to_go {
 
         # fix for b1465: -vmll adds stress for -xlp
         # DEACTIVATED with b1520, which fixes b1465 in a more general way.
+        # FIXME: this unused block can be removed
         if (   0
             && $high_stress_level <= 2
             && $rOpts_variable_maximum_line_length )
