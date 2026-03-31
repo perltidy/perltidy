@@ -3504,41 +3504,12 @@ EOM
             $rOpts->{'extended-line-up-parentheses'} = 0;
         }
 
-        # b1507 fix, Option 2: -xlp -xci -naws can be unstable: turn off -xci
-        # This is not needed if b1507 Option 4 is set, but it improves
-        # formatting in some marginal cases (see b1466). This is deactivated
-        # with c486.
-        # FIXME: this unused block can be removed
-        if (   0
-            && !$rOpts->{'add-whitespace'}
-            && $rOpts->{'extended-line-up-parentheses'}
-            && $rOpts->{'extended-continuation-indentation'} )
-        {
-            $rOpts->{'extended-continuation-indentation'} = 0;
-        }
-
         if ( $rOpts->{'whitespace-cycle'} ) {
             Warn(<<EOM);
 Conflict: -wc cannot currently be used with the -lp option; ignoring -wc
 EOM
             $rOpts->{'whitespace-cycle'} = 0;
         }
-    }
-
-    #-----------------------------------------------------------
-    # The combination -lp -vmll can be unstable if -ci<2 (b1267)
-    #-----------------------------------------------------------
-    # The -vmll and -lp parameters do not really work well together.
-    # This is a very crude fix for an unusual parameter combination.
-    # DEACTIVATED with b1520: no longer needed, but retain for history
-    # FIXME: this unused block can be removed
-    if (   0
-        && $rOpts->{'variable-maximum-line-length'}
-        && $rOpts->{'line-up-parentheses'}
-        && $rOpts->{'continuation-indentation'} < 2 )
-    {
-        $rOpts->{'continuation-indentation'} = 2;
-        ##Warn("Increased -ci=n to n=2 for stability with -lp and -vmll\n");
     }
 
     #-----------------------------------------------------------
@@ -7036,40 +7007,10 @@ EOM
                 $bond_str = NO_BREAK;
             }
 
-            # Original note: In older version of perl, use strict can cause
-            # problems with breaks before bare words following opening parens.
-            # For example, this will fail under older versions if a break is
-            # made between '(' and 'MAIL':
-
-            # use strict; open( MAIL, "a long filename or command"); close MAIL;
-
-            # Update 1: Third fix for b1213:
-            # This option does not seem to be needed any longer, and it can
-            # cause instabilities.  It can be turned off, but to minimize
-            # changes to existing formatting it is retained only in the case
-            # where the previous token was 'open' and there was no line break.
-            # Even this could eventually be removed if it causes instability.
-
-            # FIXME: this unused block can be removed
-            if ( $type eq '{' ) {
-
-                # Update 2: Deactivated to fix b1508, where the 'open' case was
-                # a problem
-                if (   0
-                    && $token eq '('
-                    && $next_nonblank_type eq 'w'
-                    && $last_nonblank_type eq 'k'
-                    && $last_nonblank_token eq 'open'
-                    && !$old_breakpoint_to_go[$i] )
-                {
-                    $bond_str = NO_BREAK;
-                }
-            }
-
             # Do not break between a possible filehandle and a ? or / and do
             # not introduce a break after it if there is no blank
             # (extrude.t)
-            elsif ( $type eq 'Z' ) {
+            if ( $type eq 'Z' ) {
 
                 # don't break..
                 if (
@@ -8532,20 +8473,6 @@ EOM
             }
             $qw_text           = substr( $qw_text, 3 );
             $has_opening_space = $qw_text =~ s/^\s+//;
-
-            # Do not use -qwaf under high stress (b1482,b1483,b1484,b1485,1486)
-            # Note: so far all known cases of stress instability have had -naws
-            # set, so this is included for now. It may eventually need to be
-            # removed.
-            # NOTE: The update for b1491 also fixes cases b1482-6 in a
-            # more general way, so this test can be deactivated.
-            # FIXME: this unused block can be removed
-            if (   0
-                && !$rOpts_add_whitespace
-                && $level_words >= $high_stress_level )
-            {
-                return;
-            }
         }
 
         # Look for and remove any closing ')'
@@ -8584,20 +8511,6 @@ EOM
 Error parsing the following qw string at line $lno:
 $qw_text_start
 EOM
-            return;
-        }
-
-        # The combination -naws -lp can currently be unstable for multi-line qw
-        # (b1487, b1488).
-        # NOTE: this instability has been fixed by following the input
-        # whitespace within parens, but keep this code for a while in case the
-        # issue arises in the future (b1487).
-        # FIXME: this unused block can be removed
-        if (   0
-            && !$rOpts_add_whitespace
-            && $rOpts_line_up_parentheses
-            && ( !$opening || !$closing ) )
-        {
             return;
         }
 
@@ -18787,26 +18700,6 @@ sub delete_trailing_comma {
         }
     }
 
-    # The combination -cab=3 -lp -atc -dtc can be unstable in paren lists with
-    # '=>' tokens. So in this case we do not delete. Fixes b1529, b1533.  This
-    # is very rare because -cab=3 is seldom used, and a user can always run
-    # -atc and -dtc in separate runs if necessary. See also b1394 for a
-    # previous fix which locally changed the cab value. The method here
-    # is more robust.
-    # DEACTIVATED and replaced with b1535
-    # FIXME: this unused block can be removed
-    if (   0
-        && !$match
-        && $rOpts_add_trailing_commas
-        && $rOpts_line_up_parentheses
-        && $rOpts_comma_arrow_breakpoints == 3
-        && $rLL->[$Kfirst]->[_TOKEN_] eq '(' )
-    {
-        my $type_sequence = $rLL->[$KK]->[_TYPE_SEQUENCE_];
-        my $rtype_count   = $self->[_rtype_count_by_seqno_]->{$type_sequence};
-        if ( $rtype_count->{'=>'} ) { $match = 0 }
-    }
-
     # If no match and not delayed
     if ( !$match && !$self->delay_trailing_comma_op( 0, $stable_flag ) ) {
 
@@ -19527,17 +19420,6 @@ sub match_trailing_comma_rule {
             || !$if_add && $rOpts_add_trailing_commas )
         {
             $self->[_ris_bare_trailing_comma_by_seqno_]->{$type_sequence} = 1;
-
-            # The combination of -atc and -dtc and -cab=3 can be unstable
-            # (b1394). So we deactivate -cab=3 in this case.
-            # A value of '0' or '4' is required for stability of case b1451.
-            # DEACTIVATED: This was causing instability and replaced as part
-            # of b1529, which turns off comma deletions if -cab=3 -atc -lp
-            # instead of changing -cab=3.
-            # FIXME: this unused block can be removed
-            if ( 0 && $rOpts_comma_arrow_breakpoints == 3 ) {
-                $self->[_roverride_cab3_]->{$type_sequence} = 0;
-            }
         }
     }
     return $match;
@@ -23157,7 +23039,7 @@ EOM
 } ## end sub warn_nested_ternaries
 
 sub check_for_old_break {
-    my ( $self, $KK, $rkeep_break_hash, $rbreak_hash, $break_after ) = @_;
+    my ( $self, $KK, $rkeep_break_hash, $rbreak_hash, $break_after_uu ) = @_;
 
     # This sub is called to help implement flags:
     # --keep-old-breakpoints-before and --keep-old-breakpoints-after
@@ -23192,20 +23074,6 @@ sub check_for_old_break {
             }
 
             $rbreak_hash->{$KK} = $is_soft_keep_break_type{$type} ? 2 : 1;
-
-            # Update the permanently broken flag for a non-sequenced token.
-            # First added in b1538; soft break check added for b1540.
-            # Deactivated for b1543 to avoid problems with -xlp
-            # FIXME: this unused block can be removed
-            if ( 0 && !$is_soft_keep_break_type{$type} ) {
-                my $seqno_parent           = $self->parent_seqno_by_K($KK);
-                my $ris_permanently_broken = $self->[_ris_permanently_broken_];
-                if ( !$ris_permanently_broken->{$seqno_parent} ) {
-                    $ris_permanently_broken->{$seqno_parent} = 1;
-                    $self->mark_parent_containers( $seqno_parent,
-                        $ris_permanently_broken );
-                }
-            }
         }
     }
 
@@ -23244,25 +23112,6 @@ EOM
             if ($match) {
                 my $type = $rLL->[$KK]->[_TYPE_];
                 $rbreak_hash->{$KK} = $is_soft_keep_break_type{$type} ? 2 : 1;
-
-                # Update the permanently broken flag for a sequenced token.
-                # First added in b1538; soft break check added for b1540.
-                # Removed for b1541, b1542 to avoid problems with -xlp
-                # FIXME: this unused block can be removed
-                if ( 0 && !$is_soft_keep_break_type{$type} ) {
-                    my $seqno_parent =
-                      (      $is_opening_type{$type} && $break_after
-                          || $is_closing_type{$type} && !$break_after )
-                      ? $seqno
-                      : $self->parent_seqno_by_K($KK);
-                    my $ris_permanently_broken =
-                      $self->[_ris_permanently_broken_];
-                    if ( !$ris_permanently_broken->{$seqno_parent} ) {
-                        $ris_permanently_broken->{$seqno_parent} = 1;
-                        $self->mark_parent_containers( $seqno_parent,
-                            $ris_permanently_broken );
-                    }
-                }
             }
         }
     }
@@ -30286,22 +30135,6 @@ EOM
                         && !$is_block_without_semicolon{$block_type} )
                     {
                         $added_length += $Knnb - $Ktoken_vars - 1;
-                    }
-
-                    # Allow for preceding spaced semicolon
-                    # b1510 b1511 b1512 b1513 b1514
-                    # NOTE: **This test can eventually be removed**
-                    # The fix for b1515 prevents a phantom semicolon for
-                    # a one-line block with -nasc, so this check has no effect.
-                    # FIXME: this unused block can be removed
-                    if (   0
-                        && $rOpts_space_terminal_semicolon
-                        && !$rOpts_add_semicolons )
-                    {
-                        my $Km = $self->K_previous_nonblank($Ktoken_vars);
-                        if ( $Km && $rLL->[$Km]->[_TYPE_] eq ';' ) {
-                            $added_length += 1;
-                        }
                     }
 
                     # we have to terminate it if..
@@ -38016,22 +37849,6 @@ EOM
                 $tol += $dtol;
             }
 
-            # OLD: Patch to avoid blinking with -bbxi=2 and -cab=2
-            # in which variations in -ci cause unstable formatting
-            # in edge cases. We just always add one ci level so that
-            # the formatting is independent of the -BBX results.
-            # Fixes cases b1137 b1149 b1150 b1155 b1158 b1159 b1160
-            # b1161 b1166 b1167 b1168
-            # Deactivated after fix b1528, no longer necessary (c511)
-            # FIXME: this unused block can be removed
-            if (   0
-                && !$ci_levels_to_go[$i_opening]
-                && $self->[_rbreak_before_container_by_seqno_]->{$type_sequence}
-              )
-            {
-                $tol += $rOpts_continuation_indentation;
-            }
-
             $is_long_term = $excess + $tol > 0;
         }
 
@@ -38168,35 +37985,6 @@ EOM
         # sub-container, so it will be broken open to avoid too much density.
         # Also, since it contains no 'or's, there will be a forced break at
         # its 'and'.
-
-        # Experimental coding for --break-open-compact-parens.
-        # If this flag is set, we will implement it by pretending we did not
-        # see the opening structure, since in that case parens always get
-        # opened up.  NOTE: deactivated, eventually to be deleted.
-        # FIXME: this unused block can be removed
-        if (   0
-            && $saw_opening_structure
-            && $rOpts_break_open_compact_parens )
-        {
-
-            # This parameter is a one-character flag, as follows:
-            #  '0' matches no parens  -> break open NOT OK
-            #  '1' matches all parens -> break open OK
-            #  Other values are same as used by the weld-exclusion-list
-            my $flag = $rOpts_break_open_compact_parens;
-            if (   $flag eq '*'
-                || $flag eq '1' )
-            {
-                $saw_opening_structure = 0;
-            }
-            else {
-
-                # NOTE: $seqno will be equal to closure var $type_sequence here
-                my $seqno = $type_sequence_to_go[$i_opening];
-                $saw_opening_structure =
-                  !$self->match_paren_control_flag( $seqno, $flag );
-            }
-        }
 
         # Set some more flags telling something about this container..
         my $is_simple_logical_expression;
@@ -38569,39 +38357,7 @@ EOM
 
         # The -bbxi=2 parameters can add an extra hidden level of indentation
         # so they need a tolerance to avoid instability.  Fixes b1259, 1260.
-        my $opening_token = $tokens_to_go[$i_opening_paren];
-        my $tol           = 0;
-
-        # Deactivated extra tols after update 1528; no longer necessary (c509)
-        # FIXME: this unused block can be removed
-        if (   0
-            && $break_before_container_types{$opening_token}
-            && $container_indentation_options{$opening_token}
-            && $container_indentation_options{$opening_token} == 2 )
-        {
-            $tol = $rOpts_indent_columns;
-
-            # use greater of -ci and -i (fix for case b1334)
-            if ( $tol < $rOpts_continuation_indentation ) {
-                $tol = $rOpts_continuation_indentation;
-            }
-        }
-
-        # Increase tol when -atc and -dtc are both used to allow for
-        # possible loss in length on next pass due to a comma. Fixes b1455.
-        # DEACTIVATED and replaced with fix b1530, below.
-        if (
-               0
-            && $rOpts_delete_trailing_commas
-            && $rOpts_add_trailing_commas
-
-            # optional additional restriction which works for b1455:
-            && $rOpts_extended_continuation_indentation
-            && $rOpts_continuation_indentation > $rOpts_indent_columns
-          )
-        {
-            $tol += 1;
-        }
+        my $tol = 0;
 
         # Fix b1530: make result independent of any trailing comma. This will
         # help avoid instability with --add and --delete-trailing-commas, and
@@ -40239,16 +39995,6 @@ sub get_available_spaces_to_go {
 
         # fix for b1459: -naws adds stress for -xlp
         if ( $high_stress_level <= 2 && !$rOpts_add_whitespace ) {
-            $rOpts_extended_line_up_parentheses = 0;
-        }
-
-        # fix for b1465: -vmll adds stress for -xlp
-        # DEACTIVATED with b1520, which fixes b1465 in a more general way.
-        # FIXME: this unused block can be removed
-        if (   0
-            && $high_stress_level <= 2
-            && $rOpts_variable_maximum_line_length )
-        {
             $rOpts_extended_line_up_parentheses = 0;
         }
 
