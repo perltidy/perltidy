@@ -2262,9 +2262,9 @@ sub set_line_separator {
                 $rinput_string = \$buf;
             }
 
-            # unknown line ending scheme - leave it alone and let the tokenizer
-            # deal with it
+            # unknown line ending scheme
             else {
+                ## leave it alone and let the tokenizer deal with it
             }
         }
     }
@@ -6268,7 +6268,7 @@ sub read_config_file {
             }
         }
         else {
-            # no abbreviations to untangle
+            ## no abbreviations to untangle
         }
 
         # Now store any parameters

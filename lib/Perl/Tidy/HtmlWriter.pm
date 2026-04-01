@@ -1144,7 +1144,7 @@ sub pod_to_html_old {
                 push @args, "--no$kwd";
             }
             else {
-                # user did not set this keyword
+                ## user did not set this keyword
             }
         }
 
@@ -1172,7 +1172,7 @@ sub pod_to_html_old {
         $fh->close() or Warn("Cannot close $tmpfile\n");
     }
     else {
-        # this error shouldn't happen ... we just used this filename
+        ## this error shouldn't happen ... we just used this filename
         Perl::Tidy::Warn(
             "unable to open temporary file $tmpfile; cannot use Pod::Html\n");
         return;
@@ -1824,7 +1824,9 @@ EOM
                 return;
             }
         }
-        else { $line_character = 'Q' }
+        else {
+            $line_character = 'Q';
+        }
         $html_line = $self->markup_html_element( $input_line, $line_character );
     }
 

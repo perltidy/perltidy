@@ -1520,7 +1520,7 @@ sub get_line {
             );
         }
         else {
-            # not a code-skipping control line
+            ## not a code-skipping control line
         }
         return $line_of_tokens;
     }
@@ -1572,7 +1572,7 @@ sub get_line {
         }
     }
     else {
-        # not a special control line
+        ## not a special control line
     }
 
     # check for a hash-bang line if we haven't seen one
@@ -1765,7 +1765,7 @@ sub get_line {
         return $line_of_tokens;
     }
     else {
-        # not in __END__ or __DATA__
+        ## not in __END__ or __DATA__
     }
 
     # now, finally, we know that this line is type 'CODE'
@@ -1805,7 +1805,7 @@ sub get_line {
         $self->log_numbered_msg("End of multi-line quote or pattern\n");
     }
     else {
-        # not at the edge of a quote
+        ## not at the edge of a quote
     }
 
     # we are returning a line of CODE
@@ -3548,7 +3548,9 @@ EOM
                 $self->write_logfile_entry($msg);
             }
         }
-        else { $is_pattern = ( $expecting == TERM ) }
+        else {
+            $is_pattern = ( $expecting == TERM );
+        }
 
         if ($is_pattern) {
             $in_quote                = 1;
@@ -3682,7 +3684,7 @@ EOM
             $want_paren = EMPTY_STRING;
         }
         else {
-            # not special
+            ## not special
         }
 
         # now identify which of the three possible types of
@@ -3795,9 +3797,8 @@ EOM
         if ( defined( $rbrace_package->[$brace_depth] ) ) {
             $current_package = $rbrace_package->[$brace_depth];
         }
-
-        # can happen on brace error (caught elsewhere)
         else {
+            ## can happen on brace error (caught elsewhere)
         }
         ( $type_sequence, $indent_flag ) =
           $self->decrease_nesting_depth( BRACE, $rtoken_map->[$i_tok] );
@@ -3855,6 +3856,7 @@ EOM
             }
         }
         else {
+            ## '&' is an operator
         }
         return;
     } ## end sub do_AMPERSAND
@@ -3883,6 +3885,7 @@ EOM
             }
         }
         else {
+            ## ok:  '<' is less than
         }
         return;
     } ## end sub do_LESS_THAN_SIGN
@@ -3943,7 +3946,9 @@ EOM
                 }
             }
         }
-        else { $is_pattern = ( $expecting == TERM ) }
+        else {
+            $is_pattern = ( $expecting == TERM );
+        }
 
         if ($is_pattern) {
             $in_quote                = 1;
@@ -4324,7 +4329,7 @@ EOM
                         "Unconventional here-target: '$here_doc_target'\n");
                 }
                 else {
-                    # nothing to complain about
+                    ## nothing to complain about
                 }
             }
             elsif ( $expecting == TERM ) {
@@ -4346,10 +4351,11 @@ EOM
 
             # target not found, expecting == UNKNOWN
             else {
-                # assume it is a shift
+                ## assume it is a shift
             }
         }
         else {
+            ## '<<' is shift
         }
         return;
     } ## end sub do_LEFT_SHIFT
@@ -4392,7 +4398,7 @@ EOM
                         "Unconventional here-target: '$here_doc_target'\n");
                 }
                 else {
-                    # nothing to complain about
+                    ## nothing to complain about
                 }
 
                 # Note that we put a leading space on the here quote
@@ -5523,6 +5529,7 @@ EOM
                 }
             }
             else {
+                ## something else
             }
 
             if ( DEBUG_BAREWORD && $result ne 'other bareword' ) {
@@ -6057,7 +6064,7 @@ EOM
                 $self->[_in_format_skipping_] = 0;
             }
             else {
-                # not a format skipping comment
+                ## not a format skipping comment
             }
 
             # Optional fast processing of a block comment
@@ -6185,7 +6192,7 @@ EOM
                         $self->complain("Should 'ne' be '!=' here ?\n");
                     }
                     else {
-                        # that's all
+                        ## that's all
                     }
                 }
 
@@ -6229,7 +6236,7 @@ EOM
                         }
                     }
                     else {
-                        # No other patches
+                        ## No other patches
                     }
                 }
             }
@@ -6638,7 +6645,7 @@ EOM
                     }
                 }
                 else {
-                    # valid token type other than ; and t
+                    ## valid token type other than ; and t
                 }
 
                 #----------------------------------------------------
@@ -7637,7 +7644,7 @@ sub decide_if_code_block {
             $j++;
         }
         else {
-            # none of the above
+            ## none of the above
         }
         if ( $j > $jbeg ) {
 
@@ -8694,9 +8701,8 @@ sub scan_bare_identifier_do {
                     $type = 'Z';
                 }
             }
-
-            # none of the above special types
             else {
+                ## none of the above special types
             }
         }
 
@@ -9256,7 +9262,7 @@ sub do_scan_package {
                           "Space in identifier, following $identifier\n";
                     }
                     else {
-                        # silently accept space after '$' and '@' sigils
+                        ## silently accept space after '$' and '@' sigils
                     }
                 }
             }
@@ -10123,6 +10129,7 @@ EOM
                 $tok = $last_nonblank_token;
             }
             else {
+                ##
             }
 
             $match ||= 1;
@@ -10278,9 +10285,8 @@ EOM
                     );
                 }
             }
-
-            # EOF technically ok
             else {
+                ## EOF technically ok
             }
 
             check_prototype( $proto, $package, $subname );
@@ -10288,7 +10294,7 @@ EOM
 
         # no match to either sub name or prototype, but line not blank
         else {
-
+            ##
         }
         return ( $i, $tok, $type, $id_scan_state );
     } ## end sub do_scan_sub

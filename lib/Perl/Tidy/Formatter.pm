@@ -2981,7 +2981,7 @@ EOM
             $rOpts->{'line-up-parentheses-inclusion-list'}, 'lpil' );
     }
     else {
-        # neither -lpxl nor -lpil specified
+        ## neither -lpxl nor -lpil specified
     }
     return;
 } ## end sub initialize_lpxl_lpil
@@ -3781,7 +3781,7 @@ Unknown flag '$flag' given for '$key' in '-$short_name'
 EOM
         }
         else {
-            # no error seen
+            ## no error seen
         }
 
         $rkeep_break_hash->{$key} = $flag;
@@ -3907,7 +3907,7 @@ EOM
             push @Q_subtype_list, $word;
         }
         else {
-            # something is wrong; previous checks should prevent arriving here
+            ## something is wrong; previous checks should prevent arriving here
             DEVEL_MODE
               && Fault(
                 "unexpected word '$word' while initializing -mutt=$opt\n");
@@ -4383,7 +4383,7 @@ EOM
         $opt = 0;
     }
     else {
-        # no error seen
+        ## no error seen
     }
     $rOpts->{$long_name} = $opt;
     return;
@@ -4737,10 +4737,16 @@ EOM
                     if ( !defined( $rule_hash{$key} ) ) {
                         $rule_hash{$key} = $ch2 ? 1 : -1;
                     }
-                    else { $err_msg = "multiple copies for '$key'"; last; }
+                    else {
+                        $err_msg = "multiple copies for '$key'";
+                        last;
+                    }
                     $ch1 = $ch2 = undef;
                 }
-                else { $err_msg = "unexpected '$4'"; last }
+                else {
+                    $err_msg = "unexpected '$4'";
+                    last;
+                }
                 next;
             }
             if ($5) {
@@ -5109,7 +5115,9 @@ sub set_whitespace_flags {
                 if ( $last_block_type && $last_token eq '{' ) {
                     $tightness_here = $rOpts_block_brace_tightness;
                 }
-                else { $tightness_here = $tightness{$last_token} }
+                else {
+                    $tightness_here = $tightness{$last_token};
+                }
 
                 #=============================================================
                 # Patch for test problem <<snippets/fabrice_bug.in>>
@@ -5315,7 +5323,9 @@ sub set_whitespace_flags {
                     if ( $block_type && $token eq '}' ) {
                         $tightness_here = $rOpts_block_brace_tightness;
                     }
-                    else { $tightness_here = $tightness{$token} }
+                    else {
+                        $tightness_here = $tightness{$token};
+                    }
 
                     $ws = ( $tightness_here > 1 ) ? WS_NO : WS_YES;
                 }
@@ -5463,7 +5473,7 @@ sub set_whitespace_flags {
                 }
 
                 else {
-                    # no special rule for this opening paren type
+                    ## no special rule for this opening paren type
                 }
             }
 
@@ -5473,7 +5483,7 @@ sub set_whitespace_flags {
                 $ws = WS_OPTIONAL;
             }
             else {
-                # opening type not covered by a special rule
+                ## opening type not covered by a special rule
             }
 
             # keep space between 'sub' and '{' for anonymous sub definition,
@@ -5514,7 +5524,7 @@ sub set_whitespace_flags {
         } ## end elsif ( $is_opening_type{$type} ) {
 
         else {
-            # $type not opening, closing, or covered by a special rule
+            ## $type not opening, closing, or covered by a special rule
         }
 
         # always preserve whatever space was used after a possible
@@ -6983,7 +6993,7 @@ EOM
                 if ( $bond_str < STRONG ) { $bond_str = STRONG }
             }
             else {
-                # no applicable hardwired change
+                ## no applicable hardwired change
             }
 
             #---------------------------------------------------------------
@@ -7043,7 +7053,7 @@ EOM
                     && $next_nonblank_type ne '//' );
             }
             else {
-                # no hardwired rule applies
+                ## no hardwired rule applies
             }
 
             # Breaking before a ? before a quote can cause trouble if
@@ -7076,7 +7086,7 @@ EOM
                 }
             }
             else {
-                # no special NO_BREAK rule applies
+                ## no special NO_BREAK rule applies
             }
 
             $bond_str_2 = $bond_str if (DEBUG_BOND);
@@ -7256,7 +7266,7 @@ EOM
                     $strength -= 1;
                 }
                 else {
-                    # not welded left or right
+                    ## not welded left or right
                 }
             }
 
@@ -7615,7 +7625,7 @@ sub initialize_closing_side_comments {
         }
     }
     else {
-        # no -csc flags
+        ## no -csc flags
     }
 
     return;
@@ -12555,7 +12565,7 @@ sub set_ci {
                               $rparent->{_container_type} eq 'Logical';
                         }
                         else {
-                            # does not look like a logical paren
+                            ## does not look like a logical paren
                         }
                     }
 
@@ -12765,7 +12775,7 @@ sub set_ci {
         }
 
         else {
-            # not a special ci type
+            ## not a special ci type
         }
 
         # Save debug info if requested
@@ -13076,8 +13086,8 @@ sub set_CODE_type {
                         );
                     }
                     else {
-                        # unexpected second start marker in inverted mode
-                        # ignore; let warning occur in normal mode
+                        ## unexpected second start marker in inverted mode
+                        ## ignore; let warning occur in normal mode
                     }
                 }
                 else {
@@ -13149,7 +13159,7 @@ sub set_CODE_type {
                 push @format_marker_list, [ -1, $input_line_no ];
             }
             else {
-                # not at a format skipping control line
+                ## not at a format skipping control line
             }
         }
 
@@ -13981,7 +13991,7 @@ sub scan_variable_usage {
             push @sigils_to_test, $sigil;
         }
         else {
-            # neither
+            ## neither
         }
 
         # See if this name has been seen, possibly with a different sigil
@@ -14468,7 +14478,7 @@ EOM
         }
 
         else {
-            # chain ends if no elsif/else block
+            ## chain ends if no elsif/else block
         }
 
         if (   $seqno_block
@@ -14695,11 +14705,11 @@ EOM
                         return;
                     }
                     else {
-                        # not a block, not on stack: nothing to do
+                        ## not a block, not on stack: nothing to do
                     }
                 }
                 else {
-                    # ternary
+                    ## ternary
                 }
             }
 
@@ -14852,7 +14862,7 @@ EOM
                     }
                 }
                 else {
-                    # ignore variable if not collecting 'my' or counts
+                    ## ignore variable if not collecting 'my' or counts
                 }
             }
 
@@ -15020,7 +15030,7 @@ EOM
                 }
             }
             else {
-                # skip all other token types
+                ## skip all other token types
             }
         }
     }
@@ -15261,7 +15271,7 @@ sub initialize_warn_hash {
             return $rwarn_hash;
         }
         else {
-            # should be one of the allowed letters - catch any error below
+            ## should be one of the allowed letters - catch any error below
         }
     }
 
@@ -16179,7 +16189,7 @@ sub interbracket_arrow_check {
             }
         }
         else {
-            # something else
+            ## something else
         }
 
         # now check for a preceding closing bracket or hash brace
@@ -16232,7 +16242,7 @@ sub interbracket_arrow_check {
             }
         }
         else {
-            # complexity flag >1 => no restriction
+            ## complexity flag >1 => no restriction
         }
 
         # set a flag telling sub respace_tokens to actually make the change
@@ -17270,7 +17280,7 @@ sub respace_tokens_inner_loop {
                 }
             }
             else {
-                # Could be something like '* STDERR' or '$ debug'
+                ## Could be something like '* STDERR' or '$ debug'
             }
         }
 
@@ -17392,7 +17402,7 @@ sub respace_tokens_inner_loop {
                 $self->complain( "found '=>,' ... error?\n", $lno );
             }
             else {
-                # not a repeated comma type
+                ## not a repeated comma type
             }
 
             # remember input line index of first comma if -wtc is used
@@ -17579,7 +17589,7 @@ EOM
         }
 
         else {
-            # no special processing for this token type
+            ## no special processing for this token type
         }
 
         # Store this token with possible previous blank
@@ -17799,7 +17809,7 @@ EOM
             }
         }
         else {
-            # nothing special to do for this container token
+            ## nothing special to do for this container token
         }
     }
 
@@ -18896,7 +18906,7 @@ sub unstore_last_nonblank_token {
             }
         }
         else {
-            # want_space=-1 so do not add a blank
+            ## want_space=-1 so do not add a blank
         }
     }
 
@@ -20230,7 +20240,7 @@ sub count_list_elements {
                 $rarg_list->{self_name} = $self_name;
             }
             else {
-                # continue search
+                ## continue search
             }
         }
 
@@ -20304,7 +20314,7 @@ sub count_list_elements {
         }
 
         else {
-            # continue search
+            ## continue search
         }
     } ## end while ( ++$KK < $K_list_end)
 
@@ -20953,7 +20963,7 @@ sub count_sub_input_args {
             }
 
             else {
-                # continue search
+                ## continue search
             }
         }
 
@@ -21110,6 +21120,7 @@ sub count_sub_input_args {
                 }
             }
             else {
+                ##
             }
         }
 
@@ -21204,7 +21215,7 @@ sub count_sub_input_args {
             }
         }
         else {
-            # continue search
+            ## continue search
         }
     } ## end while ( ++$KK < $K_closing)
 
@@ -23106,7 +23117,7 @@ EOM
                     }
                 }
                 else {
-                    # no match
+                    ## no match
                 }
             }
             if ($match) {
@@ -23199,7 +23210,7 @@ sub keep_old_line_breaks {
                 $rbreak_container->{$seqno} = 1;
             }
             else {
-                # not a special case
+                ## not a special case
             }
         }
     }
@@ -23401,7 +23412,7 @@ sub weld_cuddled_blocks {
         if    ( $level < $last_level ) { $in_chain{$last_level} = undef }
         elsif ( $level > $last_level ) { $in_chain{$level}      = undef }
         else {
-            # level unchanged
+            ## level unchanged
         }
 
         # We are only looking at code blocks
@@ -24014,7 +24025,7 @@ sub setup_new_weld_measurements {
             }
         }
         else {
-            # do not need to backup
+            ## do not need to backup
         }
     }
 
@@ -25955,7 +25966,7 @@ EOM
 
         # unknown option
         else {
-            # Shouldn't happen - leave ci unchanged
+            ## Shouldn't happen - leave ci unchanged
             DEVEL_MODE && Fault(<<EOM);
 unexpected ci flag '$ci_flag' for -bbpi -bbsbi -bbhbi: expecting one of 0 1 2
 EOM
@@ -27380,7 +27391,7 @@ EOM
                             $collapsed_len = MIN_BLOCK_LEN;
                         }
                         else {
-                            # none of these rules applies
+                            ## none of these rules applies
                         }
                     }
 
@@ -29297,7 +29308,7 @@ EOM
 
             }
             else {
-                # ternary token: nothing to do
+                ## ternary token: nothing to do
             }
         }
 
@@ -30729,7 +30740,7 @@ sub starting_one_line_block {
             }
         }
         else {
-            # $i_start is 0 - cannot back up
+            ## $i_start is 0 - cannot back up
         }
     }
     elsif ( $previous_nonblank_token eq ')' ) {
@@ -30952,6 +30963,7 @@ sub starting_one_line_block {
 
         # just keep going for other characters
         else {
+            ##
         }
     }
 
@@ -31000,7 +31012,7 @@ sub starting_one_line_block {
             $self->[_ris_short_broken_eval_block_]->{$type_sequence_j} = 1;
         }
         else {
-            # do not continue the search
+            ## do not continue the search
         }
     }
     return;
@@ -31246,7 +31258,7 @@ EOM
         # breaks are forced before 'if' and 'unless'
         elsif ( $is_if_unless{$token} && $type eq 'k' ) { $i-- }
         else {
-            # do not break before
+            ## do not break before
         }
 
         if ( $i >= 0 && $i <= $max_index_to_go ) {
@@ -31813,7 +31825,7 @@ EOM
                     }
                 }
                 else {
-                    # no blank line needed
+                    ## no blank line needed
                 }
             }
 
@@ -31864,7 +31876,7 @@ EOM
                 }
             }
             else {
-                # no blank line needed
+                ## no blank line needed
             }
 
             if ($blank_count) {
@@ -31944,7 +31956,7 @@ EOM
             }
         }
         else {
-            # single balanced token
+            ## single balanced token
         }
 
         # See if there are any complete lists with limited field counts
@@ -33970,7 +33982,7 @@ EOM
                 ##TBD
             }
             else {
-                # not a special type
+                ## not a special type
             }
             ## end assignment
         }
@@ -34421,7 +34433,7 @@ EOM
             }
         }
         else {
-            # not a special type
+            ## not a special type
         }
         return ( 1, $skip_Section_3 );
     } ## end sub recombine_section_2
@@ -35580,7 +35592,7 @@ sub break_long_lines {
                 $self->set_closing_breakpoint($i_lowest);
             }
             else {
-                # not at a '?'
+                ## not at a '?'
             }
 
             #--------------------------------------------------------
@@ -35595,7 +35607,7 @@ sub break_long_lines {
                 push @i_colon_breaks, $i_lowest;
             }
             else {
-                # not at a ':'
+                ## not at a ':'
             }
 
             # here we should set breaks for all '?'/':' pairs which are
@@ -36157,7 +36169,7 @@ sub break_lines_inner_loop {
             }
         }
         else {
-            # too long
+            ## too long
         }
 
         # a break here makes the line too long ...
@@ -36979,7 +36991,7 @@ EOM
                     $i_equals[$depth] = $i;
                 }
                 else {
-                    # error : no code to handle a type in %quick_filter_A
+                    ## error : no code to handle a type in %quick_filter_A
                     DEVEL_MODE && Fault(<<EOM);
 Missing code to handle token type '$type' which is in the quick_filter_A
 EOM
@@ -39128,7 +39140,7 @@ EOM
                     }
                 }
                 else {
-                    # break
+                    ## break
                 }
             }
         }
@@ -39238,7 +39250,7 @@ EOM
             $number_of_fields_best = $number_of_fields_max;
         }
         else {
-            # no change
+            ## no change
         }
 
         # If we are crowded and the -lp option is being used, try
@@ -39534,15 +39546,13 @@ sub study_list_complexity {
             $quote_count++;
         }
         else {
-            # not a quote
+            ## not a quote
         }
 
         if ( $ib eq $ie ) {
             if ( $is_quote && $tokens_to_go[$ib] =~ /\s/ ) {
                 $complex_item_count++;
                 $weighted_length *= 2;
-            }
-            else {
             }
         }
         else {
@@ -39588,7 +39598,7 @@ sub study_list_complexity {
             pop @i_ragged_break_list;
         }
         else {
-            # ok as is
+            ## ok as is
         }
     }
 
@@ -40389,9 +40399,11 @@ sub get_available_spaces_to_go {
                   $leading_spaces_to_go[$ii_last_equals]
                   if ( $types_to_go[$i_test] eq 'b' );
             }
-            elsif ( $types_to_go[ $i_test + 1 ] eq 'b' ) { $i_test++ }
+            elsif ( $types_to_go[ $i_test + 1 ] eq 'b' ) {
+                $i_test++;
+            }
             else {
-                # no change needed
+                ## no change needed
             }
 
             my $test_position = total_line_length( $i_test, $ii );
@@ -41004,7 +41016,7 @@ EOM
 
                 # shouldn't happen except for code bug:
                 else {
-                    # non-fatal, keep going except in DEVEL_MODE
+                    ## non-fatal, keep going except in DEVEL_MODE
                     if (DEVEL_MODE) {
                         my $level = $rlp_object_list->[$i_debug]->get_level();
                         my $ci_level =
@@ -41294,7 +41306,7 @@ sub convey_batch_to_vertical_aligner {
         $self->undo_ci();
     }
     else {
-        # ok: single line, no -xci
+        ## ok: single line, no -xci
     }
 
     if (DEVEL_MODE) { $self->check_batch_summed_lengths() }
@@ -41536,7 +41548,7 @@ EOM
             }
         }
         else {
-            # do not need to break vertical alignment here
+            ## do not need to break vertical alignment here
         }
 
         # ----------------------------------
@@ -44583,7 +44595,7 @@ sub make_paren_name {
                     $lev         = $levels_to_go[$i_terminal];
                 }
                 else {
-                    # shouldn't happen - default_adjust_indentation is 0 or 1
+                    ## shouldn't happen - default_adjust_indentation is 0 or 1
                     DEVEL_MODE
                       && Fault(
 "default_indentation=$default_adjust_indentation expected to be 0 or 1\n"
@@ -44883,7 +44895,7 @@ sub make_paren_name {
                 if ( $Kterm == $K_beg ) { $adjust_indentation = 1 }
             }
             else {
-                # no change in ci needed
+                ## no change in ci needed
             }
         }
 
@@ -44903,7 +44915,9 @@ sub make_paren_name {
             if ( $K_beg eq $K_opening ) {
                 $ris_bli_container->{$seqno_beg} = $is_bli_beg = 2;
             }
-            else { $is_bli_beg = 0 }
+            else {
+                $is_bli_beg = 0;
+            }
         }
 
         # QW PATCH for the combination -lp -wn
@@ -45232,7 +45246,7 @@ sub make_paren_name {
             if ($is_leading) { $adjust_indentation = 2; }
         }
         else {
-            # not a closing type
+            ## not a closing type
         }
 
         # A final check: reset the flag value from 1 to 0 if moving left would
@@ -45951,7 +45965,7 @@ sub set_vertical_tightness_flags {
         $vt_max_lines    = 0;
     }
     else {
-        # no -vt flags apply
+        ## no -vt flags apply
     }
 
     my $last_vt_type = $self->[_last_vt_type_];
@@ -46146,7 +46160,7 @@ sub set_vertical_tightness_flags {
                 $leading_block_text .= '...';
             }
             else {
-                # not enough space to add text
+                ## not enough space to add text
             }
         }
         return;
@@ -46644,7 +46658,7 @@ sub add_closing_side_comment {
                     if ( $old_csc =~ /\[\s*if/ ) { $old_csc = $new_csc }
                 }
                 else {
-                    # neither else or elsif
+                    ## neither else or elsif
                 }
 
                 # if old comment is contained in new comment,
