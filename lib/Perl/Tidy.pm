@@ -4109,6 +4109,7 @@ sub generate_options {
     $add_option->( 'warn-mismatched-return-types',          'wmrt',  '=s' );
     $add_option->( 'warn-mismatched-return-exclusion-list', 'wmrxl', '=s' );
     $add_option->( 'warn-similar-keys',                     'wsk',   '!' );
+    $add_option->( 'warn-c-style-for-loops',                'wcsfl', '!' );
 
     $add_option->( 'add-interbracket-arrows',       'aia', '!' );
     $add_option->( 'delete-interbracket-arrows',    'dia', '!' );

@@ -68,6 +68,9 @@ uc lc sprintf if unless reverse'
 # and I want to keep the ternary, I use parens to turn the warning off.
 --warn-nested-ternaries
 
+# I prefer to avoid using C-style for loops
+--warn-c-style-for-loops
+
 # This defines a new option which is invoked with -debug on the command line.
 # It overrides any of the settings above.
 debug {

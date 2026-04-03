@@ -714,6 +714,7 @@ BEGIN {
         _rK_wantarray_by_sub_seqno_       => $i++,
         _rK_sub_by_seqno_                 => $i++,
         _ris_my_sub_by_seqno_             => $i++,
+        _ris_c_style_for_paren_by_seqno_  => $i++,
         _rsub_call_paren_info_by_seqno_   => $i++,
         _rDOLLAR_underscore_by_sub_seqno_ => $i++,
         _this_batch_                      => $i++,
@@ -1185,6 +1186,7 @@ sub initialize_self_vars {
     $self->[_rDOLLAR_underscore_by_sub_seqno_] = {};
     $self->[_rK_sub_by_seqno_]                 = {};
     $self->[_ris_my_sub_by_seqno_]             = {};
+    $self->[_ris_c_style_for_paren_by_seqno_]  = {};
     $self->[_this_batch_]                      = [];
 
     # Mostly list characteristics and processing flags
@@ -9085,6 +9087,11 @@ EOM
           if ( $self->[_logger_object_] );
     }
 
+    if ( $rOpts->{'warn-c-style-for-loops'} ) {
+        $self->warn_c_style_for_loops()
+          if ( $self->[_logger_object_] );
+    }
+
     # Dump variable usage info if requested
     if ( $rOpts->{'dump-unusual-variables'} ) {
         $self->dump_unusual_variables();
@@ -16553,6 +16560,9 @@ my $rK_sub_by_seqno;
 # true for a 'my' sub
 my $ris_my_sub_by_seqno;
 
+# true for c-style for loops
+my $ris_c_style_for_paren_by_seqno;
+
 sub initialize_respace_tokens_closure {
 
     my ($self) = @_;
@@ -16599,6 +16609,8 @@ sub initialize_respace_tokens_closure {
       $self->[_rDOLLAR_underscore_by_sub_seqno_];
     $rK_sub_by_seqno     = $self->[_rK_sub_by_seqno_];
     $ris_my_sub_by_seqno = $self->[_ris_my_sub_by_seqno_];
+
+    $ris_c_style_for_paren_by_seqno = $self->[_ris_c_style_for_paren_by_seqno_];
 
     $last_nonblank_code_type       = ';';
     $last_nonblank_code_token      = ';';
@@ -17697,6 +17709,7 @@ EOM
             # Type 'f' is semicolon in a c-style 'for' statement
             elsif ( $rtype_count->{'f'} ) {
                 ## not a list
+                $ris_c_style_for_paren_by_seqno->{$seqno} = 1;
             }
             elsif ( $rtype_count->{','} || $rtype_count->{'=>'} ) {
 
@@ -23048,6 +23061,45 @@ EOM
 
     return;
 } ## end sub warn_nested_ternaries
+
+sub warn_c_style_for_loops {
+    my ($self) = @_;
+
+    # implement --warn-c-style-for-loops
+    my $ris_c_style_for_paren_by_seqno =
+      $self->[_ris_c_style_for_paren_by_seqno_];
+    return unless ($ris_c_style_for_paren_by_seqno);
+
+    my $rLL    = $self->[_rLL_];
+    my $rlines = $self->[_rlines_];
+    my $output_string;
+    my $K_opening_container = $self->[_K_opening_container_];
+    foreach
+      my $seqno ( sort { $a <=> $b } keys %{$ris_c_style_for_paren_by_seqno} )
+    {
+        my $Ko             = $K_opening_container->{$seqno};
+        my $lx             = $rLL->[$Ko]->[_LINE_INDEX_];
+        my $ln             = $lx + 1;
+        my $line_of_tokens = $rlines->[$lx];
+        my $text           = $line_of_tokens->{_line_text};
+        $text =~ s/^\s+//;
+        $text =~ s/\s+$//;
+        if ( length($text) > 40 ) { $text = substr( $text, 0, 40 ) . "..." }
+        $output_string .= "$ln: $text\n";
+    }
+    if ($output_string) {
+        my $opt_name = 'warn-c-style-for-loops';
+        chomp $output_string;
+        $self->warning(<<EOM);
+
+Begin scan for --$opt_name
+$output_string
+End scan for --$opt_name
+EOM
+    }
+
+    return;
+} ## end sub warn_c_style_for_loops
 
 sub check_for_old_break {
     my ( $self, $KK, $rkeep_break_hash, $rbreak_hash, $break_after_uu ) = @_;

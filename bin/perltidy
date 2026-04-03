@@ -7678,6 +7678,23 @@ more-readable linear chain of tests, similar to an if-elsif- chain.
 
 =back
 
+=item B<Use --warn-c-style-for-loops> to write a warning for C-style for loops
+
+When the parameter B<--warn-c-style-for-loops>, or B<-wcsfl>, is set, any
+C-style for loops are listed in the error output stream.  These loops have
+the form
+
+    for (my $i = 0; $i < 5; $i++) {
+        print "Value: $i\n";
+    }
+
+They can often be converted into a more readable list-oriented loop.  This
+parameter can be set temporarily to make a list of them for a code review, or
+it can be set permanently if the policy is not to use them.
+
+Note that this parameter is similar to the B<Perl::Critic> policy
+B<ControlStructures::ProhibitCStyleForLoops>.
+
 =item B<Use --dump-keyword-usage> to dump a list of keywords used
 
 By default, the parameter B<--dump-keyword-usage>, or B<-dku>, will write a
