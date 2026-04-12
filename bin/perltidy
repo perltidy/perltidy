@@ -7688,12 +7688,15 @@ the form
         print "Value: $i\n";
     }
 
-They can often be converted into a more readable list-oriented loop.  This
-parameter can be set temporarily to make a list of them for a code review, or
-it can be set permanently if the policy is not to use them.
+They can often be converted into a more readable list-oriented loop.
+This parameter can be set if the policy is not to use them.
 
 Note that this parameter is similar to the B<Perl::Critic> policy
 B<ControlStructures::ProhibitCStyleForLoops>.
+
+The dump version of this option, B<--dump-c-style-for-loops>, or B<-dcsfl>,
+can be used to dump a list of such loops to the standard output for a code
+review.
 
 =item B<Use --dump-keyword-usage> to dump a list of keywords used
 
@@ -7736,6 +7739,65 @@ as C<File::Basename::fileparse>, then only function calls exactly matching that
 full module path would be included in the output.
 
 =back
+
+=item B<Use --warn-label-types=s>, or B<-wlu=s> to warn of selected label issues
+
+Statement labels are very useful for controlling program flow, but their use
+also introduces a vulnerability which should be considered. This is because
+labels are global identifiers, and when perl has an unresolved reference to a
+label it looks up the call stack for a match.  If this is not intended it may
+not end well, and it can be very difficult to debug. This can occur for example
+with just a spelling error.
+
+The parameter B<-wlu=s> provides some simple checks on statement labels
+which can help identify potential problems.
+
+The string B<s> indicates which items should be checked, as follows:
+
+=over 4
+
+=item B<c:> a label which is not all B<capital> letters
+
+=item B<r:> a label which is B<reused>
+
+=item B<u:> a label which is B<unused> (not referenced)
+
+=item B<m:> a label which is referenced but B<missing>
+
+=back
+
+Use either commas or spaces to separate Multiple items. For example
+
+  perltidy -wlt='c m' somefile.pl
+
+will format somefile.pl and also issue a warning if issues B<c> or B<m> are found.
+
+All possible checks may be specified with B<-wlt='*'> or B<-wlt=1>.
+The default is not to do any of these checks, and it can also be indicated with
+B<-wlt=0>.
+
+=item Use B<--warn-label-exclusion-list>, or B<-wlxl=string>, to skip warning
+checks for specific labels.
+
+The string may contain a list, entered as a quoted
+string of space- or comma-separated labels.  A leading and/or trailing B<*> on a
+name may be used to indicate a partial string match.  Warnings for the
+following label names used by B<Test::More> are always excluded: B<SKIP> and
+B<TODO>.
+
+=item B<Use --dump-label-usage> to dump a list of labels used
+
+The parameter B<--dump-label-usage>, or B<-dlu>, will write a list of statement
+labels defined in a file along with the following associated items: (1) the
+line number of first occurrence, (2) the number of occurrences, (3) the number
+of references, (4) a note on any of the above issues.
+
+For example,
+
+   perltidy -dlu somefile.pl >results.txt
+
+All labels and potential issues are listed in the dump.
+
 
 =back
 
@@ -8135,24 +8197,24 @@ The following list shows all short parameter names which allow a prefix
  atnl   aws    b      baa    baao   bar    bbao   bbb    bbc    bboc
  bbs    bl     bli    blpc   boa    boc    bok    bol    bom    bos
  bot    botc   botl   cblx   ce     conv   cpb    cpbw   cs     csc
- cscb   cscw   csfs   dac    dbc    dbs    dcbl   dcsc   ddf    dfsfs
- dhk    dia    dior   dku    dln    dltc   dma    dmcp   dmr    dnl
- dnt    dop    dp     dpro   drc    dsc    dsk    dsm    dsn    dtc
- dtco   dtt    duk    duv    dwic   dwls   dwrs   dws    eos    f
- fpva   frm    fs     fso    gcs    hbc    hbcm   hbco   hbh    hbhh
- hbi    hbj    hbk    hbm    hbn    hbp    hbpd   hbpu   hbq    hbs
- hbsc   hbv    hbw    hent   hic    hicm   hico   hih    hihh   hii
- hij    hik    him    hin    hip    hipd   hipu   hiq    his    hisc
- hiv    hiw    hsc    html   ibc    icb    icp    ils    iob    ipc
- isbc   iscl   kgb    kgbd   kgbi   kis    lal    log    lop    lp
- lsl    mci    mem    nib    ohbr   okw    ola    olc    oll    olq
- opr    opt    osbc   osbr   otr    ple    pod    pvl    q      qwaf
- sac    sbc    sbl    scbb   schb   scp    scsb   sct    se     sfp
- sfs    skp    sob    sobb   sohb   sop    sosb   sot    ssc    st
- sts    t      tac    tbc    toc    tp     tqw    trp    ts     tsc
- tso    vbc    vc     vco    viu    vmll   vsc    vsn    vwe    w
- wfc    wia    wma    wme    wmr    wn     wnt    wsk    wuk    x
- xbt    xci    xlp    xs
+ cscb   cscw   csfs   dac    dbc    dbs    dcbl   dcsc   dcsfl  ddf
+ dfsfs  dhk    dia    dior   dku    dln    dltc   dlu    dma    dmcp
+ dmr    dnl    dnt    dop    dp     dpro   drc    dsc    dsk    dsm
+ dsn    dtc    dtco   dtt    duk    duv    dwic   dwls   dwrs   dws
+ eos    f      fpva   frm    fs     fso    gcs    hbc    hbcm   hbco
+ hbh    hbhh   hbi    hbj    hbk    hbm    hbn    hbp    hbpd   hbpu
+ hbq    hbs    hbsc   hbv    hbw    hent   hic    hicm   hico   hih
+ hihh   hii    hij    hik    him    hin    hip    hipd   hipu   hiq
+ his    hisc   hiv    hiw    hsc    html   ibc    icb    icp    ils
+ iob    ipc    isbc   iscl   kgb    kgbd   kgbi   kis    lal    log
+ lop    lp     lsl    mci    mem    nib    ohbr   okw    ola    olc
+ oll    olq    opr    opt    osbc   osbr   otr    ple    pod    pvl
+ q      qwaf   sac    sbc    sbl    scbb   schb   scp    scsb   sct
+ se     sfp    sfs    skp    sob    sobb   sohb   sop    sosb   sot
+ ssc    st     sts    t      tac    tbc    toc    tp     tqw    trp
+ ts     tsc    tso    vbc    vc     vco    viu    vmll   vsc    vsn
+ vwe    w      wcsfl  wfc    wia    wma    wme    wmr    wn     wnt
+ wsk    wuk    x      xbt    xci    xlp    xs
 
 Equivalently, the prefix 'no' or 'no-' on the corresponding long names may be
 used.

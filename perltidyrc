@@ -38,8 +38,8 @@
 # user-defined subs must have args in parens
 --want-call-parens='&'
 
-# Add closing side comments for subs, asubs, and while blocks
-# while blocks are marked because they can be tricky to get right.
+# Add closing side comments for subs, asubs, and while blocks.
+# 'while' blocks are marked because they can be tricky to get right.
 # The default interval (-csci=6) is used but a value of 10 might
 # be a little better. But changing -csci would change a lot of lines.
 --closing-side-comments
@@ -52,10 +52,11 @@
 --delete-trailing-commas
 --add-trailing-commas
 
-# this is optional but usually gives a cleaner look
+# This is optional but usually gives a cleaner look
 --delete-weld-interfering-commas
 
-# require arrows
+# Require arrows. One reason is that they clarify structure
+# when line breaks are needed between containers.
 --add-interbracket-arrows
 --interbracket-arrow-style=']->{ }->{ }->[ ]->['
 
@@ -69,7 +70,10 @@ uc lc sprintf if unless reverse'
 --warn-nested-ternaries
 
 # I prefer to avoid using C-style for loops
---warn-c-style-for-loops
+---warn-c-style-for-loops
+
+# Minimize label use as much as possible
+---warn-label-types=1
 
 # This defines a new option which is invoked with -debug on the command line.
 # It overrides any of the settings above.

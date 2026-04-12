@@ -9733,7 +9733,7 @@ sub do_scan_package {
                 $id_scan_state = EMPTY_STRING;
 
                 # emergency return
-                goto RETURN;
+                goto SCAN_ID_EMERGENCY_RETURN;
             }
             $saw_type = !$saw_alpha;
         }
@@ -9899,7 +9899,7 @@ EOM
             $i   = $i_begin;
         }
 
-      RETURN:
+      SCAN_ID_EMERGENCY_RETURN:
 
         DEBUG_SCAN_ID && do {
             my ( $a, $b, $c ) = caller();

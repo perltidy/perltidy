@@ -431,6 +431,10 @@ my (
     $rwarn_variable_types,
     $ris_warn_variable_excluded_name,
 
+    # INITIALIZER: sub initialize_warn_label_types
+    $rwarn_label_types,
+    $ris_warn_label_excluded_name,
+
     # INITIALIZER: sub initialize_warn_mismatched_args
     $rwarn_mismatched_arg_types,
     $ris_warn_mismatched_arg_excluded_name,
@@ -656,7 +660,6 @@ BEGIN {
 
         _saw_VERSION_in_this_file_ => $i++,
         _saw_use_strict_           => $i++,
-        _saw_END_or_DATA_          => $i++,
 
         _rK_weld_left_         => $i++,
         _rK_weld_right_        => $i++,
@@ -672,11 +675,11 @@ BEGIN {
         _maximum_BLOCK_level_         => $i++,
         _maximum_BLOCK_level_at_line_ => $i++,
 
-        _rKrange_code_without_comments_ => $i++,
-        _rbreak_before_Kfirst_          => $i++,
-        _rbreak_after_Klast_            => $i++,
-        _converged_                     => $i++,
-        _want_second_iteration_         => $i++,
+        _rix_CODE_without_comments_ => $i++,
+        _rbreak_before_Kfirst_      => $i++,
+        _rbreak_after_Klast_        => $i++,
+        _converged_                 => $i++,
+        _want_second_iteration_     => $i++,
 
         _rstarting_multiline_qw_seqno_by_K_ => $i++,
         _rending_multiline_qw_seqno_by_K_   => $i++,
@@ -706,18 +709,23 @@ BEGIN {
         _rarrow_call_chain_             => $i++,
 
         # these vars are defined after call to respace tokens:
-        _rK_package_list_                 => $i++,
-        _rK_AT_underscore_by_sub_seqno_   => $i++,
-        _rK_first_self_by_sub_seqno_      => $i++,
-        _rK_bless_by_sub_seqno_           => $i++,
-        _rK_return_by_sub_seqno_          => $i++,
-        _rK_wantarray_by_sub_seqno_       => $i++,
-        _rK_sub_by_seqno_                 => $i++,
-        _ris_my_sub_by_seqno_             => $i++,
-        _ris_c_style_for_paren_by_seqno_  => $i++,
-        _rsub_call_paren_info_by_seqno_   => $i++,
-        _rDOLLAR_underscore_by_sub_seqno_ => $i++,
-        _this_batch_                      => $i++,
+        _rK_package_list_                   => $i++,
+        _rK_AT_underscore_by_sub_seqno_     => $i++,
+        _rK_first_self_by_sub_seqno_        => $i++,
+        _rK_bless_by_sub_seqno_             => $i++,
+        _rK_return_by_sub_seqno_            => $i++,
+        _rK_wantarray_by_sub_seqno_         => $i++,
+        _rK_sub_by_seqno_                   => $i++,
+        _ris_my_sub_by_seqno_               => $i++,
+        _ris_c_style_for_paren_by_seqno_    => $i++,
+        _rline_numbers_of_statement_labels_ => $i++,
+        _rline_numbers_of_target_labels_    => $i++,
+        _rspecial_line_type_count_          => $i++,
+        _rkeyword_count_                    => $i++,
+        _is_complete_script_                => $i++,
+        _rsub_call_paren_info_by_seqno_     => $i++,
+        _rDOLLAR_underscore_by_sub_seqno_   => $i++,
+        _this_batch_                        => $i++,
 
         _LAST_SELF_INDEX_ => $i - 1,
     };
@@ -1176,18 +1184,23 @@ sub initialize_self_vars {
     #               --dump-mismatched-args
     #               --dump-mismatched-returns
     #               --warn-mismatched-returns
-    $self->[_rK_package_list_]                 = [];
-    $self->[_rK_AT_underscore_by_sub_seqno_]   = {};
-    $self->[_rK_first_self_by_sub_seqno_]      = {};
-    $self->[_rK_bless_by_sub_seqno_]           = {};
-    $self->[_rK_return_by_sub_seqno_]          = {};
-    $self->[_rK_wantarray_by_sub_seqno_]       = {};
-    $self->[_rsub_call_paren_info_by_seqno_]   = {};
-    $self->[_rDOLLAR_underscore_by_sub_seqno_] = {};
-    $self->[_rK_sub_by_seqno_]                 = {};
-    $self->[_ris_my_sub_by_seqno_]             = {};
-    $self->[_ris_c_style_for_paren_by_seqno_]  = {};
-    $self->[_this_batch_]                      = [];
+    $self->[_rK_package_list_]                   = [];
+    $self->[_rK_AT_underscore_by_sub_seqno_]     = {};
+    $self->[_rK_first_self_by_sub_seqno_]        = {};
+    $self->[_rK_bless_by_sub_seqno_]             = {};
+    $self->[_rK_return_by_sub_seqno_]            = {};
+    $self->[_rK_wantarray_by_sub_seqno_]         = {};
+    $self->[_rsub_call_paren_info_by_seqno_]     = {};
+    $self->[_rDOLLAR_underscore_by_sub_seqno_]   = {};
+    $self->[_rK_sub_by_seqno_]                   = {};
+    $self->[_ris_my_sub_by_seqno_]               = {};
+    $self->[_ris_c_style_for_paren_by_seqno_]    = {};
+    $self->[_rline_numbers_of_statement_labels_] = {};
+    $self->[_rline_numbers_of_target_labels_]    = {};
+    $self->[_rspecial_line_type_count_]          = {};
+    $self->[_rkeyword_count_]                    = {};
+    $self->[_is_complete_script_]                = undef;
+    $self->[_this_batch_]                        = [];
 
     # Mostly list characteristics and processing flags
     $self->[_rtype_count_by_seqno_]      = {};
@@ -1237,7 +1250,6 @@ sub initialize_self_vars {
     $self->[_tabbing_disagreement_count_]       = 0;
     $self->[_in_tabbing_disagreement_]          = 0;
     $self->[_saw_use_strict_]                   = 0;
-    $self->[_saw_END_or_DATA_]                  = 0;
     $self->[_first_brace_tabbing_disagreement_] = undef;
     $self->[_in_brace_tabbing_disagreement_]    = undef;
 
@@ -1259,11 +1271,11 @@ sub initialize_self_vars {
     $self->[_maximum_BLOCK_level_]         = 0;
     $self->[_maximum_BLOCK_level_at_line_] = 0;
 
-    $self->[_rKrange_code_without_comments_] = [];
-    $self->[_rbreak_before_Kfirst_]          = {};
-    $self->[_rbreak_after_Klast_]            = {};
-    $self->[_converged_]                     = 0;
-    $self->[_want_second_iteration_]         = 0;
+    $self->[_rix_CODE_without_comments_] = [];
+    $self->[_rbreak_before_Kfirst_]      = {};
+    $self->[_rbreak_after_Klast_]        = {};
+    $self->[_converged_]                 = 0;
+    $self->[_want_second_iteration_]     = 0;
 
     # qw stuff
     $self->[_rstarting_multiline_qw_seqno_by_K_] = {};
@@ -2360,7 +2372,7 @@ EOM
 
 sub check_options {
 
-    ( $rOpts, my $wvt_in_args, my $num_files, my $line_range_clipped ) = @_;
+    ($rOpts) = @_;
 
     # This routine is called to check the user-supplied run parameters
     # in $rOpts and to configure the control hashes to them.
@@ -2401,10 +2413,11 @@ sub check_options {
     # Note: this call was missing in version 20240214
     initialize_call_paren_style();
 
-    initialize_warn_variable_types( $wvt_in_args, $num_files,
-        $line_range_clipped );
+    initialize_warn_variable_types();
 
     initialize_warn_mismatched();
+
+    initialize_warn_label_types();
 
     make_bli_pattern();
 
@@ -9087,6 +9100,11 @@ EOM
           if ( $self->[_logger_object_] );
     }
 
+    if ( $rOpts->{'dump-c-style-for-loops'} ) {
+        $self->dump_c_style_for_loops();
+        Exit(0);
+    }
+
     if ( $rOpts->{'warn-c-style-for-loops'} ) {
         $self->warn_c_style_for_loops()
           if ( $self->[_logger_object_] );
@@ -9102,6 +9120,10 @@ EOM
     # (the logger is deactivated during iterations)
     $self->warn_variable_types()
       if ( %{$rwarn_variable_types}
+        && $self->[_logger_object_] );
+
+    $self->warn_label_types()
+      if ( %{$rwarn_label_types}
         && $self->[_logger_object_] );
 
     if (   $rOpts->{'warn-mismatched-args'}
@@ -9128,6 +9150,11 @@ EOM
 
     if ( $rOpts->{'dump-keyword-usage'} ) {
         $self->dump_keyword_usage();
+        Exit(0);
+    }
+
+    if ( $rOpts->{'dump-label-usage'} ) {
+        $self->dump_label_usage();
         Exit(0);
     }
 
@@ -11381,12 +11408,14 @@ sub warn_unique_or_similar_keys {
     # process -wsk and -wuk together because they both call scan_hash_keys
     # and may both be used in the same run
 
+    my $is_complete_script = $self->is_complete_script();
+
     my $wsk_key = 'warn-similar-keys';
     my $wuk_key = 'warn-unique-keys';
 
     my $rhash = {};
     $rhash->{similar} = 1 if ( $rOpts->{$wsk_key} );
-    $rhash->{unique}  = 1 if ( $rOpts->{$wuk_key} );
+    $rhash->{unique}  = 1 if ( $rOpts->{$wuk_key} && $is_complete_script );
     $self->scan_hash_keys($rhash);
 
     my $output_string;
@@ -13010,6 +13039,7 @@ sub set_CODE_type {
     my $last_line_had_side_comment = 0;
     my ( $Kfirst, $Klast );
     my $CODE_type;
+    my @ix_CODE_without_comments;
 
     # Loop to set CODE_type
 
@@ -13362,6 +13392,11 @@ sub set_CODE_type {
             $CODE_type = 'VER';
             next;
         }
+
+        # Save line indexes of of non-comment code for use by sub
+        # 'keep_old_line_breaks'. Note that line indexes are not changed by
+        # respace operations.
+        push @ix_CODE_without_comments, $ix_line;
     }
     continue {
         $line_of_tokens->{_code_type} = $CODE_type;
@@ -13372,6 +13407,7 @@ sub set_CODE_type {
             $has_side_comment = 0;
         }
     }
+    $self->[_rix_CODE_without_comments_] = \@ix_CODE_without_comments;
 
     return \@ix_side_comments;
 } ## end sub set_CODE_type
@@ -13544,51 +13580,80 @@ sub has_complete_package {
 } ## end sub has_complete_package
 
 sub is_complete_script {
-    my ( $self, $rline_type_count, $rkeyword_count ) = @_;
+    my ($self) = @_;
 
     # Guess if we are formatting a complete script
-    # Given:
-    #   $rline_type_count = hash ref of count of line types
-    #   $rkeyword_count   = hash ref of count of keywords
     # Return: true or false
 
-    # Goal: help decide if we should skip certain warning checks when
-    # operating on just part of a script (such as from an editor).
+    # This sub is called to decide if we should skip certain warning checks
+    # when operating on just part of a script (such as from an editor).
 
-    #----------------------------------------------------------------
-    # TEST 1: Assume a file with known extension is a complete script
-    #----------------------------------------------------------------
-    my %is_standard_file_extension = (
-        'pm'  => 1,
-        'pl'  => 1,
-        'plx' => 1,
-        't'   => 1,
-    );
-    my $input_stream_name = $self->[_input_stream_name_];
+    # Three value switch: undef=MAYBE, 0=NO, 1=YES
 
-    # look for a file extension
-    my $pos_dot        = rindex( $input_stream_name, '.' );
-    my $file_extension = EMPTY_STRING;
-    if ( $pos_dot > 0 ) {
-        $file_extension = substr( $input_stream_name, $pos_dot + 1 );
+    # Check for a cached result of this function call
+    my $is_complete_script = $self->[_is_complete_script_];
+    if ( defined($is_complete_script) ) { return $is_complete_script }
 
-        # allow additional digits, like .pm.0, .pm.1 etc
-        if (   defined($file_extension)
-            && length($file_extension)
-            && $file_extension =~ /^\d+$/ )
-        {
-            my $str = substr( $input_stream_name, 0, $pos_dot );
-            $pos_dot = rindex( $str, '.' );
-            if ( $pos_dot > 0 ) {
-                $file_extension = substr( $str, $pos_dot + 1 );
-            }
-        }
-
-        return 1 if ( $is_standard_file_extension{ lc($file_extension) } );
+    # Assume snippet if incomplete line range is being formatted
+    my $line_range_clipped = Perl::Tidy::get_line_range_clipped();
+    if ($line_range_clipped) {
+        $is_complete_script = 0;
     }
 
+    # If the input came from a file ...
+    else {
+
+        # ... assume complete script if operating on multiple files,
+        my $num_files = Perl::Tidy::get_num_files();
+        if ($num_files) {
+            if ( $num_files > 1 ) {
+                $is_complete_script = 1;
+            }
+
+            # ... or require a file extension for a single file. The idea is
+            # that it would be unusual for an editor to create a temporary
+            # named file with an extension for transferring just a snippet of
+            # code.
+            else {
+
+                my $input_stream_name = $self->[_input_stream_name_];
+
+                my $pos_dot        = rindex( $input_stream_name, '.' );
+                my $file_extension = EMPTY_STRING;
+                if ( $pos_dot > 0 ) {
+                    $file_extension =
+                      substr( $input_stream_name, $pos_dot + 1 );
+
+                    # allow additional digits, like .pm.0, .pm.1 etc
+                    if ( defined($file_extension)
+                        && length($file_extension) )
+                    {
+                        $is_complete_script = 1;
+                    }
+                }
+            }
+        }
+    }
+
+    # Guess based on file contents if necessary
+    if ( !defined($is_complete_script) ) {
+        my $guess = $self->guess_if_complete_script();
+        $is_complete_script = $guess ? 1 : 0;
+    }
+
+    # Cache the result of this sub call
+    $self->[_is_complete_script_] = $is_complete_script;
+    return $is_complete_script;
+} ## end sub is_complete_script
+
+sub guess_if_complete_script {
+    my ($self) = @_;
+
+    # Guess if we are formatting a complete script based on file contents
+    # Return: true or false
+
     #-------------------------------------------------------------
-    # TEST 2: a positive starting level implies an incomplete script
+    # TEST 1: a positive starting level implies an incomplete script
     #-------------------------------------------------------------
     my $rLL = $self->[_rLL_];
     return unless ( @{$rLL} );
@@ -13596,12 +13661,12 @@ sub is_complete_script {
     return if ($sil);
 
     #------------------------------------
-    # TEST 3: look for a complete package
+    # TEST 2: look for a complete package
     #------------------------------------
     return 1 if ( $self->has_complete_package() );
 
     #----------------------------
-    # TEST 4: examine other clues
+    # TEST 3: examine other clues
     #----------------------------
     my $rlines     = $self->[_rlines_];
     my $line_count = @{$rlines};
@@ -13611,6 +13676,7 @@ sub is_complete_script {
     my $saw_hash_bang = substr( $input_line, 0, 2 ) eq '#!'
       && $input_line =~ /^\#\!.*perl\b/;
 
+    my $rkeyword_count  = $self->[_rkeyword_count_];
     my $rK_package_list = $self->[_rK_package_list_];
     my $saw_package     = defined($rK_package_list) && @{$rK_package_list};
     my $sub_count       = +keys %{ $self->[_ris_sub_block_] };
@@ -13647,14 +13713,17 @@ sub is_complete_script {
         if ( $rkeyword_count->{$_} ) { $score += 50; last; }
     }
 
-    $score += 50 if ( $rline_type_count->{POD} );
+    my $rspecial_line_type_count = $self->[_rspecial_line_type_count_];
+    $score += 50 if ( $rspecial_line_type_count->{POD_START} );
 
     # ending indicator
-    $score += 50 if ( $self->[_saw_END_or_DATA_] );
+    $score += 50
+      if ( $rspecial_line_type_count->{END_START}
+        || $rspecial_line_type_count->{DATA_START} );
 
     if ( $score >= 100 ) { return 1 }
     return;
-} ## end sub is_complete_script
+} ## end sub guess_if_complete_script
 
 use constant DEBUG_USE_CONSTANT => 0;
 
@@ -14582,9 +14651,6 @@ EOM
         return;
     }; ## end $check_sub_signature = sub
 
-    my $rkeyword_count   = {};
-    my $rline_type_count = {};
-
     #--------------------
     # Loop over all lines
     #--------------------
@@ -14593,7 +14659,6 @@ EOM
         $ix_line++;
         my $line_type = $line_of_tokens->{_line_type};
         if ( $line_type ne 'CODE' ) {
-            $rline_type_count->{$line_type}++;
             next;
         }
 
@@ -14788,7 +14853,7 @@ EOM
                     $check_sub_signature->($KK);
                 }
                 else {
-                    $rkeyword_count->{$token}++;
+                    ## nothing else
                 }
             }
 
@@ -15047,26 +15112,16 @@ EOM
     #----------
 
     # skip final 'c' and 'u' output if this appears to be a snippet
-    my $is_possible_snippet = $roption->{is_possible_snippet};
     my $more_u_checks =
          $check_unused
       && @{$rblock_stack} == 1
       && keys %{ $rblock_stack->[0]->{rvars} };
     my $more_c_checks = $check_constant && keys %{$rconstant_hash};
 
-    if ( $is_possible_snippet
-        && ( $more_u_checks || $more_c_checks ) )
-    {
+    if ( $more_u_checks || $more_c_checks ) {
 
-        # the flag $is_possible_snippet = 0:No  1:Uncertain   2:Yes
-        if (   $is_possible_snippet == 1
-            && $self->is_complete_script( $rline_type_count, $rkeyword_count ) )
-        {
-            # not a snippet
-        }
-
-        # is possible snippet: deactivate 'c' and 'u
-        else {
+        # if is possible snippet: deactivate 'c' and 'u
+        if ( !$self->is_complete_script() ) {
             $check_unused   = 0;
             $check_constant = 0;
         }
@@ -15406,8 +15461,6 @@ sub wildcard_match {
 
 sub initialize_warn_variable_types {
 
-    my ( $wvt_in_args, $num_files, $line_range_clipped ) = @_;
-
     # Initialization for:
     #    --warn-variable-types=s and
     #    --warn-variable-exclusion-list=s
@@ -15420,33 +15473,27 @@ sub initialize_warn_variable_types {
     $rwarn_variable_types =
       initialize_warn_hash( 'warn-variable-types', 0, \@all_opts );
 
-    # Check for issues 'u' or 'c' cannot be fully made if we are working
-    # on a partial file (snippet), so we save info about that.
-    if ( $rwarn_variable_types->{u} || $rwarn_variable_types->{c} ) {
-
-        # Three value switch: 0=NO, 1=MAYBE 2=DEFINITELY
-        my $is_possible_snippet = 1;
-
-        # assume snippet if incomplete line range is being formatted
-        if ($line_range_clipped) {
-            $is_possible_snippet = 2;
-        }
-
-        # assume complete script if operating on multiple files or if
-        # operating on one file and -wvt came in on the command line
-        if ( $is_possible_snippet == 1 && $num_files ) {
-            if ( $num_files > 1 || $wvt_in_args && $num_files ) {
-                $is_possible_snippet = 0;
-            }
-        }
-
-        $rwarn_variable_types->{is_possible_snippet} = $is_possible_snippet;
-    }
-
     $ris_warn_variable_excluded_name =
       make_excluded_name_hash('warn-variable-exclusion-list');
     return;
 } ## end sub initialize_warn_variable_types
+
+sub initialize_warn_label_types {
+
+    # Initialization for:
+    #    --warn-label-types=s
+    #    --warn-label-exclusion-list=s
+    $rwarn_label_types =
+      initialize_warn_hash( 'warn-label-types', 0, [qw( c r u m)] );
+
+    # Remove any colons (i.e. 'LOOP:' should be just 'LOOP')
+    my $opt_name = 'warn-label-exclusion-list';
+    if ( $rOpts->{$opt_name} ) { $rOpts->{$opt_name} =~ s/://g; }
+
+    $ris_warn_label_excluded_name =
+      make_excluded_name_hash('warn-label-exclusion-list');
+    return;
+} ## end sub initialize_warn_label_types
 
 sub filter_excluded_names {
 
@@ -15529,6 +15576,257 @@ EOM
     }
     return;
 } ## end sub warn_variable_types
+
+sub scan_label_usage {
+    my ($self) = @_;
+
+    # process a --warn-label-types command
+
+    # Issues types which can be checked:
+    # c: not all caps
+    # r: reused statement label:  a label has been used more than once
+    # u: unused statement label:  statement label not used
+    # m: missing statement label: statement label missing
+    my $issue_type_string =
+      "Issue types are 'c'=not ALL CAPS 'r'=reused 'u'=unused 'm'=missing\n";
+
+    # Issues 'm' and 'u' require a complete script
+    my $is_complete_script = $self->is_complete_script();
+
+    # $rline_numbers_of_target_labels is a hash with labels as keys
+    my $rline_numbers_of_statement_labels =
+      $self->[_rline_numbers_of_statement_labels_];
+
+    # $rline_numbers_of_target_labels->{$label} = [$line1, $line2, ...]
+    my $rline_numbers_of_target_labels =
+      $self->[_rline_numbers_of_target_labels_];
+    my @warnings;
+
+    foreach my $label ( keys %{$rline_numbers_of_statement_labels} ) {
+
+        my @line_numbers = @{ $rline_numbers_of_statement_labels->{$label} };
+        my $num          = @line_numbers;
+        my $first_line   = shift @line_numbers;
+
+        # Issue 'c': not all caps
+        if ( $rwarn_label_types->{'c'} && $label ne uc($label) ) {
+            my $note = "not ALL CAPS (issue c)";
+            if ( $num > 1 ) { $note .= ", $num occurrences" }
+            push @warnings,
+              {
+                name        => $label,
+                line_number => $first_line,
+                note        => $note,
+                letter      => 'c',
+              };
+        }
+
+        # Issue 'r': reused statement label
+        if ( $rwarn_label_types->{'r'} && $num > 1 ) {
+            my $note = "used $num times (issue r)";
+            push @warnings,
+              {
+                name        => $label,
+                line_number => $first_line,
+                note        => $note,
+                letter      => 'r',
+              };
+        }
+
+        # Issue 'u': unused statement label
+        if (   $rwarn_label_types->{'u'}
+            && !defined( $rline_numbers_of_target_labels->{$label} )
+            && $is_complete_script )
+        {
+            my $note = "is not referenced (issue u)";
+            push @warnings,
+              {
+                name        => $label,
+                line_number => $first_line,
+                note        => $note,
+                letter      => 'u',
+              };
+        }
+    }
+
+    # Issue 'm': missing statement label
+    if (   $rwarn_label_types->{'m'}
+        && $is_complete_script )
+    {
+        foreach my $label ( keys %{$rline_numbers_of_target_labels} ) {
+            if ( !defined( $rline_numbers_of_statement_labels->{$label} ) ) {
+                my @line_numbers =
+                  @{ $rline_numbers_of_target_labels->{$label} };
+                my $first_line = shift @line_numbers;
+                my $note       = "referenced but not found (issue m)";
+                push @warnings,
+                  {
+                    name        => $label,
+                    line_number => $first_line,
+                    note        => $note,
+                    letter      => 'm',
+                  };
+            }
+        }
+    }
+    if (@warnings) {
+        @warnings =
+          sort {
+                 $a->{line_number} <=> $b->{line_number}
+              || $a->{letter} cmp $b->{letter}
+          } @warnings;
+    }
+
+    return ( \@warnings, $issue_type_string );
+} ## end sub scan_label_usage
+
+sub dump_label_usage {
+    my ($self) = @_;
+
+    # process a --dump-label-usage command
+
+    my $opt_name = 'dump-label-usage';
+    return unless ( $rOpts->{$opt_name} );
+
+    # $rline_numbers_of_target_labels is a hash with labels as keys
+    my $rline_numbers_of_statement_labels =
+      $self->[_rline_numbers_of_statement_labels_];
+
+    # $rline_numbers_of_target_labels->{$label} = [$line1, $line2, ...]
+    my $rline_numbers_of_target_labels =
+      $self->[_rline_numbers_of_target_labels_];
+
+    my %issue_text = (
+        c => 'not all CAPS',
+        u => 'not referenced',
+        r => 'reused label',
+        m => 'missing label',
+    );
+
+    my %all_labels;
+    foreach my $label ( keys %{$rline_numbers_of_statement_labels} ) {
+        my @line_numbers = @{ $rline_numbers_of_statement_labels->{$label} };
+        my $label_count  = @line_numbers;
+        my $first_line   = shift @line_numbers;
+        my $rissues      = [];
+        if ( $label_count > 1 )     { push @{$rissues}, 'r' }
+        if ( $label ne uc($label) ) { push @{$rissues}, 'c' }
+        $all_labels{$label} = {
+            first_line  => $first_line,
+            label       => $label,
+            label_count => $label_count,
+            call_count  => 0,
+            rissues     => $rissues,
+        };
+    }
+    foreach my $label ( keys %{$rline_numbers_of_target_labels} ) {
+        my @line_numbers = @{ $rline_numbers_of_target_labels->{$label} };
+        my $label_count  = @line_numbers;
+        my $first_line   = shift @line_numbers;
+        if ( defined( $all_labels{$label} ) ) {
+            $all_labels{$label}->{call_count} = $label_count;
+        }
+        else {
+            my $rissues = [];
+            push @{$rissues}, 'm';
+            if ( $label ne uc($label) ) { push @{$rissues}, 'c' }
+            $all_labels{$label} = {
+                first_line  => $first_line,
+                label       => $label,
+                label_count => 0,
+                call_count  => $label_count,
+                rissues     => $rissues,
+            };
+        }
+    }
+    foreach my $label ( keys %{$rline_numbers_of_statement_labels} ) {
+        if ( !$all_labels{$label}->{call_count} ) {
+            push @{ $all_labels{$label}->{rissues} }, 'u';
+        }
+    }
+    return if ( !%all_labels );
+
+    my @output_lines;
+    foreach my $label ( keys %all_labels ) {
+        push @output_lines, $all_labels{$label};
+    }
+    @output_lines =
+      sort { $a->{first_line} <=> $b->{first_line} } @output_lines;
+    my $input_stream_name = $self->[_input_stream_name_];
+    my $output_string     = <<EOM;
+$input_stream_name: output for --dump-label-usage
+Line: label: number: ref_count: notes
+EOM
+    foreach my $item (@output_lines) {
+        my $line        = $item->{first_line};
+        my $label       = $item->{label};
+        my $label_count = $item->{label_count};
+        my $call_count  = $item->{call_count};
+        my $rissues     = $item->{rissues};
+
+        # separate issues with commas and add explanation
+        my $issue_string;
+        if ( @{$rissues} ) {
+            my @issues;
+            foreach my $letter ( @{$rissues} ) {
+                push @issues, $issue_text{$letter};
+            }
+            $issue_string = join( "; ", @issues );
+        }
+        else { $issue_string = '-' }
+
+        $output_string .=
+          "$line: $label: $label_count: $call_count: $issue_string\n";
+    }
+    print {*STDOUT} $output_string;
+    return;
+} ## end sub dump_label_usage
+
+sub warn_label_types {
+    my ($self) = @_;
+
+    # process a --warn-label-types command
+    return unless ( %{$rwarn_label_types} );
+
+    my $wl_key    = 'warn-label-types';
+    my $wl_option = $rOpts->{$wl_key};
+
+    my ( $rwarnings, $issue_type_string ) = $self->scan_label_usage();
+    return unless ( $rwarnings && @{$rwarnings} );
+
+    # Exclude commonly used special names: SKIP and TODO 
+    # which are special names for Test::More.  But do not overwrite any user
+    # control.
+    for (qw(SKIP TODO)) {
+        $ris_warn_label_excluded_name->{$_} = 1
+          if ( !defined( $ris_warn_label_excluded_name->{$_} ) );
+    }
+    $rwarnings =
+      filter_excluded_names( $rwarnings, $ris_warn_label_excluded_name );
+
+    # loop to form error messages
+    my $message_middle = EMPTY_STRING;
+    foreach my $item ( @{$rwarnings} ) {
+        my $label       = $item->{name};
+        my $line_number = $item->{line_number};
+##      my $letter      = $item->{letter};
+        my $note = $item->{note};
+##      $message_middle .= "$line_number:$letter: $label: $note\n";
+        $message_middle .= "$line_number: $label: $note\n";
+    }
+
+    if ($message_middle) {
+        my $message = "\nBegin scan for --$wl_key=$wl_option\n";
+        $message .= <<EOM;
+$issue_type_string
+Line:Issue: LABEL: note
+EOM
+        $message .= $message_middle;
+        $message .= "End scan for --$wl_key=$wl_option:\n";
+        $self->warning($message);
+    }
+    return;
+} ## end sub warn_label_types
 
 sub block_seqno_of_paren_seqno {
 
@@ -16563,6 +16861,12 @@ my $ris_my_sub_by_seqno;
 # true for c-style for loops
 my $ris_c_style_for_paren_by_seqno;
 
+# line numbers of labels
+my $rline_numbers_of_statement_labels;
+my $rline_numbers_of_target_labels;
+my $rspecial_line_type_count;
+my $rkeyword_count;
+
 sub initialize_respace_tokens_closure {
 
     my ($self) = @_;
@@ -16611,6 +16915,11 @@ sub initialize_respace_tokens_closure {
     $ris_my_sub_by_seqno = $self->[_ris_my_sub_by_seqno_];
 
     $ris_c_style_for_paren_by_seqno = $self->[_ris_c_style_for_paren_by_seqno_];
+    $rline_numbers_of_statement_labels =
+      $self->[_rline_numbers_of_statement_labels_];
+    $rline_numbers_of_target_labels = $self->[_rline_numbers_of_target_labels_];
+    $rspecial_line_type_count       = $self->[_rspecial_line_type_count_];
+    $rkeyword_count                 = $self->[_rkeyword_count_];
 
     $last_nonblank_code_type       = ';';
     $last_nonblank_code_token      = ';';
@@ -16712,6 +17021,9 @@ sub respace_tokens {
     # (re-)initialize closure variables for this problem
     $self->initialize_respace_tokens_closure();
 
+    my %is_special_line_type;
+    $is_special_line_type{$_} = 1 for qw( END_START DATA_START POD_START );
+
     #--------------------------------
     # Main over all lines of the file
     #--------------------------------
@@ -16738,6 +17050,9 @@ sub respace_tokens {
                             $ris_permanently_broken );
                     }
                 }
+            }
+            if ( $is_special_line_type{$line_type} ) {
+                $rspecial_line_type_count->{$line_type}++;
             }
             next;
         }
@@ -17311,6 +17626,7 @@ sub respace_tokens_inner_loop {
                   @{ $rK_wantarray_by_sub_seqno->{$current_sub_seqno} },
                   scalar( @{$rLL_new} );
             }
+            $rkeyword_count->{$token}++;
         }
 
         # handle semicolons
@@ -17598,8 +17914,14 @@ EOM
         elsif ( $type eq 'J' ) {
             $token =~ s/\s+//g;
             $rtoken_vars->[_TOKEN_] = $token;
+            my $key = substr( $token, 0, -1 );
+            push @{ $rline_numbers_of_statement_labels->{$key} },
+              $input_line_number;
         }
-
+        elsif ( $type eq 'j' ) {
+            push @{ $rline_numbers_of_target_labels->{$token} },
+              $input_line_number;
+        }
         else {
             ## no special processing for this token type
         }
@@ -19540,7 +19862,6 @@ sub resync_lines_and_tokens {
     my $rLL    = $self->[_rLL_];
     my $Klimit = $self->[_Klimit_];
     my $rlines = $self->[_rlines_];
-    my @Krange_code_without_comments;
     my @Klast_valign_code;
 
     # This is the next token and its line index:
@@ -19626,12 +19947,6 @@ EOM
 
                 $Kfirst = $Knext_beg;
 
-                # Save ranges of non-comment code. This will be used by
-                # sub keep_old_line_breaks.
-                if ( $rLL->[$Kfirst]->[_TYPE_] ne '#' ) {
-                    push @Krange_code_without_comments, [ $Kfirst, $Klast ];
-                }
-
                 # Only save ending K indexes of code types which are blank
                 # or 'VER'.  These will be used for a convergence check.
                 # See related code in sub 'convey_batch_to_vertical_aligner'
@@ -19690,7 +20005,6 @@ EOM
         $severe_error = 1;
         return ( $severe_error, $rqw_lines );
     }
-    $self->[_rKrange_code_without_comments_] = \@Krange_code_without_comments;
 
     # Setup the convergence test in the FileWriter based on line-ending indexes
     my $file_writer_object = $self->[_file_writer_object_];
@@ -23062,16 +23376,16 @@ EOM
     return;
 } ## end sub warn_nested_ternaries
 
-sub warn_c_style_for_loops {
+sub find_c_style_for_loops {
     my ($self) = @_;
 
-    # implement --warn-c-style-for-loops
     my $ris_c_style_for_paren_by_seqno =
       $self->[_ris_c_style_for_paren_by_seqno_];
     return unless ($ris_c_style_for_paren_by_seqno);
 
-    my $rLL    = $self->[_rLL_];
-    my $rlines = $self->[_rlines_];
+    my $MAX_LENGTH = 60;
+    my $rLL        = $self->[_rLL_];
+    my $rlines     = $self->[_rlines_];
     my $output_string;
     my $K_opening_container = $self->[_K_opening_container_];
     foreach
@@ -23084,9 +23398,36 @@ sub warn_c_style_for_loops {
         my $text           = $line_of_tokens->{_line_text};
         $text =~ s/^\s+//;
         $text =~ s/\s+$//;
-        if ( length($text) > 40 ) { $text = substr( $text, 0, 40 ) . "..." }
+        if ( length($text) > $MAX_LENGTH ) {
+            $text = substr( $text, 0, $MAX_LENGTH ) . "...";
+        }
         $output_string .= "$ln: $text\n";
     }
+    return $output_string;
+} ## end sub find_c_style_for_loops
+
+sub dump_c_style_for_loops {
+    my ($self) = @_;
+
+    # implement --dump-c-style-for-loops
+    my $output_string = $self->find_c_style_for_loops();
+    if ($output_string) {
+        my $opt_name          = 'dump-c-style-for-loops';
+        my $input_stream_name = $self->[_input_stream_name_];
+        chomp $output_string;
+        print {*STDOUT} <<EOM;
+$input_stream_name: output for --$opt_name
+$output_string
+EOM
+    }
+    return;
+} ## end sub dump_c_style_for_loops
+
+sub warn_c_style_for_loops {
+    my ($self) = @_;
+
+    # implement --warn-c-style-for-loops
+    my $output_string = $self->find_c_style_for_loops();
     if ($output_string) {
         my $opt_name = 'warn-c-style-for-loops';
         chomp $output_string;
@@ -23097,7 +23438,6 @@ $output_string
 End scan for --$opt_name
 EOM
     }
-
     return;
 } ## end sub warn_c_style_for_loops
 
@@ -23117,8 +23457,8 @@ sub check_for_old_break {
     #    = 2 make a soft break (keep building current batch)
     #        best for something like leading ->
 
-    my $rLL = $self->[_rLL_];
-
+    return if ( !defined($KK) );
+    my $rLL   = $self->[_rLL_];
     my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
 
     # Non-container tokens use the type as the key
@@ -23195,12 +23535,12 @@ sub keep_old_line_breaks {
     # = 2 make a soft break (keep building current batch)
     #     best for something like leading ->
 
-    my $rLL = $self->[_rLL_];
-    my $rKrange_code_without_comments =
-      $self->[_rKrange_code_without_comments_];
-    my $rbreak_before_Kfirst = $self->[_rbreak_before_Kfirst_];
-    my $rbreak_after_Klast   = $self->[_rbreak_after_Klast_];
-    my $rbreak_container     = $self->[_rbreak_container_];
+    my $rLL                       = $self->[_rLL_];
+    my $rlines                    = $self->[_rlines_];
+    my $rix_CODE_without_comments = $self->[_rix_CODE_without_comments_];
+    my $rbreak_before_Kfirst      = $self->[_rbreak_before_Kfirst_];
+    my $rbreak_after_Klast        = $self->[_rbreak_after_Klast_];
+    my $rbreak_container          = $self->[_rbreak_container_];
 
     #----------------------------------------
     # Apply --break-at-old-method-breakpoints
@@ -23208,8 +23548,13 @@ sub keep_old_line_breaks {
 
     # This code moved here from sub break_lists to fix b1120
     if ( $rOpts->{'break-at-old-method-breakpoints'} ) {
-        foreach my $item ( @{$rKrange_code_without_comments} ) {
+        foreach my $ix ( @{$rix_CODE_without_comments} ) {
+            my $item = $rlines->[$ix]->{_rK_range};
             my ( $Kfirst, $Klast ) = @{$item};
+            if ( !defined($Kfirst) ) {
+                ## this can happen if a useless ';' is removed
+                next;
+            }
             my $type  = $rLL->[$Kfirst]->[_TYPE_];
             my $token = $rLL->[$Kfirst]->[_TOKEN_];
 
@@ -23273,8 +23618,13 @@ sub keep_old_line_breaks {
 
     return unless ( %keep_break_before_type || %keep_break_after_type );
 
-    foreach my $item ( @{$rKrange_code_without_comments} ) {
+    foreach my $ix ( @{$rix_CODE_without_comments} ) {
+        my $item = $rlines->[$ix]->{_rK_range};
         my ( $Kfirst, $Klast ) = @{$item};
+        if ( !defined($Kfirst) ) {
+            ## this can happen if a useless ';' is removed
+            next;
+        }
         $self->check_for_old_break( $Kfirst, \%keep_break_before_type,
             $rbreak_before_Kfirst, 0 );
         $self->check_for_old_break( $Klast, \%keep_break_after_type,
@@ -28171,6 +28521,7 @@ sub process_all_lines {
     $self->keep_old_blank_lines_exclusions($rwant_blank_line_after)
       if ( $rOpts_keep_old_blank_lines == 1 );
 
+    my $saw_END_or_DATA;
     my $line_type      = EMPTY_STRING;
     my $i_last_POD_END = -10;
     my $i              = -1;
@@ -28209,7 +28560,7 @@ sub process_all_lines {
 
         # put a blank line after an =cut which comes before __END__ and __DATA__
         # (required by podchecker)
-        if ( $last_line_type eq 'POD_END' && !$self->[_saw_END_or_DATA_] ) {
+        if ( $last_line_type eq 'POD_END' && !$saw_END_or_DATA ) {
             $i_last_POD_END = $i;
             $file_writer_object->reset_consecutive_blank_lines();
             if ( !$in_format_skipping_section && $input_line !~ /^\s*$/ ) {
@@ -28308,7 +28659,7 @@ sub process_all_lines {
                 if (   !$skip_line
                     && !$in_format_skipping_section
                     && $line_type eq 'POD_START'
-                    && !$self->[_saw_END_or_DATA_] )
+                    && !$saw_END_or_DATA )
                 {
                     $self->want_blank_line();
                 }
@@ -28318,7 +28669,7 @@ sub process_all_lines {
             # after __END__ or __DATA__
             elsif ( $line_type eq 'END_START' || $line_type eq 'DATA_START' ) {
                 $file_writer_object->reset_consecutive_blank_lines();
-                $self->[_saw_END_or_DATA_] = 1;
+                $saw_END_or_DATA = 1;
             }
 
             # Patch to avoid losing blank lines after a code-skipping block;

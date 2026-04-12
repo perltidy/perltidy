@@ -582,6 +582,14 @@ sub get_iteration_count {
     return $rstatus->{iteration_count};
 }
 
+sub get_num_files {
+    return $rstatus->{num_files};
+}
+
+sub get_line_range_clipped {
+    return $rstatus->{line_range_clipped};
+}
+
 sub check_for_valid_words {
 
     my ($rcall_hash) = @_;
@@ -852,16 +860,18 @@ sub perltidy {
         opt_encode_output  => EMPTY_STRING,
         opt_max_iterations => EMPTY_STRING,
 
-        input_name        => '(unknown)',
-        output_name       => EMPTY_STRING,
-        char_mode_source  => 0,
-        char_mode_used    => 0,
-        input_decoded_as  => EMPTY_STRING,
-        output_encoded_as => EMPTY_STRING,
-        gcs_used          => 0,
-        iteration_count   => 0,
-        converged         => 0,
-        blinking          => 0,
+        input_name         => '(unknown)',
+        output_name        => EMPTY_STRING,
+        char_mode_source   => 0,
+        char_mode_used     => 0,
+        input_decoded_as   => EMPTY_STRING,
+        output_encoded_as  => EMPTY_STRING,
+        gcs_used           => 0,
+        iteration_count    => 0,
+        converged          => 0,
+        blinking           => 0,
+        num_files          => 0,
+        line_range_clipped => 0,
     };
 
     # Fix for issue git #57
@@ -1038,9 +1048,6 @@ EOM
         @ARGV_saved = ( $ARGV[-2], $ARGV[-1] );
     }
 
-    # see if -wvt was entered on the command line before @ARGV is changed
-    my $wvt_in_args = grep { /-(wvt|warn-variable-types)=/ } @ARGV;
-
     #-------------------------
     # get command line options
     #-------------------------
@@ -1122,6 +1129,7 @@ EOM
     # line parameters and is expecting formatted output to stdout.  Another
     # precaution, added elsewhere, is to ignore these in a .perltidyrc
     my $num_files = @Arg_files;
+    $rstatus->{num_files} = $num_files;
     foreach my $opt_name (
         qw(
         dump-block-summary
@@ -1133,6 +1141,7 @@ EOM
         dump-hash-keys
         dump-similar-keys
         dump-keyword-usage
+        dump-label-usage
         )
       )
     {
@@ -1197,9 +1206,9 @@ EOM
     my $line_range_clipped = $rOpts->{'line-range-tidy'}
       && ( $self->[_line_tidy_begin_] > 1
         || defined( $self->[_line_tidy_end_] ) );
+    $rstatus->{line_range_clipped} = $line_range_clipped;
 
-    Perl::Tidy::Formatter::check_options( $rOpts, $wvt_in_args, $num_files,
-        $line_range_clipped );
+    Perl::Tidy::Formatter::check_options($rOpts);
     Perl::Tidy::Tokenizer::check_options($rOpts);
     Perl::Tidy::VerticalAligner::check_options($rOpts);
     if ( $rOpts->{'format'} eq 'html' ) {
@@ -4095,6 +4104,8 @@ sub generate_options {
     $add_option->( 'pass-version-line',            'pvl',  '!' );
     $add_option->( 'warn-variable-types',          'wvt',  '=s' );
     $add_option->( 'warn-variable-exclusion-list', 'wvxl', '=s' );
+    $add_option->( 'warn-label-types',             'wlt',  '=s' );
+    $add_option->( 'warn-label-exclusion-list',    'wlxl', '=s' );
     $add_option->( 'want-call-parens',             'wcp',  '=s' );
     $add_option->( 'nowant-call-parens',           'nwcp', '=s' );
 
@@ -4109,6 +4120,7 @@ sub generate_options {
     $add_option->( 'warn-mismatched-return-types',          'wmrt',  '=s' );
     $add_option->( 'warn-mismatched-return-exclusion-list', 'wmrxl', '=s' );
     $add_option->( 'warn-similar-keys',                     'wsk',   '!' );
+    $add_option->( 'dump-c-style-for-loops',                'dcsfl', '!' );
     $add_option->( 'warn-c-style-for-loops',                'wcsfl', '!' );
 
     $add_option->( 'add-interbracket-arrows',       'aia', '!' );
@@ -4134,6 +4146,7 @@ sub generate_options {
     $add_option->( 'dump-mixed-call-parens',          'dmcp',  '!' );
     $add_option->( 'dump-keyword-usage',              'dku',   '!' );
     $add_option->( 'dump-keyword-usage-list',         'dkul',  '=s' );
+    $add_option->( 'dump-label-usage',                'dlu',   '!' );
     $add_option->( 'dump-options',                    'dop',   '!' );
     $add_option->( 'dump-profile',                    'dpro',  '!' );
     $add_option->( 'dump-short-names',                'dsn',   '!' );
@@ -4977,6 +4990,7 @@ EOM
                 #  dump-want-left-space
                 #  dump-want-right-space
                 #  dump-keyword-usage
+                #  dump-label-usage
 
                 # The following dump configuration parameters which
                 # take =i or =s would still be allowed:

@@ -2,6 +2,16 @@
 
 ## 2026 02 04.02
 
+    - Add input parameter --dump-label-usage, or -dlu, to dump a list of
+      all statement labels used in a script to standard output.
+
+    - Add input parameter --warn-label-types=s, or -wlt=s, to issue a
+      warning for certain types of statement labels. The string s can select
+      from several types of warnings. A value '1' selects all warnings.
+      The manual has details. A companion parameter
+      --warn-label-exclusion-list=s, or -wlxl=s, can avoid warnings for
+      selected labels.
+
     - Add input parameter --warn-c-style-for-loops. When set, any
       C-style for loops are listed in the error output stream.
 
@@ -2138,7 +2148,7 @@
       } );
 
     - RT#12764, introduced new feature allowing placement of blanks around
-      sequences of selected keywords. This can be activated with the -kgb* 
+      sequences of selected keywords. This can be activated with the -kgb*
       series of parameters described in the manual.
 
     - Rewrote vertical alignment module.  It is better at finding
