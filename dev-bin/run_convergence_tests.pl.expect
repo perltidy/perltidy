@@ -9527,6 +9527,60 @@ my $file =
            ]
   )->grid(qw/-sticky w/);
 
+==> b1586 <==
+    File::Find::find(
+        {
+            wanted => sub {
+                my $path = $File::Find::name;
+
+                return
+                       if $path eq $dir;
+                if ( $self->_path_is_excluded($path) )
+                {
+                    $File::Find::prune = 1;
+                    return;
+                }
+
+                push
+                       @events,
+                       $self->event_class->new(
+                    path => $path,
+                    type => 'create',
+                       );
+            },
+            follow_fast =>
+                   ( $self->follow_symlinks ? 1 : 0 ),
+            no_chdir => 1
+        },
+        $dir
+    );
+    File::Find::find(
+        {
+            wanted => sub {
+                my $path = $File::Find::name;
+
+                return
+                       if $path eq $dir;
+                if ( $self->_path_is_excluded($path) )
+                {
+                    $File::Find::prune = 1;
+                    return;
+                }
+
+                push
+                       @events,
+                       $self->event_class->new(
+                    path => $path,
+                    type => 'create',
+                       );
+            },
+            follow_fast =>
+                   ( $self->follow_symlinks ? 1 : 0 ),
+            no_chdir => 1
+        },
+        $dir
+    );
+
 ==> b163 <==
 # State 1
 Readonly::Scalar
@@ -10384,15 +10438,13 @@ $graph->set(
 ==> b378 <==
 # State 1
 
-use constant BG_COLOR=>(
-               255,255,255
-);
+use constant BG_COLOR=>
+     (255,255,255);
 
 # State 2
 
-use constant BG_COLOR=>(
-               255,255,255
-);
+use constant BG_COLOR=>
+     (255,255,255 );
 
 
 ==> b379 <==
@@ -10414,14 +10466,12 @@ use
 
 ==> b380 <==
 # State 1
-use constant BG_COLOR=>(
-    255,255,255
-);
+use constant BG_COLOR=>
+          (255,255,255);
 
 # State 2
-use constant BG_COLOR=>(
-    255,255,255
-);
+use constant BG_COLOR=>
+          (255,255,255 );
 
 ==> b381 <==
          # state 1

@@ -15794,7 +15794,7 @@ sub warn_label_types {
     my ( $rwarnings, $issue_type_string ) = $self->scan_label_usage();
     return unless ( $rwarnings && @{$rwarnings} );
 
-    # Exclude commonly used special names: SKIP and TODO 
+    # Exclude commonly used special names: SKIP and TODO
     # which are special names for Test::More.  But do not overwrite any user
     # control.
     for (qw(SKIP TODO)) {
@@ -38660,7 +38660,8 @@ sub find_token_starting_list {
     }
 
     elsif (
-        $tokens_to_go[$i_opening_paren] eq '('
+        # check for '=>' added for b1586
+        ( $tokens_to_go[$i_opening_paren] eq '(' && $type_prev_nb ne '=>' )
 
         # non-parens added here to fix case b1186
         || $is_kwiZ{$type_prev_nb}

@@ -14403,6 +14403,65 @@ my $file =
 --break-before-square-bracket=1
 --keep-old-breakpoints-before='i'
 
+==> b1586.in <==
+    File::Find::find(
+        {
+            wanted => sub {
+                my $path = $File::Find::name;
+
+                return
+                       if $path eq $dir;
+                if ( $self->_path_is_excluded($path) )
+                {
+                    $File::Find::prune = 1;
+                    return;
+                }
+
+                push
+                       @events,
+                       $self->event_class->new(
+                    path => $path,
+                    type => 'create',
+                       );
+            },
+            follow_fast => (
+                         $self->follow_symlinks ? 1 : 0
+            ),
+            no_chdir => 1
+        },
+        $dir
+    );
+    File::Find::find(
+      {
+        wanted => sub {
+            my $path = $File::Find::name;
+
+            return
+                   if $path eq $dir;
+            if ( $self->_path_is_excluded($path) ) {
+                $File::Find::prune = 1;
+                return;
+            }
+
+            push
+                   @events,
+                   $self->event_class->new(
+                                      path => $path,
+                                      type => 'create',
+                   );
+        },
+        follow_fast =>
+               ( $self->follow_symlinks ? 1 : 0 ),
+        no_chdir => 1
+      },
+      $dir
+    );
+
+==> b1586.par <==
+--maximum-line-length=55
+--continuation-indentation=7
+--extended-line-up-parentheses
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar
