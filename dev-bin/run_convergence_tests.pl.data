@@ -14462,6 +14462,26 @@ my $file =
 --continuation-indentation=7
 --extended-line-up-parentheses
 
+==> b1587.in <==
+my %flags = (
+ tag =>
+   {
+  type => ':s',
+  descr => 'Specifies a tag to save to result_history.db.  ' . 'Default is $HTML::Mason::VERSION or --cvs_tag value.' }, clear_cache => { descr => 'Will clear on-disk cache first.  Useful for exercising the compiler.' }, help => { descr => 'Prints this message and exits.' } );
+
+my %flags = (
+ tag =>
+ {type => ':s',
+  descr => 'Specifies a tag to save to result_history.db.  ' . 'Default is $HTML::Mason::VERSION or --cvs_tag value.' }, clear_cache => { descr => 'Will clear on-disk cache first.  Useful for exercising the compiler.' }, help => { descr => 'Prints this message and exits.' } );
+
+==> b1587.par <==
+--indent-columns=1
+--extended-line-up-parentheses
+--break-before-hash-brace=1
+--break-before-hash-brace-and-indent=1
+--brace-vertical-tightness=1
+--keep-old-breakpoints-after='=>'
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar

@@ -9581,6 +9581,33 @@ my $file =
         $dir
     );
 
+==> b1587 <==
+my %flags = (
+ tag =>
+ {   type  => ':s',
+     descr => 'Specifies a tag to save to result_history.db.  '
+       . 'Default is $HTML::Mason::VERSION or --cvs_tag value.'
+ },
+ clear_cache => {
+  descr =>
+    'Will clear on-disk cache first.  Useful for exercising the compiler.'
+ },
+ help => { descr => 'Prints this message and exits.' }
+);
+
+my %flags = (
+ tag =>
+ {   type  => ':s',
+     descr => 'Specifies a tag to save to result_history.db.  '
+       . 'Default is $HTML::Mason::VERSION or --cvs_tag value.'
+ },
+ clear_cache => {
+  descr =>
+    'Will clear on-disk cache first.  Useful for exercising the compiler.'
+ },
+ help => { descr => 'Prints this message and exits.' }
+);
+
 ==> b163 <==
 # State 1
 Readonly::Scalar

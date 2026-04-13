@@ -658,8 +658,7 @@ BEGIN {
         _first_brace_tabbing_disagreement_ => $i++,
         _in_brace_tabbing_disagreement_    => $i++,
 
-        _saw_VERSION_in_this_file_ => $i++,
-        _saw_use_strict_           => $i++,
+        _saw_use_strict_ => $i++,
 
         _rK_weld_left_         => $i++,
         _rK_weld_right_        => $i++,
@@ -1089,8 +1088,7 @@ sub new {
     $self->[_logger_object_]           = $logger_object;
     $self->[_save_logfile_] =
       defined($logger_object) && $logger_object->get_save_logfile();
-    $self->[_saw_VERSION_in_this_file_] = !$rOpts->{'pass-version-line'};
-    $self->[_input_stream_name_]        = $display_name;
+    $self->[_input_stream_name_] = $display_name;
 
     # Initialize all other self vars
     $self->initialize_self_vars();
@@ -12939,6 +12937,34 @@ sub set_maximum_field_count {
     return;
 } ## end sub set_maximum_field_count
 
+sub is_VERSION_line {
+    my ( $self, $Kfirst, $Klast ) = @_;
+
+    # Be sure that the text 'VERSION' in a line is an identifier,
+    # and not for example in a quote or comment.
+
+    # Given the range of indexes on a line,
+    # Return:
+    #   - true if there is an identifier VERSION
+    #   - false otherwise
+    my $rLL             = $self->[_rLL_];
+    my $semicolon_count = 0;
+    foreach my $KK ( $Kfirst .. $Klast ) {
+        my $type = $rLL->[$KK]->[_TYPE_];
+        if ( $type eq ';' ) {
+            $semicolon_count++;
+            if ( $semicolon_count > 1 ) { return }
+            next;
+        }
+        if ( $type eq 'i' ) {
+            my $token = $rLL->[$KK]->[_TOKEN_];
+            if ( $token =~ /\bVERSION$/ ) { return 1 }
+            next;
+        }
+    }
+    return;
+} ## end sub is_VERSION_line
+
 sub set_CODE_type {
     my ( $self, $early_FS_end_marker ) = @_;
 
@@ -13034,7 +13060,7 @@ sub set_CODE_type {
         }
     }
 
-    my $Saw_VERSION_in_this_file   = 0;
+    my $looking_for_VERSION_line   = $rOpts->{'pass-version-line'};
     my $has_side_comment           = 0;
     my $last_line_had_side_comment = 0;
     my ( $Kfirst, $Klast );
@@ -13372,19 +13398,21 @@ sub set_CODE_type {
         #   Patch for problem reported in RT #81866, where files
         #   had been flattened into a single line and couldn't be
         #   tidied without -npvl.  There are two parts to this patch:
-        #   First, it is not done for a really long line (80 tokens for now).
+        #   First, a really long line is skipped (60 tokens for now;
+        #      the max in all of the perltidy source lines is 44 tokens)
         #   Second, we will only allow up to one semicolon
         #   before the VERSION.  We need to allow at least one semicolon
         #   for statements like this:
         #      require Exporter;  our $VERSION = $Exporter::VERSION;
         #   where both statements must be on a single line for MakeMaker
-
-        if (  !$Saw_VERSION_in_this_file
-            && $jmax < 80
+        if (   $looking_for_VERSION_line
+            && $jmax < 60
+            && index( $input_line, 'VERSION' ) > 0
             && $input_line =~
-            /^[^;]*;?[^;]*([\$*])(([\w\:\']*)\bVERSION)\b.*\=/ )
+            /^[^;]*;?[^;]*([\$*])(([\w\:\']*)\bVERSION)\b.*\=/
+            && $self->is_VERSION_line( $Kfirst, $Klast ) )
         {
-            $Saw_VERSION_in_this_file = 1;
+            $looking_for_VERSION_line = 0;
             $self->write_logfile_entry(
                 "passing VERSION line; -npvl deactivates\n");
 
@@ -29979,7 +30007,6 @@ EOM
 
         # check for a $VERSION statement
         if ( $CODE_type eq 'VER' ) {
-            $self->[_saw_VERSION_in_this_file_] = 1;
             $no_internal_newlines = 2;
         }
 

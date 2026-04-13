@@ -906,6 +906,7 @@ EOM
             'interbracket-arrow-style' =>
               [ ']{', ']->{', '][', ']->[', '}[', '}->[', '}{', '}->{' ],
 
+            'warn-label-types'                      => [ '0', '1' ],
             'warn-variable-types'                   => [ '0', '1' ],
             'warn-mismatched-arg-types'             => [ '0', '1' ],
             'warn-mismatched-arg-undercount-cutoff' => [ 0,   5 ],

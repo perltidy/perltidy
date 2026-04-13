@@ -15,6 +15,10 @@
     - Add input parameter --warn-c-style-for-loops. When set, any
       C-style for loops are listed in the error output stream.
 
+    - The parameter --pass-version-line, or -pvl is now working correcty.
+      It was not possible to negate this parameter in the previous version,
+      and this has been fixed.
+
     - Add input parameter --blank-lines-prevent-cuddles, or -blpc, to
       allow user to break a cuddled chain with a blank line. Previously,
       the only way to prevent an unwanted cuddle was to insert a comment.
