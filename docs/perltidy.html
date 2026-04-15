@@ -2098,7 +2098,7 @@
 
 <p>If the first block spans multiple lines, then cuddling can be done and will continue for the subsequent blocks in the chain, as illustrated in the previous snippet.</p>
 
-<p>If there are blank lines between cuddled blocks they will be eliminated. If there are comments after the closing brace where cuddling would occur then cuddling will be prevented. If this occurs, cuddling will restart later in the chain if possible.</p>
+<p>If there are blank lines between cuddled blocks they will be eliminated (unless the flag <b>--blank-lines-prevent-cuddles</b> is set; it is described below). If there are comments after the closing brace where cuddling would occur then cuddling will be prevented. If this occurs, cuddling will restart later in the chain if possible.</p>
 
 </dd>
 <dt id="cb---cuddled-blocks"><b>-cb</b>, <b>--cuddled-blocks</b></dt>
@@ -2152,6 +2152,21 @@
 <p>The option <b>cbo=0</b> can produce erratic cuddling if there are numerous one-line blocks.</p>
 
 <p>The option <b>cbo=2</b> produces maximal cuddling but will not allow any short blocks.</p>
+
+</dd>
+<dt id="blpc---blank-lines-prevent-cuddles"><b>-blpc</b>, <b>--blank-lines-prevent-cuddles</b></dt>
+<dd>
+
+<p>By default, cuddling operations occur even if a blank line separates a closing brace from the line to which it will be joined. This flag can be set to prevent cuddling across such a blank line. For example, cuddling will be prevented in the following example because of the -blpc flag:</p>
+
+<pre><code>    # perltidy -ce -blpc
+    if ($task) {
+        yyy();
+    }
+
+    else {
+        zzz();
+    }</code></pre>
 
 </dd>
 <dt id="bl---opening-brace-on-new-line-or---brace-left"><b>-bl</b>, <b>--opening-brace-on-new-line</b>, or <b>--brace-left</b></dt>
@@ -3027,8 +3042,8 @@
 
 <p>The <b>-baao</b> flag sets the default to be to break after all of the following operators:</p>
 
-<pre><code>    % + - * / x != == &gt;= &lt;= =~ !~ &lt; &gt; | &amp;
-    = **= += *= &amp;= &lt;&lt;= &amp;&amp;= -= /= |= &gt;&gt;= ||= //= .= %= ^= x=
+<pre><code>    % + - * / x != == &gt;= &lt;= =~ !~ &lt; &gt; | &amp; ^ |. &amp;. ^.
+    = **= += *= &amp;= &lt;&lt;= &amp;&amp;= -= /= |= &gt;&gt;= ||= //= .= %= ^= x= |.= &amp;.= ^.=
     . : ? &amp;&amp; || and or err xor</code></pre>
 
 <p>and the <b>-bbao</b> flag sets the default to break before all of these operators. These can be used to define an initial break preference which can be fine-tuned with the <b>--want-break-after</b> and <b>--want-break-before</b> flags. For example, to break before all operators except an <b>=</b> one could use <code>-bbao -wba=&#39;=&#39;</code> rather than listing every single perl operator except <b>=</b> on a <b>-wbb</b> flag.</p>
@@ -4716,7 +4731,7 @@
 
 <pre><code>  = **= += *= &amp;= &lt;&lt;= &amp;&amp;= -= /= |= &gt;&gt;= ||= //= .= %= ^= x= ^^=
   { ( ? : , ; =&gt; &amp;&amp; || ~~ !~~ =~ !~ // &lt;=&gt; -&gt; q
-  if unless and or err for foreach while until</code></pre>
+  if unless and or err for foreach while until cmp</code></pre>
 
 <p>These alignment types correspond to perl symbols, operators and keywords except for &#39;q&#39;, which refers to the special case of alignment in a &#39;use&#39; statement of qw quotes and empty parens.</p>
 
@@ -4780,6 +4795,24 @@
   print &quot;Would need: @DepList\n&quot;     if ( @DepList and !$Quiet );
   print &quot;Output:\n&quot;                  unless $Quiet;
   print join( &quot;\n&quot;, @Output ) . &quot;\n&quot; unless $Quiet;</code></pre>
+
+</dd>
+<dt id="Aligning-cmp-and-with---valign-comparison-operators-or--vco"><b>Aligning cmp and &lt;=&gt; with --valign-comparison-operators or -vco</b></dt>
+<dd>
+
+<p>By default, the string comparison operator <b>cmp</b> aligns with the numeric comparison operator <b>&lt;=&gt;</b>. To prevent this, use the negative of this parameter. For example,</p>
+
+<pre><code>  # perltidy [DEFAULT]
+  sub sortName       { $a-&gt;{&quot;file&quot;}       cmp $b-&gt;{&quot;file&quot;}; }
+  sub sortNameNoCase { uc( $a-&gt;{&quot;file&quot;} ) cmp uc( $b-&gt;{&quot;file&quot;} ); }
+  sub sortSize       { $b-&gt;{&quot;size&quot;}       &lt;=&gt; $a-&gt;{&quot;size&quot;}; }
+  sub sortDate       { $b-&gt;{&quot;mtime&quot;}      &lt;=&gt; $a-&gt;{&quot;mtime&quot;}; }
+
+  # perltidy -nvco
+  sub sortName       { $a-&gt;{&quot;file&quot;}       cmp $b-&gt;{&quot;file&quot;}; }
+  sub sortNameNoCase { uc( $a-&gt;{&quot;file&quot;} ) cmp uc( $b-&gt;{&quot;file&quot;} ); }
+  sub sortSize       { $b-&gt;{&quot;size&quot;}  &lt;=&gt; $a-&gt;{&quot;size&quot;}; }
+  sub sortDate       { $b-&gt;{&quot;mtime&quot;} &lt;=&gt; $a-&gt;{&quot;mtime&quot;}; }</code></pre>
 
 </dd>
 <dt id="Aligning-signed-numbers-with---valign-signed-numbers-or--vsn"><b>Aligning signed numbers with --valign-signed-numbers or -vsn</b></dt>
@@ -5893,6 +5926,22 @@
 </ul>
 
 </dd>
+<dt id="Use---warn-c-style-for-loops-to-write-a-warning-for-C-style-for-loops"><b>Use --warn-c-style-for-loops</b> to write a warning for C-style for loops</dt>
+<dd>
+
+<p>When the parameter <b>--warn-c-style-for-loops</b>, or <b>-wcsfl</b>, is set, any C-style for loops are listed in the error output stream. These loops have the form</p>
+
+<pre><code>    for (my $i = 0; $i &lt; 5; $i++) {
+        print &quot;Value: $i\n&quot;;
+    }</code></pre>
+
+<p>They can often be converted into a more readable list-oriented loop. This parameter can be set if the policy is not to use them.</p>
+
+<p>Note that this parameter is similar to the <b>Perl::Critic</b> policy <b>ControlStructures::ProhibitCStyleForLoops</b>.</p>
+
+<p>The dump version of this option, <b>--dump-c-style-for-loops</b>, or <b>-dcsfl</b>, can be used to dump a list of such loops to the standard output for a code review.</p>
+
+</dd>
 <dt id="Use---dump-keyword-usage-to-dump-a-list-of-keywords-used"><b>Use --dump-keyword-usage</b> to dump a list of keywords used</dt>
 <dd>
 
@@ -5921,6 +5970,62 @@
 
 </li>
 </ul>
+
+</dd>
+<dt id="Use---warn-label-types-s-or--wlu-s-to-warn-of-selected-label-issues"><b>Use --warn-label-types=s</b>, or <b>-wlu=s</b> to warn of selected label issues</dt>
+<dd>
+
+<p>The parameter <b>-wlu=s</b> provides some simple checks which can help screen for potential problems with statement labels.</p>
+
+<p>Statement labels are very useful for controlling program flow, but their use also introduces a vulnerability which should be considered. This is because labels are global in scope, and when perl has an unresolved reference to a label it looks up the call stack for a match, even if it is in another module or file. If this is not intended it will not end well, especially if an unintended label is found. Such an event can be very difficult to debug, especially if it is triggered by a rare condition. This can happen for example with a simple spelling error.</p>
+
+<p>The string <b>s</b> indicates which issues should be checked, as follows:</p>
+
+<dl>
+
+<dt id="c:-a-label-which-is-not-all-capital-letters"><b>c:</b> a label which is not all <b>capital</b> letters</dt>
+<dd>
+
+</dd>
+<dt id="r:-a-label-which-is-reused"><b>r:</b> a label which is <b>reused</b></dt>
+<dd>
+
+</dd>
+<dt id="u:-a-label-which-is-unused-not-referenced"><b>u:</b> a label which is <b>unused</b> (not referenced)</dt>
+<dd>
+
+</dd>
+<dt id="m:-a-label-which-is-referenced-but-missing"><b>m:</b> a label which is referenced but <b>missing</b></dt>
+<dd>
+
+</dd>
+</dl>
+
+<p>Use either commas or spaces to separate multiple items. For example</p>
+
+<pre><code>  perltidy -wlt=&#39;c m&#39; somefile.pl</code></pre>
+
+<p>will format somefile.pl and also issue a warning if issues <b>c</b> or <b>m</b> are found.</p>
+
+<p>All possible checks may be specified with <b>-wlt=&#39;*&#39;</b> or <b>-wlt=1</b>. The default is not to do any of these checks, and it can also be indicated with <b>-wlt=0</b>.</p>
+
+</dd>
+<dt id="Use---warn-label-exclusion-list-or--wlxl-string-to-skip-warning-checks-for-specific-labels">Use <b>--warn-label-exclusion-list</b>, or <b>-wlxl=string</b>, to skip warning checks for specific labels.</dt>
+<dd>
+
+<p>The string may contain a list, entered as a quoted string of space- or comma-separated labels. A leading and/or trailing <b>*</b> on a name may be used to indicate a partial string match. Warnings for the following label names used by <b>Test::More</b> are always excluded: <b>SKIP</b> and <b>TODO</b>.</p>
+
+</dd>
+<dt id="Use---dump-label-usage-to-dump-a-list-of-labels-used"><b>Use --dump-label-usage</b> to dump a list of labels used</dt>
+<dd>
+
+<p>The parameter <b>--dump-label-usage</b>, or <b>-dlu</b>, will write a list of statement labels defined in a file along with the following associated items: (1) the line number of first occurrence, (2) the number of occurrences, (3) the number of references, (4) a note on any of the above issues.</p>
+
+<p>For example,</p>
+
+<pre><code>   perltidy -dlu somefile.pl &gt;results.txt</code></pre>
+
+<p>All labels and potential issues are listed in the dump.</p>
 
 </dd>
 </dl>
@@ -6209,26 +6314,26 @@
 
 <pre><code> D      aia    altc   ame    anl    asbl   asc    ast    asu    atc
  atnl   aws    b      baa    baao   bar    bbao   bbb    bbc    bboc
- bbs    bl     bli    boa    boc    bok    bol    bom    bos    bot
- botc   botl   cblx   ce     conv   cpb    cpbw   cs     csc    cscb
- cscw   csfs   dac    dbc    dbs    dcbl   dcsc   ddf    dfsfs  dhk
- dia    dior   dku    dln    dltc   dma    dmcp   dmr    dnl    dnt
- dop    dp     dpro   drc    dsc    dsk    dsm    dsn    dtc    dtco
- dtt    duk    duv    dwic   dwls   dwrs   dws    eos    f      fpva
- frm    fs     fso    gcs    hbc    hbcm   hbco   hbh    hbhh   hbi
- hbj    hbk    hbm    hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc
- hbv    hbw    hent   hic    hicm   hico   hih    hihh   hii    hij
- hik    him    hin    hip    hipd   hipu   hiq    his    hisc   hiv
- hiw    hsc    html   ibc    icb    icp    ils    iob    ipc    isbc
- iscl   kgb    kgbd   kgbi   kis    lal    log    lop    lp     lsl
- mci    mem    nib    ohbr   okw    ola    olc    oll    olq    opr
- opt    osbc   osbr   otr    ple    pod    pvl    q      qwaf   sac
- sbc    sbl    scbb   schb   scp    scsb   sct    se     sfp    sfs
- skp    sob    sobb   sohb   sop    sosb   sot    ssc    st     sts
- t      tac    tbc    toc    tp     tqw    trp    ts     tsc    tso
- vbc    vc     viu    vmll   vsc    vsn    vwe    w      wfc    wia
- wma    wme    wmr    wn     wnt    wsk    wuk    x      xbt    xci
- xlp    xs</code></pre>
+ bbs    bl     bli    blpc   boa    boc    bok    bol    bom    bos
+ bot    botc   botl   cblx   ce     conv   cpb    cpbw   cs     csc
+ cscb   cscw   csfs   dac    dbc    dbs    dcbl   dcsc   dcsfl  ddf
+ dfsfs  dhk    dia    dior   dku    dln    dltc   dlu    dma    dmcp
+ dmr    dnl    dnt    dop    dp     dpro   drc    dsc    dsk    dsm
+ dsn    dtc    dtco   dtt    duk    duv    dwic   dwls   dwrs   dws
+ eos    f      fpva   frm    fs     fso    gcs    hbc    hbcm   hbco
+ hbh    hbhh   hbi    hbj    hbk    hbm    hbn    hbp    hbpd   hbpu
+ hbq    hbs    hbsc   hbv    hbw    hent   hic    hicm   hico   hih
+ hihh   hii    hij    hik    him    hin    hip    hipd   hipu   hiq
+ his    hisc   hiv    hiw    hsc    html   ibc    icb    icp    ils
+ iob    ipc    isbc   iscl   kgb    kgbd   kgbi   kis    lal    log
+ lop    lp     lsl    mci    mem    nib    ohbr   okw    ola    olc
+ oll    olq    opr    opt    osbc   osbr   otr    ple    pod    pvl
+ q      qwaf   sac    sbc    sbl    scbb   schb   scp    scsb   sct
+ se     sfp    sfs    skp    sob    sobb   sohb   sop    sosb   sot
+ ssc    st     sts    t      tac    tbc    toc    tp     tqw    trp
+ ts     tsc    tso    vbc    vc     vco    viu    vmll   vsc    vsn
+ vwe    w      wcsfl  wfc    wia    wma    wme    wmr    wn     wnt
+ wsk    wuk    x      xbt    xci    xlp    xs</code></pre>
 
 <p>Equivalently, the prefix &#39;no&#39; or &#39;no-&#39; on the corresponding long names may be used.</p>
 
@@ -6308,7 +6413,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20260204</p>
+<p>This man page documents perltidy version 20260204.03</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

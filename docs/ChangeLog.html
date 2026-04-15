@@ -1,5 +1,87 @@
 <h1>Perltidy Change Log</h1>
 
+<h2>2026 02 04.03</h2>
+
+<pre><code>- Add input parameter --dump-label-usage, or -dlu, to dump a list of
+  all statement labels used in a script to standard output.
+
+- Add input parameter --warn-label-types=s, or -wlt=s, to issue a
+  warning for certain types of statement labels. The string s can select
+  from several types of warnings. A value '1' selects all warnings.
+  The manual has details. A companion parameter
+  --warn-label-exclusion-list=s, or -wlxl=s, can avoid warnings for
+  selected labels.
+
+- Add input parameter --warn-c-style-for-loops. When set, any
+  C-style for loops are listed in the error output stream.
+
+- The parameter --pass-version-line, or -pvl is now working correctly.
+  It was not possible to negate this parameter in the previous version,
+  and this has been fixed.
+
+- Add input parameter --blank-lines-prevent-cuddles, or -blpc, to
+  allow user to break a cuddled chain with a blank line. Previously,
+  the only way to prevent an unwanted cuddle was to insert a comment.
+
+- Fixed issue git #205. In some rare cases of cuddled formatting, the
+  cuddled style could unexpectedly continue from an if-chain into
+  a sort/map/grep block.
+
+- Vertical alignment now occurs by default for the string comparison
+  operator 'cmp', and these align with any numeric comparison
+  operators '&lt;=&gt;' by default. Previously the 'cmp' operator was not
+  vertically aligned.  A new control switch --valign-comparison-operators
+  can be negated to cause any 'cmp' operators not to align with any
+  '&lt;=&gt;' operators.  To illustrate the options:
+
+    # Old default, or new version with --valign-exclusion-list='cmp'
+    sub sortName       { $a-&gt;{"file"} cmp $b-&gt;{"file"}; }
+    sub sortNameNoCase { uc( $a-&gt;{"file"} ) cmp uc( $b-&gt;{"file"} ); }
+    sub sortSize       { $b-&gt;{"size"}  &lt;=&gt; $a-&gt;{"size"}; }
+    sub sortDate       { $b-&gt;{"mtime"} &lt;=&gt; $a-&gt;{"mtime"}; }
+
+    # New default:
+    sub sortName       { $a-&gt;{"file"}       cmp $b-&gt;{"file"}; }
+    sub sortNameNoCase { uc( $a-&gt;{"file"} ) cmp uc( $b-&gt;{"file"} ); }
+    sub sortSize       { $b-&gt;{"size"}       &lt;=&gt; $a-&gt;{"size"}; }
+    sub sortDate       { $b-&gt;{"mtime"}      &lt;=&gt; $a-&gt;{"mtime"}; }
+
+    # New version with --novalign-comparison-operators
+    sub sortName       { $a-&gt;{"file"}       cmp $b-&gt;{"file"}; }
+    sub sortNameNoCase { uc( $a-&gt;{"file"} ) cmp uc( $b-&gt;{"file"} ); }
+    sub sortSize       { $b-&gt;{"size"}  &lt;=&gt; $a-&gt;{"size"}; }
+    sub sortDate       { $b-&gt;{"mtime"} &lt;=&gt; $a-&gt;{"mtime"}; }
+
+- Fixed issue git #197, where long lines could be broken before reaching
+  the maximum line length in some edge cases when
+  --extended-continuation-indentation is set.
+
+- Implemented issue git #27, docker image for perltidy.
+
+- Parameters --break-before-all-operators and --break-after-all-operators
+  now include control of the following bitwise operators:
+
+       |.= &amp;.= ^.= &amp;. ^. |.
+
+  Breaks around these operators can be individually controlled with
+  --want-break-before and --want-break-after.
+
+- If a long line needs to break at the caret operator, '^', the break will
+  now be after the operator rather than before it.  This should have been
+  the default. Use --want-break-before='^' to keep breaks before this operator.
+  For example:
+
+        # new default breaks long lines after a '^'
+        $state-&gt;[$kk] =
+          $state-&gt;[ $kk - 18 ] ^ ( ( $state-&gt;[$kk] &gt;&gt; 1 ) &amp; 0x7fffffff ) ^
+          $mag01[ $state-&gt;[$kk] &amp; 1 ];
+
+        # previous default, and current version with perltidy -wbb='^'
+        $state-&gt;[$kk] =
+          $state-&gt;[ $kk - 18 ] ^ ( ( $state-&gt;[$kk] &gt;&gt; 1 ) &amp; 0x7fffffff )
+          ^ $mag01[ $state-&gt;[$kk] &amp; 1 ];
+</code></pre>
+
 <h2>2026 02 04</h2>
 
 <pre><code>- Fix issue git #195, where --want-break-before=s and --want-break-after=s
@@ -2101,7 +2183,7 @@ signatures.  Reformatting with the current version will fix the problem.
   } );
 
 - RT#12764, introduced new feature allowing placement of blanks around
-  sequences of selected keywords. This can be activated with the -kgb* 
+  sequences of selected keywords. This can be activated with the -kgb*
   series of parameters described in the manual.
 
 - Rewrote vertical alignment module.  It is better at finding

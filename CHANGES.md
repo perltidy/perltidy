@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2026 02 04.02
+## 2026 02 04.03
 
     - Add input parameter --dump-label-usage, or -dlu, to dump a list of
       all statement labels used in a script to standard output.
