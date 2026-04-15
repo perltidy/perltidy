@@ -15,7 +15,7 @@
     - Add input parameter --warn-c-style-for-loops. When set, any
       C-style for loops are listed in the error output stream.
 
-    - The parameter --pass-version-line, or -pvl is now working correcty.
+    - The parameter --pass-version-line, or -pvl is now working correctly.
       It was not possible to negate this parameter in the previous version,
       and this has been fixed.
 

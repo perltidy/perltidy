@@ -7742,17 +7742,19 @@ full module path would be included in the output.
 
 =item B<Use --warn-label-types=s>, or B<-wlu=s> to warn of selected label issues
 
+The parameter B<-wlu=s> provides some simple checks which can help screen for
+potential problems with statement labels.
+
 Statement labels are very useful for controlling program flow, but their use
 also introduces a vulnerability which should be considered. This is because
-labels are global identifiers, and when perl has an unresolved reference to a
-label it looks up the call stack for a match.  If this is not intended it may
-not end well, and it can be very difficult to debug. This can occur for example
-with just a spelling error.
+labels are global in scope, and when perl has an unresolved reference to a
+label it looks up the call stack for a match, even if it is in another module
+or file.  If this is not intended it will not end well, especially if an
+unintended label is found. Such an event can be very difficult to debug,
+especially if it is triggered by a rare condition.  This can happen for example
+with a simple spelling error.
 
-The parameter B<-wlu=s> provides some simple checks on statement labels
-which can help identify potential problems.
-
-The string B<s> indicates which items should be checked, as follows:
+The string B<s> indicates which issues should be checked, as follows:
 
 =over 4
 
@@ -7766,7 +7768,7 @@ The string B<s> indicates which items should be checked, as follows:
 
 =back
 
-Use either commas or spaces to separate Multiple items. For example
+Use either commas or spaces to separate multiple items. For example
 
   perltidy -wlt='c m' somefile.pl
 
