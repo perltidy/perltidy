@@ -5673,13 +5673,14 @@ EOM
                 my $pos_shift = rindex( $qs, '<<' );
                 if (
 
-                    # '<<' in the last line
+                    # a '<<' in the last line
                     $pos_shift >= $len_qs
 
-                    # followed by a '}'
-                    && rindex( $qs, '}' ) > $pos_shift
+                    # and a '}' in the last line (c598: updated to allow
+                    # for the possibility of an extra '<<' after a here doc)
+                    && rindex( $qs, '}' ) >= $len_qs
 
-                    # preceded by '$' or '@'
+                    # and a '<<' preceded by '$' or '@'
                     && (   rindex( $qs, '$', $pos_shift ) >= 0
                         || rindex( $qs, '@', $pos_shift ) >= 0 )
                   )
