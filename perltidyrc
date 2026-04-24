@@ -75,6 +75,9 @@ uc lc sprintf if unless reverse'
 # Minimize label use as much as possible
 ---warn-label-types=1
 
+# These builtin operators are not used in Perl::Tidy
+---warn-keyword-list=" system exec qx ` "
+
 # This defines a new option which is invoked with -debug on the command line.
 # It overrides any of the settings above.
 debug {

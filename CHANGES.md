@@ -2,6 +2,13 @@
 
 ## 2026 02 04.03
 
+    - Add input parameter --warn-keyword-list=s to warn if any of keywords
+      or functions in the string s occur in a file. For example
+
+         perltidy -wkl='goto'
+
+      will warn of the occurrences of the perl builtin keyword goto.
+
     - Add input parameter --dump-label-usage, or -dlu, to dump a list of
       all statement labels used in a script to standard output.
 

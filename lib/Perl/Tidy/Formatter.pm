@@ -443,6 +443,9 @@ my (
     $rwarn_mismatched_return_types,
     $ris_warn_mismatched_return_excluded_name,
 
+    # INITIALIZER: sub initialize_warn_keyword_list
+    $rwarn_keyword_list,
+
     # regex patterns for text identification.
     # Most can be configured by user parameters.
     # Most are initialized in a sub make_**_pattern during configuration.
@@ -2416,6 +2419,8 @@ sub check_options {
     initialize_warn_mismatched();
 
     initialize_warn_label_types();
+
+    initialize_warn_keyword_list();
 
     make_bli_pattern();
 
@@ -9149,6 +9154,10 @@ EOM
     if ( $rOpts->{'dump-keyword-usage'} ) {
         $self->dump_keyword_usage();
         Exit(0);
+    }
+
+    if ( $rOpts->{'warn-keyword-list'} ) {
+        $self->warn_keyword_list();
     }
 
     if ( $rOpts->{'dump-label-usage'} ) {
@@ -15894,35 +15903,9 @@ sub block_seqno_of_paren_seqno {
 
 use constant DEBUG_KEYWORD_USAGE => 0;
 
-sub dump_keyword_usage {
-    my ($self) = @_;
+sub find_keyword_usage {
 
-    # Implement --dump-keyword-usage
-
-    my $opt_name = 'dump-keyword-usage';
-    return unless ( $rOpts->{$opt_name} );
-
-    # Check --dump-keyword-usage-list
-    my %dump_keyword_usage_list;
-    my $include_all_keywords = 1;
-    my $opt_name_list        = 'dump-keyword-usage-list';
-    my $word_list            = $rOpts->{$opt_name_list};
-    if ($word_list) {
-        $word_list =~ s/,/ /g;
-        if ( my @q = split_words($word_list) ) {
-            check_for_valid_words(
-                {
-                    rinput_list => \@q,
-                    option_name => "--$opt_name_list",
-                    on_error    => 'die',
-                    rexceptions => { '*' => 1, '`' => 1 },
-                }
-            );
-
-            $dump_keyword_usage_list{$_} = 1 for @q;
-            $include_all_keywords = $dump_keyword_usage_list{'*'};
-        }
-    }
+    my ( $self, $rkeyword_list ) = @_;
 
     my $rLL               = $self->[_rLL_];
     my $rlines            = $self->[_rlines_];
@@ -15930,6 +15913,8 @@ sub dump_keyword_usage {
 
     my %Q1 = map { $_ => 1 } qw( q  s  y  m ` );
     my %Q2 = map { $_ => 1 } qw( qq qx qr tr );
+
+    my $include_all_keywords = !%{$rkeyword_list} || $rkeyword_list->{'*'};
 
     # Loop over all tokens
     my @line_order;
@@ -15987,18 +15972,18 @@ sub dump_keyword_usage {
         if ( $include_all_keywords && $type eq 'k' ) {
             ## ok to include
         }
-        elsif (%dump_keyword_usage_list) {
+        elsif ( %{$rkeyword_list} ) {
 
             # 'k'=builtin keyword, 'U'=user defined sub, 'w'=unknown bareword
             next unless ( $is_kwU{$type} );
-            if ( !$dump_keyword_usage_list{$token} ) {
+            if ( !$rkeyword_list->{$token} ) {
 
                 # Try removing any leading module path
                 next if ( $type ne 'U' );
                 my $pos = rindex( $token, ':' );
                 next if ( $pos <= 0 );
                 my $word = substr( $token, $pos + 1 );
-                next if ( !$dump_keyword_usage_list{$word} );
+                next if ( !$rkeyword_list->{$word} );
             }
         }
         else { next }
@@ -16027,11 +16012,45 @@ sub dump_keyword_usage {
             my $first_on_line = defined($Kfirst) && $KK == $Kfirst ? 1 : 0;
             $call_counts{$token}->{line_start_count}++ if ($first_on_line);
         }
+    }
+    return ( \@line_order, \%call_counts );
+} ## end sub find_keyword_usage
 
+sub dump_keyword_usage {
+    my ($self) = @_;
+
+    # Implement --dump-keyword-usage
+
+    my $opt_name = 'dump-keyword-usage';
+    return unless ( $rOpts->{$opt_name} );
+
+    my $rLL = $self->[_rLL_];
+
+    # Check --dump-keyword-usage-list
+    my %keyword_list;
+    my $opt_name_list = 'dump-keyword-usage-list';
+    my $word_list     = $rOpts->{$opt_name_list};
+    if ($word_list) {
+        $word_list =~ s/,/ /g;
+        if ( my @q = split_words($word_list) ) {
+            check_for_valid_words(
+                {
+                    rinput_list => \@q,
+                    option_name => "--$opt_name_list",
+                    on_error    => 'die',
+                    rexceptions => { '*' => 1, '`' => 1 },
+                }
+            );
+
+            $keyword_list{$_} = 1 for @q;
+        }
     }
 
+    my ( $rline_order, $rcall_counts ) =
+      $self->find_keyword_usage( \%keyword_list );
+
     # Report results
-    return if ( !@line_order );
+    return if ( !@{$rline_order} );
 
     my $input_stream_name = $self->[_input_stream_name_];
     my $output_string     = <<EOM;
@@ -16042,8 +16061,8 @@ EOM
         chomp $output_string;
         $output_string .= ",line_starts\n";
     }
-    foreach my $key (@line_order) {
-        my $rhash            = $call_counts{$key};
+    foreach my $key ( @{$rline_order} ) {
+        my $rhash            = $rcall_counts->{$key};
         my $count            = $rhash->{count};
         my $Kfirst           = $rhash->{Kfirst};
         my $Klast            = $rhash->{Klast};
@@ -16057,6 +16076,71 @@ EOM
     print {*STDOUT} $output_string;
     return;
 } ## end sub dump_keyword_usage
+
+sub initialize_warn_keyword_list {
+
+    # Initialize --warn-keyword-list=s
+    my $opt_name = 'warn-keyword-list';
+    $rwarn_keyword_list = {};
+    return unless ( $rOpts->{$opt_name} );
+    my $word_list = $rOpts->{$opt_name};
+    if ($word_list) {
+        $word_list =~ s/,/ /g;
+        if ( my @q = split_words($word_list) ) {
+            check_for_valid_words(
+                {
+                    rinput_list => \@q,
+                    option_name => "--$opt_name",
+                    on_error    => 'die',
+                    rexceptions => { '*' => 1, '`' => 1 },
+                }
+            );
+            $rwarn_keyword_list->{$_} = 1 for @q;
+        }
+    }
+    return;
+} ## end sub initialize_warn_keyword_list
+
+sub warn_keyword_list {
+    my ($self) = @_;
+
+    # Implement --warn-keyword-list=s
+
+    my $opt_name = 'warn-keyword-list';
+    return unless ( $rOpts->{$opt_name} );
+
+    my $rLL = $self->[_rLL_];
+
+    my ( $rline_order, $rcall_counts ) =
+      $self->find_keyword_usage($rwarn_keyword_list);
+
+    # Report results
+    return if ( !@{$rline_order} );
+
+    my $input_stream_name = $self->[_input_stream_name_];
+    my $output_string     = <<EOM;
+$input_stream_name: output for --$opt_name
+keyword,count,lno_first,lno_last
+EOM
+    if (DEBUG_KEYWORD_USAGE) {
+        chomp $output_string;
+        $output_string .= ",line_starts\n";
+    }
+    foreach my $key ( @{$rline_order} ) {
+        my $rhash            = $rcall_counts->{$key};
+        my $count            = $rhash->{count};
+        my $Kfirst           = $rhash->{Kfirst};
+        my $Klast            = $rhash->{Klast};
+        my $line_start_count = $rhash->{line_start_count};
+        my $ln_first         = $rLL->[$Kfirst]->[_LINE_INDEX_] + 1;
+        my $ln_last          = $rLL->[$Klast]->[_LINE_INDEX_] + 1;
+        $output_string .= "$key,$count,$ln_first,$ln_last";
+        if (DEBUG_KEYWORD_USAGE) { $output_string .= ",$line_start_count" }
+        $output_string .= "\n";
+    }
+    $self->warning($output_string);
+    return;
+} ## end sub warn_keyword_list
 
 sub dump_mixed_call_parens {
     my ($self) = @_;

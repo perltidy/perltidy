@@ -6781,8 +6781,10 @@ B<--warn->:
 
 =item *
 
-The B<--dump-> parameters read a file, write information to the standard output,
-and then exit without doing any formatting.
+The B<--dump-> parameters read a file, write information to the standard
+output, and then exit without doing any formatting.  All B<--dump-> parameters
+must be on the command line, not in a F<.perltidyrc> file, and they require a
+single file name on the command line.
 
 =item *
 
@@ -6796,14 +6798,14 @@ Some of these have associated control parameters.
 
 =over 4
 
-=item B<Use --dump-block-summary to make a table of information on code blocks>
+=item B<Use --dump-block-summary> to make a table of information on code blocks
 
 A table listing information about the blocks of code in a file can be made with
 B<--dump-block-summary>, or B<-dbs>.  This causes perltidy to read and parse
 the file, write a table of comma-separated values for selected code blocks to
-the standard output, and then exit.  This parameter must be on the command
-line, not in a F<.perltidyrc> file, and it requires a single file name on the
-command line.  For example
+the standard output, and then exit.  Like all B<--dump-> parameters, this must
+be on the command line, not in a F<.perltidyrc> file, and it requires a single
+file name on the command line.  For example
 
    perltidy -dbs somefile.pl >blocks.csv
 
@@ -6923,7 +6925,7 @@ This selects every C<while> block with 6 or more code lines
 
 =back
 
-=item B<Use --dump-unusual-variables to find unused, reused, and certain other variables of interest>
+=item B<Use --dump-unusual-variables> to find unused, reused, and certain other variables of interest
 
 Variables with certain properties of interest to a programmer can be
 listed with B<--dump-unusual-variables> or B<-duv>.  This parameter must be on
@@ -7038,7 +7040,7 @@ misspelling, so it can be worthwhile reviewing them.
 B<Exception>: The following B<our> variables are exempt from warnings:
 B<$VERSION>, B<@EXPORT>, B<@EXPORT_OK>, B<%EXPORT_TAGS>, B<@ISA, $AUTOLOAD>.
 
-=item B<Use --warn-variable-types to warn about certain variable types>
+=item B<Use --warn-variable-types> to warn about certain variable types
 
 The flag B<--warn-variable-types=string>, or B<-wvt=string>, is the B<--warn>
 counterpart to B<--dump-unusual-variables>, and can be used to
@@ -7246,7 +7248,7 @@ problem. For example:
 
 The lines in the output file list the keys and number of occurrences.
 
-=item B<Use --dump-mixed-call-parens to find functions called both with and without parens>
+=item B<Use --dump-mixed-call-parens> to find functions called both with and without parens
 
 The parameter B<--dump-mixed-call-parens>, or B<-dmcp>, provides information on
 the use of call parens within a program.  It produces a list of keywords and sub
@@ -7277,7 +7279,7 @@ likely to have parens as not.
 More detailed information can be obtained with the parameters described in the
 next section.
 
-=item B<Use --want-call-parens=s and --nowant-call-parens=s to warn about specific missing or extra call parens>
+=item B<Use --want-call-parens=s> and B<--nowant-call-parens=s> to warn about specific missing or extra call parens
 
 The parameter B<--want-call-parens=s>, or B<-wcp=s>, can be used to produce
 a warning message if call parens are missing from selected functions.
@@ -7329,7 +7331,7 @@ removed, then C<||> must be changed to C<or>:
 Otherwise, the C<||> will operate on C<$infile> rather than the return value of
 C<open>.
 
-=item B<Use --dump-mismatched-args to find function calls with args not matching sub declarations>
+=item B<Use --dump-mismatched-args>, or B<-dma> to find function calls with args not matching sub declarations
 
 The parameter B<--dump-mismatched-args>, or B<-dma>, causes perltidy to
 examine the definitions of subroutines in a file, and calls to those subs,
@@ -7427,8 +7429,8 @@ processed are checked. But note that a file may contain multiple packages.
 
 =back
 
-=item B<Use --warn-mismatched-args to produce a warning for function calls with
-args not matching sub declarations>.
+=item B<Use --warn-mismatched-args>, or B<-wma>, to produce a warning for function calls with
+args not matching sub declarations.
 
 This is similar to the B<-dump> parameter described above except that any
 mismatches are reported in the error file and otherwise formatting continues
@@ -7447,7 +7449,7 @@ select specific tests, type B<a> (arrow test) or B<o> (overcounts) or B<u> (unde
 
 To restrict the check to a specific warning type, set the string equal to the letter of that warning, any B<a>, B<o>, or B<u>.  For example
 
-   perltidy -wmat='a o' somefile.pl
+   perltidy -wma -wmat='a o' somefile.pl
 
 will format F<somefile.pl> and report any arrow-type mismatches and overcount mismatches, but will skip undercount mismatches.
 
@@ -7568,7 +7570,7 @@ Reported issues are
 not necessarily errors, but they might be, or they might indicate potentially
 confusing code.
 
-=item B<Use --warn-mismatched-returns> to issue warnings when the number of requested values may disagree with sub return statements
+=item B<Use --warn-mismatched-returns>, or B<-wmr>, to issue warnings when the number of requested values may disagree with sub return statements
 
 This is similar to the B<-dump> parameter described above except that any
 mismatches are reported in the error file and otherwise formatting continues
@@ -7603,7 +7605,7 @@ trailing B<*> on a name may be used to indicate a partial string match.
 
 =back
 
-=item B<Use --dump-nested-ternaries> to dump a list nested ternaries.
+=item B<Use --dump-nested-ternaries>, or B<-dnt> to dump a list nested ternaries.
 
 Like other B<-dump-> commands, this writes to the standard output and then exits immediately,
 without doing any formatting. A ternary statement has the form
@@ -7619,7 +7621,7 @@ zero, then its line number and nesting depth are listed in the output. The list
 may be limited to ternaries with a depth greater than a certain value with the next
 parameter.
 
-=item B<Use --nested-ternary-maximum-depth=n> to ignore ternaries nested to a depth of B<n> or less.
+=item B<Use --nested-ternary-maximum-depth=n>, or B<-ntmd=n>, to ignore ternaries nested to a depth of B<n> or less.
 
 Ternary statements with a depth less than or equal to B<n> are ignored by
 B<--dump-nested-ternaries> and its companion B<--warn-nested-ternaries>.  The
@@ -7627,7 +7629,7 @@ default value B<n=0> will cause all nested ternaries to be listed. A value
 B<n=1>, for example, will cause ternaries with a depth of 0 or 1 to be ignored
 by these commands.
 
-=item B<Use --warn-nested-ternaries> to write a warning when a nested ternary is encountered.
+=item B<Use --warn-nested-ternaries>, or B<-wnt>, to write a warning when a nested ternary is encountered.
 
 This is the same as the B<-dump> parameter described above except that any
 nested ternaries are reported in the error file and formatting continues normally.
@@ -7739,6 +7741,17 @@ as C<File::Basename::fileparse>, then only function calls exactly matching that
 full module path would be included in the output.
 
 =back
+
+=item B<Use --warn-keyword-list=s>, or B<-wkl=s> to warn of the use of selected keywords or functions
+
+This parameter is the B<--warn-> version of the previous B<--dump->
+parameters. It causes a warning to be issued if any of the builtin keywords or
+functions listed in the string B<s> occur in a file. For example,
+
+  perltidy -wkl='goto system qx fileparse' ifile
+
+will format F<ifile> and issue a warning on the occurrences of the perl builtin
+keywords C<goto>, C<system>, and C<qx>, or a function named C<fileparse>.
 
 =item B<Use --warn-label-types=s>, or B<-wlu=s> to warn of selected label issues
 

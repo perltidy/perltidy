@@ -4108,6 +4108,7 @@ sub generate_options {
     $add_option->( 'warn-label-exclusion-list',    'wlxl', '=s' );
     $add_option->( 'want-call-parens',             'wcp',  '=s' );
     $add_option->( 'nowant-call-parens',           'nwcp', '=s' );
+    $add_option->( 'warn-keyword-list',            'wkl',  '=s' );
 
     $add_option->( 'warn-unique-keys',                      'wuk',   '!' );
     $add_option->( 'warn-unique-keys-cutoff',               'wukc',  '=i' );
