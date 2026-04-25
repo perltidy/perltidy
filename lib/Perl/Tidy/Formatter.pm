@@ -16119,7 +16119,6 @@ sub warn_keyword_list {
 
     my $input_stream_name = $self->[_input_stream_name_];
     my $output_string     = <<EOM;
-$input_stream_name: output for --$opt_name
 keyword,count,lno_first,lno_last
 EOM
     if (DEBUG_KEYWORD_USAGE) {
@@ -16138,7 +16137,13 @@ EOM
         if (DEBUG_KEYWORD_USAGE) { $output_string .= ",$line_start_count" }
         $output_string .= "\n";
     }
-    $self->warning($output_string);
+    chomp $output_string;
+    $self->warning(<<EOM);
+
+Begin scan for --$opt_name
+$output_string
+End scan for --$opt_name
+EOM
     return;
 } ## end sub warn_keyword_list
 
