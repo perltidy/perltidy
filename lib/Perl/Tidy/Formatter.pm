@@ -15987,6 +15987,12 @@ sub find_keyword_usage {
                 my $word = substr( $token, $pos + 1 );
                 next if ( !$rkeyword_list->{$word} );
             }
+            else {
+                if ( $type eq 'w' ) {
+                    my $Kn = $self->K_next_code($KK);
+                    next if ( $Kn && $rLL->[$Kn]->[_TYPE_] eq '=>' );
+                }
+            }
         }
         else { next }
 
