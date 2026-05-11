@@ -14482,6 +14482,31 @@ my %flags = (
 --brace-vertical-tightness=1
 --keep-old-breakpoints-after='=>'
 
+==> b1588.in <==
+$a =
+   new Net::ICal::Alarm(
+      action => 'EMAIL',
+
+      attendee =>
+      [ new Net::ICal::Attendee("mailto:alice\@wonderland.net") ],
+      summary => "mail subject.",
+   );
+$a = new Net::ICal::Alarm(
+        action => 'EMAIL',
+
+        attendee => [
+                 new Net::ICal::Attendee("mailto:alice\@wonderland.net")
+        ],
+        summary => "mail subject.",
+);
+
+==> b1588.par <==
+--maximum-line-length=72
+--indent-columns=8
+--continuation-indentation=3
+--extended-continuation-indentation
+--extended-line-up-parentheses
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar

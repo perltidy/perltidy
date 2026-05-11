@@ -1022,6 +1022,8 @@ BEGIN {
     @q = qw( $ & % * @ );
     $is_sigil{$_} = 1 for @q;
 
+    # Note: '=>' was added for b1551 but is no longer required after b1588.
+    # It can remain for now.
     $is_comma_token{$_} = 1 for ( '=>', COMMA );
 
 } ## end BEGIN
@@ -16117,8 +16119,7 @@ sub warn_keyword_list {
     # Report results
     return if ( !@{$rline_order} );
 
-    my $input_stream_name = $self->[_input_stream_name_];
-    my $output_string     = <<EOM;
+    my $output_string = <<EOM;
 keyword,count,lno_first,lno_last
 EOM
     if (DEBUG_KEYWORD_USAGE) {
@@ -27132,8 +27133,10 @@ sub is_fragile_block_type {
         if ( $rLL->[$KK]->[_TYPE_] eq 'b' ) { $KK++ }
         my $length = 0;
         if (
-               $KK < $K_comma
-            && $is_comma_token{ $rLL->[$K_comma]->[_TYPE_] }    # should be true
+            $KK < $K_comma
+
+            # This should be true
+            && $is_comma_token{ $rLL->[$K_comma]->[_TYPE_] }
 
             # Ignore if terminal comma, causes instability (b1297,
             # b1330)
@@ -27617,7 +27620,13 @@ sub is_fragile_block_type {
                         # Fix for b1331: at a broken => item, include the
                         # length of the previous half of the item plus one for
                         # the missing space
-                        if ( $last_nonblank_type eq '=>' ) {
+                        if (
+                            $last_nonblank_type eq '=>'
+
+                            # unless this is line starts a container (b1588)
+                            && !$is_opening_type{ $rLL->[$K_first]->[_TYPE_] }
+                          )
+                        {
                             $length += $len + 1;
                         }
                         if ( $length > $max_prong_len ) {
@@ -38367,11 +38376,13 @@ EOM
                     # Part 2a: include minimum tol for -lp -xci -vmll
                     $dtol = max( $dtol, $lp_tol_boost );
 
+                    ## FIXME: deactivated, replaced with b1588, can be removed
                     # Part 2b: for -lp -xci, use at least -ci as tol for broken
                     # containers to keep them broken (b1574) if the parent is
                     # permanently broken.
                     my $seqno_p = $parent_seqno_to_go[$i_opening] || SEQ_ROOT;
-                    if (   $self->[_ris_permanently_broken_]->{$seqno_p}
+                    if (   0
+                        && $self->[_ris_permanently_broken_]->{$seqno_p}
                         && $self->[_rline_diff_by_seqno_]->{$type_sequence} )
                     {
                         $dtol = max( $dtol, $rOpts_continuation_indentation );

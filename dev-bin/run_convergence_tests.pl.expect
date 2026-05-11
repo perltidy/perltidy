@@ -6127,40 +6127,40 @@ WriteMakefile(
 ==> b1314 <==
 # S1
 WriteMakefile(
-        'NAME'         => 'Gimp::Net',
-        'VERSION_FROM' => '../Gimp.pm',
+     'NAME'         => 'Gimp::Net',
+     'VERSION_FROM' => '../Gimp.pm',
 
 #'INC'	=> "$INC1 $CPPFLAGS $pdl_inc $cfg{GLIB_CFLAGS} $CFLAGS",
-        'INC' => "$INC1 $CPPFLAGS $pdl_inc $CFLAGS",
-        'DEFINE'   => "$DEFINE1 $DEFS",
-        'TYPEMAPS' =>
-              [ "$topdir/typemap", @pdl_typemaps ],
+     'INC'      => "$INC1 $CPPFLAGS $pdl_inc $CFLAGS",
+     'DEFINE'   => "$DEFINE1 $DEFS",
+     'TYPEMAPS' =>
+           [ "$topdir/typemap", @pdl_typemaps ],
 
 #dynamic_lib	=> { OTHERLDFLAGS => "$LDFLAGS $LIBS $cfg{GLIB_LIBS}" },
-        dynamic_lib =>
-              { OTHERLDFLAGS => "$LDFLAGS $LIBS" },
-        'PM' => {
-                'Net.pm' => '$(INST_LIBDIR)/Net.pm',
-        },
+     dynamic_lib =>
+           { OTHERLDFLAGS => "$LDFLAGS $LIBS" },
+     'PM' => {
+               'Net.pm' => '$(INST_LIBDIR)/Net.pm',
+     },
 );
 
 # S2
 WriteMakefile(
-        'NAME'         => 'Gimp::Net',
-        'VERSION_FROM' => '../Gimp.pm',
+     'NAME'         => 'Gimp::Net',
+     'VERSION_FROM' => '../Gimp.pm',
 
 #'INC'	=> "$INC1 $CPPFLAGS $pdl_inc $cfg{GLIB_CFLAGS} $CFLAGS",
-        'INC' => "$INC1 $CPPFLAGS $pdl_inc $CFLAGS",
-        'DEFINE'   => "$DEFINE1 $DEFS",
-        'TYPEMAPS' =>
-              [ "$topdir/typemap", @pdl_typemaps ],
+     'INC'      => "$INC1 $CPPFLAGS $pdl_inc $CFLAGS",
+     'DEFINE'   => "$DEFINE1 $DEFS",
+     'TYPEMAPS' =>
+           [ "$topdir/typemap", @pdl_typemaps ],
 
 #dynamic_lib	=> { OTHERLDFLAGS => "$LDFLAGS $LIBS $cfg{GLIB_LIBS}" },
-        dynamic_lib =>
-              { OTHERLDFLAGS => "$LDFLAGS $LIBS" },
-        'PM' => {
-                'Net.pm' => '$(INST_LIBDIR)/Net.pm',
-        },
+     dynamic_lib =>
+           { OTHERLDFLAGS => "$LDFLAGS $LIBS" },
+     'PM' => {
+               'Net.pm' => '$(INST_LIBDIR)/Net.pm',
+     },
 );
 
 ==> b1315 <==
@@ -8890,9 +8890,10 @@ my %e =
     #
 );
 my %e =
-(   jisx0208 => [ qw/euc-jp shiftjis 7bit-jis iso-2022-jp iso-2022-jp-1/ ],
+(     jisx0208 =>
+           [ qw/euc-jp shiftjis 7bit-jis iso-2022-jp iso-2022-jp-1/ ],
 
-    #
+      #
 );
 
 
@@ -9347,9 +9348,8 @@ $a =
             #trigger => new Net::ICal::Trigger (
             #   new Net::ICal::Duration ("-PT5M"),
             #   related => 'END'),
-            attendee => [
-                       new Net::ICal::Attendee("mailto:alice\@wonderland.net")
-            ],
+            attendee =>
+            [ new Net::ICal::Attendee("mailto:alice\@wonderland.net") ],
             summary     => "mail subject.",
             description => "mail content."
         );
@@ -9364,9 +9364,8 @@ $a =
             #trigger => new Net::ICal::Trigger (
             #   new Net::ICal::Duration ("-PT5M"),
             #   related => 'END'),
-            attendee => [
-                       new Net::ICal::Attendee("mailto:alice\@wonderland.net")
-            ],
+            attendee =>
+            [ new Net::ICal::Attendee("mailto:alice\@wonderland.net") ],
             summary     => "mail subject.",
             description => "mail content."
         );
@@ -9477,8 +9476,8 @@ $a =
         );
        my %opts
         = (
-          kff => ( defined $4 ? $4 : undef )
-          ,    # end field
+             kff =>
+              ( defined $4 ? $4 : undef ),   # end field
         );
 
 ==> b1581 <==
@@ -9529,56 +9528,54 @@ my $file =
 
 ==> b1586 <==
     File::Find::find(
-        {
-            wanted => sub {
-                my $path = $File::Find::name;
+      {
+        wanted => sub {
+            my $path = $File::Find::name;
 
-                return
-                       if $path eq $dir;
-                if ( $self->_path_is_excluded($path) )
-                {
-                    $File::Find::prune = 1;
-                    return;
-                }
+            return
+                   if $path eq $dir;
+            if ( $self->_path_is_excluded($path) ) {
+                $File::Find::prune = 1;
+                return;
+            }
 
-                push
-                       @events,
-                       $self->event_class->new(
-                    path => $path,
-                    type => 'create',
-                       );
-            },
-            follow_fast =>
-                   ( $self->follow_symlinks ? 1 : 0 ),
-            no_chdir => 1
+            push
+                   @events,
+                   $self->event_class->new(
+                                      path => $path,
+                                      type => 'create',
+                   );
         },
-        $dir
+        follow_fast =>
+               ( $self->follow_symlinks ? 1 : 0 ),
+        no_chdir => 1
+      },
+      $dir
     );
     File::Find::find(
-        {
-            wanted => sub {
-                my $path = $File::Find::name;
+      {
+        wanted => sub {
+            my $path = $File::Find::name;
 
-                return
-                       if $path eq $dir;
-                if ( $self->_path_is_excluded($path) )
-                {
-                    $File::Find::prune = 1;
-                    return;
-                }
+            return
+                   if $path eq $dir;
+            if ( $self->_path_is_excluded($path) ) {
+                $File::Find::prune = 1;
+                return;
+            }
 
-                push
-                       @events,
-                       $self->event_class->new(
-                    path => $path,
-                    type => 'create',
-                       );
-            },
-            follow_fast =>
-                   ( $self->follow_symlinks ? 1 : 0 ),
-            no_chdir => 1
+            push
+                   @events,
+                   $self->event_class->new(
+                                      path => $path,
+                                      type => 'create',
+                   );
         },
-        $dir
+        follow_fast =>
+               ( $self->follow_symlinks ? 1 : 0 ),
+        no_chdir => 1
+      },
+      $dir
     );
 
 ==> b1587 <==
@@ -9607,6 +9604,24 @@ my %flags = (
  },
  help => { descr => 'Prints this message and exits.' }
 );
+
+==> b1588 <==
+$a =
+   new Net::ICal::Alarm(
+      action => 'EMAIL',
+
+      attendee =>
+      [ new Net::ICal::Attendee("mailto:alice\@wonderland.net") ],
+      summary => "mail subject.",
+   );
+$a =
+   new Net::ICal::Alarm(
+      action => 'EMAIL',
+
+      attendee =>
+      [ new Net::ICal::Attendee("mailto:alice\@wonderland.net") ],
+      summary => "mail subject.",
+   );
 
 ==> b163 <==
 # State 1
