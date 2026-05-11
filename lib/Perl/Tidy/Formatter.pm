@@ -3132,8 +3132,9 @@ sub initialize_space_after_keyword {
 
     # Default keywords for which space is introduced before an opening paren:
     # (at present, including them messes up vertical alignment)
-    my @sak = qw( my local our state and or xor err eq ne if else elsif until
-      unless while for foreach return switch case given when catch );
+    # Added 'cmp' to defaults based on discussion in git #206
+    my @sak = qw( my local our state and or xor cmp err eq ne if else elsif
+      until unless while for foreach return switch case given when catch );
     %space_after_keyword = map { $_ => 1 } @sak;
 
     # first remove any or all of these if desired

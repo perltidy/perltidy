@@ -2,6 +2,18 @@
 
 ## 2026 02 04.03
 
+    - The operator 'cmp' has been added to the defaults for the parameter
+      --space-after-keyword.  For example, the old default is:
+
+        sort { !( ref $b->{select} ) cmp( ref $a->{select} ) }
+
+      The new default is:
+
+        sort { !( ref $b->{select} ) cmp ( ref $a->{select} ) }
+
+      Use -nsak='cmp' if you prefer no space between 'cmp' and a following '('.
+      See git #205 for a discussion.
+
     - Add input parameter --warn-keyword-list=s to warn if any of keywords
       or functions in the string s occur in a file. For example
 
