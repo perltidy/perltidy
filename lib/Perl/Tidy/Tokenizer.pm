@@ -12132,7 +12132,8 @@ BEGIN {
     push @unary_ops, BACKSLASH;
     $is_binary_or_unary_operator_type{$_} = 1 for ( @binary_ops, @unary_ops );
 
-    my @binary_keywords = qw( and or err eq ne cmp );
+    # added xor ge gt le lt ( git #206 )
+    my @binary_keywords = qw( and or err eq ne cmp xor ge gt le lt );
     $is_binary_keyword{$_} = 1 for @binary_keywords;
 
     $is_binary_or_unary_keyword{$_} = 1 for ( @binary_keywords, 'not' );
