@@ -3432,7 +3432,8 @@ sub initialize_token_break_preferences {
     my @all_operators = qw{
       % + - * / x != == >= <= =~ !~ < > | & ^ |. &. ^.
       = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x= |.= &.= ^.=
-      . : ? && || and or err xor
+      . : ? && ||
+      and eq err ge gt le lt ne or xor cmp );
     };
 
     $break_after->(@all_operators) if ( $rOpts->{'break-after-all-operators'} );
@@ -3440,7 +3441,7 @@ sub initialize_token_break_preferences {
       if ( $rOpts->{'break-before-all-operators'} );
 
     # These keywords are accepted by -wbb and -wba (fixes git #195):
-    my @ok = qw( and eq err ge gt le lt ne or xor );
+    my @ok = qw( and eq err ge gt le lt ne or xor cmp );
 
     # It is safe to keep going because invalid types are ignored.
     my $die_on_error = 0;
@@ -6395,8 +6396,9 @@ EOM
         # real tokens
         $right_bond_strength{'b'} = NO_BREAK;
 
-        # try not to break on exponentiation
-        @q                       = qw# ** .. ... <=> #;
+        # Try not to break on exponentiation
+        # Note: cmp and <=> are tentatively here but could be weakened
+        @q                       = qw# ** .. ... <=> cmp #;
         $left_bond_strength{$_}  = STRONG for @q;
         $right_bond_strength{$_} = STRONG for @q;
 
@@ -44277,7 +44279,8 @@ sub xlp_tweak {
         $is_binary_type{$_} = 1 for @q;
 
         # Token keywords which prevent using leading word as a container name
-        $is_binary_keyword{$_} = 1 for qw( and or err eq ne cmp );
+        $is_binary_keyword{$_} = 1
+            for qw( and or err eq ne cmp xor ge gt le lt );
 
         # Some common function calls whose args can be aligned.  These do not
         # give good alignments if the lengths differ significantly.
