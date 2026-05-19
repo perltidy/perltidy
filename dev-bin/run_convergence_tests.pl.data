@@ -14507,6 +14507,27 @@ $a = new Net::ICal::Alarm(
 --extended-continuation-indentation
 --extended-line-up-parentheses
 
+==> b1592.in <==
+my %MyTokens = (
+
+ '\scriptsize' => { Type => 'local' },
+ '\footnotesize' =>
+   { Type => 'local' },
+);
+
+my %MyTokens = (
+
+    '\scriptsize' =>
+      { Type => 'local' },
+    '\footnotesize' =>
+      { Type => 'local' },
+);
+
+==> b1592.par <==
+--maximum-line-length=38
+--extended-line-up-parentheses
+--paren-tightness=2
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar

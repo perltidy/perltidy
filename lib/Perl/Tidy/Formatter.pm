@@ -27057,6 +27057,7 @@ BEGIN {
         _K_o_                   => $i++,
         _K_c_                   => $i++,
         _interrupted_list_rule_ => $i++,
+        _rix_no_comma_          => $i++,
     };
 } ## end BEGIN
 
@@ -27120,6 +27121,7 @@ sub is_fragile_block_type {
             undef,       # $KK,
             undef,       # $K_c,
             undef,       # $interrupted_list_rule
+            [],          # $rix_no_comma
         ];
 
         return;
@@ -27403,6 +27405,56 @@ sub is_fragile_block_type {
             return;
         }; ## end $start_multiline_q = sub
 
+        my $add_interrupted_tokens = sub {
+            my ( $rix_no_comma, $K_first, $K_terminal, $iline ) = @_;
+
+            # Given:
+            #  $rix_no_comma = list of line immediately previous indexes
+            #  $K_first = first token on the current line
+            #  $K_terminal = the last token on the current line (except comment)
+
+            # Return:
+            #   $K_first_fix = starting index K to use for line length
+
+            my $K_first_fix = $K_first;
+
+            # Modified fix for b1579; updates b1525.
+            # Backup at a multi-line term if necessary.
+            # Eventually more cases can be handled here
+            if (
+
+                # Include previous line before an isolated comma
+                $K_first == $K_terminal
+
+                # Include a preceding hash key (b1331)
+                || (
+                    $last_nonblank_type eq '=>'
+
+                    # unless this is line starts a container
+                    # in -xci mode (b1588, b1592)
+                    && !(
+                           $rOpts_extended_continuation_indentation
+                        && $is_opening_type{ $rLL->[$K_first]->[_TYPE_] }
+                    )
+                )
+              )
+            {
+                my $ix_prev             = $rix_no_comma->[0];
+                my $line_of_tokens_prev = $rlines->[$ix_prev];
+                my $K_test = $line_of_tokens_prev->{_rK_range}->[0];
+                if ( $K_test && $K_test < $K_first ) {
+                    $K_first_fix = $K_test;
+                }
+                else {
+                    #FIXME: remove after testing; or use DEVEL_MODE
+                    Fault(
+"at line $iline with K_first=$K_first, got ix_prev=$ix_prev K_first=$K_test\n"
+                    );
+                }
+            }
+            return $K_first_fix;
+        }; ## end $add_interrupted_tokens = sub
+
         xlp_collapsed_lengths_initialize();
 
         #--------------------------------
@@ -27591,55 +27643,55 @@ sub is_fragile_block_type {
                     if ( $rLL->[$K_terminal]->[_TYPE_] eq ',' ) {
                         $K_comma = $K_terminal;
                     }
-                    else {
 
-                        # .. or is followed by a line which has a leading comma
-                        # followed by a side comment under -iscl control.
-                        # Added for b1579; updates b1525.
-                        if (   $rOpts_ignore_side_comment_lengths
-                            && !$has_comment
-                            && $iline + 1 < @{$rlines} )
-                        {
-                            my $line_of_tokens_next = $rlines->[ $iline + 1 ];
-                            my ( $K_first_next, $K_terminal_next ) =
-                              @{ $line_of_tokens_next->{_rK_range} };
-                            if (
-                                   $K_first_next
-                                && $rLL->[$K_first_next]->[_TYPE_] eq ','
-                                && $rLL->[$K_terminal_next]->[_TYPE_] eq '#'
-                                && ( $self->K_next_nonblank($K_first_next) ==
-                                    $K_terminal_next )
-                              )
-                            {
-                                $K_comma = $K_first_next;
-                            }
-                        }
+                    # Pull out the list of lines without commas
+                    my $rix_no_comma = $stack[-1]->[_rix_no_comma_];
+
+                    # and empty it if there has been a forced break
+                    if (
+                           $rix_no_comma
+                        && @{$rix_no_comma}
+                        && (   $rix_no_comma->[-1] < $iline - 1
+                            || $line_of_tokens->{_starting_in_quote} )
+                      )
+                    {
+                        $rix_no_comma = [];
                     }
 
                     if ( $K_comma
                         && !$skip_line_length_sum->( $K_first, $K_comma ) )
                     {
 
+                        # Backup to start with earlier non-comma lines if ok
+                        my $K_first_fix = $K_first;
+                        if ( @{$rix_no_comma} ) {
+
+                            $K_first_fix = $add_interrupted_tokens->(
+                                $rix_no_comma, $K_first,
+                                $K_terminal,   $iline
+                            );
+                        }
+
                         # Fix for b1536a: add $is_interrupted flag
                         my $is_interrupted = 1;
                         my $length =
-                          $self->cumulative_length_to_comma( $K_first,
+                          $self->cumulative_length_to_comma( $K_first_fix,
                             $K_comma, $K_c, $is_interrupted );
 
-                        # Fix for b1331: at a broken => item, include the
-                        # length of the previous half of the item plus one for
-                        # the missing space
-                        if (
-                            $last_nonblank_type eq '=>'
-
-                            # unless this is line starts a container (b1588)
-                            && !$is_opening_type{ $rLL->[$K_first]->[_TYPE_] }
-                          )
-                        {
-                            $length += $len + 1;
-                        }
                         if ( $length > $max_prong_len ) {
                             $max_prong_len = $length;
+                        }
+                    }
+
+                    # Update the list of lines without commas
+                    if ($K_comma) {
+                        $rix_no_comma = [];
+                    }
+                    else {
+                        if (   !$has_comment
+                            && !$line_of_tokens->{_ending_in_quote} )
+                        {
+                            push @{$rix_no_comma}, $iline;
                         }
                     }
                 }
@@ -27836,6 +27888,10 @@ sub is_fragile_block_type {
                             $K_terminal, $K_c, $interrupted_list_rule );
                     }
 
+                    # The array ref $rix_no_comma will hold a list of indexes
+                    # to lines which do not end in commas in interrupted lists
+                    my $rix_no_comma = [];
+
                     push @stack, [
 
                         $max_prong_len,
@@ -27845,6 +27901,7 @@ sub is_fragile_block_type {
                         $KK,
                         $K_c,
                         $interrupted_list_rule,
+                        $rix_no_comma,
                     ];
                 }
 
@@ -38382,20 +38439,9 @@ EOM
                 # For containers under -lp control with -xci
                 if ( $lp_tol_boost && $lp_object ) {
 
-                    # Part 2a: include minimum tol for -lp -xci -vmll
+                    # Part 2: include minimum tol for -lp -xci -vmll
                     $dtol = max( $dtol, $lp_tol_boost );
 
-                    ## FIXME: deactivated, replaced with b1588, can be removed
-                    # Part 2b: for -lp -xci, use at least -ci as tol for broken
-                    # containers to keep them broken (b1574) if the parent is
-                    # permanently broken.
-                    my $seqno_p = $parent_seqno_to_go[$i_opening] || SEQ_ROOT;
-                    if (   0
-                        && $self->[_ris_permanently_broken_]->{$seqno_p}
-                        && $self->[_rline_diff_by_seqno_]->{$type_sequence} )
-                    {
-                        $dtol = max( $dtol, $rOpts_continuation_indentation );
-                    }
                 }
                 $tol += $dtol;
             }
@@ -44280,7 +44326,7 @@ sub xlp_tweak {
 
         # Token keywords which prevent using leading word as a container name
         $is_binary_keyword{$_} = 1
-            for qw( and or err eq ne cmp xor ge gt le lt );
+          for qw( and or err eq ne cmp xor ge gt le lt );
 
         # Some common function calls whose args can be aligned.  These do not
         # give good alignments if the lengths differ significantly.

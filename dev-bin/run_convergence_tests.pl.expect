@@ -6259,21 +6259,21 @@ my @tests = (
 my $parser =
   Pod::Markdown->new(
 
-     perldoc_fragment_format =>
-     'pod_simple_html',    # CodeRef ( $self, $text )
-     markdown_fragment_format =>
-     'pod_simple_html',    # CodeRef ( $self, $text )
-     include_meta_tags => 0,
+      perldoc_fragment_format =>
+      'pod_simple_html',   # CodeRef ( $self, $text )
+      markdown_fragment_format =>
+      'pod_simple_html',   # CodeRef ( $self, $text )
+      include_meta_tags => 0,
   );
 
 my $parser =
   Pod::Markdown->new(
 
-     perldoc_fragment_format =>
-     'pod_simple_html',    # CodeRef ( $self, $text )
-     markdown_fragment_format =>
-     'pod_simple_html',    # CodeRef ( $self, $text )
-     include_meta_tags => 0,
+      perldoc_fragment_format =>
+      'pod_simple_html',   # CodeRef ( $self, $text )
+      markdown_fragment_format =>
+      'pod_simple_html',   # CodeRef ( $self, $text )
+      include_meta_tags => 0,
   );
 
 ==> b1322 <==
@@ -9057,16 +9057,14 @@ __END__
 ==> b1562 <==
     my $notebook =
       $ow->NoteBook(
-           -background         => $config{"ColorBG"},   #
-           -inactivebackground =>
-             $config{"ColorEntry"},                     #
+          -background         => $config{"ColorBG"},    #
+          -inactivebackground => $config{"ColorEntry"}, #
       );
 
     my $notebook =
       $ow->NoteBook(
-           -background         => $config{"ColorBG"},   #
-           -inactivebackground =>
-             $config{"ColorEntry"},                     #
+          -background         => $config{"ColorBG"},    #
+          -inactivebackground => $config{"ColorEntry"}, #
       );
 
 ==> b1564 <==
@@ -9476,8 +9474,8 @@ $a =
         );
        my %opts
         = (
-             kff =>
-              ( defined $4 ? $4 : undef ),   # end field
+          kff => ( defined $4 ? $4 : undef )
+          ,    # end field
         );
 
 ==> b1581 <==
@@ -9622,6 +9620,23 @@ $a =
       [ new Net::ICal::Attendee("mailto:alice\@wonderland.net") ],
       summary => "mail subject.",
    );
+
+==> b1592 <==
+my %MyTokens = (
+
+    '\scriptsize' =>
+      { Type => 'local' },
+    '\footnotesize' =>
+      { Type => 'local' },
+);
+
+my %MyTokens = (
+
+    '\scriptsize' =>
+      { Type => 'local' },
+    '\footnotesize' =>
+      { Type => 'local' },
+);
 
 ==> b163 <==
 # State 1
