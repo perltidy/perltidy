@@ -14528,6 +14528,27 @@ my %MyTokens = (
 --extended-line-up-parentheses
 --paren-tightness=2
 
+==> b1593.in <==
+$service =
+   (getservbyport ($port, "tcp"))
+   [0]
+   || $port;
+
+$service = (getservbyport (
+                       $port, "tcp"
+))[0]
+   || $port;
+
+==> b1593.par <==
+--maximum-line-length=35
+--indent-columns=6
+--continuation-indentation=3
+--weld-nested-containers
+--extended-line-up-parentheses
+--paren-tightness=2
+--space-keyword-paren
+--want-break-after='+ >>= == &&= = =~ /='
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar

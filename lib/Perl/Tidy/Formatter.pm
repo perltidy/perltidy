@@ -24785,6 +24785,9 @@ sub weld_nested_containers {
     my $weld_count_this_start = 0;
     my $weld_starts_in_block  = 0;
 
+    # Fix for b1593
+    my $lp_stress_boost = $rOpts_line_up_parentheses ? 1 : 0;
+
     # HISTORY:
     # A) $single_line_tol added to fix cases b1180 b1181
     #       = $rOpts_continuation_indentation > $rOpts_indent_columns ? 1 : 0;
@@ -24898,8 +24901,9 @@ sub weld_nested_containers {
         # that after each weld the level values are reduced, so long multiple
         # welds can still be made.  This rule will seldom be a limiting factor
         # in actual working code. Fixes b1206, b1243.
+        # Add 1 to the inner level for b1593.
         my $inner_level = $inner_opening->[_LEVEL_];
-        if ( $inner_level >= $high_stress_level ) { next }
+        if ( $inner_level + $lp_stress_boost >= $high_stress_level ) { next }
 
         # extra tolerance added under high stress to fix b1481
         my $stress_tol = ( $high_stress_level - $inner_level <= 1 ) ? 1 : 0;

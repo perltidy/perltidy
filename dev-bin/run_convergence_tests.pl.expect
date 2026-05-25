@@ -3119,24 +3119,26 @@ ok(
 
 ==> b1111 <==
           my($name,$content)=
-            map{@$_;}
-            grep{$_->[0]eq$find}map{[### full path ###
-           File::Spec::Unix->catfile(
-                                     grep{length}@{$_->[0]},
-                                     $_->[1]
-           ),
-           $_->[2],
-            ]}@$struct;
+            map{@$_;}grep{$_->[0]eq$find}map{
+                    [### full path ###
+                              File::Spec::Unix->catfile(
+                                        grep{length}
+                                          @{$_->[0]},
+                                        $_->[1]),
+                              $_->[2],
+                    ]
+            }@$struct;
 
           my($name,$content)=
-            map{@$_;}
-            grep{$_->[0]eq$find}map{[### full path ###
-           File::Spec::Unix->catfile(
-                                     grep{length}@{$_->[0]},
-                                     $_->[1]
-           ),
-           $_->[2],
-            ]}@$struct;
+            map{@$_;}grep{$_->[0]eq$find}map{
+                    [### full path ###
+                              File::Spec::Unix->catfile(
+                                        grep{length}
+                                          @{$_->[0]},
+                                        $_->[1]),
+                              $_->[2],
+                    ]
+            }@$struct;
 
 
 ==> b1112 <==
@@ -3441,20 +3443,24 @@ sub t025 (
 ==> b1124 <==
          ok(
               ( $k, $err ) =
-                new Compress::Raw::Zlib::Inflate( {
-                                         -Bufsize      => 1,
-                                         -AppendOutput => 1,
-                                         -WindowBits => -MAX_WBITS()
-                } )
+                new Compress::Raw::Zlib::Inflate(
+                                      {
+                                        -Bufsize      => 1,
+                                        -AppendOutput => 1,
+                                        -WindowBits => -MAX_WBITS()
+                                      }
+                )
          );
 
          ok(
               ( $k, $err ) =
-                new Compress::Raw::Zlib::Inflate( {
-                                         -Bufsize      => 1,
-                                         -AppendOutput => 1,
-                                         -WindowBits => -MAX_WBITS()
-                } )
+                new Compress::Raw::Zlib::Inflate(
+                                      {
+                                        -Bufsize      => 1,
+                                        -AppendOutput => 1,
+                                        -WindowBits => -MAX_WBITS()
+                                      }
+                )
          );
 
 ==> b1125 <==
@@ -8994,14 +9000,14 @@ run_sub (
 ==> b1559 <==
 my $array_ref=
   $sth->fetchall_arrayref ({
-                            name => 1,
-                            location => 1
+    name     => 1,
+    location => 1
   });
 
 my $array_ref=
   $sth->fetchall_arrayref ({
-                            name => 1,
-                            location => 1
+    name     => 1,
+    location => 1
   });
 
 ==> b156 <==
@@ -9277,7 +9283,11 @@ sub dialSelectedEntry {
                      table (
                              'yyy',
                              Tr ( [
-                                 th ( [ 'Total', sprintf '$%.2f', $total ] )
+                                   th (
+                                        [
+                                          'Total', sprintf '$%.2f', $total
+                                        ]
+                                   )
                              ] )
                      )
               );
@@ -9287,7 +9297,11 @@ sub dialSelectedEntry {
                      table (
                              'yyy',
                              Tr ( [
-                                 th ( [ 'Total', sprintf '$%.2f', $total ] )
+                                   th (
+                                        [
+                                          'Total', sprintf '$%.2f', $total
+                                        ]
+                                   )
                              ] )
                      )
               );
@@ -9637,6 +9651,17 @@ my %MyTokens = (
     '\footnotesize' =>
       { Type => 'local' },
 );
+
+==> b1593 <==
+$service =
+   (getservbyport ($port, "tcp"))
+   [0]
+   || $port;
+
+$service =
+   (getservbyport ($port, "tcp"))
+   [0]
+   || $port;
 
 ==> b163 <==
 # State 1
@@ -11213,23 +11238,29 @@ has 'baz' => (
 ==> b746 <==
 # State 1 :
 @eigenvalues=
-  eigenvalue( [
+  eigenvalue(
+              [
                 [ 3, 4 ],
                 [ 4, -3 ]
-  ] );
+              ]
+  );
 
 # State 2 :
 @eigenvalues=
-  eigenvalue( [
+  eigenvalue(
+              [
                 [ 3, 4 ],
                 [ 4, -3 ]
-  ] );
+              ]
+  );
 
 @eigenvalues=
-  eigenvalue( [
+  eigenvalue(
+              [
                 [ 3,  4 ],
                 [ 4, -3 ],
-  ] );
+              ]
+  );
 
 __END__
 
@@ -11292,12 +11323,15 @@ __END__
 
 ==> b752 <==
 # S1
-my$cmb=CPAN::Mirrored::By->new({
-          continent=>"continent",
-          country=>"country",
-          http=>"http",
-          ftp=>"ftp",
-});
+my$cmb=
+  CPAN::Mirrored::By->new(
+      {
+        continent=>"continent",
+        country=>"country",
+        http=>"http",
+        ftp=>"ftp",
+      }
+  );
 
 # S2
 my$cmb=
@@ -11313,17 +11347,21 @@ my$cmb=
 ==> b753 <==
 # S1
 my $parser =
-  TAP::Parser->new( {
-        iterator  => $iterator,
-        callbacks => \%callbacks,
-  } );
+  TAP::Parser->new(
+     {
+       iterator  => $iterator,
+       callbacks => \%callbacks,
+     }
+  );
 
 # S2
 my $parser =
-  TAP::Parser->new( {
-        iterator  => $iterator,
-        callbacks => \%callbacks,
-  } );
+  TAP::Parser->new(
+     {
+       iterator  => $iterator,
+       callbacks => \%callbacks,
+     }
+  );
 
 
 ==> b756 <==
