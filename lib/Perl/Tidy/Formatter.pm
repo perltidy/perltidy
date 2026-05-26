@@ -6397,10 +6397,14 @@ EOM
         $right_bond_strength{'b'} = NO_BREAK;
 
         # Try not to break on exponentiation
-        # Note: cmp and <=> are tentatively here but could be weakened
-        @q                       = qw# ** .. ... <=> cmp #;
+        @q                       = qw# ** .. ... #;
         $left_bond_strength{$_}  = STRONG for @q;
         $right_bond_strength{$_} = STRONG for @q;
+
+        # c601: break before comparison operators
+        @q                       = qw# <=> cmp #;
+        $left_bond_strength{$_}  = NOMINAL for @q;
+        $right_bond_strength{$_} = STRONG  for @q;
 
         # The comma-arrow has very low precedence but not a good break point
         $left_bond_strength{'=>'}  = NO_BREAK;
