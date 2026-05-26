@@ -14507,6 +14507,49 @@ $a = new Net::ICal::Alarm(
 --extended-continuation-indentation
 --extended-line-up-parentheses
 
+==> b1589.in <==
+%_rl_vars = (
+
+    history_quotes_inhibit_expansion    => [ 'I', 17, ],
+    rl_ignore_some_completions_function =>
+            [ 'F', 9, ],
+    history_inhibit_expansion_function =>
+            [ 'F', 11, ],
+);
+%_rl_vars = (
+
+          history_quotes_inhibit_expansion => [ 'I', 17, ],
+          rl_ignore_some_completions_function => [ 'F', 9, ],
+          history_inhibit_expansion_function => [ 'F', 11, ],
+);
+
+==> b1589.par <==
+--maximum-line-length=61
+--continuation-indentation=8
+--extended-continuation-indentation
+--extended-line-up-parentheses
+
+==> b1590.in <==
+ my @params = @{ $self->get_meta ( 'options',
+                                   $key ) };
+
+ my @params = @{ $self->get_meta ( 'options',
+                                   $key ) };
+
+==> b1590.par <==
+--maximum-line-length=47
+--indent-columns=1
+--continuation-indentation=7
+--extended-continuation-indentation
+--paren-vertical-tightness=1
+--extended-line-up-parentheses
+--space-function-paren
+--break-before-all-operators
+--want-trailing-commas='f(m'
+--add-trailing-commas
+--delete-trailing-commas
+--nooutdent-long-quotes
+
 ==> b1592.in <==
 my %MyTokens = (
 

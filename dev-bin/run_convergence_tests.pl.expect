@@ -3119,26 +3119,24 @@ ok(
 
 ==> b1111 <==
           my($name,$content)=
-            map{@$_;}grep{$_->[0]eq$find}map{
-                    [### full path ###
-                              File::Spec::Unix->catfile(
-                                        grep{length}
-                                          @{$_->[0]},
-                                        $_->[1]),
-                              $_->[2],
-                    ]
-            }@$struct;
+            map{@$_;}
+            grep{$_->[0]eq$find}map{[### full path ###
+           File::Spec::Unix->catfile(
+                                     grep{length}@{$_->[0]},
+                                     $_->[1]
+           ),
+           $_->[2],
+            ]}@$struct;
 
           my($name,$content)=
-            map{@$_;}grep{$_->[0]eq$find}map{
-                    [### full path ###
-                              File::Spec::Unix->catfile(
-                                        grep{length}
-                                          @{$_->[0]},
-                                        $_->[1]),
-                              $_->[2],
-                    ]
-            }@$struct;
+            map{@$_;}
+            grep{$_->[0]eq$find}map{[### full path ###
+           File::Spec::Unix->catfile(
+                                     grep{length}@{$_->[0]},
+                                     $_->[1]
+           ),
+           $_->[2],
+            ]}@$struct;
 
 
 ==> b1112 <==
@@ -3443,24 +3441,20 @@ sub t025 (
 ==> b1124 <==
          ok(
               ( $k, $err ) =
-                new Compress::Raw::Zlib::Inflate(
-                                      {
-                                        -Bufsize      => 1,
-                                        -AppendOutput => 1,
-                                        -WindowBits => -MAX_WBITS()
-                                      }
-                )
+                new Compress::Raw::Zlib::Inflate( {
+                                         -Bufsize      => 1,
+                                         -AppendOutput => 1,
+                                         -WindowBits => -MAX_WBITS()
+                } )
          );
 
          ok(
               ( $k, $err ) =
-                new Compress::Raw::Zlib::Inflate(
-                                      {
-                                        -Bufsize      => 1,
-                                        -AppendOutput => 1,
-                                        -WindowBits => -MAX_WBITS()
-                                      }
-                )
+                new Compress::Raw::Zlib::Inflate( {
+                                         -Bufsize      => 1,
+                                         -AppendOutput => 1,
+                                         -WindowBits => -MAX_WBITS()
+                } )
          );
 
 ==> b1125 <==
@@ -7965,8 +7959,7 @@ sub new{
                [
                     'addressparts',
                     5,
-                    sub{{"address",$_[1],"address2",$_[3],"street",$_[5],
-                    }},
+                    sub{{"address",$_[1],"address2",$_[3],"street",$_[5],}},
                ],
           ],
           @_,
@@ -8729,9 +8722,11 @@ has child_projects => (
            lazy    => 1,
            default => sub {
                  $_[0]->_inflate_array(
-                       $_[0]
-                       ->_full_data->{ projects }{ project },
-                       'Project', 'parent_project'
+                                   $_[0]
+                                   ->_full_data->{ projects }
+                                   { project },
+                                   'Project',
+                                   'parent_project'
                  );
            }
 );
@@ -8742,9 +8737,11 @@ has child_projects => (
            lazy    => 1,
            default => sub {
                  $_[0]->_inflate_array(
-                       $_[0]
-                       ->_full_data->{ projects }{ project },
-                       'Project', 'parent_project'
+                                   $_[0]
+                                   ->_full_data->{ projects }
+                                   { project },
+                                   'Project',
+                                   'parent_project'
                  );
            }
 );
@@ -9000,14 +8997,14 @@ run_sub (
 ==> b1559 <==
 my $array_ref=
   $sth->fetchall_arrayref ({
-    name     => 1,
-    location => 1
+                            name => 1,
+                            location => 1
   });
 
 my $array_ref=
   $sth->fetchall_arrayref ({
-    name     => 1,
-    location => 1
+                            name => 1,
+                            location => 1
   });
 
 ==> b156 <==
@@ -9283,11 +9280,7 @@ sub dialSelectedEntry {
                      table (
                              'yyy',
                              Tr ( [
-                                   th (
-                                        [
-                                          'Total', sprintf '$%.2f', $total
-                                        ]
-                                   )
+                                 th ( [ 'Total', sprintf '$%.2f', $total ] )
                              ] )
                      )
               );
@@ -9297,11 +9290,7 @@ sub dialSelectedEntry {
                      table (
                              'yyy',
                              Tr ( [
-                                   th (
-                                        [
-                                          'Total', sprintf '$%.2f', $total
-                                        ]
-                                   )
+                                 th ( [ 'Total', sprintf '$%.2f', $total ] )
                              ] )
                      )
               );
@@ -9634,6 +9623,27 @@ $a =
       [ new Net::ICal::Attendee("mailto:alice\@wonderland.net") ],
       summary => "mail subject.",
    );
+
+==> b1589 <==
+%_rl_vars = (
+
+         history_quotes_inhibit_expansion    => [ 'I', 17, ],
+         rl_ignore_some_completions_function => [ 'F', 9, ],
+         history_inhibit_expansion_function  => [ 'F', 11, ],
+);
+%_rl_vars = (
+
+         history_quotes_inhibit_expansion    => [ 'I', 17, ],
+         rl_ignore_some_completions_function => [ 'F', 9, ],
+         history_inhibit_expansion_function  => [ 'F', 11, ],
+);
+
+==> b1590 <==
+ my @params = @{ $self->get_meta ( 'options',
+                                   $key, ) };
+
+ my @params = @{ $self->get_meta ( 'options',
+                                   $key, ) };
 
 ==> b1592 <==
 my %MyTokens = (
@@ -11238,29 +11248,23 @@ has 'baz' => (
 ==> b746 <==
 # State 1 :
 @eigenvalues=
-  eigenvalue(
-              [
+  eigenvalue( [
                 [ 3, 4 ],
                 [ 4, -3 ]
-              ]
-  );
+  ] );
 
 # State 2 :
 @eigenvalues=
-  eigenvalue(
-              [
+  eigenvalue( [
                 [ 3, 4 ],
                 [ 4, -3 ]
-              ]
-  );
+  ] );
 
 @eigenvalues=
-  eigenvalue(
-              [
+  eigenvalue( [
                 [ 3,  4 ],
                 [ 4, -3 ],
-              ]
-  );
+  ] );
 
 __END__
 
@@ -11323,15 +11327,12 @@ __END__
 
 ==> b752 <==
 # S1
-my$cmb=
-  CPAN::Mirrored::By->new(
-      {
-        continent=>"continent",
-        country=>"country",
-        http=>"http",
-        ftp=>"ftp",
-      }
-  );
+my$cmb=CPAN::Mirrored::By->new({
+          continent=>"continent",
+          country=>"country",
+          http=>"http",
+          ftp=>"ftp",
+});
 
 # S2
 my$cmb=
@@ -11347,21 +11348,17 @@ my$cmb=
 ==> b753 <==
 # S1
 my $parser =
-  TAP::Parser->new(
-     {
-       iterator  => $iterator,
-       callbacks => \%callbacks,
-     }
-  );
+  TAP::Parser->new( {
+        iterator  => $iterator,
+        callbacks => \%callbacks,
+  } );
 
 # S2
 my $parser =
-  TAP::Parser->new(
-     {
-       iterator  => $iterator,
-       callbacks => \%callbacks,
-     }
-  );
+  TAP::Parser->new( {
+        iterator  => $iterator,
+        callbacks => \%callbacks,
+  } );
 
 
 ==> b756 <==

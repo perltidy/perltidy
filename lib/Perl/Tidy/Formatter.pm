@@ -24785,9 +24785,6 @@ sub weld_nested_containers {
     my $weld_count_this_start = 0;
     my $weld_starts_in_block  = 0;
 
-    # Fix for b1593
-    my $lp_stress_boost = $rOpts_line_up_parentheses ? 1 : 0;
-
     # HISTORY:
     # A) $single_line_tol added to fix cases b1180 b1181
     #       = $rOpts_continuation_indentation > $rOpts_indent_columns ? 1 : 0;
@@ -24903,7 +24900,17 @@ sub weld_nested_containers {
         # in actual working code. Fixes b1206, b1243.
         # Add 1 to the inner level for b1593.
         my $inner_level = $inner_opening->[_LEVEL_];
-        if ( $inner_level + $lp_stress_boost >= $high_stress_level ) { next }
+        if ( $inner_level >= $high_stress_level ) { next }
+
+        # Increase stress threshold by 1 for -lp for b1593.
+        # Currently limited to parenthesized lists to limit changes
+        if (   $rOpts_line_up_parentheses
+            && $inner_level + 1 >= $high_stress_level
+            && $inner_opening->[_TOKEN_] eq '('
+            && $ris_list_by_seqno->{$inner_seqno} )
+        {
+            next;
+        }
 
         # extra tolerance added under high stress to fix b1481
         my $stress_tol = ( $high_stress_level - $inner_level <= 1 ) ? 1 : 0;
@@ -26554,6 +26561,7 @@ sub extended_ci {
     my $rno_closing_ci_by_seqno  = $self->[_rno_closing_ci_by_seqno_];
     my $ris_bli_container        = $self->[_ris_bli_container_];
     my $rblock_type_of_seqno     = $self->[_rblock_type_of_seqno_];
+    my $rhas_list                = $self->[_rhas_list_];
 
     my %available_space;
 
@@ -26564,6 +26572,13 @@ sub extended_ci {
     my @seqno_stack;
     my $seqno_top;
     my $K_last;
+
+    # b1589, b1590 fix part 1
+    # Turn off -xci if -ci>i && -xlp because -xlp cannot undo xci.
+    # This is unlikely to actually occur in practice.
+    my $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
+    my $big_ci_fix                = $rOpts_extended_line_up_parentheses
+      && ( $rOpts_continuation_indentation > $rOpts_indent_columns );
 
     # The following variable can be used to allow a little extra space to
     # avoid blinkers.  A value $len_tol = 20 fixed the following
@@ -26707,6 +26722,15 @@ sub extended_ci {
 
         # Skip if requested by -bbx to avoid blinkers
         next if ( $rno_xci_by_seqno->{$seqno} );
+
+        # Turn off -xci locally if -ci>i && -xlp because -xlp cannot undo xci
+        # and ci>i can leave large unwanted gaps (b1589, b1590, part 2)
+        if ( $big_ci_fix && !$ris_excluded_lp_container->{$seqno} ) {
+
+            # But only turn off if a seqno has a list. This is optional,
+            # to minimize changes, and works on b1589 and b1590.
+            next if ( $rhas_list->{$seqno} );
+        }
 
         # Skip if this is a -bli container (this fixes case b1065) Note: case
         # b1065 is also fixed by the update for b1055, so this update is not
