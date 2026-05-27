@@ -27687,7 +27687,7 @@ sub is_fragile_block_type {
                             || $line_of_tokens->{_starting_in_quote} )
                       )
                     {
-                        $rix_no_comma = [];
+                        @{$rix_no_comma} = ();
                     }
 
                     if ( $K_comma
