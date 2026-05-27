@@ -14550,6 +14550,27 @@ $a = new Net::ICal::Alarm(
 --delete-trailing-commas
 --nooutdent-long-quotes
 
+==> b1591.in <==
+my %S3d_url = (
+        'pfam_us' => $SGD_stem_url{'s3d'} . 'seq_search.pl?db=pfam&loc=us&gene=',
+        'blast_worm_yeast' => $SGD_stem_url{'s3d'}
+    . 'getblast?db=worm&query=worm&name=',
+        'patmatch' => $SGD_stem_url{'s3d2'} . 'grepmatch?',    ## deprecated
+);
+my %S3d_url = (
+    'pfam_us' => $SGD_stem_url{'s3d'} . 'seq_search.pl?db=pfam&loc=us&gene=',
+    'blast_worm_yeast' => $SGD_stem_url{'s3d'}
+     . 'getblast?db=worm&query=worm&name=',
+    'patmatch' => $SGD_stem_url{'s3d2'} . 'grepmatch?',    ## deprecated
+);
+
+==> b1591.par <==
+--maximum-line-length=83
+--continuation-indentation=1
+--extended-continuation-indentation
+--extended-line-up-parentheses
+--paren-tightness=2
+
 ==> b1592.in <==
 my %MyTokens = (
 

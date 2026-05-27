@@ -6127,40 +6127,40 @@ WriteMakefile(
 ==> b1314 <==
 # S1
 WriteMakefile(
-     'NAME'         => 'Gimp::Net',
-     'VERSION_FROM' => '../Gimp.pm',
+        'NAME'         => 'Gimp::Net',
+        'VERSION_FROM' => '../Gimp.pm',
 
 #'INC'	=> "$INC1 $CPPFLAGS $pdl_inc $cfg{GLIB_CFLAGS} $CFLAGS",
-     'INC'      => "$INC1 $CPPFLAGS $pdl_inc $CFLAGS",
-     'DEFINE'   => "$DEFINE1 $DEFS",
-     'TYPEMAPS' =>
-           [ "$topdir/typemap", @pdl_typemaps ],
+        'INC' => "$INC1 $CPPFLAGS $pdl_inc $CFLAGS",
+        'DEFINE'   => "$DEFINE1 $DEFS",
+        'TYPEMAPS' =>
+              [ "$topdir/typemap", @pdl_typemaps ],
 
 #dynamic_lib	=> { OTHERLDFLAGS => "$LDFLAGS $LIBS $cfg{GLIB_LIBS}" },
-     dynamic_lib =>
-           { OTHERLDFLAGS => "$LDFLAGS $LIBS" },
-     'PM' => {
-               'Net.pm' => '$(INST_LIBDIR)/Net.pm',
-     },
+        dynamic_lib =>
+              { OTHERLDFLAGS => "$LDFLAGS $LIBS" },
+        'PM' => {
+                'Net.pm' => '$(INST_LIBDIR)/Net.pm',
+        },
 );
 
 # S2
 WriteMakefile(
-     'NAME'         => 'Gimp::Net',
-     'VERSION_FROM' => '../Gimp.pm',
+        'NAME'         => 'Gimp::Net',
+        'VERSION_FROM' => '../Gimp.pm',
 
 #'INC'	=> "$INC1 $CPPFLAGS $pdl_inc $cfg{GLIB_CFLAGS} $CFLAGS",
-     'INC'      => "$INC1 $CPPFLAGS $pdl_inc $CFLAGS",
-     'DEFINE'   => "$DEFINE1 $DEFS",
-     'TYPEMAPS' =>
-           [ "$topdir/typemap", @pdl_typemaps ],
+        'INC' => "$INC1 $CPPFLAGS $pdl_inc $CFLAGS",
+        'DEFINE'   => "$DEFINE1 $DEFS",
+        'TYPEMAPS' =>
+              [ "$topdir/typemap", @pdl_typemaps ],
 
 #dynamic_lib	=> { OTHERLDFLAGS => "$LDFLAGS $LIBS $cfg{GLIB_LIBS}" },
-     dynamic_lib =>
-           { OTHERLDFLAGS => "$LDFLAGS $LIBS" },
-     'PM' => {
-               'Net.pm' => '$(INST_LIBDIR)/Net.pm',
-     },
+        dynamic_lib =>
+              { OTHERLDFLAGS => "$LDFLAGS $LIBS" },
+        'PM' => {
+                'Net.pm' => '$(INST_LIBDIR)/Net.pm',
+        },
 );
 
 ==> b1315 <==
@@ -9529,54 +9529,56 @@ my $file =
 
 ==> b1586 <==
     File::Find::find(
-      {
-        wanted => sub {
-            my $path = $File::Find::name;
+        {
+            wanted => sub {
+                my $path = $File::Find::name;
 
-            return
-                   if $path eq $dir;
-            if ( $self->_path_is_excluded($path) ) {
-                $File::Find::prune = 1;
-                return;
-            }
+                return
+                       if $path eq $dir;
+                if ( $self->_path_is_excluded($path) )
+                {
+                    $File::Find::prune = 1;
+                    return;
+                }
 
-            push
-                   @events,
-                   $self->event_class->new(
-                                      path => $path,
-                                      type => 'create',
-                   );
+                push
+                       @events,
+                       $self->event_class->new(
+                    path => $path,
+                    type => 'create',
+                       );
+            },
+            follow_fast =>
+                   ( $self->follow_symlinks ? 1 : 0 ),
+            no_chdir => 1
         },
-        follow_fast =>
-               ( $self->follow_symlinks ? 1 : 0 ),
-        no_chdir => 1
-      },
-      $dir
+        $dir
     );
     File::Find::find(
-      {
-        wanted => sub {
-            my $path = $File::Find::name;
+        {
+            wanted => sub {
+                my $path = $File::Find::name;
 
-            return
-                   if $path eq $dir;
-            if ( $self->_path_is_excluded($path) ) {
-                $File::Find::prune = 1;
-                return;
-            }
+                return
+                       if $path eq $dir;
+                if ( $self->_path_is_excluded($path) )
+                {
+                    $File::Find::prune = 1;
+                    return;
+                }
 
-            push
-                   @events,
-                   $self->event_class->new(
-                                      path => $path,
-                                      type => 'create',
-                   );
+                push
+                       @events,
+                       $self->event_class->new(
+                    path => $path,
+                    type => 'create',
+                       );
+            },
+            follow_fast =>
+                   ( $self->follow_symlinks ? 1 : 0 ),
+            no_chdir => 1
         },
-        follow_fast =>
-               ( $self->follow_symlinks ? 1 : 0 ),
-        no_chdir => 1
-      },
-      $dir
+        $dir
     );
 
 ==> b1587 <==
@@ -9644,6 +9646,20 @@ $a =
 
  my @params = @{ $self->get_meta ( 'options',
                                    $key, ) };
+
+==> b1591 <==
+my %S3d_url = (
+        'pfam_us' => $SGD_stem_url{'s3d'} . 'seq_search.pl?db=pfam&loc=us&gene=',
+        'blast_worm_yeast' => $SGD_stem_url{'s3d'}
+        . 'getblast?db=worm&query=worm&name=',
+        'patmatch' => $SGD_stem_url{'s3d2'} . 'grepmatch?',    ## deprecated
+);
+my %S3d_url = (
+        'pfam_us' => $SGD_stem_url{'s3d'} . 'seq_search.pl?db=pfam&loc=us&gene=',
+        'blast_worm_yeast' => $SGD_stem_url{'s3d'}
+        . 'getblast?db=worm&query=worm&name=',
+        'patmatch' => $SGD_stem_url{'s3d2'} . 'grepmatch?',    ## deprecated
+);
 
 ==> b1592 <==
 my %MyTokens = (

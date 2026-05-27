@@ -41410,7 +41410,15 @@ EOM
                     }
                 }
                 elsif ( $is_opening_token{$last_nonblank_token} ) {
-                    if ( ( $tightness{$last_nonblank_token} < 2 ) ) {
+                    if (
+                        $tightness{$last_nonblank_token} < 2
+
+                        # added fix for b1591
+                        || (   $rOpts_continuation_indentation < 2
+                            && $self->[_ris_permanently_broken_]
+                            ->{$last_nonblank_seqno} )
+                      )
+                    {
                         $min_gnu_indentation += 2;
                     }
                     else {
