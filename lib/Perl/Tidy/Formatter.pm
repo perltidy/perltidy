@@ -27446,9 +27446,9 @@ sub is_fragile_block_type {
             #  $K_terminal = the last token on the current line (except comment)
 
             # Return:
-            #   $K_first_fix = starting index K to use for line length
+            #   $K_sum_start = starting index K to use for line length
 
-            my $K_first_fix = $K_first;
+            my $K_sum_start = $K_first;
 
             # Modified fix for b1579; updates b1525.
             # Backup at a multi-line term if necessary.
@@ -27475,7 +27475,7 @@ sub is_fragile_block_type {
                 my $line_of_tokens_prev = $rlines->[$ix_prev];
                 my $K_test = $line_of_tokens_prev->{_rK_range}->[0];
                 if ( $K_test && $K_test < $K_first ) {
-                    $K_first_fix = $K_test;
+                    $K_sum_start = $K_test;
                 }
                 else {
                     #FIXME: remove after testing; or use DEVEL_MODE
@@ -27484,7 +27484,7 @@ sub is_fragile_block_type {
                     );
                 }
             }
-            return $K_first_fix;
+            return $K_sum_start;
         }; ## end $add_interrupted_tokens = sub
 
         xlp_collapsed_lengths_initialize();
@@ -27695,10 +27695,10 @@ sub is_fragile_block_type {
                     {
 
                         # Backup to start with earlier non-comma lines if ok
-                        my $K_first_fix = $K_first;
+                        my $K_sum_start = $K_first;
                         if ( @{$rix_no_comma} ) {
 
-                            $K_first_fix = $add_interrupted_tokens->(
+                            $K_sum_start = $add_interrupted_tokens->(
                                 $rix_no_comma, $K_first,
                                 $K_terminal,   $iline
                             );
@@ -27707,7 +27707,7 @@ sub is_fragile_block_type {
                         # Fix for b1536a: add $is_interrupted flag
                         my $is_interrupted = 1;
                         my $length =
-                          $self->cumulative_length_to_comma( $K_first_fix,
+                          $self->cumulative_length_to_comma( $K_sum_start,
                             $K_comma, $K_c, $is_interrupted );
 
                         if ( $length > $max_prong_len ) {
@@ -27717,7 +27717,7 @@ sub is_fragile_block_type {
 
                     # Update the list of lines without commas
                     if ($K_comma) {
-                        $rix_no_comma = [];
+                        @{$rix_no_comma} = ();
                     }
                     else {
                         if (   !$has_comment
