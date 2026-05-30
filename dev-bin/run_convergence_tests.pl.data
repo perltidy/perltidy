@@ -14613,6 +14613,28 @@ $service = (getservbyport (
 --space-keyword-paren
 --want-break-after='+ >>= == &&= = =~ /='
 
+==> b1596.in <==
+%EXPORT_TAGS =
+( std => [qw( &blast_local @Blast_dbp_local @Blast_dbn_local @Blast_matrix_local )
+] );
+
+%EXPORT_TAGS =
+  ( std => [
+          qw( &blast_local @Blast_dbp_local @Blast_dbn_local @Blast_matrix_local )
+  ] );
+
+==> b1596.par <==
+--maximum-line-length=82
+--indent-columns=9
+--weld-nested-containers
+--break-before-paren=1
+--break-before-paren-and-indent=1
+--extended-line-up-parentheses
+--square-bracket-vertical-tightness=1
+--weld-fat-comma
+--delete-weld-interfering-commas
+--qw-as-function
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar

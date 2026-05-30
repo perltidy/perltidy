@@ -46154,6 +46154,12 @@ sub set_vertical_tightness_flags {
                 && $types_to_go[$ibeg_next] eq 'w'
             )
 
+            # Fix for b1596: skip if rhs is a function call and lhs is welded
+            && !(
+                   $types_to_go[$ibeg_next] eq 'U'
+                && $self->is_welded_at_seqno($seqno_end)
+            )
+
             && (
                 $opening_vertical_tightness{$token_end} > 0
 

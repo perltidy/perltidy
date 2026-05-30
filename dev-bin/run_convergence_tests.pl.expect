@@ -6259,21 +6259,21 @@ my @tests = (
 my $parser =
   Pod::Markdown->new(
 
-      perldoc_fragment_format =>
-      'pod_simple_html',   # CodeRef ( $self, $text )
-      markdown_fragment_format =>
-      'pod_simple_html',   # CodeRef ( $self, $text )
-      include_meta_tags => 0,
+     perldoc_fragment_format =>
+     'pod_simple_html',    # CodeRef ( $self, $text )
+     markdown_fragment_format =>
+     'pod_simple_html',    # CodeRef ( $self, $text )
+     include_meta_tags => 0,
   );
 
 my $parser =
   Pod::Markdown->new(
 
-      perldoc_fragment_format =>
-      'pod_simple_html',   # CodeRef ( $self, $text )
-      markdown_fragment_format =>
-      'pod_simple_html',   # CodeRef ( $self, $text )
-      include_meta_tags => 0,
+     perldoc_fragment_format =>
+     'pod_simple_html',    # CodeRef ( $self, $text )
+     markdown_fragment_format =>
+     'pod_simple_html',    # CodeRef ( $self, $text )
+     include_meta_tags => 0,
   );
 
 ==> b1322 <==
@@ -9688,6 +9688,17 @@ $service =
    (getservbyport ($port, "tcp"))
    [0]
    || $port;
+
+==> b1596 <==
+%EXPORT_TAGS =
+( std => [
+          qw( &blast_local @Blast_dbp_local @Blast_dbn_local @Blast_matrix_local )
+] );
+
+%EXPORT_TAGS =
+( std => [
+          qw( &blast_local @Blast_dbp_local @Blast_dbn_local @Blast_matrix_local )
+] );
 
 ==> b163 <==
 # State 1
