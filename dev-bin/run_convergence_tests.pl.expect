@@ -6127,40 +6127,40 @@ WriteMakefile(
 ==> b1314 <==
 # S1
 WriteMakefile(
-        'NAME'         => 'Gimp::Net',
-        'VERSION_FROM' => '../Gimp.pm',
+     'NAME'         => 'Gimp::Net',
+     'VERSION_FROM' => '../Gimp.pm',
 
 #'INC'	=> "$INC1 $CPPFLAGS $pdl_inc $cfg{GLIB_CFLAGS} $CFLAGS",
-        'INC' => "$INC1 $CPPFLAGS $pdl_inc $CFLAGS",
-        'DEFINE'   => "$DEFINE1 $DEFS",
-        'TYPEMAPS' =>
-              [ "$topdir/typemap", @pdl_typemaps ],
+     'INC'      => "$INC1 $CPPFLAGS $pdl_inc $CFLAGS",
+     'DEFINE'   => "$DEFINE1 $DEFS",
+     'TYPEMAPS' =>
+           [ "$topdir/typemap", @pdl_typemaps ],
 
 #dynamic_lib	=> { OTHERLDFLAGS => "$LDFLAGS $LIBS $cfg{GLIB_LIBS}" },
-        dynamic_lib =>
-              { OTHERLDFLAGS => "$LDFLAGS $LIBS" },
-        'PM' => {
-                'Net.pm' => '$(INST_LIBDIR)/Net.pm',
-        },
+     dynamic_lib =>
+           { OTHERLDFLAGS => "$LDFLAGS $LIBS" },
+     'PM' => {
+               'Net.pm' => '$(INST_LIBDIR)/Net.pm',
+     },
 );
 
 # S2
 WriteMakefile(
-        'NAME'         => 'Gimp::Net',
-        'VERSION_FROM' => '../Gimp.pm',
+     'NAME'         => 'Gimp::Net',
+     'VERSION_FROM' => '../Gimp.pm',
 
 #'INC'	=> "$INC1 $CPPFLAGS $pdl_inc $cfg{GLIB_CFLAGS} $CFLAGS",
-        'INC' => "$INC1 $CPPFLAGS $pdl_inc $CFLAGS",
-        'DEFINE'   => "$DEFINE1 $DEFS",
-        'TYPEMAPS' =>
-              [ "$topdir/typemap", @pdl_typemaps ],
+     'INC'      => "$INC1 $CPPFLAGS $pdl_inc $CFLAGS",
+     'DEFINE'   => "$DEFINE1 $DEFS",
+     'TYPEMAPS' =>
+           [ "$topdir/typemap", @pdl_typemaps ],
 
 #dynamic_lib	=> { OTHERLDFLAGS => "$LDFLAGS $LIBS $cfg{GLIB_LIBS}" },
-        dynamic_lib =>
-              { OTHERLDFLAGS => "$LDFLAGS $LIBS" },
-        'PM' => {
-                'Net.pm' => '$(INST_LIBDIR)/Net.pm',
-        },
+     dynamic_lib =>
+           { OTHERLDFLAGS => "$LDFLAGS $LIBS" },
+     'PM' => {
+               'Net.pm' => '$(INST_LIBDIR)/Net.pm',
+     },
 );
 
 ==> b1315 <==
@@ -6392,18 +6392,16 @@ WriteMakefile(
 # S1
 WriteMakefile PREREQ_PM =>
   {  # e.g., Module::Name => 1.1
-    'ExtUtils::MakeMaker' =>
-      5.45,
-    'LWP::UserAgent' => 0,
+  'ExtUtils::MakeMaker' => 5.45,
+  'LWP::UserAgent'      => 0,
   },
   ;
 
 # S2
 WriteMakefile PREREQ_PM =>
   {  # e.g., Module::Name => 1.1
-    'ExtUtils::MakeMaker' =>
-      5.45,
-    'LWP::UserAgent' => 0,
+  'ExtUtils::MakeMaker' => 5.45,
+  'LWP::UserAgent'      => 0,
   },
   ;
 
@@ -7056,34 +7054,30 @@ my %MyTokens= (
 
 ==> b1408 <==
           $registry->add_type_constraint(
-                    Moose::Meta::TypeConstraint::Parameterizable->new(
-                              parent =>
-                                Moose::Util::TypeConstraints::find_type_constraint(
-                                        'Ref' ),
-                              constraint_generator => sub {
+              Moose::Meta::TypeConstraint::Parameterizable->new(
+                   parent =>
+                     Moose::Util::TypeConstraints::find_type_constraint( 'Ref' ),
+                   constraint_generator => sub {
 
-                                        return sub {
-                                                  foreach my $x ( @$_ ) {
-                                                            ( $check->( $x ) )
-                                                              || return;
-                                                  }
-                                        }
-                              }, ) );
+                             return sub {
+                                       foreach my $x ( @$_ ) {
+                                                 ( $check->( $x ) ) || return;
+                                       }
+                             }
+                   }, ) );
 
           $registry->add_type_constraint(
-                    Moose::Meta::TypeConstraint::Parameterizable->new(
-                              parent =>
-                                Moose::Util::TypeConstraints::find_type_constraint(
-                                        'Ref' ),
-                              constraint_generator => sub {
+              Moose::Meta::TypeConstraint::Parameterizable->new(
+                   parent =>
+                     Moose::Util::TypeConstraints::find_type_constraint( 'Ref' ),
+                   constraint_generator => sub {
 
-                                        return sub {
-                                                  foreach my $x ( @$_ ) {
-                                                            ( $check->( $x ) )
-                                                              || return;
-                                                  }
-                                        }
-                              }, ) );
+                             return sub {
+                                       foreach my $x ( @$_ ) {
+                                                 ( $check->( $x ) ) || return;
+                                       }
+                             }
+                   }, ) );
 
 
 ==> b1409 <==
@@ -7816,20 +7810,20 @@ sub bubba {
 
 ==> b1462 <==
 die sprintf(
-     "Usage: %s [ -r | -a | -f fmt ] file ...\n",
-     (
-       $0=~
-         m|.*/(.*)|o
-     ),
+      "Usage: %s [ -r | -a | -f fmt ] file ...\n",
+      (
+        $0=~
+          m|.*/(.*)|o
+      ),
 
 );
 
 die sprintf(
-     "Usage: %s [ -r | -a | -f fmt ] file ...\n",
-     (
-       $0=~
-         m|.*/(.*)|o
-     ),
+      "Usage: %s [ -r | -a | -f fmt ] file ...\n",
+      (
+        $0=~
+          m|.*/(.*)|o
+      ),
 
 );
 
@@ -8477,15 +8471,13 @@ my $template;
 
 ==> b1525 <==
    my (%reverse_genetic_code) = (
-      'L' =>
-          'CTA CTC CTG CTT TTA TTG'
-      ,    # Leucine
+     'L' =>
+         'CTA CTC CTG CTT TTA TTG', # Leucine
    );
 
    my (%reverse_genetic_code) = (
-      'L' =>
-          'CTA CTC CTG CTT TTA TTG'
-      ,    # Leucine
+     'L' =>
+         'CTA CTC CTG CTT TTA TTG', # Leucine
    );
 
 
@@ -8824,15 +8816,17 @@ push @paths,
 
 ==> b1548 <==
 yxskaft(
-     pack( "C*", 0xDF, 0x20 ), # ($bytes2 cmp $U) > 0
-     pack( "U*", 0x3AF, 0x20 )
-     ,                         # ($g2 cmp $byte) > 0
+         pack( "C*",
+               0xDF, 0x20 ),   # ($bytes2 cmp $U) > 0
+         pack( "U*",
+               0x3AF, 0x20 ),  # ($g2 cmp $byte) > 0
 );
 
 yxskaft(
-     pack( "C*", 0xDF, 0x20 ), # ($bytes2 cmp $U) > 0
-     pack( "U*", 0x3AF, 0x20 )
-     ,                         # ($g2 cmp $byte) > 0
+         pack( "C*",
+               0xDF, 0x20 ),   # ($bytes2 cmp $U) > 0
+         pack( "U*",
+               0x3AF, 0x20 ),  # ($g2 cmp $byte) > 0
 );
 
 ==> b1549 <==
@@ -9060,8 +9054,9 @@ __END__
 ==> b1562 <==
     my $notebook =
       $ow->NoteBook(
-          -background         => $config{"ColorBG"},    #
-          -inactivebackground => $config{"ColorEntry"}, #
+                     -background => $config{"ColorBG"}, #
+                     -inactivebackground =>
+                       $config{"ColorEntry"},           #
       );
 
     my $notebook =
@@ -9201,21 +9196,21 @@ my ($self) = $class->SUPER::new(
 ==> b1566 <==
     $heap->{pipe_wheel} =
       POE::Wheel::ReadWrite->new(
-                InputHandle => $heap->{pipe_read} =
-                $a_read,
-                OutputHandle =>
-                $heap->{pipe_write} = $b_write,
+        InputHandle => $heap->{pipe_read} =
+        $a_read,
+        OutputHandle => $heap->{pipe_write} =
+        $b_write,
 
-                #
+        #
       );
     $heap->{pipe_wheel} =
       POE::Wheel::ReadWrite->new(
-                InputHandle => $heap->{pipe_read} =
-                $a_read,
-                OutputHandle =>
-                $heap->{pipe_write} = $b_write,
+        InputHandle => $heap->{pipe_read} =
+        $a_read,
+        OutputHandle => $heap->{pipe_write} =
+        $b_write,
 
-                #
+        #
       );
 
 ==> b1567 <==
@@ -9452,33 +9447,31 @@ $a =
 
 ==> b1578 <==
                 runtime (
-                    sprintf(
-                        "sv_setsv($left, %s);",
-                        &$operator ( $left,
-                            $right )
+                  sprintf(
+                          "sv_setsv($left, %s);",
+                          &$operator ( $left, $right )
 
-                    )
+                  )
                 );
 
                 runtime (
-                    sprintf(
-                        "sv_setsv($left, %s);",
-                        &$operator ( $left,
-                            $right )
+                  sprintf(
+                          "sv_setsv($left, %s);",
+                          &$operator ( $left, $right )
 
-                    )
+                  )
                 );
 
 ==> b1579 <==
        my %opts
         = (
-          kff => ( defined $4 ? $4 : undef )
-          ,    # end field
+             kff =>
+              ( defined $4 ? $4 : undef ),   # end field
         );
        my %opts
         = (
-          kff => ( defined $4 ? $4 : undef )
-          ,    # end field
+             kff =>
+              ( defined $4 ? $4 : undef ),   # end field
         );
 
 ==> b1581 <==
@@ -9529,56 +9522,54 @@ my $file =
 
 ==> b1586 <==
     File::Find::find(
-        {
-            wanted => sub {
-                my $path = $File::Find::name;
+      {
+        wanted => sub {
+            my $path = $File::Find::name;
 
-                return
-                       if $path eq $dir;
-                if ( $self->_path_is_excluded($path) )
-                {
-                    $File::Find::prune = 1;
-                    return;
-                }
+            return
+                   if $path eq $dir;
+            if ( $self->_path_is_excluded($path) ) {
+                $File::Find::prune = 1;
+                return;
+            }
 
-                push
-                       @events,
-                       $self->event_class->new(
-                    path => $path,
-                    type => 'create',
-                       );
-            },
-            follow_fast =>
-                   ( $self->follow_symlinks ? 1 : 0 ),
-            no_chdir => 1
+            push
+                   @events,
+                   $self->event_class->new(
+                                      path => $path,
+                                      type => 'create',
+                   );
         },
-        $dir
+        follow_fast =>
+               ( $self->follow_symlinks ? 1 : 0 ),
+        no_chdir => 1
+      },
+      $dir
     );
     File::Find::find(
-        {
-            wanted => sub {
-                my $path = $File::Find::name;
+      {
+        wanted => sub {
+            my $path = $File::Find::name;
 
-                return
-                       if $path eq $dir;
-                if ( $self->_path_is_excluded($path) )
-                {
-                    $File::Find::prune = 1;
-                    return;
-                }
+            return
+                   if $path eq $dir;
+            if ( $self->_path_is_excluded($path) ) {
+                $File::Find::prune = 1;
+                return;
+            }
 
-                push
-                       @events,
-                       $self->event_class->new(
-                    path => $path,
-                    type => 'create',
-                       );
-            },
-            follow_fast =>
-                   ( $self->follow_symlinks ? 1 : 0 ),
-            no_chdir => 1
+            push
+                   @events,
+                   $self->event_class->new(
+                                      path => $path,
+                                      type => 'create',
+                   );
         },
-        $dir
+        follow_fast =>
+               ( $self->follow_symlinks ? 1 : 0 ),
+        no_chdir => 1
+      },
+      $dir
     );
 
 ==> b1587 <==
@@ -9664,18 +9655,16 @@ my %S3d_url = (
 ==> b1592 <==
 my %MyTokens = (
 
-    '\scriptsize' =>
-      { Type => 'local' },
-    '\footnotesize' =>
-      { Type => 'local' },
+ '\scriptsize' => { Type => 'local' },
+ '\footnotesize' =>
+   { Type => 'local' },
 );
 
 my %MyTokens = (
 
-    '\scriptsize' =>
-      { Type => 'local' },
-    '\footnotesize' =>
-      { Type => 'local' },
+ '\scriptsize' => { Type => 'local' },
+ '\footnotesize' =>
+   { Type => 'local' },
 );
 
 ==> b1593 <==
@@ -9688,6 +9677,58 @@ $service =
    (getservbyport ($port, "tcp"))
    [0]
    || $port;
+
+==> b1594 <==
+%USA =
+         (
+    pop => Math::BigFloat->new("267 954 764")
+    ,    # people
+    gdp => Math::BigFloat->new("7 610 000 000 000")
+    ,    # $US
+    pop_incr => Math::BigFloat->new("1.0087")
+    ,    # annual change
+    gdp_incr => Math::BigFloat->new("1.024")
+    ,    # annual change
+         );
+%USA =
+         (pop => Math::BigFloat->new("267 954 764")
+          ,    # people
+          gdp =>
+                   Math::BigFloat->new(
+                           "7 610 000 000 000"), # $US
+          pop_incr => Math::BigFloat->new("1.0087")
+          ,    # annual change
+          gdp_incr => Math::BigFloat->new("1.024")
+          ,    # annual change
+         );
+
+
+==> b1595 <==
+%USA = (
+         pop =>
+           Math::BigFloat->new( "267 954 764" ),
+         gdp =>
+           Math::BigFloat->new(
+                                "7 610 000 000 000"
+           ),
+         pop_incr =>
+           Math::BigFloat->new( "1.0087" ),
+
+         gdp_incr => Math::BigFloat->new( "1.024" )
+);
+
+%USA = (
+         pop =>
+           Math::BigFloat->new( "267 954 764" ),
+         gdp =>
+           Math::BigFloat->new(
+                                "7 610 000 000 000"
+           ),
+         pop_incr =>
+           Math::BigFloat->new( "1.0087" ),
+
+         gdp_incr => Math::BigFloat->new( "1.024" )
+);
 
 ==> b1596 <==
 %EXPORT_TAGS =

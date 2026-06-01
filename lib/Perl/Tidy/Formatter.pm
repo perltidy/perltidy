@@ -337,6 +337,7 @@ my (
     %is_s_y_m_slash,
     %is_sigil,
     %is_comma_token,
+    %is_comma_or_equals,
 
     # INITIALIZER: sub check_options
     $controlled_comma_style,
@@ -1025,6 +1026,8 @@ BEGIN {
     # Note: '=>' was added for b1551 but is no longer required after b1588.
     # It can remain for now.
     $is_comma_token{$_} = 1 for ( '=>', COMMA );
+
+    $is_comma_or_equals{$_} = 1 for ( '=', COMMA );
 
 } ## end BEGIN
 
@@ -24902,12 +24905,10 @@ sub weld_nested_containers {
         # that after each weld the level values are reduced, so long multiple
         # welds can still be made.  This rule will seldom be a limiting factor
         # in actual working code. Fixes b1206, b1243.
-        # Add 1 to the inner level for b1593.
         my $inner_level = $inner_opening->[_LEVEL_];
         if ( $inner_level >= $high_stress_level ) { next }
 
-        # Increase stress threshold by 1 for -lp for b1593.
-        # Currently limited to parenthesized lists to limit changes
+        # Increase stress threshold by 1 to the inner level for b1593.
         if (   $rOpts_line_up_parentheses
             && $inner_level + 1 >= $high_stress_level
             && $inner_opening->[_TOKEN_] eq '('
@@ -26577,7 +26578,7 @@ sub extended_ci {
     my $seqno_top;
     my $K_last;
 
-    # b1589, b1590 fix part 1
+    # b1589, b1590, b1594 fix part 1
     # Turn off -xci if -ci>i && -xlp because -xlp cannot undo xci.
     # This is unlikely to actually occur in practice.
     my $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
@@ -26728,7 +26729,7 @@ sub extended_ci {
         next if ( $rno_xci_by_seqno->{$seqno} );
 
         # Turn off -xci locally if -ci>i && -xlp because -xlp cannot undo xci
-        # and ci>i can leave large unwanted gaps (b1589, b1590, part 2)
+        # and ci>i can leave large unwanted gaps (b1589, b1590, b1594 part 2)
         if ( $big_ci_fix && !$ris_excluded_lp_container->{$seqno} ) {
 
             # But only turn off if a seqno has a list. This is optional,
@@ -27178,9 +27179,6 @@ sub is_fragile_block_type {
         if (
             $KK < $K_comma
 
-            # This should be true
-            && $is_comma_token{ $rLL->[$K_comma]->[_TYPE_] }
-
             # Ignore if terminal comma, causes instability (b1297,
             # b1330)
             && (
@@ -27271,6 +27269,8 @@ sub is_fragile_block_type {
         my $rcollapsed_length_by_seqno = $self->[_rcollapsed_length_by_seqno_];
         my $rtype_count_by_seqno       = $self->[_rtype_count_by_seqno_];
         my $rK_next_seqno_by_K         = $self->[_rK_next_seqno_by_K_];
+        my $K_opening_container        = $self->[_K_opening_container_];
+        my $rblock_type_of_seqno       = $self->[_rblock_type_of_seqno_];
 
         my $K_start_multiline_qw;
         my $level_start_multiline_qw = 0;
@@ -27289,35 +27289,14 @@ sub is_fragile_block_type {
             #  true  => skip use of full line length (possible instability)
             #  false => ok to use full line length
 
-            # Okay if previous CODE token is a comma or opening container
-            return if ( $last_nonblank_type eq ',' );
-            return if ( $is_opening_type{$last_nonblank_type} );
-
-            # or last line ended in a comment,
-            my $K_prev = $self->K_previous_nonblank($K_first);
-            return if ( !$K_prev );
-            my $type_prev = $rLL->[$K_prev]->[_TYPE_];
-            return if ( $type_prev eq '#' );
-
-            # or this line begins with a comma,
-            my $type_first = $rLL->[$K_first]->[_TYPE_];
-            return if ( $type_first eq ',' );
-
-            # or a continued quote,
-            return if ( $type_first eq 'Q' && $type_prev eq 'Q' );
-            return if ( $type_first eq 'q' && $type_prev eq 'q' );
-
-            # or was a blank line.
-            my $ln      = $rLL->[$K_first]->[_LINE_INDEX_];
-            my $ln_prev = $rLL->[$K_prev]->[_LINE_INDEX_];
-            return if ( $ln_prev < $ln - 1 );
-
-            # Otherwise, skip if the last line did not end in '=>'
-            if ( $last_nonblank_type ne '=>' ) { return 1 }
+            # Decide if the last line not ending in '=>' can be stable
+            if ( $last_nonblank_type ne '=>' ) {
+                return $is_weak_binary_operator_token{$last_nonblank_type};
+            }
 
             # Decide if a line following a '=>' can be stable.
             # We have to scan the line for weak tokens, like ',' and '='
-
+            # and breakable containers.
             my $K_test = $K_first - 1;
             while ( ++$K_test < $K_terminal ) {
 
@@ -27438,7 +27417,7 @@ sub is_fragile_block_type {
         }; ## end $start_multiline_q = sub
 
         my $add_interrupted_tokens = sub {
-            my ( $rix_no_comma, $K_first, $K_terminal, $iline ) = @_;
+            my ( $rix_no_comma, $K_first, $K_terminal ) = @_;
 
             # Given:
             #  $rix_no_comma = list of line immediately previous indexes
@@ -27446,7 +27425,13 @@ sub is_fragile_block_type {
             #  $K_terminal = the last token on the current line (except comment)
 
             # Return:
+            #   undef if this line sum should be skipped, OR
             #   $K_sum_start = starting index K to use for line length
+
+            # Skip certain troublesome lines
+            if ( $skip_line_length_sum->( $K_first, $K_terminal ) ) {
+                return;
+            }
 
             my $K_sum_start = $K_first;
 
@@ -27459,16 +27444,7 @@ sub is_fragile_block_type {
                 $K_first == $K_terminal
 
                 # Include a preceding hash key (b1331)
-                || (
-                    $last_nonblank_type eq '=>'
-
-                    # unless this is line starts a container
-                    # in -xci mode (b1588, b1592)
-                    && !(
-                           $rOpts_extended_continuation_indentation
-                        && $is_opening_type{ $rLL->[$K_first]->[_TYPE_] }
-                    )
-                )
+                || $last_nonblank_type eq '=>'
               )
             {
                 my $ix_prev             = $rix_no_comma->[0];
@@ -27478,10 +27454,13 @@ sub is_fragile_block_type {
                     $K_sum_start = $K_test;
                 }
                 else {
-                    #FIXME: remove after testing; or use DEVEL_MODE
+                    my $lx = $rLL->[$K_first]->[_LINE_INDEX_];
+
+                    #FIXME: use DEVEL_MODE after testing
                     Fault(
-"at line $iline with K_first=$K_first, got ix_prev=$ix_prev K_first=$K_test\n"
+"at line $lx with K_first=$K_first, got ix_prev=$ix_prev K_first=$K_test\n"
                     );
+                    return;
                 }
             }
             return $K_sum_start;
@@ -27670,12 +27649,6 @@ sub is_fragile_block_type {
                         }
                     }    # END patch for issue b1408
 
-                    # Look for a line which ends in a comma...
-                    my $K_comma;
-                    if ( $rLL->[$K_terminal]->[_TYPE_] eq ',' ) {
-                        $K_comma = $K_terminal;
-                    }
-
                     # Pull out the list of lines without commas
                     my $rix_no_comma = $stack[-1]->[_rix_no_comma_];
 
@@ -27690,36 +27663,56 @@ sub is_fragile_block_type {
                         @{$rix_no_comma} = ();
                     }
 
-                    if ( $K_comma
-                        && !$skip_line_length_sum->( $K_first, $K_comma ) )
+                    # Look for a line which ends in a comma (or an '=')...
+                    if ( $is_comma_or_equals{ $rLL->[$K_terminal]->[_TYPE_] } )
                     {
 
-                        # Backup to start with earlier non-comma lines if ok
+                        # Backup to include earlier non-comma lines if ok
                         my $K_sum_start = $K_first;
+                        my $K_sum_end   = $K_terminal;
                         if ( @{$rix_no_comma} ) {
-
                             $K_sum_start = $add_interrupted_tokens->(
-                                $rix_no_comma, $K_first,
-                                $K_terminal,   $iline
+                                $rix_no_comma, $K_first, $K_terminal,
                             );
+
+                            # Stop at the opening '(' if line ends in '),'
+                            # or other container. Fixes b1595, b1588.
+                            # See also b1592.
+                            my $Kt_m = $self->K_previous_nonblank($K_terminal);
+                            if (   defined($K_sum_start)
+                                && $Kt_m
+                                && $Kt_m > $K_first
+                                && $is_closing_type{ $rLL->[$Kt_m]->[_TYPE_] } )
+                            {
+
+                                # But only for non-block containers
+                                my $seqno_Kt_m =
+                                  $rLL->[$Kt_m]->[_TYPE_SEQUENCE_];
+                                if ( !$rblock_type_of_seqno->{$seqno_Kt_m} ) {
+                                    $K_sum_end =
+                                      $K_opening_container->{$seqno_Kt_m};
+                                }
+                            }
                         }
 
-                        # Fix for b1536a: add $is_interrupted flag
-                        my $is_interrupted = 1;
-                        my $length =
-                          $self->cumulative_length_to_comma( $K_sum_start,
-                            $K_comma, $K_c, $is_interrupted );
+                        if ( defined($K_sum_start) ) {
 
-                        if ( $length > $max_prong_len ) {
-                            $max_prong_len = $length;
+                            # Fix for b1536a: add $is_interrupted flag
+                            my $is_interrupted = 1;
+                            my $length =
+                              $self->cumulative_length_to_comma( $K_sum_start,
+                                $K_sum_end, $K_c, $is_interrupted );
+                            if ( $length > $max_prong_len ) {
+                                $max_prong_len = $length;
+                            }
                         }
-                    }
 
-                    # Update the list of lines without commas
-                    if ($K_comma) {
+                        # Empty the list of lines without commas
                         @{$rix_no_comma} = ();
                     }
                     else {
+
+                        # Update the list of lines without commas
                         if (   !$has_comment
                             && !$line_of_tokens->{_ending_in_quote} )
                         {
@@ -27887,6 +27880,11 @@ sub is_fragile_block_type {
                         # and -vmll is NOT set; fixes b1325, b1537
                         # In general, -vmll and -xlp are not a good combination.
                         && !$rOpts_variable_maximum_line_length
+
+                        # and the stress level is not high. See c602.
+                        # The value '3' is the minimum which works for b1562.
+                        && $rLL->[$KK]->[_LEVEL_] + 3 < $high_stress_level
+
                       )
                     {
 
@@ -38473,12 +38471,10 @@ EOM
 
                     # Part 2: include minimum tol for -lp -xci -vmll
                     $dtol = max( $dtol, $lp_tol_boost );
-
                 }
                 $tol += $dtol;
             }
-
-            $is_long_term = $excess + $tol > 0;
+            $is_long_term ||= $excess + $tol > 0;
         }
 
         # We've set breaks after all comma-arrows.  Now we have to
@@ -38655,6 +38651,7 @@ EOM
         # FINALLY: Break open container according to the flags which have
         # been set.
         #----------------------------------------------------------------
+
         if (
 
             # breaks for code BLOCKS are handled at a higher level
@@ -38683,6 +38680,7 @@ EOM
                 # - this is a long block contained in another breakable
                 #   container
                 || $is_long_term && !$self->is_in_block_by_i($i_opening)
+
             )
           )
         {
@@ -41413,7 +41411,7 @@ EOM
                     if (
                         $tightness{$last_nonblank_token} < 2
 
-                        # added fix for b1591
+                        # b1591
                         || (   $rOpts_continuation_indentation < 2
                             && $self->[_ris_permanently_broken_]
                             ->{$last_nonblank_seqno} )

@@ -14613,6 +14613,65 @@ $service = (getservbyport (
 --space-keyword-paren
 --want-break-after='+ >>= == &&= = =~ /='
 
+==> b1594.in <==
+%USA =
+         (
+    pop => Math::BigFloat->new("267 954 764")
+    ,    # people
+    gdp => Math::BigFloat->new("7 610 000 000 000")
+    ,    # $US
+    pop_incr => Math::BigFloat->new("1.0087")
+    ,    # annual change
+    gdp_incr => Math::BigFloat->new("1.024")
+    ,    # annual change
+         );
+%USA =
+         (pop => Math::BigFloat->new("267 954 764")
+          ,    # people
+          gdp =>
+                   Math::BigFloat->new(
+                           "7 610 000 000 000"), # $US
+          pop_incr => Math::BigFloat->new("1.0087")
+          ,    # annual change
+          gdp_incr => Math::BigFloat->new("1.024")
+          ,    # annual change
+         );
+
+
+==> b1594.par <==
+--maximum-line-length=54
+--continuation-indentation=9
+--paren-vertical-tightness=1
+--extended-line-up-parentheses
+--keep-old-breakpoints-after='x= U -- *= ^. >>= = F Y'
+
+==> b1595.in <==
+%USA = (
+      pop => Math::BigFloat->new( "267 954 764" ),
+      gdp =>
+       Math::BigFloat->new( "7 610 000 000 000" ),
+      pop_incr => Math::BigFloat->new( "1.0087" ),
+
+      gdp_incr => Math::BigFloat->new( "1.024" )
+);
+
+%USA = (
+        pop => Math::BigFloat->new( "267 954 764" ),
+        gdp =>
+          Math::BigFloat->new(
+                               "7 610 000 000 000"
+          ),
+        pop_incr => Math::BigFloat->new( "1.0087" ),
+
+        gdp_incr => Math::BigFloat->new( "1.024" )
+);
+
+==> b1595.par <==
+--maximum-line-length=52
+--indent-columns=8
+--extended-line-up-parentheses
+--paren-tightness=0
+
 ==> b1596.in <==
 %EXPORT_TAGS =
 ( std => [qw( &blast_local @Blast_dbp_local @Blast_dbn_local @Blast_matrix_local )
