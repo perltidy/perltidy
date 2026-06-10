@@ -78,7 +78,7 @@ use constant BACKSLASH    => q{\\};
 use Carp;
 use English    qw( -no_match_vars );
 use List::Util qw( min max first );    # min, max first are in Perl 5.8
-our $VERSION = '20260204.03';
+our $VERSION = '20260204.04';
 
 # List of hash keys to prevent -duk from listing them.
 # 'Unicode::Collate::Locale' is in the data for scan_unique_keys
@@ -27712,10 +27712,10 @@ sub is_fragile_block_type {
                 else {
                     my $lx = $rLL->[$K_first]->[_LINE_INDEX_];
 
-                    #FIXME: use DEVEL_MODE after testing
-                    Fault(
+                    DEVEL_MODE
+                      && Fault(
 "at line $lx with K_first=$K_first, got ix_prev=$ix_prev K_first=$K_test\n"
-                    );
+                      );
                     return;
                 }
             }

@@ -1,13 +1,13 @@
 # Perltidy Change Log
 
-## 2026 02 04.03
+## 2026 02 04.04
 
     - Improved formatting of certain ternary expressions (see git #209).
       A ternary expression for which both the TRUE and FALSE parts are
       single ternary expressions is now written in a more balanced way.
       For example, this expression gives max($a,$b,$c):
 
-        OLD: (tail end is economized into equivalent elsif's):
+        # OLD: (tail end is economized into equivalent elsif's):
         $a > $b
           ? $a > $c
               ? $a
@@ -15,7 +15,7 @@
           : $b > $c ? $b
           :           $c;
 
-        NEW (tail remains as simple if's):
+        # NEW (tail remains as simple if's):
         $a > $b
             ? $a > $c
                 ? $a
