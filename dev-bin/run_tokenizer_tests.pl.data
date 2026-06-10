@@ -219,6 +219,27 @@ method
 
 
 
+==> c603.in <==
+# here target has leading spaces
+print<<~'    EOF';
+Please choose a category:
+ 1) News Clipper
+ 2) General
+ 3) Tech
+ 4) Business
+ 5) Sports
+ 6) Science
+ 7) Weather
+ 8) Music
+ 9) Local
+ 10) Humor
+ 11) Comics
+ 12) Linux
+ 13) Programming
+ 14) Personal Computers
+ 15) Miscellaneous
+    EOF
+
 ==> git82.in <==
 say
 $

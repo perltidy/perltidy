@@ -1404,21 +1404,29 @@ sub get_line {
 ##      _ending_in_quote           => 0,
     };
 
-    # must print line unchanged if we are in a here document
+    # Must print line unchanged if we are in a here document
     if ( $self->[_in_here_doc_] ) {
 
         $line_of_tokens->{_line_type} = 'HERE';
         my $here_doc_target      = $self->[_here_doc_target_];
         my $here_quote_character = $self->[_here_quote_character_];
         my $candidate_target     = $input_line;
+        my $leading_whitespace   = EMPTY_STRING;
         chomp $candidate_target;
 
         # Handle <<~ targets, which are indicated here by a leading space on
-        # the here quote character
-        if ( $here_quote_character =~ /^\s/ ) {
-            $candidate_target =~ s/^\s+//;
+        # the here quote character. c603 has test cases.
+        # FIXME: store the leading whitespace for later checking that
+        # the leading whitespace of all here text lines match it.
+        my $ix = rindex( $candidate_target, $here_doc_target );
+        if ( $ix > 0 && $here_quote_character =~ /^\s/ ) {
+            $leading_whitespace = substr( $candidate_target, 0, $ix );
+            if ( $leading_whitespace !~ /^\s*$/ ) {
+                $leading_whitespace = EMPTY_STRING;
+            }
         }
-        if ( $candidate_target eq $here_doc_target ) {
+
+        if ( $candidate_target eq $leading_whitespace . $here_doc_target ) {
             $self->[_nearly_matched_here_target_at_] = undef;
             $line_of_tokens->{_line_type} = 'HERE_END';
             $self->log_numbered_msg("Exiting HERE document $here_doc_target\n");
