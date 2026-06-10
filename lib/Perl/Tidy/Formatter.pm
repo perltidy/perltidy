@@ -2038,6 +2038,26 @@ sub parent_sub_seqno_by_K {
     return $seqno_sub;
 } ## end sub parent_sub_seqno_by_K
 
+sub in_same_container_by_K {
+    my ( $self, $K1, $K2 ) = @_;
+
+    # Given:
+    #   $K1, $K2 = two token indexes
+    # Return:
+    #   true if they are in the same parent container
+    #   false otherwise
+    my $seqno_parent_1 = $self->parent_seqno_by_K($K1);
+    my $seqno_parent_2 = $self->parent_seqno_by_K($K2);
+    if ( !defined($seqno_parent_1) || !defined($seqno_parent_2) ) {
+
+        # If we get here, this function has probably been called
+        # before sub respace_tokens has defined the parents.
+        DEVEL_MODE && Fault("Bad call, no parent(s) for K1=$K1 K2=$K2\n");
+        return;
+    }
+    return $seqno_parent_1 eq $seqno_parent_2;
+} ## end sub in_same_container_by_K
+
 sub is_in_block_by_i {
     my ( $self, $i ) = @_;
 
@@ -9064,6 +9084,8 @@ EOM
             $self->wrapup();
             return 1;
         }
+
+        $self->ternary_level_adjustment();
 
         # sub 'set_ci' is called after sub respace to allow use of type counts
         # Token variable _CI_LEVEL_ is only defined after this call
@@ -23410,6 +23432,240 @@ EOM
     }
     return;
 } ## end sub dump_mismatched_returns
+
+my %is_non_ternary_type;
+
+BEGIN {
+    my @q = qw( ; );
+    push @q, '#';
+    push @q, ',';
+    $is_non_ternary_type{$_} = 1 for @q;
+}
+
+sub ternary_level_adjustment {
+    my ($self) = @_;
+
+    # Adjust levels of balanced ternaries of the form ??::?:
+    # The goal is to achieve formatting like this (see git #209):
+    #      $a > $b
+    #        ? $a > $c
+    #            ? $a
+    #            : $c
+    #        : $b > $c
+    #            ? $b
+    #            : $c;
+    # instead of this:
+    #        $a > $b
+    #          ? $a > $c
+    #              ? $a
+    #              : $c
+    #          : $b > $c ? $b
+    #          :           $c;
+    #
+    # The pattern of this ternary is '??::?:', so we are going to look
+    # for that pattern and add one indentation level to the last ? and :.
+    # The rest will be automatic.
+
+    # Note: this sub must be called after sub respace_tokens in order
+    # for sub in_same_container_by_K to work.
+
+    my $rLL               = $self->[_rLL_];
+    my $K_opening_ternary = $self->[_K_opening_ternary_];
+    my $K_closing_ternary = $self->[_K_closing_ternary_];
+
+    # Maximum number of tokens to check to see if a ':' and
+    # following '?' are in the same ternary expression.
+    use constant TERNARY_SEARCH_LIMIT => 100;
+
+    my $in_same_ternary = sub {
+        my ( $K_c, $K_q ) = @_;
+
+        # Given:
+        #   $K_c= index of a non-nested ternary ':'
+        #   $K_q= index of a subsequent '?'
+        # Return:
+        #   true if the '?' starts a new ternary
+        #   false if the '?' continues the ternary
+
+        # If uncertain, return false
+
+        if ( !defined($K_c) || !defined($K_q) || $K_c < 0 || $K_q < $K_c ) {
+            DEVEL_MODE && Fault("Bad or undefined values of K_c and or K_q\n");
+            return;
+        }
+
+        # They must be in the same container
+        if ( !$self->in_same_container_by_K( $K_c, $K_q ) ) { return }
+
+        # Put a reasonable limit on the tokens to search
+        if ( $K_q - $K_c > TERNARY_SEARCH_LIMIT ) { return }
+
+        my $KK     = $K_q;
+        my $K_last = $K_q;
+        while ( --$KK > $K_c ) {
+
+            # Safety check - shouldn't happen
+            if ( $KK >= $K_last ) {
+                my $lno = $rLL->[$KK]->[_LINE_INDEX_] + 1;
+                DEVEL_MODE && Fault("Infinite loop near line $lno\n");
+                return;
+            }
+            $K_last = $KK;
+
+            my $type = $rLL->[$KK]->[_TYPE_];
+            next   if ( $type eq 'b' );
+            return if ( $is_non_ternary_type{$type} );
+
+            # Skip over containers
+            if ( my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_] ) {
+                if ( $is_closing_type{$type} ) {
+                    $KK = $self->[_K_opening_container_]->{$seqno};
+                    next;
+                }
+            }
+        } ## end while ( --$KK > $K_c )
+        return 1;
+    }; ## end $in_same_ternary = sub
+
+    my $adjust_level = sub {
+        my ( $Ko, $Kc ) = @_;
+
+        # Increase the level of the tokens at indexes $Ko, $Kc
+        $rLL->[$Ko]->[_LEVEL_] += 1;
+        $rLL->[$Kc]->[_LEVEL_] += 1;
+        return;
+    }; ## end $adjust_level = sub
+
+    #-------
+    # Pass 1
+    #-------
+    # Preliminary loop over all ternaries in order of occurrence
+    # to find any nested ternaries. These are rare, so making this fast
+    # first pass will improve efficiency.
+    my @sorted_openings = sort { $a <=> $b } keys %{$K_opening_ternary};
+    my $ix_question     = -1;
+    my @ix_double_questions;
+    my ( $Ko_last, $Kc_last );
+    foreach my $seqno (@sorted_openings) {
+
+        # Index in @sorted_openings of this ternary
+        $ix_question++;
+
+        # Pull out the indexes of the '?' and ':' tokens for this ternary
+        my $Ko = $K_opening_ternary->{$seqno};    # '?'
+        my $Kc = $K_closing_ternary->{$seqno};    # ':'
+
+        # If this '?' precedes the ':' of a previous ternary then it is nested
+        # so we store the index of the previous ternary.
+        if ( defined($Kc_last) && $Ko < $Kc_last ) {
+
+            # But skip a nested ternary in parens.
+            if ( $self->in_same_container_by_K( $Ko, $Ko_last ) ) {
+                push @ix_double_questions, $ix_question - 1;
+            }
+        }
+        $Ko_last = $Ko;
+        $Kc_last = $Kc;
+    }
+
+    #-------
+    # Pass 2
+    #-------
+    # We are looking for the specific pattern '??::?:'
+    # We have a list of the starting index of all ternaries which
+    # include the '??' pattern.
+    my $pattern_match = '??::?:';
+
+    my $ix_max          = @sorted_openings - 1;
+    my $ix_last_pattern = -1;
+    while (@ix_double_questions) {
+
+        # $ix is the index of the first of the '??' pair
+        my $ix = shift(@ix_double_questions);
+
+        next if ( $ix < $ix_last_pattern );
+
+        my $ix_start    = $ix;
+        my $seqno_start = $sorted_openings[$ix_start];
+        my $Ko_start    = $K_opening_ternary->{$seqno_start};
+        my $Kc_start    = $K_closing_ternary->{$seqno_start};
+
+        my @stack;
+        push @stack, $Kc_start;
+        my $pattern = '?';
+        $Ko_last         = $Ko_start;
+        $Kc_last         = $Kc_start;
+        $ix_last_pattern = $ix;
+
+        # See if this '?' starts a new ternary. If it does not, we
+        # still have to run until the stack is empty.
+        if ( $ix_start > 0 ) {
+            my $seqno_prev = $sorted_openings[ $ix_start - 1 ];
+            my $Kc_prev    = $K_closing_ternary->{$seqno_prev};
+            if ( $Kc_prev < $Ko_start ) {
+                if ( $in_same_ternary->( $Kc_prev, $Ko_start ) ) {
+                    $pattern = '*' . $pattern;
+                }
+            }
+        }
+
+        foreach my $ix_test ( $ix_start + 1 .. $ix_max ) {
+
+            my $seqno = $sorted_openings[$ix_test];
+            my $Ko    = $K_opening_ternary->{$seqno};
+            my $Kc    = $K_closing_ternary->{$seqno};
+
+            # See if nested in previous ternaries
+            while (@stack) {
+                last if ( $Ko < $stack[-1] );
+                $Kc_last = pop @stack;
+                $pattern .= ':';
+            }
+
+            # Stop if...
+            if (
+
+                # The stack is empty ...
+                !@stack
+
+                # and either the ternary ends
+                && (
+                    !$in_same_ternary->( $Kc_last, $Ko )
+
+                    # or if match is not possible
+                    || index( $pattern_match, $pattern ) != 0
+                )
+              )
+            {
+                if ( $pattern eq $pattern_match ) {
+                    $adjust_level->( $Ko_last, $Kc_last );
+                    $pattern = EMPTY_STRING;
+                }
+                last;
+            }
+
+            # Stop if no more ternary tokens
+            if ( $ix_test == $ix_max ) {
+                $pattern .= '?:';
+                $ix_last_pattern = $ix_test;
+                if ( $pattern eq $pattern_match ) {
+                    $adjust_level->( $Ko, $Kc );
+                    $pattern = EMPTY_STRING;
+                }
+                last;
+            }
+            else {
+                $ix_last_pattern = $ix_test;
+                $pattern .= '?';
+                push @stack, $Kc;
+            }
+            $Ko_last = $Ko;
+            $Kc_last = $Kc;
+        }
+    } ## end while (@ix_double_questions)
+
+    return;
+} ## end sub ternary_level_adjustment
 
 sub find_nested_ternaries {
     my ($self) = @_;

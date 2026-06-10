@@ -327,8 +327,9 @@ my $flags =
   ? ( $_ & 4 )
       ? $THRf_DEAD
       : $THRf_ZOMBIE
-  : ( $_ & 4 ) ? $THRf_R_DETACHED
-  :              $THRf_R_JOINABLE;
+  : ( $_ & 4 )
+      ? $THRf_R_DETACHED
+      : $THRf_R_JOINABLE;
 #6...........
         },
 

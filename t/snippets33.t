@@ -56,7 +56,7 @@ BEGIN {
 --extended-continuation-indentation
 ----------
         'git205' => <<'----------',
---cuddled-blocks 
+--cuddled-blocks
 --cuddled-block-list=sort,map,grep
 ----------
     };
@@ -72,7 +72,7 @@ sub baz {
         print "foo\n";
     }
 
-    elsif ('x') { 
+    elsif ('x') {
         #
     }
     else {

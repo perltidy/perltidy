@@ -2,6 +2,28 @@
 
 ## 2026 02 04.03
 
+    - Improved formatting of certain ternary expressions (see git #209).
+      A ternary expression for which both the TRUE and FALSE parts are
+      single ternary expressions is now written in a more balanced way.
+      For example, this expression gives max($a,$b,$c):
+
+        OLD: (tail end is economized into equivalent elsif's):
+        $a > $b
+          ? $a > $c
+              ? $a
+              : $c
+          : $b > $c ? $b
+          :           $c;
+
+        NEW (tail remains as simple if's):
+        $a > $b
+            ? $a > $c
+                ? $a
+                : $c
+            : $b > $c
+                ? $b
+                : $c;
+
     - The operator 'cmp' has been added to the defaults for the parameter
       --space-after-keyword.  For example, the old default is:
 
