@@ -979,6 +979,11 @@ EOM
             'keep-old-blank-lines-exceptions' =>
               [ '}b', '{b', 'cb', 'b{', 'b}', 'bs', 'bp', 'bc' ],
 
+            'heredoc-excess-length-option'  => [ 0,   3 ],
+            'heredoc-extra-spaces'          => [ '4', '0', '0;4', ';4', '4;' ],
+            'heredoc-tag-exclusion-pattern' => [ '^_',       '^\s+' ],
+            'heredoc-convert-to'            => [ 'standard', 'indented' ],
+
             # Arbitrary limits to keep things readable
             'blank-lines-after-opening-block'  => [ 0, 4 ],
             'blank-lines-before-closing-block' => [ 0, 3 ],

@@ -254,6 +254,7 @@ my (
     $rOpts_indent_columns,
     $rOpts_indent_leading_semicolon,
     $rOpts_indent_only,
+    $rOpts_heredoc_indentation_update,
     $rOpts_keep_interior_semicolons,
     $rOpts_line_up_parentheses,
     $rOpts_logical_padding,
@@ -522,6 +523,9 @@ my (
     # INITIALIZER: initialize_maximum_field_count_control_hash
     %maximum_field_count_control_hash,
 
+    # INITIALIZER: initialize_here_doc_control_hash,
+    %here_doc_control_hash,
+
     # INITIALIZER: initialize_break_at_old_comma_types
     %break_at_old_comma_types,
 
@@ -713,6 +717,9 @@ BEGIN {
 
         # these vars are defined after call to respace tokens:
         _rK_package_list_                   => $i++,
+        _rK_type_h_list_                    => $i++,
+        _ris_indented_type_h_line_index_    => $i++,
+        _rhere_doc_update_list_             => $i++,
         _rK_AT_underscore_by_sub_seqno_     => $i++,
         _rK_first_self_by_sub_seqno_        => $i++,
         _rK_bless_by_sub_seqno_             => $i++,
@@ -1191,6 +1198,9 @@ sub initialize_self_vars {
     #               --dump-mismatched-returns
     #               --warn-mismatched-returns
     $self->[_rK_package_list_]                   = [];
+    $self->[_rK_type_h_list_]                    = [];
+    $self->[_ris_indented_type_h_line_index_]    = {};
+    $self->[_rhere_doc_update_list_]             = [];
     $self->[_rK_AT_underscore_by_sub_seqno_]     = {};
     $self->[_rK_first_self_by_sub_seqno_]        = {};
     $self->[_rK_bless_by_sub_seqno_]             = {};
@@ -2516,6 +2526,8 @@ EOM
 
     initialize_maximum_field_count_control_hash();
 
+    initialize_here_doc_control_hash();
+
     initialize_break_at_old_comma_types();
 
     initialize_extended_block_tightness_list();
@@ -3233,6 +3245,74 @@ EOM
 
 } ## end sub initialize_maximum_field_count_control_hash
 
+sub initialize_here_doc_control_hash {
+
+    # Default control options; added in issue git #210
+    %here_doc_control_hash = (
+        convert_to_standard    => 0,
+        convert_to_indented    => 0,
+        extra_spaces_block     => 0,
+        extra_spaces_non_block => 0,
+        excess_length_option   => 0,
+        tag_exclusion_pattern  => undef,
+    );
+
+    my $hct_key = 'heredoc-convert-to';
+    my @hct     = split_words( $rOpts->{$hct_key} );
+    if (@hct) {
+        check_for_valid_words(
+            {
+                rinput_list  => \@hct,
+                option_name  => "--$hct_key",
+                on_error     => 'die',
+                rexceptions  => undef,
+                rvalid_words => [qw(standard indented)],
+            }
+        );
+        $here_doc_control_hash{convert_to_standard} =
+          $hct_key =~ /\bstandard\b/;
+        $here_doc_control_hash{convert_to_indented} =
+          $hct_key =~ /\bindented\b/;
+    }
+
+    my $hxlo_key   = 'heredoc-excess-length-option';
+    my $hxlo_value = $rOpts->{$hxlo_key};
+    if ( defined($hxlo_value) ) {
+        $here_doc_control_hash{excess_length_option} = $hxlo_value;
+    }
+
+    my $hxs_key = 'heredoc-extra-spaces';
+    my $hxs_str = $rOpts->{$hxs_key};
+    if ( defined($hxs_str) ) {
+        $hxs_str =~ s/\s+//g;
+        my ( $n1, $n2 ) = ( 0, 0 );
+        if ( $hxs_str =~ /^(\d+)?(;?)(\d+)?$/ ) {
+            $n1                                        = $1;
+            $n2                                        = defined($2) ? $3 : $n1;
+            $here_doc_control_hash{extra_spaces_block} = $n1;
+            $here_doc_control_hash{extra_spaces_non_block} = $n2;
+        }
+        else {
+            my $msg = <<EOM;
+--$hxs_key='$hxs_str':   expecting 'n' or 'n1;n2' where n, n1, n2 are digits
+EOM
+            Die($msg);
+        }
+    }
+
+    my $htxp_key = 'heredoc-tag-exclusion-pattern';
+    my $htxp_str = $rOpts->{$htxp_key};
+    if ( defined($htxp_str) ) {
+        my $pattern = $htxp_str;
+        if ( bad_pattern($pattern) ) {
+            Die("ERROR: --$htxp_key='$htxp_str' produced an invalid regex\n");
+        }
+        $here_doc_control_hash{tag_exclusion_pattern} = $pattern;
+    }
+
+    return;
+} ## end sub initialize_here_doc_control_hash
+
 sub initialize_break_at_old_comma_types {
 
     %break_at_old_comma_types = ();
@@ -3316,10 +3396,11 @@ sub initialize_keyword_paren_inner_tightness {
     if (@kpit) {
         check_for_valid_words(
             {
-                rinput_list => \@kpit,
-                option_name => "--$kpitl_key",
-                on_error    => 'die',
-                rexceptions => undef,
+                rinput_list  => \@kpit,
+                option_name  => "--$kpitl_key",
+                on_error     => 'die',
+                rexceptions  => undef,
+                rvalid_words => undef,
             }
         );
     }
@@ -4050,6 +4131,7 @@ sub initialize_global_option_vars {
     $rOpts_indent_columns             = $rOpts->{'indent-columns'};
     $rOpts_indent_leading_semicolon   = $rOpts->{'indent-leading-semicolon'};
     $rOpts_indent_only                = $rOpts->{'indent-only'};
+    $rOpts_heredoc_indentation_update = $rOpts->{'heredoc-indentation-update'};
     $rOpts_keep_interior_semicolons   = $rOpts->{'keep-interior-semicolons'};
     $rOpts_line_up_parentheses        = $rOpts->{'line-up-parentheses'};
     $rOpts_extended_block_tightness   = $rOpts->{'extended-block-tightness'};
@@ -9084,6 +9166,8 @@ EOM
             $self->wrapup();
             return 1;
         }
+
+        $self->check_indented_here_docs();
 
         $self->ternary_level_adjustment();
 
@@ -16989,6 +17073,12 @@ my $rwhitespace_flags;
 # new index K of package or class statements
 my $rK_package_list;
 
+# new index K of type 'h' here doc tokens
+my $rK_type_h_list;
+
+# true if line index has an indented type 'h' here doc token
+my $ris_indented_type_h_line_index;
+
 # new index K of @_ tokens
 my $rK_AT_underscore_by_sub_seqno;
 
@@ -17056,15 +17146,17 @@ sub initialize_respace_tokens_closure {
     $ris_asub_block            = $self->[_ris_asub_block_];
     $ris_method_block          = $self->[_ris_method_block_];
 
-    $rK_package_list               = $self->[_rK_package_list_];
-    $rK_AT_underscore_by_sub_seqno = $self->[_rK_AT_underscore_by_sub_seqno_];
-    $rK_first_self_by_sub_seqno    = $self->[_rK_first_self_by_sub_seqno_];
-    $rK_bless_by_sub_seqno         = $self->[_rK_bless_by_sub_seqno_];
-    $rK_return_by_sub_seqno        = $self->[_rK_return_by_sub_seqno_];
-    $rK_wantarray_by_sub_seqno     = $self->[_rK_wantarray_by_sub_seqno_];
-    $rsub_call_paren_info_by_seqno = $self->[_rsub_call_paren_info_by_seqno_];
-    $rseqno_arrow_call_chain_start = $self->[_rseqno_arrow_call_chain_start_];
-    $rarrow_call_chain             = $self->[_rarrow_call_chain_];
+    $rK_package_list                = $self->[_rK_package_list_];
+    $rK_type_h_list                 = $self->[_rK_type_h_list_];
+    $ris_indented_type_h_line_index = $self->[_ris_indented_type_h_line_index_];
+    $rK_AT_underscore_by_sub_seqno  = $self->[_rK_AT_underscore_by_sub_seqno_];
+    $rK_first_self_by_sub_seqno     = $self->[_rK_first_self_by_sub_seqno_];
+    $rK_bless_by_sub_seqno          = $self->[_rK_bless_by_sub_seqno_];
+    $rK_return_by_sub_seqno         = $self->[_rK_return_by_sub_seqno_];
+    $rK_wantarray_by_sub_seqno      = $self->[_rK_wantarray_by_sub_seqno_];
+    $rsub_call_paren_info_by_seqno  = $self->[_rsub_call_paren_info_by_seqno_];
+    $rseqno_arrow_call_chain_start  = $self->[_rseqno_arrow_call_chain_start_];
+    $rarrow_call_chain              = $self->[_rarrow_call_chain_];
     $rDOLLAR_underscore_by_sub_seqno =
       $self->[_rDOLLAR_underscore_by_sub_seqno_];
     $rK_sub_by_seqno     = $self->[_rK_sub_by_seqno_];
@@ -17991,6 +18083,14 @@ EOM
                     $rtoken_vars->[_TOKEN_] = $token;
                 }
             }
+
+            # Save info for checking here docs
+            if ( substr( $token, 0, 3 ) eq '<<~' ) {
+                my $lx = $rtoken_vars->[_LINE_INDEX_];
+                $ris_indented_type_h_line_index->{$lx} = 1;
+            }
+
+            push @{$rK_type_h_list}, scalar( @{$rLL_new} );
         }
         elsif ( $type eq 'S' ) {
 
@@ -23433,6 +23533,415 @@ EOM
     return;
 } ## end sub dump_mismatched_returns
 
+sub check_indented_here_docs {
+    my ($self) = @_;
+
+    # Check here-docs for problems and requested modifications
+    # This feature added for issue git #210.
+
+    my $ris_indented_type_h_line_index =
+      $self->[_ris_indented_type_h_line_index_];
+
+    my $extra_spaces_block     = $here_doc_control_hash{extra_spaces_block};
+    my $extra_spaces_non_block = $here_doc_control_hash{extra_spaces_non_block};
+    my $convert_to_standard    = $here_doc_control_hash{convert_to_standard};
+    my $convert_to_indented    = $here_doc_control_hash{convert_to_indented};
+    my $excess_length_option   = $here_doc_control_hash{excess_length_option};
+    my $tag_exclusion_pattern  = $here_doc_control_hash{tag_exclusion_pattern};
+
+    # Quick check: nothing to do if:
+    # (1) no indented here docs and
+    # (2) not converting to indented
+    if ( !%{$ris_indented_type_h_line_index} && !$convert_to_indented ) {
+        return;
+    }
+
+    my $rLL            = $self->[_rLL_];
+    my $rK_type_h_list = $self->[_rK_type_h_list_];
+    my $rlines         = $self->[_rlines_];
+
+    my $get_heredoc_extra_spaces = sub {
+        my ($ix_line) = @_;
+
+        # Given:
+        #   $ix_line = index of line of code with a here-doc token
+        # Return:
+        #   number of extra indentation spaces when updating indentation
+
+        # The number of spaces may depend on if the outer container is a block
+        my $extra_spaces = $extra_spaces_block;
+        if (   !defined($extra_spaces_block)
+            || !defined($extra_spaces_non_block)
+            || $extra_spaces_block != $extra_spaces_non_block )
+        {
+            my $line_of_tokens = $rlines->[$ix_line];
+            my $rK_range       = $line_of_tokens->{_rK_range};
+            my ( $Kfirst, $Klast_uu ) = @{$rK_range};
+            if ( defined($Kfirst) ) {
+                my $seqno_parent = $self->parent_seqno_by_K($Kfirst);
+                my $block_type =
+                  $seqno_parent eq SEQ_ROOT
+                  ? ';'
+                  : $self->[_rblock_type_of_seqno_]->{$seqno_parent};
+                $extra_spaces =
+                    $block_type
+                  ? $extra_spaces_block
+                  : $extra_spaces_non_block;
+            }
+        }
+        return $extra_spaces;
+    }; ## end $get_heredoc_extra_spaces = sub
+
+    # Create the following list which will be used by sub convey_batch for
+    # making indentation updates when -hiu is set:
+    my @here_doc_update_list;
+
+    my $error_count;
+    my $ix_HERE_END = -1;
+
+    # Loop over all here doc type 'h' tokens
+    foreach my $KK ( @{$rK_type_h_list} ) {
+
+        my $rtoken = $rLL->[$KK];
+        my $type   = $rtoken->[_TYPE_];
+
+        # Stored K values may be off by 1 due to an added blank
+        if ( $type eq 'b' ) {
+            $KK += 1;
+            $rtoken = $rLL->[$KK];
+            $type   = $rtoken->[_TYPE_];
+        }
+        my $ix_line = $rtoken->[_LINE_INDEX_];
+
+        # shouldn't happen: sub respace_tokens has stored a bad K value
+        if ( $type ne 'h' ) {
+            my $lno = $ix_line + 1;
+            DEVEL_MODE && Fault("$lno: type '$type' expected to be 'h'\n");
+            next;
+        }
+
+        # Check type, '<<' or '<<~'
+        my $here_type;
+        my $here_tag;
+        my $token = $rtoken->[_TOKEN_];
+        if ( $token =~ /^ (\<\<\~?)([^\d].*) $/x ) {
+            $here_type = $1;
+            $here_tag  = $2;
+        }
+        else {
+            ## Shouldn't happen: type 'h' tokens start with '<<' or '<<~'
+            my $lno = $ix_line + 1;
+            DEVEL_MODE && Fault("$lno: failed to parse here token '$token'\n");
+            return;
+        }
+
+        # We can skip this token if:
+        # - it is a type '<<'
+        # - and not in a line which also has a type '<<~'
+        # - and we are not going to convert it to type a type '<<~'
+        next
+          if ( $here_type eq '<<'
+            && !$ris_indented_type_h_line_index->{$ix_line}
+            && !$convert_to_indented );
+
+        # Remove any enclosing quote characters to get the raw tag
+        my $quote_char = EMPTY_STRING;
+        if ( length($here_tag) > 1 ) {
+            my $end_quote_char   = substr( $here_tag, -1, 1 );
+            my $start_quote_char = substr( $here_tag,  0, 1 );
+            if (   $end_quote_char =~ /^[\"\'\`]/
+                && $start_quote_char eq $end_quote_char )
+            {
+                $here_tag   = substr( $here_tag, 1, -1 );
+                $quote_char = $start_quote_char;
+            }
+        }
+
+        # See if we will be ignoring this tag
+        my $is_excluded_tag = defined($tag_exclusion_pattern)
+          && $here_tag =~ /$tag_exclusion_pattern/;
+
+        my $extra_spaces = $get_heredoc_extra_spaces->($ix_line);
+        $is_excluded_tag ||= !defined($extra_spaces);
+
+        # Define the here-doc ending line index $ix_HERE_END for:
+        #   (1) all '<<~' types,
+        #   (2) any '<<' which are on lines with '<<~'
+        #   (3) any '<<' which might become '<<~'
+        # and check leading whitespace for all '<<~' types (even excluded tags)
+        my $leading_whitespace = EMPTY_STRING;
+        my $ix_HERE            = max( $ix_HERE_END, $ix_line );
+        if ( $ris_indented_type_h_line_index->{$ix_line}
+            || ( $convert_to_indented && !$is_excluded_tag ) )
+        {
+
+            # Collect the here doc text and update line indexes
+            my $ix_test = $ix_HERE;
+            ( $ix_HERE_END, my $here_text ) = $self->get_here_text($ix_HERE);
+
+            # Define and check leading whitespace if type is '<<~'
+            if ( $here_type eq '<<~' ) {
+
+                # Get the end tag and its leading whitespace
+                my $lhash_HERE_END = $rlines->[$ix_HERE_END];
+                my $end_text       = $lhash_HERE_END->{_line_text};
+                chomp $end_text;
+                my $i_tag = rindex( $end_text, $here_tag );
+                if ( $i_tag > 0 ) {
+                    $leading_whitespace = substr( $end_text, 0, $i_tag );
+                    if ( $leading_whitespace !~ /^\s*$/ ) {
+                        $leading_whitespace = EMPTY_STRING;
+                    }
+                }
+
+                # Verify that we are at the correct here doc end tag
+                if ( $end_text ne $leading_whitespace . $here_tag ) {
+
+                    # Shouldn't happen - tokenizer found this end tag
+                    my $lno = $ix_line + 1;
+                    DEVEL_MODE
+                      && Fault(
+                        "$lno: found '$end_text' but expected '$here_tag'\n");
+                    next;
+                }
+
+                # Check the leading whitespace of all lines
+                my $has_bad_whitespace;
+                if ( length($leading_whitespace) > 0 ) {
+                    my @lines           = split /^/, $here_text;
+                    my $max_line_length = 0;
+                    foreach my $line (@lines) {
+                        $ix_test++;
+
+                        chomp $line;
+                        my $line_length = length($line);
+                        next if ( !$line_length );
+                        if ( index( $line, $leading_whitespace ) != 0 ) {
+                            my $lno_here_end = $ix_HERE_END + 1;
+                            my $lno_test     = $ix_test + 1;
+                            $self->warning(<<EOM);
+$lno_test: Leading whitespace of here-doc doesn't match that of tag '$here_tag' at line $lno_here_end
+EOM
+
+                            # Stop checking this here doc on any error to
+                            # avoid excess error output.
+                            $has_bad_whitespace = 1;
+                            last;
+                        }
+                        if ( $line_length > $max_line_length ) {
+                            $max_line_length = $line_length;
+                        }
+                    }
+                    $max_line_length -= length($leading_whitespace);
+                }
+
+                # On error, skip further processing of this here doc
+                if ($has_bad_whitespace) {
+                    $error_count++;
+                    next;
+                }
+
+                # Convert type '<<~' to '<<' if requested and selected
+                if ( $convert_to_standard
+                    && !$is_excluded_tag )
+                {
+                    $here_type         = '<<';
+                    $token             = $here_type . substr( $token, 3 );
+                    $rtoken->[_TOKEN_] = $token;
+
+                    # Remove the leading whitespace characters
+                    my $numch = length($leading_whitespace);
+                    if ($numch) {
+                        foreach my $ix ( $ix_HERE + 1 .. $ix_HERE_END ) {
+                            my $lhash = $rlines->[$ix];
+                            my $text  = $lhash->{_line_text};
+                            $text = substr( $text, $numch );
+                            $lhash->{_line_text} = $text;
+                        }
+                        $leading_whitespace = EMPTY_STRING;
+                    }
+                }
+            }
+        }
+
+        # Nothing more to do for excluded here docs
+        next if ($is_excluded_tag);
+
+        # Handle type '<<': Either convert to '<<~' or skip
+        if ( $here_type eq '<<' ) {
+            next if ( !$convert_to_indented );
+            $here_type         = '<<~';
+            $token             = $here_type . substr( $token, 2 );
+            $rtoken->[_TOKEN_] = $token;
+        }
+
+        # Setup for indentation of type '<<~' when indentation becomes known:
+        if ($rOpts_heredoc_indentation_update) {
+
+            push @here_doc_update_list,
+              {
+                ix_HERE_token        => $ix_line,
+                ix_HERE              => $ix_HERE,
+                ix_HERE_END          => $ix_HERE_END,
+                here_tag             => $here_tag,
+                leading_whitespace   => $leading_whitespace,
+                extra_spaces         => $extra_spaces,
+                excess_length_option => $excess_length_option,
+              };
+        }
+    }
+
+    # Do not try to update indentation if there are any whitespace errors
+    # in this file
+    if ( !$error_count ) {
+        $self->[_rhere_doc_update_list_] = \@here_doc_update_list;
+    }
+    return;
+} ## end sub check_indented_here_docs
+
+sub update_indented_here_doc {
+    my ( $self, $ix_CODE, $rinfo, $indent_spaces, $line_length_MAX ) = @_;
+
+    # Modify an indented here-doc if necessary to match current indentation.
+    # Called by sub convey_batch_to_vertical_aligner just after it has written
+    # a line of code with a here-doc to be indented.
+    # This feature added for issue git #210.
+
+    # Given:
+    #   $ix_CODE = index of the line just written (with a '<<~' token)
+    #   $rinfo   = ref to packed information on this here doc
+    #   $indent_spaces   = number of leading spaces of line just written
+    #   $line_length_MAX = maximum line length allowed here.
+
+    # NOTE: a critical patch in sub process_all_lines flushes early if this sub
+    # might be called; otherwise the first line would not get updated.
+
+    # Pull out info about this heredoc packed by sub check_indented_here_docs
+    my $ix_HERE_token          = $rinfo->{ix_HERE_token};
+    my $ix_HERE                = $rinfo->{ix_HERE};
+    my $ix_HERE_END            = $rinfo->{ix_HERE_END};
+    my $here_tag               = $rinfo->{here_tag};
+    my $leading_whitespace_old = $rinfo->{leading_whitespace};
+    my $extra_spaces           = $rinfo->{extra_spaces};
+    my $excess_length_option   = $rinfo->{excess_length_option};
+
+    # Be sure we agree on the line of CODE with this '<<~' here token
+    if ( $ix_HERE_token != $ix_CODE ) {
+        ## Shouldn't happen: looks like sub convey_.. may have skipped a line
+        DEVEL_MODE
+          && Fault(
+            "$ix_CODE: expecting here doc '$here_tag' for ix=$ix_HERE_token\n");
+        return;
+    }
+
+    my $rlines = $self->[_rlines_];
+
+    # Be sure everything still looks OK before we make any changes.
+    # Note $ix_HERE is one line before first 'HERE' line.
+    my $line_type_ix_CODE     = $rlines->[$ix_CODE]->{_line_type};
+    my $line_type_ix_HERE     = $rlines->[$ix_HERE]->{_line_type};
+    my $line_type_ix_HERE_END = $rlines->[$ix_HERE_END]->{_line_type};
+    if (   $line_type_ix_CODE ne 'CODE'
+        || $line_type_ix_HERE ne 'CODE' && $line_type_ix_HERE ne 'HERE_END'
+        || $line_type_ix_HERE_END ne 'HERE_END'
+        || $ix_HERE < $ix_CODE
+        || $ix_HERE_END <= $ix_HERE )
+    {
+        # If this happens, operations in sub convey_batch_to_vertical_aligner
+        # have gotten out of sync with sub update_indented_here_docs, possibly
+        # due to a recent coding change.
+        DEVEL_MODE && Fault(<<EOM);
+Unexpected line types or line index order at these line indexes:
+$ix_CODE: type is '$line_type_ix_CODE' ; expecting type 'CODE'
+$ix_HERE: type is '$line_type_ix_HERE' ; expecting type 'CODE' or 'HERE_END'
+$ix_HERE_END: type is '$line_type_ix_HERE_END' ; expecting type 'HERE_END'
+EOM
+        return;
+    }
+
+    # Get the text and end tag without leading whitespace
+    my $numch_old      = length($leading_whitespace_old);
+    my $max_raw_length = 0;
+    my @here_lines;
+    foreach my $ix ( $ix_HERE + 1 .. $ix_HERE_END ) {
+        my $lhash = $rlines->[$ix];
+        my $text  = $lhash->{_line_text};
+
+        # Note that we chomp the text and will add a newline back at the end
+        chomp $text;
+
+        # Skip empty lines
+        if ( length($text) ) {
+
+            # Verify the expected leading whitespace
+            if ( index( $text, $leading_whitespace_old ) != 0 ) {
+                DEVEL_MODE && Fault("$ix: unexpected leading whitespace\n");
+                return;
+            }
+            $text = substr( $text, $numch_old );
+            if ( length($text) > $max_raw_length ) {
+                $max_raw_length = length($text);
+            }
+        }
+        push @here_lines, $text;
+    }
+    if ( !@here_lines ) {
+        ## Shouldn't happen because of line index checks above
+        DEVEL_MODE && Fault("$ix_HERE_END: Strange - here doc is missing\n");
+        return;
+    }
+
+    # Now verify that this here doc has the expected end tag
+    my $end_tag = $here_lines[-1];
+    if ( $end_tag ne $here_tag ) {
+        DEVEL_MODE
+          && Fault(
+            "$ix_HERE_END: got end tag '$end_tag' but expecting '$here_tag'\n");
+        return;
+    }
+
+    # Adjust whitespace in case of excess line length according to user option:
+    my $space_count_new = $indent_spaces + $extra_spaces;
+    my $excess          = $max_raw_length + $space_count_new - $line_length_MAX;
+    if ( $excess > 0 ) {
+
+        # 0 leave here doc unchanged [DEFAULT]]
+        if ( $excess_length_option == 0 ) { return }
+
+        # 1 ignore line length limit
+        elsif ( $excess_length_option == 1 ) { }
+
+        # 2 use zero whitespace
+        elsif ( $excess_length_option == 2 ) { $space_count_new = 0 }
+
+        # 3 use max possible without exceeding the limit
+        elsif ( $excess_length_option == 3 ) {
+            $space_count_new = max( 0, $space_count_new - $excess );
+        }
+        else {
+            ## Shouldn't happen because of preliminary integer input checks
+            return;
+        }
+    }
+
+    # Calculate the new whitespace
+    my $leading_whitespace_new = SPACE x $space_count_new;
+
+    # Nothing to do if the whitespace is unchanged
+    if ( $leading_whitespace_old eq $leading_whitespace_new ) {
+        return;
+    }
+
+    # Everything looks okay, so we can update the here-doc lines text
+    foreach my $ix ( $ix_HERE + 1 .. $ix_HERE_END ) {
+        my $raw_text = shift @here_lines;
+        my $text     = $leading_whitespace_new . $raw_text;
+        $rlines->[$ix]->{_line_text} = $text . "\n";
+    }
+
+    return;
+} ## end sub update_indented_here_doc
+
 my %is_non_ternary_type;
 
 BEGIN {
@@ -23517,8 +24026,8 @@ sub ternary_level_adjustment {
             return if ( $is_non_ternary_type{$type} );
 
             # Skip over containers
-            if ( my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_] ) {
-                if ( $is_closing_type{$type} ) {
+            if ( $is_closing_type{$type} ) {
+                if ( my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_] ) {
                     $KK = $self->[_K_opening_container_]->{$seqno};
                     next;
                 }
@@ -29154,6 +29663,18 @@ sub process_all_lines {
             # fixes case c047.
             elsif ( $line_type eq 'SKIP_END' ) {
                 $file_writer_object->reset_consecutive_blank_lines();
+            }
+            elsif ( $line_type eq 'HERE' ) {
+
+                # Flush early on CODE->HERE transition if there are more
+                # indented here doc updates to process. Otherwise, the first
+                # line will not get updated. Added for issue git #210.
+                if ( $last_line_type eq 'CODE'
+                    && @{ $self->[_rhere_doc_update_list_] } )
+                {
+                    $self->flush();
+                    $input_line = $line_of_tokens->{_line_text};
+                }
             }
             else {
                 ## some other line type
@@ -42656,6 +43177,20 @@ EOM
         my $file_writer_object = $self->[_file_writer_object_];
         $file_writer_object->write_code_line( $cscw_block_comment . "\n" );
     }
+
+    # Check for option to update indented here-docs; issue git #210.
+    my $rhere_doc_update_list = $self->[_rhere_doc_update_list_];
+    my $ix                    = $rLL->[ $K_to_go[$iend] ]->[_LINE_INDEX_];
+    while ( @{$rhere_doc_update_list}
+        && $rhere_doc_update_list->[0]->{ix_HERE_token} <= $ix )
+    {
+        my $ritem = shift @{$rhere_doc_update_list};
+        $self->update_indented_here_doc(
+            $ix, $ritem,
+            $rindentation_list->[-1],
+            $maximum_line_length_at_level[ $levels_to_go[$ibeg] ],
+        );
+    } ## end while ( @{$rhere_doc_update_list...})
     return;
 } ## end sub convey_batch_to_vertical_aligner
 

@@ -638,7 +638,8 @@ sub check_for_valid_words {
                 Fault("expecting {$key_name} to be a ref in call '$msg_end'\n");
             }
             if ( $ref eq 'ARRAY' ) {
-                $rthing = \map { $_ => 1 } @{$rthing};
+                my %hash = map { $_ => 1 } @{$rthing};
+                $rthing = \%hash;
             }
             if ( ref($rthing) ne 'HASH' ) {
                 Fault(
@@ -3870,6 +3871,11 @@ sub generate_options {
     $add_option->( 'brace-left-and-indent',                'bli',   '!' );
     $add_option->( 'brace-left-and-indent-list',           'blil',  '=s' );
     $add_option->( 'brace-left-and-indent-exclusion-list', 'blixl', '=s' );
+    $add_option->( 'heredoc-indentation-update',           'hiu',   '!' );
+    $add_option->( 'heredoc-convert-to',                   'hct',   '=s' );
+    $add_option->( 'heredoc-extra-spaces',                 'hxs',   '=s' );
+    $add_option->( 'heredoc-excess-length-option',         'hxlo',  '=i' );
+    $add_option->( 'heredoc-tag-exclusion-pattern',        'htxp',  '=s' );
 
     ########################################
     $category = 3;    # Whitespace control
@@ -4333,6 +4339,7 @@ sub generate_options {
         'dump-block-minimum-lines'                  => [ 0, undef, 20 ],
         'entab-leading-whitespace'                  => [ 0, undef, 0 ],
         'fixed-position-side-comment'               => [ 0, undef, undef ],
+        'heredoc-excess-length-option'              => [ 0, 3,     0 ],
         'indent-columns'                            => [ 0, undef, 4 ],
         'integer-range-check'                       => [ 1, 3,     2 ],
         'interbracket-arrow-complexity'             => [ 0, 2,     1 ],

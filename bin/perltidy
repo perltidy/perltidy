@@ -4879,6 +4879,126 @@ Any comments between brackets will prevent the adding and deleting of arrows.
 
 =back
 
+=head2 Manipulating Indented Here-documents
+
+Perl has two types of here-documents, B<standard> and B<indented>.  A
+B<standard> here-document (heredoc) is introduced with the symbol B<E<lt>E<lt>> followed
+by a (possibly quoted) B<delimiter string> or B<tag>.  The lines of B<here-text> follow
+immediately and are terminated by a line containing just the delimiter string and a
+newline character.
+
+In Perl v5.26 and later, an B<indented> heredoc can be introduce with the B<E<lt>E<lt>~>
+operator followed by a delimiter string. In this case, the terminating line may
+have B<leading whitespace>, and this amount of leading whitespace must also appear
+in the preceding lines of here-text.
+
+Although the actual leading whitespace of indented here documents is arbitrary,
+a common practice is to use the same leading whitespace as the line which
+introduces the here document, possibly with a few added spaces of
+indentation.  The following B<--heredoc-> parameters can be used to adjust the
+leading whitespace of indented heredocs according to rules like this, and also
+to convert between heredoc types.
+
+=over 4
+
+=item B<--heredoc-indentation-update>,  B<-hiu>
+
+This parameter setting causes the leading whitespace of indented here-documents
+to be updated to agree with the indentation of the line of code on which they
+are introduced.
+
+The additional B<--heredoc-> parameters defined below may be used to add
+additional spaces, to select just certain heredocs, and to convert between
+heredoc types.
+
+=item B<--heredoc-extra-spaces=s>, or B<-hxs=s>
+
+This parameter allows extra spaces to be added to the leading whitespace, thus
+indenting the heredoc text.  The string parameter B<s> gives the number of
+additional leading spaces.
+
+For example B<-hxs=4> means add four additional spaces to the leading whitespace.
+The default is no added spaces, which can also be specified with B<s=0>.
+
+It is further possible to specify a different number of spaces for heredocs
+which are in blocks of code, and heredocs which are not within blocks of code.
+This is done by specifying the two integers separated with a semicolon.  The
+first integer applies within blocks, and the second applies within non-blocks.
+For example, B<-hxs=0;4> means to use 0 extra spaces within code blocks
+(where a semicolon could appear) and 4 extra spaces elsewhere (such as within a
+list). This string expression may include spaces.
+
+This semicolon format can also be used as a way to prevent selected heredocs
+from being updated, as follows.  If the first integer of this semicolon format
+is omitted, then heredocs within code blocks will be skipped by these
+parameters. Likewise, if the second integer is omitted, then heredocs in
+non-blocks will be skipped. For example, B<-hxs='0;'> means use 0 extra spaces
+within code blocks, and ignore heredocs which are not in code blocks.
+
+=item B<--heredoc-tag-exclusion-pattern=s>, or B<-htxp=s>
+
+This option prevents any of the B<--heredoc-> parameters from operating on
+heredocs whose tags match the regex pattern string B<s>. For example,
+B<-hds='^-'> prevents operations by all B<--heredoc-> parameters on tags with
+leading underscores, such as B<'_END'>.
+
+=item B<--heredoc-excess-length-option=n>, or B<-hxlo=n>
+
+The value B<n> of this option is an integer which determines what happens
+if an indented heredoc would exceed the maximum line length, as follows:
+
+  n=0 leave unchanged [DEFAULT]
+  n=1 ignore the line length limit
+  n=2 use zero indentation
+  n=3 use the maximum without exceeding the limit
+
+=item B<--heredoc-convert-to=s>, or B<-hct=s>
+
+This option converts between B<standard> and B<indented> heredocs.
+The string may contain any of these strings:
+
+  'standard' - convert '<<~' to to '<<' heredocs
+  'indented' - convert '<<' to '<<~' heredocs
+
+Thus B<-hcs='standard'> removes the leading whitespace of indented heredocs and
+changes the symbol B<E<lt>E<lt>~> to be B<E<lt>E<lt>>.  This might be useful
+for converting a program to run under older versions of perl.
+
+The option B<-hcs='indented'> by itself just changes the symbol B<E<lt>E<lt>>
+to B<E<lt>E<lt>~>.  If the master parameter B<--heredoc-indentation-update> is
+also set, then whitespace will also be added. Otherwise, it will remain zero
+until the file is formatted with the B<--heredoc-indentation-update> parameter
+set.
+
+=item B<Some notes on these heredoc- parameters>
+
+=over 4
+
+=item *
+
+These parameters only apply to here documents which appear in the basic stream
+of code tokens. They do not apply, for example, to here documents which are
+first referenced from within regular expressions or quoted strings.
+
+=item *
+
+Tab characters may be used in the leading whitespace of indented here
+documents, but any new leading whitespace created by perltidy will only contain
+simple space characters, not tabs, even if the user has set the parameter
+B<--entab>.  Using tab characters can cause problems, for example, when the
+text is operated on by an editor, especially if the here-text itself has
+additional leading whitespace.
+
+=item *
+
+Indented here documents which do not have the same leading whitespace on each
+line of text as on the ending delimiter will produce an error message and will
+not be processed by these parameters.
+
+=back
+
+=back
+
 =head2 Missing Else Blocks
 
 A defensive programming technique is to require that every B<if-elsif-> chain
