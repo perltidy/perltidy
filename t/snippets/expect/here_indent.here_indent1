@@ -1,0 +1,29 @@
+{
+    my $name = "Sir or Madam";
+    my $amt  = 3141.59;
+    ## line with both types of here docs
+    my $text = <<STD1 . <<~IND1 . <<STD2;
+=====
+STD1
+   Dear $name,
+
+   You just won \$$amt at our lottery!
+     To claim your prize, just click on the link below
+   IND1
+   **freemoney.malware.com**
+====
+STD2
+    print $text;
+}
+
+my %hash = (
+    no_text => <<~'IND2',
+    IND2
+    text_and_empty => <<~'IND3',
+    IND3 line 1
+
+    IND3
+    standard => <<'STD3',
+STD3 line 1
+STD3
+);

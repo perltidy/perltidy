@@ -1,0 +1,3 @@
+-heredoc-convert-to='standard'
+# convert all to standard except IND3
+-heredoc-tag-exclusion-pattern='3$'

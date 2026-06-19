@@ -633,3 +633,7 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
+../snippets33.t	here_indent.def
+../snippets33.t	here_indent.here_indent1
+../snippets33.t	here_indent.here_indent2
+../snippets33.t	here_indent.here_indent3

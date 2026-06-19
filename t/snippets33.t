@@ -15,6 +15,10 @@
 #12 blpc.def
 #13 git205.def
 #14 git205.git205
+#15 here_indent.def
+#16 here_indent.here_indent1
+#17 here_indent.here_indent2
+#18 here_indent.here_indent3
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -58,6 +62,22 @@ BEGIN {
         'git205' => <<'----------',
 --cuddled-blocks
 --cuddled-block-list=sort,map,grep
+----------
+        'here_indent1' => <<'----------',
+-heredoc-indentation-update
+-heredoc-excess-length-option=3
+-maximum-line-length=54
+----------
+        'here_indent2' => <<'----------',
+-heredoc-indentation-update
+-heredoc-convert-to='indented'
+-heredoc-extra-spaces='0;4'
+
+----------
+        'here_indent3' => <<'----------',
+-heredoc-convert-to='standard'
+# convert all to standard except IND3
+-heredoc-tag-exclusion-pattern='3$'
 ----------
     };
 
@@ -256,6 +276,38 @@ sub baz {
     }
     grep { $_ > 1 } qw(3 2 1 0);
 }
+----------
+
+        'here_indent' => <<'----------',
+{
+    my $name = "Sir or Madam";
+    my $amt  = 3141.59;
+    ## line with both types of here docs
+    my $text = <<STD1 . <<~IND1 . <<STD2;
+=====
+STD1
+ Dear $name,
+
+ You just won \$$amt at our lottery!
+   To claim your prize, just click on the link below
+ IND1
+   **freemoney.malware.com**
+====
+STD2
+    print $text;
+}
+
+my %hash = (
+    no_text => <<~'IND2',
+  IND2
+    text_and_empty => <<~'IND3',
+  IND3 line 1
+
+  IND3
+    standard => <<'STD3',
+STD3 line 1
+STD3
+);
 ----------
     };
 
@@ -587,6 +639,150 @@ sub baz {
     grep { $_ > 1 } qw(3 2 1 0);
 }
 #14...........
+        },
+
+        'here_indent.def' => {
+            source => "here_indent",
+            params => "def",
+            expect => <<'#15...........',
+{
+    my $name = "Sir or Madam";
+    my $amt  = 3141.59;
+    ## line with both types of here docs
+    my $text = <<STD1 . <<~IND1 . <<STD2;
+=====
+STD1
+ Dear $name,
+
+ You just won \$$amt at our lottery!
+   To claim your prize, just click on the link below
+ IND1
+   **freemoney.malware.com**
+====
+STD2
+    print $text;
+}
+
+my %hash = (
+    no_text => <<~'IND2',
+  IND2
+    text_and_empty => <<~'IND3',
+  IND3 line 1
+
+  IND3
+    standard => <<'STD3',
+STD3 line 1
+STD3
+);
+#15...........
+        },
+
+        'here_indent.here_indent1' => {
+            source => "here_indent",
+            params => "here_indent1",
+            expect => <<'#16...........',
+{
+    my $name = "Sir or Madam";
+    my $amt  = 3141.59;
+    ## line with both types of here docs
+    my $text = <<STD1 . <<~IND1 . <<STD2;
+=====
+STD1
+   Dear $name,
+
+   You just won \$$amt at our lottery!
+     To claim your prize, just click on the link below
+   IND1
+   **freemoney.malware.com**
+====
+STD2
+    print $text;
+}
+
+my %hash = (
+    no_text => <<~'IND2',
+    IND2
+    text_and_empty => <<~'IND3',
+    IND3 line 1
+
+    IND3
+    standard => <<'STD3',
+STD3 line 1
+STD3
+);
+#16...........
+        },
+
+        'here_indent.here_indent2' => {
+            source => "here_indent",
+            params => "here_indent2",
+            expect => <<'#17...........',
+{
+    my $name = "Sir or Madam";
+    my $amt  = 3141.59;
+    ## line with both types of here docs
+    my $text = <<~STD1 . <<~IND1 . <<~STD2;
+    =====
+    STD1
+    Dear $name,
+
+    You just won \$$amt at our lottery!
+      To claim your prize, just click on the link below
+    IND1
+       **freemoney.malware.com**
+    ====
+    STD2
+    print $text;
+}
+
+my %hash = (
+    no_text => <<~'IND2',
+        IND2
+    text_and_empty => <<~'IND3',
+        IND3 line 1
+
+        IND3
+    standard => <<~'STD3',
+        STD3 line 1
+        STD3
+);
+#17...........
+        },
+
+        'here_indent.here_indent3' => {
+            source => "here_indent",
+            params => "here_indent3",
+            expect => <<'#18...........',
+{
+    my $name = "Sir or Madam";
+    my $amt  = 3141.59;
+    ## line with both types of here docs
+    my $text = <<STD1 . <<IND1 . <<STD2;
+=====
+STD1
+Dear $name,
+
+You just won \$$amt at our lottery!
+  To claim your prize, just click on the link below
+IND1
+   **freemoney.malware.com**
+====
+STD2
+    print $text;
+}
+
+my %hash = (
+    no_text => <<'IND2',
+IND2
+    text_and_empty => <<~'IND3',
+  IND3 line 1
+
+  IND3
+    standard => <<'STD3',
+STD3 line 1
+STD3
+);
+#18...........
         },
     };
 

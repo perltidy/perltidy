@@ -3269,10 +3269,11 @@ sub initialize_here_doc_control_hash {
                 rvalid_words => [qw(standard indented)],
             }
         );
-        $here_doc_control_hash{convert_to_standard} =
-          $hct_key =~ /\bstandard\b/;
-        $here_doc_control_hash{convert_to_indented} =
-          $hct_key =~ /\bindented\b/;
+        my %saw_word;
+        $saw_word{$_} = 1 for @hct;
+
+        $here_doc_control_hash{convert_to_standard} = $saw_word{'standard'};
+        $here_doc_control_hash{convert_to_indented} = $saw_word{'indented'};
     }
 
     my $hxlo_key   = 'heredoc-excess-length-option';
@@ -23755,8 +23756,10 @@ EOM
                         foreach my $ix ( $ix_HERE + 1 .. $ix_HERE_END ) {
                             my $lhash = $rlines->[$ix];
                             my $text  = $lhash->{_line_text};
+                            chomp $text;
+                            next if ( !length($text) );
                             $text = substr( $text, $numch );
-                            $lhash->{_line_text} = $text;
+                            $lhash->{_line_text} = $text . "\n";
                         }
                         $leading_whitespace = EMPTY_STRING;
                     }
@@ -23934,8 +23937,13 @@ EOM
 
     # Everything looks okay, so we can update the here-doc lines text
     foreach my $ix ( $ix_HERE + 1 .. $ix_HERE_END ) {
-        my $raw_text = shift @here_lines;
-        my $text     = $leading_whitespace_new . $raw_text;
+        my $text = shift @here_lines;
+
+        # Keep empty lines empty
+        if ( length($text) > 0 ) {
+            $text = $leading_whitespace_new . $text;
+        }
+
         $rlines->[$ix]->{_line_text} = $text . "\n";
     }
 
@@ -29664,7 +29672,7 @@ sub process_all_lines {
             elsif ( $line_type eq 'SKIP_END' ) {
                 $file_writer_object->reset_consecutive_blank_lines();
             }
-            elsif ( $line_type eq 'HERE' ) {
+            elsif ( $line_type eq 'HERE' || $line_type eq 'HERE_END' ) {
 
                 # Flush early on CODE->HERE transition if there are more
                 # indented here doc updates to process. Otherwise, the first

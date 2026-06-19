@@ -1,0 +1,3 @@
+-heredoc-indentation-update
+-heredoc-excess-length-option=3
+-maximum-line-length=54
