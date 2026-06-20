@@ -1,6 +1,26 @@
 # Perltidy Change Log
 
-## 2026 02 04.04
+## 2026 02 04.05
+
+    - Added controls adjust indented here-docs (see git #210). The main
+      new controls are:
+
+      --heredoc-indentation-update (-hiu): adjusts indentation of type '<<~'
+       here-documents to match the code indentation
+
+      --heredoc-extra-spaces=n (-hxs=n): adds n extra indentation spaces
+
+      --heredoc-excess-length-option=n (-hxlo=n) : how to handle long lines
+        n=0 : leave code unchanged [DEFAULT]
+        n=1 : ignore line length limit
+        n=2 : use zero leading space (i.e., left-adjust heredoc)
+        n=3 : use max possible without exceeding line length limit
+
+      --heredoc-convert-to=s (-hct=s): convert between '<<' and '<<~'
+        s='standard' : convert type '<<~' to '<<'
+        s='indented' : convert type '<<' to '<<~'
+
+     See the man pages for additional details and options.
 
     - Improved formatting of certain ternary expressions (see git #209).
       A ternary expression for which both the TRUE and FALSE parts are

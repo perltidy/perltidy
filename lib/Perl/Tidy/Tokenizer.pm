@@ -34,7 +34,7 @@ use strict;
 use warnings;
 use English qw( -no_match_vars );
 
-our $VERSION = '20260204.04';
+our $VERSION = '20260204.05';
 
 use Carp;
 
@@ -1416,7 +1416,6 @@ sub get_line {
 
         # Handle <<~ targets, which are indicated here by a leading space on
         # the here quote character. c603 has test cases.
-        # FIXME: store the leading whitespace for later checking that
         # the leading whitespace of all here text lines match it.
         my $ix = rindex( $candidate_target, $here_doc_target );
         if ( $ix > 0 && $here_quote_character =~ /^\s/ ) {

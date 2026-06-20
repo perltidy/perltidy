@@ -8340,16 +8340,16 @@ The following list shows all short parameter names which allow a prefix
  hbh    hbhh   hbi    hbj    hbk    hbm    hbn    hbp    hbpd   hbpu
  hbq    hbs    hbsc   hbv    hbw    hent   hic    hicm   hico   hih
  hihh   hii    hij    hik    him    hin    hip    hipd   hipu   hiq
- his    hisc   hiv    hiw    hsc    html   ibc    icb    icp    ils
- iob    ipc    isbc   iscl   kgb    kgbd   kgbi   kis    lal    log
- lop    lp     lsl    mci    mem    nib    ohbr   okw    ola    olc
- oll    olq    opr    opt    osbc   osbr   otr    ple    pod    pvl
- q      qwaf   sac    sbc    sbl    scbb   schb   scp    scsb   sct
- se     sfp    sfs    skp    sob    sobb   sohb   sop    sosb   sot
- ssc    st     sts    t      tac    tbc    toc    tp     tqw    trp
- ts     tsc    tso    vbc    vc     vco    viu    vmll   vsc    vsn
- vwe    w      wcsfl  wfc    wia    wma    wme    wmr    wn     wnt
- wsk    wuk    x      xbt    xci    xlp    xs
+ his    hisc   hiu    hiv    hiw    hsc    html   ibc    icb    icp
+ ils    iob    ipc    isbc   iscl   kgb    kgbd   kgbi   kis    lal
+ log    lop    lp     lsl    mci    mem    nib    ohbr   okw    ola
+ olc    oll    olq    opr    opt    osbc   osbr   otr    ple    pod
+ pvl    q      qwaf   sac    sbc    sbl    scbb   schb   scp    scsb
+ sct    se     sfp    sfs    skp    sob    sobb   sohb   sop    sosb
+ sot    ssc    st     sts    t      tac    tbc    toc    tp     tqw
+ trp    ts     tsc    tso    vbc    vc     vco    viu    vmll   vsc
+ vsn    vwe    w      wcsfl  wfc    wia    wma    wme    wmr    wn
+ wnt    wsk    wuk    x      xbt    xci    xlp    xs
 
 Equivalently, the prefix 'no' or 'no-' on the corresponding long names may be
 used.
@@ -8453,7 +8453,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20260204.04
+This man page documents perltidy version 20260204.05
 
 =head1 BUG REPORTS
 

@@ -1,8 +1,49 @@
 <h1>Perltidy Change Log</h1>
 
-<h2>2026 02 04.03</h2>
+<h2>2026 02 04.05</h2>
 
-<pre><code>- Add input parameter --dump-label-usage, or -dlu, to dump a list of
+<pre><code>- Improved formatting of certain ternary expressions (see git #209).
+  A ternary expression for which both the TRUE and FALSE parts are
+  single ternary expressions is now written in a more balanced way.
+  For example, this expression gives max($a,$b,$c):
+
+    # OLD: (tail end is economized into equivalent elsif's):
+    $a &gt; $b
+      ? $a &gt; $c
+          ? $a
+          : $c
+      : $b &gt; $c ? $b
+      :           $c;
+
+    # NEW (tail remains as simple if's):
+    $a &gt; $b
+        ? $a &gt; $c
+            ? $a
+            : $c
+        : $b &gt; $c
+            ? $b
+            : $c;
+
+- The operator 'cmp' has been added to the defaults for the parameter
+  --space-after-keyword.  For example, the old default is:
+
+    sort { !( ref $b-&gt;{select} ) cmp( ref $a-&gt;{select} ) }
+
+  The new default is:
+
+    sort { !( ref $b-&gt;{select} ) cmp ( ref $a-&gt;{select} ) }
+
+  Use -nsak='cmp' if you prefer no space between 'cmp' and a following '('.
+  See git #205 for a discussion.
+
+- Add input parameter --warn-keyword-list=s to warn if any of keywords
+  or functions in the string s occur in a file. For example
+
+     perltidy -wkl='goto'
+
+  will warn of the occurrences of the perl builtin keyword goto.
+
+- Add input parameter --dump-label-usage, or -dlu, to dump a list of
   all statement labels used in a script to standard output.
 
 - Add input parameter --warn-label-types=s, or -wlt=s, to issue a

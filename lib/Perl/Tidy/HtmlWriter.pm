@@ -8,7 +8,7 @@ package Perl::Tidy::HtmlWriter;
 
 use strict;
 use warnings;
-our $VERSION = '20260204.04';
+our $VERSION = '20260204.05';
 
 use Carp;
 use English qw( -no_match_vars );

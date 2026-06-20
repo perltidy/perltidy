@@ -37,6 +37,7 @@
       <li><a href="#Controlling-List-Formatting">Controlling List Formatting</a></li>
       <li><a href="#Adding-and-Deleting-Commas">Adding and Deleting Commas</a></li>
       <li><a href="#Adding-and-Deleting-Interbracket-Arrows">Adding and Deleting Interbracket Arrows</a></li>
+      <li><a href="#Manipulating-Indented-Here-documents">Manipulating Indented Here-documents</a></li>
       <li><a href="#Missing-Else-Blocks">Missing Else Blocks</a></li>
       <li><a href="#Controlling-Breaks-at-Certain-Chain-Operators">Controlling Breaks at Certain Chain Operators</a></li>
       <li><a href="#Retaining-or-Ignoring-Existing-Line-Breaks">Retaining or Ignoring Existing Line Breaks</a></li>
@@ -1292,8 +1293,8 @@
 
 <p>When an opening paren follows a Perl keyword, no space is introduced after the keyword, unless it is (by default) one of these:</p>
 
-<pre><code>   my local our state and or xor err eq ne if else elsif until unless
-   while for foreach return switch case given when catch</code></pre>
+<pre><code>   my local our state and or xor cmp err eq ne if else elsif until
+   unless while for foreach return switch case given when catch</code></pre>
 
 <p>These defaults can be modified with two commands:</p>
 
@@ -3791,6 +3792,85 @@
 </li>
 </ul>
 
+<h2 id="Manipulating-Indented-Here-documents">Manipulating Indented Here-documents</h2>
+
+<p>Perl has two types of here-documents, <b>standard</b> and <b>indented</b>. A <b>standard</b> here-document (heredoc) is introduced with the symbol <b>&lt;&lt;</b> followed by a (possibly quoted) <b>delimiter string</b> or <b>tag</b>. The lines of <b>here-text</b> follow immediately and are terminated by a line containing just the delimiter string and a newline character.</p>
+
+<p>In Perl v5.26 and later, an <b>indented</b> heredoc can be introduce with the <b>&lt;&lt;~</b> operator followed by a delimiter string. In this case, the terminating line may have <b>leading whitespace</b>, and this amount of leading whitespace must also appear in the preceding lines of here-text.</p>
+
+<p>Although the actual leading whitespace of indented here documents is arbitrary, a common practice is to use the same leading whitespace as the line which introduces the here document, possibly with a few added spaces of indentation. The following <b>--heredoc-</b> parameters can be used to adjust the leading whitespace of indented heredocs according to rules like this, and also to convert between heredoc types.</p>
+
+<dl>
+
+<dt id="heredoc-indentation-update--hiu"><b>--heredoc-indentation-update</b>, <b>-hiu</b></dt>
+<dd>
+
+<p>This parameter setting causes the leading whitespace of indented here-documents to be updated to agree with the indentation of the line of code on which they are introduced.</p>
+
+<p>The additional <b>--heredoc-</b> parameters defined below may be used to add additional spaces, to select just certain heredocs, and to convert between heredoc types.</p>
+
+</dd>
+<dt id="heredoc-extra-spaces-s-or--hxs-s"><b>--heredoc-extra-spaces=s</b>, or <b>-hxs=s</b></dt>
+<dd>
+
+<p>This parameter allows extra spaces to be added to the leading whitespace, thus indenting the heredoc text. The string parameter <b>s</b> gives the number of additional leading spaces.</p>
+
+<p>For example <b>-hxs=4</b> means add four additional spaces to the leading whitespace. The default is no added spaces, which can also be specified with <b>s=0</b>.</p>
+
+<p>It is further possible to specify a different number of spaces for heredocs which are in blocks of code, and heredocs which are not within blocks of code. This is done by specifying the two integers separated with a semicolon. The first integer applies within blocks, and the second applies within non-blocks. For example, <b>-hxs=0;4</b> means to use 0 extra spaces within code blocks (where a semicolon could appear) and 4 extra spaces elsewhere (such as within a list). This string expression may include spaces.</p>
+
+<p>This semicolon format can also be used as a way to prevent selected heredocs from being updated, as follows. If the first integer of this semicolon format is omitted, then heredocs within code blocks will be skipped by these parameters. Likewise, if the second integer is omitted, then heredocs in non-blocks will be skipped. For example, <b>-hxs=&#39;0;&#39;</b> means use 0 extra spaces within code blocks, and ignore heredocs which are not in code blocks.</p>
+
+</dd>
+<dt id="heredoc-tag-exclusion-pattern-s-or--htxp-s"><b>--heredoc-tag-exclusion-pattern=s</b>, or <b>-htxp=s</b></dt>
+<dd>
+
+<p>This option prevents any of the <b>--heredoc-</b> parameters from operating on heredocs whose tags match the regex pattern string <b>s</b>. For example, <b>-hds=&#39;^-&#39;</b> prevents operations by all <b>--heredoc-</b> parameters on tags with leading underscores, such as <b>&#39;_END&#39;</b>.</p>
+
+</dd>
+<dt id="heredoc-excess-length-option-n-or--hxlo-n"><b>--heredoc-excess-length-option=n</b>, or <b>-hxlo=n</b></dt>
+<dd>
+
+<p>The value <b>n</b> of this option is an integer which determines what happens if an indented heredoc would exceed the maximum line length, as follows:</p>
+
+<pre><code>  n=0 leave unchanged [DEFAULT]
+  n=1 ignore the line length limit
+  n=2 use zero indentation
+  n=3 use the maximum without exceeding the limit</code></pre>
+
+</dd>
+<dt id="heredoc-convert-to-s-or--hct-s"><b>--heredoc-convert-to=s</b>, or <b>-hct=s</b></dt>
+<dd>
+
+<p>This option converts between <b>standard</b> and <b>indented</b> heredocs. The string may contain any of these strings:</p>
+
+<pre><code>  &#39;standard&#39; - convert &#39;&lt;&lt;~&#39; to to &#39;&lt;&lt;&#39; heredocs
+  &#39;indented&#39; - convert &#39;&lt;&lt;&#39; to &#39;&lt;&lt;~&#39; heredocs</code></pre>
+
+<p>Thus <b>-hcs=&#39;standard&#39;</b> removes the leading whitespace of indented heredocs and changes the symbol <b>&lt;&lt;~</b> to be <b>&lt;&lt;</b>. This might be useful for converting a program to run under older versions of perl.</p>
+
+<p>The option <b>-hcs=&#39;indented&#39;</b> by itself just changes the symbol <b>&lt;&lt;</b> to <b>&lt;&lt;~</b>. If the master parameter <b>--heredoc-indentation-update</b> is also set, then whitespace will also be added. Otherwise, it will remain zero until the file is formatted with the <b>--heredoc-indentation-update</b> parameter set.</p>
+
+</dd>
+<dt id="Some-notes-on-these-heredoc--parameters"><b>Some notes on these heredoc- parameters</b></dt>
+<dd>
+
+<ul>
+
+<li><p>These parameters only apply to here documents which appear in the basic stream of code tokens. They do not apply, for example, to here documents which are first referenced from within regular expressions or quoted strings.</p>
+
+</li>
+<li><p>Tab characters may be used in the leading whitespace of indented here documents, but any new leading whitespace created by perltidy will only contain simple space characters, not tabs, even if the user has set the parameter <b>--entab</b>. Using tab characters can cause problems, for example, when the text is operated on by an editor, especially if the here-text itself has additional leading whitespace.</p>
+
+</li>
+<li><p>Indented here documents which do not have the same leading whitespace on each line of text as on the ending delimiter will produce an error message and will not be processed by these parameters.</p>
+
+</li>
+</ul>
+
+</dd>
+</dl>
+
 <h2 id="Missing-Else-Blocks">Missing Else Blocks</h2>
 
 <p>A defensive programming technique is to require that every <b>if-elsif-</b> chain be terminated with an <b>else</b> block, even though it is not strictly required. This helps insure that there are no holes in the logic.</p>
@@ -5254,7 +5334,7 @@
 
 <ul>
 
-<li><p>The <b>--dump-</b> parameters read a file, write information to the standard output, and then exit without doing any formatting.</p>
+<li><p>The <b>--dump-</b> parameters read a file, write information to the standard output, and then exit without doing any formatting. All <b>--dump-</b> parameters must be on the command line, not in a <i>.perltidyrc</i> file, and they require a single file name on the command line.</p>
 
 </li>
 <li><p>The <b>--warn-</b> parameters, on the other hand, cause perltidy to function normally but issue warnings to the error output when certain conditions are encountered.</p>
@@ -5266,10 +5346,10 @@
 
 <dl>
 
-<dt id="Use---dump-block-summary-to-make-a-table-of-information-on-code-blocks"><b>Use --dump-block-summary to make a table of information on code blocks</b></dt>
+<dt id="Use---dump-block-summary-to-make-a-table-of-information-on-code-blocks"><b>Use --dump-block-summary</b> to make a table of information on code blocks</dt>
 <dd>
 
-<p>A table listing information about the blocks of code in a file can be made with <b>--dump-block-summary</b>, or <b>-dbs</b>. This causes perltidy to read and parse the file, write a table of comma-separated values for selected code blocks to the standard output, and then exit. This parameter must be on the command line, not in a <i>.perltidyrc</i> file, and it requires a single file name on the command line. For example</p>
+<p>A table listing information about the blocks of code in a file can be made with <b>--dump-block-summary</b>, or <b>-dbs</b>. This causes perltidy to read and parse the file, write a table of comma-separated values for selected code blocks to the standard output, and then exit. Like all <b>--dump-</b> parameters, this must be on the command line, not in a <i>.perltidyrc</i> file, and it requires a single file name on the command line. For example</p>
 
 <pre><code>   perltidy -dbs somefile.pl &gt;blocks.csv</code></pre>
 
@@ -5349,7 +5429,7 @@
 </ul>
 
 </dd>
-<dt id="Use---dump-unusual-variables-to-find-unused-reused-and-certain-other-variables-of-interest"><b>Use --dump-unusual-variables to find unused, reused, and certain other variables of interest</b></dt>
+<dt id="Use---dump-unusual-variables-to-find-unused-reused-and-certain-other-variables-of-interest"><b>Use --dump-unusual-variables</b> to find unused, reused, and certain other variables of interest</dt>
 <dd>
 
 <p>Variables with certain properties of interest to a programmer can be listed with <b>--dump-unusual-variables</b> or <b>-duv</b>. This parameter must be on the command line, along with a single file name. It causes perltidy to scan the file for certain variable types, write any found to the standard output, and then immediately exit without doing any formatting. For example</p>
@@ -5429,7 +5509,7 @@
 <p><b>Exception</b>: The following <b>our</b> variables are exempt from warnings: <b>$VERSION</b>, <b>@EXPORT</b>, <b>@EXPORT_OK</b>, <b>%EXPORT_TAGS</b>, <b>@ISA, $AUTOLOAD</b>.</p>
 
 </dd>
-<dt id="Use---warn-variable-types-to-warn-about-certain-variable-types"><b>Use --warn-variable-types to warn about certain variable types</b></dt>
+<dt id="Use---warn-variable-types-to-warn-about-certain-variable-types"><b>Use --warn-variable-types</b> to warn about certain variable types</dt>
 <dd>
 
 <p>The flag <b>--warn-variable-types=string</b>, or <b>-wvt=string</b>, is the <b>--warn</b> counterpart to <b>--dump-unusual-variables</b>, and can be used to produce a warning message if certain of the above variable types are encountered during formatting. All possible variable warnings may be requested with <b>-wvt=&#39;*&#39;</b> or <b>-wvt=1</b>.</p>
@@ -5588,7 +5668,7 @@
 <p>The lines in the output file list the keys and number of occurrences.</p>
 
 </dd>
-<dt id="Use---dump-mixed-call-parens-to-find-functions-called-both-with-and-without-parens"><b>Use --dump-mixed-call-parens to find functions called both with and without parens</b></dt>
+<dt id="Use---dump-mixed-call-parens-to-find-functions-called-both-with-and-without-parens"><b>Use --dump-mixed-call-parens</b> to find functions called both with and without parens</dt>
 <dd>
 
 <p>The parameter <b>--dump-mixed-call-parens</b>, or <b>-dmcp</b>, provides information on the use of call parens within a program. It produces a list of keywords and sub names which occur both with and without parens. In other words, with a mixed style. This might be useful if one is working to standardize the call style for some particular keyword or function. For example,</p>
@@ -5608,7 +5688,7 @@
 <p>More detailed information can be obtained with the parameters described in the next section.</p>
 
 </dd>
-<dt id="Use---want-call-parens-s-and---nowant-call-parens-s-to-warn-about-specific-missing-or-extra-call-parens"><b>Use --want-call-parens=s and --nowant-call-parens=s to warn about specific missing or extra call parens</b></dt>
+<dt id="Use---want-call-parens-s-and---nowant-call-parens-s-to-warn-about-specific-missing-or-extra-call-parens"><b>Use --want-call-parens=s</b> and <b>--nowant-call-parens=s</b> to warn about specific missing or extra call parens</dt>
 <dd>
 
 <p>The parameter <b>--want-call-parens=s</b>, or <b>-wcp=s</b>, can be used to produce a warning message if call parens are missing from selected functions. Likewise, <b>--nowant-call-parens=s</b>, or <b>-nwcp=s</b>, can warn if call parens exist for selected functions. When either of these parameters are set, perltidy will report any discrepancies from the requested style in its error output.</p>
@@ -5641,7 +5721,7 @@
 <p>Otherwise, the <code>||</code> will operate on <code>$infile</code> rather than the return value of <code>open</code>.</p>
 
 </dd>
-<dt id="Use---dump-mismatched-args-to-find-function-calls-with-args-not-matching-sub-declarations"><b>Use --dump-mismatched-args to find function calls with args not matching sub declarations</b></dt>
+<dt id="Use---dump-mismatched-args-or--dma-to-find-function-calls-with-args-not-matching-sub-declarations"><b>Use --dump-mismatched-args</b>, or <b>-dma</b> to find function calls with args not matching sub declarations</dt>
 <dd>
 
 <p>The parameter <b>--dump-mismatched-args</b>, or <b>-dma</b>, causes perltidy to examine the definitions of subroutines in a file, and calls to those subs, and report certain differences. Like all <b>--dump</b> commands, it writes its report to standard output and exits immediately. For example</p>
@@ -5728,7 +5808,7 @@
 </ul>
 
 </dd>
-<dt id="Use---warn-mismatched-args-to-produce-a-warning-for-function-calls-with-args-not-matching-sub-declarations"><b>Use --warn-mismatched-args to produce a warning for function calls with args not matching sub declarations</b>.</dt>
+<dt id="Use---warn-mismatched-args-or--wma-to-produce-a-warning-for-function-calls-with-args-not-matching-sub-declarations"><b>Use --warn-mismatched-args</b>, or <b>-wma</b>, to produce a warning for function calls with args not matching sub declarations.</dt>
 <dd>
 
 <p>This is similar to the <b>-dump</b> parameter described above except that any mismatches are reported in the error file and otherwise formatting continues normally. The basic usage is</p>
@@ -5743,7 +5823,7 @@
 
 <p>To restrict the check to a specific warning type, set the string equal to the letter of that warning, any <b>a</b>, <b>o</b>, or <b>u</b>. For example</p>
 
-<pre><code>   perltidy -wmat=&#39;a o&#39; somefile.pl</code></pre>
+<pre><code>   perltidy -wma -wmat=&#39;a o&#39; somefile.pl</code></pre>
 
 <p>will format <i>somefile.pl</i> and report any arrow-type mismatches and overcount mismatches, but will skip undercount mismatches.</p>
 
@@ -5843,7 +5923,7 @@
 <p>Reported issues are not necessarily errors, but they might be, or they might indicate potentially confusing code.</p>
 
 </dd>
-<dt id="Use---warn-mismatched-returns-to-issue-warnings-when-the-number-of-requested-values-may-disagree-with-sub-return-statements"><b>Use --warn-mismatched-returns</b> to issue warnings when the number of requested values may disagree with sub return statements</dt>
+<dt id="Use---warn-mismatched-returns-or--wmr-to-issue-warnings-when-the-number-of-requested-values-may-disagree-with-sub-return-statements"><b>Use --warn-mismatched-returns</b>, or <b>-wmr</b>, to issue warnings when the number of requested values may disagree with sub return statements</dt>
 <dd>
 
 <p>This is similar to the <b>-dump</b> parameter described above except that any mismatches are reported in the error file and otherwise formatting continues normally. The basic usage is</p>
@@ -5869,7 +5949,7 @@
 </ul>
 
 </dd>
-<dt id="Use---dump-nested-ternaries-to-dump-a-list-nested-ternaries"><b>Use --dump-nested-ternaries</b> to dump a list nested ternaries.</dt>
+<dt id="Use---dump-nested-ternaries-or--dnt-to-dump-a-list-nested-ternaries"><b>Use --dump-nested-ternaries</b>, or <b>-dnt</b> to dump a list nested ternaries.</dt>
 <dd>
 
 <p>Like other <b>-dump-</b> commands, this writes to the standard output and then exits immediately, without doing any formatting. A ternary statement has the form</p>
@@ -5881,13 +5961,13 @@
 <p>This parameter checks the nesting depth of each ternary in a script and, if it is not zero, then its line number and nesting depth are listed in the output. The list may be limited to ternaries with a depth greater than a certain value with the next parameter.</p>
 
 </dd>
-<dt id="Use---nested-ternary-maximum-depth-n-to-ignore-ternaries-nested-to-a-depth-of-n-or-less"><b>Use --nested-ternary-maximum-depth=n</b> to ignore ternaries nested to a depth of <b>n</b> or less.</dt>
+<dt id="Use---nested-ternary-maximum-depth-n-or--ntmd-n-to-ignore-ternaries-nested-to-a-depth-of-n-or-less"><b>Use --nested-ternary-maximum-depth=n</b>, or <b>-ntmd=n</b>, to ignore ternaries nested to a depth of <b>n</b> or less.</dt>
 <dd>
 
 <p>Ternary statements with a depth less than or equal to <b>n</b> are ignored by <b>--dump-nested-ternaries</b> and its companion <b>--warn-nested-ternaries</b>. The default value <b>n=0</b> will cause all nested ternaries to be listed. A value <b>n=1</b>, for example, will cause ternaries with a depth of 0 or 1 to be ignored by these commands.</p>
 
 </dd>
-<dt id="Use---warn-nested-ternaries-to-write-a-warning-when-a-nested-ternary-is-encountered"><b>Use --warn-nested-ternaries</b> to write a warning when a nested ternary is encountered.</dt>
+<dt id="Use---warn-nested-ternaries-or--wnt-to-write-a-warning-when-a-nested-ternary-is-encountered"><b>Use --warn-nested-ternaries</b>, or <b>-wnt</b>, to write a warning when a nested ternary is encountered.</dt>
 <dd>
 
 <p>This is the same as the <b>-dump</b> parameter described above except that any nested ternaries are reported in the error file and formatting continues normally.</p>
@@ -5970,6 +6050,16 @@
 
 </li>
 </ul>
+
+</dd>
+<dt id="Use---warn-keyword-list-s-or--wkl-s-to-warn-of-the-use-of-selected-keywords-or-functions"><b>Use --warn-keyword-list=s</b>, or <b>-wkl=s</b> to warn of the use of selected keywords or functions</dt>
+<dd>
+
+<p>This parameter is the <b>--warn-</b> version of the previous <b>--dump-</b> parameters. It causes a warning to be issued if any of the builtin keywords or functions listed in the string <b>s</b> occur in a file. For example,</p>
+
+<pre><code>  perltidy -wkl=&#39;goto system qx fileparse&#39; ifile</code></pre>
+
+<p>will format <i>ifile</i> and issue a warning on the occurrences of the perl builtin keywords <code>goto</code>, <code>system</code>, and <code>qx</code>, or a function named <code>fileparse</code>.</p>
 
 </dd>
 <dt id="Use---warn-label-types-s-or--wlu-s-to-warn-of-selected-label-issues"><b>Use --warn-label-types=s</b>, or <b>-wlu=s</b> to warn of selected label issues</dt>
@@ -6324,16 +6414,16 @@
  hbh    hbhh   hbi    hbj    hbk    hbm    hbn    hbp    hbpd   hbpu
  hbq    hbs    hbsc   hbv    hbw    hent   hic    hicm   hico   hih
  hihh   hii    hij    hik    him    hin    hip    hipd   hipu   hiq
- his    hisc   hiv    hiw    hsc    html   ibc    icb    icp    ils
- iob    ipc    isbc   iscl   kgb    kgbd   kgbi   kis    lal    log
- lop    lp     lsl    mci    mem    nib    ohbr   okw    ola    olc
- oll    olq    opr    opt    osbc   osbr   otr    ple    pod    pvl
- q      qwaf   sac    sbc    sbl    scbb   schb   scp    scsb   sct
- se     sfp    sfs    skp    sob    sobb   sohb   sop    sosb   sot
- ssc    st     sts    t      tac    tbc    toc    tp     tqw    trp
- ts     tsc    tso    vbc    vc     vco    viu    vmll   vsc    vsn
- vwe    w      wcsfl  wfc    wia    wma    wme    wmr    wn     wnt
- wsk    wuk    x      xbt    xci    xlp    xs</code></pre>
+ his    hisc   hiu    hiv    hiw    hsc    html   ibc    icb    icp
+ ils    iob    ipc    isbc   iscl   kgb    kgbd   kgbi   kis    lal
+ log    lop    lp     lsl    mci    mem    nib    ohbr   okw    ola
+ olc    oll    olq    opr    opt    osbc   osbr   otr    ple    pod
+ pvl    q      qwaf   sac    sbc    sbl    scbb   schb   scp    scsb
+ sct    se     sfp    sfs    skp    sob    sobb   sohb   sop    sosb
+ sot    ssc    st     sts    t      tac    tbc    toc    tp     tqw
+ trp    ts     tsc    tso    vbc    vc     vco    viu    vmll   vsc
+ vsn    vwe    w      wcsfl  wfc    wia    wma    wme    wmr    wn
+ wnt    wsk    wuk    x      xbt    xci    xlp    xs</code></pre>
 
 <p>Equivalently, the prefix &#39;no&#39; or &#39;no-&#39; on the corresponding long names may be used.</p>
 
@@ -6413,7 +6503,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20260204.03</p>
+<p>This man page documents perltidy version 20260204.05</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 
