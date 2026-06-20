@@ -43192,10 +43192,9 @@ EOM
     while ( @{$rhere_doc_update_list}
         && $rhere_doc_update_list->[0]->{ix_HERE_token} <= $ix )
     {
-        my $ritem = shift @{$rhere_doc_update_list};
-        $self->update_indented_here_doc(
-            $ix, $ritem,
-            $rindentation_list->[-1],
+        my $ritem  = shift @{$rhere_doc_update_list};
+        my $spaces = get_spaces( $rindentation_list->[-1] );
+        $self->update_indented_here_doc( $ix, $ritem, $spaces,
             $maximum_line_length_at_level[ $levels_to_go[$ibeg] ],
         );
     } ## end while ( @{$rhere_doc_update_list...})
