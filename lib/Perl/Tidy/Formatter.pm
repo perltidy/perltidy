@@ -5353,27 +5353,39 @@ sub set_whitespace_flags {
 
                 # Keywords 'for', 'foreach' are special cases for -kpit since
                 # the opening paren does not always immediately follow the
-                # keyword. So we have to search forward for the paren in this
-                # case.  I have limited the search to 10 tokens ahead, just in
-                # case somebody has a big file and no opening paren.  This
-                # should be enough for all normal code.
+                # keyword. So we have to skip past a possible iterator.
                 if (   $is_for_foreach{$token}
                     && %keyword_paren_inner_tightness
                     && defined( $keyword_paren_inner_tightness{$token} )
                     && $j < $jmax )
                 {
-                    my $level = $rLL->[$j]->[_LEVEL_];
-                    foreach my $jp ( $j + 1 .. $j + 9 ) {
-                        last if ( $jp > $jmax );
+                    # $it_count = number of iterator tokens
+                    # =0 at start
+                    # =1 after saw leading 'my'
+                    # =1 after saw leading $iterator
+                    # =2 after saw leading my $iterator
+                    my $it_count = 0;
+                    foreach my $jp ( $j + 1 .. $jmax ) {
 
-                        # Catch a trailing 'for'. An alternative would be to
-                        # add a check for trailing 'for' before the loop start.
-                        last if ( $rLL->[$jp]->[_LEVEL_] != $level );    # b1236
-                        last if ( $rLL->[$jp]->[_TYPE_] eq ';' );        # b1550
+                        my $type_p = $rLL->[$jp]->[_TYPE_];
+                        next if ( $type_p eq 'b' );
+                        my $token_p = $rLL->[$jp]->[_TOKEN_];
+                        $it_count++;
 
-                        next unless ( $rLL->[$jp]->[_TOKEN_] eq '(' );
-                        my $seqno_p = $rLL->[$jp]->[_TYPE_SEQUENCE_];
-                        set_container_ws_by_keyword( $token, $seqno_p );
+                        if ( $token_p eq '(' ) {
+                            my $seqno_p = $rLL->[$jp]->[_TYPE_SEQUENCE_];
+                            set_container_ws_by_keyword( $token, $seqno_p );
+                        }
+                        elsif ( $type_p eq 'k' ) {
+                            next if ( $token_p eq 'my' && $it_count == 1 );
+                        }
+                        elsif ( $type_p eq 'i' ) {
+                            next if ( $it_count < 3 );
+                            $it_count++;
+                        }
+                        else {
+                            ## no other cases
+                        }
                         last;
                     }
                 }

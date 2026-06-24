@@ -9741,6 +9741,19 @@ $service =
           qw( &blast_local @Blast_dbp_local @Blast_dbn_local @Blast_matrix_local )
 ] );
 
+==> b1602 <==
+sub diag {
+    s/^/# /gm, s/\Z.*/\n/s, print
+            for join '',
+            map +( defined $_ ? $_ : 'undef' ), @_;
+}
+
+sub gaid {
+    s/^/# /gm, s/\Z.*/\n/s, print
+            for join '',
+            map +( defined $_ ? $_ : 'undef' ), @_;
+}
+
 ==> b163 <==
 # State 1
 Readonly::Scalar

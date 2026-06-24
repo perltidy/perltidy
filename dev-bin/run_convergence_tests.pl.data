@@ -14694,6 +14694,25 @@ $service = (getservbyport (
 --delete-weld-interfering-commas
 --qw-as-function
 
+==> b1602.in <==
+sub diag {
+    s/^/# /gm, s/\Z.*/\n/s, print
+            for join '',
+            map +( defined $_ ? $_ : 'undef' ), @_;
+}
+sub gaid {
+    s/^/# /gm, s/\Z.*/\n/s, print
+            for join '', map +(defined $_ ? $_ : 'undef'),
+            @_;
+}
+
+==> b1602.par <==
+--maximum-line-length=55
+--continuation-indentation=8
+--variable-maximum-line-length
+--ignore-old-breakpoints
+--keyword-paren-inner-tightness=2
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar
