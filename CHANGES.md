@@ -2,6 +2,10 @@
 
 ## 2026 02 04.06
 
+    - The indentation of indented here-docs is now checked. A warning
+      is issued if the leading whitespace of the ending delimiter string
+      does not also exist on all the lines of the associated here-document.
+
     - Added controls adjust indented here-docs (see git #210). The main
       new controls are:
 

@@ -23912,7 +23912,15 @@ EOM
         if ( $excess_length_option == 0 ) { return }
 
         # 1 ignore line length limit
-        elsif ( $excess_length_option == 1 ) { }
+        elsif ( $excess_length_option == 1 ) {
+
+            # ..but do not move the end tag itself beyond the maximum line
+            # length. This could happen for example if user changed maximum
+            # line length to a very small value, like 1. Leave unchanged.
+            if ( $space_count_new >= $line_length_MAX ) {
+                return;
+            }
+        }
 
         # 2 use zero whitespace
         elsif ( $excess_length_option == 2 ) { $space_count_new = 0 }
