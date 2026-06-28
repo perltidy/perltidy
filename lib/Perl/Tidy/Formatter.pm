@@ -290,6 +290,7 @@ my (
     $rOpts_extended_block_tightness,
     $rOpts_extended_line_up_parentheses,
     $rOpts_warn_unique_keys_cutoff,
+    $rOpts_warn_unexpected_code_container,
     $throttle_vtc,
 
     # Static hashes
@@ -339,6 +340,7 @@ my (
     %is_sigil,
     %is_comma_token,
     %is_comma_or_equals,
+    %is_comma_fat_comma_equals,
 
     # INITIALIZER: sub check_options
     $controlled_comma_style,
@@ -1035,6 +1037,8 @@ BEGIN {
     $is_comma_token{$_} = 1 for ( '=>', COMMA );
 
     $is_comma_or_equals{$_} = 1 for ( '=', COMMA );
+
+    $is_comma_fat_comma_equals{$_} = 1 for ( COMMA, '=>', '=' );
 
 } ## end BEGIN
 
@@ -4175,6 +4179,8 @@ sub initialize_global_option_vars {
     $rOpts_variable_maximum_line_length =
       $rOpts->{'variable-maximum-line-length'};
     $rOpts_warn_unique_keys_cutoff = $rOpts->{'warn-unique-keys-cutoff'};
+    $rOpts_warn_unexpected_code_container =
+      $rOpts->{'warn-unexpected-code-container'};
 
     # Note that both opening and closing tokens can access the opening
     # and closing flags of their container types.
@@ -17066,11 +17072,13 @@ my $K_last_S_is_my;
 my $last_S_is_method;
 
 my %seqno_stack;
+my %non_block_container_stack;
 my %K_old_opening_by_seqno;
 my $depth_next;
 my $depth_next_max;
 my @sub_seqno_stack;
 my $current_sub_seqno;
+my @wucc_error_list;
 
 my $cumulative_length;
 
@@ -17191,10 +17199,11 @@ sub initialize_respace_tokens_closure {
     $K_last_S_is_my                = undef;
     $last_S_is_method              = undef;
 
-    %seqno_stack            = ();
-    %K_old_opening_by_seqno = ();    # Note: old K index
-    $depth_next             = 0;
-    $depth_next_max         = 0;
+    %seqno_stack               = ();
+    %non_block_container_stack = ();
+    %K_old_opening_by_seqno    = ();    # Note: old K index
+    $depth_next                = 0;
+    $depth_next_max            = 0;
 
     @sub_seqno_stack   = ();
     $current_sub_seqno = 0;
@@ -17202,10 +17211,10 @@ sub initialize_respace_tokens_closure {
     # we will be setting token lengths as we go
     $cumulative_length = 0;
 
-    $Ktoken_vars    = undef;          # the old K value of $rtoken_vars
-    $Kfirst_old     = undef;          # min K of old line
-    $Klast_old      = undef;          # max K of old line
-    $Klast_old_code = undef;          # K of last token if side comment
+    $Ktoken_vars    = undef;            # the old K value of $rtoken_vars
+    $Kfirst_old     = undef;            # min K of old line
+    $Klast_old      = undef;            # max K of old line
+    $Klast_old_code = undef;            # K of last token if side comment
     $CODE_type      = EMPTY_STRING;
 
     # Set the whitespace flags, which indicate the token spacing preference.
@@ -17224,6 +17233,9 @@ sub initialize_respace_tokens_closure {
 
     # array for saving seqno's of ')->' for possible line breaks, git #171
     @seqno_paren_arrow = ();
+
+    # String to hold -wucc warning messages
+    @wucc_error_list = ();
 
     return;
 
@@ -17464,6 +17476,9 @@ sub respace_tokens {
 
     # update the token limits of each line
     ( $severe_error, $rqw_lines ) = $self->resync_lines_and_tokens();
+
+    $self->warn_unexpected_code_container()
+      if (@wucc_error_list);
 
     return ( $severe_error, $rqw_lines );
 } ## end sub respace_tokens
@@ -17866,6 +17881,13 @@ sub respace_tokens_inner_loop {
                 {
                     if ( $token eq 'strict' ) { $self->[_saw_use_strict_] = 1 }
                 }
+
+                # Turn off -wucc check for container with known extended
+                # syntax operator (see git124)
+                if ( $token eq 'gather' || $token eq 'List::Gather::gather' ) {
+                    $non_block_container_stack{ $depth_next - 1 } =
+                      EMPTY_STRING;
+                }
             }
             else {
                 ## Could be something like '* STDERR' or '$ debug'
@@ -17888,10 +17910,26 @@ sub respace_tokens_inner_loop {
                   scalar( @{$rLL_new} );
             }
             $rkeyword_count->{$token}++;
+
+            # Check for certain keywords misplaced in a non-block container
+            # See c607, but also git124 for List::Gather issue
+            if (   $is_if_unless_while_until_for_foreach{$token}
+                && $rOpts_warn_unexpected_code_container
+                && $non_block_container_stack{ $depth_next - 1 } )
+            {
+                $self->add_wucc_error($rtoken_vars);
+            }
         }
 
         # handle semicolons
         elsif ( $type eq ';' ) {
+
+            # Check for semicolon misplaced in a non-block container
+            if (   $rOpts_warn_unexpected_code_container
+                && $non_block_container_stack{ $depth_next - 1 } )
+            {
+                $self->add_wucc_error($rtoken_vars);
+            }
 
             # Remove unnecessary semicolons, but not after bare
             # blocks, where it could be unsafe if the brace is
@@ -18672,8 +18710,21 @@ sub store_token {
                 my $seqno_parent = $seqno_stack{ $depth_next - 1 };
                 $seqno_parent = SEQ_ROOT unless ( defined($seqno_parent) );
                 push @{ $rchildren_of_seqno->{$seqno_parent} }, $type_sequence;
-                $rparent_of_seqno->{$type_sequence}     = $seqno_parent;
-                $seqno_stack{$depth_next}               = $type_sequence;
+                $rparent_of_seqno->{$type_sequence} = $seqno_parent;
+                $seqno_stack{$depth_next} = $type_sequence;
+
+                # Note if this container is not a block. A '{' not marked
+                # block could still be a block if it is preceded by a sigil
+                # (% @ $ *) since these are not marked by the tokenizer.
+                # (These could either be type 't' or in some cases 'Z').
+                # Here we are more cautious and require a preceding
+                # character type be one of '=' '=>' ',' See c607.
+                $non_block_container_stack{$depth_next} =
+                    $block_type   ? EMPTY_STRING
+                  : $token ne '{' ? $token
+                  : $is_comma_fat_comma_equals{$last_nonblank_code_type}
+                  ? $token
+                  : EMPTY_STRING;
                 $K_old_opening_by_seqno{$type_sequence} = $Ktoken_vars;
                 $depth_next++;
 
@@ -20112,6 +20163,88 @@ sub check_Q {
     }
     return;
 } ## end sub check_Q
+
+sub add_wucc_error {
+    my ( $self, $rtoken_vars ) = @_;
+
+    # Register a -wucc error for token $rtoken_vars. c607.
+    my $token_o = $non_block_container_stack{ $depth_next - 1 };
+    my $seqno_o = $seqno_stack{ $depth_next - 1 };
+    my $token   = $rtoken_vars->[_TOKEN_];
+    my $lno     = $rtoken_vars->[_LINE_INDEX_] + 1;
+    push @wucc_error_list,
+      {
+        line_number      => $lno,
+        unexpected_token => $token,
+        container_token  => $token_o,
+        container_seqno  => $seqno_o,
+      };
+    return;
+} ## end sub add_wucc_error
+
+use constant MAX_WUCC_LINES => 5;
+
+sub warn_unexpected_code_container {
+    my ($self) = @_;
+
+    # Process --warn-unexpected-code-container warnings found in respace ops
+    # Notes:
+    # - This is called after sub respace tokens, so we are using
+    #   the updated indexes.
+    # - A test was made with these checks done in the tokenizer, but
+    #   the output could be confusing if the file had unbalanced containers.
+    #   So it is better to do these checks here, when we know that the
+    #   file has balanced containers. c607.
+
+    my $wucc_key = 'warn-unexpected-code-container';
+    if ( $rOpts->{$wucc_key} && @wucc_error_list ) {
+
+        my $output_lines = EMPTY_STRING;
+        my $count        = 0;
+        while (@wucc_error_list) {
+            my $item = shift @wucc_error_list;
+            if ( $count >= MAX_WUCC_LINES ) {
+                my $skipped_count = 1 + @wucc_error_list;
+                $output_lines .= <<EOM;
+      ... skipping $skipped_count more issues
+EOM
+                last;
+            }
+            my $lno     = $item->{line_number};
+            my $token_u = $item->{unexpected_token};
+            my $token_c = $item->{container_token};
+            my $seqno_c = $item->{container_seqno};
+
+            # Filter out c-style for parens, which may contain code.
+            # We had to wait until now to do this check.
+            next if ( $ris_c_style_for_paren_by_seqno->{$seqno_c} );
+
+            $count++;
+
+            my $Ko;
+            if ( $seqno_c && $seqno_c > SEQ_ROOT ) {
+                $Ko = $K_opening_container->{$seqno_c};
+            }
+            my $lno_c = defined($Ko) ? $rLL->[$Ko]->[_LINE_INDEX_] + 1 : $lno;
+            my $msg =
+              "$lno: found '$token_u' in non-block '$token_c' container";
+            if ( $lno_c < $lno ) {
+                $msg .= " (see line $lno_c)";
+            }
+            $output_lines .= $msg . "\n";
+        } ## end while (@wucc_error_list)
+        if ($output_lines) {
+            chomp $output_lines;
+            $self->warning(<<EOM);
+
+Begin scan for --$wucc_key
+$output_lines
+End scan for --$wucc_key
+EOM
+        }
+    }
+    return;
+} ## end sub warn_unexpected_code_container
 
 } ## end closure respace_tokens
 

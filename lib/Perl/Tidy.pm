@@ -4129,6 +4129,7 @@ sub generate_options {
     $add_option->( 'warn-similar-keys',                     'wsk',   '!' );
     $add_option->( 'dump-c-style-for-loops',                'dcsfl', '!' );
     $add_option->( 'warn-c-style-for-loops',                'wcsfl', '!' );
+    $add_option->( 'warn-unexpected-code-container',        'wucc',  '!' );
 
     $add_option->( 'add-interbracket-arrows',       'aia', '!' );
     $add_option->( 'delete-interbracket-arrows',    'dia', '!' );
@@ -4290,6 +4291,7 @@ sub generate_options {
       code-skipping
       format-skipping
       detect-format-skipping-from-start
+      warn-unexpected-code-container
 
       pod2html
       html-table-of-contents

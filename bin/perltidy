@@ -7933,6 +7933,13 @@ For example,
 
 All labels and potential issues are listed in the dump.
 
+=item B<Use --warn-unexpected-code-container> to warn of misplaced code statements
+
+The parameter B<--warn-unuxpected-code-container>, or B<-wucc>, causes extra
+checks to be made for code tokens such as semicolons within containers where
+they would produce a syntax error. This parameter is true by default, but can
+be turned off with B<-nwucc> in case incorrect warnings are produced for
+modules which extend standard perl syntax.
 
 =back
 
