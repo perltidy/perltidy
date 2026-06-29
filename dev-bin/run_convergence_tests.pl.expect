@@ -7224,14 +7224,14 @@ L2hos
 
 ==> b1424 <==
 $registry->add_type_constraint( Moose::Meta::TypeConstraint::Parameterizable
-                                  ->new( $a = 1;
-                                         $b = 1;
+                                  ->new( $a = 1,
+                                         $b = 1,
 
                                   ) );
 
 $registry->add_type_constraint( Moose::Meta::TypeConstraint::Parameterizable
-                                  ->new( $a = 1;
-                                         $b = 1;
+                                  ->new( $a = 1,
+                                         $b = 1,
 
                                   ) );
 

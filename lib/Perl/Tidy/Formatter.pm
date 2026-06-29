@@ -23775,9 +23775,9 @@ sub check_indented_here_docs {
             $here_tag  = $2;
         }
         else {
-            ## Shouldn't happen: type 'h' tokens start with '<<' or '<<~'
-            my $lno = $ix_line + 1;
-            DEVEL_MODE && Fault("$lno: failed to parse here token '$token'\n");
+            # We are ignoring complex here targets, such as this one in a regex:
+            #  s//<<EOV/e if 0;
+            #  EOV
             return;
         }
 
@@ -23790,7 +23790,15 @@ sub check_indented_here_docs {
             && !$ris_indented_type_h_line_index->{$ix_line}
             && !$convert_to_indented );
 
-        # Remove any enclosing quote characters to get the raw tag
+        # Perl allows a leading backslash on alphanumeric strings (c608)
+        # The tokenizer also does this (see sub find_here_doc).
+        if ( length($here_tag) > 1 && substr( $here_tag, 0, 1 ) eq BACKSLASH ) {
+            $here_tag = substr( $here_tag, 1 );
+        }
+
+        # Remove any enclosing quote characters to get the raw tag.
+        # Note: the logic here is simplified compared to the logic in the
+        # tokenizer regarding backslashes.
         my $quote_char = EMPTY_STRING;
         if ( length($here_tag) > 1 ) {
             my $end_quote_char   = substr( $here_tag, -1, 1 );
@@ -23843,7 +23851,11 @@ sub check_indented_here_docs {
                 # Verify that we are at the correct here doc end tag
                 if ( $end_text ne $leading_whitespace . $here_tag ) {
 
-                    # Shouldn't happen - tokenizer found this end tag
+                    # Shouldn't happen - tokenizer found this end tag.
+                    # But this could be caused by ignoring interior backslashes
+                    # above in complex here tags. For now, we just skip this
+                    # tag, but if this becomes a problem we could make the code
+                    # above exactly like tokenizer sub find_here_doc. c608
                     my $lno = $ix_line + 1;
                     DEVEL_MODE
                       && Fault(
@@ -24039,7 +24051,7 @@ EOM
         return;
     }
 
-    # Now verify that this here doc has the expected end tag
+    # Now verify that this here-doc has the expected end tag
     my $end_tag = $here_lines[-1];
     if ( $end_tag ne $here_tag ) {
         DEVEL_MODE
