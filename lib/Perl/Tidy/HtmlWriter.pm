@@ -480,15 +480,36 @@ sub make_abbreviated_names {
     #      'hck'    => [qw(html-color-keyword)],
     #  etc
     my ( $class, $rexpansion ) = @_;
+    my $add_short_name = sub {
+
+        my ( $short_name, $long_name ) = @_;
+
+        # Add an abbreviation for a long name
+
+        # Given:
+        #   $short_name = the abbreviation
+        #   $long_name  = the expanded name
+
+        if ( $rexpansion->{$short_name} ) {
+
+            # A new option short name has been added which is already in use
+            my $existing_name = $rexpansion->{$short_name}->[0];
+            Perl::Tidy::Die(
+"redefining abbreviation '$short_name' for '$long_name'; already used for '$existing_name'\n"
+            );
+        }
+        $rexpansion->{$short_name} = [$long_name];
+        return;
+    }; ## end $add_short_name = sub
 
     # abbreviations for color/bold/italic properties
     foreach my $short_name ( keys %short_to_long_names ) {
         my $long_name = $short_to_long_names{$short_name};
-        ${$rexpansion}{"hc$short_name"}  = ["html-color-$long_name"];
-        ${$rexpansion}{"hb$short_name"}  = ["html-bold-$long_name"];
-        ${$rexpansion}{"hi$short_name"}  = ["html-italic-$long_name"];
-        ${$rexpansion}{"nhb$short_name"} = ["nohtml-bold-$long_name"];
-        ${$rexpansion}{"nhi$short_name"} = ["nohtml-italic-$long_name"];
+        $add_short_name->( "hc$short_name",  "html-color-$long_name" );
+        $add_short_name->( "hb$short_name",  "html-bold-$long_name" );
+        $add_short_name->( "hi$short_name",  "html-italic-$long_name" );
+        $add_short_name->( "nhb$short_name", "nohtml-bold-$long_name" );
+        $add_short_name->( "nhi$short_name", "nohtml-italic-$long_name" );
     }
 
     # abbreviations for all other html options

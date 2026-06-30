@@ -3794,6 +3794,14 @@ sub generate_options {
     # Options with code '!' get standard negation ('no' for long names,
     # 'n' for abbreviations).  Categories follow the manual.
 
+    # Be careful not to re-use any of these --html short names.
+    # Use --dump-short-names to make this list.
+    #   hbc  hbcm hbco hbh  hbhh hbi  hbj  hbk  hbm  hbn  hbp  hbpd
+    #   hbpu hbq  hbs  hbsc hbv  hbw  hcbg hcc  hccm hcco hch  hchh
+    #   hci  hcj  hck  hcm  hcn  hcp  hcpd hcpu hcq  hcs  hcsc hcv
+    #   hcw  hent hic  hicm hico hih  hihh hii  hij  hik  him  hin
+    #   hip  hipd hipu hiq  his  hisc hiu  hiv  hiw
+
     ###########################
     $category = 0;    # I/O_Control
     ###########################
