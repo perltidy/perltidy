@@ -513,22 +513,22 @@ sub make_abbreviated_names {
     }
 
     # abbreviations for all other html options
-    ${$rexpansion}{"hcbg"}  = ["html-color-background"];
-    ${$rexpansion}{"pre"}   = ["html-pre-only"];
-    ${$rexpansion}{"toc"}   = ["html-table-of-contents"];
-    ${$rexpansion}{"ntoc"}  = ["nohtml-table-of-contents"];
-    ${$rexpansion}{"nnn"}   = ["html-line-numbers"];
-    ${$rexpansion}{"hent"}  = ["html-entities"];
-    ${$rexpansion}{"nhent"} = ["nohtml-entities"];
-    ${$rexpansion}{"css"}   = ["html-linked-style-sheet"];
-    ${$rexpansion}{"nss"}   = ["nohtml-style-sheets"];
-    ${$rexpansion}{"ss"}    = ["stylesheet"];
-    ${$rexpansion}{"pod"}   = ["pod2html"];
-    ${$rexpansion}{"npod"}  = ["nopod2html"];
-    ${$rexpansion}{"frm"}   = ["frames"];
-    ${$rexpansion}{"nfrm"}  = ["noframes"];
-    ${$rexpansion}{"text"}  = ["html-toc-extension"];
-    ${$rexpansion}{"sext"}  = ["html-src-extension"];
+    $add_short_name->( "hcbg",  "html-color-background" );
+    $add_short_name->( "pre",   "html-pre-only" );
+    $add_short_name->( "toc",   "html-table-of-contents" );
+    $add_short_name->( "ntoc",  "nohtml-table-of-contents" );
+    $add_short_name->( "nnn",   "html-line-numbers" );
+    $add_short_name->( "hent",  "html-entities" );
+    $add_short_name->( "nhent", "nohtml-entities" );
+    $add_short_name->( "css",   "html-linked-style-sheet" );
+    $add_short_name->( "nss",   "nohtml-style-sheets" );
+    $add_short_name->( "ss",    "stylesheet" );
+    $add_short_name->( "pod",   "pod2html" );
+    $add_short_name->( "npod",  "nopod2html" );
+    $add_short_name->( "frm",   "frames" );
+    $add_short_name->( "nfrm",  "noframes" );
+    $add_short_name->( "text",  "html-toc-extension" );
+    $add_short_name->( "sext",  "html-src-extension" );
     return;
 } ## end sub make_abbreviated_names
 
