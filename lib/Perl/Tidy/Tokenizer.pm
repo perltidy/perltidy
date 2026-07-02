@@ -3292,8 +3292,7 @@ EOM
                             {
                                 $hint =
                                   "Do you mean '$last_nonblank_token->(' ?";
-                                my $tok0 = $rtokens->[0];
-                                if ( $tok0 eq 'for' || $tok0 eq 'foreach' ) {
+                                if ( $is_for_foreach{ $rtokens->[0] } ) {
                                     $hint .= " ... or is a ';' missing above?";
                                 }
                                 $hint .= "\n";
