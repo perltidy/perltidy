@@ -3291,7 +3291,12 @@ EOM
                                 && $last_nonblank_token =~ /^\$/ )
                             {
                                 $hint =
-                                  "Do you mean '$last_nonblank_token->(' ?\n";
+                                  "Do you mean '$last_nonblank_token->(' ?";
+                                my $tok0 = $rtokens->[0];
+                                if ( $tok0 eq 'for' || $tok0 eq 'foreach' ) {
+                                    $hint .= " ... or is a ';' missing above?";
+                                }
+                                $hint .= "\n";
                             }
                         }
                         else {
