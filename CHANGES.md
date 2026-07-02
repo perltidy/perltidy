@@ -2,33 +2,37 @@
 
 ## 2026 02 04.06
 
-    - The indentation of indented here-docs is now checked. A warning
-      is issued if the leading whitespace of the ending delimiter string
-      does not also exist on all the lines of the associated here-document.
-
-    - Added controls adjust indented here-docs (see git #210). The main
-      new controls are:
+    - Added new controls to adjust indented here-docs (see git #210).
+      The main new controls are:
 
       --heredoc-indentation-update (-hiu): adjusts indentation of type '<<~'
        here-documents to match the code indentation
 
       --heredoc-extra-spaces=n (-hxs=n): adds n extra indentation spaces
+       when indenting here-docs (DEFAULT is n=0)
 
-      --heredoc-excess-length-option=n (-hxlo=n) : how to handle long lines
+      --heredoc-excess-length-option=n (-hxlo=n) : tells how to handle the
+       indentation of long lines of here-doc text
+
         n=0 : leave code unchanged [DEFAULT]
         n=1 : ignore line length limit
         n=2 : use zero leading space (i.e., left-adjust heredoc)
         n=3 : use max possible without exceeding line length limit
 
-      --heredoc-convert-to=s (-hct=s): convert between '<<' and '<<~'
+      --heredoc-convert-to=s (-hct=s): converts between '<<' and '<<~'
+
         s='standard' : convert type '<<~' to '<<'
         s='indented' : convert type '<<' to '<<~'
 
      See the man pages for additional details and options.
 
+    - The indentation of indented here-docs is now checked. A warning
+      is issued if the leading whitespace of the ending delimiter string
+      does not also exist on all the lines of the associated here-doc text.
+
     - Improved formatting of certain ternary expressions (see git #209).
       A ternary expression for which both the TRUE and FALSE parts are
-      single ternary expressions is now written in a more balanced way.
+      single ternary expressions is now written in a balanced way.
       For example, this expression gives max($a,$b,$c):
 
         # OLD: (tail end is economized into equivalent elsif's):
