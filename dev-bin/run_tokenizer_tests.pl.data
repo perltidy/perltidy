@@ -247,7 +247,7 @@ $
 fh
 } <<~EOM;
 
-say { $fh } <<EOM;
+   say { $fh } <<EOM;
 
-b^^
+   b^^
    EOM
