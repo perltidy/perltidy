@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2026 02 04.06
+## 2026 07 05
 
     - Added new controls to adjust indented here-docs (see git #210).
       The main new controls are:

@@ -6118,6 +6118,12 @@
 <p>All labels and potential issues are listed in the dump.</p>
 
 </dd>
+<dt id="Use---warn-unexpected-code-container-to-warn-of-misplaced-code-statements"><b>Use --warn-unexpected-code-container</b> to warn of misplaced code statements</dt>
+<dd>
+
+<p>The parameter <b>--warn-unexpected-code-container</b>, or <b>-wucc</b>, causes extra checks to be made for code tokens such as semicolons within containers where they would produce a syntax error. This parameter is true by default, but can be turned off with <b>-nwucc</b> in case incorrect warnings are produced for modules which extend standard perl syntax.</p>
+
+</dd>
 </dl>
 
 <h2 id="Working-with-MakeMaker-AutoLoader-and-SelfLoader"><b>Working with MakeMaker, AutoLoader and SelfLoader</b></h2>
@@ -6423,7 +6429,7 @@
  sot    ssc    st     sts    t      tac    tbc    toc    tp     tqw
  trp    ts     tsc    tso    vbc    vc     vco    viu    vmll   vsc
  vsn    vwe    w      wcsfl  wfc    wia    wma    wme    wmr    wn
- wnt    wsk    wuk    x      xbt    xci    xlp    xs</code></pre>
+ wnt    wsk    wucc   wuk    x      xbt    xci    xlp    xs</code></pre>
 
 <p>Equivalently, the prefix &#39;no&#39; or &#39;no-&#39; on the corresponding long names may be used.</p>
 
@@ -6503,7 +6509,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20260204.05</p>
+<p>This man page documents perltidy version 20260705</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

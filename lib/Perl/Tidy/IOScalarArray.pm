@@ -16,7 +16,7 @@ package Perl::Tidy::IOScalarArray;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '20260204.06';
+our $VERSION = '20260705';
 
 use constant DEVEL_MODE => 0;
 
