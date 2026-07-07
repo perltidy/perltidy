@@ -9754,6 +9754,22 @@ sub gaid {
             map +( defined $_ ? $_ : 'undef' ), @_;
 }
 
+==> b1604 <==
+    my $self = bless(
+        {
+            'centralDirectoryOffsetWRTStartingDiskNumber'
+              => 0,    # must re-compute
+        },
+        $class
+    );
+    my $self = bless(
+        {
+            'centralDirectoryOffsetWRTStartingDiskNumber'
+              => 0,    # must re-compute
+        },
+        $class
+    );
+
 ==> b163 <==
 # State 1
 Readonly::Scalar

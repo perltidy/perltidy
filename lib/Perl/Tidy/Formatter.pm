@@ -28381,8 +28381,9 @@ sub is_fragile_block_type {
                 # Include previous line before an isolated comma
                 $K_first == $K_terminal
 
-                # Include a preceding hash key (b1331)
+                # Include a preceding hash key (b1331, b1604)
                 || $last_nonblank_type eq '=>'
+                || $rLL->[$K_first]->[_TYPE_] eq '=>'
               )
             {
                 my $ix_prev             = $rix_no_comma->[0];

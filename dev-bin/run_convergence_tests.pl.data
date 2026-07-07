@@ -14713,6 +14713,27 @@ sub gaid {
 --ignore-old-breakpoints
 --keyword-paren-inner-tightness=2
 
+==> b1604.in <==
+    my $self = bless(
+        {
+            'centralDirectoryOffsetWRTStartingDiskNumber'
+              => 0,    # must re-compute
+        },
+        $class
+    );
+    my $self =
+      bless(
+       {
+         'centralDirectoryOffsetWRTStartingDiskNumber' =>
+           0,    # must re-compute
+       },
+       $class
+      );
+
+==> b1604.par <==
+--maximum-line-length=59
+--extended-line-up-parentheses
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar
