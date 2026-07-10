@@ -14694,6 +14694,58 @@ $service = (getservbyport (
 --delete-weld-interfering-commas
 --qw-as-function
 
+==> b1597.in <==
+      %Expect_File = (
+
+          file_path_name('fa', 'fsl', 'fba',  'fba_ord')  => 1,
+          file_path_name('fa', 'fab', 'faba', 'faba_ord') => 1,
+          file_path_name('fa', 'faa', 'faa_ord') => 1
+      );
+      %Expect_File = (
+
+            file_path_name('fa', 'fsl', 'fba', 'fba_ord') =>
+              1,
+            file_path_name(
+                             'fa', 'fab', 'faba', 'faba_ord'
+            ) => 1,
+            file_path_name('fa', 'faa', 'faa_ord') => 1
+      );
+
+==> b1597.par <==
+--maximum-line-length=63
+--indent-columns=6
+--extended-continuation-indentation
+--extended-line-up-parentheses
+--paren-tightness=2
+
+==> b1599.in <==
+my @groks =
+  (
+      [  "3e", PERL_SCAN_TRAILING,
+         3,    IS_NUMBER_IN_UV | IS_NUMBER_TRAILING ],
+
+      [  "nanx", PERL_SCAN_TRAILING,
+         undef,  IS_NUMBER_NAN | IS_NUMBER_NOT_INT | IS_NUMBER_TRAILING ],
+  );
+
+my @groks =
+  (
+   [  "3e", PERL_SCAN_TRAILING, 3, IS_NUMBER_IN_UV | IS_NUMBER_TRAILING ],
+
+   [  "nanx", PERL_SCAN_TRAILING,
+      undef,  IS_NUMBER_NAN | IS_NUMBER_NOT_INT | IS_NUMBER_TRAILING ],
+  );
+
+==> b1599.par <==
+--maximum-line-length=74
+--extended-continuation-indentation
+--break-before-paren=1
+--extended-line-up-parentheses
+--paren-tightness=2
+--square-bracket-vertical-tightness-closing=2
+--square-bracket-vertical-tightness=1
+--break-at-old-comma-types='f('
+
 ==> b1602.in <==
 sub diag {
     s/^/# /gm, s/\Z.*/\n/s, print

@@ -28207,8 +28207,6 @@ sub is_fragile_block_type {
         my $rcollapsed_length_by_seqno = $self->[_rcollapsed_length_by_seqno_];
         my $rtype_count_by_seqno       = $self->[_rtype_count_by_seqno_];
         my $rK_next_seqno_by_K         = $self->[_rK_next_seqno_by_K_];
-        my $K_opening_container        = $self->[_K_opening_container_];
-        my $rblock_type_of_seqno       = $self->[_rblock_type_of_seqno_];
 
         my $K_start_multiline_qw;
         my $level_start_multiline_qw = 0;
@@ -28610,27 +28608,24 @@ sub is_fragile_block_type {
                         my $K_sum_start = $K_first;
                         my $K_sum_end   = $K_terminal;
                         if ( @{$rix_no_comma} ) {
-                            $K_sum_start = $add_interrupted_tokens->(
-                                $rix_no_comma, $K_first, $K_terminal,
-                            );
 
-                            # Stop at the opening '(' if line ends in '),'
-                            # or other container. Fixes b1595, b1588.
-                            # See also b1592.
+                            # Previously (b1595, b1588, b1592): we added any
+                            # previous lines but then stopped at the opening
+                            # '(' if line ends in '),' or other container.
+
+                            # Update (b1599): at a closing '),' ignore any
+                            # previous line(s) and just include this entire
+                            # line.
                             my $Kt_m = $self->K_previous_nonblank($K_terminal);
-                            if (   defined($K_sum_start)
-                                && $Kt_m
-                                && $Kt_m > $K_first
-                                && $is_closing_type{ $rLL->[$Kt_m]->[_TYPE_] } )
-                            {
+                            my $is_one_line_block =
+                                 $Kt_m
+                              && $Kt_m > $K_first
+                              && $is_closing_type{ $rLL->[$Kt_m]->[_TYPE_] };
 
-                                # But only for non-block containers
-                                my $seqno_Kt_m =
-                                  $rLL->[$Kt_m]->[_TYPE_SEQUENCE_];
-                                if ( !$rblock_type_of_seqno->{$seqno_Kt_m} ) {
-                                    $K_sum_end =
-                                      $K_opening_container->{$seqno_Kt_m};
-                                }
+                            if ( !$is_one_line_block ) {
+                                $K_sum_start = $add_interrupted_tokens->(
+                                    $rix_no_comma, $K_first, $K_terminal,
+                                );
                             }
                         }
 
@@ -28729,6 +28724,7 @@ sub is_fragile_block_type {
         my $rcollapsed_length_by_seqno = $self->[_rcollapsed_length_by_seqno_];
         my $ris_permanently_broken     = $self->[_ris_permanently_broken_];
         my $ris_list_by_seqno          = $self->[_ris_list_by_seqno_];
+        my $rhas_broken_list           = $self->[_rhas_broken_list_];
         my $rbreak_before_container_by_seqno =
           $self->[_rbreak_before_container_by_seqno_];
 
@@ -28824,13 +28820,13 @@ sub is_fragile_block_type {
                         # The value '3' is the minimum which works for b1562.
                         && $rLL->[$KK]->[_LEVEL_] + 3 < $high_stress_level
 
+                        # and there are no broken lists: b1597, b1599.
+                        # Note: This was originally a fix for b1298, b1366, but
+                        # removed as part of fix b1578.
+                        && !$rhas_broken_list->{$seqno}
+
                       )
                     {
-
-                        # Old fix for b1298, b1366, removed to fix b1578:
-                        # $interrupted_list_rule =
-                        #  $rhas_broken_list->{$seqno} ? 0 : 1;
-
                         $interrupted_list_rule = 1;
                     }
 

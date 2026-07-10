@@ -8626,19 +8626,20 @@ for $dir (
 ==> b1536 <==
 $i =
       &GetOptions(
-         "<>" =>
-         sub { $bootfile = $_[ 0 ] },    # any "non-option" is
+                "<>" =>
+                sub { $bootfile = $_[ 0 ] }, # any "non-option" is
       );
 $i =
       &GetOptions(
-         "<>" =>
-         sub { $bootfile = $_[ 0 ] },    # any "non-option" is
+                "<>" =>
+                sub { $bootfile = $_[ 0 ] }, # any "non-option" is
       );
 
 ==> b1536a <==
 $i =
       &GetOptions(
-        "<>" => sub { $bootfile = $_[ 0 ] }, # any "non-option" is
+               "<>" =>
+               sub { $bootfile = $_[ 0 ] },  # any "non-option" is
       );
 $i =
       &GetOptions(
@@ -9740,6 +9741,43 @@ $service =
 ( std => [
           qw( &blast_local @Blast_dbp_local @Blast_dbn_local @Blast_matrix_local )
 ] );
+
+==> b1597 <==
+      %Expect_File = (
+
+               file_path_name('fa', 'fsl', 'fba', 'fba_ord') =>
+               1,
+               file_path_name(
+                     'fa', 'fab', 'faba', 'faba_ord'
+               ) => 1,
+               file_path_name('fa', 'faa', 'faa_ord') => 1
+      );
+      %Expect_File = (
+
+               file_path_name('fa', 'fsl', 'fba', 'fba_ord') =>
+               1,
+               file_path_name(
+                     'fa', 'fab', 'faba', 'faba_ord'
+               ) => 1,
+               file_path_name('fa', 'faa', 'faa_ord') => 1
+      );
+
+==> b1599 <==
+my @groks =
+  (
+   [  "3e", PERL_SCAN_TRAILING, 3, IS_NUMBER_IN_UV | IS_NUMBER_TRAILING ],
+
+   [  "nanx", PERL_SCAN_TRAILING,
+      undef,  IS_NUMBER_NAN | IS_NUMBER_NOT_INT | IS_NUMBER_TRAILING ],
+  );
+
+my @groks =
+  (
+   [  "3e", PERL_SCAN_TRAILING, 3, IS_NUMBER_IN_UV | IS_NUMBER_TRAILING ],
+
+   [  "nanx", PERL_SCAN_TRAILING,
+      undef,  IS_NUMBER_NAN | IS_NUMBER_NOT_INT | IS_NUMBER_TRAILING ],
+  );
 
 ==> b1602 <==
 sub diag {
