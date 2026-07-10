@@ -23930,6 +23930,10 @@ EOM
         # Handle type '<<': Either convert to '<<~' or skip
         if ( $here_type eq '<<' ) {
             next if ( !$convert_to_indented );
+
+            # Indented here-docs cannot use an empty string: c614
+            next if ( !length($here_tag) );
+
             $here_type         = '<<~';
             $token             = $here_type . substr( $token, 2 );
             $rtoken->[_TOKEN_] = $token;
