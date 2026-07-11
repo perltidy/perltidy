@@ -513,6 +513,10 @@
 ../snippets33.t	blpc.def
 ../snippets33.t	git205.def
 ../snippets33.t	git205.git205
+../snippets33.t	here_indent.def
+../snippets33.t	here_indent.here_indent1
+../snippets33.t	here_indent.here_indent2
+../snippets33.t	here_indent.here_indent3
 ../snippets4.t	gnu1.gnu
 ../snippets4.t	gnu2.def
 ../snippets4.t	gnu2.gnu
@@ -633,7 +637,4 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets33.t	here_indent.def
-../snippets33.t	here_indent.here_indent1
-../snippets33.t	here_indent.here_indent2
-../snippets33.t	here_indent.here_indent3
+../snippets33.t	git211.def

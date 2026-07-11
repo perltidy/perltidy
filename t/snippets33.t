@@ -19,6 +19,7 @@
 #16 here_indent.here_indent1
 #17 here_indent.here_indent2
 #18 here_indent.here_indent3
+#19 git211.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -276,6 +277,14 @@ sub baz {
     }
     grep { $_ > 1 } qw(3 2 1 0);
 }
+----------
+
+        'git211' => <<'----------',
+eval { @$list = map( { [ qr($_), $_, 0 ]; } @$list ); };
+eval {
+    @$list = map( { [ qr($_), $_, 0 ]; } @$list );
+};
+eval { @$list = map { [ qr($_), $_, 0 ]; } @$list; };
 ----------
 
         'here_indent' => <<'----------',
@@ -783,6 +792,22 @@ STD3 line 1
 STD3
 );
 #18...........
+        },
+
+        'git211.def' => {
+            source => "git211",
+            params => "def",
+            expect => <<'#19...........',
+eval {
+    @$list = map( { [ qr($_), $_, 0 ]; } @$list );
+};
+eval {
+    @$list = map( { [ qr($_), $_, 0 ]; } @$list );
+};
+eval {
+    @$list = map { [ qr($_), $_, 0 ]; } @$list;
+};
+#19...........
         },
     };
 

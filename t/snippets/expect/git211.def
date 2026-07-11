@@ -1,0 +1,9 @@
+eval {
+    @$list = map( { [ qr($_), $_, 0 ]; } @$list );
+};
+eval {
+    @$list = map( { [ qr($_), $_, 0 ]; } @$list );
+};
+eval {
+    @$list = map { [ qr($_), $_, 0 ]; } @$list;
+};

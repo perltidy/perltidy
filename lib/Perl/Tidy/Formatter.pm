@@ -31533,11 +31533,17 @@ EOM
 
                 if (   $block_type
                     && $token eq $type
-                    && $block_type ne 't'
                     && !$self->[_rshort_nested_]->{$type_sequence} )
                 {
 
-                    if ( $type eq '{' ) {
+                    # Fix git #211 - kill one line blocks at a block marked as
+                    # type 't'; it might be a block within parens
+                    if ( $block_type eq 't' ) {
+                        if ( $type eq '{' ) {
+                            create_one_line_block(undef);
+                        }
+                    }
+                    elsif ( $type eq '{' ) {
                         $is_opening_BLOCK     = 1;
                         $nobreak_BEFORE_BLOCK = $no_internal_newlines;
                     }

@@ -2,6 +2,19 @@
 
 ## 2026 07 05
 
+    - Fixed git #211, an unusual instability with the following eval block:
+
+     eval { @$list = map( { [ qr($_), $_, 0 ]; } @$list ); };
+
+     A workaround was removing the parens around the map call parameters;
+     this version has a permanent fix.
+
+   - Some very rare instabilities with the -xlp style have been identified
+     and fixed.  This could cause a shift in the indentation some lists
+     formatted with -xlp.
+
+## 2026 07 05
+
     - Added new controls to adjust indented here-docs (see git #210).
       The main new controls are:
 
