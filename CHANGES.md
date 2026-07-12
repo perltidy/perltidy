@@ -13,6 +13,10 @@
      and fixed.  This could cause a shift in the indentation some lists
      formatted with -xlp.
 
+   - Added checks when converting type '<<' here-docs to '<<~':
+     (1) Zero-length tags are skipped and (2) the conversion
+     is skipped if any lines of the here-text would match the new tag.
+
 ## 2026 07 05
 
     - Added new controls to adjust indented here-docs (see git #210).

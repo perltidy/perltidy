@@ -23922,6 +23922,30 @@ EOM
                     }
                 }
             }
+
+            # Check for problems with a type '<<' being converted to '<<~'
+            else {
+
+                # Indented here-docs cannot use an empty string: c614
+                if ( !length($here_tag) ) { $is_excluded_tag = 1 }
+
+                # For a type'<<' being converted to '<<~', the text must not
+                # also match the tag: c615
+                if ( $convert_to_indented
+                    && !$is_excluded_tag )
+                {
+                    my @lines = split /^/, $here_text;
+                    foreach my $line (@lines) {
+                        chomp $line;
+                        my $line_length = length($line);
+                        next if ( !$line_length );
+                        if ( $line =~ /^\s*$here_tag\s*$/ ) {
+                            $is_excluded_tag = 1;
+                            last;
+                        }
+                    }
+                }
+            }
         }
 
         # Nothing more to do for excluded here docs
@@ -23929,10 +23953,8 @@ EOM
 
         # Handle type '<<': Either convert to '<<~' or skip
         if ( $here_type eq '<<' ) {
-            next if ( !$convert_to_indented );
 
-            # Indented here-docs cannot use an empty string: c614
-            next if ( !length($here_tag) );
+            next if ( !$convert_to_indented );
 
             $here_type         = '<<~';
             $token             = $here_type . substr( $token, 2 );
