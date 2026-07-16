@@ -30693,11 +30693,17 @@ EOM
         # Set index starting next one-line block
         # Given:
         #   $index_start_one_line_block = starting index in _to_go array
-        #   undef => end current one-line block
+        #   (undef => will kill current one-line block)
         #
-        # call with no args to delete the current one-line block
         return;
     } ## end sub create_one_line_block
+
+    sub kill_one_line_block {
+
+        # delete the current one-line block
+        $index_start_one_line_block = undef;
+        return;
+    } ## end sub kill_one_line_block
 
     # Routine to place the current token into the output stream.
     # Called once per output token.
@@ -31557,27 +31563,24 @@ EOM
                     && $token eq $type
                     && !$self->[_rshort_nested_]->{$type_sequence} )
                 {
+                    if ( $type eq '{' ) {
 
-                    # Fix git #211 - kill one line blocks at a block marked as
-                    # type 't'; it might be a block within parens
-                    if ( $block_type eq 't' ) {
-                        if ( $type eq '{' ) {
-                            create_one_line_block(undef);
+                        # Kill any current one-line block at all new opening
+                        # blocks: we can only go 1 deep (see also git #211)
+                        kill_one_line_block();
+
+                        # The normal block formatting rules do not work well
+                        # for block types 't', which are typically very short
+                        if ( $block_type ne 't' ) {
+                            $is_opening_BLOCK     = 1;
+                            $nobreak_BEFORE_BLOCK = $no_internal_newlines;
                         }
                     }
-                    elsif ( $type eq '{' ) {
-                        $is_opening_BLOCK     = 1;
-                        $nobreak_BEFORE_BLOCK = $no_internal_newlines;
-                    }
-                    elsif ( $type eq '}' ) {
-                        $is_closing_BLOCK     = 1;
-                        $nobreak_BEFORE_BLOCK = $no_internal_newlines;
-                    }
                     else {
-                        ## error - block should be enclosed by curly brace
-                        DEVEL_MODE && Fault(<<EOM);
-block type '$block_type' has unexpected container type '$type'
-EOM
+                        if ( $block_type ne 't' ) {
+                            $is_closing_BLOCK     = 1;
+                            $nobreak_BEFORE_BLOCK = $no_internal_newlines;
+                        }
                     }
                 }
             }
@@ -32242,9 +32245,6 @@ sub starting_one_line_block {
     my $rLL                  = $self->[_rLL_];
     my $K_opening_container  = $self->[_K_opening_container_];
     my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
-
-    # kill any current block - we can only go 1 deep
-    create_one_line_block(undef);
 
     my $i_start = 0;
 
