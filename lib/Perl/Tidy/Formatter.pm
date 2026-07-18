@@ -620,6 +620,7 @@ BEGIN {
         _rhas_broken_code_block_    => $i++,
         _rhas_ternary_              => $i++,
         _ris_excluded_lp_container_ => $i++,
+        _ris_xlp_interrupted_list_  => $i++,
         _rlp_object_by_seqno_       => $i++,
         _rwant_reduced_ci_          => $i++,
         _rno_xci_by_seqno_          => $i++,
@@ -1237,6 +1238,7 @@ sub initialize_self_vars {
     $self->[_rhas_broken_code_block_]    = {};
     $self->[_rhas_ternary_]              = {};
     $self->[_ris_excluded_lp_container_] = {};
+    $self->[_ris_xlp_interrupted_list_]  = {};
     $self->[_rlp_object_by_seqno_]       = {};
     $self->[_rwant_reduced_ci_]          = {};
     $self->[_rno_xci_by_seqno_]          = {};
@@ -28751,6 +28753,7 @@ sub is_fragile_block_type {
         my $ris_permanently_broken     = $self->[_ris_permanently_broken_];
         my $ris_list_by_seqno          = $self->[_ris_list_by_seqno_];
         my $rhas_broken_list           = $self->[_rhas_broken_list_];
+        my $ris_xlp_interrupted_list   = $self->[_ris_xlp_interrupted_list_];
         my $rbreak_before_container_by_seqno =
           $self->[_rbreak_before_container_by_seqno_];
 
@@ -28854,6 +28857,7 @@ sub is_fragile_block_type {
                       )
                     {
                         $interrupted_list_rule = 1;
+                        $ris_xlp_interrupted_list->{$seqno} = 1;
                     }
 
                     my $K_c = $K_closing_container->{$seqno};
@@ -42334,9 +42338,21 @@ EOM
             }
             $available_spaces = $test_space_count - $min_gnu_indentation;
 
-            # Fix for combo -naws and -xlp (b1501; also b1466)
-            my $tol = !$rOpts_add_whitespace
-              && $rOpts_extended_line_up_parentheses ? 1 : 0;
+            my $tol = 0;
+            if ($rOpts_extended_line_up_parentheses) {
+
+                # Fix for combo -naws and -xlp (b1501; also b1466)
+                $tol += 1 if ( !$rOpts_add_whitespace );
+
+                $tol += 1
+                  if (
+                    # Fix for -xlp interrupted lists...
+                    $self->[_ris_xlp_interrupted_list_]->{$last_nonblank_seqno}
+
+                    # ...containing lists (b1598, b1600)
+                    && $self->[_rhas_list_]->{$last_nonblank_seqno}
+                  );
+            }
 
             # Do not startup -lp indentation mode if no space ...
             # ... or if it puts the opening far to the right
@@ -42392,7 +42408,7 @@ EOM
 
                         # b1591
                         || (   $rOpts_continuation_indentation < 2
-                            && $self->[_ris_permanently_broken_]
+                            && $self->[_ris_xlp_interrupted_list_]
                             ->{$last_nonblank_seqno} )
                       )
                     {

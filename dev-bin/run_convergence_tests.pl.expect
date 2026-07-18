@@ -9762,6 +9762,28 @@ $service =
                file_path_name('fa', 'faa', 'faa_ord') => 1
       );
 
+==> b1598 <==
+         my %tests =
+                 (
+
+                          # time_t         gmtime list                          scalar
+                          -2**32 =>
+                          [ 44, 31, 17, 24, 10, -67, 0, 327, 0, "Sun Nov 24 17:31:44 1833" ],
+                          -2**31 =>
+                          [ 52, 45, 20, 13, 11, 1, 5, 346, 0, "Fri Dec 13 20:45:52 1901" ],
+                 );
+         my %tests =
+                 (
+
+                          # time_t         gmtime list                          scalar
+                          -2**32 =>
+                          [ 44, 31, 17, 24, 10, -67, 0, 327, 0, "Sun Nov 24 17:31:44 1833" ],
+                          -2**31 =>
+                          [ 52, 45, 20, 13, 11, 1, 5, 346, 0, "Fri Dec 13 20:45:52 1901" ],
+                 );
+
+         # on above
+
 ==> b1599 <==
 my @groks =
   (
@@ -9778,6 +9800,24 @@ my @groks =
    [  "nanx", PERL_SCAN_TRAILING,
       undef,  IS_NUMBER_NAN | IS_NUMBER_NOT_INT | IS_NUMBER_TRAILING ],
   );
+
+==> b1600 <==
+    $Registry->{$root . $Source} = {
+      '/EventMessageFile' => [ $dll, REG_EXPAND_SZ ],
+      '/CategoryMessageFile' =>
+        [ $dll, REG_EXPAND_SZ ],
+      '/CategoryCount' => [ '0x0000001e', REG_DWORD ],
+
+      #
+    };
+    $Registry->{$root . $Source} = {
+      '/EventMessageFile' => [ $dll, REG_EXPAND_SZ ],
+      '/CategoryMessageFile' =>
+        [ $dll, REG_EXPAND_SZ ],
+      '/CategoryCount' => [ '0x0000001e', REG_DWORD ],
+
+      #
+    };
 
 ==> b1602 <==
 sub diag {

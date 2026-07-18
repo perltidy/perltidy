@@ -14718,6 +14718,34 @@ $service = (getservbyport (
 --extended-line-up-parentheses
 --paren-tightness=2
 
+==> b1598.in <==
+         my %tests =
+                 (
+
+                          # time_t         gmtime list                          scalar
+                          -2**32 =>
+                          [ 44, 31, 17, 24, 10, -67, 0, 327, 0, "Sun Nov 24 17:31:44 1833" ],
+                          -2**31 =>
+                          [ 52, 45, 20, 13, 11, 1, 5, 346, 0, "Fri Dec 13 20:45:52 1901" ],
+                 );
+         my %tests =
+                 (
+
+                  # time_t         gmtime list                          scalar
+                  -2**32 => [ 44, 31, 17, 24, 10, -67, 0, 327, 0, "Sun Nov 24 17:31:44 1833" ],
+                  -2**31 => [ 52, 45, 20, 13, 11,  1,  5, 346, 0, "Fri Dec 13 20:45:52 1901" ],
+                 );
+# on above
+
+==> b1598.par <==
+--maximum-line-length=95
+--indent-columns=9
+--continuation-indentation=8
+--extended-continuation-indentation
+--break-before-paren=2
+--extended-line-up-parentheses
+--paren-tightness=2
+
 ==> b1599.in <==
 my @groks =
   (
@@ -14745,6 +14773,29 @@ my @groks =
 --square-bracket-vertical-tightness-closing=2
 --square-bracket-vertical-tightness=1
 --break-at-old-comma-types='f('
+
+==> b1600.in <==
+    $Registry->{$root . $Source} = {
+      '/EventMessageFile' => [ $dll, REG_EXPAND_SZ ],
+      '/CategoryMessageFile' =>
+        [ $dll, REG_EXPAND_SZ ],
+      '/CategoryCount' => [ '0x0000001e', REG_DWORD ],
+
+      #
+    };
+    $Registry->{$root . $Source} = {
+     '/EventMessageFile'    => [ $dll, REG_EXPAND_SZ ],
+     '/CategoryMessageFile' => [ $dll, REG_EXPAND_SZ ],
+     '/CategoryCount' => [ '0x0000001e', REG_DWORD ],
+
+     #
+    };
+
+==> b1600.par <==
+--maximum-line-length=55
+--indent-columns=2
+--extended-line-up-parentheses
+--brace-tightness=2
 
 ==> b1602.in <==
 sub diag {
