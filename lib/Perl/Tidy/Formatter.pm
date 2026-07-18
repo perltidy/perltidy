@@ -2212,7 +2212,7 @@ sub is_trailing_comma {
           && Fault("Bad call: expected type ',' but received '$type_KK'\n");
         return;
     }
-    my $Knnb = $self->K_next_nonblank($KK);
+    my $Knnb = $self->K_next_code($KK);
     if ( defined($Knnb) ) {
         my $type_sequence = $rLL->[$Knnb]->[_TYPE_SEQUENCE_];
         my $type_Knnb     = $rLL->[$Knnb]->[_TYPE_];
