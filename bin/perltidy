@@ -986,6 +986,13 @@ file.  This means that minor name changes can produce significant file
 differences.  This can be annoying and does not occur with the default
 indentation method.
 
+=item *
+
+Likewise, new releases of Perl::Tidy sometimes have small changes in the logic
+which checks line lengths, especially for the B<-xlp> style. This is necessary
+for improved stability, but may occasionally cause the indentation of large
+tables to change.
+
 =back
 
 Some things that can be done to minimize these problems are:
@@ -5091,7 +5098,8 @@ this for certain operators which may be specified with the string B<s>. These
 are the concatenation operator B<s='.'> and the method call arrow
 B<s='-E<gt>'>.  When this parameter is selected for an operator, no special
 breaks are made, so there will be a minimal number of line breaks.
-For example, here is the default formatting for a method call chain:
+For example, here is the default formatting for a method call chain
+which requires multiple lines:
 
     # perltidy -l=60
     Data::Dumper->new( [ \%errors ] )
