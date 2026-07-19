@@ -988,10 +988,10 @@ indentation method.
 
 =item *
 
-Likewise, new releases of Perl::Tidy sometimes have small changes in the logic
-which checks line lengths, especially for the B<-xlp> style. This is necessary
-for improved stability, but may occasionally cause the indentation of large
-tables to change.
+Sometimes new releases of Perl::Tidy can cause changes in the indentation of
+lists, especially for large lists formatted with the B<-xlp> style.  This is
+because small changes occasionally need to be made in the logic which checks
+line lengths in order to fix formatting issues.
 
 =back
 
