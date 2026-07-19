@@ -304,6 +304,12 @@ STD1
 ====
 STD2
     print $text;
+
+    # backslash test
+    my $str = << "gobble'de'gook\"weird";
+Enjoy your prize!
+gobble'de'gook"weird
+    print "$str";
 }
 
 my %hash = (
@@ -670,6 +676,12 @@ STD1
 ====
 STD2
     print $text;
+
+    # backslash test
+    my $str = <<"gobble'de'gook\"weird";
+Enjoy your prize!
+gobble'de'gook"weird
+    print "$str";
 }
 
 my %hash = (
@@ -706,6 +718,12 @@ STD1
 ====
 STD2
     print $text;
+
+    # backslash test
+    my $str = <<"gobble'de'gook\"weird";
+Enjoy your prize!
+gobble'de'gook"weird
+    print "$str";
 }
 
 my %hash = (
@@ -742,6 +760,12 @@ STD3
     ====
     STD2
     print $text;
+
+    # backslash test
+    my $str = <<~"gobble'de'gook\"weird";
+    Enjoy your prize!
+    gobble'de'gook"weird
+    print "$str";
 }
 
 my %hash = (
@@ -778,6 +802,12 @@ IND1
 ====
 STD2
     print $text;
+
+    # backslash test
+    my $str = <<"gobble'de'gook\"weird";
+Enjoy your prize!
+gobble'de'gook"weird
+    print "$str";
 }
 
 my %hash = (

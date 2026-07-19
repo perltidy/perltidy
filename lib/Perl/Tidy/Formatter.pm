@@ -23835,13 +23835,24 @@ sub check_indented_here_docs {
             my $ix_test = $ix_HERE;
             ( $ix_HERE_END, my $here_text ) = $self->get_here_text($ix_HERE);
 
-            # Define and check leading whitespace if type is '<<~'
+            # Get the text of the ending line which has the delimiter text
+            my $lhash_HERE_END = $rlines->[$ix_HERE_END];
+            my $end_text       = $lhash_HERE_END->{_line_text};
+            chomp $end_text;
+
+            # Define and check leading whitespace for type '<<~'
             if ( $here_type eq '<<~' ) {
 
-                # Get the end tag and its leading whitespace
-                my $lhash_HERE_END = $rlines->[$ix_HERE_END];
-                my $end_text       = $lhash_HERE_END->{_line_text};
-                chomp $end_text;
+                # Remove backslashes if necessary.  Conversions for this here
+                # doc will be skipped if this doesn't work.
+                if ( index( $here_tag, BACKSLASH ) >= 0
+                    && $here_tag !~ /^\s*$end_text$/ )
+                {
+                    $here_tag =~ s/(\\(.))/$2/g;
+                }
+
+                # Get the end tag and its leading whitespace. This is tricky
+                # because the tag itself may have leading whitespace.
                 my $i_tag = rindex( $end_text, $here_tag );
                 if ( $i_tag > 0 ) {
                     $leading_whitespace = substr( $end_text, 0, $i_tag );
@@ -23930,6 +23941,19 @@ EOM
 
                 # Indented here-docs cannot use an empty string: c614
                 if ( !length($here_tag) ) { $is_excluded_tag = 1 }
+
+                # Skip if tags do not match.
+                if ( $here_tag ne $end_text ) {
+
+                    # Try removing backslashes
+                    if ( index( $here_tag, BACKSLASH ) >= 0 ) {
+                        $here_tag =~ s/(\\(.))/$2/g;
+                    }
+
+                    if ( $here_tag ne $end_text ) {
+                        $is_excluded_tag = 1;
+                    }
+                }
 
                 # For a type'<<' being converted to '<<~', the text must not
                 # also match the tag: c615
