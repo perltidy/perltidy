@@ -14837,6 +14837,42 @@ sub gaid {
 --maximum-line-length=59
 --extended-line-up-parentheses
 
+==> b1605.in <==
+  $w_heap->coords(
+                   $tile_ids[$i],
+                   $new_col
+     * $TILE_WIDTH,    #x0
+                   $new_row *
+                     $TILE_HEIGHT
+                   ,    #y0
+                   (
+                     $new_col + 1
+                     ) *
+                     $TILE_WIDTH
+                   ,    #x1
+                   (
+                     $new_row + 1
+                     ) *
+                     $TILE_HEIGHT
+  );
+
+  $w_heap->coords(
+         $tile_ids[$i],
+         $new_col
+           * $TILE_WIDTH,    #x0
+         $new_row *
+           $TILE_HEIGHT,     #y0
+         ( $new_col + 1 ) *
+           $TILE_WIDTH,      #x1
+         ( $new_row + 1 ) *
+           $TILE_HEIGHT
+  );
+
+==> b1605.par <==
+--maximum-line-length=35
+--indent-columns=1
+--extended-line-up-parentheses
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar

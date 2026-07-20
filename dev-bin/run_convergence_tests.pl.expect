@@ -9641,16 +9641,16 @@ $a =
 
 ==> b1591 <==
 my %S3d_url = (
-        'pfam_us' => $SGD_stem_url{'s3d'} . 'seq_search.pl?db=pfam&loc=us&gene=',
-        'blast_worm_yeast' => $SGD_stem_url{'s3d'}
-        . 'getblast?db=worm&query=worm&name=',
-        'patmatch' => $SGD_stem_url{'s3d2'} . 'grepmatch?',    ## deprecated
+    'pfam_us' => $SGD_stem_url{'s3d'} . 'seq_search.pl?db=pfam&loc=us&gene=',
+    'blast_worm_yeast' => $SGD_stem_url{'s3d'}
+     . 'getblast?db=worm&query=worm&name=',
+    'patmatch' => $SGD_stem_url{'s3d2'} . 'grepmatch?',    ## deprecated
 );
 my %S3d_url = (
-        'pfam_us' => $SGD_stem_url{'s3d'} . 'seq_search.pl?db=pfam&loc=us&gene=',
-        'blast_worm_yeast' => $SGD_stem_url{'s3d'}
-        . 'getblast?db=worm&query=worm&name=',
-        'patmatch' => $SGD_stem_url{'s3d2'} . 'grepmatch?',    ## deprecated
+    'pfam_us' => $SGD_stem_url{'s3d'} . 'seq_search.pl?db=pfam&loc=us&gene=',
+    'blast_worm_yeast' => $SGD_stem_url{'s3d'}
+     . 'getblast?db=worm&query=worm&name=',
+    'patmatch' => $SGD_stem_url{'s3d2'} . 'grepmatch?',    ## deprecated
 );
 
 ==> b1592 <==
@@ -9847,6 +9847,27 @@ sub gaid {
         },
         $class
     );
+
+==> b1605 <==
+  $w_heap->coords(
+   $tile_ids[$i],
+   $new_col
+     * $TILE_WIDTH,    #x0
+   $new_row * $TILE_HEIGHT,    #y0
+   ( $new_col + 1 ) *
+     $TILE_WIDTH,              #x1
+   ( $new_row + 1 ) * $TILE_HEIGHT
+  );
+
+  $w_heap->coords(
+   $tile_ids[$i],
+   $new_col
+     * $TILE_WIDTH,            #x0
+   $new_row * $TILE_HEIGHT,    #y0
+   ( $new_col + 1 ) *
+     $TILE_WIDTH,              #x1
+   ( $new_row + 1 ) * $TILE_HEIGHT
+  );
 
 ==> b163 <==
 # State 1

@@ -393,7 +393,6 @@ my (
     # INITIALIZER: sub initialize_token_break_preferences
     %want_break_before,
     %break_before_container_types,
-    %is_weak_binary_operator_token,
 
     # INITIALIZER: sub initialize_space_after_keyword
     %space_after_keyword,
@@ -3501,7 +3500,6 @@ sub initialize_token_break_preferences {
     # Initialize these global hashes defining break preferences:
     # %want_break_before
     # %break_before_container_types
-    # %is_weak_binary_operator_token
 
     my $break_after = sub {
         my @toks = @_;
@@ -3575,11 +3573,8 @@ sub initialize_token_break_preferences {
         my $lbs = $left_bond_strength{$tok};
         my $rbs = $right_bond_strength{$tok};
         if ( defined($lbs) && defined($rbs) ) {
-
             $want_break_before{$tok} =
               $left_bond_strength{$tok} < $right_bond_strength{$tok};
-
-            $is_weak_binary_operator_token{$tok} = $lbs <= WEAK || $rbs <= WEAK;
         }
     }
 
@@ -28263,105 +28258,6 @@ sub is_fragile_block_type {
         my $K_start_multiline_qw;
         my $level_start_multiline_qw = 0;
 
-        my $skip_line_length_sum = sub {
-            my ( $K_first, $K_terminal ) = @_;
-
-            # Decide if it is ok to include the full line length for a line
-            # ending in a comma in interrupted mode.  This is always ok in a
-            # simple list of comma-separated items, but in some rare, unusual
-            # cases it can lead to instability.
-
-            # Given:
-            #  $K_first, $K_last = index range of the current line
-            # Return:
-            #  true  => skip use of full line length (possible instability)
-            #  false => ok to use full line length
-
-            # Decide if the last line not ending in '=>' can be stable
-            if ( $last_nonblank_type ne '=>' ) {
-                return $is_weak_binary_operator_token{$last_nonblank_type};
-            }
-
-            # Decide if a line following a '=>' can be stable.
-            # We have to scan the line for weak tokens, like ',' and '='
-            # and breakable containers.
-            my $K_test = $K_first - 1;
-            while ( ++$K_test < $K_terminal ) {
-
-                my $type = $rLL->[$K_test]->[_TYPE_];
-                next if ( $type eq 'b' );
-
-                # Check for issue b1566:
-                # where a line with a weak binary operator can be unstable, i.e.
-
-                #   OutputHandle => $heap->{pipe_write} =
-                #     $b_write,
-
-                #   OutputHandle =>
-                #   $heap->{pipe_write} = $b_write,
-
-                # The b1566 instability is caused by the '=' which is weak.
-                if ( $is_weak_binary_operator_token{$type} ) { return 1 }
-
-                # Alternate fix for b1539a, part 2: include '}->' as fragile
-                # Note: it also works to just check for '->'
-                if ( $type eq '->' ) {
-                    my $Kt_m = $self->K_previous_nonblank($K_test);
-                    if (   $Kt_m
-                        && $Kt_m > $K_first
-                        && $is_closing_type{ $rLL->[$Kt_m]->[_TYPE_] } )
-                    {
-                        return 1;
-                    }
-                }
-
-                # Check for a container
-                my $seqno = $rLL->[$K_test]->[_TYPE_SEQUENCE_];
-                next if ( !$seqno );
-                if ( $is_opening_type{$type} ) {
-
-                    # Look back for one of -> } ) ]
-                    # which indicate a weak point in the line
-                    my $Kt_m = $self->K_previous_nonblank($K_test);
-                    if (   $Kt_m
-                        && $Kt_m > $K_first )
-                    {
-                        my $type_m = $Kt_m ? $rLL->[$Kt_m]->[_TYPE_] : 'b';
-                        if ( $type_m eq '->' || $is_closing_type{$type_m} ) {
-                            return 1;
-                        }
-                    }
-
-                    # Skip past this container
-                    my $Kc = $self->[_K_closing_container_]->{$seqno};
-                    if ( $Kc && $Kc > $K_test ) {
-
-                        # Alternate fix for b1539, part 1
-                        # Skip a list which has a comma
-                        #   fanart =>
-                        #       get_art( $images, 'fanart', 'backdrops' ),
-                        my $rtype_count = $rtype_count_by_seqno->{$seqno};
-                        if ( $rtype_count && $rtype_count->{','} ) {
-                            return 1;
-                        }
-                        $K_test = $Kc;
-                        next;
-                    }
-
-                    # Safety exit, shouldn't happen
-                    if (DEVEL_MODE) {
-                        my $lno = $rLL->[$K_test]->[_LINE_INDEX_] + 1;
-                        Fault(
-                            "Bad loop indexes near line $lno, seqno=$seqno\n");
-                    }
-                    return 1;
-                }
-            } ## end while ( ++$K_test < $K_terminal)
-
-            # Ok, no problems detected
-            return;
-        }; ## end $skip_line_length_sum = sub
-
         my $continue_multiline_q = sub {
             my ($KK) = @_;
 
@@ -28405,52 +28301,35 @@ sub is_fragile_block_type {
         }; ## end $start_multiline_q = sub
 
         my $add_interrupted_tokens = sub {
-            my ( $rix_no_comma, $K_first, $K_terminal ) = @_;
+            my ( $rix_no_comma, $K_first ) = @_;
 
             # Given:
             #  $rix_no_comma = list of line immediately previous indexes
             #  $K_first = first token on the current line
-            #  $K_terminal = the last token on the current line (except comment)
 
             # Return:
             #   undef if this line sum should be skipped, OR
             #   $K_sum_start = starting index K to use for line length
-
-            # Skip certain troublesome lines
-            if ( $skip_line_length_sum->( $K_first, $K_terminal ) ) {
-                return;
-            }
 
             my $K_sum_start = $K_first;
 
             # Modified fix for b1579; updates b1525.
             # Backup at a multi-line term if necessary.
             # Eventually more cases can be handled here
-            if (
+            my $ix_prev             = $rix_no_comma->[0];
+            my $line_of_tokens_prev = $rlines->[$ix_prev];
+            my $K_test              = $line_of_tokens_prev->{_rK_range}->[0];
+            if ( $K_test && $K_test < $K_first ) {
+                $K_sum_start = $K_test;
+            }
+            else {
+                my $lx = $rLL->[$K_first]->[_LINE_INDEX_];
 
-                # Include previous line before an isolated comma
-                $K_first == $K_terminal
-
-                # Include a preceding hash key (b1331, b1604)
-                || $last_nonblank_type eq '=>'
-                || $rLL->[$K_first]->[_TYPE_] eq '=>'
-              )
-            {
-                my $ix_prev             = $rix_no_comma->[0];
-                my $line_of_tokens_prev = $rlines->[$ix_prev];
-                my $K_test = $line_of_tokens_prev->{_rK_range}->[0];
-                if ( $K_test && $K_test < $K_first ) {
-                    $K_sum_start = $K_test;
-                }
-                else {
-                    my $lx = $rLL->[$K_first]->[_LINE_INDEX_];
-
-                    DEVEL_MODE
-                      && Fault(
+                DEVEL_MODE
+                  && Fault(
 "at line $lx with K_first=$K_first, got ix_prev=$ix_prev K_first=$K_test\n"
-                      );
-                    return;
-                }
+                  );
+                return;
             }
             return $K_sum_start;
         }; ## end $add_interrupted_tokens = sub
@@ -28676,7 +28555,7 @@ sub is_fragile_block_type {
 
                             if ( !$is_one_line_block ) {
                                 $K_sum_start = $add_interrupted_tokens->(
-                                    $rix_no_comma, $K_first, $K_terminal,
+                                    $rix_no_comma, $K_first,
                                 );
                             }
                         }
