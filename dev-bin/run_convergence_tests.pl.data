@@ -14816,6 +14816,31 @@ sub gaid {
 --ignore-old-breakpoints
 --keyword-paren-inner-tightness=2
 
+==> b1603.in <==
+    my $Valid = {
+       'autoclose' => [ IO::Compress::Base::Common::Parse_boolean, 0 ],
+       'multistream' =>
+         [ IO::Compress::Base::Common::Parse_boolean, 0 ],
+       'inputlength' =>
+         [ IO::Compress::Base::Common::Parse_unsigned, undef ],
+       'binmodeout' => [ IO::Compress::Base::Common::Parse_boolean, 0 ],
+
+       # requires this
+    };
+    my $Valid = {
+      'autoclose'   => [ IO::Compress::Base::Common::Parse_boolean, 0 ],
+      'multistream' => [ IO::Compress::Base::Common::Parse_boolean, 0 ],
+      'inputlength' =>
+        [ IO::Compress::Base::Common::Parse_unsigned, undef ],
+      'binmodeout' => [ IO::Compress::Base::Common::Parse_boolean, 0 ],
+
+      # requires this
+    };
+
+==> b1603.par <==
+--maximum-line-length=72
+--extended-line-up-parentheses
+
 ==> b1604.in <==
     my $self = bless(
         {

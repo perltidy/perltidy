@@ -8626,20 +8626,19 @@ for $dir (
 ==> b1536 <==
 $i =
       &GetOptions(
-                "<>" =>
-                sub { $bootfile = $_[ 0 ] }, # any "non-option" is
+         "<>" =>
+         sub { $bootfile = $_[ 0 ] },    # any "non-option" is
       );
 $i =
       &GetOptions(
-                "<>" =>
-                sub { $bootfile = $_[ 0 ] }, # any "non-option" is
+         "<>" =>
+         sub { $bootfile = $_[ 0 ] },    # any "non-option" is
       );
 
 ==> b1536a <==
 $i =
       &GetOptions(
-               "<>" =>
-               sub { $bootfile = $_[ 0 ] },  # any "non-option" is
+        "<>" => sub { $bootfile = $_[ 0 ] }, # any "non-option" is
       );
 $i =
       &GetOptions(
@@ -9055,9 +9054,8 @@ __END__
 ==> b1562 <==
     my $notebook =
       $ow->NoteBook(
-                     -background => $config{"ColorBG"}, #
-                     -inactivebackground =>
-                       $config{"ColorEntry"},           #
+          -background         => $config{"ColorBG"},    #
+          -inactivebackground => $config{"ColorEntry"}, #
       );
 
     my $notebook =
@@ -9831,6 +9829,30 @@ sub gaid {
             for join '',
             map +( defined $_ ? $_ : 'undef' ), @_;
 }
+
+==> b1603 <==
+    my $Valid = {
+        'autoclose' => [ IO::Compress::Base::Common::Parse_boolean, 0 ],
+        'multistream' =>
+          [ IO::Compress::Base::Common::Parse_boolean, 0 ],
+        'inputlength' =>
+          [ IO::Compress::Base::Common::Parse_unsigned, undef ],
+        'binmodeout' =>
+          [ IO::Compress::Base::Common::Parse_boolean, 0 ],
+
+        # requires this
+    };
+    my $Valid = {
+        'autoclose' => [ IO::Compress::Base::Common::Parse_boolean, 0 ],
+        'multistream' =>
+          [ IO::Compress::Base::Common::Parse_boolean, 0 ],
+        'inputlength' =>
+          [ IO::Compress::Base::Common::Parse_unsigned, undef ],
+        'binmodeout' =>
+          [ IO::Compress::Base::Common::Parse_boolean, 0 ],
+
+        # requires this
+    };
 
 ==> b1604 <==
     my $self = bless(

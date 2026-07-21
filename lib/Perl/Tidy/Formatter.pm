@@ -28123,6 +28123,7 @@ sub is_fragile_block_type {
     my $len;
     my $last_nonblank_type;
     my @stack;
+    my $one_line_block_tol;
 
     sub xlp_collapsed_lengths_initialize {
 
@@ -28141,6 +28142,12 @@ sub is_fragile_block_type {
             undef,       # $interrupted_list_rule
             [],          # $rix_no_comma
         ];
+
+        # Tolerance for decisions for one-line blocks.  This was tuned to work
+        # for b1574 and b1603.  See comments in sub $add_interrupted_tokens
+        # where this is used.
+        $one_line_block_tol =
+          max( $rOpts_indent_columns, $rOpts_continuation_indentation, 2 );
 
         return;
     } ## end sub xlp_collapsed_lengths_initialize
@@ -28301,7 +28308,10 @@ sub is_fragile_block_type {
         }; ## end $start_multiline_q = sub
 
         my $add_interrupted_tokens = sub {
-            my ( $rix_no_comma, $K_first ) = @_;
+            my ( $rix_no_comma, $K_first, $K_terminal ) = @_;
+
+            # Include lengths of previous lines at a line ending
+            # a comma which was not preceded by a line ending in comma.
 
             # Given:
             #  $rix_no_comma = list of line immediately previous indexes
@@ -28313,9 +28323,27 @@ sub is_fragile_block_type {
 
             my $K_sum_start = $K_first;
 
-            # Modified fix for b1579; updates b1525.
-            # Backup at a multi-line term if necessary.
-            # Eventually more cases can be handled here
+            # Relevant cases: b1525, b1574, b1579, b1588, b1592, b1595, b1603
+            my $Kt_m = $self->K_previous_nonblank($K_terminal);
+            if (   $Kt_m
+                && $Kt_m > $K_first
+                && $is_closing_type{ $rLL->[$Kt_m]->[_TYPE_] } )
+            {
+
+                # The safest thing to do is ALWAYS return here so that we do
+                # not cause a block to break. But we can avoid some rare
+                # instabilities by allowing relatively short blocks to continue
+                # and include previous lines in the length sum. The current
+                # tolerance is based on:
+                #   b1574: relatively long blocks  (needs tol>=-1)
+                #   b1603: relatively short blocks (allows tol as defined)
+                my $excess =
+                  $self->excess_line_length_for_Krange( $K_first, $K_terminal );
+                if ( $excess + $one_line_block_tol >= 0 ) {
+                    return $K_sum_start;
+                }
+            }
+
             my $ix_prev             = $rix_no_comma->[0];
             my $line_of_tokens_prev = $rlines->[$ix_prev];
             my $K_test              = $line_of_tokens_prev->{_rK_range}->[0];
@@ -28323,8 +28351,9 @@ sub is_fragile_block_type {
                 $K_sum_start = $K_test;
             }
             else {
-                my $lx = $rLL->[$K_first]->[_LINE_INDEX_];
 
+                # Shouldn't happen - looks like bad call parameters
+                my $lx = $rLL->[$K_first]->[_LINE_INDEX_];
                 DEVEL_MODE
                   && Fault(
 "at line $lx with K_first=$K_first, got ix_prev=$ix_prev K_first=$K_test\n"
@@ -28332,6 +28361,7 @@ sub is_fragile_block_type {
                 return;
             }
             return $K_sum_start;
+
         }; ## end $add_interrupted_tokens = sub
 
         xlp_collapsed_lengths_initialize();
@@ -28535,29 +28565,14 @@ sub is_fragile_block_type {
                     if ( $is_comma_or_equals{ $rLL->[$K_terminal]->[_TYPE_] } )
                     {
 
-                        # Backup to include earlier non-comma lines if ok
                         my $K_sum_start = $K_first;
                         my $K_sum_end   = $K_terminal;
+
+                        # Backup to include earlier non-comma lines
                         if ( @{$rix_no_comma} ) {
-
-                            # Previously (b1595, b1588, b1592): we added any
-                            # previous lines but then stopped at the opening
-                            # '(' if line ends in '),' or other container.
-
-                            # Update (b1599): at a closing '),' ignore any
-                            # previous line(s) and just include this entire
-                            # line.
-                            my $Kt_m = $self->K_previous_nonblank($K_terminal);
-                            my $is_one_line_block =
-                                 $Kt_m
-                              && $Kt_m > $K_first
-                              && $is_closing_type{ $rLL->[$Kt_m]->[_TYPE_] };
-
-                            if ( !$is_one_line_block ) {
-                                $K_sum_start = $add_interrupted_tokens->(
-                                    $rix_no_comma, $K_first,
-                                );
-                            }
+                            $K_sum_start = $add_interrupted_tokens->(
+                                $rix_no_comma, $K_first, $K_terminal,
+                            );
                         }
 
                         if ( defined($K_sum_start) ) {
