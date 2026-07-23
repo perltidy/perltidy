@@ -28259,8 +28259,6 @@ sub is_fragile_block_type {
         my $rLL                        = $self->[_rLL_];
         my $rlines                     = $self->[_rlines_];
         my $rcollapsed_length_by_seqno = $self->[_rcollapsed_length_by_seqno_];
-        my $rtype_count_by_seqno       = $self->[_rtype_count_by_seqno_];
-        my $rK_next_seqno_by_K         = $self->[_rK_next_seqno_by_K_];
 
         my $K_start_multiline_qw;
         my $level_start_multiline_qw = 0;
@@ -28335,7 +28333,7 @@ sub is_fragile_block_type {
                 # instabilities by allowing relatively short blocks to continue
                 # and include previous lines in the length sum. The current
                 # tolerance is based on:
-                #   b1574: relatively long blocks  (needs tol>=-1)
+                #   b1574: relatively long blocks  (needs tol>=1)
                 #   b1603: relatively short blocks (allows tol as defined)
                 my $excess =
                   $self->excess_line_length_for_Krange( $K_first, $K_terminal );
@@ -28370,13 +28368,8 @@ sub is_fragile_block_type {
         # Loop over all lines in the file
         #--------------------------------
         my $iline = -1;
-        my $skip_next_line;
         foreach my $line_of_tokens ( @{$rlines} ) {
             $iline++;
-            if ($skip_next_line) {
-                $skip_next_line = 0;
-                next;
-            }
             my $line_type = $line_of_tokens->{_line_type};
             next if ( $line_type ne 'CODE' );
             my $CODE_type = $line_of_tokens->{_code_type};
@@ -28460,92 +28453,6 @@ sub is_fragile_block_type {
             if ( @stack && $stack[-1]->[_interrupted_list_rule_] ) {
                 my $K_c = $stack[-1]->[_K_c_];
                 if ( defined($K_c) ) {
-
-                    #----------------------------------------------------------
-                    # BEGIN patch for issue b1408: If this line ends in an
-                    # opening token, look for the closing token and comma at
-                    # the end of the next line. If so, combine the two lines to
-                    # get the correct sums.  This problem seems to require -xlp
-                    # -vtc=2 and blank lines to occur. Use %is_opening_type to
-                    # fix b1431.
-                    #----------------------------------------------------------
-                    if ( $is_opening_type{ $rLL->[$K_terminal]->[_TYPE_] }
-                        && !$has_comment )
-                    {
-                        my $seqno_end = $rLL->[$K_terminal]->[_TYPE_SEQUENCE_];
-                        my $Kc_test   = $rK_next_seqno_by_K->[$K_terminal];
-
-                        # We are looking for a short broken remnant on the next
-                        # line; something like the third line here (b1408):
-
-                    #     parent =>
-                    #       Moose::Util::TypeConstraints::find_type_constraint(
-                    #               'RefXX' ),
-                    # or this
-                    #
-                    #  Help::WorkSubmitter->_filter_chores_and_maybe_warn_user(
-                    #                                    $story_set_all_chores),
-                    # or this (b1431):
-                    #        $issue->{
-                    #           'borrowernumber'},  # borrowernumber
-                        if (   defined($Kc_test)
-                            && $seqno_end
-                            && $seqno_end == $rLL->[$Kc_test]->[_TYPE_SEQUENCE_]
-                            && $rLL->[$Kc_test]->[_LINE_INDEX_] == $iline + 1 )
-                        {
-                            my $line_of_tokens_next = $rlines->[ $iline + 1 ];
-                            my $rtype_count =
-                              $rtype_count_by_seqno->{$seqno_end};
-                            my ( $K_first_next, $K_terminal_next ) =
-                              @{ $line_of_tokens_next->{_rK_range} };
-
-                            # backup at a side comment
-                            if ( defined($K_terminal_next)
-                                && $rLL->[$K_terminal_next]->[_TYPE_] eq '#' )
-                            {
-                                my $Kprev =
-                                  $self->K_previous_nonblank($K_terminal_next);
-                                if ( defined($Kprev)
-                                    && $Kprev >= $K_first_next )
-                                {
-                                    $K_terminal_next = $Kprev;
-                                }
-                            }
-
-                            if (
-                                defined($K_terminal_next)
-
-                                # next line ends with a comma
-                                && $rLL->[$K_terminal_next]->[_TYPE_] eq ','
-
-                                # which follows the closing container token
-                                && (
-                                    $K_terminal_next - $Kc_test == 1
-                                    || (   $K_terminal_next - $Kc_test == 2
-                                        && $rLL->[ $K_terminal_next - 1 ]
-                                        ->[_TYPE_] eq 'b' )
-                                )
-
-                                # no commas in the container
-                                && (   !defined($rtype_count)
-                                    || !$rtype_count->{','} )
-
-                                # for now, restrict this to a container with
-                                # just 1 or two tokens
-                                && $K_terminal_next - $K_terminal <= 5
-
-                              )
-                            {
-
-                                # combine the next line with the current line
-                                $K_terminal     = $K_terminal_next;
-                                $skip_next_line = 1;
-                                if (DEBUG_COLLAPSED_LENGTHS) {
-                                    print "Combining lines at line $iline\n";
-                                }
-                            }
-                        }
-                    }    # END patch for issue b1408
 
                     # Pull out the list of lines without commas
                     my $rix_no_comma = $stack[-1]->[_rix_no_comma_];
@@ -28850,20 +28757,13 @@ EOM
                     # Some test cases:
                     # c098/x107 x108 x110 x112 x114 x115 x117 x118 x119
                     my $block_type = $rblock_type_of_seqno->{$seqno};
-                    if ($block_type) {
+                    if ( $block_type && defined($K_o) ) {
 
-                        my $K_c          = $KK;
-                        my $block_length = MIN_BLOCK_LEN;
-                        my $is_one_line_block;
+                        my $K_c   = $KK;
                         my $level = $rLL->[$K_o]->[_LEVEL_];
-                        if ( defined($K_o) && defined($K_c) ) {
-
-                            # note: fixed 3 May 2022 (removed 'my')
-                            $block_length =
-                              $rLL->[ $K_c - 1 ]->[_CUMULATIVE_LENGTH_] -
-                              $rLL->[$K_o]->[_CUMULATIVE_LENGTH_];
-                            $is_one_line_block = $iline == $iline_o;
-                        }
+                        my $block_length =
+                          $rLL->[ $K_c - 1 ]->[_CUMULATIVE_LENGTH_] -
+                          $rLL->[$K_o]->[_CUMULATIVE_LENGTH_];
 
                         # Code block rule 1: Use the total block length if
                         # it is less than the minimum.
@@ -28877,7 +28777,7 @@ EOM
                         # check here, because if it breaks then it will
                         # stay broken on later iterations.
                         elsif (
-                               $is_one_line_block
+                               $iline == $iline_o
                             && $block_length <
                             $maximum_line_length_at_level[$level]
 
