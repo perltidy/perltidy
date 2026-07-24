@@ -1,0 +1,5 @@
+# Do not allow user to remove the space after the << (makes a here doc)
+my $ONE = 1;
+use constant two => 2;
+print $ONE << two, "\n";
+print "OK\n";

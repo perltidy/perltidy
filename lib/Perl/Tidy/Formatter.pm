@@ -5976,6 +5976,7 @@ EOM
     my %is_plus_minus_percent_star;
     my %is_special_variable_char;
     my %is_digit_char;
+    my %is_tricky_Z_follower;
 
     BEGIN {
 
@@ -6043,6 +6044,11 @@ EOM
 
         @q = qw( 0 1 2 3 4 5 6 7 8 9 );
         $is_digit_char{$_} = 1 for @q;
+
+        # When these types follow a type Z (indirect object), perl
+        # may guess meaning depending on if a space char follows:
+        @q = qw( / ? + - * << );
+        $is_tricky_Z_follower{$_} = 1 for @q;
 
     } ## end BEGIN
 
@@ -6243,9 +6249,11 @@ EOM
           # and any space would have to be added back manually if desired.
           || $typel eq 'Y'
 
-          # Perl is sensitive to whitespace after the + here:
+          # Perl is sensitive to space after certain chars like the + here:
           #  $b = xvals $a + 0.1 * yvals $a;
-          || $typell eq 'Z' && $typel =~ /^[\/\?\+\-\*]$/
+          # and removing the space after the '<<' makes a heredoc (c622):
+          #  print $ONE << two,"\n";
+          || $typell eq 'Z' && $is_tricky_Z_follower{$typel}
 
           || (
             $tokenr_is_open_paren && (
