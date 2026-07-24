@@ -338,8 +338,6 @@ my (
     %is_keyword_with_special_leading_term,
     %is_s_y_m_slash,
     %is_sigil,
-    %is_comma_token,
-    %is_comma_or_equals,
     %is_comma_fat_comma_equals,
 
     # INITIALIZER: sub check_options
@@ -1031,12 +1029,6 @@ BEGIN {
 
     @q = qw( $ & % * @ );
     $is_sigil{$_} = 1 for @q;
-
-    # Note: '=>' was added for b1551 but is no longer required after b1588.
-    # It can remain for now.
-    $is_comma_token{$_} = 1 for ( '=>', COMMA );
-
-    $is_comma_or_equals{$_} = 1 for ( '=', COMMA );
 
     $is_comma_fat_comma_equals{$_} = 1 for ( COMMA, '=>', '=' );
 
@@ -4950,7 +4942,7 @@ sub initialize_whitespace_hashes {
 
     #my @spaces_left_side = qw< t ! ~ m p { \ h pp mm Z j >;
     my @spaces_left_side = qw< t ! ~ m p { >;
-    push @spaces_left_side, "\\";
+    push @spaces_left_side, BACKSLASH;
     push @spaces_left_side, qw< h pp mm Z j >;
     push( @spaces_left_side, '#' );    # avoids warning message
 
@@ -5412,7 +5404,7 @@ sub set_whitespace_flags {
             # allow a space between a backslash and single or double quote
             # to avoid fooling html formatters
             elsif ( $type eq 'Q' ) {
-                if ( $last_type eq '\\' && $token =~ /^[\"\']/ ) {
+                if ( $last_type eq BACKSLASH && $token =~ /^[\"\']/ ) {
                     $ws =
                        !$rOpts_space_backslash_quote      ? WS_NO
                       : $rOpts_space_backslash_quote == 1 ? WS_OPTIONAL
@@ -6045,7 +6037,7 @@ EOM
         # These are the only characters which can (currently) form special
         # variables, like $^W: (issue c066, c068).
         @q = qw{ ? A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ };
-        push @q, "\\";
+        push @q, BACKSLASH;
         push @q, (qw{  ] ^ _ });
         $is_special_variable_char{$_} = 1 for @q;
 
@@ -10590,7 +10582,7 @@ EOM
                     next   if ( $pos < 0 );
                     return if ( $pos == 0 );
                     my $ch_test = substr( $word, $pos - 1, 1 );
-                    return if ( $ch_test ne '\\' );
+                    return if ( $ch_test ne BACKSLASH );
                 }
             }
 
@@ -14985,7 +14977,9 @@ EOM
                         # A preceding \ implies that this memory can be used
                         # even if the variable name does not appear again.
                         # For example: return \my $string_buf;
-                        if ( $last_type eq '\\' ) { $my_starting_count = 1 }
+                        if ( $last_type eq BACKSLASH ) {
+                            $my_starting_count = 1;
+                        }
                     }
                 }
 
@@ -17011,7 +17005,7 @@ BEGIN {
       ... **= <<= >>= &&= ||= //= <=>
       + - / * | % ! x ~ =
       #;
-    push @q, "\\";
+    push @q, BACKSLASH;
     push @q, qw#
       ? : . < > ^ &
       #;
@@ -20949,7 +20943,7 @@ sub count_list_elements {
                 if ( defined($K_last) ) {
                     my $type_last = $rLL->[$K_last]->[_TYPE_];
                     next if ( $type_last eq '+' || $type_last eq 'p' );
-                    next if ( $type_last eq q{\\} );
+                    next if ( $type_last eq BACKSLASH );
                     next if ( $type_last eq '!' );
                     my $token_last = $rLL->[$K_last]->[_TOKEN_];
                     next if ( $type_last eq 'k' && $token_last eq 'scalar' );
@@ -21115,7 +21109,7 @@ sub count_prototype_args {
         }
         elsif ( $is_array_sigil{$ch} )  { $saw_array->(); last }
         elsif ( $is_scalar_sigil{$ch} ) { $bump_count->(); }
-        elsif ( $ch eq q{\\} ) {
+        elsif ( $ch eq BACKSLASH ) {
             $ch = shift @chars;
             last unless ( defined($ch) );
             $bump_count->();
@@ -25694,9 +25688,7 @@ sub excess_line_length_for_Krange {
 
     my $rLL = $self->[_rLL_];
     my $length_before_Kfirst =
-      $Kfirst <= 0
-      ? 0
-      : $rLL->[ $Kfirst - 1 ]->[_CUMULATIVE_LENGTH_];
+      ( $Kfirst <= 0 ? 0 : $rLL->[ $Kfirst - 1 ]->[_CUMULATIVE_LENGTH_] );
 
     # backup before a side comment if necessary
     my $Kend = $Klast;
@@ -28216,9 +28208,8 @@ sub is_fragile_block_type {
                     return 0;
                 }
             }
-            my $starting_len =
-              $KK >= 0 ? $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_] : 0;
-            $length = $rLL->[$K_comma]->[_CUMULATIVE_LENGTH_] - $starting_len;
+            $length = $rLL->[$K_comma]->[_CUMULATIVE_LENGTH_] -
+              ( $KK <= 0 ? 0 : $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_] );
         }
         return $length;
     } ## end sub cumulative_length_to_comma
@@ -28269,8 +28260,8 @@ sub is_fragile_block_type {
             # Continuing a multiline q at index $KK
             my $level    = $rLL->[$KK]->[_LEVEL_];
             my $ci_level = $rLL->[$KK]->[_CI_LEVEL_];
-            $len = $rLL->[$KK]->[_CUMULATIVE_LENGTH_];
-            if ( $KK > 0 ) { $len -= $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_] }
+            $len = $rLL->[$KK]->[_CUMULATIVE_LENGTH_] -
+              ( $KK <= 0 ? 0 : $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_] );
 
             # We may have to add the spaces of one level or ci level
             # ...  it depends on the -xci flag, the -wn flag,
@@ -28468,9 +28459,8 @@ sub is_fragile_block_type {
                         @{$rix_no_comma} = ();
                     }
 
-                    # Look for a line which ends in a comma (or an '=')...
-                    if ( $is_comma_or_equals{ $rLL->[$K_terminal]->[_TYPE_] } )
-                    {
+                    # Look for a line which ends in a comma
+                    if ( $rLL->[$K_terminal]->[_TYPE_] eq COMMA ) {
 
                         my $K_sum_start = $K_first;
                         my $K_sum_end   = $K_terminal;
@@ -28522,13 +28512,13 @@ sub is_fragile_block_type {
                 }
                 else {
 
-                 # For a side comment when -iscl is not set, measure length from
-                 # the start of the previous nonblank token
-                    my $len0 =
-                        $K_terminal > 0
-                      ? $rLL->[ $K_terminal - 1 ]->[_CUMULATIVE_LENGTH_]
-                      : 0;
-                    $len = $rLL->[$K_last]->[_CUMULATIVE_LENGTH_] - $len0;
+                    # For a side comment when -iscl is not set, measure length
+                    # from the start of the previous nonblank token
+                    $len = $rLL->[$K_last]->[_CUMULATIVE_LENGTH_] - (
+                        $K_terminal <= 0
+                        ? 0
+                        : $rLL->[ $K_terminal - 1 ]->[_CUMULATIVE_LENGTH_]
+                    );
                     if ( $len > $max_prong_len ) { $max_prong_len = $len }
                 }
             }
@@ -28690,18 +28680,9 @@ sub is_fragile_block_type {
                     # Add length of any terminal list item if interrupted
                     # so that the result is the same as if the term is
                     # in the next line (b1446).
-                    if (
-                           $interrupted_list_rule
+                    if (   $interrupted_list_rule
                         && $KK < $K_terminal
-
-                        # The line should end in a comma-type.
-                        # NOTE: this currently assumes break after comma.
-                        # As long as the other call to cumulative_length..
-                        # makes the same assumption we should remain stable.
-                        # Updated to include '=>' for b1551. Also supplied the
-                        # interrupted flag to the length function
-                        && $is_comma_token{ $rLL->[$K_terminal]->[_TYPE_] }
-                      )
+                        && $rLL->[$K_terminal]->[_TYPE_] eq COMMA )
                     {
                         $max_prong_len =
                           $self->cumulative_length_to_comma( $KK + 1,
@@ -44123,7 +44104,7 @@ sub undo_contained_ci {
     return;
 } ## end sub undo_contained_ci
 
-{
+{    ## begin closure undo_ci
     my %undo_extended_ci;
 
     sub initialize_closure_undo_ci {
@@ -44384,7 +44365,7 @@ sub undo_contained_ci {
 
         return;
     } ## end sub undo_ci
-}
+} ## end closure undo_ci
 
 {    ## begin closure set_logical_padding
     my %is_math_op;
