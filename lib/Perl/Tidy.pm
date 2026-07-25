@@ -3681,7 +3681,6 @@ sub generate_options {
     # options and may or may not be retained in future versions:
 
     # These undocumented flags are accepted but not used:
-    # --check-syntax
     # --fuzzy-line-length
     #
     # These undocumented flags are for debugging:
@@ -3837,13 +3836,11 @@ sub generate_options {
     ########################################
     $category = 1;    # Basic formatting options
     ########################################
-    $add_option->( 'check-syntax',                 'syn',  '!' );
     $add_option->( 'entab-leading-whitespace',     'et',   '=i' );
     $add_option->( 'indent-columns',               'i',    '=i' );
     $add_option->( 'maximum-line-length',          'l',    '=i' );
     $add_option->( 'variable-maximum-line-length', 'vmll', '!' );
     $add_option->( 'whitespace-cycle',             'wc',   '=i' );
-    $add_option->( 'perl-syntax-check-flags',      'pscf', '=s' );
     $add_option->( 'preserve-line-endings',        'ple',  '!' );
     $add_option->( 'tabs',                         't',    '!' );
     $add_option->( 'default-tabsize',              'dt',   '=i' );
@@ -4466,6 +4463,7 @@ sub generate_options {
     #-----------------------------------------------------------------------
     %expansion = (
         %expansion,
+
         'freeze-newlines'    => [qw(noadd-newlines nodelete-old-newlines)],
         'fnl'                => [qw(freeze-newlines)],
         'freeze-whitespace'  => [qw(noadd-whitespace nodelete-old-whitespace)],
@@ -4678,6 +4676,18 @@ q(wbb=% + - * / x != == >= <= =~ !~ < > | & = **= += *= &= <<= &&= -= /= |= >>= 
         ],
 
         # Additional styles can be added here
+
+        #----------------------
+        # deprecated parameters
+        #----------------------
+
+        # These flags are accepted for backwards compatibility but ignored.
+        'check-syntax'            => [],
+        'nocheck-syntax'          => [],
+        'syn'                     => [],
+        'nsyn'                    => [],
+        'perl-syntax-check-flags' => [],
+        'pscf'                    => [],
     );
 
     Perl::Tidy::HtmlWriter->make_abbreviated_names( \%expansion );
@@ -5397,16 +5407,6 @@ EOM
         $rOpts->{'closing-paren-indentation'}          = $cti;
     }
 
-    # Syntax checking is no longer supported due to concerns about executing
-    # code in BEGIN blocks.  These flags are still accepted for backwards
-    # compatibility but ignored. They will be deleted in a future version.
-    foreach my $optname (qw( check-syntax perl-syntax-check-flags )) {
-        if ( $rOpts->{$optname} ) {
-            Nag("## NOTE: '--$optname' is deprecated and should be removed\n");
-            delete $rOpts->{$optname};
-        }
-    }
-
     my $MAX_BLANK_COUNT   = 100;
     my $check_blank_count = sub {
         my ( $key, $abbrev ) = @_;
@@ -5818,9 +5818,6 @@ sub dump_short_names {
 
     my $rexpansion = shift;
 
-    my %deprecated;
-    $deprecated{$_} = 1 for ( qw( syn nsyn pscf ) );
-
     # do --dump-short-names (-dsn)
     # Debug routine -- this will dump the expansion hash
 
@@ -5833,8 +5830,7 @@ For a list of all long names, use perltidy --dump-long-names (-dln).
 EOM
     foreach my $abbrev ( sort keys %{$rexpansion} ) {
         my @list = @{ $rexpansion->{$abbrev} };
-        print {*STDOUT} "$abbrev --> @list\n"
-          if ( !$deprecated{$abbrev} );
+        print {*STDOUT} "$abbrev --> @list\n";
     }
     return;
 } ## end sub dump_short_names
@@ -6546,9 +6542,6 @@ sub dump_long_names {
 
     my @names = @_;
 
-    my %deprecated;
-    $deprecated{$_} = 1 for ( qw( check-syntax! perl-syntax-check-flags=s ) );
-
     # do --dump-long-names (-dln)
 
     print {*STDOUT} <<EOM;
@@ -6568,8 +6561,7 @@ sub dump_long_names {
 EOM
 
     foreach my $name ( sort @names ) {
-        print {*STDOUT} "$name\n"
-          if ( !$deprecated{$name} );
+        print {*STDOUT} "$name\n";
     }
     return;
 } ## end sub dump_long_names
