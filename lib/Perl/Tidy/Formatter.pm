@@ -28373,6 +28373,10 @@ sub is_fragile_block_type {
             next if ( $line_type ne 'CODE' );
             my $CODE_type = $line_of_tokens->{_code_type};
 
+            #-----------------------------------
+            # Handle special types of CODE lines
+            #-----------------------------------
+
             # Always skip blank lines
             next if ( $CODE_type eq 'BL' );
 
@@ -28507,9 +28511,9 @@ sub is_fragile_block_type {
                 }
             }
 
-            #----------------------------------
-            # Loop over all tokens on this line
-            #----------------------------------
+            #---------------------------------------
+            # Loop over all tokens on a line of CODE
+            #---------------------------------------
             $self->xlp_collapse_lengths_inner_loop( $iline, $K_begin_loop,
                 $K_terminal, $K_last );
 
@@ -28580,9 +28584,9 @@ sub is_fragile_block_type {
         my $rbreak_before_container_by_seqno =
           $self->[_rbreak_before_container_by_seqno_];
 
-        #----------------------------------
-        # Loop over tokens on this line ...
-        #----------------------------------
+        #-------------------------------------------
+        # Loop over all tokens on a line of CODE ...
+        #-------------------------------------------
         my $type;
         foreach my $KK ( $K_begin_loop .. $K_terminal ) {
 
@@ -28855,7 +28859,7 @@ EOM
             # include everything to end of line after a here target
             elsif ( $type eq 'h' ) {
                 $len = $rLL->[$K_last]->[_CUMULATIVE_LENGTH_] -
-                  $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
+                  ( $KK <= 0 ? 0 : $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_] );
                 if ( $len > $max_prong_len ) { $max_prong_len = $len }
             }
 
