@@ -4245,7 +4245,6 @@ sub generate_options {
       break-at-old-ternary-breakpoints
       break-at-old-attribute-breakpoints
       break-at-old-keyword-breakpoints
-      nocheck-syntax
       character-encoding=guess
       closing-side-comments-balanced
       noextended-continuation-indentation
@@ -5404,7 +5403,7 @@ EOM
     foreach my $optname (qw( check-syntax perl-syntax-check-flags )) {
         if ( $rOpts->{$optname} ) {
             Nag("## NOTE: '--$optname' is deprecated and should be removed\n");
-            $rOpts->{$optname} = undef;
+            delete $rOpts->{$optname};
         }
     }
 
@@ -5819,6 +5818,9 @@ sub dump_short_names {
 
     my $rexpansion = shift;
 
+    my %deprecated;
+    $deprecated{$_} = 1 for ( qw( syn nsyn pscf ) );
+
     # do --dump-short-names (-dsn)
     # Debug routine -- this will dump the expansion hash
 
@@ -5831,7 +5833,8 @@ For a list of all long names, use perltidy --dump-long-names (-dln).
 EOM
     foreach my $abbrev ( sort keys %{$rexpansion} ) {
         my @list = @{ $rexpansion->{$abbrev} };
-        print {*STDOUT} "$abbrev --> @list\n";
+        print {*STDOUT} "$abbrev --> @list\n"
+          if ( !$deprecated{$abbrev} );
     }
     return;
 } ## end sub dump_short_names
@@ -6543,6 +6546,9 @@ sub dump_long_names {
 
     my @names = @_;
 
+    my %deprecated;
+    $deprecated{$_} = 1 for ( qw( check-syntax! perl-syntax-check-flags=s ) );
+
     # do --dump-long-names (-dln)
 
     print {*STDOUT} <<EOM;
@@ -6561,7 +6567,10 @@ sub dump_long_names {
 #--------------------------------------------------
 EOM
 
-    foreach my $name ( sort @names ) { print {*STDOUT} "$name\n" }
+    foreach my $name ( sort @names ) {
+        print {*STDOUT} "$name\n"
+          if ( !$deprecated{$name} );
+    }
     return;
 } ## end sub dump_long_names
 
