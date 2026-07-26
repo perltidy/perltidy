@@ -1506,7 +1506,6 @@ sub check_in_place_modify {
                 Nag(
 "## warning: conflict of -st and -b in profile: -st has priority; use -nst to activate -b\n"
                 );
-
             }
             else {
                 ## keep quiet
@@ -3680,9 +3679,6 @@ sub generate_options {
     # message. This is because these are deprecated, experimental or debug
     # options and may or may not be retained in future versions:
 
-    # These undocumented flags are accepted but not used:
-    # --fuzzy-line-length
-    #
     # These undocumented flags are for debugging:
     # --recombine                           # used to debug line breaks
     # --short-concatenation-item-length     # used to break a '.' chain
@@ -4169,7 +4165,6 @@ sub generate_options {
     $add_option->( 'dump-unique-keys',                'duk',   '!' );
     $add_option->( 'dump-want-left-space',            'dwls',  '!' );
     $add_option->( 'dump-want-right-space',           'dwrs',  '!' );
-    $add_option->( 'fuzzy-line-length',               'fll',   '!' );
     $add_option->( 'help',                            'h',     EMPTY_STRING );
     $add_option->( 'short-concatenation-item-length', 'scl',   '=i' );
     $add_option->( 'show-options',                    'opt',   '!' );
@@ -4254,7 +4249,6 @@ sub generate_options {
       encode-output-strings
       file-size-order
       function-paren-vertical-alignment
-      fuzzy-line-length
       hanging-side-comments
       indent-block-comments
       indent-leading-semicolon
@@ -4654,7 +4648,6 @@ sub generate_options {
               noblanks-before-blocks
               blank-lines-before-subs=0
               blank-lines-before-packages=0
-              nofuzzy-line-length
               notabs
               norecombine
             )
@@ -4688,6 +4681,10 @@ q(wbb=% + - * / x != == >= <= =~ !~ < > | & = **= += *= &= <<= &&= -= /= |= >>= 
         'nsyn'                    => [],
         'perl-syntax-check-flags' => [],
         'pscf'                    => [],
+        'fuzzy-line-length'       => [],
+        'nofuzzy-line-length'     => [],
+        'fll'                     => [],
+        'nfll'                    => [],
     );
 
     Perl::Tidy::HtmlWriter->make_abbreviated_names( \%expansion );
@@ -5529,18 +5526,6 @@ EOM
     }
 
     make_grep_alias_string($rOpts);
-
-    # Turn on fuzzy-line-length unless this is an extrude run, as determined
-    # by the -i and -ci settings. Otherwise blinkers can form (case b935).
-    # This is an undocumented parameter used only for stress-testing when
-    # --extrude is set.
-    if ( !$rOpts->{'fuzzy-line-length'} ) {
-        if (   $rOpts->{'maximum-line-length'} != 1
-            || $rOpts->{'continuation-indentation'} != 0 )
-        {
-            $rOpts->{'fuzzy-line-length'} = 1;
-        }
-    }
 
     # Large values of -scl can cause convergence problems, issue c167
     if ( $rOpts->{'short-concatenation-item-length'} > 12 ) {

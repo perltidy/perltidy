@@ -4116,7 +4116,6 @@ sub initialize_global_option_vars {
     $rOpts_freeze_whitespace = $rOpts->{'freeze-whitespace'};
     $rOpts_function_paren_vertical_alignment =
       $rOpts->{'function-paren-vertical-alignment'};
-    $rOpts_fuzzy_line_length      = $rOpts->{'fuzzy-line-length'};
     $rOpts_ignore_old_breakpoints = $rOpts->{'ignore-old-breakpoints'};
     $rOpts_ignore_side_comment_lengths =
       $rOpts->{'ignore-side-comment-lengths'};
@@ -4170,6 +4169,15 @@ sub initialize_global_option_vars {
     $rOpts_warn_unique_keys_cutoff = $rOpts->{'warn-unique-keys-cutoff'};
     $rOpts_warn_unexpected_code_container =
       $rOpts->{'warn-unexpected-code-container'};
+
+    # Turn off fuzzy-line-length flags if this is an extrude run,
+    # as determined by the -i and -ci settings. These are only used for
+    # stress-testing perltidy.
+    $rOpts_fuzzy_line_length =
+      (      $rOpts_maximum_line_length == 1
+          && $rOpts_continuation_indentation == 0 )
+      ? 0
+      : 1;
 
     # Note that both opening and closing tokens can access the opening
     # and closing flags of their container types.
