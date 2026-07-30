@@ -14898,6 +14898,27 @@ sub gaid {
 --indent-columns=1
 --extended-line-up-parentheses
 
+==> b1607.in <==
+my %Html = (
+           'authority' =>
+             qq|<A HREF="mailto:$AUTHORITY"><b>$AUTHORITY</b></A>|,
+           'trouble' => <<"QQ_TROUBLE_QQ",
+QQ_TROUBLE_QQ
+);
+
+my %Html
+  = ( 'authority' =>
+        qq|<A HREF="mailto:$AUTHORITY"><b>$AUTHORITY</b></A>|,
+      'trouble' => <<"QQ_TROUBLE_QQ",
+QQ_TROUBLE_QQ
+  );
+
+==> b1607.par <==
+--paren-vertical-tightness=1
+--extended-line-up-parentheses
+--want-break-before='='
+--keep-old-breakpoints-after='=>'
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar

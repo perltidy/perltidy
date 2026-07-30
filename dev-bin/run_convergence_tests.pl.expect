@@ -9891,6 +9891,23 @@ sub gaid {
    ( $new_row + 1 ) * $TILE_HEIGHT
   );
 
+==> b1607 <==
+my %Html
+  = (
+      'authority' =>
+        qq|<A HREF="mailto:$AUTHORITY"><b>$AUTHORITY</b></A>|,
+      'trouble' => <<"QQ_TROUBLE_QQ",
+QQ_TROUBLE_QQ
+  );
+
+my %Html
+  = (
+      'authority' =>
+        qq|<A HREF="mailto:$AUTHORITY"><b>$AUTHORITY</b></A>|,
+      'trouble' => <<"QQ_TROUBLE_QQ",
+QQ_TROUBLE_QQ
+  );
+
 ==> b163 <==
 # State 1
 Readonly::Scalar

@@ -28270,6 +28270,24 @@ sub is_fragile_block_type {
         my $K_start_multiline_qw;
         my $level_start_multiline_qw = 0;
 
+        # For -xlp with forced ending line breaks in interrupted lists, block
+        # vertical tightness.  The reason is that the interrupted list code
+        # will be skipped for the first line of a list if there is a level
+        # drop.  FIXME: consider always doing this more generally below.
+        # See issue b1607.
+        if ( $keep_break_after_type{'=>'} ) {
+            my $rmax_opening_vertical_tightness =
+              $self->[_rmax_opening_vertical_tightness_];
+            my $ris_permanently_broken = $self->[_ris_permanently_broken_];
+            my $rtype_count_by_seqno   = $self->[_rtype_count_by_seqno_];
+            foreach my $seqno ( keys %{$ris_permanently_broken} ) {
+                my $rtype_count = $rtype_count_by_seqno->{$seqno};
+                next unless ($rtype_count);
+                next unless ( $rtype_count->{'=>'} );
+                $rmax_opening_vertical_tightness->{$seqno} = 0;
+            }
+        }
+
         my $continue_multiline_q = sub {
             my ($KK) = @_;
 
@@ -28681,7 +28699,9 @@ sub is_fragile_block_type {
                         && !$rOpts_variable_maximum_line_length
 
                         # and the stress level is not high. See c602.
-                        # The value '3' is the minimum which works for b1562.
+                        # Previously, a value '3' was required for b1562.
+                        # Currently, a value '1' or more is required for b1578.
+                        # This is not a critical value so the value remains '3'
                         && $rLL->[$KK]->[_LEVEL_] + 3 < $high_stress_level
 
                         # and there are no broken lists: b1597, b1599.
@@ -28711,6 +28731,13 @@ sub is_fragile_block_type {
 
                     # The array ref $rix_no_comma will hold a list of indexes
                     # to lines which do not end in commas in interrupted lists
+                    # FIXME: Possible more general future fix for b1607:
+                    # 1. Push this line in @rix_no_comma if this closing token
+                    # is not the last token and the line ends in this container
+                    # without a comma.
+                    # 2. either store the starting K of the rest of the line,
+                    # or make other logic check for this and use min (K_start,
+                    # K_opening)
                     my $rix_no_comma = [];
 
                     push @stack, [
