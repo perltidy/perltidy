@@ -28270,24 +28270,6 @@ sub is_fragile_block_type {
         my $K_start_multiline_qw;
         my $level_start_multiline_qw = 0;
 
-        # For -xlp with forced ending line breaks in interrupted lists, block
-        # vertical tightness.  The reason is that the interrupted list code
-        # will be skipped for the first line of a list if there is a level
-        # drop.  FIXME: consider always doing this more generally below.
-        # See issue b1607.
-        if ( $keep_break_after_type{'=>'} ) {
-            my $rmax_opening_vertical_tightness =
-              $self->[_rmax_opening_vertical_tightness_];
-            my $ris_permanently_broken = $self->[_ris_permanently_broken_];
-            my $rtype_count_by_seqno   = $self->[_rtype_count_by_seqno_];
-            foreach my $seqno ( keys %{$ris_permanently_broken} ) {
-                my $rtype_count = $rtype_count_by_seqno->{$seqno};
-                next unless ($rtype_count);
-                next unless ( $rtype_count->{'=>'} );
-                $rmax_opening_vertical_tightness->{$seqno} = 0;
-            }
-        }
-
         my $continue_multiline_q = sub {
             my ($KK) = @_;
 
@@ -28367,22 +28349,24 @@ sub is_fragile_block_type {
                 }
             }
 
-            my $ix_prev             = $rix_no_comma->[0];
-            my $line_of_tokens_prev = $rlines->[$ix_prev];
-            my $K_test              = $line_of_tokens_prev->{_rK_range}->[0];
-            if ( $K_test && $K_test < $K_first ) {
-                $K_sum_start = $K_test;
-            }
-            else {
+            ( my $ix_prev, $K_sum_start ) = @{ $rix_no_comma->[0] };
 
-                # Shouldn't happen - looks like bad call parameters
+            # Verify that indexes have been packed/unpacked correctly
+            my $line_of_tokens_prev = $rlines->[$ix_prev];
+            my ( $K_first_prev, $K_last_prev ) =
+              @{ $line_of_tokens_prev->{_rK_range} };
+            if (   $K_sum_start > $K_first
+                || $K_sum_start < $K_first_prev
+                || $K_sum_start > $K_last_prev )
+            {
                 my $lx = $rLL->[$K_first]->[_LINE_INDEX_];
                 DEVEL_MODE
                   && Fault(
-"at line $lx with K_first=$K_first, got ix_prev=$ix_prev K_first=$K_test\n"
+"at line $lx with K_first=$K_first, got ix_prev=$ix_prev K_first=$K_first_prev sub start at K=$K_sum_start\n"
                   );
-                return;
+                $K_sum_start = $K_first;
             }
+
             return $K_sum_start;
 
         }; ## end $add_interrupted_tokens = sub
@@ -28490,7 +28474,7 @@ sub is_fragile_block_type {
                     if (
                            $rix_no_comma
                         && @{$rix_no_comma}
-                        && (   $rix_no_comma->[-1] < $iline - 1
+                        && (   $rix_no_comma->[-1]->[0] < $iline - 1
                             || $line_of_tokens->{_starting_in_quote} )
                       )
                     {
@@ -28531,7 +28515,7 @@ sub is_fragile_block_type {
                         if (   !$has_comment
                             && !$line_of_tokens->{_ending_in_quote} )
                         {
-                            push @{$rix_no_comma}, $iline;
+                            push @{$rix_no_comma}, [ $iline, $K_first ];
                         }
                     }
                 }
@@ -28717,28 +28701,38 @@ sub is_fragile_block_type {
 
                     my $K_c = $K_closing_container->{$seqno};
 
+                    # The array ref $rix_no_comma will hold a list of indexes
+                    # to lines which do not end in commas in interrupted lists
+                    my $rix_no_comma = [];
+
                     # Add length of any terminal list item if interrupted
                     # so that the result is the same as if the term is
                     # in the next line (b1446).
                     if (   $interrupted_list_rule
-                        && $KK < $K_terminal
-                        && $rLL->[$K_terminal]->[_TYPE_] eq COMMA )
+                        && $KK < $K_terminal )
                     {
-                        $max_prong_len =
-                          $self->cumulative_length_to_comma( $KK + 1,
-                            $K_terminal, $K_c, $interrupted_list_rule );
-                    }
+                        # Start with first character after this opening token.
+                        # Leading blanks are ignored in length calcualtion.
+                        my $KK_p = $KK + 1;
+                        if ( $rLL->[$K_terminal]->[_TYPE_] eq COMMA ) {
+                            $max_prong_len =
+                              $self->cumulative_length_to_comma( $KK_p,
+                                $K_terminal, $K_c, $interrupted_list_rule );
+                        }
+                        else {
 
-                    # The array ref $rix_no_comma will hold a list of indexes
-                    # to lines which do not end in commas in interrupted lists
-                    # FIXME: Possible more general future fix for b1607:
-                    # 1. Push this line in @rix_no_comma if this closing token
-                    # is not the last token and the line ends in this container
-                    # without a comma.
-                    # 2. either store the starting K of the rest of the line,
-                    # or make other logic check for this and use min (K_start,
-                    # K_opening)
-                    my $rix_no_comma = [];
+                            # Postpone measurement if no comma and line
+                            # continues (fixes b1607)
+                            my $rlines         = $self->[_rlines_];
+                            my $line_of_tokens = $rlines->[$iline];
+                            my $has_comment = $rLL->[$K_last]->[_TYPE_] eq '#';
+                            if (   !$has_comment
+                                && !$line_of_tokens->{_ending_in_quote} )
+                            {
+                                push @{$rix_no_comma}, [ $iline, $KK_p ];
+                            }
+                        }
+                    }
 
                     push @stack, [
 
