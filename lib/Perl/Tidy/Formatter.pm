@@ -28712,7 +28712,7 @@ sub is_fragile_block_type {
                         && $KK < $K_terminal )
                     {
                         # Start with first character after this opening token.
-                        # Leading blanks are ignored in length calcualtion.
+                        # Leading blanks are ignored in length calculation.
                         my $KK_p = $KK + 1;
                         if ( $rLL->[$K_terminal]->[_TYPE_] eq COMMA ) {
                             $max_prong_len =
