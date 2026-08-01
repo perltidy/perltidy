@@ -154,6 +154,7 @@ my (
     %is_zero_continuation_block_type,
     %is_keyword,
     %is_TERM_keyword,
+    %is_OPERATOR_keyword,
     %is_my_our_state,
     %is_package,
     %matching_end_token,
@@ -4708,8 +4709,16 @@ EOM
         # Note that we only check keywords for OPERATOR expected, not TERM.
         # This is because a large number of keywords which normally expect
         # a TERM will also take an OPERATOR.
-        if ( $expecting == OPERATOR && $is_TERM_keyword{$tok} ) {
-            $self->error_if_expecting_OPERATOR();
+        if ( $is_TERM_keyword{$tok} ) {
+            $self->error_if_expecting_OPERATOR()
+              if ( $expecting == OPERATOR );
+        }
+        elsif ( $is_OPERATOR_keyword{$tok} ) {
+            $self->error_if_expecting_TERM()
+              if ( $expecting == TERM );
+        }
+        else {
+            ## expecting value not defined
         }
 
         # recognize 'use' statements, which are special
@@ -11950,15 +11959,9 @@ BEGIN {
     $is_indirect_object_taker{$_} = 1 for @q;
 
     # Keywords which definitely produce error if an OPERATOR is expected
-    # This small list was used through version 20260705:
+    # The following small list was used until version 20260705:
     #    @q = qw( my our state local use require );
-    # The list was expanded to the list below to catch more errors (c613).
-    # For reference, here is a list of keywords NOT in the list below:
-    #    @q = qw( err isa and cmp eq ge gt le lt ne or xor EQ GE GT LE LT NE
-    #        if unless for foreach when while until case );
-    # Note: we could invert the logic to use this shorter list, but if keywords
-    #   are added to perl in the future it is safer to add them explicitly.
-    # FIXME: this works but needs additional checking before next CPAN release
+    # This list was expanded to the list below to catch more errors (c613).
     @q = qw(
       AUTOLOAD       BEGIN            CHECK         DESTROY
       END            INIT             UNITCHECK     abs
@@ -12019,8 +12022,16 @@ BEGIN {
       values         vec              wait          waitpid
       wantarray      warn             write         y
     );
-
     $is_TERM_keyword{$_} = 1 for @q;
+
+    # Stable keyword infix operators which produce error if a TERM is expected
+    @q = qw( and or xor eq ne ge gt le lt );
+    $is_OPERATOR_keyword{$_} = 1 for @q;
+
+    # Keywords which are omitted from the above TERM or OPERATOR lists.
+    # Note that 'cmp' is here since it can be re-defined by File::Compare.
+    #   qw( isa err cmp if unless for foreach when while until case
+    #       EQ GE GT LE LT NE );
 
     # Note: 'field' will be added by sub check_options if --use-feature=class
     @q = qw( my our state );
