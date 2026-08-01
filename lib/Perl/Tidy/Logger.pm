@@ -489,12 +489,19 @@ sub finish {
     my $log_file        = $self->{_log_file};
     my $msg_line_number = $self->{_last_input_line_number};
 
+    my $logfile_display_name = EMPTY_STRING;
+    if ($save_logfile) {
+        my $ref = ref($log_file);
+        $logfile_display_name = $ref ? "(ref to $ref)" : $log_file;
+    }
+
     if ($warning_count) {
         if ($save_logfile) {
             $self->block_log_output();    # avoid echoing this to the logfile
             $self->warning(
-                "The logfile $log_file may contain useful information\n",
-                $msg_line_number );
+"The logfile '$logfile_display_name' may contain useful information\n",
+                $msg_line_number
+            );
             $self->unblock_log_output();
         }
 
@@ -517,7 +524,8 @@ sub finish {
         my $is_encoded_data = $self->{_is_encoded_data};
         my $fh = Perl::Tidy::streamhandle( $log_file, 'w', $is_encoded_data );
         if ( !$fh ) {
-            Perl::Tidy::Warn("unable to open log file '$log_file'\n");
+            Perl::Tidy::Warn(
+                "unable to open log file '$logfile_display_name'\n");
         }
         else {
             my $routput_array = $self->{_output_array};
@@ -528,7 +536,8 @@ sub finish {
             {
                 $fh->close()
                   or Perl::Tidy::Warn(
-                    "Error closing LOG file '$log_file': $OS_ERROR\n");
+"Error closing LOG file '$logfile_display_name': $OS_ERROR\n"
+                  );
             }
         }
     }
