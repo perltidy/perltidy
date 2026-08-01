@@ -7565,7 +7565,7 @@ $bc[
                 'foo'=~
 /$pattern/,
                          1;
-            }
+            };
 
 # S2
             eval {
@@ -7573,7 +7573,7 @@ $bc[
                          =~
 /$pattern/,
                          1;
-            }
+            };
 
 ==> b1214.par <==
 --continuation-indentation=9
@@ -21019,7 +21019,7 @@ $self->{'H'}=[
                                               ),
                                               "... and turning off '$warning_type' warnings suppressed it"
                                               ) ;
-                                          }
+                                          };
 
 # S2
                               do {
@@ -21032,7 +21032,7 @@ $self->{'H'}=[
                                               }),
                                               "... and turning off '$warning_type' warnings suppressed it"
                                               ) ;
-                                          }
+                                          };
 
 
 ==> b982.par <==
@@ -21244,7 +21244,7 @@ sub :
 lvalue
 {
 return;
-}
+};
 
 # State 2
 do sub
@@ -21252,7 +21252,7 @@ do sub
 lvalue
 {
     return;
-}
+};
 
 ==> b994.par <==
 --continuation-indentation=0
@@ -21370,12 +21370,12 @@ s/^([^\t]*)(\t+)/$1.(" " x ((length($2)<<3)-(length($1)&7)))/e )
 
 ==> c100.in <==
                 # Starting
-                eval { substr( $$textref, $_[4], $_[1] + $_[5] ) = $extra; } # need to check for sort_map_grep_eval in starting_one_line_block
+                eval { substr( $$textref, $_[4], $_[1] + $_[5] ) = $extra; }; # need to check for sort_map_grep_eval in starting_one_line_block
 
                 # Stable
                 eval {
                     substr( $$textref, $_[4], $_[1] + $_[5] ) = $extra;
-                } # need to check for sort_map_grep_eval in starting_one_line_block
+                }; # need to check for sort_map_grep_eval in starting_one_line_block
 
                 # Starting (note ';' before '#' )
                 eval {

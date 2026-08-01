@@ -4937,16 +4937,15 @@ $bc[
                          =~
 /$pattern/,
                          1;
-            }
+            };
 
-                   # S2
-                     eval
-            {
+            # S2
+            eval {
                 'foo'
                          =~
 /$pattern/,
                          1;
-            }
+            };
 
 ==> b1215 <==
   # S1
@@ -12975,10 +12974,10 @@ $self->{'H'}=
                                           ),
 "... and turning off '$warning_type' warnings suppressed it"
                                     ) ;
-                                     }
+                              } ;
 
-                                     # S2
-                                     do {
+                              # S2
+                              do {
                                     ok(   0 ==capture_warnings(
                                                 sub {
                                                       $_ = "x" ;
@@ -12989,7 +12988,7 @@ $self->{'H'}=
                                           ),
 "... and turning off '$warning_type' warnings suppressed it"
                                     ) ;
-                              }
+                              } ;
 
 
 ==> b983 <==
@@ -13105,7 +13104,7 @@ sub :
 lvalue
 {
     return;
-}
+};
 
 # State 2
 do
@@ -13113,7 +13112,7 @@ sub :
 lvalue
 {
     return;
-}
+};
 
 ==> b995 <==
 eval{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{
@@ -13190,17 +13189,13 @@ s/^([^\t]*)(\t+)/$1.(" " x ((length($2)<<3)-(length($1)&7)))/e )
 
 ==> c100 <==
                 # Starting
-                eval {
-                    substr( $$textref, $_[4], $_[1] + $_[5] ) = $extra;
-                } # need to check for sort_map_grep_eval in starting_one_line_block
+                eval { substr( $$textref, $_[4], $_[1] + $_[5] ) = $extra; }; # need to check for sort_map_grep_eval in starting_one_line_block
 
-                  # Stable
-                  eval {
-                    substr( $$textref, $_[4], $_[1] + $_[5] ) = $extra;
-                  } # need to check for sort_map_grep_eval in starting_one_line_block
+                # Stable
+                eval { substr( $$textref, $_[4], $_[1] + $_[5] ) = $extra; }; # need to check for sort_map_grep_eval in starting_one_line_block
 
-                  # Starting (note ';' before '#' )
-                  eval { substr( $$textref, $_[4], $_[1] + $_[5] ) = $extra; }; # need to check for sort_map_grep_eval in starting_one_line_block
+                # Starting (note ';' before '#' )
+                eval { substr( $$textref, $_[4], $_[1] + $_[5] ) = $extra; }; # need to check for sort_map_grep_eval in starting_one_line_block
 
                 # Stable (note ';' before '#' )
                 eval { substr( $$textref, $_[4], $_[1] + $_[5] ) = $extra; }; # need to check for sort_map_grep_eval in starting_one_line_block

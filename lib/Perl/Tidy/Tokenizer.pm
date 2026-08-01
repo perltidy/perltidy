@@ -11945,12 +11945,81 @@ BEGIN {
     @q = qw( do eval );
     $is_block_operator{$_} = 1 for @q;
 
-    # these functions allow an identifier in the indirect object slot
+    # These functions allow an identifier in the indirect object slot:
     @q = qw( print printf sort exec system say );
     $is_indirect_object_taker{$_} = 1 for @q;
 
     # Keywords which definitely produce error if an OPERATOR is expected
-    @q = qw( my our state local use require );
+    # This small list was used through version 20260705:
+    #    @q = qw( my our state local use require );
+    # The list was expanded to the list below to catch more errors (c613).
+    # For reference, here is a list of keywords NOT in the list below:
+    #    @q = qw( err isa and cmp eq ge gt le lt ne or xor EQ GE GT LE LT NE
+    #        if unless for foreach when while until case );
+    # Note: we could invert the logic to use this shorter list, but if keywords
+    #   are added to perl in the future it is safer to add them explicitly.
+    # FIXME: this works but needs additional checking before next CPAN release
+    @q = qw(
+      AUTOLOAD       BEGIN            CHECK         DESTROY
+      END            INIT             UNITCHECK     abs
+      accept         alarm            atan2         bind
+      binmode        bless            break         caller
+      catch          chdir            chmod         chomp
+      chop           chown            chr           chroot
+      close          closedir         connect       continue
+      cos            crypt            dbmclose      dbmopen
+      default        defined          delete        die
+      do             dump             each          else
+      elsif          endgrent         endhostent    endnetent
+      endprotoent    endpwent         endservent    eof
+      eval           evalbytes        exec          exists
+      exit           exp              fc            fcntl
+      fileno         flock            fork          format
+      formline       getc             getgrent      getgrgid
+      getgrnam       gethostbyaddr    gethostbyname gethostent
+      getlogin       getnetbyaddr     getnetbyname  getnetent
+      getpeername    getpgrp          getppid       getpriority
+      getprotobyname getprotobynumber getprotoent   getpwent
+      getpwnam       getpwuid         getservbyname getservbyport
+      getservent     getsockname      getsockopt    given
+      glob           gmtime           goto          grep
+      hex            index            int           ioctl
+      join           keys             kill          last
+      lc             lcfirst          length        link
+      listen         local            localtime     lock
+      log            lstat            m             map
+      mkdir          msgctl           msgget        msgrcv
+      msgsnd         my               next          no
+      not            oct              open          opendir
+      ord            our              pack          package
+      pipe           pop              pos           print
+      printf         prototype        push          q
+      qq             qr               quotemeta     qw
+      qx             rand             read          readdir
+      readline       readlink         readpipe      recv
+      redo           ref              rename        require
+      reset          return           reverse       rewinddir
+      rindex         rmdir            s             say
+      scalar         seek             seekdir       select
+      semctl         semget           semop         send
+      setgrent       sethostent       setnetent     setpgrp
+      setpriority    setprotoent      setpwent      setservent
+      setsockopt     shift            shmctl        shmget
+      shmread        shmwrite         shutdown      sin
+      sleep          socket           socketpair    sort
+      splice         split            sprintf       sqrt
+      srand          stat             state         study
+      sub            substr           switch        symlink
+      syscall        sysopen          sysread       sysseek
+      system         syswrite         tell          telldir
+      tie            tied             time          times
+      tr             truncate         uc            ucfirst
+      umask          undef            unlink        unpack
+      unshift        untie            use           utime
+      values         vec              wait          waitpid
+      wantarray      warn             write         y
+    );
+
     $is_TERM_keyword{$_} = 1 for @q;
 
     # Note: 'field' will be added by sub check_options if --use-feature=class

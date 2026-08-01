@@ -2,7 +2,7 @@
 
 ## 2026 07 05.01
 
-    - Fixed git #211, an unusual instability with the following eval block:
+   - Fixed git #211, an unusual instability with the following eval block:
 
      eval { @$list = map( { [ qr($_), $_, 0 ]; } @$list ); };
 
@@ -16,6 +16,8 @@
    - Added checks when converting type '<<' here-docs to '<<~':
      (1) Zero-length tags are skipped and (2) the conversion
      is skipped if any lines of the here-text would match the new tag.
+
+   - Added more syntax checks to help catch missing semicolons.
 
 ## 2026 07 05
 
