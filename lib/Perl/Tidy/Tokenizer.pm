@@ -4705,20 +4705,17 @@ EOM
             }
         }
 
-        # Catch some unexpected keyword errors; c517.
-        # Note that we only check keywords for OPERATOR expected, not TERM.
-        # This is because a large number of keywords which normally expect
-        # a TERM will also take an OPERATOR.
-        if ( $is_TERM_keyword{$tok} ) {
-            $self->error_if_expecting_OPERATOR()
-              if ( $expecting == OPERATOR );
-        }
-        elsif ( $is_OPERATOR_keyword{$tok} ) {
+        # Catch unexpected keywords (c517, c613).
+        if ( $expecting == TERM ) {
             $self->error_if_expecting_TERM()
-              if ( $expecting == TERM );
+              if ( $is_OPERATOR_keyword{$tok} );
+        }
+        elsif ( $expecting == OPERATOR ) {
+            $self->error_if_expecting_OPERATOR()
+              if ( $is_TERM_keyword{$tok} );
         }
         else {
-            ## expecting value not defined
+            ## expecting == UNKNOWN
         }
 
         # recognize 'use' statements, which are special
