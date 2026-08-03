@@ -1290,7 +1290,7 @@ EOM
         }
 
         # we'll stuff the source array into Arg_files
-        unshift( @Arg_files, $source_stream );
+        unshift @Arg_files, $source_stream;
 
         # No special treatment for source stream which is a filename.
         # This will enable checks for binary files and other bad stuff.
@@ -1299,7 +1299,7 @@ EOM
 
     # use stdin by default if no source array and no args
     elsif ( !@Arg_files ) {
-        unshift( @Arg_files, '-' );
+        unshift @Arg_files, '-';
     }
 
     # check file existence and expand any globs
@@ -5643,7 +5643,7 @@ sub expand_command_abbreviations {
 
                 # save the raw input for debug output in case of circular refs
                 if ( $pass_count == 0 ) {
-                    push( @{$rraw_options}, $word );
+                    push @{$rraw_options}, $word;
                 }
 
                 # recombine abbreviation and flag, if necessary,
@@ -5661,19 +5661,19 @@ sub expand_command_abbreviations {
                     # new arg list for the next pass
                     foreach my $abbrev ( @{ $rexpansion->{$abr} } ) {
                         next unless ($abbrev);    # for safety; shouldn't happen
-                        push( @new_argv, '--' . $abbrev . $flags );
+                        push @new_argv, '--' . $abbrev . $flags;
                     }
                 }
 
                 # not in expansion hash, must be actual long name
                 else {
-                    push( @new_argv, $word );
+                    push @new_argv, $word;
                 }
             }
 
             # not a dash item, so just save it for the next pass
             else {
-                push( @new_argv, $word );
+                push @new_argv, $word;
             }
         } ## end of this pass
 
@@ -6308,7 +6308,7 @@ EOM
                 push @{ $rexpansion->{$name} }, @{$rbody_parts};
             }
             else {
-                push( @config_list, @{$rbody_parts} );
+                push @config_list, @{$rbody_parts};
             }
         }
     }

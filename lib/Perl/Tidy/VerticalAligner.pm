@@ -1278,8 +1278,8 @@ sub fix_terminal_ternary {
             return if ( $patterns[0] !~ s/^\:/?/ );
 
             # install leading tokens and patterns of existing line
-            unshift( @tokens,   @{$rtokens_old}[ 0 .. $jquestion ] );
-            unshift( @patterns, @{$rpatterns_old}[ 0 .. $jquestion ] );
+            unshift @tokens,   @{$rtokens_old}[ 0 .. $jquestion ];
+            unshift @patterns, @{$rpatterns_old}[ 0 .. $jquestion ];
 
             # insert appropriate number of empty fields
             splice( @fields,        1, 0, (EMPTY_STRING) x $jadd ) if ($jadd);
@@ -1319,8 +1319,8 @@ sub fix_terminal_ternary {
 
         # install leading tokens and patterns of existing line
         $patterns[0] = '?' . 'b' . $patterns[0];
-        unshift( @tokens,   @{$rtokens_old}[ 0 .. $jquestion ] );
-        unshift( @patterns, @{$rpatterns_old}[ 0 .. $jquestion ] );
+        unshift @tokens,   @{$rtokens_old}[ 0 .. $jquestion ];
+        unshift @patterns, @{$rpatterns_old}[ 0 .. $jquestion ];
 
         # insert appropriate number of empty fields
         $jadd             = $jquestion + 1;

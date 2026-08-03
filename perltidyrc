@@ -65,6 +65,9 @@
 --want-call-parens='open unlink substr defined ref scalar int
 uc lc sprintf if unless reverse'
 
+# prefer to omit parens for these keywords:
+--nowant-call-parens='push pop shift unshift'
+
 # Minimize use of nested ternary expressions. If this triggers a warning,
 # and I want to keep the ternary, I use parens to turn the warning off.
 --warn-nested-ternaries

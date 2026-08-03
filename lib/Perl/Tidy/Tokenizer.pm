@@ -746,7 +746,7 @@ EOM
         # This will die if user's object does have a 'get_line' method
         my $line;
         while ( defined( $line = $line_source_object->get_line() ) ) {
-            push( @{$rinput_lines}, $line );
+            push @{$rinput_lines}, $line;
         }
         $source_string = join( EMPTY_STRING, @{$rinput_lines} );
     }
@@ -5601,7 +5601,7 @@ EOM
 
         # initialize if continuation line
         if ( !@{$routput_token_list} ) {
-            push( @{$routput_token_list}, $i );
+            push @{$routput_token_list}, $i;
             $routput_token_type->[$i] = $type;
         }
 
@@ -6166,10 +6166,9 @@ EOM
         }
 
         $max_token_index = scalar( @{$rtokens} ) - 1;
-        push( @{$rtokens}, SPACE, SPACE, SPACE )
-          ;    # extra whitespace simplifies logic
-        push( @{$rtoken_map},  0,   0,   0 );     # shouldn't be referenced
-        push( @{$rtoken_type}, 'b', 'b', 'b' );
+        push @{$rtokens},    SPACE, SPACE, SPACE; # extra space simplifies logic
+        push @{$rtoken_map}, 0,     0,     0;     # shouldn't be referenced
+        push @{$rtoken_type}, 'b',  'b',   'b';
 
         # initialize for main loop
         if (0) { #<<< this is not necessary
@@ -6294,7 +6293,7 @@ EOM
               );
 
             # this pre-token will start an output token
-            push( @{$routput_token_list}, $i_tok );
+            push @{$routput_token_list}, $i_tok;
 
             #---------------------------------------------------
             # The token search leads to one of 5 main END NODES:
@@ -6669,10 +6668,10 @@ EOM
                 #----------------------------------------------------
                 # Section 1.3. Store values for a non-sequenced token
                 #----------------------------------------------------
-                push( @output_levels,        $level_in_tokenizer );
-                push( @output_block_type,    EMPTY_STRING );
-                push( @output_type_sequence, EMPTY_STRING );
-                push( @output_token_type,    $type_i );
+                push @output_levels,        $level_in_tokenizer;
+                push @output_block_type,    EMPTY_STRING;
+                push @output_type_sequence, EMPTY_STRING;
+                push @output_token_type,    $type_i;
 
             }
 
@@ -6797,10 +6796,10 @@ EOM
                 }
 
                 # Store values for a sequenced token
-                push( @output_levels,        $level_i );
-                push( @output_block_type,    $routput_block_type->[$ii] );
-                push( @output_type_sequence, $routput_type_sequence->[$ii] );
-                push( @output_token_type,    $type_i );
+                push @output_levels,        $level_i;
+                push @output_block_type,    $routput_block_type->[$ii];
+                push @output_type_sequence, $routput_type_sequence->[$ii];
+                push @output_token_type,    $type_i;
 
             }
         }    ## End loop to over tokens
@@ -6818,7 +6817,7 @@ EOM
             my $offset = $rtoken_map->[$im];
             foreach my $ii ( @{$routput_token_list} ) {
                 my $numc = $rtoken_map->[$ii] - $offset;
-                push( @output_tokens, substr( $input_line, $offset, $numc ) );
+                push @output_tokens, substr( $input_line, $offset, $numc );
                 $offset += $numc;
 
                 # programming note: it seems most efficient to 'next' out of
@@ -6833,7 +6832,7 @@ EOM
 
             # Form and store the final token of this line
             my $numc = length($input_line) - $offset;
-            push( @output_tokens, substr( $input_line, $offset, $numc ) );
+            push @output_tokens, substr( $input_line, $offset, $numc );
 
             if (DEVEL_MODE) {
                 if ( $numc <= 0 ) {
@@ -11934,10 +11933,10 @@ BEGIN {
       { } ( ) [ ] ; + - / * | % ! x ~ = ? : . < > ^ &
       #;
     push @valid_token_types, BACKSLASH;
-    push( @valid_token_types, @digraphs );
-    push( @valid_token_types, @trigraphs );
-    push( @valid_token_types, @tetragraphs );
-    push( @valid_token_types, ( '#', COMMA, 'CORE::' ) );
+    push @valid_token_types, @digraphs;
+    push @valid_token_types, @trigraphs;
+    push @valid_token_types, @tetragraphs;
+    push @valid_token_types, ( '#', COMMA, 'CORE::' );
     $is_valid_token_type{$_} = 1 for @valid_token_types;
 
     # a list of file test letters, as in -e (Table 3-4 of 'camel 3')
@@ -12139,11 +12138,11 @@ BEGIN {
     # 'err' is a fairly safe addition.
     # Added 'default' for Switch::Plain. Note that we could also have
     # a separate set of keywords to include if we see 'use Switch::Plain'
-    push( @Keywords, @value_requestor );
+    push @Keywords, @value_requestor;
 
     # These are treated the same but are not keywords:
     my @extra_vr = qw( constant vars );
-    push( @value_requestor, @extra_vr );
+    push @value_requestor, @extra_vr;
 
     $expecting_term_token{$_} = 1 for @value_requestor;
 
@@ -12159,12 +12158,12 @@ BEGIN {
       wantarray
     );
 
-    push( @Keywords, @operator_requestor );
+    push @Keywords, @operator_requestor;
 
     # These are treated the same but are not considered keywords:
     my @extra_or = qw( STDERR STDIN STDOUT );
 
-    push( @operator_requestor, @extra_or );
+    push @operator_requestor, @extra_or;
 
     $expecting_operator_token{$_} = 1 for @operator_requestor;
 
@@ -12287,7 +12286,7 @@ BEGIN {
     # These keywords are handled specially in the tokenizer code:
     my @special_keywords =
       qw( do eval format m package q qq qr qw qx s sub tr y );
-    push( @Keywords, @special_keywords );
+    push @Keywords, @special_keywords;
 
     # Keywords after which list formatting may be used
     # WARNING: do not include |map|grep|eval or perl may die on

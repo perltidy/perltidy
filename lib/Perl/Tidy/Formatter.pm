@@ -963,7 +963,7 @@ BEGIN {
 
     # Removed 'h' (no longer needed after updated b1523)
     @q = qw( => ; f );
-    push @q, ',';
+    push @q, COMMA;
     $is_counted_type{$_} = 1 for @q;
 
     # Tokens where --keep-old-break-xxx flags make soft breaks instead
@@ -981,26 +981,26 @@ BEGIN {
     # on the same line, as in:
     #   } while ( $something);
     my @dof = qw( until while unless if ; : );
-    push @dof, ',';
+    push @dof, COMMA;
     $is_do_follower{$_} = 1 for @dof;
 
     # what can follow a multi-line anonymous sub definition closing curly:
     my @asf = qw# ; : => or and  && || ~~ !~~ ) #;
-    push @asf, ',';
+    push @asf, COMMA;
     $is_anon_sub_brace_follower{$_} = 1 for @asf;
 
     # what can follow a one-line anonymous sub closing curly:
     # one-line anonymous subs also have ']' here...
     # see tk3.t and PP.pm
     my @asf1 = qw#  ; : => or and  && || ) ] ~~ !~~ #;
-    push @asf1, ',';
+    push @asf1, COMMA;
     $is_anon_sub_1_brace_follower{$_} = 1 for @asf1;
 
     # What can follow a closing curly of a block
     # which is not an if/elsif/else/do/sort/map/grep/eval/sub
     # Testfiles: 'Toolbar.pm', 'Menubar.pm', bless.t, '3rules.pl'
     my @obf = qw#  ; : => or and  && || ) #;
-    push @obf, ',';
+    push @obf, COMMA;
     $is_other_brace_follower{$_} = 1 for @obf;
 
     # 'k'=builtin keyword, 'U'=user defined sub, 'w'=unknown bareword
@@ -4952,11 +4952,11 @@ sub initialize_whitespace_hashes {
     my @spaces_left_side = qw< t ! ~ m p { >;
     push @spaces_left_side, BACKSLASH;
     push @spaces_left_side, qw< h pp mm Z j >;
-    push( @spaces_left_side, '#' );    # avoids warning message
+    push @spaces_left_side, '#';                 # avoids warning message
 
     # c349: moved **= from @spaces_right_side to @spaces_both_sides
     my @spaces_right_side = qw< ; } ) ] R J ++ -- >;
-    push( @spaces_right_side, ',' );    # avoids warning message
+    push @spaces_right_side, ',';                # avoids warning message
 
     %want_left_space  = ();
     %want_right_space = ();
@@ -6010,7 +6010,7 @@ EOM
         # Filter 1:
         # These left side token types USUALLY do not require a space:
         @q = qw( ; { } [ ] L R );
-        push @q, ',';
+        push @q, COMMA;
         push @q, ')';
         push @q, '(';
         $essential_whitespace_filter_l1{$_} = 1 for @q;
@@ -6022,7 +6022,7 @@ EOM
         # Filter 2:
         # These right side filters usually do not require a space
         @q = qw( ; ] R } );
-        push @q, ',';
+        push @q, COMMA;
         push @q, ')';
         $essential_whitespace_filter_r2{$_} = 1 for @q;
 
@@ -10986,7 +10986,7 @@ EOM
     # Optimization: we just need to look at these non-blank types
     my %is_special_check_type = ( %is_opening_type, %is_closing_type );
     @q = qw( => Q q k U w h ; );
-    push @q, ',';
+    push @q, COMMA;
     $is_special_check_type{$_} = 1 for @q;
 
     # Values defined during token scan:
@@ -12244,7 +12244,7 @@ sub set_ci {
 
     my %is_list_end_type;
     @q = qw( ; { } );
-    push @q, ',';
+    push @q, COMMA;
     $is_list_end_type{$_} = 1 for @q;
 
     my %is_nobreak_opening_paren_type;
@@ -17025,7 +17025,7 @@ BEGIN {
     push @q, qw#
       ? : . < > ^ &
       #;
-    push @q, ',';
+    push @q, COMMA;
     $is_ascii_type{$_} = 1 for @q;
 
 } ## end BEGIN
@@ -24177,7 +24177,7 @@ my %is_non_ternary_type;
 BEGIN {
     my @q = qw( ; );
     push @q, '#';
-    push @q, ',';
+    push @q, COMMA;
     $is_non_ternary_type{$_} = 1 for @q;
 }
 
@@ -24320,7 +24320,7 @@ sub ternary_level_adjustment {
     while (@ix_double_questions) {
 
         # $ix is the index of the first of the '??' pair
-        my $ix = shift(@ix_double_questions);
+        my $ix = shift @ix_double_questions;
 
         next if ( $ix < $ix_last_pattern );
 
@@ -32939,7 +32939,7 @@ EOM
 
     BEGIN {
         my @q = qw# L { ( [ R ] ) } ? : f => #;
-        push @q, ',';
+        push @q, COMMA;
         $quick_filter{$_} = 1 for @q;
     }
 
@@ -34252,7 +34252,7 @@ EOM
 
         # all cases break on seeing commas at same level
         my @q = qw( => );
-        push @q, ',';
+        push @q, COMMA;
         $ris_comma_token->{$_} = 1 for @q;
 
         # Non-ternary text also breaks on seeing any of qw(? : || or )
@@ -37107,10 +37107,10 @@ sub break_long_lines {
         $line_count++;
 
         # save this line segment, after trimming blanks at the ends
-        push( @i_first,
-            ( $types_to_go[$i_begin] eq 'b' ) ? $i_begin + 1 : $i_begin );
-        push( @i_last,
-            ( $types_to_go[$i_lowest] eq 'b' ) ? $i_lowest - 1 : $i_lowest );
+        push @i_first,
+          ( $types_to_go[$i_begin] eq 'b' ) ? $i_begin + 1 : $i_begin;
+        push @i_last,
+          ( $types_to_go[$i_lowest] eq 'b' ) ? $i_lowest - 1 : $i_lowest;
 
         # set a forced breakpoint at a container opening, if necessary, to
         # signal a break at a closing container.  Excepting '(' for now.
@@ -38158,8 +38158,8 @@ EOM
 
         %quick_filter_B = %is_assignment;
         @q              = qw# => . ; < > ~ #;
-        push @q, ',';
-        push @q, 'f';    # added for ';' for issue c154
+        push @q, COMMA;
+        push @q, 'f';     # added for ';' for issue c154
         $quick_filter_B{$_} = 1 for @q;
 
     } ## end BEGIN
@@ -39652,7 +39652,7 @@ BEGIN {
 
     # added = for b1211
     @q = qw< ( [ { L R } ] ) = b >;
-    push @q, ',';
+    push @q, COMMA;
     $is_key_type{$_} = 1 for @q;
 } ## end BEGIN
 
@@ -41469,7 +41469,7 @@ sub get_available_spaces_to_go {
         my @q = qw< } ) ] >;
         $hash_test1{$_} = 1 for @q;
         @q = qw( : ? f );
-        push @q, ',';
+        push @q, COMMA;
         $hash_test2{$_} = 1 for @q;
         @q              = qw( . || && );
         $hash_test3{$_} = 1 for @q;
@@ -42439,7 +42439,7 @@ EOM
             my $available_spaces = $item->get_available_spaces();
 
             if ( $available_spaces > 0 ) {
-                push( @candidates, [ $i, $available_spaces ] );
+                push @candidates, [ $i, $available_spaces ];
             }
         }
 
@@ -45207,7 +45207,7 @@ sub xlp_tweak {
           %= ^= x= ~~ ** << /= &= // >> &. |. ^.
           **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~
         };
-        push @q, ',';
+        push @q, COMMA;
         $is_binary_type{$_} = 1 for @q;
 
         # Token keywords which prevent using leading word as a container name
@@ -45546,14 +45546,14 @@ sub xlp_tweak {
 
                 # concatenate the text of the consecutive tokens to form
                 # the field
-                push( @fields,
-                    join( EMPTY_STRING, @tokens_to_go[ $i_start .. $i - 1 ] ) );
+                push @fields,
+                  join( EMPTY_STRING, @tokens_to_go[ $i_start .. $i - 1 ] );
 
                 push @field_lengths,
                   $summed_lengths_to_go[$i] - $summed_lengths_to_go[$i_start];
 
                 # store the alignment token for this field
-                push( @tokens, $tok );
+                push @tokens, $tok;
 
                 # get ready for the next batch
                 $i_start              = $i;
@@ -45660,8 +45660,7 @@ sub xlp_tweak {
         #---------------------------------------------------------------
         # End of main loop .. join text of tokens to make the last field
         #---------------------------------------------------------------
-        push( @fields,
-            join( EMPTY_STRING, @tokens_to_go[ $i_start .. $iend ] ) );
+        push @fields, join( EMPTY_STRING, @tokens_to_go[ $i_start .. $iend ] );
         push @field_lengths,
           $summed_lengths_to_go[ $iend + 1 ] - $summed_lengths_to_go[$i_start];
 
