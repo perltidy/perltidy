@@ -663,7 +663,7 @@ sub load_pod_formatter {
         my @q  = keys %formatters;
         my %ok = map { $_ => 1 } @q;
         if ( !$ok{$use_pod_formatter} ) {
-            my $str = join ', ', @q;
+            my $str = join( ', ', @q );
             Perl::Tidy::Die(<<EOM);
 --use-pod-formatter='$use_pod_formatter' not recognized; expecting one of:
   $str
@@ -1341,7 +1341,7 @@ EOM
 
     my $first_anchor_uu =
       change_anchor_names( $rtoc, $src_basename, "$src_frame_name" );
-    $fh->print( join EMPTY_STRING, @{$rtoc} );
+    $fh->print( join( EMPTY_STRING, @{$rtoc} ) );
 
     $fh->print(<<EOM);
 </body>
@@ -1649,7 +1649,7 @@ sub markup_tokens {
 
             # but don't include sub declarations in the toc;
             # these will have leading token types 'i;'
-            my $signature = join EMPTY_STRING, @{$rtoken_type};
+            my $signature = join( EMPTY_STRING, @{$rtoken_type} );
             if ( $signature !~ /^i;/ ) {
                 my $subname = $token;
                 $subname =~ s/[\s\(].*$//; # remove any attributes and prototype
@@ -1775,7 +1775,7 @@ sub write_line {
         }
         my ($rcolored_tokens) =
           $self->markup_tokens( $rtokens, $rtoken_type, $rlevels );
-        $html_line .= join EMPTY_STRING, @{$rcolored_tokens};
+        $html_line .= join( EMPTY_STRING, @{$rcolored_tokens} );
     }
 
     # markup line of non-code..

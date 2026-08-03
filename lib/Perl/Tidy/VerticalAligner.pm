@@ -5070,7 +5070,7 @@ sub end_signed_number_column {
     if ( $signed + $unsigned != $nlines ) {
         my $line    = $rgroup_lines->[$ix_last];
         my $rfields = $line->{'rfields'};
-        my $text    = join EMPTY_STRING, @{$rfields};
+        my $text    = join( EMPTY_STRING, @{$rfields} );
         DEVEL_MODE && Fault(<<EOM);
 We seem to have miscounted lines, please check:
 signed=$signed
@@ -5905,7 +5905,7 @@ sub end_wide_equals_column {
     if ( $num != $nlines ) {
         my $line    = $rgroup_lines->[$ix_last];
         my $rfields = $line->{'rfields'};
-        my $text    = join EMPTY_STRING, @{$rfields};
+        my $text    = join( EMPTY_STRING, @{$rfields} );
         DEVEL_MODE && Fault(<<EOM);
 We seem to have miscounted lines, please check:
 nlines=$nlines

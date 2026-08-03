@@ -353,7 +353,7 @@ sub stream_slurp {
     # handle a reference
     if ($ref) {
         if ( $ref eq 'ARRAY' ) {
-            my $buf = join EMPTY_STRING, @{$filename};
+            my $buf = join( EMPTY_STRING, @{$filename} );
             $rinput_string = \$buf;
         }
         elsif ( $ref eq 'SCALAR' ) {
@@ -695,7 +695,7 @@ sub check_for_valid_words {
         $on_error = lc($on_error);
         if ( $on_error eq 'warn' || $on_error eq 'die' ) {
             my $num         = @non_words;
-            my $str         = join SPACE, @non_words;
+            my $str         = join( SPACE, @non_words );
             my $max_str_len = 120;
             if ( length($str) > $max_str_len - 1 ) {
                 $str = substr( $str, 0, $max_str_len - 4 ) . "...";
@@ -1186,8 +1186,8 @@ EOM
 
     # be sure we have a valid output format
     if ( !exists $default_file_extension{ $rOpts->{'format'} } ) {
-        my $formats = join SPACE,
-          sort map { "'" . $_ . "'" } keys %default_file_extension;
+        my $formats = join( SPACE,
+            sort map { "'" . $_ . "'" } keys %default_file_extension );
         my $fmt = $rOpts->{'format'};
         Die("-format='$fmt' but must be one of: $formats\n");
     }
@@ -2172,7 +2172,7 @@ sub get_line_separator_default {
         $line_separator_default = $endings{ lc($ole) };
 
         if ( !$line_separator_default ) {
-            my $str = join SPACE, keys %endings;
+            my $str = join( SPACE, keys %endings );
             Die(<<EOM);
 Unrecognized line ending '$ole'; expecting one of: $str
 EOM
@@ -2258,7 +2258,7 @@ sub set_line_separator {
                     if ( @lines > 1 ) {
 
                         # then make the change
-                        my $buf = join EMPTY_STRING, @lines;
+                        my $buf = join( EMPTY_STRING, @lines );
                         $rinput_string = \$buf;
                     }
                 }
@@ -2267,7 +2267,7 @@ sub set_line_separator {
             # convert CR-LF to LF
             elsif ( ( $input_line_separator eq $CRLF ) && ( "\n" eq $LF ) ) {
                 foreach my $line (@lines) { $line =~ s/$CRLF$/\n/ }
-                my $buf = join EMPTY_STRING, @lines;
+                my $buf = join( EMPTY_STRING, @lines );
                 $rinput_string = \$buf;
             }
 
@@ -2846,8 +2846,9 @@ EOM
                 if ( !defined($line_tidy_end) || $line_tidy_end > $num ) {
                     $line_tidy_end = $num;
                 }
-                my $input_string = join EMPTY_STRING,
-                  @input_lines[ $line_tidy_begin - 1 .. $line_tidy_end - 1 ];
+                my $input_string = join( EMPTY_STRING,
+                    @input_lines[ $line_tidy_begin - 1 .. $line_tidy_end - 1 ]
+                );
                 $rinput_string = \$input_string;
 
                 @input_lines_pre  = @input_lines[ 0 .. $line_tidy_begin - 2 ];
@@ -2939,8 +2940,8 @@ EOM
     # do --line-range-tidy line recombination
     #----------------------------------------
     if ( @input_lines_pre || @input_lines_post ) {
-        my $str_pre       = join EMPTY_STRING, @input_lines_pre;
-        my $str_post      = join EMPTY_STRING, @input_lines_post;
+        my $str_pre       = join( EMPTY_STRING, @input_lines_pre );
+        my $str_post      = join( EMPTY_STRING, @input_lines_post );
         my $output_string = $str_pre . ${$routput_string} . $str_post;
         $routput_string = \$output_string;
     }
@@ -2969,7 +2970,7 @@ EOM
                 $line .= $line_separator;
             }
         }
-        my $output_string = join EMPTY_STRING, @output_lines;
+        my $output_string = join( EMPTY_STRING, @output_lines );
         $routput_string = \$output_string;
     }
 
@@ -3363,7 +3364,7 @@ sub copy_buffer_to_external_ref {
 
     my $destination_buffer = EMPTY_STRING;
     if ( ref($routput) eq 'ARRAY' ) {
-        $destination_buffer = join EMPTY_STRING, @{$routput};
+        $destination_buffer = join( EMPTY_STRING, @{$routput} );
     }
     elsif ( ref($routput) eq 'SCALAR' ) {
         $destination_buffer = ${$routput};
@@ -5097,8 +5098,8 @@ sub make_grep_alias_string {
 
     # Defaults: list operators in List::Util
     # Possible future additions:  pairfirst pairgrep pairmap
-    my $default_string = join SPACE,
-      qw( all any first none notall reduce reductions );
+    my $default_string =
+      join( SPACE, qw( all any first none notall reduce reductions ) );
 
     # make a hash of any excluded words
     my %is_excluded_word;
@@ -5153,7 +5154,7 @@ sub make_grep_alias_string {
         }
     );
 
-    my $joined_words = join SPACE, @filtered_word_list;
+    my $joined_words = join( SPACE, @filtered_word_list );
     $rOpts->{$opt_name} = $joined_words;
 
     return;
@@ -5204,7 +5205,7 @@ sub cleanup_word_list {
             on_error    => 'die',
         }
     );
-    $rOpts->{$option_name} = join SPACE, @filtered_word_list;
+    $rOpts->{$option_name} = join( SPACE, @filtered_word_list );
     return \%seen;
 } ## end sub cleanup_word_list
 

@@ -1068,7 +1068,7 @@ sub new {
 
     # Be sure we have a sink_object to receive formatted lines
     if ( !defined($sink_object) ) {
-        croak("Did not receive a sink_object\n");
+        croak "Did not receive a sink_object\n";
     }
 
     # Create a FileWriter object to receive lines from the vertical aligner
@@ -7857,7 +7857,7 @@ sub make_sub_matching_pattern {
         # %matches_ASUB - with a hash lookup (new method, faster)
 
         $matches_ASUB{$_} = 1 for @words;
-        my $alias_list = join '|', keys %matches_ASUB;
+        my $alias_list = join( '|', keys %matches_ASUB );
         $SUB_PATTERN  =~ s/sub/\($alias_list\)/;
         $ASUB_PATTERN =~ s/sub/\($alias_list\)/;
     }
@@ -10906,7 +10906,7 @@ EOM
 line,id,first-key,total-count,early-count,late-count,warn?
 EOM
             foreach my $rvals (@debug_output) {
-                my $line = join ',', @{$rvals};
+                my $line = join( ',', @{$rvals} );
                 print $line, "\n";
             }
         }
@@ -15489,7 +15489,7 @@ sub initialize_warn_hash {
     return $rwarn_hash unless ($user_option_string);
 
     my %is_valid_option;
-    $is_valid_option{$_} = 1 for ( @{$rall_opts} );
+    $is_valid_option{$_} = 1 for @{$rall_opts};
 
     # allow comma separators
     $user_option_string =~ s/,/ /g;
@@ -32977,8 +32977,8 @@ EOM
                     @tokens_to_go[ $mm .. $max_index_to_go ] );
             }
             else {
-                $output_str = join EMPTY_STRING,
-                  @tokens_to_go[ 0 .. $max_index_to_go ];
+                $output_str =
+                  join( EMPTY_STRING, @tokens_to_go[ 0 .. $max_index_to_go ] );
             }
             print {*STDOUT} <<EOM;
 grind got batch number $batch_count with $max_index_to_go tokens, last type '$type' tok='$token', text:
@@ -33928,8 +33928,8 @@ sub break_method_call_chains {
     # See if these are part of a call chain
     my @insert_list;
     my %is_end_i;
-    $is_end_i{$_} = 1 for ( @{$ri_left} );
-    $is_end_i{$_} = 1 for ( @{$ri_right} );
+    $is_end_i{$_} = 1 for @{$ri_left};
+    $is_end_i{$_} = 1 for @{$ri_right};
     my $one = !$want_break_before{'->'} ? 0 : 1;
     foreach my $ii (@i_arrow_breaks) {
 
@@ -35191,11 +35191,11 @@ EOM
         if ($n_best) {
             DEBUG_RECOMBINE > 1
               && print "BEST: nb=$n_best nbeg=$nbeg stop=$nstop bs=$bs_best\n";
-            splice @{$ri_beg}, $n_best,     1;
-            splice @{$ri_end}, $n_best - 1, 1;
-            splice @{$rjoint}, $n_best,     1;
+            splice( @{$ri_beg}, $n_best,     1 );
+            splice( @{$ri_end}, $n_best - 1, 1 );
+            splice( @{$rjoint}, $n_best,     1 );
 
-            splice @{$rpair_list}, $ix_best, 1;
+            splice( @{$rpair_list}, $ix_best, 1 );
 
             # Update the line indexes in the pair list:
             # Old $n values greater than the best $n decrease by 1

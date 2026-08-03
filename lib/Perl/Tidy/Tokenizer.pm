@@ -1253,7 +1253,7 @@ EOM
     }
 
     push @output_lines, "\n";
-    my $output_str = join EMPTY_STRING, @output_lines;
+    my $output_str = join( EMPTY_STRING, @output_lines );
 
     $self->interrupt_logfile();
     $self->warning($output_str);
@@ -2372,18 +2372,18 @@ sub prepare_for_a_new_file {
 
             # Splice in any digits
             if ($len_1) {
-                splice @{$rtoken_map},  $isplice, 0, $pos_1;
-                splice @{$rtokens},     $isplice, 0, $tok_1;
-                splice @{$rtoken_type}, $isplice, 0, $pre_type_1;
+                splice( @{$rtoken_map},  $isplice, 0, $pos_1 );
+                splice( @{$rtokens},     $isplice, 0, $tok_1 );
+                splice( @{$rtoken_type}, $isplice, 0, $pre_type_1 );
                 $max_token_index++;
                 $isplice++;
             }
 
             # Splice in any trailing word
             if ($len_2) {
-                splice @{$rtoken_map},  $isplice, 0, $pos_2;
-                splice @{$rtokens},     $isplice, 0, $tok_2;
-                splice @{$rtoken_type}, $isplice, 0, $pre_type_2;
+                splice( @{$rtoken_map},  $isplice, 0, $pos_2 );
+                splice( @{$rtokens},     $isplice, 0, $tok_2 );
+                splice( @{$rtoken_type}, $isplice, 0, $pre_type_2 );
                 $max_token_index++;
             }
 
@@ -6166,9 +6166,11 @@ EOM
         }
 
         $max_token_index = scalar( @{$rtokens} ) - 1;
-        push @{$rtokens},    SPACE, SPACE, SPACE; # extra space simplifies logic
-        push @{$rtoken_map}, 0,     0,     0;     # shouldn't be referenced
-        push @{$rtoken_type}, 'b',  'b',   'b';
+
+        # add extra spaces to simplify logic - they shouldn't be referenced
+        push @{$rtokens},     ( SPACE, SPACE, SPACE );
+        push @{$rtoken_map},  ( 0,   0,   0 );
+        push @{$rtoken_type}, ( 'b', 'b', 'b' );
 
         # initialize for main loop
         if (0) { #<<< this is not necessary
@@ -6842,7 +6844,7 @@ EOM
                 }
 
                 # Make sure we didn't gain or lose any characters
-                my $test_line = join EMPTY_STRING, @output_tokens;
+                my $test_line = join( EMPTY_STRING, @output_tokens );
                 if ( $test_line ne $input_line ) {
                     my $len_input = length($input_line);
                     my $len_test  = length($test_line);

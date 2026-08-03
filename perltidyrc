@@ -60,13 +60,14 @@
 --add-interbracket-arrows
 --interbracket-arrow-style=']->{ }->{ }->[ ]->['
 
-# Use 'perltidy -dmcp filename' to find mixed call paren usage.
 # Prefer call parens for these keywords:
 --want-call-parens='open unlink substr defined ref scalar int
-uc lc sprintf if unless reverse'
+uc lc sprintf if unless reverse split join'
 
-# prefer to omit parens for these keywords:
---nowant-call-parens='push pop shift unshift'
+# Prefer to omit parens for these keywords:
+--nowant-call-parens='push pop shift unshift croak'
+
+# Note: Use 'perltidy -dmcp filename' to find mixed call paren usage.
 
 # Minimize use of nested ternary expressions. If this triggers a warning,
 # and I want to keep the ternary, I use parens to turn the warning off.
