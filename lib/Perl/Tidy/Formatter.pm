@@ -23961,7 +23961,7 @@ EOM
                 }
 
                 # For a type'<<' being converted to '<<~', the text must not
-                # also match the tag: c615
+                # also match the tag: c615, c629
                 if ( $convert_to_indented
                     && !$is_excluded_tag )
                 {
@@ -23970,9 +23970,17 @@ EOM
                         chomp $line;
                         my $line_length = length($line);
                         next if ( !$line_length );
-                        if ( $line =~ /^\s*$here_tag\s*$/ ) {
-                            $is_excluded_tag = 1;
-                            last;
+
+                        # Give up if the line matches the tag except for space
+                        my $ixl = index( $line, $here_tag );
+                        if ( $ixl >= 0 ) {
+                            my $str_l = substr( $line, 0, $ixl );
+                            my $str_r =
+                              substr( $line, $ixl + length($here_tag) );
+                            if ( $str_l =~ m/^\s*$/ && $str_r =~ m/^\s*$/ ) {
+                                $is_excluded_tag = 1;
+                                last;
+                            }
                         }
                     }
                 }
