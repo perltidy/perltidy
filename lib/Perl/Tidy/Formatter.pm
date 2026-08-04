@@ -4942,13 +4942,13 @@ sub initialize_whitespace_hashes {
     # example.
 
     # fix for c250: added space rules new package type 'P' and sub type 'S'
+    # TODO c628: consider moving attribute colon type 'A' to @spaces_left_side
     my @spaces_both_sides = qw#
       + - * / % ? = . : x < > | & ^ .. << >> ** && .. || // => += -=
       .= %= x= &= |= ^= *= <> <= >= == =~ !~ /= != ... <<= >>= ~~ !~~
       **= &&= ||= //= <=> A k f w F n C Y U G v P S ^^
       #;
 
-    #my @spaces_left_side = qw< t ! ~ m p { \ h pp mm Z j >;
     my @spaces_left_side = qw< t ! ~ m p { >;
     push @spaces_left_side, BACKSLASH;
     push @spaces_left_side, qw< h pp mm Z j >;

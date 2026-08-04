@@ -62,7 +62,7 @@
 
 # Prefer call parens for these keywords:
 --want-call-parens='open unlink substr defined ref scalar int
-uc lc sprintf if unless reverse split join'
+uc lc sprintf if unless reverse splice join'
 
 # Prefer to omit parens for these keywords:
 --nowant-call-parens='push pop shift unshift croak'
