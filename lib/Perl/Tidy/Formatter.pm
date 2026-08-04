@@ -23973,14 +23973,13 @@ EOM
 
                         # Give up if the line matches the tag except for space
                         my $ixl = index( $line, $here_tag );
-                        if ( $ixl >= 0 ) {
-                            my $str_l = substr( $line, 0, $ixl );
-                            my $str_r =
-                              substr( $line, $ixl + length($here_tag) );
-                            if ( $str_l =~ m/^\s*$/ && $str_r =~ m/^\s*$/ ) {
-                                $is_excluded_tag = 1;
-                                last;
-                            }
+                        my $ixr = $ixl + length($here_tag);
+                        if (   $ixl >= 0
+                            && substr( $line, 0, $ixl ) !~ /\S/
+                            && substr( $line, $ixr ) !~ /\S/ )
+                        {
+                            $is_excluded_tag = 1;
+                            last;
                         }
                     }
                 }
