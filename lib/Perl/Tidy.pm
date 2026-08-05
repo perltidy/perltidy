@@ -4678,12 +4678,14 @@ q(wbb=% + - * / x != == >= <= =~ !~ < > | & = **= += *= &= <<= &&= -= /= |= >>= 
         # These flags are accepted for backwards compatibility but ignored.
         'check-syntax'            => [],
         'nocheck-syntax'          => [],
+        'no-check-syntax'         => [],
         'syn'                     => [],
         'nsyn'                    => [],
         'perl-syntax-check-flags' => [],
         'pscf'                    => [],
         'fuzzy-line-length'       => [],
         'nofuzzy-line-length'     => [],
+        'no-fuzzy-line-length'    => [],
         'fll'                     => [],
         'nfll'                    => [],
     );
