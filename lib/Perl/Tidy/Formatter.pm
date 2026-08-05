@@ -16516,8 +16516,8 @@ EOM
             }
 
             # stop before a ':' to allow use of ':' as spreadsheet col separator
-            my $ii = index( $token_next, ':' );
-            if ( $ii >= 0 ) { $token_next = substr( $token_next, 0, $ii ) }
+            my $pos = index( $token_next, ':' );
+            if ( $pos >= 0 ) { $token_next = substr( $token_next, 0, $pos ) }
 
             $message .= "$lno:$token $token_next: $note\n";
         }
@@ -21483,13 +21483,13 @@ sub count_sub_input_args {
     #----------------------------------
     # Check for and process a prototype
     #----------------------------------
-    my $sub_token  = $rLL->[$K_sub]->[_TOKEN_];
-    my $iproto_beg = index( $sub_token, '(' );
-    if ( $iproto_beg > 0 ) {
-        my $iproto_end = index( $sub_token, ')', $iproto_beg );
-        if ( $iproto_end > $iproto_beg ) {
+    my $sub_token = $rLL->[$K_sub]->[_TOKEN_];
+    my $pos_beg   = index( $sub_token, '(' );
+    if ( $pos_beg > 0 ) {
+        my $pos_end = index( $sub_token, ')', $pos_beg );
+        if ( $pos_end > $pos_beg ) {
             my $prototype =
-              substr( $sub_token, $iproto_beg, $iproto_end - $iproto_beg + 1 );
+              substr( $sub_token, $pos_beg, $pos_end - $pos_beg + 1 );
             my ( $prototype_count_min, $prototype_count_max ) =
               count_prototype_args($prototype);
             $item->{prototype}           = $prototype;
@@ -23858,9 +23858,9 @@ sub check_indented_here_docs {
 
                 # Get the end tag and its leading whitespace. This is tricky
                 # because the tag itself may have leading whitespace.
-                my $i_tag = rindex( $end_text, $here_tag );
-                if ( $i_tag > 0 ) {
-                    $leading_whitespace = substr( $end_text, 0, $i_tag );
+                my $pos_tag = rindex( $end_text, $here_tag );
+                if ( $pos_tag > 0 ) {
+                    $leading_whitespace = substr( $end_text, 0, $pos_tag );
                     if ( $leading_whitespace !~ /^\s*$/ ) {
                         $leading_whitespace = EMPTY_STRING;
                     }
@@ -23972,11 +23972,11 @@ EOM
                         next if ( !$line_length );
 
                         # Give up if the line matches the tag except for space
-                        my $ixl = index( $line, $here_tag );
-                        my $ixr = $ixl + length($here_tag);
-                        if (   $ixl >= 0
-                            && substr( $line, 0, $ixl ) !~ /\S/
-                            && substr( $line, $ixr ) !~ /\S/ )
+                        my $pos_l = index( $line, $here_tag );
+                        my $pos_r = $pos_l + length($here_tag);
+                        if (   $pos_l >= 0
+                            && substr( $line, 0, $pos_l ) !~ /\S/
+                            && substr( $line, $pos_r ) !~ /\S/ )
                         {
                             $is_excluded_tag = 1;
                             last;
