@@ -2,9 +2,9 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title></title>
+<title>Perl::Tidy - Parses and beautifies perl source</title>
 <meta http-equiv="content-type" content="text/html; charset=utf-8" />
-<link rev="made" href="mailto:root@localhost" />
+<link rev="made" href="mailto:steve@inspiron-3668.(none)" />
 </head>
 
 <body>
@@ -33,24 +33,24 @@
 
 <h1 id="SYNOPSIS">SYNOPSIS</h1>
 
-<pre><code>    use Perl::Tidy;
+<pre><code>use Perl::Tidy;
 
-    my $error_flag = Perl::Tidy::perltidy(
-        source            =&gt; $source,
-        destination       =&gt; $destination,
-        stderr            =&gt; $stderr,
-        argv              =&gt; $argv,
-        perltidyrc        =&gt; $perltidyrc,
-        logfile           =&gt; $logfile,
-        errorfile         =&gt; $errorfile,
-        teefile           =&gt; $teefile,
-        debugfile         =&gt; $debugfile,
-        formatter         =&gt; $formatter,    # callback object (see below)
-        dump_options      =&gt; $dump_options,
-        dump_options_type =&gt; $dump_options_type,
-        prefilter         =&gt; $prefilter_coderef,
-        postfilter        =&gt; $postfilter_coderef,
-    );</code></pre>
+my $error_flag = Perl::Tidy::perltidy(
+    source            =&gt; $source,
+    destination       =&gt; $destination,
+    stderr            =&gt; $stderr,
+    argv              =&gt; $argv,
+    perltidyrc        =&gt; $perltidyrc,
+    logfile           =&gt; $logfile,
+    errorfile         =&gt; $errorfile,
+    teefile           =&gt; $teefile,
+    debugfile         =&gt; $debugfile,
+    formatter         =&gt; $formatter,    # callback object (see below)
+    dump_options      =&gt; $dump_options,
+    dump_options_type =&gt; $dump_options_type,
+    prefilter         =&gt; $prefilter_coderef,
+    postfilter        =&gt; $postfilter_coderef,
+);</code></pre>
 
 <h1 id="DESCRIPTION">DESCRIPTION</h1>
 
@@ -58,33 +58,33 @@
 
 <p>For example, the perltidy script is basically just this:</p>
 
-<pre><code>    use Perl::Tidy;
-    Perl::Tidy::perltidy();</code></pre>
+<pre><code>use Perl::Tidy;
+Perl::Tidy::perltidy();</code></pre>
 
 <p>The call to <b>perltidy</b> returns a scalar <b>$error_flag</b> which is TRUE if an error caused premature termination, and FALSE if the process ran to normal completion. Additional discuss of errors is contained below in the <a href="#ERROR-HANDLING">ERROR HANDLING</a> section.</p>
 
 <p>The module accepts input and output streams by a variety of methods. The following list of parameters may be any of the following: a filename, an ARRAY reference, a SCALAR reference, or an object with either a <b>getline</b> or <b>print</b> method, as appropriate.</p>
 
-<pre><code>    source            - the source of the script to be formatted
-    destination       - the destination of the formatted output
-    stderr            - standard error output
-    perltidyrc        - the .perltidyrc file
-    logfile           - the .LOG file stream, if any
-    errorfile         - the .ERR file stream, if any
-    dump_options      - ref to a hash to receive parameters (see below),
-    dump_options_type - controls contents of dump_options
-    dump_getopt_flags - ref to a hash to receive Getopt flags
-    dump_options_category - ref to a hash giving category of options
-    dump_abbreviations    - ref to a hash giving all abbreviations</code></pre>
+<pre><code>source            - the source of the script to be formatted
+destination       - the destination of the formatted output
+stderr            - standard error output
+perltidyrc        - the .perltidyrc file
+logfile           - the .LOG file stream, if any
+errorfile         - the .ERR file stream, if any
+dump_options      - ref to a hash to receive parameters (see below),
+dump_options_type - controls contents of dump_options
+dump_getopt_flags - ref to a hash to receive Getopt flags
+dump_options_category - ref to a hash giving category of options
+dump_abbreviations    - ref to a hash giving all abbreviations</code></pre>
 
 <p>The following chart illustrates the logic used to decide how to treat a parameter.</p>
 
-<pre><code>   ref($param)  $param is assumed to be:
-   -----------  ---------------------
-   undef        a filename
-   SCALAR       ref to string
-   ARRAY        ref to array
-   (other)      object with getline (if source) or print method</code></pre>
+<pre><code>ref($param)  $param is assumed to be:
+-----------  ---------------------
+undef        a filename
+SCALAR       ref to string
+ARRAY        ref to array
+(other)      object with getline (if source) or print method</code></pre>
 
 <p>If the parameter is an object, and the object has a <b>close</b> method, that close method will be called at the end of the stream.</p>
 
@@ -247,44 +247,44 @@
 
 <p>The following example uses string references to hold the input and output code and error streams, and illustrates checking for errors.</p>
 
-<pre><code>  use Perl::Tidy;
+<pre><code>use Perl::Tidy;
 
-  my $source_string = &lt;&lt;&#39;EOT&#39;;
-  my$error=Perl::Tidy::perltidy(argv=&gt;$argv,source=&gt;\$source_string,
-    destination=&gt;\$dest_string,stderr=&gt;\$stderr_string,
-  errorfile=&gt;\$errorfile_string,);
-  EOT
+my $source_string = &lt;&lt;&#39;EOT&#39;;
+my$error=Perl::Tidy::perltidy(argv=&gt;$argv,source=&gt;\$source_string,
+  destination=&gt;\$dest_string,stderr=&gt;\$stderr_string,
+errorfile=&gt;\$errorfile_string,);
+EOT
 
-  my $dest_string;
-  my $stderr_string;
-  my $errorfile_string;
-  my $argv = &quot;-npro&quot;;   # Ignore any .perltidyrc at this site
-  $argv .= &quot; -pbp&quot;;     # Format according to perl best practices
-  $argv .= &quot; -nst&quot;;     # Must turn off -st in case -pbp is specified
-  $argv .= &quot; -se&quot;;      # -se appends the errorfile to stderr
-  ## $argv .= &quot; --spell-check&quot;;  # uncomment to trigger an error
+my $dest_string;
+my $stderr_string;
+my $errorfile_string;
+my $argv = &quot;-npro&quot;;   # Ignore any .perltidyrc at this site
+$argv .= &quot; -pbp&quot;;     # Format according to perl best practices
+$argv .= &quot; -nst&quot;;     # Must turn off -st in case -pbp is specified
+$argv .= &quot; -se&quot;;      # -se appends the errorfile to stderr
+## $argv .= &quot; --spell-check&quot;;  # uncomment to trigger an error
 
-  print &quot;&lt;&lt;RAW SOURCE&gt;&gt;\n$source_string\n&quot;;
+print &quot;&lt;&lt;RAW SOURCE&gt;&gt;\n$source_string\n&quot;;
 
-  my $error = Perl::Tidy::perltidy(
-      argv        =&gt; $argv,
-      source      =&gt; \$source_string,
-      destination =&gt; \$dest_string,
-      stderr      =&gt; \$stderr_string,
-      errorfile   =&gt; \$errorfile_string,  # ignored when -se flag is set
-      ##phasers   =&gt; &#39;stun&#39;,              # uncomment to trigger an error
-  );
+my $error = Perl::Tidy::perltidy(
+    argv        =&gt; $argv,
+    source      =&gt; \$source_string,
+    destination =&gt; \$dest_string,
+    stderr      =&gt; \$stderr_string,
+    errorfile   =&gt; \$errorfile_string,  # ignored when -se flag is set
+    ##phasers   =&gt; &#39;stun&#39;,              # uncomment to trigger an error
+);
 
-  if ($error) {
+if ($error) {
 
-      # serious error in input parameters, no tidied output
-      print &quot;&lt;&lt;STDERR&gt;&gt;\n$stderr_string\n&quot;;
-      die &quot;Exiting because of serious errors\n&quot;;
-  }
+    # serious error in input parameters, no tidied output
+    print &quot;&lt;&lt;STDERR&gt;&gt;\n$stderr_string\n&quot;;
+    die &quot;Exiting because of serious errors\n&quot;;
+}
 
-  if ($dest_string)      { print &quot;&lt;&lt;TIDIED SOURCE&gt;&gt;\n$dest_string\n&quot; }
-  if ($stderr_string)    { print &quot;&lt;&lt;STDERR&gt;&gt;\n$stderr_string\n&quot; }
-  if ($errorfile_string) { print &quot;&lt;&lt;.ERR file&gt;&gt;\n$errorfile_string\n&quot; }</code></pre>
+if ($dest_string)      { print &quot;&lt;&lt;TIDIED SOURCE&gt;&gt;\n$dest_string\n&quot; }
+if ($stderr_string)    { print &quot;&lt;&lt;STDERR&gt;&gt;\n$stderr_string\n&quot; }
+if ($errorfile_string) { print &quot;&lt;&lt;.ERR file&gt;&gt;\n$errorfile_string\n&quot; }</code></pre>
 
 <p>Additional examples are given in examples section of the perltidy distribution.</p>
 
@@ -292,92 +292,92 @@
 
 <p>The <b>formatter</b> parameter is an optional callback object which allows the calling program to receive tokenized lines directly from perltidy for further specialized processing. When this parameter is used, the two formatting options which are built into perltidy (beautification or html) are ignored. The following diagram illustrates the logical flow:</p>
 
-<pre><code>                    |-- (normal route)   -&gt; code beautification
-  caller-&gt;perltidy-&gt;|-- (-html flag )    -&gt; create html
-                    |-- (formatter given)-&gt; callback to write_line</code></pre>
+<pre><code>                  |-- (normal route)   -&gt; code beautification
+caller-&gt;perltidy-&gt;|-- (-html flag )    -&gt; create html
+                  |-- (formatter given)-&gt; callback to write_line</code></pre>
 
 <p>This can be useful for processing perl scripts in some way. The parameter <code>$formatter</code> in the perltidy call,</p>
 
-<pre><code>        formatter   =&gt; $formatter,</code></pre>
+<pre><code>formatter   =&gt; $formatter,</code></pre>
 
 <p>is an object created by the caller with a <code>write_line</code> method which will accept and process tokenized lines, one line per call. Here is a simple example of a <code>write_line</code> which merely prints the line number, the line type (as determined by perltidy), and the text of the line:</p>
 
-<pre><code> sub write_line {
+<pre><code>sub write_line {
 
-     # This is called from perltidy line-by-line
-     my $self              = shift;
-     my $line_of_tokens    = shift;
-     my $line_type         = $line_of_tokens-&gt;{_line_type};
-     my $input_line_number = $line_of_tokens-&gt;{_line_number};
-     my $input_line        = $line_of_tokens-&gt;{_line_text};
-     print &quot;$input_line_number:$line_type:$input_line&quot;;
- }</code></pre>
+    # This is called from perltidy line-by-line
+    my $self              = shift;
+    my $line_of_tokens    = shift;
+    my $line_type         = $line_of_tokens-&gt;{_line_type};
+    my $input_line_number = $line_of_tokens-&gt;{_line_number};
+    my $input_line        = $line_of_tokens-&gt;{_line_text};
+    print &quot;$input_line_number:$line_type:$input_line&quot;;
+}</code></pre>
 
 <p>The complete program, <b>perllinetype</b>, is contained in the examples section of the source distribution. As this example shows, the callback method receives a parameter <b>$line_of_tokens</b>, which is a reference to a hash of other useful information. This example uses these hash entries:</p>
 
-<pre><code> $line_of_tokens-&gt;{_line_number} - the line number (1,2,...)
- $line_of_tokens-&gt;{_line_text}   - the text of the line
- $line_of_tokens-&gt;{_line_type}   - the type of the line, one of:
+<pre><code>$line_of_tokens-&gt;{_line_number} - the line number (1,2,...)
+$line_of_tokens-&gt;{_line_text}   - the text of the line
+$line_of_tokens-&gt;{_line_type}   - the type of the line, one of:
 
-    SYSTEM         - system-specific code before hash-bang line
-    CODE           - line of perl code (including comments)
-    POD_START      - line starting pod, such as &#39;=head&#39;
-    POD            - pod documentation text
-    POD_END        - last line of pod section, &#39;=cut&#39;
-    HERE           - text of here-document
-    HERE_END       - last line of here-doc (target word)
-    FORMAT         - format section
-    FORMAT_END     - last line of format section, &#39;.&#39;
-    DATA_START     - __DATA__ line
-    DATA           - unidentified text following __DATA__
-    END_START      - __END__ line
-    END            - unidentified text following __END__
-    ERROR          - we are in big trouble, probably not a perl script</code></pre>
+   SYSTEM         - system-specific code before hash-bang line
+   CODE           - line of perl code (including comments)
+   POD_START      - line starting pod, such as &#39;=head&#39;
+   POD            - pod documentation text
+   POD_END        - last line of pod section, &#39;=cut&#39;
+   HERE           - text of here-document
+   HERE_END       - last line of here-doc (target word)
+   FORMAT         - format section
+   FORMAT_END     - last line of format section, &#39;.&#39;
+   DATA_START     - __DATA__ line
+   DATA           - unidentified text following __DATA__
+   END_START      - __END__ line
+   END            - unidentified text following __END__
+   ERROR          - we are in big trouble, probably not a perl script</code></pre>
 
 <p>Most applications will be only interested in lines of type <b>CODE</b>. For another example, let&#39;s write a program which checks for one of the so-called <i>naughty matching variables</i> <code>&amp;`</code>, <code>$&amp;</code>, and <code>$&#39;</code>, which can slow down processing. Here is a <b>write_line</b>, from the example program <b>find_naughty.pl</b>, which does that:</p>
 
-<pre><code> sub write_line {
+<pre><code>sub write_line {
 
-     # This is called back from perltidy line-by-line
-     # We&#39;re looking for $`, $&amp;, and $&#39;
-     my ( $self, $line_of_tokens ) = @_;
+    # This is called back from perltidy line-by-line
+    # We&#39;re looking for $`, $&amp;, and $&#39;
+    my ( $self, $line_of_tokens ) = @_;
 
-     # pull out some stuff we might need
-     my $line_type         = $line_of_tokens-&gt;{_line_type};
-     my $input_line_number = $line_of_tokens-&gt;{_line_number};
-     my $input_line        = $line_of_tokens-&gt;{_line_text};
-     my $rtoken_type       = $line_of_tokens-&gt;{_rtoken_type};
-     my $rtokens           = $line_of_tokens-&gt;{_rtokens};
-     chomp $input_line;
+    # pull out some stuff we might need
+    my $line_type         = $line_of_tokens-&gt;{_line_type};
+    my $input_line_number = $line_of_tokens-&gt;{_line_number};
+    my $input_line        = $line_of_tokens-&gt;{_line_text};
+    my $rtoken_type       = $line_of_tokens-&gt;{_rtoken_type};
+    my $rtokens           = $line_of_tokens-&gt;{_rtokens};
+    chomp $input_line;
 
-     # skip comments, pod, etc
-     return if ( $line_type ne &#39;CODE&#39; );
+    # skip comments, pod, etc
+    return if ( $line_type ne &#39;CODE&#39; );
 
-     # loop over tokens looking for $`, $&amp;, and $&#39;
-     for ( my $j = 0 ; $j &lt; @$rtoken_type ; $j++ ) {
+    # loop over tokens looking for $`, $&amp;, and $&#39;
+    for ( my $j = 0 ; $j &lt; @$rtoken_type ; $j++ ) {
 
-         # we only want to examine token types &#39;i&#39; (identifier)
-         next unless $$rtoken_type[$j] eq &#39;i&#39;;
+        # we only want to examine token types &#39;i&#39; (identifier)
+        next unless $$rtoken_type[$j] eq &#39;i&#39;;
 
-         # pull out the actual token text
-         my $token = $$rtokens[$j];
+        # pull out the actual token text
+        my $token = $$rtokens[$j];
 
-         # and check it
-         if ( $token =~ /^\$[\`\&amp;\&#39;]$/ ) {
-             print STDERR
-               &quot;$input_line_number: $token\n&quot;;
-         }
-     }
- }</code></pre>
+        # and check it
+        if ( $token =~ /^\$[\`\&amp;\&#39;]$/ ) {
+            print STDERR
+              &quot;$input_line_number: $token\n&quot;;
+        }
+    }
+}</code></pre>
 
 <p>This example pulls out these tokenization variables from the $line_of_tokens hash reference:</p>
 
-<pre><code>     $rtoken_type = $line_of_tokens-&gt;{_rtoken_type};
-     $rtokens     = $line_of_tokens-&gt;{_rtokens};</code></pre>
+<pre><code>$rtoken_type = $line_of_tokens-&gt;{_rtoken_type};
+$rtokens     = $line_of_tokens-&gt;{_rtokens};</code></pre>
 
 <p>The variable <code>$rtoken_type</code> is a reference to an array of token type codes, and <code>$rtokens</code> is a reference to a corresponding array of token text. These are obviously only defined for lines of type <b>CODE</b>. Perltidy classifies tokens into types, and has a brief code for each type. You can get a complete list at any time by running perltidy from the command line with</p>
 
-<pre><code>     perltidy --dump-token-types</code></pre>
+<pre><code>perltidy --dump-token-types</code></pre>
 
 <p>In the present example, we are only looking for tokens of type <b>i</b> (identifiers), so the for loop skips past all other types. When an identifier is found, its actual text is checked to see if it is one being sought. If so, the above write_line prints the token and its line number.</p>
 
@@ -385,13 +385,13 @@
 
 <p>For help with perltidy&#39;s peculiar way of breaking lines into tokens, you might run, from the command line,</p>
 
-<pre><code> perltidy -D filename</code></pre>
+<pre><code>perltidy -D filename</code></pre>
 
 <p>where <i>filename</i> is a short script of interest. This will produce <i>filename.DEBUG</i> with interleaved lines of text and their token types. The <b>-D</b> flag has been in perltidy from the beginning for this purpose. If you want to see the code which creates this file, it is <code>sub Perl::Tidy::Debugger::write_debug_entry</code></p>
 
 <h1 id="EXPORT">EXPORT</h1>
 
-<pre><code>  &amp;perltidy</code></pre>
+<pre><code>&amp;perltidy</code></pre>
 
 <h1 id="INSTALLATION">INSTALLATION</h1>
 
@@ -399,7 +399,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents Perl::Tidy version 20260705</p>
+<p>This man page documents Perl::Tidy version 20260808</p>
 
 <h1 id="LICENSE">LICENSE</h1>
 

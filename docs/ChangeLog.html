@@ -1,5 +1,29 @@
 <h1>Perltidy Change Log</h1>
 
+<h2>2026 08 08</h2>
+
+<ul>
+<li><p>Fixed git #211, an unusual instability with the following eval block:</p>
+
+<p>eval { @$list = map( { [ qr($<em>), $</em>, 0 ]; } @$list ); };</p>
+
+<p>A workaround was removing the parens around the map call parameters;
+ this version has a permanent fix.</p></li>
+<li><p>Some very rare instabilities with the -xlp style have been identified
+ and fixed.  This could cause a shift in the indentation some lists
+ formatted with -xlp.</p></li>
+<li><p>Added checks when converting here-doc types '&lt;&lt;' to '&lt;&lt;~' using
+ the parameter --heredoc-convert-to='indented':</p>
+
+<p>(1) Zero-length tags are skipped and
+ (2) the conversion is skipped if any here-text lines match the new tag.</p></li>
+<li><p>Added more syntax checks to help catch missing semicolons.</p></li>
+<li><p>The parameters --want-call-parens and --nowant-call-parens now have
+ the ability to restrict warnings to lists with or without multiple
+ comma-separated items. This can be done by placing a plus sign after
+ a function name in their parameter lists. The manual has details.</p></li>
+</ul>
+
 <h2>2026 07 05</h2>
 
 <pre><code>- Added new controls to adjust indented here-docs (see git #210).

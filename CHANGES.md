@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2026 07 05.01
+## 2026 08 08
 
    - Fixed git #211, an unusual instability with the following eval block:
 
@@ -13,15 +13,17 @@
      and fixed.  This could cause a shift in the indentation some lists
      formatted with -xlp.
 
-   - Added checks when converting type '<<' here-docs to '<<~':
-     (1) Zero-length tags are skipped and (2) the conversion
-     is skipped if any lines of the here-text would match the new tag.
+   - Added checks when converting here-doc types '<<' to '<<~' using
+     the parameter --heredoc-convert-to='indented':
+
+     (1) Zero-length tags are skipped and
+     (2) the conversion is skipped if any here-text lines match the new tag.
 
    - Added more syntax checks to help catch missing semicolons.
 
    - The parameters --want-call-parens and --nowant-call-parens now have
      the ability to restrict warnings to lists with or without multiple
-     comma-separated items. This is done by placing a plus sign after
+     comma-separated items. This can be done by placing a plus sign after
      a function name in their parameter lists. The manual has details.
 
 ## 2026 07 05
