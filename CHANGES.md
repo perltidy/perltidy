@@ -19,6 +19,11 @@
 
    - Added more syntax checks to help catch missing semicolons.
 
+   - The parameters --want-call-parens and --nowant-call-parens now have
+     the ability to restrict warnings to lists with or without multiple
+     comma-separated items. This is done by placing a plus sign after
+     a function name in their parameter lists. The manual has details.
+
 ## 2026 07 05
 
     - Added new controls to adjust indented here-docs (see git #210).
