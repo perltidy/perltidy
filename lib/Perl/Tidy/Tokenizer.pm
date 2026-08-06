@@ -6168,9 +6168,9 @@ EOM
         $max_token_index = scalar( @{$rtokens} ) - 1;
 
         # add extra spaces to simplify logic - they shouldn't be referenced
-        push @{$rtokens},     ( SPACE, SPACE, SPACE );
-        push @{$rtoken_map},  ( 0,   0,   0 );
-        push @{$rtoken_type}, ( 'b', 'b', 'b' );
+        push @{$rtokens}, ( SPACE, SPACE, SPACE );
+        push @{$rtoken_map},  qw( 0 0 0 );
+        push @{$rtoken_type}, qw( b b b );
 
         # initialize for main loop
         if (0) { #<<< this is not necessary
