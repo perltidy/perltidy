@@ -62,10 +62,10 @@
 
 # Prefer call parens for these keywords:
 --want-call-parens='open unlink substr defined ref scalar int
-uc lc sprintf if unless reverse splice join'
+uc lc sprintf if unless reverse splice join for return+'
 
 # Prefer to omit parens for these keywords:
---nowant-call-parens='push pop shift unshift croak'
+--nowant-call-parens='push pop shift unshift croak for'
 
 # Note: Use 'perltidy -dmcp filename' to find mixed call paren usage.
 

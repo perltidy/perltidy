@@ -16400,9 +16400,9 @@ sub initialize_call_paren_style {
     # parse --want-call-parens=s and --nowant-call-parens=s
     # and store results in this global hash:
     %call_paren_style = ();
-    my $iter = -1;
+    my $want_paren = -1;
     foreach my $opt_name ( 'nowant-call-parens', 'want-call-parens' ) {
-        $iter++;
+        $want_paren++;
         my $opt = $rOpts->{$opt_name};
         next unless ( defined($opt) );
 
@@ -16411,15 +16411,50 @@ sub initialize_call_paren_style {
         if ( my @q = split_words($opt) ) {
             foreach my $word (@q) {
 
-                # words must be simple identifiers, or '&'
+                #  Set style flag for input combinations:
+                #   = 0: -nwcp  => never parens
+                #   = 1: -wcp   => always parens
+                #   = 2: -wcp+  => parens on >1 items
+                #   = 3: -nwcp+ => no parens if <=1 list item
+                #   = 4: -wcp -nwcp  => parens on >1 items, no parens if <= 1
+                #    (option 4 also applies if either has an ending + sign)
+                my $want_style = $want_paren;
+                my $has_sign;
+
+                # pass 1: -nwcp
+                if ( !$want_paren ) {
+
+                    # a trailing '+' means do not want parens on <=1 item
+                    if ( substr( $word, -1, 1 ) eq '+' ) {
+                        $word     = substr( $word, 0, -1 );
+                        $has_sign = 1;
+                    }
+                    $want_style = $has_sign ? 3 : 0;
+                }
+
+                # pass 2: -wcp
+                else {
+
+                    # a trailing '+' means want parens on >1 terms
+                    if ( substr( $word, -1, 1 ) eq '+' ) {
+                        $word     = substr( $word, 0, -1 );
+                        $has_sign = 1;
+                    }
+
+                    # The final style flag depends on any -nwcp parameter
+                    $want_style =
+                        defined( $call_paren_style{$word} ) ? 4
+                      : $has_sign                           ? 2
+                      :                                       1;
+                }
+
+                # Words must be simple identifiers, or '&'
                 if ( $word !~ /^(?:\&|\w+)$/ || $word =~ /^\d/ ) {
                     Die("Unexpected word in --$opt_name: '$word'\n");
                 }
-                if ( $iter && defined( $call_paren_style{$word} ) ) {
-                    Warn("'$word' occurs in both -nwcp and -wcp, using -wcp\n");
-                }
+
+                $call_paren_style{$word} = $want_style;
             }
-            $call_paren_style{$_} = $iter for @q;
         }
     }
     return;
@@ -16440,12 +16475,119 @@ sub scan_call_parens {
     return unless (%call_paren_style);
     my $opt_name = 'want-call-parens';
 
+    my $rLL                 = $self->[_rLL_];
+    my $K_closing_container = $self->[_K_closing_container_];
+    my $ris_list_by_seqno   = $self->[_ris_list_by_seqno_];
+    my $rhas_list           = $self->[_rhas_list_];
+    my $rline_diff_by_seqno = $self->[_rline_diff_by_seqno_];
+
+    my $is_single_term_list = sub {
+        my ($Ko) = @_;
+
+        # Given:
+        #   $Ko = the index of a '('
+        # Return
+        #   true if this containers a single simple term
+        #   false otherwise
+        my $seqno = $rLL->[$Ko]->[_TYPE_SEQUENCE_];
+        return
+          if (!$seqno
+            || $ris_list_by_seqno->{$seqno}
+            || $rhas_list->{$seqno}
+            || $rline_diff_by_seqno->{$seqno} );
+        my $Kc = $K_closing_container->{$seqno};
+        return if ( !$Kc );
+
+        # We are only looking for short terms
+        return if ( $Kc - $Ko >= 10 );
+
+        # Give up at a binary operator or keyword
+        foreach my $KK ( $Ko + 1 .. $Kc - 1 ) {
+            my $type = $rLL->[$KK]->[_TYPE_];
+            return if ( $type eq 'k' );
+            my $token = $rLL->[$KK]->[_TOKEN_];
+            return if ( $is_binary_operator_token{$token} );
+        }
+
+        # Look for some kind of statement termination
+        my $Kn = $self->K_next_code($Kc);
+        return if ( !$Kn );
+        my $type = $rLL->[$Kn]->[_TYPE_];
+        if ( $type eq ';' || $type eq '}' ) { return 1 }
+        if ( $type eq ',' )                 { return 1 }
+
+        if ( $type eq 'k' ) {
+            my $token = $rLL->[$Kn]->[_TOKEN_];
+            if ( $token eq 'if' || $token eq 'unless' ) { return 1 }
+        }
+        return;
+    }; ## end $is_single_term_list = sub
+
+    my $is_uncontained_list = sub {
+        my ($KK_start) = @_;
+
+        # Return true if the token at $KK_start is the first of multiple items
+        # in a paren-less list. For example:
+        #   return $x,$y;
+        # Return false if uncertain or complex, to avoid needless warnings
+
+        my $KK          = $KK_start;
+        my $level_start = $rLL->[$KK]->[_LEVEL_];
+
+        my $type_start = $rLL->[$KK]->[_TYPE_];
+        return if ( $type_start eq ';' );
+        return if ( $is_closing_type{$type_start} );
+        return if ( $is_opening_type{$type_start} );
+
+        # Return false for things like "return bless ...";
+        if ( $type_start eq 'k' ) {
+            my $token = $rLL->[$KK]->[_TOKEN_];
+            if ( !$is_my_state_our{$token} ) {
+                return;
+            }
+        }
+
+        # Limit search range since this is not critical
+        my $Klimit  = @{$rLL} - 1;
+        my $KK_stop = min( $KK + 10, $Klimit );
+        while ( ++$KK <= $KK_stop ) {
+
+            my $type = $rLL->[$KK]->[_TYPE_];
+            next if ( $type eq 'b' );
+
+            # Mark this as having multiple terms if we reach a comma
+            if ( $type eq ',' ) { return 1 }
+
+            last if ( $type eq '#' );
+            last if ( $type eq ';' );
+            last if ( $is_closing_type{$type} );
+
+            if ( $type eq 'k' ) {
+                my $token = $rLL->[$KK]->[_TOKEN_];
+                last if ( $is_if_unless_while_until_for_foreach{$token} );
+            }
+
+            # Skip past lower level containers
+            if ( $is_opening_type{$type} ) {
+                my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+                my $Kc    = $seqno ? $K_closing_container->{$seqno} : undef;
+                last if ( !$Kc );
+                $KK = $Kc;
+                next;
+            }
+
+            # Backup check, shouldn't be needed since we hop over containers
+            my $level = $rLL->[$KK]->[_LEVEL_];
+            if ( $level != $level_start ) { last }
+        } ## end while ( ++$KK <= $KK_stop)
+        return;
+    }; ## end $is_uncontained_list = sub
+
     my $rwarnings = [];
 
     #---------------------
     # Loop over all tokens
     #---------------------
-    my $rLL = $self->[_rLL_];
     foreach my $KK ( 0 .. @{$rLL} - 1 ) {
 
         # Types which will be checked:
@@ -16455,26 +16597,56 @@ sub scan_call_parens {
         # Are we looking for this word?
         my $type       = $rLL->[$KK]->[_TYPE_];
         my $token      = $rLL->[$KK]->[_TOKEN_];
-        my $want_paren = $call_paren_style{$token};
+        my $want_style = $call_paren_style{$token};
 
         # Only user-defined subs (type 'U') have defaults.
-        if ( !defined($want_paren) ) {
-            $want_paren =
+        if ( !defined($want_style) ) {
+            $want_style =
                 $type eq 'k' ? undef
               : $type eq 'U' ? $call_paren_style{'&'}
               :                undef;
         }
-        next unless ( defined($want_paren) );
+        next unless ( defined($want_style) );
 
         # This is a selected word. Look for a '(' at the next token.
         my $Kn = $self->K_next_code($KK);
         next unless ( defined($Kn) );
 
+        my $note     = EMPTY_STRING;
         my $token_Kn = $rLL->[$Kn]->[_TOKEN_];
-        if    ( $token_Kn eq '=>' ) { next }
-        elsif ( $token_Kn eq '->' ) { next }
-        elsif ( $token_Kn eq '(' )  { next if ($want_paren) }
-        else                        { next if ( !$want_paren ) }
+        next if ( $token_Kn eq '=>' );
+        next if ( $token_Kn eq '->' );
+
+        # If paren after keyword...
+        if ( $token_Kn eq '(' ) {
+
+            # 0   =>never parens
+            # 3,4 =>no parens if <=1 item
+            if ( $want_style == 0 ) {
+                $note = "has call parens";
+            }
+            elsif ( $want_style == 3 || $want_style == 4 ) {
+                next if ( !$is_single_term_list->($Kn) );
+                $note = "has call parens around single term";
+            }
+            else { next }
+        }
+
+        # If no paren after keyword...
+        else {
+            # 1  =>always parens
+            # 2,4=>parens if >1 items
+            if ( $want_style == 1 ) {
+                $note = "no call parens";
+            }
+            elsif ( $want_style == 2 || $want_style == 4 ) {
+
+                # warn if multiple items
+                next if ( !$is_uncontained_list->($Kn) );
+                $note = "no call parens but multiple items";
+            }
+            else { next }
+        }
 
         # return if this is the block form of 'if', 'unless', ..
         if (   $token_Kn eq '('
@@ -16485,13 +16657,12 @@ sub scan_call_parens {
         }
 
         # This disagrees with the wanted style; issue a warning.
-        my $note     = $want_paren ? "no call parens" : "has call parens";
         my $rwarning = {
             token       => $token,
             token_next  => $token_Kn,
             note        => $note,
             line_number => $rLL->[$KK]->[_LINE_INDEX_] + 1,
-##          want        => $want_paren,
+##          want        => $want_style,
 ##          KK          => $KK,
 ##          Kn          => $Kn,
         };
