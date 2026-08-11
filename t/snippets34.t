@@ -3,6 +3,8 @@
 # Contents:
 #1 c622.c622
 #2 c622.def
+#3 hxs.def
+#4 hxs.hxs1
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -22,6 +24,11 @@ BEGIN {
     $rparams = {
         'c622' => "-dws -naws",
         'def'  => "",
+        'hxs1' => <<'----------',
+-hct=indented
+-hiu
+-hxs=4
+----------
     };
 
     ############################
@@ -35,6 +42,22 @@ my $ONE = 1;
 use constant two => 2;
 print $ONE << two, "\n";
 print "OK\n";
+----------
+
+        'hxs' => <<'----------',
+sub demo {
+    my $inside_block = <<'BLOCK';
+one
+two
+BLOCK
+}
+
+my @outside_block = (
+    <<'LIST',
+alpha
+beta
+LIST
+);
 ----------
     };
 
@@ -65,6 +88,46 @@ use constant two => 2;
 print $ONE << two, "\n";
 print "OK\n";
 #2...........
+        },
+
+        'hxs.def' => {
+            source => "hxs",
+            params => "def",
+            expect => <<'#3...........',
+sub demo {
+    my $inside_block = <<'BLOCK';
+one
+two
+BLOCK
+}
+
+my @outside_block = (
+    <<'LIST',
+alpha
+beta
+LIST
+);
+#3...........
+        },
+
+        'hxs.hxs1' => {
+            source => "hxs",
+            params => "hxs1",
+            expect => <<'#4...........',
+sub demo {
+    my $inside_block = <<~'BLOCK';
+        one
+        two
+        BLOCK
+}
+
+my @outside_block = (
+    <<~'LIST',
+        alpha
+        beta
+        LIST
+);
+#4...........
         },
     };
 
