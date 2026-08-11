@@ -3285,9 +3285,9 @@ sub initialize_here_doc_control_hash {
         $hxs_str =~ s/\s+//g;
         my ( $n1, $n2 ) = ( 0, 0 );
         if ( $hxs_str =~ /^(\d+)?(;?)(\d+)?$/ ) {
-            $n1                                        = $1;
-            $n2                                        = defined($2) ? $3 : $n1;
-            $here_doc_control_hash{extra_spaces_block} = $n1;
+            $n1                                            = $1;
+            $n2                                            = $2 ? $3 : $n1;
+            $here_doc_control_hash{extra_spaces_block}     = $n1;
             $here_doc_control_hash{extra_spaces_non_block} = $n2;
         }
         else {
