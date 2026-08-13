@@ -590,9 +590,6 @@ BEGIN {
         _rLL_                       => $i++,
         _Klimit_                    => $i++,
         _rdepth_of_opening_seqno_   => $i++,
-        _rSS_                       => $i++,
-        _rI_opening_                => $i++,
-        _rI_closing_                => $i++,
         _rK_next_seqno_by_K_        => $i++,
         _rblock_type_of_seqno_      => $i++,
         _ris_asub_block_            => $i++,
@@ -1172,14 +1169,6 @@ sub initialize_self_vars {
     # A list of index K of sequenced tokens to allow loops over them all
     $self->[_rK_sequenced_token_list_] = [];
 
-    # 'rSS' is the 'Signed Sequence' list, a continuous list of all sequence
-    # numbers with + or - indicating opening or closing. This list represents
-    # the entire container tree and is invariant under reformatting.  It can be
-    # used to quickly travel through the tree.  Indexes in the rSS array begin
-    # with '$I' by convention.
-    $self->[_rSS_]                = [];
-    $self->[_rI_opening_]         = [];
-    $self->[_rI_closing_]         = [];
     $self->[_rK_next_seqno_by_K_] = [];
 
     # Arrays to help traverse the tree
@@ -8292,8 +8281,6 @@ EOM
     # Local variables for improved efficiency
     my $K_opening_container;
     my $K_closing_container;
-    my $rI_opening;
-    my $rI_closing;
 
     sub initialize_closure_write_line {
 
@@ -8315,8 +8302,6 @@ EOM
 
         $K_opening_container = $self->[_K_opening_container_];
         $K_closing_container = $self->[_K_closing_container_];
-        $rI_opening          = $self->[_rI_opening_];
-        $rI_closing          = $self->[_rI_closing_];
 
         return;
     } ## end sub initialize_closure_write_line
@@ -8589,7 +8574,6 @@ EOM
         # deleted, it should not matter because it does not get displayed.
 
         my $rLL                     = $self->[_rLL_];
-        my $rSS                     = $self->[_rSS_];
         my $rdepth_of_opening_seqno = $self->[_rdepth_of_opening_seqno_];
 
         # Does this qw text spill over onto another line?
@@ -8702,14 +8686,12 @@ EOM
             # update relevant seqno hashes
             $rdepth_of_opening_seqno->[$seqno] = $nesting_depth;
             $nesting_depth++;
-            $rI_opening->[$seqno] = @{$rSS};
 
             if ( $level_words > $self->[_maximum_level_] ) {
                 my $input_line_no = $line_of_tokens->{_line_number};
                 $self->[_maximum_level_]         = $level_words;
                 $self->[_maximum_level_at_line_] = $input_line_no;
             }
-            push @{$rSS}, $seqno;
 
             # make and push the 'qw' token
             my $rtoken_qw = copy_token_as_type( $rtoken_q, 'U', 'qw' );
@@ -8805,9 +8787,7 @@ EOM
 
             my $seqno = $in_qw_seqno;
             $K_closing_container->{$seqno} = @{$rLL};
-            $nesting_depth                 = $rdepth_of_opening_seqno->[$seqno];
-            $rI_closing->[$seqno]          = @{$rSS};
-            push @{$rSS}, -1 * $seqno;
+            $nesting_depth = $rdepth_of_opening_seqno->[$seqno];
 
             # make the ')'
             my $rtoken_closing = copy_token_as_type( $rtoken_q, '}', ')' );
@@ -8869,7 +8849,6 @@ EOM
         }
 
         my $rLL                     = $self->[_rLL_];
-        my $rSS                     = $self->[_rSS_];
         my $rdepth_of_opening_seqno = $self->[_rdepth_of_opening_seqno_];
 
         DEVEL_MODE
@@ -9032,7 +9011,6 @@ EOM
                 }
 
                 if ( $sign > 0 ) {
-                    $rI_opening->[$seqno] = @{$rSS};
 
                     # For efficiency, we find the maximum level of
                     # opening tokens of any type.  The actual maximum
@@ -9045,10 +9023,6 @@ EOM
                         $self->[_maximum_level_at_line_] = $line_number;
                     }
                 }
-                else {
-                    $rI_closing->[$seqno] = @{$rSS};
-                }
-                push @{$rSS}, $sign * $seqno;
                 $tokary[_TYPE_SEQUENCE_] = $seqno;
             }
             else {
@@ -9367,66 +9341,58 @@ sub find_level_info {
     # Returns:
     #   ref to hash with block info, with seqno as key (see below)
 
-    # The array _rSS_ has the complete container tree for this file.
-    my $rSS = $self->[_rSS_];
-
-    # We will be ignoring everything except code block containers
     my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
+    my $K_opening_container  = $self->[_K_opening_container_];
+    my $K_closing_container  = $self->[_K_closing_container_];
 
     my @stack;
     my %level_info;
 
-    # TREE_LOOP:
-    foreach my $sseq ( @{$rSS} ) {
+    # Loop over blocks in increasing sequence numbers
+    foreach my $seq_next ( sort { $a <=> $b } keys %{$rblock_type_of_seqno} ) {
+        my $K_opening = $K_opening_container->{$seq_next};
+        my $K_closing = $K_closing_container->{$seq_next};
+
+        # Pop closed blocks off of the stack
+        while (@stack) {
+            my $seq = $stack[-1];
+            last if ( $level_info{$seq}->{K_closing} > $K_opening );
+            pop @stack;
+        }
+
+        # Update info of blocks which contain this new block
         my $stack_depth = @stack;
-        my $seq_next    = $sseq > 0 ? $sseq : -$sseq;
-
-        next if ( !$rblock_type_of_seqno->{$seq_next} );
-        if ( $sseq > 0 ) {
-
-            # STACK_LOOP:
-            my $item;
-            foreach my $seq (@stack) {
-                $item = $level_info{$seq};
-                if ( $item->{maximum_depth} < $stack_depth ) {
-                    $item->{maximum_depth} = $stack_depth;
-                }
-                $item->{block_count}++;
-            } ## end STACK LOOP
-
-            push @stack, $seq_next;
-            my $block_type = $rblock_type_of_seqno->{$seq_next};
-
-            # If this block is a loop nested within a loop, then we
-            # will mark it as an 'inner_loop'. This is a useful
-            # complexity measure.
-            my $is_inner_loop = 0;
-            if ( $is_loop_type{$block_type} && defined($item) ) {
-                $is_inner_loop = $is_loop_type{ $item->{block_type} };
+        my $item;
+        foreach my $seq (@stack) {
+            $item = $level_info{$seq};
+            if ( $item->{maximum_depth} < $stack_depth ) {
+                $item->{maximum_depth} = $stack_depth;
             }
-
-            $level_info{$seq_next} = {
-                starting_depth => $stack_depth,
-                maximum_depth  => $stack_depth,
-                block_count    => 1,
-                block_type     => $block_type,
-                is_inner_loop  => $is_inner_loop,
-            };
+            $item->{block_count}++;
         }
-        else {
-            my $seq_test = pop @stack;
 
-            # error check
-            if ( $seq_test != $seq_next ) {
+        # Save info for this block
+        push @stack, $seq_next;
+        my $block_type = $rblock_type_of_seqno->{$seq_next};
 
-                # Shouldn't happen - the $rSS array must have an error
-                DEVEL_MODE && Fault("stack error finding total depths\n");
-
-                %level_info = ();
-                last;
-            }
+        # If this block is a loop nested within a loop, then we
+        # will mark it as an 'inner_loop'. This is a useful
+        # complexity measure.
+        my $is_inner_loop = 0;
+        if ( $is_loop_type{$block_type} && defined($item) ) {
+            $is_inner_loop = $is_loop_type{ $item->{block_type} };
         }
-    } ## end TREE_LOOP
+
+        $level_info{$seq_next} = {
+            starting_depth => $stack_depth,
+            maximum_depth  => $stack_depth,
+            block_count    => 1,
+            block_type     => $block_type,
+            is_inner_loop  => $is_inner_loop,
+            K_opening      => $K_opening,
+            K_closing      => $K_closing,
+        };
+    }
 
     return \%level_info;
 } ## end sub find_level_info
@@ -18459,23 +18425,6 @@ sub respace_post_loop_ops {
 
     $self->[_rK_next_seqno_by_K_]      = \@K_next_seqno_by_K;
     $self->[_rK_sequenced_token_list_] = \@K_sequenced_token_list;
-
-    # Verify that arrays @K_sequenced_token_list and @{$rSS} are parallel
-    # arrays, meaning that they have a common array index 'I'. This index maybe
-    # be found by seqno with rI_container and rI_closing.
-    if (DEVEL_MODE) {
-        my $num_rSS  = @{ $self->[_rSS_] };
-        my $num_Kseq = @K_sequenced_token_list;
-
-        # If this error occurs, we have gained or lost one or more of the
-        # sequenced tokens received from the tokenizer. This should never
-        # happen.
-        if ( $num_rSS != $num_Kseq ) {
-            Fault(<<EOM);
-num_rSS= $num_rSS != num_Kseq=$num_Kseq
-EOM
-        }
-    }
 
     # Find and remember lists by sequence number
     foreach my $seqno ( keys %{$K_opening_container} ) {
