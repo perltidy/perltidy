@@ -4998,9 +4998,21 @@ additional leading whitespace.
 
 =item *
 
-Indented here documents which do not have the same leading whitespace on each
-line of text as on the ending delimiter will produce an error message and will
-not be processed by these parameters.
+Indented here documents for which the leading whitespace of the ending
+delimiter is not contained in the leading whitespace of each line of text
+will produce an error message and will not be processed by these
+parameters.
+
+=item *
+
+When converting from standard to indented here documents, perltidy will
+check for potential problems and skip the conversion if necessary. For
+example, the following here-doc would cause a syntax error if converted
+to the indented form:
+
+   print <<EOM;
+      EOM
+   EOM
 
 =back
 
