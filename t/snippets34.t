@@ -5,6 +5,8 @@
 #2 c622.def
 #3 hxs.def
 #4 hxs.hxs1
+#5 c636.c636
+#6 c636.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -23,6 +25,11 @@ BEGIN {
     ###########################################
     $rparams = {
         'c622' => "-dws -naws",
+        'c636' => <<'----------',
+-hct=indented
+-hiu
+-hxs=4
+----------
         'def'  => "",
         'hxs1' => <<'----------',
 -hct=indented
@@ -42,6 +49,16 @@ my $ONE = 1;
 use constant two => 2;
 print $ONE << two, "\n";
 print "OK\n";
+----------
+
+        'c636' => <<'----------',
+# test backslash removal
+print <<"print \"[BYE!]\n\n\";";
+name
+rank
+serial number
+
+print "[BYE!]\n\n";
 ----------
 
         'hxs' => <<'----------',
@@ -128,6 +145,34 @@ my @outside_block = (
         LIST
 );
 #4...........
+        },
+
+        'c636.c636' => {
+            source => "c636",
+            params => "c636",
+            expect => <<'#5...........',
+# test backslash removal
+print <<~"print \"[BYE!]\n\n\";";
+    name
+    rank
+    serial number
+
+    print "[BYE!]\n\n";
+#5...........
+        },
+
+        'c636.def' => {
+            source => "c636",
+            params => "def",
+            expect => <<'#6...........',
+# test backslash removal
+print <<"print \"[BYE!]\n\n\";";
+name
+rank
+serial number
+
+print "[BYE!]\n\n";
+#6...........
         },
     };
 

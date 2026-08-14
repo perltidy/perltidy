@@ -23865,6 +23865,14 @@ sub check_indented_here_docs {
         return $extra_spaces;
     }; ## end $get_heredoc_extra_spaces = sub
 
+    my $un_escape_quotes = sub {
+        my ( $here_tag, $quote_char ) = @_;
+        if ($quote_char) {
+            $here_tag =~ s/(\\($quote_char))/$2/g;
+        }
+        return $here_tag;
+    };
+
     # Create the following list which will be used by sub convey_batch for
     # making indentation updates when -hiu is set:
     my @here_doc_update_list;
@@ -23970,10 +23978,8 @@ sub check_indented_here_docs {
 
                 # Remove backslashes if necessary.  Conversions for this here
                 # doc will be skipped if this doesn't work.
-                if ( index( $here_tag, BACKSLASH ) >= 0
-                    && $here_tag !~ /^\s*$end_text$/ )
-                {
-                    $here_tag =~ s/(\\(.))/$2/g;
+                if ( $quote_char && index( $here_tag, $quote_char ) >= 0 ) {
+                    $here_tag = $un_escape_quotes->( $here_tag, $quote_char );
                 }
 
                 # Get the end tag and its leading whitespace. This is tricky
@@ -24071,8 +24077,9 @@ EOM
                 if ( $here_tag ne $end_text ) {
 
                     # Try removing backslashes
-                    if ( index( $here_tag, BACKSLASH ) >= 0 ) {
-                        $here_tag =~ s/(\\(.))/$2/g;
+                    if ( $quote_char && index( $here_tag, $quote_char ) >= 0 ) {
+                        $here_tag =
+                          $un_escape_quotes->( $here_tag, $quote_char );
                     }
 
                     if ( $here_tag ne $end_text ) {

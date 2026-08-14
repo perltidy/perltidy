@@ -642,3 +642,5 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
+../snippets34.t	c636.c636
+../snippets34.t	c636.def

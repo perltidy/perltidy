@@ -1,0 +1,7 @@
+# test backslash removal
+print <<"print \"[BYE!]\n\n\";";
+name
+rank
+serial number
+
+print "[BYE!]\n\n";

@@ -3665,7 +3665,7 @@ EOM
                     {
                         $self->warning(<<EOM);
 unexpected '{' after closing ')' of a trailing '$last_nonblank_token'" ... missing ';' above?
-   to skip this warning, use --nwucc
+   to skip this warning, use -nwucc
 EOM
                     }
                 }
