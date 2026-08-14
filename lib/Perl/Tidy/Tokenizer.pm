@@ -185,6 +185,7 @@ my (
     $rOpts_non_indenting_braces,
     $rOpts_non_indenting_brace_prefix,
     $rOpts_whitespace_cycle,
+    $rOpts_warn_unexpected_code_container,
 
     $tabsize,
     %is_END_DATA_format_sub,
@@ -513,6 +514,9 @@ sub check_options {
     $rOpts_non_indenting_braces       = $rOpts->{'non-indenting-braces'};
     $rOpts_non_indenting_brace_prefix = $rOpts->{'non-indenting-brace-prefix'};
     $rOpts_whitespace_cycle           = $rOpts->{'whitespace-cycle'};
+
+    $rOpts_warn_unexpected_code_container =
+      $rOpts->{'warn-unexpected-code-container'};
 
     # In the Tokenizer, --indent-columns is just used for guessing old
     # indentation, and must be positive.  If -i=0 is used for this run (which
@@ -3650,15 +3654,19 @@ EOM
                 if ( defined($rvars) ) {
                     my ( $type_lp_uu, $want_brace ) = @{$rvars};
 
-                    # OLD: Now verify that this is not a trailing form
-                    # FIX for git #124: we have to skip this check because
-                    # the 'gather' keyword of List::Gather can operate on
-                    # a full statement, so it isn't possible to be sure
-                    # this is a trailing form.
-                    if ( 0 && !$want_brace ) {
-                        $self->warning(
-"syntax error at ') {', unexpected '{' after closing ')' of a trailing '$last_nonblank_token'\n"
-                        );
+                    # Issue an error if we are definitely not expecting a block
+                    # brace.  Since this type of error can be triggered by a
+                    # previous error, to avoid confusion we will only issue a
+                    # warning if no other warnings have gone out yet.
+                    # See git #124 and c635.
+                    if (  !$want_brace
+                        && $rOpts_warn_unexpected_code_container
+                        && !$self->[_warning_count_] )
+                    {
+                        $self->warning(<<EOM);
+unexpected '{' after closing ')' of a trailing '$last_nonblank_token'" ... missing ';' above?
+   to skip this warning, use --nwucc
+EOM
                     }
                 }
             }
@@ -4700,9 +4708,16 @@ EOM
         # Previously, before update   c230 : if ( $is_for_foreach{$tok} ) {
         ##(if elsif unless while until for foreach switch case given when catch)
         if ( $is_blocktype_with_paren{$tok} ) {
-            if ( new_statement_ok() ) {
-                $want_paren = $tok;
-            }
+
+            # Set $want_paren to help catch missing semicolon errors.
+            # Bias the result in favor of the block form of the keyword.
+            # That is, if (!$want_paren) then we really do not expect a block,
+            # and we can be confident that a warning should be given.
+            # See issue git124, and update c635.
+            $want_paren =
+              ( $expecting == OPERATOR )
+              ? EMPTY_STRING
+              : $tok;
         }
 
         # Catch unexpected keywords (c517, c613).

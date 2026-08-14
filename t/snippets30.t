@@ -416,8 +416,10 @@ match( $n : == ) {
     case (2) { say "It's two" }
     case (3) { say "It's three" }
     case (4), case (5) { say "It's four or five" }
-    case if ( $n < 10 ) { say "It's less than ten" }
-    default             { say "It's something else" }
+    case if ( $n < 10 ) {
+        say "It's less than ten";
+    }
+    default { say "It's something else" }
 }
 #15...........
         },
@@ -435,8 +437,10 @@ match( $n :== ) {
     case (2) { say "It's two" }
     case (3) { say "It's three" }
     case (4), case (5) { say "It's four or five" }
-    case if ( $n < 10 ) { say "It's less than ten" }
-    default             { say "It's something else" }
+    case if ( $n < 10 ) {
+        say "It's less than ten";
+    }
+    default { say "It's something else" }
 }
 #16...........
         },

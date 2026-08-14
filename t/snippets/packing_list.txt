@@ -520,6 +520,8 @@
 ../snippets33.t	git211.def
 ../snippets34.t	c622.c622
 ../snippets34.t	c622.def
+../snippets34.t	hxs.def
+../snippets34.t	hxs.hxs1
 ../snippets4.t	gnu1.gnu
 ../snippets4.t	gnu2.def
 ../snippets4.t	gnu2.gnu
@@ -640,5 +642,3 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets34.t	hxs.def
-../snippets34.t	hxs.hxs1

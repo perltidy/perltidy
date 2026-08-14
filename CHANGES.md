@@ -2,7 +2,9 @@
 
 ## 2026 08 08.01
 
-   - Fixed git #213, --heredoc-extra-spaces flag not working correctly
+   - Fixed git #213, --heredoc-extra-spaces flag not working correctly.
+
+   - Additional checks have been added to help catch missing semicolons.
 
 ## 2026 08 08
 
