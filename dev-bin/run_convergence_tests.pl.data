@@ -14919,6 +14919,33 @@ QQ_TROUBLE_QQ
 --want-break-before='='
 --keep-old-breakpoints-after='=>'
 
+==> b1608.in <==
+     return
+         wantarray ? map $_->(),
+         @data
+         : (
+          defined(wantarray) ? sub { $_[0] }
+          : sub { print $_[0] } )
+         ->(
+          join( "\n", map $_->(), @data )
+              . "\n" );
+
+     return
+         wantarray ? map $_->(), @data
+         : (
+          defined(wantarray) ? sub { $_[0] }
+          : sub { print $_[0] } )
+         ->(
+          join( "\n", map $_->(), @data )
+              . "\n" );
+
+
+==> b1608.par <==
+--maximum-line-length=34
+--indent-columns=5
+--continuation-indentation=4
+--variable-maximum-line-length
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar

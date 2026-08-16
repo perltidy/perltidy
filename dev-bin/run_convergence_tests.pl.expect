@@ -9904,6 +9904,28 @@ my %Html
 QQ_TROUBLE_QQ
   );
 
+==> b1608 <==
+     return
+         wantarray ? map $_->(),
+         @data
+         : (
+          defined(wantarray) ? sub { $_[0] }
+          : sub { print $_[0] } )
+         ->(
+          join( "\n", map $_->(), @data )
+              . "\n" );
+
+     return
+         wantarray ? map $_->(),
+         @data
+         : (
+          defined(wantarray) ? sub { $_[0] }
+          : sub { print $_[0] } )
+         ->(
+          join( "\n", map $_->(), @data )
+              . "\n" );
+
+
 ==> b163 <==
 # State 1
 Readonly::Scalar

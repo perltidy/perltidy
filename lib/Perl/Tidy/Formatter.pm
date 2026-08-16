@@ -23871,7 +23871,7 @@ sub check_indented_here_docs {
             $here_tag =~ s/(\\($quote_char))/$2/g;
         }
         return $here_tag;
-    };
+    }; ## end $un_escape_quotes = sub
 
     # Create the following list which will be used by sub convey_batch for
     # making indentation updates when -hiu is set:
@@ -38206,14 +38206,26 @@ EOM
             && $old_breakpoint_to_go[$i_first_comma]
             && $level_comma == $levels_to_go[0] )
         {
-            my $ibreak    = -1;
-            my $obp_count = 0;
+            my $ibreak             = -1;
+            my $obp_count          = 0;
+            my $colon_question_sum = 0;
             foreach my $ii ( reverse( 0 .. $i_first_comma - 1 ) ) {
+
+                # Fix for issue b1608: ignore if the comma and previous break
+                # are are in different parts of a ternary.
+                if ( $types_to_go[$ii] eq ':' ) { $colon_question_sum -= 1 }
+                if ( $types_to_go[$ii] eq '?' ) {
+                    last if ( !$colon_question_sum );
+                    $colon_question_sum += 1;
+                }
+
                 if ( $old_breakpoint_to_go[$ii] ) {
                     $obp_count++;
                     last if ( $obp_count > 1 );
+
                     $ibreak = $ii
-                      if ( $levels_to_go[$ii] == $level_comma );
+                      if ( $levels_to_go[$ii] == $level_comma
+                        && !$colon_question_sum );
                 }
             }
 
