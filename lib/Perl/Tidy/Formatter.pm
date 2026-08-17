@@ -37103,17 +37103,17 @@ sub break_long_lines {
     # This is a sufficient but not necessary condition for colon chain
     my $is_colon_chain = ( $colons_in_order && @{$rcolon_list} > 2 );
 
-    #------------------------------------------
-    # BEGINNING of main loop to set breakpoints
+    #--------------------------------------
+    # MAIN LOOP to set breakpoints
     # Keep iterating until we reach the end
-    #------------------------------------------
+    #--------------------------------------
     while ( $i_begin <= $imax ) {
 
-        #------------------------------------------------------------------
-        # Find the best next breakpoint based on token-token bond strengths
-        #------------------------------------------------------------------
+        #--------------------------------------------------------------------
+        # INNER LOOP to find the best next breakpoint based on bond strengths
+        #--------------------------------------------------------------------
         my ( $i_lowest, $lowest_strength, $Msg ) =
-          $self->break_lines_inner_loop(
+          $self->break_long_lines_inner_loop(
 
             $i_begin,
             $i_last_break,
@@ -37125,13 +37125,15 @@ sub break_long_lines {
 
           );
 
-        # Now make any adjustments required by ternary breakpoint rules
+        #----------------
+        # Apply ?/: RULES
+        #----------------
         if ( @{$rcolon_list} ) {
 
             my $i_next_nonblank = $inext_to_go[$i_lowest];
 
             #-------------------------------------------------------
-            # ?/: rule 1 : if a break here will separate a '?' on this
+            # ?/: RULE 1 : if a break here will separate a '?' on this
             # line from its closing ':', then break at the '?' instead.
             # But do not break a sequential chain of ?/: statements
             #-------------------------------------------------------
@@ -37160,7 +37162,7 @@ sub break_long_lines {
             my $next_nonblank_type = $types_to_go[$i_next_nonblank];
 
             #-------------------------------------------------------------
-            # ?/: rule 2 : if we break at a '?', then break at its ':'
+            # ?/: RULE 2 : if we break at a '?', then break at its ':'
             #
             # Note: this rule is also in sub break_lists to handle a break
             # at the start and end of a line (in case breaks are dictated
@@ -37177,7 +37179,7 @@ sub break_long_lines {
             }
 
             #--------------------------------------------------------
-            # ?/: rule 3 : if we break at a ':' then we save
+            # ?/: RULE 3 : if we break at a ':' then we save
             # its location for further work below.  We may need to go
             # back and break at its '?'.
             #--------------------------------------------------------
@@ -37195,12 +37197,13 @@ sub break_long_lines {
             # separated by this line
         }
 
-        # Fix two-line shear (c406)
+        #------------------------------------------
+        # Check for and fix a two-line shear (c406)
+        #------------------------------------------
         my $i_next_nonblank = $inext_to_go[$i_lowest];
         if ( $tokens_to_go[$i_next_nonblank] eq ')' ) {
 
             # Example of a '2 line shear':
-
             #   $wrapped->add_around_modifier(
             #       sub { push @tracelog => 'around 1'; $_[0]->(); } );
 
@@ -37226,7 +37229,7 @@ sub break_long_lines {
         }
 
         #--------------------------------------------------
-        # guard against infinite loop (should never happen)
+        # Guard against infinite loop (should never happen)
         #--------------------------------------------------
         if ( $i_lowest <= $i_last_break ) {
             DEVEL_MODE
@@ -37238,15 +37241,16 @@ sub break_long_lines {
           && print {*STDOUT}
 "BREAK: best is i = $i_lowest strength = $lowest_strength;\nReason>> $Msg\n";
 
+        #----------------------------------------------------------
+        # Accept this line break, after trimming blanks at the ends
+        #----------------------------------------------------------
         $line_count++;
-
-        # save this line segment, after trimming blanks at the ends
         push @i_first,
           ( $types_to_go[$i_begin] eq 'b' ) ? $i_begin + 1 : $i_begin;
         push @i_last,
           ( $types_to_go[$i_lowest] eq 'b' ) ? $i_lowest - 1 : $i_lowest;
 
-        # set a forced breakpoint at a container opening, if necessary, to
+        # Set a forced breakpoint at a container opening, if necessary, to
         # signal a break at a closing container.  Excepting '(' for now.
         if (
             (
@@ -37259,12 +37263,12 @@ sub break_long_lines {
             $self->set_closing_breakpoint($i_lowest);
         }
 
-        # get ready to find the next breakpoint
+        # Get ready to find the next breakpoint
         $last_break_strength = $lowest_strength;
         $i_last_break        = $i_lowest;
         $i_begin             = $i_lowest + 1;
 
-        # skip past a blank
+        # The next search starts after any blank
         if ( ( $i_begin <= $imax ) && ( $types_to_go[$i_begin] eq 'b' ) ) {
             $i_begin++;
         }
@@ -37275,7 +37279,7 @@ sub break_long_lines {
     #-------------------------------------------------
 
     #-----------------------------------------------------------
-    # ?/: rule 4 -- if we broke at a ':', then break at
+    # ?/: RULE 4 -- if we broke at a ':', then break at
     # corresponding '?' unless this is a chain of ?: expressions
     #-----------------------------------------------------------
     if (@i_colon_breaks) {
@@ -37299,7 +37303,7 @@ BEGIN {
     $is_dot_and_or{$_} = 1 for @q;
 }
 
-sub break_lines_inner_loop {
+sub break_long_lines_inner_loop {
 
     # Find the best next breakpoint in index range ($i_begin .. $imax)
     # which, if possible, does not exceed the maximum line length.
@@ -37587,9 +37591,9 @@ sub break_lines_inner_loop {
         #------------------------------------------------------------
         if ( ( $strength <= $lowest_strength ) && ( $strength < NO_BREAK ) ) {
 
-            # break at previous best break if it would have produced
-            # a leading alignment of certain common tokens, and it
-            # is different from the latest candidate break
+            # Break at previous best break if it would have produced a leading
+            # alignment of certain common tokens, and it is different from the
+            # latest candidate break.
             if ($leading_alignment_type) {
                 DEBUG_BREAK_LINES && do {
                     $Msg .=
@@ -37598,12 +37602,10 @@ sub break_lines_inner_loop {
                 last;
             }
 
-            # Force at least one breakpoint if old code had good
-            # break It is only called if a breakpoint is required or
-            # desired.  This will probably need some adjustments
-            # over time.  A goal is to try to be sure that, if a new
-            # side comment is introduced into formatted text, then
-            # the same breakpoints will occur.  scbreak.t
+            # Force at least one breakpoint if old code had good break.  A goal
+            # is to try to be sure that, if a new side comment is introduced
+            # into formatted text, then the same breakpoints will occur.  See
+            # 'scbreak.t'.
             if (
                 $i_test == $imax            # we are at the end
                 && !$forced_breakpoint_count
@@ -37669,8 +37671,8 @@ sub break_lines_inner_loop {
                 last;
             }
 
-            # set flags to remember if a break here will produce a
-            # leading alignment of certain common tokens
+            # Set a flag to remember if a break here will produce a
+            # leading alignment of certain common 'chain operator' tokens
             if (   $line_count > 0
                 && $i_test < $imax
                 && ( $lowest_strength - $last_break_strength <= MAX_BIAS ) )
@@ -37680,7 +37682,7 @@ sub break_lines_inner_loop {
                 my $type_beg   = $types_to_go[$i_begin];
                 if (
 
-                    # check for leading alignment of certain tokens
+                    # Check for a leading chain operator
                     (
                            $tok_beg eq $next_nonblank_token
                         && $is_chain_operator{$tok_beg}
@@ -37753,7 +37755,9 @@ sub break_lines_inner_loop {
             ## too long
         }
 
-        # a break here makes the line too long ...
+        #------------------------------------------------------------
+        # Section E: A break here will exceed the maximum line length
+        #------------------------------------------------------------
 
         DEBUG_BREAK_LINES && do {
             my $ltok = $token;
@@ -37790,6 +37794,9 @@ sub break_lines_inner_loop {
             };
             last;
         }
+
+        # Otherwise keep going even though the line length is being exceeded
+
     } ## end while ( ++$i_test <= $imax)
 
     #-----------------------------------------------------
@@ -37801,7 +37808,7 @@ sub break_lines_inner_loop {
     if ( $i_lowest < 0 ) { $i_lowest = $imax }
 
     return ( $i_lowest, $lowest_strength, $Msg );
-} ## end sub break_lines_inner_loop
+} ## end sub break_long_lines_inner_loop
 
 sub do_colon_breaks {
 
