@@ -17621,7 +17621,7 @@ sub respace_tokens {
     # update the token limits of each line
     ( $severe_error, $rqw_lines ) = $self->resync_lines_and_tokens();
 
-    $self->warn_unexpected_code_container()
+    $self->warn_unexpected_code_container( \@wucc_error_list )
       if (@wucc_error_list);
 
     return ( $severe_error, $rqw_lines );
@@ -20309,10 +20309,12 @@ sub add_wucc_error {
     return;
 } ## end sub add_wucc_error
 
+} ## end closure respace_tokens
+
 use constant MAX_WUCC_LINES => 5;
 
 sub warn_unexpected_code_container {
-    my ($self) = @_;
+    my ( $self, $rwucc_error_list ) = @_;
 
     # Process --warn-unexpected-code-container warnings found in respace ops
     # Notes:
@@ -20323,15 +20325,20 @@ sub warn_unexpected_code_container {
     #   So it is better to do these checks here, when we know that the
     #   file has balanced containers. c607.
 
+    my $rLL                 = $self->[_rLL_];
+    my $K_opening_container = $self->[_K_opening_container_];
+    my $ris_c_style_for_paren_by_seqno =
+      $self->[_ris_c_style_for_paren_by_seqno_];
+
     my $wucc_key = 'warn-unexpected-code-container';
-    if ( $rOpts->{$wucc_key} && @wucc_error_list ) {
+    if ( $rOpts->{$wucc_key} && @{$rwucc_error_list} ) {
 
         my $output_lines = EMPTY_STRING;
         my $count        = 0;
-        while (@wucc_error_list) {
-            my $item = shift @wucc_error_list;
+        while ( @{$rwucc_error_list} ) {
+            my $item = shift @{$rwucc_error_list};
             if ( $count >= MAX_WUCC_LINES ) {
-                my $skipped_count = 1 + @wucc_error_list;
+                my $skipped_count = 1 + @{$rwucc_error_list};
                 $output_lines .= <<EOM;
       ... skipping $skipped_count more issues
 EOM
@@ -20359,7 +20366,7 @@ EOM
                 $msg .= " (see line $lno_c)";
             }
             $output_lines .= $msg . "\n";
-        } ## end while (@wucc_error_list)
+        } ## end while ( @{$rwucc_error_list...})
         if ($output_lines) {
             chomp $output_lines;
             $self->warning(<<EOM);
@@ -20372,8 +20379,6 @@ EOM
     }
     return;
 } ## end sub warn_unexpected_code_container
-
-} ## end closure respace_tokens
 
 sub resync_lines_and_tokens {
 
