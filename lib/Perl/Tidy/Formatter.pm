@@ -20224,8 +20224,8 @@ sub check_Q {
     # Check that a quote looks okay, and report possible problems
     # to the logfile.
     # Given:
-    #   $KK = index of the quote token
-    #   $Kfirst = index of first token on the line
+    #   $KK = index of the quote token in the old array ($rLL)
+    #   $Kfirst = index of first token on the line in the old array ($rLL)
     #   $line_number = number of the line in the input stream
 
     my $token = $rLL->[$KK]->[_TOKEN_];
@@ -20295,6 +20295,7 @@ sub add_wucc_error {
     my ( $self, $rtoken_vars ) = @_;
 
     # Register a -wucc error for token $rtoken_vars. c607.
+    # Called from sub respace_tokens during respace operations
     my $token_o = $non_block_container_stack{ $depth_next - 1 };
     my $seqno_o = $seqno_stack{ $depth_next - 1 };
     my $token   = $rtoken_vars->[_TOKEN_];
@@ -20320,6 +20321,8 @@ sub warn_unexpected_code_container {
     # Notes:
     # - This is called after sub respace tokens, so we are using
     #   the updated indexes.
+    # - Note that this sub is NOT in the respace closure, so the new tokens
+    #   are in the current $rLL array (see c639).
     # - A test was made with these checks done in the tokenizer, but
     #   the output could be confusing if the file had unbalanced containers.
     #   So it is better to do these checks here, when we know that the
