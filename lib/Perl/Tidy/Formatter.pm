@@ -38020,7 +38020,7 @@ sub do_colon_breaks {
             $last_dot_index[$depth_t]              = undef;
             $old_breakpoint_count_stack[$depth_t]  = undef;
             $has_old_logical_breakpoints[$depth_t] = 0;
-            $rand_or_list[$depth_t]                = [];
+            $rand_or_list[$depth_t]                = {};
             $rfor_semicolon_list[$depth_t]         = [];
             $i_equals[$depth_t]                    = -1;
 
@@ -38356,17 +38356,19 @@ EOM
             # Look for breaks in this order:
             # 0   1    2   3
             # or  and  ||  &&
-            foreach my $ii ( 0 .. 3 ) {
-                if ( $rand_or_list[$dd]->[$ii] ) {
-                    foreach ( @{ $rand_or_list[$dd]->[$ii] } ) {
+            foreach my $op (qw( or and || && )) {
+                if ( $rand_or_list[$dd]->{$op} ) {
+                    foreach ( @{ $rand_or_list[$dd]->{$op} } ) {
                         $self->set_forced_breakpoint($_);
                     }
 
-                    # break at any 'if' and 'unless' too
-                    foreach ( @{ $rand_or_list[$dd]->[4] } ) {
+                    # Break at any 'if' and 'unless' too,
+                    foreach ( @{ $rand_or_list[$dd]->{if} } ) {
                         $self->set_forced_breakpoint($_);
                     }
-                    $rand_or_list[$dd] = [];
+
+                    # then stop and ignore higher precedence operators
+                    $rand_or_list[$dd] = {};
                     last;
                 }
             }
@@ -38539,14 +38541,8 @@ EOM
             # remember locations of '||'  and '&&' for possible breaks if we
             # decide this is a long logical expression.
             if ( $quick_filter_A{$type} ) {
-                if ( $type eq '||' ) {
-                    push @{ $rand_or_list[$depth]->[2] }, $i;
-                    ++$has_old_logical_breakpoints[$depth]
-                      if ( ( $i == $i_line_start || $i == $i_line_end )
-                        && $rOpts_break_at_old_logical_breakpoints );
-                }
-                elsif ( $type eq '&&' ) {
-                    push @{ $rand_or_list[$depth]->[3] }, $i;
+                if ( $type eq '&&' || $type eq '||' ) {
+                    push @{ $rand_or_list[$depth]->{$type} }, $i;
                     ++$has_old_logical_breakpoints[$depth]
                       if ( ( $i == $i_line_start || $i == $i_line_end )
                         && $rOpts_break_at_old_logical_breakpoints );
@@ -38556,40 +38552,40 @@ EOM
                 }
                 elsif ( $type eq 'k' ) {
                     if ( $token eq 'and' ) {
-                        push @{ $rand_or_list[$depth]->[1] }, $i;
+                        push @{ $rand_or_list[$depth]->{$token} }, $i;
                         ++$has_old_logical_breakpoints[$depth]
                           if ( ( $i == $i_line_start || $i == $i_line_end )
                             && $rOpts_break_at_old_logical_breakpoints );
                     }
 
-                    # break immediately at 'or's which are probably not in a
+                    # Break immediately at 'or's which are probably not in a
                     # logical block -- but we will break in logical breaks
                     # below so that they do not add to the
                     # forced_breakpoint_count
                     elsif ( $token eq 'or' ) {
-                        push @{ $rand_or_list[$depth]->[0] }, $i;
+                        push @{ $rand_or_list[$depth]->{$token} }, $i;
+
+                        my $is_old_breakpoint =
+                          ( $i == $i_line_start || $i == $i_line_end )
+                          && $rOpts_break_at_old_logical_breakpoints;
+
                         ++$has_old_logical_breakpoints[$depth]
-                          if ( ( $i == $i_line_start || $i == $i_line_end )
-                            && $rOpts_break_at_old_logical_breakpoints );
-                        if ( $is_logical_container{ $container_type[$depth] } )
+                          if ($is_old_breakpoint);
+
+                        if ( !$is_logical_container{ $container_type[$depth] } )
                         {
-                        }
-                        else {
                             if ($is_long_line) {
                                 $self->set_forced_breakpoint($i);
                             }
-                            elsif ( ( $i == $i_line_start || $i == $i_line_end )
-                                && $rOpts_break_at_old_logical_breakpoints )
-                            {
-                                $saw_good_breakpoint = 1;
-                            }
                             else {
-                                ## not a good break
+                                $saw_good_breakpoint ||= $is_old_breakpoint;
                             }
                         }
                     }
                     elsif ( $is_if_unless{$token} ) {
-                        push @{ $rand_or_list[$depth]->[4] }, $i;
+
+                        # Store both 'if' and 'unless' with key 'if'
+                        push @{ $rand_or_list[$depth]->{if} }, $i;
                     }
                     else {
                         ## not one of: 'and' 'or' 'if' 'unless'
@@ -38748,9 +38744,7 @@ EOM
         # This flag indicates if the input file had some good breakpoints.
         # It will be used to force a break in a line shorter than the
         # allowed line length.
-        if ( $has_old_logical_breakpoints[$current_depth] ) {
-            $saw_good_breakpoint = 1;
-        }
+        $saw_good_breakpoint ||= $has_old_logical_breakpoints[$current_depth];
 
         # A complex line with one break at an = has a good breakpoint.
         # This is not complex ($total_depth_variation=0):
@@ -38762,16 +38756,11 @@ EOM
         #  (is_boundp("a", 'self-insert') && is_boundp("b", 'self-insert'));
 
         # The check ($i_old_.. < $max_index_to_go) was added to fix b1333
-        elsif ($i_old_assignment_break
-            && $total_depth_variation > 4
-            && $old_breakpoint_count == 1
-            && $i_old_assignment_break < $max_index_to_go )
-        {
-            $saw_good_breakpoint = 1;
-        }
-        else {
-            ## not a good breakpoint
-        }
+        $saw_good_breakpoint ||=
+             $i_old_assignment_break
+          && $total_depth_variation > 4
+          && $old_breakpoint_count == 1
+          && $i_old_assignment_break < $max_index_to_go;
 
         return $saw_good_breakpoint;
     } ## end sub break_lists
@@ -39208,7 +39197,7 @@ EOM
         $last_dot_index[$depth]              = undef;
         $old_breakpoint_count_stack[$depth]  = $old_breakpoint_count;
         $has_old_logical_breakpoints[$depth] = 0;
-        $rand_or_list[$depth]                = [];
+        $rand_or_list[$depth]                = {};
         $rfor_semicolon_list[$depth]         = [];
         $i_equals[$depth]                    = -1;
 
