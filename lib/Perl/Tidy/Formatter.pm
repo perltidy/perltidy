@@ -16583,6 +16583,12 @@ sub scan_call_parens {
         next if ( $token_Kn eq '=>' );
         next if ( $token_Kn eq '->' );
 
+        # Be sure a type 'w' is not a keyword or hash key (c641)
+        if ( $type eq 'w' ) {
+            if ( $rLL->[$Kn]->[_TYPE_] eq 'R' ) { next }
+            if ( is_keyword($token) )           { next }
+        }
+
         # If paren after keyword...
         if ( $token_Kn eq '(' ) {
 
