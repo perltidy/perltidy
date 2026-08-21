@@ -11728,7 +11728,7 @@ sub sweep_similar_pairs {
     #   $max_diff = maximum number of differences for similarity
     #   $reverse = 1 if this is a reverse sweep, 0 if forward
     # Return:
-    #   ref to list of similar pairs
+    #   ref to hash of similar pairs
 
     my @sorted_words = sort {
         $rword_info->{$a}->{first_letter} cmp $rword_info->{$b}->{first_letter}
@@ -11783,9 +11783,15 @@ sub sweep_similar_pairs {
                     ( $w1,     $w2 )     = ( $w2,     $w1 );
                     ( $count1, $count2 ) = ( $count2, $count1 );
                 }
+
                 push @word_pairs,
-                  [ $w1, $w2, $count1, $count2, $diff_count + $reverse ];
-                ##    0    1        2        3            4
+                  {
+                    word1      => $w1,
+                    word2      => $w2,
+                    count1     => $count1,
+                    count2     => $count2,
+                    diff_count => $diff_count + $reverse,
+                  };
             }
         }
     } ## end while (@sorted_words)
@@ -11889,38 +11895,52 @@ sub find_similar_keys {
     #  1. Top priority is diff_count (low diffs go out before high diffs)
     #  2. Next priority is uniform distribution of output words
 
+    # Contents of a word pair hash returned by sweep_similar_pairs:
+    #  $rword_pair =
+    #   {
+    #       word1      => $w1,
+    #       word2      => $w2,
+    #       count1     => $count1,
+    #       count2     => $count2,
+    #       diff_count => $diff_count,
+    #   };
+
     # Handle case of too many pairs
     my $num_skipped = $num_pairs - $max_pairs;
     if ( $num_skipped > 0 ) {
 
-        # [ $w1, $w2, $count1, $count2, $diff_count ];
-        #    0    1        2        3            4
-
-        # remember the order
+        # remember the order of discovery
         my $n = 0;
         foreach (@word_pairs) {
-            $_->[5] = ++$n;
+            $_->{order_found} = ++$n;
         }
 
         # sort by diff count, then by order
         my @sorted_pairs =
-          sort { $a->[4] <=> $b->[4] || $a->[5] <=> $b->[5] } @word_pairs;
+          sort {
+                 $a->{diff_count}  <=> $b->{diff_count}
+              || $a->{order_found} <=> $b->{order_found}
+          } @word_pairs;
 
         # resort by diff count, min occurrences so far, then by the start order
         my %word_count;
         foreach my $pair (@sorted_pairs) {
-            my ( $w1, $w2 ) = @{$pair};
+            my $w1        = $pair->{word1};
+            my $w2        = $pair->{word2};
             my $min_count = min( ++$word_count{$w1}, ++$word_count{$w2} );
-            $pair->[6] = $min_count;
+            $pair->{min_count} = $min_count;
         }
         @sorted_pairs =
           sort {
-            $a->[4] <=> $b->[4] || $a->[6] <=> $b->[6] || $a->[5] <=> $b->[5]
+                 $a->{diff_count}  <=> $b->{diff_count}
+              || $a->{min_count}   <=> $b->{min_count}
+              || $a->{order_found} <=> $b->{order_found}
           } @sorted_pairs;
 
         # Truncate the list and resort
         $#sorted_pairs = $max_pairs - 1;
-        @word_pairs    = sort { $a->[5] <=> $b->[5] } @sorted_pairs;
+        @word_pairs =
+          sort { $a->{order_found} <=> $b->{order_found} } @sorted_pairs;
 
         $output_string .=
 "Note: showing $max_pairs of $num_pairs pairs; increase -skmp to show more\n";
@@ -11929,7 +11949,10 @@ sub find_similar_keys {
     if (@word_pairs) {
         $output_string .= "key1,key2,count1,count2\n";
         foreach my $pair (@word_pairs) {
-            my ( $w1, $w2, $count1, $count2, $diff_count_uu ) = @{$pair};
+            my $w1     = $pair->{word1};
+            my $w2     = $pair->{word2};
+            my $count1 = $pair->{count1};
+            my $count2 = $pair->{count2};
             $output_string .= "$w1,$w2,$count1,$count2\n";
         }
     }
