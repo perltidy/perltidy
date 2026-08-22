@@ -3802,8 +3802,8 @@ sub get_line_token_info {
         my $is_monotonic = 1;
 
         # find the index of the last token before the side comment
-        my $imax      = @{$rtokens} - 2;
-        my $imax_true = $imax;
+        my $imax = @{$rtokens} - 2;
+##      my $imax_true = $imax;
 
         # If the entire group is monotonic, and the line ends in a comma list,
         # walk it back to the first such comma. this will have the effect of
@@ -3890,11 +3890,17 @@ sub get_line_token_info {
             push @levs, $lev_top;
         }
 
-        push @{$rline_values},
-          [
-            $lev_min,        $lev_max,      $rtoken_patterns, \@levs,
-            $rtoken_indexes, $is_monotonic, $imax_true,       $imax,
-          ];
+        push @{$rline_values}, {
+            _lv_rtoken_patterns => $rtoken_patterns,
+            _lv_rlevels         => \@levs,
+            _lv_rtoken_indexes  => $rtoken_indexes,
+            _lv_is_monotonic    => $is_monotonic,
+## unused:
+##          _lv_level_min       => $lev_min,
+##          _lv_level_max       => $lev_max,
+##          _lv_imax_true       => $imax_true,
+##          _lv_imax            => $imax,
+        };
 
         # debug
         0 && do {
@@ -3986,11 +3992,18 @@ sub prune_alignment_tree {
     # than pruning, and without deleting alignments.
     return if ($all_monotonic);
 
-    # Contents of $rline_values
-    #   [
-    #     $lev_min,        $lev_max,      $rtoken_patterns, \@levs,
-    #     $rtoken_indexes, $is_monotonic, $imax_true,       $imax,
-    #   ];
+    # Contents of $rline_values:
+    #
+    #      {
+    ##       _lv_level_min       => $lev_min,
+    ##       _lv_level_max       => $lev_max,
+    #        _lv_rtoken_patterns => $rtoken_patterns,
+    #        _lv_rlevels         => \@levs,
+    #        _lv_rtoken_indexes  => $rtoken_indexes,
+    #        _lv_is_monotonic    => $is_monotonic,
+    ##       _lv_imax_true       => $imax_true,
+    #        _lv_imax            => $imax,
+    #      };
 
     # We can work to any depth, but there is little advantage to working
     # to a depth greater than 2
@@ -4001,8 +4014,17 @@ sub prune_alignment_tree {
     my @match_tree;
 
     # Tree nodes contain these values:
-    # $match_tree[$depth] = [$jbeg, $jend, $n_parent, $level, $pattern,
-    #                        $nc_beg_p, $nc_end_p, $rindexes];
+    # $match_tree[$depth] =
+    #     {
+    #       _tn_jbeg     => $jbeg,
+    #       _tn_jend     => $jend,
+    #       _tn_n_parent => $n_parent,
+    #       _tn_level    => $level,
+    ##      _tn_pattern  => $pattern,
+    #       _tn_nc_beg_p => $nc_beg_p,
+    #       _tn_nc_end_p => $nc_end_p,
+    ##      _tn_rindexes => $rindexes
+    #     };
     # where
     #      $depth = 0,1,2 = index of depth of the match
 
@@ -4045,7 +4067,7 @@ sub prune_alignment_tree {
             && @{ $match_tree[$depth] }
             && defined( $levels_current[$depth] ) )
         {
-            $match_tree[$depth]->[-1]->[1] = $jl;
+            $match_tree[$depth]->[-1]->{_tn_jend} = $jl;
         }
 
         # Define the index of the node we will create below
@@ -4073,12 +4095,16 @@ sub prune_alignment_tree {
         # Create a node for the next group at this depth. We initially assume
         # that it will continue to $jmax, and correct that later if the node
         # ends earlier.
-        push @{ $match_tree[$depth] },
-          [
-            $jl + 1, $jmax, $n_parent, $levels_current[$depth],
-            $token_patterns_current[$depth],
-            undef, undef, $token_indexes_current[$depth],
-          ];
+        push @{ $match_tree[$depth] }, {
+            _tn_jbeg     => $jl + 1,
+            _tn_jend     => $jmax,
+            _tn_n_parent => $n_parent,
+            _tn_level    => $levels_current[$depth],
+##          _tn_pattern  => $token_patterns_current[$depth],
+            _tn_nc_beg_p => undef,
+            _tn_nc_end_p => undef,
+##          _tn_rindexes => $token_indexes_current[$depth],
+        };
 
         return;
     }; ## end $end_node = sub
@@ -4092,9 +4118,10 @@ sub prune_alignment_tree {
         my $jm = $jp - 1;
 
         # Pull out needed values for the next line
-        my ( $lev_min_uu, $lev_max_uu, $rtoken_patterns, $rlevs,
-            $rtoken_indexes, $is_monotonic_uu, $imax_true_uu, $imax_uu )
-          = @{ $rline_values->[$jp] };
+        my $item_jp         = $rline_values->[$jp];
+        my $rtoken_patterns = $item_jp->{_lv_rtoken_patterns};
+        my $rlevs           = $item_jp->{_lv_rlevels};
+        my $rtoken_indexes  = $item_jp->{_lv_rtoken_indexes};
 
         # Transfer levels and patterns for this line to the working arrays.
         # If the number of levels differs from our chosen MAX_DEPTH ...
@@ -4170,7 +4197,7 @@ sub prune_alignment_tree {
         my $nc_max = @{ $match_tree[$depth] } - 1;
         my $np_now;
         foreach my $nc ( 0 .. $nc_max ) {
-            my $np = $match_tree[$depth]->[$nc]->[2];
+            my $np = $match_tree[$depth]->[$nc]->{_tn_n_parent};
             if ( !defined($np) ) {
 
                 # shouldn't happen
@@ -4179,9 +4206,9 @@ sub prune_alignment_tree {
             }
             if ( !defined($np_now) || $np != $np_now ) {
                 $np_now = $np;
-                $match_tree[ $depth - 1 ]->[$np]->[5] = $nc;
+                $match_tree[ $depth - 1 ]->[$np]->{_tn_nc_beg_p} = $nc;
             }
-            $match_tree[ $depth - 1 ]->[$np]->[6] = $nc;
+            $match_tree[ $depth - 1 ]->[$np]->{_tn_nc_end_p} = $nc;
         }
     } ## end loop to make links down to the child nodes
 
@@ -4212,9 +4239,15 @@ sub prune_alignment_tree {
         last if ( !@todo_list );
         my @todo_next;
         foreach my $np (@todo_list) {
-            my ( $jbeg_p, $jend_p, $np_p_uu, $lev_p, $pat_p_uu, $nc_beg_p,
-                $nc_end_p, $rindexes_p_uu )
-              = @{ $match_tree[$depth]->[$np] };
+
+            my $item = $match_tree[$depth]->[$np];
+
+            my $jbeg_p   = $item->{_tn_jbeg};
+            my $jend_p   = $item->{_tn_jend};
+            my $lev_p    = $item->{_tn_level};
+            my $nc_beg_p = $item->{_tn_nc_beg_p};
+            my $nc_end_p = $item->{_tn_nc_end_p};
+
             my $nlines_p = $jend_p - $jbeg_p + 1;
 
             # nothing to do if no children
@@ -4246,11 +4279,13 @@ sub prune_alignment_tree {
 
             # loop to keep or delete each child node
             foreach my $nc ( $nc_beg_p .. $nc_end_p ) {
-                my ( $jbeg_c, $jend_c, $np_c_uu, $lev_c_uu, $pat_c_uu,
-                    $nc_beg_c_uu, $nc_end_c_uu )
-                  = @{ $match_tree[ $depth + 1 ]->[$nc] };
+
+                my $item_c = $match_tree[ $depth + 1 ]->[$nc];
+                my $jbeg_c = $item_c->{_tn_jbeg};
+                my $jend_c = $item_c->{_tn_jend};
+
                 my $nlines_c     = $jend_c - $jbeg_c + 1;
-                my $is_monotonic = $rline_values->[$jbeg_c]->[5];
+                my $is_monotonic = $rline_values->[$jbeg_c]->{_lv_is_monotonic};
                 my $nmin         = $is_monotonic ? $nmin_mono : $nmin_non_mono;
                 if ( $nlines_c < $nmin ) {
 ##print "deleting child, nlines=$nlines_c, nmin=$nmin\n";
@@ -4300,9 +4335,22 @@ sub Dump_tree_groups {
     print "$msg\n";
     local $LIST_SEPARATOR = ')(';
     foreach my $item ( @{$rgroup} ) {
-        my @fix = @{$item};
-        foreach my $val (@fix) { $val = "undef" unless ( defined($val) ); }
-        $fix[4] = "...";
+        my @fix;
+        foreach my $key (
+            qw(
+            _tn_jbeg
+            _tn_jend
+            _tn_n_parent
+            _tn_level
+            _tn_nc_beg_p
+            _tn_nc_end_p
+            )
+          )
+        {
+            my $val = $item->{$key};
+            $val = "undef" unless ( defined($val) );
+            push @fix, "$val";
+        }
         print "(@fix)\n";
     }
     return;
