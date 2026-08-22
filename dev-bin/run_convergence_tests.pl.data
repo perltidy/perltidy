@@ -14946,6 +14946,22 @@ QQ_TROUBLE_QQ
 --continuation-indentation=4
 --variable-maximum-line-length
 
+==> b1609.in <==
+      $ipa{src_host} =
+       ( gethostbyaddr( $siaddr, AF_INET ) )[0];
+
+      $ipa{src_host} = ( gethostbyaddr(
+                                $siaddr, AF_INET
+      ) )[0];
+
+==> b1609.par <==
+--maximum-line-length=48
+--indent-columns=6
+--continuation-indentation=1
+--weld-nested-containers
+--extended-continuation-indentation
+--extended-line-up-parentheses
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar

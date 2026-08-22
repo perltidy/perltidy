@@ -8657,17 +8657,19 @@ print Data::Dumper->Dump(
 );
 
 ==> b1538 <==
-        my $coerced = $coercion->coerce( [
-                                          1,
-                                          2,
-                                          3
-        ] );
+        my $coerced =
+          $coercion->coerce( [
+                               1,
+                               2,
+                               3
+                             ] );
 
-        my $coerced = $coercion->coerce( [
-                                          1,
-                                          2,
-                                          3
-        ] );
+        my $coerced =
+          $coercion->coerce( [
+                               1,
+                               2,
+                               3
+                             ] );
 
 ==> b1539 <==
                   my $movie_data
@@ -9925,6 +9927,14 @@ QQ_TROUBLE_QQ
           join( "\n", map $_->(), @data )
               . "\n" );
 
+
+==> b1609 <==
+      $ipa{src_host} =
+       ( gethostbyaddr( $siaddr, AF_INET ) )[0];
+
+      $ipa{src_host} = ( gethostbyaddr(
+                                $siaddr, AF_INET
+      ) )[0];
 
 ==> b163 <==
 # State 1

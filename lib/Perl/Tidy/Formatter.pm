@@ -28905,6 +28905,18 @@ sub is_fragile_block_type {
                         }
                     }
 
+                    # Turn off -xci at short welded containers (b1609)
+                    if (   $rOpts_extended_continuation_indentation
+                        && $self->[_rK_weld_right_]->{$KK}
+                        && !$self->[_ris_permanently_broken_]->{$seqno} )
+                    {
+                        my $excess =
+                          $self->excess_line_length_for_Krange( $KK, $K_c );
+                        if ( $excess <= 0 ) {
+                            $self->[_rno_xci_by_seqno_]->{$seqno} = 1;
+                        }
+                    }
+
                     push @stack, [
 
                         $max_prong_len,
