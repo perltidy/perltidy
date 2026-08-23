@@ -4664,8 +4664,8 @@ EOM
 
                 # One example of where a keyword could follow is 'qw' here:
                 #  use constant qw{ DEBUG 0 };
-		# But otherwise, using a keyword here is probably not a good
-		# idea. But perl does not complain, so we will not.
+                # But otherwise, using a keyword here is probably not a good
+                # idea. But perl does not complain, so we will not.
             }
 
             else {
