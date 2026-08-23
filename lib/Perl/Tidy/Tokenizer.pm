@@ -1266,18 +1266,6 @@ EOM
     return;
 } ## end sub show_indentation_table
 
-sub report_v_string {
-
-    # warn if this version can't handle v-strings
-    my ( $self, $tok ) = @_;
-    if ( $] < 5.006 ) {
-        $self->warning(
-"Found v-string '$tok' but v-strings are not implemented in your version of perl; see Camel 3 book ch 2\n"
-        );
-    }
-    return;
-} ## end sub report_v_string
-
 sub is_valid_token_type {
     my ($type) = @_;
     return $is_valid_token_type{$type};
@@ -4674,18 +4662,10 @@ EOM
 
             if ( $is_keyword{$next_nonblank_tok2} ) {
 
-                # Assume qw is used as a quote and okay, as in:
+                # One example of where a keyword could follow is 'qw' here:
                 #  use constant qw{ DEBUG 0 };
-                # Not worth trying to parse for just a warning
-
-                # NOTE: This warning is deactivated because recent
-                # versions of perl do not complain here, but
-                # the coding is retained for reference.
-                if ( 0 && $next_nonblank_tok2 ne 'qw' ) {
-                    $self->warning(
-"Attempting to define constant '$next_nonblank_tok2' which is a perl keyword\n"
-                    );
-                }
+		# But otherwise, using a keyword here is probably not a good
+		# idea. But perl does not complain, so we will not.
             }
 
             else {
@@ -5234,15 +5214,10 @@ EOM
             # Bareword followed by a fat comma - see 'git18.in'
             # This code was previously sub do_QUOTED_BAREWORD: see c316, c317
 
-            # Older perl:
-            #   'v25=>1'   is a v-string key!
-            #   '-v25=>1'  is also a v-string key!
-            # Deactivated: this is no longer true; see git #165
-            if ( 0 && $tok =~ /^v\d+$/ ) {
-                $type = 'v';
-                $self->complain("v-string used as hash key\n");
-                $self->report_v_string($tok);
-            }
+            # Note: in some older perl versions these would produce an error:
+            #   'v25=>1'   # is a v-string key!
+            #   '-v25=>1'  # is also a v-string key!
+            # This is no longer true; see git #165
 
             # If tok is something like 'x17' then it could
             # actually be operator x followed by number 17.
@@ -5261,7 +5236,7 @@ EOM
             # a key with 18 a's.  But something like
             #    push @array, a x18;
             # is a syntax error.
-            elsif (
+            if (
                    $expecting == OPERATOR
                 && substr( $tok, 0, 1 ) eq 'x'
                 && ( length($tok) == 1
@@ -8630,7 +8605,6 @@ sub scan_bare_identifier_do {
                     $tok  = substr( $input_line, $pos_beg, $numc );
                 }
                 $type = 'v';
-                $self->report_v_string($tok);
             }
 
             # bareword after sort has implied empty prototype; for example:

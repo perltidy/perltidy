@@ -4356,8 +4356,8 @@ sub Dump_tree_groups {
     return;
 } ## end sub Dump_tree_groups
 
-# This test did not give sufficiently better results to use as an update,
-# but the flag is kept as a starting point for future testing.
+# This test sometimes gave alignments where no alignment was better, so it is
+# not used, but the flag is kept as a starting point for future testing.
 use constant TEST_MARGINAL_EQ_ALIGNMENT => 0;
 
 sub is_marginal_match {
