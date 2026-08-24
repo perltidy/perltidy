@@ -2102,16 +2102,6 @@ sub is_in_list_by_i {
     return;
 } ## end sub is_in_list_by_i
 
-sub is_list_by_seqno {
-
-    my ( $self, $seqno ) = @_;
-
-    # Return true if the immediate contents of a container appears to be a
-    # list.
-    return unless ( defined($seqno) );
-    return $self->[_ris_list_by_seqno_]->{$seqno};
-} ## end sub is_list_by_seqno
-
 sub is_interpolated_here_doc {
     my ($token) = @_;
 
@@ -20942,7 +20932,7 @@ sub count_list_elements {
                     }
 
                     # If not a list..
-                    if ( !$self->is_list_by_seqno($seqno) ) {
+                    if ( !$self->[_ris_list_by_seqno_]->{$seqno} ) {
 
                         # always enter a container following 'return', as in:
                         #   return (find_sub($subname) =~ /^(.*):(\d+)-(\d+)$/);
@@ -20979,7 +20969,7 @@ sub count_list_elements {
                         if ( $Kn && $rLL->[$Kn]->[_TOKEN_] eq '[' ) {
                             my $seqno_next = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
                             if (   $seqno_next
-                                && $self->is_list_by_seqno($seqno_next) )
+                                && $self->[_ris_list_by_seqno_]->{$seqno_next} )
                             {
                                 $KK = $Kn;
                                 push @seqno_stack, $seqno_next;
@@ -27258,6 +27248,7 @@ sub break_before_list_opening_containers {
     my $K_closing_container       = $self->[_K_closing_container_];
     my $rline_diff_by_seqno       = $self->[_rline_diff_by_seqno_];
     my $ris_permanently_broken    = $self->[_ris_permanently_broken_];
+    my $ris_list_by_seqno         = $self->[_ris_list_by_seqno_];
     my $rhas_list                 = $self->[_rhas_list_];
     my $rhas_broken_list_with_lec = $self->[_rhas_broken_list_with_lec_];
     my $radjusted_levels          = $self->[_radjusted_levels_];
@@ -27301,7 +27292,7 @@ sub break_before_list_opening_containers {
         # Note1: switched from 'has_broken_list' to 'has_list' to fix b1024.
         # Note2: 'has_list' holds the depth to the sub-list.  We will require
         #  a depth of just 1
-        my $is_list  = $self->is_list_by_seqno($seqno);
+        my $is_list  = $ris_list_by_seqno->{$seqno};
         my $has_list = $rhas_list->{$seqno};
 
         # Fix for b1173: if welded opening container, use flag of innermost
@@ -27312,7 +27303,7 @@ sub break_before_list_opening_containers {
             if ( defined($KK_test) ) {
                 my $seqno_inner = $rLL->[$KK_test]->[_TYPE_SEQUENCE_];
                 if ($seqno_inner) {
-                    $is_list ||= $self->is_list_by_seqno($seqno_inner);
+                    $is_list ||= $ris_list_by_seqno->{$seqno_inner};
                     $has_list = $rhas_list->{$seqno_inner};
                 }
             }
@@ -27403,7 +27394,7 @@ sub break_before_list_opening_containers {
                 # and it is also complex if the parent is a list
                 if ( !$is_complex ) {
                     my $parent = $rparent_of_seqno->{$seqno};
-                    if ( $self->is_list_by_seqno($parent) ) {
+                    if ( $parent && $ris_list_by_seqno->{$parent} ) {
                         $is_complex = 1;
                     }
                 }
@@ -27486,7 +27477,7 @@ sub break_before_list_opening_containers {
                 if ($has_list) { $rno_xci_by_seqno->{$seqno} = 1 }
 
                 my $parent = $rparent_of_seqno->{$seqno};
-                if ( $self->is_list_by_seqno($parent) ) {
+                if ( $parent && $ris_list_by_seqno->{$parent} ) {
                     DEBUG_BBX && do { $Msg = "parent is list" };
                     $ok_to_break = 1;
                 }
