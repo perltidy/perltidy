@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2026 08 08.01
+## 2026 08 26
 
    - Fixed git #213, --heredoc-extra-spaces flag not working correctly.
 
