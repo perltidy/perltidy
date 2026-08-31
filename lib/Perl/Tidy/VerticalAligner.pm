@@ -7299,7 +7299,11 @@ sub valign_output_step_D {
 ##########################
 
 sub report_anything_unusual {
-    my $self          = shift;
+
+    my $self = shift;
+
+    # Called at the end of a file to log conditions of possible interest
+
     my $logger_object = $self->[_logger_object_];
     return if ( !$logger_object );
 

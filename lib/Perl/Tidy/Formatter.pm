@@ -3895,7 +3895,6 @@ DEBUG_KB -$short_name flag: $str
 final keys:  @list
 special flags:  @tmp
 EOM
-
     }
 
     return;
@@ -5411,7 +5410,6 @@ sub set_whitespace_flags {
             elsif ( $type eq 'm' || $type eq '-' ) {
                 $ws = WS_OPTIONAL if ( $last_type eq 'w' );
             }
-
             else {
                 # A type $type was entered in %is_special_ws_type but
                 # there is no code block to handle it. Either remove it
@@ -5593,7 +5591,6 @@ sub set_whitespace_flags {
                 elsif ( $last_type eq 'S' ) {
                     $ws = $ws_signature_paren->($j);
                 }
-
                 else {
                     ## no special rule for this opening paren type
                 }
@@ -5820,8 +5817,9 @@ sub ws_in_container {
 
     # Given:
     #  $j = index of token following an opening container token
-    #  $type, $token = the type and token at index $j
     #  $j_closing = closing token of the container
+    #  $rLL = ref to the list of tokens
+    #  $type, $token = the type and token at index $j
     #  $last_token = the opening token of the container
     # Return:
     #  WS_NO  if there is just one token in the container (with exceptions)
@@ -6024,9 +6022,9 @@ EOM
 
         # These are the only characters which can (currently) form special
         # variables, like $^W: (issue c066, c068).
-        @q = qw{ ? A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ };
+        @q = qw( ? A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ );
         push @q, BACKSLASH;
-        push @q, (qw{  ] ^ _ });
+        push @q, qw(  ] ^ _ );
         $is_special_variable_char{$_} = 1 for @q;
 
         @q = qw( 0 1 2 3 4 5 6 7 8 9 );
@@ -7107,7 +7105,6 @@ EOM
                 if ( $token eq 'my' ) {
                     $bond_str = NO_BREAK;
                 }
-
             }
 
             if ( $next_nonblank_type eq 'k' && $type ne 'CORE::' ) {
@@ -7562,7 +7559,6 @@ sub bad_pattern {
                 # blocks
                 $want_one_line_block{$word} = 0;
             }
-
         }
         return;
     } ## end sub prepare_cuddled_block_types
@@ -8498,7 +8494,6 @@ EOM
                 $line_of_tokens->{_nesting_blocks_0}     = EMPTY_STRING;
                 $line_of_tokens->{_nesting_tokens_0}     = EMPTY_STRING;
                 $line_of_tokens->{_ended_in_blank_token} = undef;
-
             }
 
             $tee_output ||=
@@ -9531,7 +9526,6 @@ sub find_code_line_count {
                 }
             }
         }
-
         else {
 
             # Count all other special line types except pod as 'code';
@@ -12937,7 +12931,6 @@ sub set_ci {
                 $ci_this = $ci_next = $rparent->{_ci_open_next};
             }
         }
-
         else {
             ## not a special ci type
         }
@@ -13029,16 +13022,20 @@ EOM
 sub set_maximum_field_count {
     my ($self) = shift;
 
-    # Set maximum field counts by sequence number if the user
-    # has entered any limits with --maximum-fields-per-table.
-    # This allows efficient processing for things like -mft='w(1'
+    # Set the maximum field count for each list, by sequence number, if the
+    # user has entered any limits with --maximum-fields-per-table.  This allows
+    # efficient processing for things like -mft='w(1'
 
+    # Nothing to do if user did not enter --maximum-field-per-table
     return if ( !%maximum_field_count_control_hash );
 
     my $rLL                  = $self->[_rLL_];
     my $ris_list_by_seqno    = $self->[_ris_list_by_seqno_];
     my $rtype_count_by_seqno = $self->[_rtype_count_by_seqno_];
     my $K_opening_container  = $self->[_K_opening_container_];
+
+    # NOTE: this could be made more efficient by first unpacking the control
+    # hash by token type ( [ { , but the speedup would be small.
 
     my $rmaximum_field_count_by_seqno = {};
     foreach my $seqno ( keys %{$ris_list_by_seqno} ) {
@@ -13048,18 +13045,21 @@ sub set_maximum_field_count {
             DEVEL_MODE && Fault("seqno=$seqno has no opening\n");
             next;
         }
+
+        # Skip a list which is not selected with --maximum-fields-per-table
         my $token         = $rLL->[$K_opening]->[_TOKEN_];
         my $rpacked_flags = $maximum_field_count_control_hash{$token};
         next if ( !$rpacked_flags );
         my ( $flag, $max ) = @{$rpacked_flags};
-        if ($flag) {
-            my $match = $self->match_paren_control_flag( $seqno, $flag );
-            next if ( !$match );
-        }
+        next
+          if ( $flag && !$self->match_paren_control_flag( $seqno, $flag ) );
+
+        # Check if the maximum field count is exceeded. Note: the comma count
+        # is for interior commas only, so the field count = comma count + 1.
         my $rtype_count = $rtype_count_by_seqno->{$seqno};
         next if ( !$rtype_count );
         my $comma_count = $rtype_count->{','};
-        if ( $comma_count && $comma_count >= $max ) {
+        if ( $comma_count && $comma_count + 1 > $max ) {
             $rmaximum_field_count_by_seqno->{$seqno} = $max;
         }
     }
@@ -14577,11 +14577,9 @@ EOM
                 $last_type = $type;
             }
         }
-
         elsif ( $type_n eq ';' ) {
-
+            ## ok, at end
         }
-
         else {
             my $ln = $rLL->[$KK]->[_LINE_INDEX_] + 1;
             DEBUG_USE_CONSTANT && Fault("$ln: unknown use constant syntax\n");
@@ -14710,7 +14708,6 @@ EOM
                 $seqno_block = $rLL->[$K_nn]->[_TYPE_SEQUENCE_];
             }
         }
-
         else {
             ## chain ends if no elsif/else block
         }
@@ -16029,6 +16026,12 @@ use constant DEBUG_KEYWORD_USAGE => 0;
 sub find_keyword_usage {
 
     my ( $self, $rkeyword_list ) = @_;
+
+    # This is a utility for --warn- and --dump-keyword-usage
+    # Given:
+    #  $rkeyword_list = ref to list of keywords to be checked
+    # Returns:
+    #  Hash of usage information
 
     my $rLL               = $self->[_rLL_];
     my $rlines            = $self->[_rlines_];
@@ -19128,7 +19131,6 @@ sub store_new_nonblank_token {
 
         my $rcopy = copy_token_as_type( $rLL_new->[$Kp], $type, $token );
         $self->store_token($rcopy);
-
     }
 
     $last_last_nonblank_code_type  = $last_nonblank_code_type;
@@ -20406,9 +20408,13 @@ sub resync_lines_and_tokens {
 
     my $self = shift;
 
-    # Re-construct the arrays of tokens associated with the original input
-    # lines since they have probably changed due to inserting and deleting
-    # blanks and a few other tokens.
+    # This sub is called after sub respace_tokens has passed through
+    # all of the tokens and made whitespace adjustments according to the
+    # control parameters.
+
+    # The task is to re-construct the connections between the new tokens
+    # indexes and the original input line numbers since they have probably
+    # changed due to inserting and deleting blanks and a few other tokens.
 
     # Return parameters:
     # set severe_error = true if processing needs to terminate
@@ -20850,7 +20856,6 @@ sub count_list_elements {
             }
         }
     }
-
     else {
         DEVEL_MODE && Fault("Neither seqno_list nor K_list_start defined\n");
         return;
@@ -21195,7 +21200,6 @@ sub count_list_elements {
             }
             return;
         }
-
         else {
             ## continue search
         }
@@ -21814,7 +21818,6 @@ sub count_sub_input_args {
 
                     # NOTE: this could disagree with $_[n] usage; we
                     # ignore this for now.
-
                 }
 
                 # Count initial comments and pod after the '=@_;'
@@ -21844,7 +21847,6 @@ sub count_sub_input_args {
                     return;
                 }
             }
-
             else {
                 ## continue search
             }
@@ -21967,14 +21969,12 @@ sub count_sub_input_args {
 
                 # Skip past any parens and @_; let the semicolon be seen next
                 if ( $KK < $Kp - 1 ) { $KK = $Kp - 1 }
-
             }
             elsif ( $token eq 'bless' ) {
 
                 # Could look for something like the following:
                 #  my $self = bless {}, $class;
                 #  my $self = bless {}, shift;
-
             }
             elsif ( $is_if_unless{$token} ) {
 
@@ -22662,7 +22662,8 @@ sub update_sub_call_paren_info {
     return;
 } ## end sub update_sub_call_paren_info
 
-{
+{    ## begin closure self_call_check
+
     #-----------------------------------------------------
     # Sub to look at first use of $self in a specified sub
     #-----------------------------------------------------
@@ -22744,7 +22745,7 @@ sub update_sub_call_paren_info {
         }
         return ( $is_self_call, $is_oo_call );
     } ## end sub self_call_check
-}
+} ## end closure self_call_check
 
 use constant DEBUG_SELF      => 0;
 use constant DEBUG_SUB_CALLS => 0;
@@ -23144,7 +23145,6 @@ sub cross_check_sub_calls {
         # overwrite values found by scanning the script with prototype values
         $rsub_item->{shift_count_min} = $shift_count_min;
         $rsub_item->{shift_count_max} = $shift_count_max;
-
     }
 
     #--------------------------------------------------------------
@@ -24667,7 +24667,12 @@ EOM
 } ## end sub warn_nested_ternaries
 
 sub find_c_style_for_loops {
+
     my ($self) = @_;
+
+    # Utility called to implement --warn- and --dump-c-style-for-loops
+    # Returns:
+    #  a string with a list of these loops to print
 
     my $ris_c_style_for_paren_by_seqno =
       $self->[_ris_c_style_for_paren_by_seqno_];
@@ -25178,7 +25183,6 @@ sub weld_cuddled_blocks {
                 # The opening brace is not yet used but might eventually
                 # be needed in setting adjusted indentation.
                 $ris_cuddled_closing_brace->{$closing_seqno} = 1;
-
             }
             else {
 
@@ -27019,7 +27023,6 @@ sub mark_short_nested_blocks {
 
         # Looks OK, mark this as a short nested block
         $rshort_nested->{$type_sequence} = 1;
-
     }
     return;
 } ## end sub mark_short_nested_blocks
@@ -28790,7 +28793,6 @@ sub is_fragile_block_type {
                         # code blocks do not use -lp indentation, but behave as
                         # if they had a handle of one indentation length
                         $handle_len = $rOpts_indent_columns;
-
                     }
                     else {
                         if ( $is_handle_type{$last_nonblank_type} ) {
@@ -29020,10 +29022,8 @@ EOM
                         }
                     }
                 }
-
-                # it is a ternary or input file is unbalanced
                 else {
-
+                    ## it is a ternary or input file is unbalanced
                 }
 
                 $len                = 0;
@@ -30204,7 +30204,6 @@ EOM
                     if ( $code_type !~ /(?:BC|SBC|SBCX)/ ) {
                         if ( $rOpts_kgb_before == INSERT ) {
                             kgb_insert_blank_after( $ibeg - 1 );
-
                         }
                         elsif ( $rOpts_kgb_before == DELETE ) {
                             $self->kgb_delete_if_blank( $ibeg - 1 );
@@ -30915,7 +30914,6 @@ EOM
                 $next_slevel = $slevel + 1;
 
                 $next_parent_seqno = $seqno;
-
             }
             elsif ( $is_closing_token{$token} ) {
 
@@ -30927,7 +30925,6 @@ EOM
                 $parent_seqno = SEQ_ROOT unless ( defined($parent_seqno) );
                 $parent_seqno_to_go[$max_index_to_go] = $parent_seqno;
                 $next_parent_seqno                    = $parent_seqno;
-
             }
             else {
                 ## ternary token: nothing to do
@@ -31491,7 +31488,6 @@ EOM
                 $index_start_one_line_block = undef;
                 $self->end_batch();
             }
-
             else {
 
                 # Check for a soft break request
@@ -32001,7 +31997,6 @@ EOM
 
                     # keep going
                     $rbrace_follower = undef;
-
                 }
 
                 # if no more tokens, postpone decision until re-entering
@@ -32039,7 +32034,6 @@ EOM
 
                     $rbrace_follower = undef;
                 }
-
                 else {
                     $self->end_batch()
                       if ( !$no_internal_newlines && $max_index_to_go >= 0 );
@@ -32479,7 +32473,7 @@ sub starting_one_line_block {
 
         # keep going for non-containers
         elsif ( !$type_sequence_i ) {
-
+            ## keep going
         }
 
         # return if we encounter another opening brace before finding the
@@ -32732,7 +32726,6 @@ sub compare_indentation_levels {
                 }
             }
             $self->[_in_tabbing_disagreement_] = 0;
-
         }
     }
     return;
@@ -33573,7 +33566,6 @@ EOM
                 else {
                     $is_unbalanced_batch = 0;
                 }
-
             }
         }
         else {
@@ -35197,7 +35189,6 @@ EOM
 
                 $this_line_is_semicolon_terminated =
                   $rhash->{_has_terminal_semicolon};
-
             }
 
             #----------------------------------------------------------
@@ -35972,7 +35963,6 @@ EOM
                     # in case it is an opening paren.
                     my $ok = simple_rhs( $ri_end, $n, $nmax, $ibeg_2, $iend_2 );
                     return if ( !$ok );
-
                 }
             }
 
@@ -36434,7 +36424,7 @@ EOM
             $forced_breakpoint_to_go[$iend_1] = 0;
         }
         else {
-
+            ## no other cases
         }
         return ( 1, $bs_tweak );
     } ## end sub recombine_section_3
@@ -36764,7 +36754,6 @@ sub correct_lp_indentation {
                     # follow -pt style
                     ++$actual_pos
                       if ( $types_to_go[ $iendm + 1 ] eq 'b' );
-
                 }
             }
 
@@ -38670,7 +38659,6 @@ EOM
 
                     $comma_follows_last_closing_token =
                       $next_nonblank_type eq ',' || $next_nonblank_type eq '=>';
-
                 }
                 else {
                     ## not a depth change
@@ -38717,11 +38705,9 @@ EOM
                 $want_comma_break[$depth]   = 1;
                 $index_before_arrow[$depth] = $i_last_nonblank_token;
                 next;
-
             }
             elsif ( $type eq '.' ) {
                 $last_dot_index[$depth] = $i;
-
             }
             else {
 
@@ -38743,7 +38729,6 @@ EOM
             if ( $item_count_stack[$dd] ) {
                 $self->set_comma_breakpoints( $max_index_to_go + 1,
                     $dd, $rbond_strength_bias );
-
             }
             $self->set_logical_breakpoints($dd)
               if ( $has_old_logical_breakpoints[$dd] );
@@ -39909,7 +39894,6 @@ sub find_token_starting_list {
             $i_opening_minus = $iprev_nb;
         }
     }
-
     else {
         ## previous token not special
     }
@@ -40371,7 +40355,6 @@ EOM
                 $self->set_forced_breakpoint($i_break);
                 ${$rdo_not_break_apart} = 1;
                 return;
-
             }
 
             # Section B2B: Shortcut method 2 is for most small ragged lists
@@ -44013,27 +43996,25 @@ EOM
                     && $block_type_to_go[$i]
                     && $matches_ASUB{ $block_type_to_go[$i] } )
                 {
-
+                    ## do not align
                 }
 
                 # and do not make alignments within 'elsif' parens
                 elsif ( $i > $i_elsif_open && $i < $i_elsif_close ) {
-
+                    ## do not align
                 }
 
                 # and ignore any tokens which have leading padded spaces
                 # example: perl527/lop.t
                 elsif ( substr( $alignment_type, 0, 1 ) eq SPACE ) {
-
+                    ## do not align
                 }
-
                 else {
                     $ralignment_type_to_go->[$i] = $alignment_type;
                     $ralignment_counts->[$nline]++;
                     push @imatch_list, $i;
                 }
             }
-
             $vert_last_nonblank_type = $type;
         }
         return;
@@ -44509,7 +44490,6 @@ sub undo_contained_ci {
                         }
                     }
                 }
-
             }
 
             #-------------------------------------
@@ -44792,7 +44772,7 @@ sub undo_contained_ci {
                     # if this is text after closing '}'
                     # then look for an interior token to pad
                     if ( $types_to_go[$ibeg] eq '}' ) {
-
+                        ## do not pad
                     }
 
                     # otherwise, we might pad if it looks really good
@@ -46487,8 +46467,14 @@ sub make_paren_name {
 
         ) = @_;
 
-        # Determine indentation adjustment for a line with a leading closing
-        # token - i.e. one of these:     ) ] } :
+        # This sub is called if the first token on a line is a sequenced
+        # item, or a pseud-sequenced qw container.
+
+        # For lines with a LEADING OPENING token, some special cases are
+        # checked.
+
+        # For lines with a LEADING CLOSING token, i.e. one of ) ] } :, the main
+        # task is to determine indentation the adjustment.
 
         # The indentation adjustment is found by checking all user controls,
         # which are sometimes in conflict.  So the logic is rather complex.
@@ -46530,7 +46516,9 @@ sub make_paren_name {
             $is_leading,          $opening_exists,
         );
 
-        # Honor any flag to reduce -ci set by the -bbxi=n option
+        #----------------------------------------
+        # Section 1: check for and handle -bbxi=n
+        #----------------------------------------
         if ( $seqno_beg && $self->[_rwant_reduced_ci_]->{$seqno_beg} ) {
 
             # if this is an opening, it must be alone on the line ...
@@ -46551,17 +46539,19 @@ sub make_paren_name {
             else {
                 ## no change in ci needed
             }
-        }
+        } ## end if ( $seqno_beg && $self...)
 
-        my $ris_bli_container = $self->[_ris_bli_container_];
-        my $is_bli_beg = $seqno_beg ? $ris_bli_container->{$seqno_beg} : 0;
-
+        #--------------------------------------------------------
+        # Section 2: check for and handle --brace-left-and-indent
+        #--------------------------------------------------------
         # Update the $is_bli flag as we go. It is initially 1.
         # We note seeing a leading opening brace by setting it to 2.
         # If we get to the closing brace without seeing the opening then we
         # turn it off.  This occurs if the opening brace did not get output
         # at the start of a line, so we will then indent the closing brace
         # in the default way.
+        my $ris_bli_container = $self->[_ris_bli_container_];
+        my $is_bli_beg = $seqno_beg ? $ris_bli_container->{$seqno_beg} : 0;
         if ( $is_bli_beg && $is_bli_beg == 1 ) {
             my $K_opening_container = $self->[_K_opening_container_];
             my $K_opening           = $K_opening_container->{$seqno_beg};
@@ -46574,6 +46564,9 @@ sub make_paren_name {
             }
         }
 
+        #--------------------------------------------------
+        # Section 3: Check for -lp -wn at a welded qw quote
+        #--------------------------------------------------
         # QW PATCH for the combination -lp -wn
         # For -lp formatting use $ibeg_weld_fix to get around the problem
         # that with -lp type formatting the opening and closing tokens to not
@@ -46589,7 +46582,9 @@ sub make_paren_name {
             }
         }
 
-        # if we are at a closing token of some type..
+        #---------------------------------------------------------
+        # Section 4A: handle closing tokens } ] } plus qw versions
+        #---------------------------------------------------------
         if ( $is_closing_type_beg || $seqno_qw_closing ) {
 
             my $K_beg = $K_to_go[$ibeg];
@@ -46663,102 +46658,38 @@ sub make_paren_name {
                 || (   $i_terminal > $ibeg
                     && $is_closing_type{ $types_to_go[$iend] } )
 
-                # Alternate Patch for git #51, isolated closing qw token not
-                # outdented if no-delete-old-newlines is set. This works, but
-                # a more general patch elsewhere fixes the real problem: ljump.
-                # || ( $seqno_qw_closing && $ibeg == $i_terminal )
-
-              )
-            {
-                $adjust_indentation = 1;
-            }
-
-            # outdent something like '),'
-            if (
-                $terminal_type eq ','
-
-                # Removed this constraint for -wn
-                # OLD: allow just one character before the comma
-                # && $i_terminal == $ibeg + 1
-
+                # Outdent something like '),'
                 # require LIST environment; otherwise, we may outdent too much -
                 # this can happen in calls without parentheses (overload.t);
-                && $self->is_in_list_by_i($i_terminal)
+                || (   $terminal_type eq ','
+                    && $self->is_in_list_by_i($i_terminal) )
+
               )
             {
                 $adjust_indentation = 1;
-            }
+            } ## end if ( $is_semicolon_terminated...)
 
-            # undo continuation indentation of a terminal closing token if
+            # Undo continuation indentation of a terminal closing token if
             # it is the last token before a level decrease.  This will allow
             # a closing token to line up with its opening counterpart, and
             # avoids an indentation jump larger than 1 level.
-            my $rLL    = $self->[_rLL_];
-            my $Klimit = $self->[_Klimit_];
-            if (   $i_terminal == $ibeg
+            if (
+                   $adjust_indentation != 1
+                && $i_terminal == $ibeg
                 && $is_closing_type_beg
+
+                # do not undo ci if it was set by the -xci option
                 && defined($K_beg)
-                && $K_beg < $Klimit )
+                && !$self->[_rseqno_controlling_my_ci_]->{$K_beg}
+              )
             {
-                my $K_plus    = $K_beg + 1;
-                my $type_plus = $rLL->[$K_plus]->[_TYPE_];
 
-                if ( $type_plus eq 'b' && $K_plus < $Klimit ) {
-                    $type_plus = $rLL->[ ++$K_plus ]->[_TYPE_];
-                }
-
-                if ( $type_plus eq '#' && $K_plus < $Klimit ) {
-                    $type_plus = $rLL->[ ++$K_plus ]->[_TYPE_];
-                    if ( $type_plus eq 'b' && $K_plus < $Klimit ) {
-                        $type_plus = $rLL->[ ++$K_plus ]->[_TYPE_];
-                    }
-
-                    # Note: we have skipped past just one comment (perhaps a
-                    # side comment).  There could be more, and we could easily
-                    # skip past all the rest with the following code, or with a
-                    # while loop.  It would be rare to have to do this, and
-                    # those block comments would still be indented, so it would
-                    # to leave them indented.  So it seems best to just stop at
-                    # a maximum of one comment.
-                    ##if ($type_plus eq '#') {
-                    ##   $K_plus = $self->K_next_code($K_plus);
-                    ##}
-                }
-
-                if ( !$is_bli_beg && defined($K_plus) ) {
-                    my $lev        = $level_beg;
+                my $K_plus = $self->K_next_code($K_beg);
+                if ( defined($K_plus) ) {
+                    my $rLL        = $self->[_rLL_];
                     my $level_next = $rLL->[$K_plus]->[_LEVEL_];
-
-                    # and do not undo ci if it was set by the -xci option
                     $adjust_indentation = 1
-                      if ( $level_next < $lev
-                        && !$self->[_rseqno_controlling_my_ci_]->{$K_beg} );
-                }
-
-                # Patch for RT #96101, in which closing brace of anonymous subs
-                # was not outdented.  We should look ahead and see if there is
-                # a level decrease at the next token (i.e., a closing token),
-                # but right now we do not have that information.  For now
-                # we see if we are in a list, and this works well.
-                # See test files 'sub*.t' for good test cases.
-                if (  !$rOpts_indent_closing_brace
-                    && $block_type_beg
-                    && $self->[_ris_asub_block_]->{$seqno_beg}
-                    && $self->is_in_list_by_i($i_terminal) )
-                {
-                    (
-                        $opening_indentation, $opening_offset,
-                        $is_leading,          $opening_exists,
-                      )
-                      = $self->get_opening_indentation( $ibeg,
-                        $rindentation_list, undef );
-                    my $indentation = $leading_spaces_beg;
-                    if ( defined($opening_indentation)
-                        && get_spaces($indentation) >
-                        get_spaces($opening_indentation) )
-                    {
-                        $adjust_indentation = 1;
-                    }
+                      if ( $level_next < $level_beg );
                 }
             }
 
@@ -46766,17 +46697,12 @@ sub make_paren_name {
             # Undo ci of line with leading closing eval brace,
             # but not beyond the indentation of the line with
             # the opening brace.
-            if (   $block_type_beg
+            if (   $adjust_indentation != 1
+                && $block_type_beg
                 && $block_type_beg eq 'eval'
                 && !ref($leading_spaces_beg)
                 && !$rOpts_indent_closing_brace )
             {
-                (
-                    $opening_indentation, $opening_offset,
-                    $is_leading,          $opening_exists,
-                  )
-                  = $self->get_opening_indentation( $ibeg, $rindentation_list,
-                    undef );
                 my $indentation = $leading_spaces_beg;
                 if ( defined($opening_indentation)
                     && get_spaces($indentation) >
@@ -46831,7 +46757,7 @@ sub make_paren_name {
                     # the opening indentation, and qw quote delimiters are not
                     # sequenced items.
                     if ( defined($cti) && $cti == 1 ) { $cti = 0 }
-                }
+                } ## end if ( $seqno_qw_closing...)
 
                 if ( !defined($cti) ) {
 
@@ -46845,7 +46771,6 @@ sub make_paren_name {
                     #  >
                     #  >     ) );
                     $adjust_indentation = 0;
-
                 }
                 elsif ( $cti == 1 ) {
                     if (   $i_terminal <= $ibeg + 1
@@ -46871,7 +46796,7 @@ sub make_paren_name {
                 else {
                     ## cti == 0
                 }
-            }
+            } ## end if ( !$block_type_beg )
 
             # handle option to indent blocks
             else {
@@ -46886,11 +46811,15 @@ sub make_paren_name {
                     $adjust_indentation = 3;
                 }
             }
-        } ## end if ( $is_closing_type_beg || $seqno_qw_closing )
+        } ## end if ( $is_closing_type_beg...)
 
-        # if line begins with a ':', align it with any
-        # previous line leading with corresponding ?
+        #---------------------------------
+        # Section 4B: handle a leading ':'
+        #---------------------------------
         elsif ( $type_beg eq ':' ) {
+
+            # if line begins with a ':', align it with any
+            # previous line leading with corresponding ?
             (
                 $opening_indentation, $opening_offset,
                 $is_leading,          $opening_exists,
@@ -46899,23 +46828,31 @@ sub make_paren_name {
                 $rindentation_list, undef );
             if ($is_leading) { $adjust_indentation = 2; }
         }
+
+        #--------------------------------------------------
+        # Section 4C: handle opening token types
+        #--------------------------------------------------
         else {
-            ## not a closing type
+            ## nothing more to do for opening type
         }
 
+        #------------------------------------------------------------------
+        # Section 5: do not outdent the closing token more than the opening
+        #------------------------------------------------------------------
         # A final check: reset the flag value from 1 to 0 if moving left would
         # give this closing token less indentation than the line with its
         # opening token. We could do this check at the top for more efficiency
         # except for -lp.  For -lp, if the $adjust_indentation flag flips from
         # 1 to 2, then the -lp logic can do a better recovery if it knows that
         # the $default_adjust_indentation=1 instead of 0 (c435)
-        if ( $adjust_indentation == 1 ) {
-            my $no_left_adjustment_space = defined($opening_indentation)
-              && get_spaces($leading_spaces_beg) <=
-              get_spaces($opening_indentation);
-            if ($no_left_adjustment_space) {
-                $adjust_indentation = 0;
-            }
+        if (
+               $adjust_indentation == 1
+            && defined($opening_indentation)
+            && ( get_spaces($leading_spaces_beg) <=
+                get_spaces($opening_indentation) )
+          )
+        {
+            $adjust_indentation = 0;
         }
 
         return (
@@ -47260,7 +47197,6 @@ sub set_vertical_tightness_flags {
                 $vt_valid_flag   = $valid_flag;
                 $vt_min_lines    = 0;
                 $vt_max_lines    = 0;
-
             }
         }
 

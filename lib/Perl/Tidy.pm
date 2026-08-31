@@ -561,8 +561,7 @@ sub is_char_mode {
     # See https://perldoc.perl.org/Encode.
     # See also comments in Carp.pm and other modules using this function
 
-    return 1 if ( utf8::is_utf8($string) );
-    return;
+    return utf8::is_utf8($string);
 } ## end sub is_char_mode
 
 my $md5_hex = sub {
@@ -971,7 +970,6 @@ saw: '$dump_options_type'
 expecting: 'perltidyrc' or 'full'
 ------------------------------------------------------------------------
 EOM
-
         }
     }
     else {
@@ -2138,7 +2136,7 @@ EOM
     );
 } ## end sub get_decoded_string_buffer
 
-{ #<<<
+{ #<<< closure line_separator subs
 
 my $LF;
 my $CR;
@@ -2281,7 +2279,7 @@ sub set_line_separator {
     $self->[_line_separator_] = $line_separator;
     return $rinput_string;
 } ## end sub set_line_separator
-}
+} ## end closure for line_separator subs
 
 sub process_all_files {
 
@@ -2871,7 +2869,6 @@ EOM
         # have a newline, then we remove the final newline of the output
         $chomp_terminal_newline = !$rOpts->{'add-terminal-newline'}
           && substr( ${$rinput_string}, -1, 1 ) !~ /\n/;
-
     }
 
     #-----------------------------------------------------------------------
@@ -3250,10 +3247,6 @@ EOM
                         $diagnostics_object->write_diagnostics(
                             $convergence_log_message)
                           if ($diagnostics_object);
-
-# Uncomment to search for blinking states:
-# Warn( "$display_name: blinking; iter $iter same as for $saw_md5{$digest}\n" );
-
                     }
                     else {
                         $convergence_log_message = <<EOM;
@@ -5784,7 +5777,6 @@ EOM
             {
                 $arg_seeking_string = $arg;
             }
-
         }
         $arg_seeking_string_last = $arg_seeking_string;
     }
@@ -5962,7 +5954,7 @@ sub find_config_file {
     # sub to check file existence and record all tests
     my $exists_config_file = sub {
         my $config_file = shift;
-        return 0 unless ( defined($config_file) );
+        return if ( !defined($config_file) );
         ${$rconfig_file_chatter} .= "# Testing: $config_file\n";
         return -f $config_file;
     }; ## end $exists_config_file = sub

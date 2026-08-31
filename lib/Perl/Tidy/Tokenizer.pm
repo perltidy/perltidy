@@ -1021,13 +1021,11 @@ EOM
 "hit eof while in pod documentation (no =cut seen)\n\tthis can cause trouble with some pod utilities\n"
             );
         }
-
         else {
             $self->complain(
 "hit eof while in pod documentation (no =cut seen)\n\tthis can cause trouble with some pod utilities\n"
             );
         }
-
     }
 
     if ( $self->[_in_here_doc_] ) {
@@ -1703,7 +1701,6 @@ sub get_line {
                 $self->log_numbered_msg("Entering POD section\n");
             }
         }
-
         else {
             $line_of_tokens->{_line_type} = 'POD_START';
             $self->log_numbered_msg("Entering POD section\n");
@@ -2675,7 +2672,7 @@ EOM
         #      $cref->&*;    # a postderef
         #-------------------------------------------------------
         if ( $last_nonblank_token eq '->' ) {
-
+            ## need full scan
         }
 
         #------------------------------
@@ -3687,7 +3684,6 @@ EOM
                 $self->warning(
 "syntax error at '$want_paren .. {' -- missing \$ loop variable\n"
                 );
-
             }
             $want_paren = EMPTY_STRING;
         }
@@ -4232,7 +4228,6 @@ EOM
 
             # maybe part of bareword token? unary is safest
             if ( !defined($number) ) { $type = 'm'; }
-
         }
         elsif ( $expecting == OPERATOR ) {
         }
@@ -4667,7 +4662,6 @@ EOM
                 # But otherwise, using a keyword here is probably not a good
                 # idea. But perl does not complain, so we will not.
             }
-
             else {
                 $ris_constant->{$current_package}->{$next_nonblank_tok2} = 1;
             }
@@ -4874,12 +4868,12 @@ EOM
                 if (   $rsaw_use_module->{$current_package}->{'RPerl'}
                     && $tok =~ /^sse_(mul|div|add|sub)$/ )
                 {
-
+                    ## no error message
                 }
 
                 # patch for Syntax::Operator::In, git #162
                 elsif ( $tok eq 'in' && $next_nonblank_token eq ':' ) {
-
+                    ## no error message
                 }
 
                 # Fix part 1 for git #63 in which a comment falls
@@ -4887,7 +4881,7 @@ EOM
                 # alternate fix would be to change operator_expected
                 # to return an UNKNOWN for this type.
                 elsif ( $last_nonblank_type eq '->' ) {
-
+                    ## no error message
                 }
 
                 # don't complain about possible indirect object
@@ -4931,7 +4925,6 @@ EOM
 
                 # not a special case
                 else { }
-
             }
 
             # underscore after file test operator is file handle
@@ -6664,7 +6657,6 @@ EOM
                 push @output_block_type,    EMPTY_STRING;
                 push @output_type_sequence, EMPTY_STRING;
                 push @output_token_type,    $type_i;
-
             }
 
             #------------------------------------
@@ -6700,7 +6692,6 @@ EOM
                             # break BEFORE '?' in a nested ternary
                             $level_i = $level_in_tokenizer;
                             $nesting_block_string .= "$nesting_block_flag";
-
                         }
                     }
                     else {
@@ -6761,7 +6752,6 @@ EOM
                             $nesting_block_flag =
                               substr( $nesting_block_string, -1 ) eq '1';
                         }
-
                     }
                 }
 
@@ -6792,7 +6782,6 @@ EOM
                 push @output_block_type,    $routput_block_type->[$ii];
                 push @output_type_sequence, $routput_type_sequence->[$ii];
                 push @output_token_type,    $type_i;
-
             }
         }    ## End loop to over tokens
 
@@ -7580,7 +7569,6 @@ sub decide_if_code_block {
     if ( $next_nonblank_token eq '}' ) {
         $code_block_type = EMPTY_STRING;
     }
-
     else {
 
         # To guess if this '{' is an anonymous hash reference, look ahead
@@ -8866,7 +8854,6 @@ sub scan_id_do {
             );
             $id_scan_state = EMPTY_STRING;
         }
-
         else {
             $self->warning("invalid token in scan_id: $tok\n");
             $id_scan_state = EMPTY_STRING;
@@ -10224,7 +10211,6 @@ EOM
                             $self->warning(
 "already saw definition of lexical 'sub $subname' at line $lno\n"
                             );
-
                         }
                         else {
                             if ( !DEVEL_MODE ) {
@@ -11051,7 +11037,6 @@ sub find_here_doc {
             $here_doc_target = $next_token;
             $i               = $ibeg + 1;
         }
-
     }
     else {
 
@@ -11534,7 +11519,10 @@ sub follow_quoted_string {
 sub indicate_error {
     my ( $self, $msg, $line_number, $input_line, $pos, $caret ) = @_;
 
-    # write input line and line with carat's showing where error was detected
+    # Write input line and line with a carat showing where error was detected.
+    # Example:
+    #  11: if (!defined($ans) {print "ans is not defined\n"}
+    #         ^
     $self->interrupt_logfile();
     $self->warning($msg);
     $self->write_error_indicator_pair( $line_number, $input_line, $pos,
