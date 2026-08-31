@@ -1,5 +1,18 @@
 # Perltidy Change Log
 
+## 2026 08 26.01
+
+   - Fixed a very rare problem where a closing anonymous sub brace in a list
+     with multiple values, and followed by a pointer, was not indented:
+
+        check(
+            $yy,
+            sub {
+                ...;
+              }        ## <-- this brace was not indented
+              ->(),
+        );
+
 ## 2026 08 26
 
    - Fixed git #213, --heredoc-extra-spaces flag not working correctly.
