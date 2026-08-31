@@ -644,24 +644,24 @@ BEGIN {
         _last_line_leading_type_  => $i++,
         _last_line_leading_level_ => $i++,
 
-        _added_semicolon_count_    => $i++,
-        _first_added_semicolon_at_ => $i++,
-        _last_added_semicolon_at_  => $i++,
+        _added_semicolon_count_      => $i++,
+        _first_added_semicolon_line_ => $i++,
+        _last_added_semicolon_line_  => $i++,
 
-        _deleted_semicolon_count_    => $i++,
-        _first_deleted_semicolon_at_ => $i++,
-        _last_deleted_semicolon_at_  => $i++,
+        _deleted_semicolon_count_      => $i++,
+        _first_deleted_semicolon_line_ => $i++,
+        _last_deleted_semicolon_line_  => $i++,
 
-        _embedded_tab_count_    => $i++,
-        _first_embedded_tab_at_ => $i++,
-        _last_embedded_tab_at_  => $i++,
+        _embedded_tab_count_      => $i++,
+        _first_embedded_tab_line_ => $i++,
+        _last_embedded_tab_line_  => $i++,
 
-        _first_tabbing_disagreement_       => $i++,
-        _last_tabbing_disagreement_        => $i++,
-        _tabbing_disagreement_count_       => $i++,
-        _in_tabbing_disagreement_          => $i++,
-        _first_brace_tabbing_disagreement_ => $i++,
-        _in_brace_tabbing_disagreement_    => $i++,
+        _first_indentation_rift_line_       => $i++,
+        _last_indentation_rift_line_        => $i++,
+        _indentation_rift_count_            => $i++,
+        _in_indentation_rift_               => $i++,
+        _first_brace_indentation_rift_line_ => $i++,
+        _in_brace_indentation_rift_         => $i++,
 
         _saw_use_strict_ => $i++,
 
@@ -1234,26 +1234,26 @@ sub initialize_self_vars {
     $self->[_rshort_nested_]    = {};    # blocks not forced open
 
     # Memory of processed text...
-    $self->[_ris_special_identifier_token_]     = {};
-    $self->[_last_line_leading_level_]          = 0;
-    $self->[_last_line_leading_type_]           = '#';
-    $self->[_last_output_short_opening_token_]  = 0;
-    $self->[_added_semicolon_count_]            = 0;
-    $self->[_first_added_semicolon_at_]         = 0;
-    $self->[_last_added_semicolon_at_]          = 0;
-    $self->[_deleted_semicolon_count_]          = 0;
-    $self->[_first_deleted_semicolon_at_]       = 0;
-    $self->[_last_deleted_semicolon_at_]        = 0;
-    $self->[_embedded_tab_count_]               = 0;
-    $self->[_first_embedded_tab_at_]            = 0;
-    $self->[_last_embedded_tab_at_]             = 0;
-    $self->[_first_tabbing_disagreement_]       = 0;
-    $self->[_last_tabbing_disagreement_]        = 0;
-    $self->[_tabbing_disagreement_count_]       = 0;
-    $self->[_in_tabbing_disagreement_]          = 0;
-    $self->[_saw_use_strict_]                   = 0;
-    $self->[_first_brace_tabbing_disagreement_] = undef;
-    $self->[_in_brace_tabbing_disagreement_]    = undef;
+    $self->[_ris_special_identifier_token_]      = {};
+    $self->[_last_line_leading_level_]           = 0;
+    $self->[_last_line_leading_type_]            = '#';
+    $self->[_last_output_short_opening_token_]   = 0;
+    $self->[_added_semicolon_count_]             = 0;
+    $self->[_first_added_semicolon_line_]        = 0;
+    $self->[_last_added_semicolon_line_]         = 0;
+    $self->[_deleted_semicolon_count_]           = 0;
+    $self->[_first_deleted_semicolon_line_]      = 0;
+    $self->[_last_deleted_semicolon_line_]       = 0;
+    $self->[_embedded_tab_count_]                = 0;
+    $self->[_first_embedded_tab_line_]           = 0;
+    $self->[_last_embedded_tab_line_]            = 0;
+    $self->[_first_indentation_rift_line_]       = 0;
+    $self->[_last_indentation_rift_line_]        = 0;
+    $self->[_indentation_rift_count_]            = 0;
+    $self->[_in_indentation_rift_]               = 0;
+    $self->[_saw_use_strict_]                    = 0;
+    $self->[_first_brace_indentation_rift_line_] = undef;
+    $self->[_in_brace_indentation_rift_]         = undef;
 
     # Hashes related to container welding...
     $self->[_radjusted_levels_] = [];
@@ -32682,50 +32682,49 @@ sub compare_indentation_levels {
       && $type eq '}';
 
     if ( $guessed_indentation_level ne $structural_indentation_level ) {
-        $self->[_last_tabbing_disagreement_] = $line_number;
+        $self->[_last_indentation_rift_line_] = $line_number;
 
         if ($is_closing_block) {
 
-            if ( !$self->[_in_brace_tabbing_disagreement_] ) {
-                $self->[_in_brace_tabbing_disagreement_] = $line_number;
+            if ( !$self->[_in_brace_indentation_rift_] ) {
+                $self->[_in_brace_indentation_rift_] = $line_number;
             }
-            if ( !$self->[_first_brace_tabbing_disagreement_] ) {
-                $self->[_first_brace_tabbing_disagreement_] = $line_number;
+            if ( !$self->[_first_brace_indentation_rift_line_] ) {
+                $self->[_first_brace_indentation_rift_line_] = $line_number;
             }
         }
 
-        if ( !$self->[_in_tabbing_disagreement_] ) {
-            $self->[_tabbing_disagreement_count_]++;
+        if ( !$self->[_in_indentation_rift_] ) {
+            $self->[_indentation_rift_count_]++;
 
-            if ( $self->[_tabbing_disagreement_count_] <= MAX_NAG_MESSAGES ) {
+            if ( $self->[_indentation_rift_count_] <= MAX_NAG_MESSAGES ) {
                 $self->write_logfile_entry(
 "Start indentation disagreement: input=$guessed_indentation_level; output=$structural_indentation_level\n"
                 );
             }
-            $self->[_in_tabbing_disagreement_]    = $line_number;
-            $self->[_first_tabbing_disagreement_] = $line_number
-              unless ( $self->[_first_tabbing_disagreement_] );
+            $self->[_in_indentation_rift_]         = $line_number;
+            $self->[_first_indentation_rift_line_] = $line_number
+              unless ( $self->[_first_indentation_rift_line_] );
         }
     }
     else {
 
-        $self->[_in_brace_tabbing_disagreement_] = 0 if ($is_closing_block);
+        $self->[_in_brace_indentation_rift_] = 0 if ($is_closing_block);
 
-        my $in_tabbing_disagreement = $self->[_in_tabbing_disagreement_];
-        if ($in_tabbing_disagreement) {
+        my $in_indentation_rift = $self->[_in_indentation_rift_];
+        if ($in_indentation_rift) {
 
-            if ( $self->[_tabbing_disagreement_count_] <= MAX_NAG_MESSAGES ) {
+            if ( $self->[_indentation_rift_count_] <= MAX_NAG_MESSAGES ) {
                 $self->write_logfile_entry(
-"End indentation disagreement from input line $in_tabbing_disagreement\n"
+"End indentation disagreement from input line $in_indentation_rift\n"
                 );
 
-                if ( $self->[_tabbing_disagreement_count_] == MAX_NAG_MESSAGES )
-                {
+                if ( $self->[_indentation_rift_count_] == MAX_NAG_MESSAGES ) {
                     $self->write_logfile_entry(
-                        "No further tabbing disagreements will be noted\n");
+                        "No further indentation disagreements will be noted\n");
                 }
             }
-            $self->[_in_tabbing_disagreement_] = 0;
+            $self->[_in_indentation_rift_] = 0;
         }
     }
     return;
@@ -36583,9 +36582,9 @@ sub insert_breaks_before_list_opening_containers {
 
 sub note_added_semicolon {
     my ( $self, $line_number ) = @_;
-    $self->[_last_added_semicolon_at_] = $line_number;
+    $self->[_last_added_semicolon_line_] = $line_number;
     if ( $self->[_added_semicolon_count_] == 0 ) {
-        $self->[_first_added_semicolon_at_] = $line_number;
+        $self->[_first_added_semicolon_line_] = $line_number;
     }
     $self->[_added_semicolon_count_]++;
     $self->write_logfile_entry("Added ';' here\n");
@@ -36594,9 +36593,9 @@ sub note_added_semicolon {
 
 sub note_deleted_semicolon {
     my ( $self, $line_number ) = @_;
-    $self->[_last_deleted_semicolon_at_] = $line_number;
+    $self->[_last_deleted_semicolon_line_] = $line_number;
     if ( $self->[_deleted_semicolon_count_] == 0 ) {
-        $self->[_first_deleted_semicolon_at_] = $line_number;
+        $self->[_first_deleted_semicolon_line_] = $line_number;
     }
     $self->[_deleted_semicolon_count_]++;
     $self->write_logfile_entry(
@@ -36607,9 +36606,9 @@ sub note_deleted_semicolon {
 sub note_embedded_tab {
     my ( $self, $line_number ) = @_;
     $self->[_embedded_tab_count_]++;
-    $self->[_last_embedded_tab_at_] = $line_number;
-    if ( !$self->[_first_embedded_tab_at_] ) {
-        $self->[_first_embedded_tab_at_] = $line_number;
+    $self->[_last_embedded_tab_line_] = $line_number;
+    if ( !$self->[_first_embedded_tab_line_] ) {
+        $self->[_first_embedded_tab_line_] = $line_number;
     }
 
     if ( $self->[_embedded_tab_count_] <= MAX_NAG_MESSAGES ) {
@@ -48400,9 +48399,9 @@ sub wrapup {
 "Maximum leading structural depth is $max_depth in input at line $at_line\n"
     );
 
-    my $added_semicolon_count    = $self->[_added_semicolon_count_];
-    my $first_added_semicolon_at = $self->[_first_added_semicolon_at_];
-    my $last_added_semicolon_at  = $self->[_last_added_semicolon_at_];
+    my $added_semicolon_count      = $self->[_added_semicolon_count_];
+    my $first_added_semicolon_line = $self->[_first_added_semicolon_line_];
+    my $last_added_semicolon_line  = $self->[_last_added_semicolon_line_];
 
     if ( $added_semicolon_count > 0 ) {
         my $first = ( $added_semicolon_count > 1 ) ? "First" : EMPTY_STRING;
@@ -48410,20 +48409,20 @@ sub wrapup {
           ( $added_semicolon_count > 1 ) ? "semicolons were" : "semicolon was";
         $self->write_logfile_entry("$added_semicolon_count $what added:\n");
         $self->write_logfile_entry(
-            "  $first at input line $first_added_semicolon_at\n");
+            "  $first at input line $first_added_semicolon_line\n");
 
         if ( $added_semicolon_count > 1 ) {
             $self->write_logfile_entry(
-                "   Last at input line $last_added_semicolon_at\n");
+                "   Last at input line $last_added_semicolon_line\n");
         }
         $self->write_logfile_entry(
             "  (Use -nasc to prevent semicolon addition)\n");
         $self->write_logfile_entry("\n");
     }
 
-    my $deleted_semicolon_count    = $self->[_deleted_semicolon_count_];
-    my $first_deleted_semicolon_at = $self->[_first_deleted_semicolon_at_];
-    my $last_deleted_semicolon_at  = $self->[_last_deleted_semicolon_at_];
+    my $deleted_semicolon_count      = $self->[_deleted_semicolon_count_];
+    my $first_deleted_semicolon_line = $self->[_first_deleted_semicolon_line_];
+    my $last_deleted_semicolon_line  = $self->[_last_deleted_semicolon_line_];
     if ( $deleted_semicolon_count > 0 ) {
         my $first = ( $deleted_semicolon_count > 1 ) ? "First" : EMPTY_STRING;
         my $what =
@@ -48433,20 +48432,20 @@ sub wrapup {
         $self->write_logfile_entry(
             "$deleted_semicolon_count unnecessary $what deleted:\n");
         $self->write_logfile_entry(
-            "  $first at input line $first_deleted_semicolon_at\n");
+            "  $first at input line $first_deleted_semicolon_line\n");
 
         if ( $deleted_semicolon_count > 1 ) {
             $self->write_logfile_entry(
-                "   Last at input line $last_deleted_semicolon_at\n");
+                "   Last at input line $last_deleted_semicolon_line\n");
         }
         $self->write_logfile_entry(
             "  (Use -ndsm to prevent semicolon deletion)\n");
         $self->write_logfile_entry("\n");
     }
 
-    my $embedded_tab_count    = $self->[_embedded_tab_count_];
-    my $first_embedded_tab_at = $self->[_first_embedded_tab_at_];
-    my $last_embedded_tab_at  = $self->[_last_embedded_tab_at_];
+    my $embedded_tab_count      = $self->[_embedded_tab_count_];
+    my $first_embedded_tab_line = $self->[_first_embedded_tab_line_];
+    my $last_embedded_tab_line  = $self->[_last_embedded_tab_line_];
     if ( $embedded_tab_count > 0 ) {
         my $first = ( $embedded_tab_count > 1 ) ? "First" : EMPTY_STRING;
         my $what =
@@ -48459,26 +48458,26 @@ sub wrapup {
 "This means the display of this script could vary with device or software\n"
         );
         $self->write_logfile_entry(
-            "  $first at input line $first_embedded_tab_at\n");
+            "  $first at input line $first_embedded_tab_line\n");
 
         if ( $embedded_tab_count > 1 ) {
             $self->write_logfile_entry(
-                "   Last at input line $last_embedded_tab_at\n");
+                "   Last at input line $last_embedded_tab_line\n");
         }
         $self->write_logfile_entry("\n");
     }
 
-    my $first_tabbing_disagreement = $self->[_first_tabbing_disagreement_];
-    my $last_tabbing_disagreement  = $self->[_last_tabbing_disagreement_];
-    my $in_tabbing_disagreement    = $self->[_in_tabbing_disagreement_];
+    my $first_indentation_rift_line = $self->[_first_indentation_rift_line_];
+    my $last_indentation_rift_line  = $self->[_last_indentation_rift_line_];
+    my $in_indentation_rift         = $self->[_in_indentation_rift_];
 
-    if ($first_tabbing_disagreement) {
+    if ($first_indentation_rift_line) {
         $self->write_logfile_entry(
-"First indentation disagreement seen at input line $first_tabbing_disagreement\n"
+"First indentation disagreement seen at input line $first_indentation_rift_line\n"
         );
     }
 
-    my $first_btd = $self->[_first_brace_tabbing_disagreement_];
+    my $first_btd = $self->[_first_brace_indentation_rift_line_];
     if ($first_btd) {
         my $msg =
 "First closing brace indentation disagreement started at input line $first_btd\n";
@@ -48488,7 +48487,7 @@ sub wrapup {
         if ( $self->get_saw_brace_error() ) { $self->warning("NOTE: $msg") }
     }
 
-    my $in_btd = $self->[_in_brace_tabbing_disagreement_];
+    my $in_btd = $self->[_in_brace_indentation_rift_];
     if ($in_btd) {
         my $msg =
 "Ending with brace indentation disagreement which started at input line $in_btd\n";
@@ -48498,17 +48497,17 @@ sub wrapup {
         if ( $self->get_saw_brace_error() ) { $self->warning("NOTE: $msg") }
     }
 
-    if ($in_tabbing_disagreement) {
+    if ($in_indentation_rift) {
         my $msg =
-"Ending with indentation disagreement which started at input line $in_tabbing_disagreement\n";
+"Ending with indentation disagreement which started at input line $in_indentation_rift\n";
         $self->write_logfile_entry($msg);
     }
     else {
 
-        if ($last_tabbing_disagreement) {
+        if ($last_indentation_rift_line) {
 
             $self->write_logfile_entry(
-"Last indentation disagreement seen at input line $last_tabbing_disagreement\n"
+"Last indentation disagreement seen at input line $last_indentation_rift_line\n"
             );
         }
         else {
@@ -48516,7 +48515,7 @@ sub wrapup {
         }
     }
 
-    if ($first_tabbing_disagreement) {
+    if ($first_indentation_rift_line) {
         $self->write_logfile_entry(
 "Note: Indentation disagreement detection is not accurate for outdenting and -lp.\n"
         );
