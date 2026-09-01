@@ -72,6 +72,7 @@ use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };
 use constant COMMA        => q{,};
 use constant BACKSLASH    => q{\\};
+use constant SEMICOLON    => q{;};
 
 { #<<< A non-indenting brace to contain all lexical variables
 
@@ -1949,24 +1950,24 @@ sub parent_seqno_by_K {
     # have a defined value and allow formatting to proceed.
     my $parent_seqno = SEQ_ROOT;
     return $parent_seqno if ( !defined($KK) );
-    my $type_sequence = $rLL->[$KK]->[_TYPE_SEQUENCE_];
-    if ($type_sequence) {
-        $parent_seqno = $self->[_rparent_of_seqno_]->{$type_sequence};
+    my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+    if ($seqno) {
+        $parent_seqno = $self->[_rparent_of_seqno_]->{$seqno};
     }
     else {
         my $Kt = $self->[_rK_next_seqno_by_K_]->[$KK];
         if ( defined($Kt) ) {
-            $type_sequence = $rLL->[$Kt]->[_TYPE_SEQUENCE_];
+            $seqno = $rLL->[$Kt]->[_TYPE_SEQUENCE_];
             my $type = $rLL->[$Kt]->[_TYPE_];
 
             # if next container token is closing, it is the parent seqno
             if ( $is_closing_type{$type} ) {
-                $parent_seqno = $type_sequence;
+                $parent_seqno = $seqno;
             }
 
             # otherwise we want its parent container
             else {
-                $parent_seqno = $self->[_rparent_of_seqno_]->{$type_sequence};
+                $parent_seqno = $self->[_rparent_of_seqno_]->{$seqno};
             }
         }
     }
@@ -2054,52 +2055,57 @@ sub in_same_container_by_K {
     return $seqno_parent_1 eq $seqno_parent_2;
 } ## end sub in_same_container_by_K
 
-sub is_in_block_by_i {
+sub in_block_type_by_i {
     my ( $self, $i ) = @_;
 
-    # Return true if
+    # Given:
+    #  $i = index of a token in the _to_go arrays
+    # Returns: block type of parent container if
     #     token at i is contained in a BLOCK
     #     or is at root level
     #     or there is some kind of error (i.e. unbalanced file)
-    # Return false otherwise
+    # Returns false otherwise
 
     if ( $i < 0 ) {
         DEVEL_MODE && Fault("Bad call, i='$i'\n");
-        return 1;
+        return SEMICOLON;
     }
 
-    my $seqno = $parent_seqno_to_go[$i];
-    return 1 if ( !$seqno || $seqno == SEQ_ROOT );
-    return 1 if ( $self->[_rblock_type_of_seqno_]->{$seqno} );
-    return;
-} ## end sub is_in_block_by_i
+    my $parent_seqno = $parent_seqno_to_go[$i];
+    return $parent_seqno && $parent_seqno != SEQ_ROOT
+      ? $self->[_rblock_type_of_seqno_]->{$parent_seqno}
+      : SEMICOLON;
+} ## end sub in_block_type_by_i
 
-sub is_in_block_by_K {
+sub in_block_type_by_K {
     my ( $self, $KK ) = @_;
 
-    # Return true if
-    #     token at $KK is contained in a BLOCK
+    # Given:
+    #  $KK = index of a token in the _rLL_ array
+    # Returns: block type of parent container if
+    #     token at i is contained in a BLOCK
     #     or is at root level
     #     or there is some kind of error (i.e. unbalanced file)
-    # Return false otherwise
+    # Returns false otherwise
 
     my $parent_seqno = $self->parent_seqno_by_K($KK);
-    return SEQ_ROOT if ( !$parent_seqno || $parent_seqno == SEQ_ROOT );
-    return $self->[_rblock_type_of_seqno_]->{$parent_seqno};
-} ## end sub is_in_block_by_K
+    return $parent_seqno && $parent_seqno != SEQ_ROOT
+      ? $self->[_rblock_type_of_seqno_]->{$parent_seqno}
+      : SEMICOLON;
+} ## end sub in_block_type_by_K
 
 sub is_in_list_by_i {
     my ( $self, $i ) = @_;
 
-    # Return true if token at $i is contained in a LIST
+    # Given:
+    #   $i = index of a token in the _to_go arrays
+    # Return true if token is contained in a LIST
     # Return false otherwise
     my $seqno = $parent_seqno_to_go[$i];
-    return if ( !$seqno );
-    return if ( $seqno == SEQ_ROOT );
-    if ( $self->[_ris_list_by_seqno_]->{$seqno} ) {
-        return 1;
-    }
-    return;
+    return
+         $seqno
+      && $seqno != SEQ_ROOT
+      && $self->[_ris_list_by_seqno_]->{$seqno};
 } ## end sub is_in_list_by_i
 
 sub is_interpolated_here_doc {
@@ -14601,11 +14607,12 @@ EOM
             $package = $pos > 0 ? substr( $word, 0, $pos ) : 'main';
             $word    = substr( $word, $pos + 2 );
         }
-        return if ( !defined( $rconstant_hash->{$package} ) );
-        my $rvars = $rconstant_hash->{$package}->{$word};
-        return if ( !defined($rvars) );
-        return if ( $KK <= $rvars->{K} );
-        $rvars->{count}++;
+        if ( defined( $rconstant_hash->{$package} ) ) {
+            my $rvars = $rconstant_hash->{$package}->{$word};
+            if ( defined($rvars) && $KK > $rvars->{K} ) {
+                $rvars->{count}++;
+            }
+        }
         return;
     }; ## end $update_constant_count = sub
 
@@ -30457,8 +30464,8 @@ EOM
 
             # Do not look for keywords in lists ( keyword 'my' can occur in
             # lists, see case b760); fixed for c048.
-            # Switch from ->is_list_by_K to !->is_in_block_by_K to fix b1464
-            if ( !$self->is_in_block_by_K($K_first) ) {
+            # Switch from ->is_list_by_K to !->in_block_type_by_K to fix b1464
+            if ( !$self->in_block_type_by_K($K_first) ) {
                 if ( $ibeg >= 0 ) { $iend = $i }
                 next;
             }
@@ -38881,7 +38888,7 @@ EOM
             #            open INFILE_COPY, ">$input_file_copy"
             #              or die ("very long message");
             if ( ( $opening_structure_index_stack[$depth] < 0 )
-                && $self->is_in_block_by_i($i) )
+                && $self->in_block_type_by_i($i) )
             {
                 $dont_align[$depth] = 1;
             }
@@ -39668,7 +39675,7 @@ EOM
 
                 # - this is a long block contained in another breakable
                 #   container
-                || $is_long_term && !$self->is_in_block_by_i($i_opening)
+                || $is_long_term && !$self->in_block_type_by_i($i_opening)
 
             )
           )
@@ -40232,7 +40239,7 @@ EOM
 ##      my $identifier_count    = $rhash_IN->{identifier_count};
 
         # CAUTION: i_opening_paren changes value below so we get these vars here
-        my $opening_is_in_block = $self->is_in_block_by_i($i_opening_paren);
+        my $opening_is_in_block = $self->in_block_type_by_i($i_opening_paren);
         my $opening_token       = $tokens_to_go[$i_opening_paren];
         my $seqno_opening       = $type_sequence_to_go[$i_opening_paren];
 
