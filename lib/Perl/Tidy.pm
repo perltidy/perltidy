@@ -3919,6 +3919,7 @@ sub generate_options {
     $add_option->( 'valign-exclusion-list',                     'vxl',   '=s' );
     $add_option->( 'valign-inclusion-list',                     'vil',   '=s' );
     $add_option->( 'valign-if-unless',                          'viu',   '!' );
+    $add_option->( 'valign-trailing-if-gaps',                   'vtig',  '!' );
     $add_option->( 'valign-comparison-operators',               'vco',   '!' );
     $add_option->( 'valign-signed-numbers',                     'vsn',   '!' );
     $add_option->( 'valign-signed-numbers-limit',               'vsnl',  '=i' );
@@ -4271,6 +4272,7 @@ sub generate_options {
       valign-code
       valign-block-comments
       valign-comparison-operators
+      valign-trailing-if-gaps
       valign-side-comments
       valign-signed-numbers
       space-for-semicolon

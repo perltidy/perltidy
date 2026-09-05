@@ -232,6 +232,7 @@ my (
     $rOpts_minimum_space_to_comment,
     $rOpts_valign_code,
     $rOpts_valign_block_comments,
+    $rOpts_valign_trailing_if_gaps,
     $rOpts_valign_side_comments,
     $rOpts_valign_signed_numbers,
     $rOpts_valign_signed_numbers_limit,
@@ -345,6 +346,7 @@ sub check_options {
     $rOpts_minimum_space_to_comment = $rOpts->{'minimum-space-to-comment'};
     $rOpts_valign_code              = $rOpts->{'valign-code'};
     $rOpts_valign_block_comments    = $rOpts->{'valign-block-comments'};
+    $rOpts_valign_trailing_if_gaps  = $rOpts->{'valign-trailing-if-gaps'};
     $rOpts_valign_side_comments     = $rOpts->{'valign-side-comments'};
     $rOpts_valign_signed_numbers    = $rOpts->{'valign-signed-numbers'};
     $rOpts_valign_signed_numbers_limit =
@@ -1822,6 +1824,10 @@ sub _flush_group_lines {
     # aligning happens here in the following steps:
     #------------------------------------------------------------------------
 
+    # STEP 0: allow alignment across gaps between trailing 'if' or 'unless'
+    $self->fill_trailing_if_gaps( $rgroup_lines, $group_level )
+      if ($rOpts_valign_trailing_if_gaps);
+
     # STEP 1: Remove most unmatched tokens. They block good alignments.
     my ( $max_lev_diff_uu, $saw_side_comment, $saw_signed_number ) =
       delete_unmatched_tokens( $rgroup_lines, $group_level );
@@ -3036,6 +3042,173 @@ sub delete_unmatched_tokens {
 
     return ( $max_lev_diff, $saw_side_comment, $saw_signed_number );
 } ## end sub delete_unmatched_tokens
+
+sub fill_trailing_if_gaps {
+
+    my ( $self, $rlines, $group_level ) = @_;
+
+    # Scan this group of lines for gaps in trailing if and unless lines, and
+    # insert an empty trailing 'if' in the gap to allow alignment. For example:
+
+    #   $h    = $height{$ch};
+    #   $h    = 0           if $h < 0;
+    #   $d    = $depth{$ch};             # <-- add empty if to this line
+    #   $d    = 0           if $d < 0;
+
+    # See discussion for git #207
+
+    my $add_trailing_if = sub {
+        my ( $line, $trailing_token, $trailing_pattern ) = @_;
+
+        # Add a trailing if token to this line
+        my $rtokens        = $line->{'rtokens'};
+        my $rpatterns      = $line->{'rpatterns'};
+        my $rfields        = $line->{'rfields'};
+        my $rfield_lengths = $line->{'rfield_lengths'};
+        my $imax           = @{$rtokens} - 2;
+
+        # For safety, be sure the next token is a side comment
+        my $tokp = $rtokens->[ $imax + 1 ];
+        if ( !defined($tokp) || $tokp ne '#' ) {
+            ## Shouldn't happen - all lines have real or dummy side comments
+            my $line_number =
+              $self->[_file_writer_object_]->get_output_line_number();
+            DEVEL_MODE
+              && Fault("$line_number: last token is not a side comment\n");
+            return;
+        }
+
+        # Be sure this line does not already has a (possibly complex) trailing
+        # keyword.  This is required because, for example, trailing if tokens
+        # will not be the last alignment tokens for complex statements, and we
+        # must avoid adding a trailing if to a trailing if.
+        my %is_trailing_keyword;
+        $is_trailing_keyword{$_} = 1 for qw(if unless while until for foreach);
+        foreach my $i ( 0 .. $imax ) {
+            if (   $rtokens->[$i] =~ /^(\w+)(\d+)$/
+                && $2 == $group_level
+                && $is_trailing_keyword{$1} )
+            {
+                return;
+            }
+        }
+
+        splice( @{$rtokens},        $imax + 1, 0, $trailing_token );
+        splice( @{$rpatterns},      $imax + 2, 0, $trailing_pattern );
+        splice( @{$rfields},        $imax + 2, 0, EMPTY_STRING );
+        splice( @{$rfield_lengths}, $imax + 2, 0, 0 );
+        $rpatterns->[ $imax + 1 ] =~ s/;$//;
+        $line->{'jmax'} = @{$rfields} - 1;
+
+        # Be sure this line is not a terminal match (shouldn't happen)
+        $line->{'j_terminal_match'} = undef;
+    }; ## end $add_trailing_if = sub
+
+    # Define fixed patterns to be used for creating trailing if/unless tokens
+    # in this group. Note that the alignment tokens depend on the group level.
+    #    token => pattern
+    my %trailing_patterns = (
+        "if$group_level"     => 'ifb{n};',
+        "unless$group_level" => 'unlessb{n};',
+    );
+
+    #------------------------------------------
+    # Pass 1: look for lines with trailing if's
+    #------------------------------------------
+    my @j_has_trailing_if;
+    my $jline = -1;
+    foreach my $line ( @{$rlines} ) {
+        $jline++;
+        my $rtokens = $line->{'rtokens'};
+        my $imax    = @{$rtokens} - 2;
+        if ( $imax >= 0 ) {
+
+            # Save info for any trailing if/unless lines
+            my $token = $rtokens->[$imax];
+            if ( $trailing_patterns{$token} ) {
+                push @j_has_trailing_if,
+                  [ $jline, $token, $trailing_patterns{$token} ];
+            }
+        }
+    }
+
+    #--------------------------------------------------
+    # Pass 2: add dummy trailing if's where appropriate
+    #--------------------------------------------------
+    return if ( @j_has_trailing_if <= 1 );
+
+    my ( $jend, $tok_end, $pat_end ) = @{ shift @j_has_trailing_if };
+    while (@j_has_trailing_if) {
+        my ( $jbeg, $tok_beg, $pat_beg ) = ( $jend, $tok_end, $pat_end );
+        ( $jend, $tok_end, $pat_end ) = @{ shift @j_has_trailing_if };
+
+        # Skip gaps between mixed if/unless lines (use -viu to align them)
+        next if ( $tok_beg ne $tok_end );
+
+        # The maximum gap is limited to just 1 line. Testing showed that this
+        # is a good compromise which usually gives good results and avoids some
+        # poor alignments which can occur for alignments across larger gaps.
+        my $gap = $jend - $jbeg - 1;
+        next if ( $gap <= 0 || $gap > 1 );
+
+        my $rtokens_end = $rlines->[$jend]->{'rtokens'};
+        my $tok0_end    = $rtokens_end->[0];
+        my $imax_end    = @{$rtokens_end} - 2;
+
+        # Be sure maximum gap is limited to 1 for case of no alignment tokens.
+        # This check is needed in case the overall maximum ever gets increased.
+        next if ( $gap > 1 && $imax_end <= 0 );
+
+        my $rpatterns_end = $rlines->[$jend]->{'rpatterns'};
+
+        # Lines must end in ';' (patterns must end in ';' or ';b')
+        if ( $rpatterns_end->[ $imax_end + 1 ] !~ /;b?$/ ) {
+            next;
+        }
+
+        # We will require that the leading patterns match up to the first blank
+        my $pat0_end = $rpatterns_end->[0];
+        my $pos_end  = index( $pat0_end, 'b', 0 );
+        my $substr_end =
+          $pos_end > 0 ? substr( $pat0_end, 0, $pos_end ) : $pat0_end;
+
+        # Loop to compare all lines to the ending line
+        my $no_match;
+        foreach my $jj ( $jbeg .. $jend - 1 ) {
+
+            my $line      = $rlines->[$jj];
+            my $rtokens   = $line->{'rtokens'};
+            my $rpatterns = $line->{'rpatterns'};
+            my $imax      = @{$rtokens} - 2;
+
+            # The leading alignment tokens, if any, must match
+            if ( $imax_end > 0 ) {
+                my $tok0 = $rtokens->[0];
+                if ( $tok0 ne $tok0_end ) { $no_match = 1; last }
+            }
+
+            # Lines must end in ';' (so patterns must end in ';' or ';b')
+            if ( $rpatterns->[ $imax + 1 ] !~ /;b?$/ ) {
+                $no_match = 1;
+                last;
+            }
+
+            # The leading patterns must match to the first blank space
+            my $pat0 = $rpatterns->[0];
+            my $pos  = index( $pat0, 'b', 0 );
+            if ( $pos ne $pos_end ) { $no_match = 1; last }
+            my $substr = $pos > 0 ? substr( $pat0, 0, $pos ) : $pat0;
+            if ( $substr ne $substr_end ) { $no_match = 1; last }
+        }
+        next if ($no_match);
+
+        # Lines look similar, fill gap with an empty trailing if
+        foreach my $jj ( $jbeg + 1 .. $jend - 1 ) {
+            $add_trailing_if->( $rlines->[$jj], $tok_beg, $pat_beg );
+        }
+    } ## end while (@j_has_trailing_if)
+    return;
+} ## end sub valign_trailing_if_gaps
 
 sub make_alignment_info {
 
