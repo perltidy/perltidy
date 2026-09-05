@@ -14962,6 +14962,24 @@ QQ_TROUBLE_QQ
 --extended-continuation-indentation
 --extended-line-up-parentheses
 
+==> b1610.in <==
+              my @answers =
+                scramble( (  @{ $q->{Answers} } ) );
+
+              my @answers =
+                scramble( (      @{ $q->{Answers} }
+                          ) );
+
+==> b1610.par <==
+--maximum-line-length=40
+--indent-columns=7
+--weld-nested-containers
+--variable-maximum-line-length
+--extended-continuation-indentation
+--paren-vertical-tightness=1
+--extended-line-up-parentheses
+--stack-closing-paren
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar
