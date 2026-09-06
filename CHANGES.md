@@ -2,6 +2,15 @@
 
 ## 2026 08 26.01
 
+   - Add option --valign-postfix-if-gaps, or -vpig, to continue alignment
+     of postfix 'if' and 'unless' across gaps of similar code. For example:
+
+        $turn  = 0                unless defined $turn;
+        $turn  = $move{$turn};
+        $board = [ ($empty) x 9 ] unless defined $board;
+
+     This is on by default; use -nvpig to turn it off. See git #207.
+
    - Fixed a very rare problem where a closing anonymous sub brace in a list
      with multiple values, and followed by a pointer, was not indented:
 

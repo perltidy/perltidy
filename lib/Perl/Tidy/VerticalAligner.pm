@@ -10,6 +10,7 @@ use English qw( -no_match_vars );
 use Scalar::Util 'refaddr';    # perl 5.8.1 and later
 use Perl::Tidy::VerticalAligner::Alignment;
 use Perl::Tidy::VerticalAligner::Line;
+use List::Util qw( min max first );    # min, max first are in Perl 5.8
 
 use constant DEVEL_MODE   => 0;
 use constant EMPTY_STRING => q{};
@@ -232,7 +233,7 @@ my (
     $rOpts_minimum_space_to_comment,
     $rOpts_valign_code,
     $rOpts_valign_block_comments,
-    $rOpts_valign_trailing_if_gaps,
+    $rOpts_valign_postfix_if_gaps,
     $rOpts_valign_side_comments,
     $rOpts_valign_signed_numbers,
     $rOpts_valign_signed_numbers_limit,
@@ -346,7 +347,7 @@ sub check_options {
     $rOpts_minimum_space_to_comment = $rOpts->{'minimum-space-to-comment'};
     $rOpts_valign_code              = $rOpts->{'valign-code'};
     $rOpts_valign_block_comments    = $rOpts->{'valign-block-comments'};
-    $rOpts_valign_trailing_if_gaps  = $rOpts->{'valign-trailing-if-gaps'};
+    $rOpts_valign_postfix_if_gaps  = $rOpts->{'valign-postfix-if-gaps'};
     $rOpts_valign_side_comments     = $rOpts->{'valign-side-comments'};
     $rOpts_valign_signed_numbers    = $rOpts->{'valign-signed-numbers'};
     $rOpts_valign_signed_numbers_limit =
@@ -1824,9 +1825,9 @@ sub _flush_group_lines {
     # aligning happens here in the following steps:
     #------------------------------------------------------------------------
 
-    # STEP 0: allow alignment across gaps between trailing 'if' or 'unless'
-    $self->fill_trailing_if_gaps( $rgroup_lines, $group_level )
-      if ($rOpts_valign_trailing_if_gaps);
+    # STEP 0: allow alignment across gaps between postfix 'if' or 'unless'
+    $self->fill_postfix_if_gaps( $rgroup_lines, $group_level )
+      if ($rOpts_valign_postfix_if_gaps);
 
     # STEP 1: Remove most unmatched tokens. They block good alignments.
     my ( $max_lev_diff_uu, $saw_side_comment, $saw_signed_number ) =
@@ -3043,7 +3044,7 @@ sub delete_unmatched_tokens {
     return ( $max_lev_diff, $saw_side_comment, $saw_signed_number );
 } ## end sub delete_unmatched_tokens
 
-sub fill_trailing_if_gaps {
+sub fill_postfix_if_gaps {
 
     my ( $self, $rlines, $group_level ) = @_;
 
@@ -3055,7 +3056,9 @@ sub fill_trailing_if_gaps {
     #   $d    = $depth{$ch};             # <-- add empty if to this line
     #   $d    = 0           if $d < 0;
 
-    # See discussion for git #207
+    # See discussion for git #207. These statement modifiers are called
+    # 'postfix' in the documentation, but I have usually used called them
+    # 'trailing' in the code.
 
     my $add_trailing_if = sub {
         my ( $line, $trailing_token, $trailing_pattern ) = @_;
@@ -3208,7 +3211,7 @@ sub fill_trailing_if_gaps {
         }
     } ## end while (@j_has_trailing_if)
     return;
-} ## end sub valign_trailing_if_gaps
+} ## end sub fill_postfix_if_gaps
 
 sub make_alignment_info {
 
@@ -4693,6 +4696,7 @@ sub is_marginal_match {
     # See if the lines end with semicolons...
     my $sc_term0;
     my $sc_term1;
+    my $has_dummy_trailing_if;
     if ( $jmax_0 < 1 || $jmax_1 < 1 ) {
 
         # shouldn't happen
@@ -4702,6 +4706,25 @@ sub is_marginal_match {
         my $pat1 = $rpatterns_1->[ $jmax_1 - 1 ];
         $sc_term0 = $pat0 =~ /;b?$/;
         $sc_term1 = $pat1 =~ /;b?$/;
+
+        # Look for and remove a dummy trailing 'if' or 'unless' at the end
+        # of one of the two lines (part of update git #207).
+        if (
+            $saw_if_or
+            && (   !$rfield_lengths_0->[ $jmax_0 - 1 ]
+                || !$rfield_lengths_1->[ $jmax_1 - 1 ] )
+          )
+        {
+            $has_dummy_trailing_if = 1;
+            $saw_if_or             = 0;
+            $is_marginal           = 1;
+            if ( !defined($jfirst_bad) ) {
+                $jfirst_bad = min( $jmax_0 - 2, $jmax_1 - 2 );
+            }
+            else {
+                $jfirst_bad = min( $jfirst_bad, $jmax_0 - 2, $jmax_1 - 2 );
+            }
+        }
     }
 
     if ( !$is_marginal && !$sc_term0 ) {
@@ -4758,7 +4781,10 @@ sub is_marginal_match {
     #---------------------------------------------------------
     # Turn off the marginal flag for some types of assignments
     #---------------------------------------------------------
-    if ( $is_assignment{$raw_tokb} ) {
+    if ($has_dummy_trailing_if) {
+        ## stays marginal
+    }
+    elsif ( $is_assignment{$raw_tokb} ) {
 
         # undo marginal flag if first line is semicolon terminated
         # and leading patterns match

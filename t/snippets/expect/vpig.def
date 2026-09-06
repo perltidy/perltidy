@@ -1,0 +1,23 @@
+{
+    {
+        $h     = 0           if $h < 0;
+        $d     = $depth{$ch};
+        $d     = 0           if $d < 0;
+        $turn  = 0                unless defined $turn;
+        $turn  = $move{$turn};
+        $board = [ ($empty) x 9 ] unless defined $board;
+
+        $yo   = 1 if ( $2 eq "r" );    # too long
+        $note = $freq{$2} * ( 2**( $oct - 4 ) ) * 1.234**$xxx;
+        $oct  = $1 if $1;
+
+        $oct  = $1 if $1;
+        $note = $freq{$2} * ( 2**( $oct - 4 ) ) * 1.234**$xxx;
+        $yo   = 1 if ( $2 eq "r" );    # too long
+
+        # no alignment - different start
+        alarm(2) if $have_alarm;
+        $match = $test->();
+        alarm(0) if $have_alarm;
+    }
+}

@@ -6280,7 +6280,7 @@ alignment cannot be made for some reason.
 But also notice that side comments remain aligned because their alignment is
 controlled separately with the parameter B<--valign-side-comments> described above.
 
-=item B<Aligning postfix unless and if with --valign-if-unless or -viu>
+=item B<Aligning postfix 'if' and 'unless' with --valign-if-unless or -viu>
 
 By default, postfix B<if> terms align and postfix B<unless> terms align,
 but separately.  For example,
@@ -6299,6 +6299,20 @@ postfix B<if> for purposes of alignment, and thus they align:
   print "Would need: @DepList\n"     if ( @DepList and !$Quiet );
   print "Output:\n"                  unless $Quiet;
   print join( "\n", @Output ) . "\n" unless $Quiet;
+
+=item B<Aligning across a gap in postfix 'if' and 'unless' with --valign-postfix-if-gaps or -vpig>
+
+By default, perltidy will continue vertical alignment of postfix B<if> and B<unless> terms
+across a single line missing such a term, provided that the lines begin similarly. For
+example:
+
+    $row .= qq(<td class="photogallery">$photogallery</td>) if ($has1);
+    $row .= qq(<td class="name">$link</td>);
+    $row .= qq(<td class="author">$expert</td>)             if ($has2);
+
+This usually improves readability, but this feature can be turned off with
+the negative of this switch, B<--novalign-postfix-if-gaps>.  See git #207 for
+a discussion.
 
 =item B<< Aligning cmp and <=> with --valign-comparison-operators or -vco >>
 

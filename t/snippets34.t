@@ -7,6 +7,9 @@
 #4 hxs.hxs1
 #5 c636.c636
 #6 c636.def
+#7 vpig.def
+#8 vpig.vpig1
+#9 vpig.vpig2
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -36,6 +39,11 @@ BEGIN {
 -hiu
 -hxs=4
 ----------
+        'vpig1' => <<'----------',
+-vpig
+-viu
+----------
+        'vpig2' => "-nvpig",
     };
 
     ############################
@@ -75,6 +83,30 @@ alpha
 beta
 LIST
 );
+----------
+
+        'vpig' => <<'----------',
+{{
+        $h     = 0           if $h < 0;
+        $d     = $depth{$ch};
+        $d     = 0           if $d < 0;
+        $turn  = 0                unless defined $turn;
+        $turn  = $move{$turn};
+        $board = [ ($empty) x 9 ] unless defined $board;
+
+        $yo   = 1 if ( $2 eq "r" );    # too long
+        $note = $freq{$2} * ( 2**( $oct - 4 ) ) * 1.234**$xxx;
+        $oct  = $1 if $1;
+
+        $oct  = $1 if $1;
+        $note = $freq{$2} * ( 2**( $oct - 4 ) ) * 1.234**$xxx;
+        $yo   = 1 if ( $2 eq "r" );    # too long
+
+	# no alignment - different start
+        alarm(2)           if $have_alarm;
+        $match = $test->();
+        alarm(0)           if $have_alarm;
+}}
 ----------
     };
 
@@ -173,6 +205,96 @@ serial number
 
 print "[BYE!]\n\n";
 #6...........
+        },
+
+        'vpig.def' => {
+            source => "vpig",
+            params => "def",
+            expect => <<'#7...........',
+{
+    {
+        $h     = 0           if $h < 0;
+        $d     = $depth{$ch};
+        $d     = 0           if $d < 0;
+        $turn  = 0                unless defined $turn;
+        $turn  = $move{$turn};
+        $board = [ ($empty) x 9 ] unless defined $board;
+
+        $yo   = 1 if ( $2 eq "r" );    # too long
+        $note = $freq{$2} * ( 2**( $oct - 4 ) ) * 1.234**$xxx;
+        $oct  = $1 if $1;
+
+        $oct  = $1 if $1;
+        $note = $freq{$2} * ( 2**( $oct - 4 ) ) * 1.234**$xxx;
+        $yo   = 1 if ( $2 eq "r" );    # too long
+
+        # no alignment - different start
+        alarm(2) if $have_alarm;
+        $match = $test->();
+        alarm(0) if $have_alarm;
+    }
+}
+#7...........
+        },
+
+        'vpig.vpig1' => {
+            source => "vpig",
+            params => "vpig1",
+            expect => <<'#8...........',
+{
+    {
+        $h     = 0                if $h < 0;
+        $d     = $depth{$ch};
+        $d     = 0                if $d < 0;
+        $turn  = 0                unless defined $turn;
+        $turn  = $move{$turn};
+        $board = [ ($empty) x 9 ] unless defined $board;
+
+        $yo   = 1 if ( $2 eq "r" );    # too long
+        $note = $freq{$2} * ( 2**( $oct - 4 ) ) * 1.234**$xxx;
+        $oct  = $1 if $1;
+
+        $oct  = $1 if $1;
+        $note = $freq{$2} * ( 2**( $oct - 4 ) ) * 1.234**$xxx;
+        $yo   = 1 if ( $2 eq "r" );    # too long
+
+        # no alignment - different start
+        alarm(2) if $have_alarm;
+        $match = $test->();
+        alarm(0) if $have_alarm;
+    }
+}
+#8...........
+        },
+
+        'vpig.vpig2' => {
+            source => "vpig",
+            params => "vpig2",
+            expect => <<'#9...........',
+{
+    {
+        $h     = 0 if $h < 0;
+        $d     = $depth{$ch};
+        $d     = 0 if $d < 0;
+        $turn  = 0 unless defined $turn;
+        $turn  = $move{$turn};
+        $board = [ ($empty) x 9 ] unless defined $board;
+
+        $yo   = 1 if ( $2 eq "r" );                              # too long
+        $note = $freq{$2} * ( 2**( $oct - 4 ) ) * 1.234**$xxx;
+        $oct  = $1 if $1;
+
+        $oct  = $1 if $1;
+        $note = $freq{$2} * ( 2**( $oct - 4 ) ) * 1.234**$xxx;
+        $yo   = 1 if ( $2 eq "r" );                              # too long
+
+        # no alignment - different start
+        alarm(2) if $have_alarm;
+        $match = $test->();
+        alarm(0) if $have_alarm;
+    }
+}
+#9...........
         },
     };
 
