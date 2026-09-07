@@ -347,7 +347,7 @@ sub check_options {
     $rOpts_minimum_space_to_comment = $rOpts->{'minimum-space-to-comment'};
     $rOpts_valign_code              = $rOpts->{'valign-code'};
     $rOpts_valign_block_comments    = $rOpts->{'valign-block-comments'};
-    $rOpts_valign_postfix_if_gaps  = $rOpts->{'valign-postfix-if-gaps'};
+    $rOpts_valign_postfix_if_gaps   = $rOpts->{'valign-postfix-if-gaps'};
     $rOpts_valign_side_comments     = $rOpts->{'valign-side-comments'};
     $rOpts_valign_signed_numbers    = $rOpts->{'valign-signed-numbers'};
     $rOpts_valign_signed_numbers_limit =
@@ -3107,6 +3107,13 @@ sub fill_postfix_if_gaps {
         $line->{'j_terminal_match'} = undef;
     }; ## end $add_trailing_if = sub
 
+    # The maximum gap is limited to 2 lines. Testing showed that this is a good
+    # compromise which gives good overall results and avoids some poor
+    # alignments which can occur for larger gaps.  I decided not to make this
+    # an input parameter because large values can cause problems which the user
+    # would not foresee.
+    use constant MAX_GAP => 2;
+
     # Define fixed patterns to be used for creating trailing if/unless tokens
     # in this group. Note that the alignment tokens depend on the group level.
     #    token => pattern
@@ -3148,11 +3155,9 @@ sub fill_postfix_if_gaps {
         # Skip gaps between mixed if/unless lines (use -viu to align them)
         next if ( $tok_beg ne $tok_end );
 
-        # The maximum gap is limited to just 1 line. Testing showed that this
-        # is a good compromise which usually gives good results and avoids some
-        # poor alignments which can occur for alignments across larger gaps.
+        # Skip large gaps
         my $gap = $jend - $jbeg - 1;
-        next if ( $gap <= 0 || $gap > 1 );
+        next if ( $gap <= 0 || $gap > MAX_GAP );
 
         my $rtokens_end = $rlines->[$jend]->{'rtokens'};
         my $tok0_end    = $rtokens_end->[0];
