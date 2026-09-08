@@ -18602,8 +18602,8 @@ EOM
             # Update parent container properties
             my $rparent_seqno_list = $self->get_parent_containers($seqno);
             foreach my $seqno_parent ( @{$rparent_seqno_list} ) {
-                $rhas_code_block->{$seqno_parent}        = 1;
-                $rhas_broken_code_block->{$seqno_parent} = $line_diff;
+                $rhas_code_block->{$seqno_parent} = 1;
+                $rhas_broken_code_block->{$seqno_parent} ||= $line_diff;
             }
         }
         else {
@@ -28304,6 +28304,7 @@ sub is_fragile_block_type {
     my $last_nonblank_type;
     my @stack;
     my $one_line_block_tol;
+    my $is_over_constrained;
 
     sub xlp_collapsed_lengths_initialize {
 
@@ -28328,6 +28329,15 @@ sub is_fragile_block_type {
         # where this is used.
         $one_line_block_tol =
           max( $rOpts_indent_columns, $rOpts_continuation_indentation, 2 );
+
+        # If the user does not a space on either side of an '=', then we can
+        # get unexpected array opening and closing at ')='. So the safe thing
+        # to do is avoid using interrupted list mode in this case. b1611.
+        $is_over_constrained = 0;
+        foreach my $tok (qw( = )) {
+            $is_over_constrained ||= $want_left_space{$tok} == WS_NO
+              && $want_right_space{$tok} == WS_NO;
+        }
 
         return;
     } ## end sub xlp_collapsed_lengths_initialize
@@ -28861,9 +28871,19 @@ sub is_fragile_block_type {
 
                         # and there are no broken lists: b1597, b1599.
                         # Note: This was originally a fix for b1298, b1366, but
-                        # removed as part of fix b1578.
+                        # removed as part of fix b1578. This was switching on
+                        # and off in b1611, and fixed with the next check.
                         && !$rhas_broken_list->{$seqno}
 
+                        # Instability can occur if spaces are not allowed
+                        # around an '='. This can cause strange line breaks
+                        # near ')='. This might occur if this list contains a
+                        # broken sub block with this condition.  Added for test
+                        # b1611.
+                        && !(
+                               $is_over_constrained
+                            && $self->[_rhas_broken_code_block_]->{$seqno}
+                        )
                       )
                     {
                         $interrupted_list_rule = 1;

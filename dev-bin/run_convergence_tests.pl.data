@@ -14718,6 +14718,53 @@ $service = (getservbyport (
 --extended-line-up-parentheses
 --paren-tightness=2
 
+==> b1597a.in <==
+      %Expect_File
+        = (
+            file_path_name('fa')           => 1,
+            file_path_name('fa', 'fa_ord') => 2,
+
+            # We may encounter the symlink first
+            file_path_name('fa', 'fa_ord_sl')             => 2,
+            file_path_name('fa', 'fsl')                   => 1,
+            file_path_name('fa', 'fsl', 'fb_ord')         => 1,
+            file_path_name('fa', 'fsl', 'fba')            => 1,
+            file_path_name('fa', 'fsl', 'fba', 'fba_ord') => 1,
+            file_path_name('fa', 'fab')                   => 1,
+            file_path_name('fa', 'fab', 'fab_ord')        => 1,
+            file_path_name('fa', 'fab', 'faba')           => 1,
+            file_path_name('fa', 'fab', 'faba', 'faba_ord') =>
+            1,
+            file_path_name('fa', 'faa') => 1,
+            file_path_name('fa', 'faa', 'faa_ord') => 1
+        );
+
+    %Expect_File = (
+        file_path_name('fa')             => 1,
+        file_path_name( 'fa', 'fa_ord' ) => 2,
+
+        # We may encounter the symlink first
+        file_path_name( 'fa', 'fa_ord_sl' )               => 2,
+        file_path_name( 'fa', 'fsl' )                     => 1,
+        file_path_name( 'fa', 'fsl', 'fb_ord' )           => 1,
+        file_path_name( 'fa', 'fsl', 'fba' )              => 1,
+        file_path_name( 'fa', 'fsl', 'fba', 'fba_ord' )   => 1,
+        file_path_name( 'fa', 'fab' )                     => 1,
+        file_path_name( 'fa', 'fab', 'fab_ord' )          => 1,
+        file_path_name( 'fa', 'fab', 'faba' )             => 1,
+        file_path_name( 'fa', 'fab', 'faba', 'faba_ord' ) => 1,
+        file_path_name( 'fa', 'faa' )                     => 1,
+        file_path_name( 'fa', 'faa', 'faa_ord' )          => 1
+    );
+
+==> b1597a.par <==
+--maximum-line-length=63
+--indent-columns=6
+--extended-continuation-indentation
+--extended-line-up-parentheses
+--break-before-all-operators
+--paren-tightness=2
+
 ==> b1598.in <==
          my %tests =
                  (
@@ -14979,6 +15026,47 @@ QQ_TROUBLE_QQ
 --paren-vertical-tightness=1
 --extended-line-up-parentheses
 --stack-closing-paren
+
+==> b1611.in <==
+my %selector_for=
+       (
+              quotelike =>
+              sub { my ($t)=@_; sub { ref() && do { $_=$$_; $t->(@_) }; $_ } },
+              string => sub {
+                     sub {
+                            my (
+                                  $pre, $op,   $ld1, $str1, $rd1,
+                                  $ld2, $str2, $rd2, $flg
+                            )=@{$_}[ 2 .. 10 ];
+                            $result .= $ld2 if $ld1 =~m/[[({<]/;    #])}>
+                     };
+              },
+       );
+
+my %selector_for=
+       (
+          quotelike =>
+          sub { my ($t)=@_; sub { ref() && do { $_=$$_; $t->(@_) }; $_ } },
+          string => sub {
+                 sub {
+                        my ( $pre, $op, $ld1, $str1, $rd1, $ld2, $str2, $rd2, $flg )=
+                        @{$_}[ 2 .. 10 ];
+                        $result .= $ld2 if $ld1 =~m/[[({<]/;    #])}>
+                 };
+          },
+       );
+
+==> b1611.par <==
+--maximum-line-length=87
+--indent-columns=7
+--continuation-indentation=7
+--extended-continuation-indentation
+--break-before-paren=2
+--extended-line-up-parentheses
+--delete-old-whitespace
+--nowant-right-space='='
+--nowant-left-space='='
+--one-line-block-nesting=1
 
 ==> b163.in <==
 # State 1
