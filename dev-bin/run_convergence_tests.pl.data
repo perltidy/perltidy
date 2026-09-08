@@ -15068,6 +15068,34 @@ my %selector_for=
 --nowant-left-space='='
 --one-line-block-nesting=1
 
+==> b1612.in <==
+$result =
+       test_app(
+              qq|Catmandu::CLI| =>
+                     [
+                    qw(config --fix add_field(foo:FOOBAR) to JSON)
+                     ]
+       );
+
+$result =
+       test_app(
+                qq|Catmandu::CLI| =>
+                [   qw(config --fix add_field(foo:FOOBAR) to JSON)
+                ]
+       );
+
+==> b1612.par <==
+--maximum-line-length=66
+--indent-columns=2
+--continuation-indentation=7
+--extended-line-up-parentheses
+--break-before-square-bracket=1
+--paren-tightness=2
+--break-before-square-bracket-and-indent=1
+--square-bracket-vertical-tightness=1
+--keep-old-breakpoints-after='=>'
+--qw-as-function
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar

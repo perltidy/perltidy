@@ -27373,6 +27373,11 @@ sub break_before_list_opening_containers {
             # ... and the container should span multiple lines
             next if ( $rline_diff_by_seqno->{$seqno} < 2 );
 
+            # ... and there is not a forced break already (b1612)
+            if ( $self->[_rbreak_after_Klast_]->{$Kprev} ) {
+                next;
+            }
+
             # Now do the checks for option 2 to be sure this is a good break
             $break_option = 2;
         }
