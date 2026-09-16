@@ -1,0 +1,9 @@
+sub circle($rad) {
+    return 1;
+}
+
+my $anon = sub ($a) { return $a };
+
+sub circle2($xc, $yc, $rad) {
+    return 1;
+}

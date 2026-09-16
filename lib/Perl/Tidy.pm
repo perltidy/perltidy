@@ -3913,6 +3913,7 @@ sub generate_options {
     $add_option->( 'want-trailing-commas',                      'wtc',   '=s' );
     $add_option->( 'space-prototype-paren',                     'spp',   '=i' );
     $add_option->( 'space-signature-paren',                     'ssp',   '=i' );
+    $add_option->( 'signature-paren-inner-tightness',           'spit',  '=i' );
     $add_option->( 'valign-code',                               'vc',    '!' );
     $add_option->( 'valign-block-comments',                     'vbc',   '!' );
     $add_option->( 'valign-side-comments',                      'vsc',   '!' );
@@ -4358,6 +4359,7 @@ sub generate_options {
         'paren-vertical-tightness'                  => [ 0, 2,     0 ],
         'paren-vertical-tightness-closing'          => [ 0, 3,     0 ],
         'short-concatenation-item-length'           => [ 0, undef, 8 ],
+        'signature-paren-inner-tightness'           => [ 0, 2,     1 ],
         'similar-keys-maximum-difference'           => [ 1, undef, 1 ],
         'similar-keys-maximum-pairs'                => [ 1, undef, 25 ],
         'similar-keys-minimum-length'               => [ 1, undef, 4 ],

@@ -524,6 +524,9 @@
 ../snippets34.t	hxs.hxs1
 ../snippets34.t	c636.c636
 ../snippets34.t	c636.def
+../snippets34.t	vpig.def
+../snippets34.t	vpig.vpig1
+../snippets34.t	vpig.vpig2
 ../snippets4.t	gnu1.gnu
 ../snippets4.t	gnu2.def
 ../snippets4.t	gnu2.gnu
@@ -644,6 +647,5 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets34.t	vpig.def
-../snippets34.t	vpig.vpig1
-../snippets34.t	vpig.vpig2
+../snippets34.t	spit.def
+../snippets34.t	spit.spit
