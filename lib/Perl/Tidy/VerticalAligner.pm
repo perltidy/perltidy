@@ -7,10 +7,10 @@ use Carp;
 
 our $VERSION = '20260826.01';
 use English qw( -no_match_vars );
-use Scalar::Util 'refaddr';    # perl 5.8.1 and later
+use Scalar::Util 'refaddr';            # perl 5.8.1 and later
+use List::Util qw( min max first );    # min, max first are in Perl 5.8
 use Perl::Tidy::VerticalAligner::Alignment;
 use Perl::Tidy::VerticalAligner::Line;
-use List::Util qw( min max first );    # min, max first are in Perl 5.8
 
 use constant DEVEL_MODE   => 0;
 use constant EMPTY_STRING => q{};

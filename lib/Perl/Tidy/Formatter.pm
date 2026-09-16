@@ -24126,19 +24126,21 @@ EOM
                 if ( $convert_to_indented
                     && !$is_excluded_tag )
                 {
-                    my @lines = split /^/, $here_text;
-                    foreach my $line (@lines) {
-                        chomp $line;
-                        my $line_length = length($line);
-                        next if ( !$line_length );
 
-                        # Give up if the line matches the tag except for space
-                        my $pos_l = index( $line, $here_tag );
-                        my $pos_r = $pos_l + length($here_tag);
-                        if (   $pos_l >= 0
-                            && substr( $line, 0, $pos_l ) !~ /\S/
-                            && substr( $line, $pos_r ) !~ /\S/ )
-                        {
+                    # For safety, we do comparisons with leading and trailing
+                    # spaces removed. See test b1613.
+                    my $trimmed_tag = $here_tag;
+                    $trimmed_tag =~ s/^\s+//;
+                    $trimmed_tag =~ s/\s+$//;
+                    if ( !length($trimmed_tag) ) { $is_excluded_tag = 1 }
+
+                    if ( !$is_excluded_tag ) {
+                        my @lines = split /^/, $here_text;
+                        foreach my $line (@lines) {
+                            my $trimmed_line = $line;
+                            $trimmed_line =~ s/^\s+//;
+                            $trimmed_line =~ s/\s+$//;
+                            next if ( $trimmed_line ne $trimmed_tag );
                             $is_excluded_tag = 1;
                             last;
                         }

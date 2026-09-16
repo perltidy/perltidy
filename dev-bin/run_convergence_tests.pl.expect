@@ -10034,6 +10034,17 @@ $result =
                      ]
        );
 
+==> b1613 <==
+{
+    my $newMetaInfo = <<'  EOF';
+\$handlerInfo{'URL'}                      = <<'EOF';
+$url
+EOF
+\$handlerInfo{'Notes'}                    = <<'EOF';
+${notes}EOF
+  EOF
+}
+
 ==> b163 <==
 # State 1
 Readonly::Scalar

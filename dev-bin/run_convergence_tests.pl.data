@@ -15096,6 +15096,21 @@ $result =
 --keep-old-breakpoints-after='=>'
 --qw-as-function
 
+==> b1613.in <==
+{
+  my $newMetaInfo = <<'  EOF';
+\$handlerInfo{'URL'}                      = <<'EOF';
+$url
+EOF
+\$handlerInfo{'Notes'}                    = <<'EOF';
+${notes}EOF
+  EOF
+}
+
+==> b1613.par <==
+--heredoc-convert-to='indented'
+--heredoc-indentation-update
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar
