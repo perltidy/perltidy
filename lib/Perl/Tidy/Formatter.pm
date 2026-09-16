@@ -5115,6 +5115,8 @@ sub set_whitespace_flags {
     my $rOpts_space_backslash_quote = $rOpts->{'space-backslash-quote'};
     my $rOpts_space_function_paren  = $rOpts->{'space-function-paren'};
     my $rOpts_space_signature_paren = $rOpts->{'space-signature-paren'};
+    my $rOpts_signature_paren_inner_tightness =
+      $rOpts->{'signature-paren-inner-tightness'};
 
     my $rwhitespace_flags       = [];
     my $ris_function_call_paren = {};
@@ -5148,6 +5150,19 @@ sub set_whitespace_flags {
         else {
             $ws = $rOpts_space_signature_paren == 0 ? WS_NO : WS_YES;
         }
+
+        # Separately, -spit=n controls the tightness *inside* this signature
+        # paren, overriding the general -pt=n rule for this container only.
+        # A value of 1 (the default) means "ignore", i.e. defer to -pt=n,
+        # exactly as for -kpit=n.
+        if ( $rOpts_signature_paren_inner_tightness != 1 ) {
+            my $seqno = $rLL->[$jj]->[_TYPE_SEQUENCE_];
+            if ($seqno) {
+                $rtightness_override_by_seqno->{$seqno} =
+                  $rOpts_signature_paren_inner_tightness;
+            }
+        }
+
         return $ws;
     }; ## end $ws_signature_paren = sub
 

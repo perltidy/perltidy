@@ -1805,6 +1805,32 @@ applying the different options would be:
     sub circle( $xc, $yc, $rad )   # n=1 [default; same as input]
     sub circle ( $xc, $yc, $rad )  # n=2 [space]
 
+=item B<-spit=n> or B<--signature-paren-inner-tightness=n>
+
+This flag is independent of the previous one: it controls the space B<inside>
+a sub signature's parens, rather than the space before the opening paren.
+Normally this space is controlled by the general B<-pt=n> (B<--paren-tightness>)
+setting, which by default (B<-pt=1>) omits the space when the signature holds
+only a single token, such as one scalar variable with no default:
+
+    sub circle($rad)          # -pt=1 [default; single token, no space]
+    sub circle( $xc, $yc )    # -pt=1 [default; multiple tokens, space]
+
+B<-spit=n> overrides B<-pt=n> for signature parens only, so that single-argument
+signatures can be forced to match multi-argument ones (or vice-versa) without
+changing the tightness of every other paren in the file.  B<n> may have the
+value 0, 1, or 2 with these meanings:
+
+    -spit=0 means always put a space inside the signature parens
+    -spit=1 means ignore this parameter and just use -pt=n [DEFAULT]
+    -spit=2 means never put a space inside the signature parens
+
+For example, given the line B<sub circle($rad) { ... }>:
+
+    sub circle( $rad ) { ... }   # -spit=0 [space]
+    sub circle($rad) { ... }     # -spit=1 [default; follows -pt=n]
+    sub circle($rad) { ... }     # -spit=2 [no space]
+
 =item B<-kpit=n> or B<--keyword-paren-inner-tightness=n>
 
 The space inside of an opening paren, which itself follows a certain keyword,

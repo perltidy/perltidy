@@ -10,6 +10,8 @@
 #7 vpig.def
 #8 vpig.vpig1
 #9 vpig.vpig2
+#10 spit.def
+#11 spit.spit
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -39,6 +41,7 @@ BEGIN {
 -hiu
 -hxs=4
 ----------
+        'spit'  => "-spit=0",
         'vpig1' => <<'----------',
 -vpig
 -viu
@@ -83,6 +86,18 @@ alpha
 beta
 LIST
 );
+----------
+
+        'spit' => <<'----------',
+sub circle($rad) {
+    return 1;
+}
+
+my $anon = sub ($a) { return $a };
+
+sub circle2($xc, $yc, $rad) {
+    return 1;
+}
 ----------
 
         'vpig' => <<'----------',
@@ -295,6 +310,38 @@ print "[BYE!]\n\n";
     }
 }
 #9...........
+        },
+
+        'spit.def' => {
+            source => "spit",
+            params => "def",
+            expect => <<'#10...........',
+sub circle($rad) {
+    return 1;
+}
+
+my $anon = sub ($a) { return $a };
+
+sub circle2( $xc, $yc, $rad ) {
+    return 1;
+}
+#10...........
+        },
+
+        'spit.spit' => {
+            source => "spit",
+            params => "spit",
+            expect => <<'#11...........',
+sub circle( $rad ) {
+    return 1;
+}
+
+my $anon = sub ( $a ) { return $a };
+
+sub circle2( $xc, $yc, $rad ) {
+    return 1;
+}
+#11...........
         },
     };
 
