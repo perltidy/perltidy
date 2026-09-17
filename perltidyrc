@@ -35,9 +35,6 @@
 # warn if return count wanted differs from sub return statements
 --warn-mismatched-returns
 
-# user-defined subs must have args in parens
---want-call-parens='&'
-
 # Add closing side comments for subs, asubs, and while blocks.
 # 'while' blocks are marked because they can be tricky to get right.
 # The default interval (-csci=6) is used but a value of 10 might
@@ -61,11 +58,12 @@
 --interbracket-arrow-style=']->{ }->{ }->[ ]->['
 
 # Prefer call parens for these keywords:
+# note: '&' means user-defined subs must have args in parens
 --want-call-parens='open unlink substr defined ref scalar int
-uc lc sprintf if unless reverse splice join for return+'
+uc lc sprintf if unless reverse splice join for+ return+ &'
 
 # Prefer to omit parens for these keywords:
---nowant-call-parens='push pop shift unshift croak for'
+--nowant-call-parens='push pop shift unshift croak'
 
 # Note: Use 'perltidy -dmcp filename' to find mixed call paren usage.
 
