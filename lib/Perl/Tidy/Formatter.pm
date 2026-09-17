@@ -24149,10 +24149,11 @@ EOM
                     $trimmed_tag =~ s/\s+$//;
                     if ( !length($trimmed_tag) ) { $is_excluded_tag = 1 }
 
-                    if ( !$is_excluded_tag ) {
+                    if ( !$is_excluded_tag
+                        && index( $here_text, $trimmed_tag ) >= 0 )
+                    {
                         my @lines = split /^/, $here_text;
-                        foreach my $line (@lines) {
-                            my $trimmed_line = $line;
+                        foreach my $trimmed_line (@lines) {
                             $trimmed_line =~ s/^\s+//;
                             $trimmed_line =~ s/\s+$//;
                             next if ( $trimmed_line ne $trimmed_tag );
