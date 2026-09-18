@@ -5383,22 +5383,22 @@ EOM
     # seen as 2 parameters, vtc and 1, so the abbreviations
     # won't be seen.  Therefore, we will catch them here if
     # they get through.
-    if ( defined( $rOpts->{'vertical-tightness'} ) ) {
-        my $vt = $rOpts->{'vertical-tightness'};
+    my $vt = $rOpts->{'vertical-tightness'};
+    if ( defined($vt) ) {
         $rOpts->{'paren-vertical-tightness'}          = $vt;
         $rOpts->{'square-bracket-vertical-tightness'} = $vt;
         $rOpts->{'brace-vertical-tightness'}          = $vt;
     }
 
-    if ( defined( $rOpts->{'vertical-tightness-closing'} ) ) {
-        my $vtc = $rOpts->{'vertical-tightness-closing'};
+    my $vtc = $rOpts->{'vertical-tightness-closing'};
+    if ( defined($vtc) ) {
         $rOpts->{'paren-vertical-tightness-closing'}          = $vtc;
         $rOpts->{'square-bracket-vertical-tightness-closing'} = $vtc;
         $rOpts->{'brace-vertical-tightness-closing'}          = $vtc;
     }
 
-    if ( defined( $rOpts->{'closing-token-indentation'} ) ) {
-        my $cti = $rOpts->{'closing-token-indentation'};
+    my $cti = $rOpts->{'closing-token-indentation'};
+    if ( defined($cti) ) {
         $rOpts->{'closing-square-bracket-indentation'} = $cti;
         $rOpts->{'closing-brace-indentation'}          = $cti;
         $rOpts->{'closing-paren-indentation'}          = $cti;

@@ -2525,14 +2525,10 @@ EOM
     initialize_container_indentation_options();
 
     # make -l=0 equal to -l=infinite
-    if ( !$rOpts->{'maximum-line-length'} ) {
-        $rOpts->{'maximum-line-length'} = 1_000_000;
-    }
+    $rOpts->{'maximum-line-length'} ||= 1_000_000;
 
     # make -lbl=0 equal to -lbl=infinite
-    if ( !$rOpts->{'long-block-line-count'} ) {
-        $rOpts->{'long-block-line-count'} = 1_000_000;
-    }
+    $rOpts->{'long-block-line-count'} ||= 1_000_000;
 
     initialize_tightness_vars();
 
@@ -3425,8 +3421,9 @@ sub initialize_extended_block_tightness_list {
 
     # This can be overridden with -xbtl="..."
     my $long_name = 'extended-block-tightness-list';
-    if ( $rOpts->{$long_name} ) {
-        my @words = split_words( $rOpts->{$long_name} );
+    my $opt_xbtl  = $rOpts->{$long_name};
+    if ($opt_xbtl) {
+        my @words = split_words($opt_xbtl);
         my @unknown;
 
         # Turn everything off
@@ -7648,8 +7645,8 @@ sub make_static_block_comment_pattern {
     $static_block_comment_pattern = '^\s*##';
 
     # allow the user to change it
-    if ( $rOpts->{'static-block-comment-prefix'} ) {
-        my $prefix = $rOpts->{'static-block-comment-prefix'};
+    my $prefix = $rOpts->{'static-block-comment-prefix'};
+    if ($prefix) {
         $prefix =~ s/^\s+//;
         my $pattern = $prefix;
 
@@ -7872,8 +7869,9 @@ sub make_bl_pattern {
     my $sbl_long_name  = 'opening-sub-brace-on-new-line';
     my $asbl_long_name = 'opening-anonymous-sub-brace-on-new-line';
 
-    if ( defined( $rOpts->{$bll_long_name} ) && $rOpts->{$bll_long_name} ) {
-        $bl_list_string = $rOpts->{$bll_long_name};
+    my $opt_bll = $rOpts->{$bll_long_name};
+    if ($opt_bll) {
+        $bl_list_string = $opt_bll;
     }
     if ( $bl_list_string =~ /\bsub\b/ ) {
         $rOpts->{$sbl_long_name} ||= $rOpts->{$bl_long_name};
@@ -7898,10 +7896,9 @@ sub make_bl_pattern {
         }
     }
 
-    if ( defined( $rOpts->{$blxl_long_name} )
-        && $rOpts->{$blxl_long_name} )
-    {
-        $bl_exclusion_list_string = $rOpts->{$blxl_long_name};
+    my $opt_blxl = $rOpts->{$blxl_long_name};
+    if ($opt_blxl) {
+        $bl_exclusion_list_string = $opt_blxl;
         if ( $bl_exclusion_list_string =~ /\bsub\b/ ) {
             $rOpts->{$sbl_long_name} = 0;
         }
@@ -7921,19 +7918,16 @@ sub make_bli_pattern {
     my $bli_list_string = 'if else elsif unless while for foreach do : sub';
     my $bli_exclusion_list_string = SPACE;
 
-    if ( defined( $rOpts->{'brace-left-and-indent-list'} )
-        && $rOpts->{'brace-left-and-indent-list'} )
-    {
-        $bli_list_string = $rOpts->{'brace-left-and-indent-list'};
+    my $opt_blil = $rOpts->{'brace-left-and-indent-list'};
+    if ($opt_blil) {
+        $bli_list_string = $opt_blil;
     }
 
     $bli_pattern = make_block_pattern( '-blil', $bli_list_string );
 
-    if ( defined( $rOpts->{'brace-left-and-indent-exclusion-list'} )
-        && $rOpts->{'brace-left-and-indent-exclusion-list'} )
-    {
-        $bli_exclusion_list_string =
-          $rOpts->{'brace-left-and-indent-exclusion-list'};
+    my $opt_blixl = $rOpts->{'brace-left-and-indent-exclusion-list'};
+    if ($opt_blixl) {
+        $bli_exclusion_list_string = $opt_blixl;
     }
     $bli_exclusion_pattern =
       make_block_pattern( '-blixl', $bli_exclusion_list_string );
@@ -7946,10 +7940,10 @@ sub make_keyword_group_list_pattern {
     # Here are the defaults:
     $keyword_group_list_pattern         = '^(our|local|my|use|require|)$';
     $keyword_group_list_comment_pattern = EMPTY_STRING;
-    if ( defined( $rOpts->{'keyword-group-blanks-list'} )
-        && $rOpts->{'keyword-group-blanks-list'} )
-    {
-        my @words = split /\s+/, $rOpts->{'keyword-group-blanks-list'};
+    my $list_opt_name = '--keyword-group-blanks-list';
+    my $list_opt      = $rOpts->{$list_opt_name};
+    if ($list_opt) {
+        my @words = split /\s+/, $list_opt;
         my @keyword_list;
         my @comment_list;
         foreach my $word (@words) {
@@ -7962,8 +7956,7 @@ sub make_keyword_group_list_pattern {
             }
         }
         if (@keyword_list) {
-            check_for_valid_keywords( \@keyword_list,
-                '--keyword-group-blanks-list', 1 );
+            check_for_valid_keywords( \@keyword_list, $list_opt_name, 1 );
             $keyword_group_list_pattern =
               make_block_pattern( '-kgbl', join( SPACE, @keyword_list ) );
         }
@@ -7980,12 +7973,10 @@ sub make_block_brace_vertical_tightness_pattern {
     # Turn any input list into a regex for recognizing selected block types
     $block_brace_vertical_tightness_pattern =
       '^((if|else|elsif|unless|while|for|foreach|do|\w+:)$|sub)';
-    if ( defined( $rOpts->{'block-brace-vertical-tightness-list'} )
-        && $rOpts->{'block-brace-vertical-tightness-list'} )
-    {
+    my $list_opt = $rOpts->{'block-brace-vertical-tightness-list'};
+    if ($list_opt) {
         $block_brace_vertical_tightness_pattern =
-          make_block_pattern( '-bbvtl',
-            $rOpts->{'block-brace-vertical-tightness-list'} );
+          make_block_pattern( '-bbvtl', $list_opt );
     }
     return;
 } ## end sub make_block_brace_vertical_tightness_pattern
@@ -8084,7 +8075,8 @@ sub make_static_side_comment_pattern {
     $static_side_comment_pattern = '^##';
 
     # allow the user to change it
-    if ( my $prefix = $rOpts->{'static-side-comment-prefix'} ) {
+    my $prefix = $rOpts->{'static-side-comment-prefix'};
+    if ($prefix) {
         $prefix =~ s/^\s+//;
         my $pattern = '^' . $prefix;
         if ( bad_pattern($pattern) ) {
@@ -32738,13 +32730,8 @@ sub compare_indentation_levels {
         $self->[_last_indentation_rift_line_] = $line_number;
 
         if ($is_closing_block) {
-
-            if ( !$self->[_in_brace_indentation_rift_] ) {
-                $self->[_in_brace_indentation_rift_] = $line_number;
-            }
-            if ( !$self->[_first_brace_indentation_rift_line_] ) {
-                $self->[_first_brace_indentation_rift_line_] = $line_number;
-            }
+            $self->[_in_brace_indentation_rift_]         ||= $line_number;
+            $self->[_first_brace_indentation_rift_line_] ||= $line_number;
         }
 
         if ( !$self->[_in_indentation_rift_] ) {
@@ -32755,9 +32742,8 @@ sub compare_indentation_levels {
 "Start indentation disagreement: input=$guessed_indentation_level; output=$structural_indentation_level\n"
                 );
             }
-            $self->[_in_indentation_rift_]         = $line_number;
-            $self->[_first_indentation_rift_line_] = $line_number
-              unless ( $self->[_first_indentation_rift_line_] );
+            $self->[_in_indentation_rift_] = $line_number;
+            $self->[_first_indentation_rift_line_] ||= $line_number;
         }
     }
     else {
@@ -37145,20 +37131,18 @@ sub break_long_lines {
     my $rbond_strength_to_go = $self->set_bond_strengths();
 
     # Add any comma bias set by break_lists
-    if ( @{$rbond_strength_bias} ) {
-        foreach my $item ( @{$rbond_strength_bias} ) {
-            my ( $ii, $bias ) = @{$item};
-            if ( $ii >= 0 && $ii <= $max_index_to_go ) {
-                $rbond_strength_to_go->[$ii] += $bias;
-            }
-            else {
-                if (DEVEL_MODE) {
-                    my $KK  = $K_to_go[0];
-                    my $lno = $self->[_rLL_]->[$KK]->[_LINE_INDEX_];
-                    Fault(
+    foreach ( @{$rbond_strength_bias} ) {
+        my ( $ii, $bias ) = @{$_};
+        if ( $ii >= 0 && $ii <= $max_index_to_go ) {
+            $rbond_strength_to_go->[$ii] += $bias;
+        }
+        else {
+            if (DEVEL_MODE) {
+                my $KK  = $K_to_go[0];
+                my $lno = $self->[_rLL_]->[$KK]->[_LINE_INDEX_];
+                Fault(
 "Bad bond strength bias near line $lno: i=$ii must be between 0 and $max_index_to_go\n"
-                    );
-                }
+                );
             }
         }
     }
@@ -38431,14 +38415,13 @@ EOM
             # or  and  ||  &&
             foreach my $op (qw( or and || && )) {
                 if ( $rand_or_list[$dd]->{$op} ) {
-                    foreach ( @{ $rand_or_list[$dd]->{$op} } ) {
-                        $self->set_forced_breakpoint($_);
-                    }
 
                     # Break at any 'if' and 'unless' too,
-                    foreach ( @{ $rand_or_list[$dd]->{if} } ) {
-                        $self->set_forced_breakpoint($_);
-                    }
+                    $self->set_forced_breakpoint($_)
+                      for (
+                        @{ $rand_or_list[$dd]->{$op} },
+                        @{ $rand_or_list[$dd]->{if} }
+                      );
 
                     # then stop and ignore higher precedence operators
                     $rand_or_list[$dd] = {};
