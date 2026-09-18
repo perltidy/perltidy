@@ -1813,8 +1813,8 @@ Normally this space is controlled by the general B<-pt=n> (B<--paren-tightness>)
 setting, which by default (B<-pt=1>) omits the space when the signature holds
 only a single token, such as one scalar variable with no default:
 
-    sub circle($rad)          # -pt=1 [default; single token, no space]
-    sub circle( $xc, $yc )    # -pt=1 [default; multiple tokens, space]
+    sub circle($rad)       # -pt=1 [default; single token, no space]
+    sub circle( $xc, $yc ) # -pt=1 [default; multiple tokens, space]
 
 B<-spit=n> overrides B<-pt=n> for signature parens only, so that single-argument
 signatures can be forced to match multi-argument ones (or vice-versa) without
