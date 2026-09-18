@@ -2,9 +2,9 @@
 
 ## 2026 08 26.01
 
-   - A new option --signature-paren-inner-tightness=n, -spit=n (git #214)
+   - A new option --signature-paren-inner-tightness=n, -spit=n
      provides separate control over spaces within sub signature parentheses,
-     independent of the --paren-tightness control.
+     independent of the --paren-tightness control. See git #214.
 
    - Add option --valign-postfix-if-gaps, or -vpig, to continue alignment
      of postfix 'if' and 'unless' across gaps of similar code. For example:
