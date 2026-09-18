@@ -3738,26 +3738,25 @@ sub initialize_old_breakpoint_controls {
 
     if ( $rOpts->{'ignore-old-breakpoints'} ) {
 
+        # These options are OFF by default and would be in conflict with -iob
+        # so we will turn them off with a warning.
+        #   long_name => [short_name, default value]
+        my %possible_conflicts = (
+            'break-at-old-method-breakpoints'    => [ 'bom', 0 ],
+            'break-at-old-comma-breakpoints'     => [ 'boc', 0 ],
+            'break-at-old-semicolon-breakpoints' => [ 'bos', 0 ],
+            'keep-old-breakpoints-before'        => [ 'kbb', EMPTY_STRING ],
+            'keep-old-breakpoints-after'         => [ 'kba', EMPTY_STRING ],
+        );
+
         my @conflicts;
-        if ( $rOpts->{'break-at-old-method-breakpoints'} ) {
-            $rOpts->{'break-at-old-method-breakpoints'} = 0;
-            push @conflicts, '--break-at-old-method-breakpoints (-bom)';
-        }
-        if ( $rOpts->{'break-at-old-comma-breakpoints'} ) {
-            $rOpts->{'break-at-old-comma-breakpoints'} = 0;
-            push @conflicts, '--break-at-old-comma-breakpoints (-boc)';
-        }
-        if ( $rOpts->{'break-at-old-semicolon-breakpoints'} ) {
-            $rOpts->{'break-at-old-semicolon-breakpoints'} = 0;
-            push @conflicts, '--break-at-old-semicolon-breakpoints (-bos)';
-        }
-        if ( $rOpts->{'keep-old-breakpoints-before'} ) {
-            $rOpts->{'keep-old-breakpoints-before'} = EMPTY_STRING;
-            push @conflicts, '--keep-old-breakpoints-before (-kbb)';
-        }
-        if ( $rOpts->{'keep-old-breakpoints-after'} ) {
-            $rOpts->{'keep-old-breakpoints-after'} = EMPTY_STRING;
-            push @conflicts, '--keep-old-breakpoints-after (-kba)';
+        foreach my $long_name ( sort keys %possible_conflicts ) {
+            if ( $rOpts->{$long_name} ) {
+                my ( $short_name, $default ) =
+                  @{ $possible_conflicts{$long_name} };
+                $rOpts->{$long_name} = $default;
+                push @conflicts, "--$long_name (-$short_name)";
+            }
         }
 
         if (@conflicts) {
@@ -3768,7 +3767,7 @@ sub initialize_old_breakpoint_controls {
         }
 
         # Note: These additional parameters are made inactive by -iob.
-        # They are silently turned off here because they are on by default.
+        # They are silently turned off here because they are ON by default.
         # We would generate unexpected warnings if we issued a warning.
         $rOpts->{'break-at-old-keyword-breakpoints'}   = 0;
         $rOpts->{'break-at-old-logical-breakpoints'}   = 0;
