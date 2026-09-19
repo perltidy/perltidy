@@ -526,6 +526,9 @@ my (
     # INITIALIZER: initialize_here_doc_control_hash,
     %here_doc_control_hash,
 
+    # INITIALIZER: initialize_use_feature,
+    %use_feature,
+
     # INITIALIZER: initialize_break_at_old_comma_types
     %break_at_old_comma_types,
 
@@ -2510,6 +2513,8 @@ EOM
 
     initialize_here_doc_control_hash();
 
+    initialize_use_feature();
+
     initialize_break_at_old_comma_types();
 
     initialize_extended_block_tightness_list();
@@ -3291,6 +3296,35 @@ EOM
 
     return;
 } ## end sub initialize_here_doc_control_hash
+
+sub initialize_use_feature {
+
+    # Note: parameter 'use-feature' is parsed by both Tokenizer and Formatter
+    %use_feature = ();
+    my $option_name = 'use-feature';
+    if ( my @q = split_words( $rOpts->{$option_name} ) ) {
+        check_for_valid_words(
+            {
+                rinput_list  => \@q,
+                option_name  => "--$option_name",
+                on_error     => 'die',
+                rexceptions  => undef,
+                rvalid_words => [qw(class noclass case_match nocase_match)],
+            }
+        );
+
+        # check for conflicts like 'class' and 'noclass'
+        $use_feature{$_} = 1 for @q;
+        foreach my $word (qw( class case_match )) {
+            if ( $use_feature{$word} && $use_feature{"no$word"} ) {
+                Warn(
+"Unexpected text in --$option_name: expecting just one of '$word' or 'no$word'\n"
+                );
+            }
+        }
+    }
+    return;
+} ## end sub initialize_use_feature
 
 sub initialize_break_at_old_comma_types {
 
@@ -7833,9 +7867,7 @@ sub make_sub_matching_pattern {
     }
 
     #   add 'method' unless use-feature='noclass' is set.
-    if ( !defined( $rOpts->{'use-feature'} )
-        || $rOpts->{'use-feature'} !~ /\bnoclass\b/ )
-    {
+    if ( !$use_feature{'noclass'} ) {
         push @words, 'method';
     }
 
@@ -20390,12 +20422,23 @@ EOM
             # We had to wait until now to do this check.
             next if ( $ris_c_style_for_paren_by_seqno->{$seqno_c} );
 
-            $count++;
-
             my $Ko;
             if ( $seqno_c && $seqno_c > SEQ_ROOT ) {
                 $Ko = $K_opening_container->{$seqno_c};
             }
+
+            # feature 'case_match' allows 'if' within match ( ... ) (c649)
+            if ( $Ko && $token_c eq '(' ) {
+                my $Kc_p = $self->K_previous_code($Ko);
+                my $token_p =
+                    $Kc_p
+                  ? $rLL->[$Kc_p]->[_TOKEN_]
+                  : EMPTY_STRING;
+                next
+                  if ( $token_p eq 'match' && !$use_feature{'nocase_match'} );
+            }
+            $count++;
+
             my $lno_c = defined($Ko) ? $rLL->[$Ko]->[_LINE_INDEX_] + 1 : $lno;
             my $msg =
               "$lno: found '$token_u' in non-block '$token_c' container";

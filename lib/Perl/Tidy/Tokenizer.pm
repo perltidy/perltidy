@@ -49,7 +49,8 @@ use constant BACKSLASH        => q{\\};
 
 # List of hash keys to prevent -duk from listing them.
 # (note the backtick in this list)
-my @unique_hash_keys_uu = qw( ` RPerl _rtype_sequence _ending_in_quote );
+my @unique_hash_keys_uu =
+  qw( ` RPerl _rtype_sequence _ending_in_quote noclass );
 
 # Parent sequence number of tree of containers; must be 1
 use constant SEQ_ROOT => 1;
@@ -192,6 +193,7 @@ my (
     %is_grep_alias,
     %is_sub,
     $guess_if_method,
+    %use_feature,
 );
 
 # possible values of operator_expected()
@@ -379,6 +381,18 @@ sub make_skipping_pattern {
     return $pattern;
 } ## end sub make_skipping_pattern
 
+sub split_words {
+
+    # Given: a string containing words separated by whitespace,
+    # Return: the corresponding list of words
+    my ($str) = @_;
+    return unless ( defined($str) );
+    $str =~ s/\s+$//;
+    $str =~ s/^\s+//;
+    return unless ( length($str) );
+    return split /\s+/, $str;
+} ## end sub split_words
+
 sub check_options {
 
     # Check and pre-process tokenizer parameters
@@ -421,27 +435,16 @@ sub check_options {
 
     my $use_feature_class = 1;
 
-    my $str = $rOpts->{'use-feature'};
-    if ( defined($str) && length($str) ) {
-        $str =~ s/^\s+//;
-        $str =~ s/\s+$//;
-        if ( !length($str) ) {
-            ## all spaces
-        }
-        elsif ( $str =~ /\bnoclass\b/ ) {
-            $use_feature_class = 0;
-        }
-        elsif ( $str =~ /\bclass\b/ ) {
-            $guess_if_method = 0;
-        }
-        else {
-            # At present, only 'class' and 'noclass' are valid strings
-            # This is just a Warn, for testing, but will eventually be Die
-            Warn(
-"Unexpected text in --use-feature: expecting 'class' or 'noclass'\n"
-            );
-        }
+    # Note: parameter 'use-feature' is parsed by both Tokenizer and Formatter.
+    # Formatter will have already checked for errors.
+    %use_feature = ();
+    if ( my @q = split_words( $rOpts->{'use-feature'} ) ) {
+        $use_feature{$_} = 1 for @q;
     }
+
+    if    ( $use_feature{'noclass'} ) { $use_feature_class = 0 }
+    elsif ( $use_feature{'class'} )   { $guess_if_method = 0 }
+    else                              { }
 
     # These are the main updates for this option. There are additional
     # changes elsewhere, usually indicated with a comment 'rt145706'
@@ -4277,6 +4280,12 @@ EOM
                     $self->warning("Possible syntax error near '{^'\n");
                 }
             }
+
+            # Check for extended syntax use of '^' as a prefix in case_match.
+            # We will mark it type 't' (a sigil) (c649):
+            if ( $next_tok eq '$' && !$use_feature{'nocase_match'} ) {
+                $type = 't';
+            }
         }
         return;
     } ## end sub do_CARAT_SIGN
@@ -4873,6 +4882,11 @@ EOM
 
                 # patch for Syntax::Operator::In, git #162
                 elsif ( $tok eq 'in' && $next_nonblank_token eq ':' ) {
+                    ## no error message
+                }
+
+                # patch for case_match (c649)
+                elsif ( $tok eq 'as' && !$use_feature{'nocase_match'} ) {
                     ## no error message
                 }
 
