@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2026 08 26.02
+## 2026 08 26.03
 
    - A new option --signature-paren-inner-tightness=n, -spit=n
      provides separate control over spaces within sub signature parentheses,

@@ -5,7 +5,7 @@ use Carp;
 
 { #<<< A non-indenting brace to contain all lexical variables
 
-our $VERSION = '20260826.02';
+our $VERSION = '20260826.03';
 use English qw( -no_match_vars );
 use Scalar::Util 'refaddr';            # perl 5.8.1 and later
 use List::Util qw( min max first );    # min, max first are in Perl 5.8
