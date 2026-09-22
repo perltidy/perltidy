@@ -374,23 +374,23 @@ sub circle2( $xc, $yc, $rad ) {
             expect => <<'#12...........',
 # allow 'if' within match(..)
 case ($person) {
-    match( { name => $name, age => $age, ... } if $age < 18 ) {
+    match ( { name => $name, age => $age, ... } if $age < 18 ) {
         say "$name is a minor";
     }
-    match( { name => $name, salary => $salary, ... } ) {
+    match ( { name => $name, salary => $salary, ... } ) {
         say "$name earns $salary";
     }
 }
 
 # treat 'as' as a binary operator
 case ( read_record() as $record ) {
-    match( { type => "ok", ... } ) { use_record($record) }
+    match ( { type => "ok", ... } ) { use_record($record) }
 }
 
 # allow pin prefix '^' (treat as sigil for formatting)
 case ($value) {
-    match($value)    { say "the subject matched itself" }
-    match( ^$value ) { say "the explicit pin also matched" }
+    match ($value)    { say "the subject matched itself" }
+    match ( ^$value ) { say "the explicit pin also matched" }
 }
 #12...........
         },

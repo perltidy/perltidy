@@ -411,7 +411,7 @@ if ( $x in : eq @some_strings ) {
     say "x is one of the given strings";
 }
 
-match( $n : == ) {
+match ( $n : == ) {
     case (1) { say "It's one" }
     case (2) { say "It's two" }
     case (3) { say "It's three" }
@@ -432,7 +432,7 @@ if ( $x in :eq @some_strings ) {
     say "x is one of the given strings";
 }
 
-match( $n :== ) {
+match ( $n :== ) {
     case (1) { say "It's one" }
     case (2) { say "It's two" }
     case (3) { say "It's three" }

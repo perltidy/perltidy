@@ -50,7 +50,7 @@ use constant BACKSLASH        => q{\\};
 # List of hash keys to prevent -duk from listing them.
 # (note the backtick in this list)
 my @unique_hash_keys_uu =
-  qw( ` RPerl _rtype_sequence _ending_in_quote noclass );
+  qw( ` RPerl _rtype_sequence _ending_in_quote noclass case_match );
 
 # Parent sequence number of tree of containers; must be 1
 use constant SEQ_ROOT => 1;
@@ -436,15 +436,23 @@ sub check_options {
     my $use_feature_class = 1;
 
     # Note: parameter 'use-feature' is parsed by both Tokenizer and Formatter.
-    # Formatter will have already checked for errors.
+    # Formatter will do full error checking.
     %use_feature = ();
     if ( my @q = split_words( $rOpts->{'use-feature'} ) ) {
         $use_feature{$_} = 1 for @q;
+        if ( $use_feature{'noclass'} ) { $use_feature_class = 0 }
+        if ( $use_feature{'class'} )   { $guess_if_method   = 0 }
     }
 
-    if    ( $use_feature{'noclass'} ) { $use_feature_class = 0 }
-    elsif ( $use_feature{'class'} )   { $guess_if_method = 0 }
-    else                              { }
+    # Make 'match' a keyword ONLY if explicitly requested; c649.
+    # Otherwise, the formatter would put a space between a function
+    # 'match' and its opening paren.  The Formatter module will check
+    # for 'match' words used in case_match syntax and convert them to
+    # keywords later, so both older and newer uses should be okay.
+    if ( $use_feature{'case_match'} ) {
+        $is_keyword{match}                        = 1;
+        $is_zero_continuation_block_type{'match'} = 1;
+    }
 
     # These are the main updates for this option. There are additional
     # changes elsewhere, usually indicated with a comment 'rt145706'

@@ -2303,6 +2303,14 @@ sub check_for_valid_words {
     return Perl::Tidy::check_for_valid_words(@_);
 }
 
+my %is_possible_keyword;
+
+# Sub set_whitespace may convert 'match' to a keyword
+BEGIN {
+    my @q = qw( match );
+    $is_possible_keyword{$_} = 1 for @q;
+}
+
 sub check_for_valid_keywords {
     my ( $rlist, ( $option_name, $die_on_error ) ) = @_;
 
@@ -2322,7 +2330,7 @@ sub check_for_valid_keywords {
 
     my @unknown_words;
     foreach my $word ( @{$rlist} ) {
-        if ( !is_keyword($word) ) {
+        if ( !is_keyword($word) && !$is_possible_keyword{$word} ) {
             push @unknown_words, $word;
         }
     }
@@ -3151,8 +3159,11 @@ sub initialize_space_after_keyword {
     # Default keywords for which space is introduced before an opening paren:
     # (at present, including them messes up vertical alignment)
     # Added 'cmp' to defaults based on discussion in git #206
+    # Added 'match' in case it is a keyword in case_match (c649) or in
+    # 'Syntax::Keyword::Match' (git162)
     my @sak = qw( my local our state and or xor cmp err eq ne if else elsif
-      until unless while for foreach return switch case given when catch );
+      until unless while for foreach return switch case given when catch
+      match );
     %space_after_keyword = map { $_ => 1 } @sak;
 
     # first remove any or all of these if desired
@@ -5526,6 +5537,23 @@ sub set_whitespace_flags {
             if ( $token eq '(' ) {
 
                 my $seqno = $rtokh->[_TYPE_SEQUENCE_];
+
+                # Patch for feature case_match: convert token type of a word
+                # 'match' to 'k' (keyword) if it has the structure:
+                #    match ( ... ) { ... }
+                # if user has not turned off feature 'case_match' (c649).
+                # This also works for 'Syntax::Keyword::Match' (git162)
+                if (   $last_token eq 'match'
+                    && $last_type ne 'k'
+                    && !$use_feature{'nocase_match'} )
+                {
+                    my $Kc = $K_closing_container->{$seqno};
+                    my $Kn = $self->K_next_nonblank($Kc);
+                    if ( $Kn && $rLL->[$Kn]->[_TOKEN_] eq '{' ) {
+                        $rtokh_last->[_TYPE_] = 'k';
+                        $last_type = 'k';
+                    }
+                }
 
                 # This will have to be tweaked as tokenization changes.
                 # We usually want a space at '} (', for example:
