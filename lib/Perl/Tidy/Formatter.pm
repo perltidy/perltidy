@@ -20459,7 +20459,7 @@ EOM
             if ( $Ko && $token_c eq '(' ) {
                 my $Kc_p = $self->K_previous_code($Ko);
                 my $token_p =
-                    $Kc_p
+                    defined($Kc_p)
                   ? $rLL->[$Kc_p]->[_TOKEN_]
                   : EMPTY_STRING;
                 next
