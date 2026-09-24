@@ -340,6 +340,7 @@ my (
     %is_s_y_m_slash,
     %is_sigil,
     %is_comma_fat_comma_equals,
+    %is_extended_syntax_block_type,
 
     # INITIALIZER: sub check_options
     $controlled_comma_style,
@@ -694,6 +695,7 @@ BEGIN {
         _rKrange_multiline_qw_by_seqno_     => $i++,
         _rmultiline_qw_has_extra_level_     => $i++,
         _ris_qwaf_by_seqno_                 => $i++,
+        _ris_extended_syntax_block_seqno_   => $i++,
 
         _rcollapsed_length_by_seqno_       => $i++,
         _rbreak_before_container_by_seqno_ => $i++,
@@ -1033,6 +1035,16 @@ BEGIN {
 
     $is_comma_fat_comma_equals{$_} = 1 for ( COMMA, '=>', '=' );
 
+    # For extend syntax words which have a syntax like
+    #    match (...) {...}
+    # with a paren layer between the word and the opening block brace,
+    # the Tokenizer will append '()' to the block type, so the above
+    # block type will be marked as 'match()'.  Sub write_line() will look
+    # for these blocks and set a flag to have the words converted to
+    # keywords. This is a general capability, but currently only used for
+    # 'match'.
+    $is_extended_syntax_block_type{$_} = 1 for qw{ match() };
+
 } ## end BEGIN
 
 {    ## begin closure to count instances
@@ -1289,6 +1301,7 @@ sub initialize_self_vars {
     $self->[_rKrange_multiline_qw_by_seqno_]     = {};
     $self->[_rmultiline_qw_has_extra_level_]     = {};
     $self->[_ris_qwaf_by_seqno_]                 = {};
+    $self->[_ris_extended_syntax_block_seqno_]   = {};
 
     $self->[_rcollapsed_length_by_seqno_]       = {};
     $self->[_rbreak_before_container_by_seqno_] = {};
@@ -2303,14 +2316,6 @@ sub check_for_valid_words {
     return Perl::Tidy::check_for_valid_words(@_);
 }
 
-my %is_possible_keyword;
-
-# Sub set_whitespace may convert 'match' to a keyword
-BEGIN {
-    my @q = qw( match );
-    $is_possible_keyword{$_} = 1 for @q;
-}
-
 sub check_for_valid_keywords {
     my ( $rlist, ( $option_name, $die_on_error ) ) = @_;
 
@@ -2330,7 +2335,9 @@ sub check_for_valid_keywords {
 
     my @unknown_words;
     foreach my $word ( @{$rlist} ) {
-        if ( !is_keyword($word) && !$is_possible_keyword{$word} ) {
+        if (   !is_keyword($word)
+            && !$is_extended_syntax_block_type{ $word . '()' } )
+        {
             push @unknown_words, $word;
         }
     }
@@ -5537,23 +5544,6 @@ sub set_whitespace_flags {
             if ( $token eq '(' ) {
 
                 my $seqno = $rtokh->[_TYPE_SEQUENCE_];
-
-                # Patch for feature case_match: convert token type of a word
-                # 'match' to 'k' (keyword) if it has the structure:
-                #    match ( ... ) { ... }
-                # if user has not turned off feature 'case_match' (c649).
-                # This also works for 'Syntax::Keyword::Match' (git162)
-                if (   $last_token eq 'match'
-                    && $last_type ne 'k'
-                    && !$use_feature{'nocase_match'} )
-                {
-                    my $Kc = $K_closing_container->{$seqno};
-                    my $Kn = $self->K_next_nonblank($Kc);
-                    if ( $Kn && $rLL->[$Kn]->[_TOKEN_] eq '{' ) {
-                        $rtokh_last->[_TYPE_] = 'k';
-                        $last_type = 'k';
-                    }
-                }
 
                 # This will have to be tweaked as tokenization changes.
                 # We usually want a space at '} (', for example:
@@ -8980,9 +8970,6 @@ EOM
                     if ( $rblock_type->[$j] ) {
                         my $block_type = $rblock_type->[$j];
 
-                        # Store the block type with sequence number as hash key
-                        $self->[_rblock_type_of_seqno_]->{$seqno} = $block_type;
-
                         # and save anonymous subs and named subs in separate
                         # hashes to avoid future pattern tests
                         if ( $matches_ASUB{$block_type} ) {
@@ -8995,10 +8982,25 @@ EOM
                         {
                             $self->[_ris_sub_block_]->{$seqno} = 1;
                         }
+
+                        # Look for extended syntax blocks of the form
+                        # 'match()'. The tokenizer added the '()' to
+                        # indicate the form match (...) {..  We will set
+                        # a flag telling sub 'upgrade_token_types' to change
+                        # 'match' to be type 'k'.  And we can remove the
+                        # trailing '()' from the block type.
+                        elsif ( $is_extended_syntax_block_type{$block_type} ) {
+                            $self->[_ris_extended_syntax_block_seqno_]->{$seqno}
+                              = 1;
+                            $block_type =~ s/\(\)$//;
+                        }
                         else {
 
                             # not a sub type
                         }
+
+                        # Store the block type with sequence number as hash key
+                        $self->[_rblock_type_of_seqno_]->{$seqno} = $block_type;
                     }
                 }
                 elsif ( $is_closing_token{$token} ) {
@@ -9207,6 +9209,8 @@ EOM
 
     # Verify that the line hash does not have any unknown keys.
     $self->check_line_hashes() if (DEVEL_MODE);
+
+    $self->upgrade_token_types();
 
     $self->interbracket_arrow_check();
 
@@ -16830,6 +16834,59 @@ sub find_non_indenting_braces {
     return;
 } ## end sub find_non_indenting_braces
 
+sub upgrade_token_types {
+    my $self = shift;
+
+    # Make any needed post-tokenizer changes to keyword token types for
+    # extended syntax.  These have been located by sub write_line. The sequence
+    # numbers of the blocks are known and we have to walk back past the control
+    # parens to the leading word and set its type to 'k' (keyword).  This will
+    # allow the user to control spaces around the parens.
+    #
+    #                Kc_paren
+    #                |
+    #    match ( ... )  { ... }
+    #       |  |        |
+    #  K_word  Ko_paren Ko_block      <-- indexes
+    #
+    # The coding is tedious but completely straightforward.
+    # The error checks are for safety and should never be hit.
+    # A simple patch can be seen in v20260826.03, sub set_whitespace.
+    # This is more general and a little more efficient.
+    # Added for feature case_match, c649.
+    # Also works for Syntax::Keyword::Match, git162.
+
+    return if ( !%{ $self->[_ris_extended_syntax_block_seqno_] } );
+    my $rLL                  = $self->[_rLL_];
+    my $K_opening_container  = $self->[_K_opening_container_];
+    my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
+
+    foreach my $seqno ( keys %{ $self->[_ris_extended_syntax_block_seqno_] } ) {
+        my $Ko_block = $K_opening_container->{$seqno};
+        next if ( !$Ko_block );
+        my $Kc_paren = $self->K_previous_code($Ko_block);
+        next if ( !$Kc_paren );
+        my $seqno_paren = $rLL->[$Kc_paren]->[_TYPE_SEQUENCE_];
+        next if ( !$seqno_paren );
+        my $Ko_paren = $K_opening_container->{$seqno_paren};
+        next if ( !$Ko_paren );
+        my $KK_word = $self->K_previous_code($Ko_paren);
+        next if ( !defined($KK_word) );
+        my $token      = $rLL->[$KK_word]->[_TOKEN_];
+        my $block_type = $rblock_type_of_seqno->{$seqno};
+
+        if ( $token eq $block_type ) {
+            $rLL->[$KK_word]->[_TYPE_] = 'k';
+        }
+        else {
+            my $lno = $rLL->[$KK_word]->[_LINE_INDEX_] + 1;
+            DEVEL_MODE
+              && Fault("$lno:found '$token' but expecting $block_type\n");
+        }
+    }
+    return;
+} ## end sub upgrade_token_types
+
 sub interbracket_arrow_check {
 
     my ($self) = @_;
@@ -20459,14 +20516,14 @@ EOM
             if ( $Ko && $token_c eq '(' ) {
                 my $Kc_p = $self->K_previous_code($Ko);
                 my $token_p =
-                    defined($Kc_p)
+                  defined($Kc_p)
                   ? $rLL->[$Kc_p]->[_TOKEN_]
                   : EMPTY_STRING;
                 next
                   if ( $token_p eq 'match' && !$use_feature{'nocase_match'} );
             }
-            $count++;
 
+            $count++;
             my $lno_c = defined($Ko) ? $rLL->[$Ko]->[_LINE_INDEX_] + 1 : $lno;
             my $msg =
               "$lno: found '$token_u' in non-block '$token_c' container";
