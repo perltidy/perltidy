@@ -80,9 +80,9 @@ uc lc sprintf if unless reverse splice join for+ return+ &'
 # These builtin operators are not used in Perl::Tidy
 ---warn-keyword-list=" system exec qx ` "
 
-# This defines a new option which is invoked with -debug on the command line.
+# This defines a new option which is invoked with -keycheck on the command line.
 # It overrides any of the settings above.
-debug {
+keycheck {
    --warn-similar-keys
    --warn-unique-keys
    --warn-unique-keys-cutoff=2

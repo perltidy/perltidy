@@ -6801,25 +6801,26 @@ Space before and after the curly braces is optional.
 
 For a specific example, the following definition
 
-  debug {
+  keycheck {
      --warn-similar-keys
      --warn-unique-keys
   }
 
 or equivalently, with abbreviations,
 
-  debug { -wsk -wuk }
+  keycheck { -wsk -wuk }
 
-could be placed in a F<.perltidyrc> file.  The new name, in this case B<debug>,
+could be placed in a F<.perltidyrc> file.
+The new name, in this case B<keycheck>,
 is arbitrary provided that it does not conflict with an existing parameter.
 The extra warning checks defined with this new parameter will be ignored unless
-the new parameter B<-debug> is added to the command line.  All other settings
+the new parameter B<-keycheck> is added to the command line.  All other settings
 in the F<.perltidyrc> file still apply.  Thus it provides a way to do some
 extra checking when perltidy is invoked with
 
-        perltidy -debug ...
+        perltidy -keycheck ...
 
-(Either B<-debug> or B<--debug> may be used).
+(Either B<-keycheck> or B<--keycheck> may be used).
 
 =item Skipping leading non-perl commands with B<-x> or B<--look-for-hash-bang>
 
