@@ -1347,6 +1347,10 @@ sub initialize_all_closures {
 # CODE SECTION 2: Some Basic Utilities
 ######################################
 
+#----------------------------------------
+# Section 2A: Utilities for self-checking
+#----------------------------------------
+
 sub check_rLL {
 
     my ( $self, $msg ) = @_;
@@ -1554,6 +1558,10 @@ EOM
     } ## end sub check_line_hashes
 } ## end closure check_line_hashes
 
+#------------------------------------------------------------------------
+# Section 2B: Utilities for error handling and inter-module communication
+#------------------------------------------------------------------------
+
 sub warning {
     my ( $self, $msg, ($msg_line_number) ) = @_;
 
@@ -1672,20 +1680,14 @@ sub consecutive_nonblank_lines {
       $vao->get_cached_line_count();
 } ## end sub consecutive_nonblank_lines
 
-sub split_words {
-
-    # Given: a string containing words separated by whitespace,
-    # Return: the corresponding list of words
-    my ($str) = @_;
-    return unless ( defined($str) );
-    $str =~ s/\s+$//;
-    $str =~ s/^\s+//;
-    return unless ( length($str) );
-    return split /\s+/, $str;
-} ## end sub split_words
+#-------------------------------------------------------
+# Section 2C: Utilities to navigate the token array $rLL
+#-------------------------------------------------------
 
 sub K_next_code {
     my ( $self, $KK, ($rLL) ) = @_;
+
+    # Find the next 'code' token in $rLL
 
     # Given:
     #   $KK  = index of a token in $rLL
@@ -1715,6 +1717,8 @@ sub K_next_code {
 sub K_next_nonblank {
     my ( $self, $KK, ($rLL) ) = @_;
 
+    # Find the next nonblank token in $rLL
+
     # Given:
     #   $KK  = index of a token in $rLL
     #   $rLL = optional token array to use (default is $self->[_rLL_])
@@ -1743,6 +1747,8 @@ sub K_next_nonblank {
 sub K_previous_code {
 
     my ( $self, $KK, ($rLL) ) = @_;
+
+    # Find the previous 'code' token in $rLL
 
     # Given:
     #   $KK  = index of a token in $rLL
@@ -1782,6 +1788,8 @@ EOM
 sub K_previous_nonblank {
 
     my ( $self, $KK, ($rLL) ) = @_;
+
+    # Find the previous nonblank token in $rLL
 
     # Given:
     #   $KK  = index of a token in $rLL
@@ -1825,6 +1833,8 @@ sub K_first_code {
 
     my ( $self, ($rLL) ) = @_;
 
+    # Find the first 'code' token in $rLL
+
     # Given:
     #   $rLL = optional token array to override default
     # Return:
@@ -1844,6 +1854,8 @@ sub K_last_code {
 
     my ( $self, ($rLL) ) = @_;
 
+    # Find the last 'code' token in $rLL
+
     # Given:
     #   $rLL = optional token array to override default
     # Return:
@@ -1859,8 +1871,14 @@ sub K_last_code {
     return $self->K_previous_code($KK);
 } ## end sub K_last_code
 
+#------------------------------------------------------------------
+# Section 2D: Utilities for container identification and navigation
+#------------------------------------------------------------------
+
 sub get_parent_containers {
     my ( $self, $seqno ) = @_;
+
+    # Get a list of all parent container sequence numbers
 
     # Given:
     #   $seqno = sequence number of a container
@@ -1888,6 +1906,8 @@ EOM
 
 sub mark_parent_containers {
     my ( $self, $seqno, $rhash, ($value) ) = @_;
+
+    # Set a hash value for all parent containers
 
     # Task:
     #   set $rhash->{$seqno}=$value for all parent containers
@@ -1917,26 +1937,6 @@ EOM
     } ## end while ( $seqno = $rparent_of_seqno...)
     return;
 } ## end sub mark_parent_containers
-
-sub copy_token_as_type {
-
-    my ( $rold_token, $type, $token ) = @_;
-
-    # This provides a quick way to create a new token by
-    # slightly modifying an existing token.
-    # Given:
-    #   $rold_token = the old token to use as a template
-    #   $type  = the new token type
-    #   $token = the new token text
-    # Return:
-    #   ref to a new token
-
-    my @rnew_token = @{$rold_token};
-    $rnew_token[_TYPE_]          = $type;
-    $rnew_token[_TOKEN_]         = $token;
-    $rnew_token[_TYPE_SEQUENCE_] = EMPTY_STRING;
-    return \@rnew_token;
-} ## end sub copy_token_as_type
 
 sub parent_seqno_by_K {
 
@@ -2124,6 +2124,28 @@ sub is_in_list_by_i {
       && $self->[_ris_list_by_seqno_]->{$seqno};
 } ## end sub is_in_list_by_i
 
+sub is_welded_at_seqno {
+
+    my ( $self, $seqno ) = @_;
+
+    # Given:
+    #   $seqno = a sequence number:
+    # Return:
+    #   true if it is welded either left or right
+    #   false otherwise
+    return unless ( $total_weld_count && defined($seqno) );
+
+    # Note that welds are nested, so we can just check the opening end
+    my $KK_o = $self->[_K_opening_container_]->{$seqno};
+    return unless ( defined($KK_o) );
+    return defined( $self->[_rK_weld_left_]->{$KK_o} )
+      || defined( $self->[_rK_weld_right_]->{$KK_o} );
+} ## end sub is_welded_at_seqno
+
+#------------------------------------------------------------
+# Section 2E: Utilities for token identification and handling
+#------------------------------------------------------------
+
 sub is_interpolated_here_doc {
     my ($token) = @_;
 
@@ -2215,15 +2237,6 @@ sub is_trailing_comma {
     return;
 } ## end sub is_trailing_comma
 
-sub cumulative_length_before_K {
-    my ( $self, $KK ) = @_;
-
-    # Returns the cumulative character length from the first token to
-    # token before the token at index $KK.
-    my $rLL = $self->[_rLL_];
-    return ( $KK <= 0 ) ? 0 : $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
-} ## end sub cumulative_length_before_K
-
 # Number of leading characters to remove for quote types
 # Zero values indicate types not used
 my %Q_leading_chars = (
@@ -2311,6 +2324,93 @@ sub Q_spy {
 ##      ch_key          => $ch_key,
     };
 } ## end sub Q_spy
+
+sub copy_token_as_type {
+
+    my ( $rold_token, $type, $token ) = @_;
+
+    # This provides a quick way to create a new token by
+    # slightly modifying an existing token.
+    # Given:
+    #   $rold_token = the old token to use as a template
+    #   $type  = the new token type
+    #   $token = the new token text
+    # Return:
+    #   ref to a new token
+
+    my @rnew_token = @{$rold_token};
+    $rnew_token[_TYPE_]          = $type;
+    $rnew_token[_TOKEN_]         = $token;
+    $rnew_token[_TYPE_SEQUENCE_] = EMPTY_STRING;
+    return \@rnew_token;
+} ## end sub copy_token_as_type
+
+#-----------------------------------------------------------
+# Section 2G: Utilities for measuring token and line lengths
+#-----------------------------------------------------------
+
+sub cumulative_length_before_K {
+    my ( $self, $KK ) = @_;
+
+    # Returns the cumulative character length from the first token to
+    # token before the token at index $KK.
+    my $rLL = $self->[_rLL_];
+    return ( $KK <= 0 ) ? 0 : $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
+} ## end sub cumulative_length_before_K
+
+sub excess_line_length_for_Krange {
+
+    my ( $self, $Kfirst, $Klast ) = @_;
+
+    # returns $excess_length =
+    #   by how many characters a line composed of tokens $Kfirst .. $Klast will
+    #   exceed the allowed line length
+
+    my $rLL = $self->[_rLL_];
+    my $length_before_Kfirst =
+      ( $Kfirst <= 0 ? 0 : $rLL->[ $Kfirst - 1 ]->[_CUMULATIVE_LENGTH_] );
+
+    # backup before a side comment if necessary
+    my $Kend = $Klast;
+    if (   $rOpts_ignore_side_comment_lengths
+        && $rLL->[$Klast]->[_TYPE_] eq '#' )
+    {
+        my $Kprev = $self->K_previous_nonblank($Klast);
+        if ( defined($Kprev) && $Kprev >= $Kfirst ) { $Kend = $Kprev }
+    }
+
+    # get the length of the text
+    my $length = $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] - $length_before_Kfirst;
+
+    # get the size of the text window
+    my $level           = $rLL->[$Kfirst]->[_LEVEL_];
+    my $ci_level        = $rLL->[$Kfirst]->[_CI_LEVEL_];
+    my $max_text_length = $maximum_text_length_at_level[$level] -
+      $ci_level * $rOpts_continuation_indentation;
+
+    my $excess_length = $length - $max_text_length;
+
+    0
+      && print
+"Kfirst=$Kfirst, Klast=$Klast, Kend=$Kend, level=$level, ci=$ci_level, max_text_length=$max_text_length, length=$length\n";
+    return ($excess_length);
+} ## end sub excess_line_length_for_Krange
+
+#-----------------------------------------------
+# Section 2G: Utilities to check for valid input
+#-----------------------------------------------
+
+sub split_words {
+
+    # Given: a string containing words separated by whitespace,
+    # Return: the corresponding list of words
+    my ($str) = @_;
+    return unless ( defined($str) );
+    $str =~ s/\s+$//;
+    $str =~ s/^\s+//;
+    return unless ( length($str) );
+    return split /\s+/, $str;
+} ## end sub split_words
 
 sub check_for_valid_words {
     return Perl::Tidy::check_for_valid_words(@_);
@@ -26003,44 +26103,6 @@ EOM
     return ( $new_weld_ok, $maximum_text_length, $starting_lentot, $msg );
 } ## end sub setup_new_weld_measurements
 
-sub excess_line_length_for_Krange {
-
-    my ( $self, $Kfirst, $Klast ) = @_;
-
-    # returns $excess_length =
-    #   by how many characters a line composed of tokens $Kfirst .. $Klast will
-    #   exceed the allowed line length
-
-    my $rLL = $self->[_rLL_];
-    my $length_before_Kfirst =
-      ( $Kfirst <= 0 ? 0 : $rLL->[ $Kfirst - 1 ]->[_CUMULATIVE_LENGTH_] );
-
-    # backup before a side comment if necessary
-    my $Kend = $Klast;
-    if (   $rOpts_ignore_side_comment_lengths
-        && $rLL->[$Klast]->[_TYPE_] eq '#' )
-    {
-        my $Kprev = $self->K_previous_nonblank($Klast);
-        if ( defined($Kprev) && $Kprev >= $Kfirst ) { $Kend = $Kprev }
-    }
-
-    # get the length of the text
-    my $length = $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] - $length_before_Kfirst;
-
-    # get the size of the text window
-    my $level           = $rLL->[$Kfirst]->[_LEVEL_];
-    my $ci_level        = $rLL->[$Kfirst]->[_CI_LEVEL_];
-    my $max_text_length = $maximum_text_length_at_level[$level] -
-      $ci_level * $rOpts_continuation_indentation;
-
-    my $excess_length = $length - $max_text_length;
-
-    DEBUG_WELD
-      && print
-"Kfirst=$Kfirst, Klast=$Klast, Kend=$Kend, level=$level, ci=$ci_level, max_text_length=$max_text_length, length=$length\n";
-    return ($excess_length);
-} ## end sub excess_line_length_for_Krange
-
 sub weld_nested_containers {
 
     my ($self) = @_;
@@ -27018,22 +27080,6 @@ sub weld_nested_quotes {
     }
     return;
 } ## end sub weld_nested_quotes
-
-sub is_welded_at_seqno {
-
-    my ( $self, $seqno ) = @_;
-
-    # Given:
-    #   $seqno = a sequence number:
-    # Return:
-    #   true if it is welded either left or right
-    #   false otherwise
-    return unless ( $total_weld_count && defined($seqno) );
-    my $KK_o = $self->[_K_opening_container_]->{$seqno};
-    return unless ( defined($KK_o) );
-    return defined( $self->[_rK_weld_left_]->{$KK_o} )
-      || defined( $self->[_rK_weld_right_]->{$KK_o} );
-} ## end sub is_welded_at_seqno
 
 sub mark_short_nested_blocks {
 
