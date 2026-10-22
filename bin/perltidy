@@ -1515,9 +1515,10 @@ B<-nsfs> or B<--nospace-for-semicolon> to deactivate it.
 
 =item B<-asc>,  B<--add-semicolons>
 
-Setting B<-asc> allows perltidy to add any missing optional semicolon at the end
-of a line which is followed by a closing curly brace on the next line.  This
-is the default, and may be deactivated with B<-nasc> or B<--noadd-semicolons>.
+Setting B<-asc> allows perltidy to add a missing optional semicolon.  This is
+the default, and may be deactivated with B<-nasc> or B<--noadd-semicolons>.  A
+semicolon which is followed by a closing block brace on a subsequent line is
+optional.  See also L<"-olbs=n, --one-line-block-semicolons=n">.
 
 =item B<-dsm>,  B<--delete-semicolons>
 
@@ -6094,20 +6095,20 @@ If the parameter B<-olbn=1> is given, then the line will be left intact if it
 is a single line in the source, or it will be broken into multiple lines if it
 is broken in multiple lines in the source.
 
-=item B<-olbs=n>, B<--one-line-block-semicolons=n>
+=item B<-olbs=n, --one-line-block-semicolons=n>
 
 This flag controls the placement of semicolons at the end of one-line blocks.
 Semicolons are optional before a closing block brace, and frequently they are
 omitted at the end of a one-line block containing just a single statement.
 By default, perltidy follows the input file regarding these semicolons,
-but this behavior can be controlled by this flag.  The values of n are:
+but this behavior can be controlled by this flag.  The values of B<n> are:
 
  n=0 remove terminal semicolons in single-statement one-line blocks
  n=1 stable; keep input terminal semicolons [DEFAULT ]
  n=2 add terminal semicolons in all one-line blocks
 
 Note that the B<n=2> option has no effect if adding semicolons is prohibited
-with the B<-nasc> flag.  Also not that while B<n=2> adds missing semicolons to
+with the B<-nasc> flag.  Also note that while B<n=2> adds missing semicolons to
 all one-line blocks, regardless of complexity, the B<n=0> option only removes
 ending semicolons which terminate one-line blocks containing just one
 semicolon.  So these two options are not exact inverses.
