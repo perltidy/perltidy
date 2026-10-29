@@ -15111,6 +15111,34 @@ ${notes}EOF
 --heredoc-convert-to='indented'
 --heredoc-indentation-update
 
+==> b1614.in <==
+is(
+  $c_mm->{INST_ARCHLIB},
+  $c_mm->{PERL_CORE}
+  ? $c_mm->{PERL_ARCHLIB}
+  : File::Spec->catdir(
+    $Updir, 'blib', 'arch' ),
+  'CHILD INST_ARCHLIB',
+);
+
+is(
+  $c_mm->{INST_ARCHLIB},
+  $c_mm->{PERL_CORE}
+  ? $c_mm->{PERL_ARCHLIB}
+  : File::Spec->catdir( $Updir, 'blib', 'arch' ),
+  'CHILD INST_ARCHLIB',
+);
+
+==> b1614.par <==
+--maximum-line-length=50
+--indent-columns=2
+--continuation-indentation=4
+--paren-vertical-tightness-closing=2
+--want-trailing-commas='f(m'
+--add-trailing-commas
+--delete-trailing-commas
+--break-at-trailing-comma-types='f(b'
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar

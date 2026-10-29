@@ -1516,9 +1516,11 @@ B<-nsfs> or B<--nospace-for-semicolon> to deactivate it.
 =item B<-asc>,  B<--add-semicolons>
 
 Setting B<-asc> allows perltidy to add a missing optional semicolon.  This is
-the default, and may be deactivated with B<-nasc> or B<--noadd-semicolons>.  A
-semicolon which is followed by a closing block brace on a subsequent line is
-optional.  See also L<"-olbs=n, --one-line-block-semicolons=n">.
+the default, and may be deactivated with B<-nasc> or B<--noadd-semicolons>.
+For example, a semicolon which is followed by a closing block brace on a
+subsequent line will be added if missing unless B<-nasc>
+has been set.  See L<"-olbs=n, --one-line-block-semicolons=n"> for
+additional control.
 
 =item B<-dsm>,  B<--delete-semicolons>
 
@@ -4443,7 +4445,7 @@ these parameters do not apply to a paren-less list.
 =item *
 
 A B<multiline list> is a list for which the opening and closing brackets
-on different lines.
+are on different lines.
 
 =item *
 

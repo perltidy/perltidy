@@ -10045,6 +10045,27 @@ ${notes}EOF
   EOF
 }
 
+==> b1614 <==
+is(
+  $c_mm->{INST_ARCHLIB},
+  $c_mm->{PERL_CORE}
+  ? $c_mm->{PERL_ARCHLIB}
+  : File::Spec->catdir(
+    $Updir, 'blib', 'arch',
+  ),
+  'CHILD INST_ARCHLIB',
+);
+
+is(
+  $c_mm->{INST_ARCHLIB},
+  $c_mm->{PERL_CORE}
+  ? $c_mm->{PERL_ARCHLIB}
+  : File::Spec->catdir(
+    $Updir, 'blib', 'arch',
+  ),
+  'CHILD INST_ARCHLIB',
+);
+
 ==> b163 <==
 # State 1
 Readonly::Scalar

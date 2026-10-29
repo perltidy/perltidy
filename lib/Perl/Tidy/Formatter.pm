@@ -19650,6 +19650,14 @@ sub add_trailing_comma {
         # any blank after the comma will be added before the closing paren,
         # below
         $self->store_new_nonblank_token( ',', ',', $Kp );
+
+        # Set flag to keep container open if requested with -bctc (b1614).
+        # This is needed to prevent -pvtc from covering the new comma.
+        if ($stable_flag) {
+            my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+            if ($seqno) { $self->[_rbreak_container_]->{$seqno} = 1 }
+            else { DEVEL_MODE && Fault("strange - missing sequence number\n") }
+        }
     }
     return;
 
