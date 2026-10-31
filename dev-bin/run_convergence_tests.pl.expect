@@ -10066,6 +10066,28 @@ is(
   'CHILD INST_ARCHLIB',
 );
 
+==> b1615 <==
+declare(
+      parameterized_inline_generator => sub {
+            return
+              sprintf(
+                    <<~'EOF', $val, $parameter->inline_check($val));
+                ( !defined( %s ) || ( %s ) )
+                EOF
+      }
+);
+
+declare(
+      parameterized_inline_generator => sub {
+            return
+              sprintf(
+                    <<~'EOF', $val, $parameter->inline_check($val));
+                ( !defined( %s ) || ( %s ) )
+                EOF
+      }
+);
+
+
 ==> b163 <==
 # State 1
 Readonly::Scalar

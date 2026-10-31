@@ -610,6 +610,7 @@ BEGIN {
         _rlec_count_by_seqno_       => $i++,
         _rline_diff_by_seqno_       => $i++,
         _ris_permanently_broken_    => $i++,
+        _rhas_heredoc_trapped_code_ => $i++,
         _rblank_and_comment_count_  => $i++,
         _rhas_list_                 => $i++,
         _rhas_broken_list_          => $i++,
@@ -1225,6 +1226,7 @@ sub initialize_self_vars {
     $self->[_rlec_count_by_seqno_]       = {};
     $self->[_rline_diff_by_seqno_]       = {};
     $self->[_ris_permanently_broken_]    = {};
+    $self->[_rhas_heredoc_trapped_code_] = {};
     $self->[_rblank_and_comment_count_]  = {};
     $self->[_rhas_list_]                 = {};
     $self->[_rhas_broken_list_]          = {};
@@ -17441,6 +17443,7 @@ my $rline_diff_by_seqno;
 my $ris_excluded_lp_container;
 my $ris_list_by_seqno;
 my $ris_permanently_broken;
+my $rhas_heredoc_trapped_code;
 my $rlec_count_by_seqno;
 my $roverride_cab3;
 my $rparent_of_seqno;
@@ -17553,6 +17556,7 @@ sub initialize_respace_tokens_closure {
     $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
     $ris_list_by_seqno         = $self->[_ris_list_by_seqno_];
     $ris_permanently_broken    = $self->[_ris_permanently_broken_];
+    $rhas_heredoc_trapped_code = $self->[_rhas_heredoc_trapped_code_];
     $rlec_count_by_seqno       = $self->[_rlec_count_by_seqno_];
     $roverride_cab3            = $self->[_roverride_cab3_];
     $rparent_of_seqno          = $self->[_rparent_of_seqno_];
@@ -18538,6 +18542,24 @@ EOM
             }
 
             push @{$rK_type_h_list}, scalar( @{$rLL_new} );
+
+            # Check for tokens trapped by here docs for -xlp stability (b1615).
+            # The safest thing to do is always set this flag, but to minimize
+            # code changes we can safely skip this if just a single comma
+            # follows. This is currently only needed if -xlp is used.
+            if (   $rOpts_extended_line_up_parentheses
+                && $Klast > $KK
+                && ( $KK + 1 != $Klast || $rLL->[$Klast]->[_TOKEN_] ne ',' ) )
+            {
+                my $seqno = $seqno_stack{ $depth_next - 1 };
+                if ( defined($seqno) ) {
+                    if ( !$rhas_heredoc_trapped_code->{$seqno} ) {
+                        $rhas_heredoc_trapped_code->{$seqno} = 1;
+                        $self->mark_parent_containers( $seqno,
+                            $rhas_heredoc_trapped_code );
+                    }
+                }
+            }
         }
         elsif ( $type eq 'S' ) {
 
@@ -42565,14 +42587,27 @@ EOM
                 # Fix for combo -naws and -xlp (b1501; also b1466)
                 $tol += 1 if ( !$rOpts_add_whitespace );
 
-                $tol += 1
-                  if (
-                    # Fix for -xlp interrupted lists...
-                    $self->[_ris_xlp_interrupted_list_]->{$last_nonblank_seqno}
+                # Add a tolerance for interrupted lists
+                if (
+                    (
+                        $self->[_ris_xlp_interrupted_list_]
+                        ->{$last_nonblank_seqno}
+
+                        # include containers with code trapped by here docs in
+                        # case they are not 'interrupted' (b1615). Note that we
+                        # could just check _ris_permanently_broken_, which
+                        # includes here docs, but that would change more
+                        # existing code.
+                        || $self->[_rhas_heredoc_trapped_code_]
+                        ->{$last_nonblank_seqno}
+                    )
 
                     # ...containing lists (b1598, b1600)
                     && $self->[_rhas_list_]->{$last_nonblank_seqno}
-                  );
+                  )
+                {
+                    $tol += 1;
+                }
             }
 
             # Do not startup -lp indentation mode if no space ...

@@ -15139,6 +15139,33 @@ is(
 --delete-trailing-commas
 --break-at-trailing-comma-types='f(b'
 
+==> b1615.in <==
+declare(
+ parameterized_inline_generator => sub {
+       return
+         sprintf(<<~'EOF', $val, $parameter->inline_check($val));
+                ( !defined( %s ) || ( %s ) )
+                EOF
+ }
+);
+
+declare(
+      parameterized_inline_generator => sub {
+            return
+              sprintf(
+                    <<~'EOF', $val, $parameter->inline_check($val));
+                ( !defined( %s ) || ( %s ) )
+                EOF
+      }
+);
+
+
+==> b1615.par <==
+--maximum-line-length=68
+--indent-columns=6
+--extended-line-up-parentheses
+--paren-tightness=2
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar
