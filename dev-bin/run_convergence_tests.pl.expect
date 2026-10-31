@@ -10088,6 +10088,19 @@ declare(
 );
 
 
+==> b1616 <==
+
+         return try {
+                  $self->schema->source($self->ResultClass)
+             }
+             || $self->schema->source(
+                  (reverse split(/\:\:/, $self->ResultClass))[0]);
+         return try {
+                  $self->schema->source($self->ResultClass)
+             }
+             || $self->schema->source(
+                  (reverse split(/\:\:/, $self->ResultClass))[0]);
+
 ==> b163 <==
 # State 1
 Readonly::Scalar

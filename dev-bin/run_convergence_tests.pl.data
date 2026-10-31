@@ -15166,6 +15166,24 @@ declare(
 --extended-line-up-parentheses
 --paren-tightness=2
 
+==> b1616.in <==
+
+         return try {
+                  $self->schema->source($self->ResultClass)
+             } ||
+             $self->schema->source((reverse split(/\:\:/, $self->ResultClass))[0]);
+         return try {
+                  $self->schema->source($self->ResultClass)
+         } || $self->schema->source(
+                  (reverse split(/\:\:/, $self->ResultClass))[0]);
+
+==> b1616.par <==
+--maximum-line-length=84
+--indent-columns=9
+--continuation-indentation=4
+--paren-tightness=2
+--brace-follower-vertical-tightness=2
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar

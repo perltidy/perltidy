@@ -35994,9 +35994,14 @@ EOM
                     )
 
                     # -bfvt=2, allow most brace followers [part of git #110]
-                    || (   $rOpts_brace_follower_vertical_tightness > 1
-                        && $ibeg_1 == $iend_1 )
+                    || (
+                           $rOpts_brace_follower_vertical_tightness > 1
+                        && $ibeg_1 == $iend_1
 
+                        # -bfvt=2 now restricted to known keyword types like
+                        # eval to avoid instabilities (b1616)
+                        && $is_block_with_ci{ $block_type_to_go[$iend_1] }
+                    )
                 )
 
                 && (
