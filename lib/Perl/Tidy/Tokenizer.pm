@@ -12022,13 +12022,14 @@ BEGIN {
     $is_TERM_keyword{$_} = 1 for @q;
 
     # Stable keyword infix operators which produce error if a TERM is expected
-    @q = qw( and or xor eq ne ge gt le lt );
+    # Updated in c653 to include: if unless for foreach while until
+    @q = qw( and or xor eq ne ge gt le lt if unless for foreach while until );
+
     $is_OPERATOR_keyword{$_} = 1 for @q;
 
     # Keywords which are omitted from the above TERM or OPERATOR lists.
     # Note that 'cmp' is here since it can be re-defined by File::Compare.
-    #   qw( isa err cmp if unless for foreach when while until case
-    #       EQ GE GT LE LT NE );
+    #   qw( isa err cmp when case EQ GE GT LE LT NE );
 
     # Note: 'field' will be added by sub check_options if --use-feature=class
     @q = qw( my our state );
