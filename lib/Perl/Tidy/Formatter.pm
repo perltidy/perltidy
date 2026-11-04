@@ -19154,6 +19154,7 @@ sub store_token {
 
                     # set flag to retain trailing comma breaks (b1493, c416)
                     # length check needed to ignore phantom commas (b1496)
+                    # and deleted commas (see sub unstore_last_nonblank_token)
                     if (   $last_nonblank_code_type eq ','
                         && $trailing_comma_break_rules{$token}
                         && length($last_nonblank_code_token) )
@@ -19944,6 +19945,10 @@ sub unstore_last_nonblank_token {
     # Alternatively, we can leave the count alone and the
     # $last_nonblank_code_type alone. Then sub store_token will produce
     # the correct result. This is simpler and is done here.
+
+    # But the comma token is gone, so clear it. This prevents sub store_token
+    # from retaining a line break for a comma which no longer exists (-btct).
+    if ( $type eq ',' ) { $last_nonblank_code_token = EMPTY_STRING }
 
     # remove a remaining blank if requested
     if ( $rLL_new->[-1]->[_TYPE_] eq 'b' ) {

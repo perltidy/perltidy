@@ -31,6 +31,41 @@
               ->(),
         );
 
+   - Fixed a problem where -btct kept a container open for a trailing comma
+     which had been deleted by -dtc or -dwic, so that a single run did not
+     reach a stable result, even with --converge. See git #216. For example,
+     with -dwic -btct=b the following input
+
+        is $x, [
+            { a => 1, b => 2 },
+        ];
+
+     previously required a second run to become
+
+        is $x, [ { a => 1, b => 2 } ];
+
+     This can change the final result when -atc and -dtc are used together
+     with -btct=m, -btct=1 or -btct='*', including with a container type such
+     as -btct='(m', because -atc could add a comma back after the line break
+     for the deleted comma had been kept. For example, with
+     -wtc=b -atc -dtc -btct=1 and no --converge, the input
+
+        foo( $a, $b, );
+
+     previously became, after two runs,
+
+        foo(
+            $a, $b,
+        );
+
+     and now becomes, on the first run,
+
+        foo( $a, $b );
+
+     With --converge the deletion of a comma is delayed, so -btct=1 still opens
+     this container. But with --converge, -btct=m can now give a different
+     result for a list which is too long to fit on one line.
+
 ## 2026 08 26
 
    - Fixed git #213, --heredoc-extra-spaces flag not working correctly.

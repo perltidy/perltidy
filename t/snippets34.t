@@ -13,6 +13,13 @@
 #10 spit.def
 #11 spit.spit
 #12 case_match.def
+#13 btctd.btctd1
+#14 btctd.btctd2
+#15 btctd.def
+#16 btcta.btcta1
+#17 btcta.btcta2
+#18 btcta.btcta3
+#19 btcta.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -30,8 +37,13 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
-        'c622' => "-dws -naws",
-        'c636' => <<'----------',
+        'btcta1' => "-wtc=b -atc -dtc -btct=1",
+        'btcta2' => "-conv -wtc=b -atc -dtc -btct=1",
+        'btcta3' => "-conv -wtc=b -atc -dtc -btct=m",
+        'btctd1' => "-conv -dwic -btct=b",
+        'btctd2' => "-conv -wtc=0 -dtc -btct=b",
+        'c622'   => "-dws -naws",
+        'c636'   => <<'----------',
 -hct=indented
 -hiu
 -hxs=4
@@ -54,6 +66,27 @@ BEGIN {
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'btcta' => <<'----------',
+# A single iteration deletes this comma before -btct=1 can act, but with -conv
+# the deletion is delayed and -btct=1 opens the container
+foo( $a, $b, );
+
+# With -conv -btct=m this comma is deleted and is not added back
+my $long_var_name = some_function_name( $first_argument_long, $second_argument_long, $third_argument_long, );
+----------
+
+        'btctd' => <<'----------',
+# -dwic and -dtc delete this comma, so -btct should not keep the line breaks
+is $x, [
+    { a => 1, b => 2 },
+];
+
+# only -dtc deletes this comma, so -btct should only keep the breaks with -dwic
+foo(
+    $a, $b,
+);
+----------
 
         'c622' => <<'----------',
 # Do not allow user to remove the space after the << (makes a here doc)
@@ -393,6 +426,106 @@ case ($value) {
     match ( ^$value ) { say "the explicit pin also matched" }
 }
 #12...........
+        },
+
+        'btctd.btctd1' => {
+            source => "btctd",
+            params => "btctd1",
+            expect => <<'#13...........',
+# -dwic and -dtc delete this comma, so -btct should not keep the line breaks
+is $x, [ { a => 1, b => 2 } ];
+
+# only -dtc deletes this comma, so -btct should only keep the breaks with -dwic
+foo(
+    $a, $b,
+);
+#13...........
+        },
+
+        'btctd.btctd2' => {
+            source => "btctd",
+            params => "btctd2",
+            expect => <<'#14...........',
+# -dwic and -dtc delete this comma, so -btct should not keep the line breaks
+is $x, [ { a => 1, b => 2 } ];
+
+# only -dtc deletes this comma, so -btct should only keep the breaks with -dwic
+foo( $a, $b );
+#14...........
+        },
+
+        'btctd.def' => {
+            source => "btctd",
+            params => "def",
+            expect => <<'#15...........',
+# -dwic and -dtc delete this comma, so -btct should not keep the line breaks
+is $x, [ { a => 1, b => 2 }, ];
+
+# only -dtc deletes this comma, so -btct should only keep the breaks with -dwic
+foo( $a, $b, );
+#15...........
+        },
+
+        'btcta.btcta1' => {
+            source => "btcta",
+            params => "btcta1",
+            expect => <<'#16...........',
+# A single iteration deletes this comma before -btct=1 can act, but with -conv
+# the deletion is delayed and -btct=1 opens the container
+foo( $a, $b );
+
+# With -conv -btct=m this comma is deleted and is not added back
+my $long_var_name =
+  some_function_name( $first_argument_long, $second_argument_long,
+    $third_argument_long );
+#16...........
+        },
+
+        'btcta.btcta2' => {
+            source => "btcta",
+            params => "btcta2",
+            expect => <<'#17...........',
+# A single iteration deletes this comma before -btct=1 can act, but with -conv
+# the deletion is delayed and -btct=1 opens the container
+foo(
+    $a, $b,
+);
+
+# With -conv -btct=m this comma is deleted and is not added back
+my $long_var_name = some_function_name(
+    $first_argument_long, $second_argument_long, $third_argument_long,
+);
+#17...........
+        },
+
+        'btcta.btcta3' => {
+            source => "btcta",
+            params => "btcta3",
+            expect => <<'#18...........',
+# A single iteration deletes this comma before -btct=1 can act, but with -conv
+# the deletion is delayed and -btct=1 opens the container
+foo( $a, $b );
+
+# With -conv -btct=m this comma is deleted and is not added back
+my $long_var_name =
+  some_function_name( $first_argument_long, $second_argument_long,
+    $third_argument_long );
+#18...........
+        },
+
+        'btcta.def' => {
+            source => "btcta",
+            params => "def",
+            expect => <<'#19...........',
+# A single iteration deletes this comma before -btct=1 can act, but with -conv
+# the deletion is delayed and -btct=1 opens the container
+foo( $a, $b, );
+
+# With -conv -btct=m this comma is deleted and is not added back
+my $long_var_name =
+  some_function_name( $first_argument_long, $second_argument_long,
+    $third_argument_long, );
+#19...........
         },
     };
 
