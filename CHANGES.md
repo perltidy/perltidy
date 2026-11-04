@@ -31,6 +31,19 @@
               ->(),
         );
 
+   - Fixed a problem where -btct kept a container open for a trailing comma
+     which had been deleted by -dtc or -dwic, so that a single run did not
+     reach a stable result, even with --converge. See git #216. For example,
+     with -dwic -btct=b the following input
+
+        is $x, [
+            { a => 1, b => 2 },
+        ];
+
+     previously required a second run to become
+
+        is $x, [ { a => 1, b => 2 } ];
+
 ## 2026 08 26
 
    - Fixed git #213, --heredoc-extra-spaces flag not working correctly.

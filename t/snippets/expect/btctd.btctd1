@@ -1,0 +1,7 @@
+# -dwic and -dtc delete this comma, so -btct should not keep the line breaks
+is $x, [ { a => 1, b => 2 } ];
+
+# only -dtc deletes this comma, so -btct should only keep the breaks with -dwic
+foo(
+    $a, $b,
+);

@@ -13,6 +13,9 @@
 #10 spit.def
 #11 spit.spit
 #12 case_match.def
+#13 btctd.btctd1
+#14 btctd.btctd2
+#15 btctd.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -30,8 +33,10 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
-        'c622' => "-dws -naws",
-        'c636' => <<'----------',
+        'btctd1' => "-conv -dwic -btct=b",
+        'btctd2' => "-conv -wtc=0 -dtc -btct=b",
+        'c622'   => "-dws -naws",
+        'c636'   => <<'----------',
 -hct=indented
 -hiu
 -hxs=4
@@ -54,6 +59,18 @@ BEGIN {
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'btctd' => <<'----------',
+# -dwic and -dtc delete this comma, so -btct should not keep the line breaks
+is $x, [
+    { a => 1, b => 2 },
+];
+
+# only -dtc deletes this comma, so -btct should only keep the breaks with -dwic
+foo(
+    $a, $b,
+);
+----------
 
         'c622' => <<'----------',
 # Do not allow user to remove the space after the << (makes a here doc)
@@ -393,6 +410,44 @@ case ($value) {
     match ( ^$value ) { say "the explicit pin also matched" }
 }
 #12...........
+        },
+
+        'btctd.btctd1' => {
+            source => "btctd",
+            params => "btctd1",
+            expect => <<'#13...........',
+# -dwic and -dtc delete this comma, so -btct should not keep the line breaks
+is $x, [ { a => 1, b => 2 } ];
+
+# only -dtc deletes this comma, so -btct should only keep the breaks with -dwic
+foo(
+    $a, $b,
+);
+#13...........
+        },
+
+        'btctd.btctd2' => {
+            source => "btctd",
+            params => "btctd2",
+            expect => <<'#14...........',
+# -dwic and -dtc delete this comma, so -btct should not keep the line breaks
+is $x, [ { a => 1, b => 2 } ];
+
+# only -dtc deletes this comma, so -btct should only keep the breaks with -dwic
+foo( $a, $b );
+#14...........
+        },
+
+        'btctd.def' => {
+            source => "btctd",
+            params => "def",
+            expect => <<'#15...........',
+# -dwic and -dtc delete this comma, so -btct should not keep the line breaks
+is $x, [ { a => 1, b => 2 }, ];
+
+# only -dtc deletes this comma, so -btct should only keep the breaks with -dwic
+foo( $a, $b, );
+#15...........
         },
     };
 
