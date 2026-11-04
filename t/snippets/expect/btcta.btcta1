@@ -1,0 +1,8 @@
+# A single iteration deletes this comma before -btct=1 can act, but with -conv
+# the deletion is delayed and -btct=1 opens the container
+foo( $a, $b );
+
+# With -conv -btct=m this comma is deleted and is not added back
+my $long_var_name =
+  some_function_name( $first_argument_long, $second_argument_long,
+    $third_argument_long );
