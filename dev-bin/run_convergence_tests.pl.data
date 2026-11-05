@@ -15184,6 +15184,33 @@ declare(
 --paren-tightness=2
 --brace-follower-vertical-tightness=2
 
+==> b1617.in <==
+my @NameVirtualHost_lcl
+= (
+    [
+       NAME_VHOST
+       .
+       ':' .
+       LISTEN_PORT
+    ]
+);
+
+my @NameVirtualHost_lcl = ([
+                       NAME_VHOST .
+   ':' .
+   LISTEN_PORT
+]);
+
+
+==> b1617.par <==
+--maximum-line-length=36
+--continuation-indentation=0
+--weld-nested-containers
+--extended-line-up-parentheses
+--break-before-all-operators
+--paren-tightness=2
+--keep-old-breakpoints-after='.'
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar

@@ -19948,6 +19948,7 @@ sub unstore_last_nonblank_token {
 
     # But the comma token is gone, so clear it. This prevents sub store_token
     # from retaining a line break for a comma which no longer exists (-btct).
+    # See git #216 and PR git #217.
     if ( $type eq ',' ) { $last_nonblank_code_token = EMPTY_STRING }
 
     # remove a remaining blank if requested
@@ -26666,9 +26667,12 @@ EOM
             next unless ( defined($Knext_io) );    # shouldn't happen
             my $type_io_next = $rLL->[$Knext_io]->[_TYPE_];
 
-            # Note: may need to eventually also include other types here,
+            # Note1: may need to eventually also include other types here,
             # such as 'Z' and 'Y':   if ($type_io_next =~ /^[ZYw]$/) {
-            if ( $type_io_next eq 'w' ) {
+            # Note2: added test for same line for case b1617
+            if (   $type_io_next eq 'w'
+                && $rLL->[$Knext_io]->[_LINE_INDEX_] == $iline_io )
+            {
                 my $Knext_io2 = $self->K_next_nonblank($Knext_io);
                 next unless ( defined($Knext_io2) );
                 my $type_io_next2 = $rLL->[$Knext_io2]->[_TYPE_];

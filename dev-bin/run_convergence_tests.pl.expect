@@ -10101,6 +10101,20 @@ declare(
              || $self->schema->source(
                   (reverse split(/\:\:/, $self->ResultClass))[0]);
 
+==> b1617 <==
+my @NameVirtualHost_lcl = ([
+                       NAME_VHOST .
+   ':' .
+   LISTEN_PORT
+]);
+
+my @NameVirtualHost_lcl = ([
+                       NAME_VHOST .
+   ':' .
+   LISTEN_PORT
+]);
+
+
 ==> b163 <==
 # State 1
 Readonly::Scalar
