@@ -4601,9 +4601,9 @@ normally be necessary.
 
 =item *
 
-Perltidy does not add a trailing comma in some B<edge cases> which appear to
-be near a stability limit.  So if a comma is unexpectedly not added, this is
-probably the reason.
+Perltidy might not add or delete a trailing comma in some B<edge cases> which
+appear to be near a stability limit. This is because stability has higher
+priority.
 
 =item *
 
