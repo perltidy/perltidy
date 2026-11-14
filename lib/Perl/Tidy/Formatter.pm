@@ -19740,7 +19740,7 @@ sub delete_trailing_comma {
     );
 
     # Patch: the --noadd-whitespace flag can cause instability in complex
-    # structures. In this case do not delete the comma. Fixes b1409.
+    # structures. In this case do not delete the comma. Fixes b1394, b1409.
     if ( !$match && !$rOpts_add_whitespace ) {
         my $Kn = $self->K_next_nonblank($KK);
         if ( defined($Kn) ) {
@@ -26862,7 +26862,10 @@ EOM
                 $rLL->[$KK]->[_LEVEL_] += $dlevel;
             }
 
-            # Copy opening ci level to help break at = for -lp mode (case b1124)
+            # Copy opening ci level to help break at = for -lp mode (see b1124)
+            # NOTE: An alternative would be to set ci levels of all
+            # intervening tokens as well; see b1617, fix3. This is not
+            # currently done because it would change existing code.
             $rLL->[$Kinner_opening]->[_CI_LEVEL_] =
               $rLL->[$Kouter_opening]->[_CI_LEVEL_];
 
@@ -27593,7 +27596,8 @@ sub break_before_list_opening_containers {
             next if ( $KK != $Kfirst );
 
             # ... and the container should span multiple lines
-            next if ( $rline_diff_by_seqno->{$seqno} < 2 );
+            # (count reduced from <2 to <1 for b1618)
+            next if ( !$rline_diff_by_seqno->{$seqno} );
 
             # ... and there is not a forced break already (b1612)
             if ( $self->[_rbreak_after_Klast_]->{$Kprev} ) {
@@ -41994,6 +41998,9 @@ sub get_available_spaces_to_go {
             my $level       = $levels_to_go[$ii];
             my $ci_level    = $ci_levels_to_go[$ii];
             my $total_depth = $nesting_depth_to_go[$ii];
+
+            # See b1617, fix4, for experiments with use of $level for
+            # $total_depth as a possible improved way to handle welds.
 
             # get the top state from the stack if it has changed
             if ($stack_changed) {

@@ -351,6 +351,7 @@ sub run_test_cases {
     my $iteration_total        = 0;
     my $iteration_maximum      = 0;
     my $iteration_maximum_case = "";
+    my @cases_with_convergence_differences;
     foreach my $sname ( sort @selected_cases ) {
 
         # remove any old tmp files for this case
@@ -463,6 +464,24 @@ sub run_test_cases {
 
             #push @olist, $basename;
         }
+
+        # Now verify that the final $output is also produced with -conv (c656)
+        # The -ndtco flag is required to keep trailing comma operations
+        # independent of iteration number.
+        my $output_retest;
+        $source = $rsources->{$sname};
+        my $err = Perl::Tidy::perltidy(
+            source      => \$source,
+            destination => \$output_retest,
+            perltidyrc  => \$params,
+            argv        => '-irc=1 -conv -ndtco',
+            stderr      => \$stderr_string,
+            errorfile   => \$errorfile_string,
+        );
+        if ( $output_retest ne $output ) {
+            push @cases_with_convergence_differences, $sname;
+            print "$sname: ERROR, Different state reached with -conv\n";
+        }
     }
 
     print "-" x 31 . "\n";
@@ -495,6 +514,12 @@ EOM
         print <<EOM;
 SKIPPED: these requested cases were not found in the database:
 @skipped_cases
+EOM
+    }
+    if (@cases_with_convergence_differences) {
+        print <<EOM;
+DIFFERENCES: these cases converged to different states with -conv set
+@cases_with_convergence_differences
 EOM
     }
     if (@expect_cases_to_update) {

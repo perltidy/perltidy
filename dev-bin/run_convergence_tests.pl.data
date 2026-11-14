@@ -15211,6 +15211,29 @@ my @NameVirtualHost_lcl = ([
 --paren-tightness=2
 --keep-old-breakpoints-after='.'
 
+==> b1618.in <==
+{
+array_accessor_curried_2 =>
+     [
+    accessor => ( 1, 90 )
+     ],
+};
+{
+array_accessor_curried_2 =>
+[   accessor => ( 1, 90 )
+],
+};
+
+
+==> b1618.par <==
+--maximum-line-length=25
+--indent-columns=0
+--continuation-indentation=5
+--extended-line-up-parentheses
+--break-before-square-bracket=1
+--break-before-square-bracket-and-indent=1
+--square-bracket-vertical-tightness=1
+
 ==> b163.in <==
 # State 1
 Readonly::Scalar

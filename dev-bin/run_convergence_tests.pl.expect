@@ -10115,6 +10115,19 @@ my @NameVirtualHost_lcl = ([
 ]);
 
 
+==> b1618 <==
+{
+array_accessor_curried_2 =>
+[   accessor => ( 1, 90 )
+],
+};
+{
+array_accessor_curried_2 =>
+[   accessor => ( 1, 90 )
+],
+};
+
+
 ==> b163 <==
 # State 1
 Readonly::Scalar
