@@ -1,7 +1,6 @@
 # Build Status
 
 + [![Github Actions Build Status](https://github.com/perltidy/perltidy/actions/workflows/perltest.yml/badge.svg)](https://github.com/perltidy/perltidy/actions)
-* [CPAN Testers](https://www.cpantesters.org/distro/P/Perl-Tidy.html)
 
 # Welcome to Perltidy
 
