@@ -5939,7 +5939,6 @@ EOM
             && substr( $untrimmed_input_line, 0, 1 ) eq '='
             && $untrimmed_input_line =~ /^=[A-Za-z_]/ )
         {
-
             # Must not be in an equation where an '=' could be expected.
             # Perl has additional restrictions which are not checked here.
             my $blank_after_Z = 1;
@@ -5947,6 +5946,19 @@ EOM
             if ( $expecting == TERM ) {
                 $self->[_in_pod_] = 1;
                 return;
+            }
+            else {
+
+                # Try to catch some missing semicolon errors (c657)
+                if ( $untrimmed_input_line =~
+/^=(pod|head\d|over|item|back|begin|end|for|encoding|cut|comment)\b/
+                  )
+                {
+                    my $msg = <<EOM;
+line '=$1' could be a pod command - missing a ';' somewhere above?
+EOM
+                    $self->complain($msg);
+                }
             }
         }
 
