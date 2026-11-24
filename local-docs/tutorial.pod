@@ -481,8 +481,8 @@ lines to be skipped with special comments like this:
                 1, 4, 6, 4, 1,);
  #>>>
 
-A related comment control is B<--code-skipping>, indicated with '#<<V>. and
-'#>>V>', which simply passes lines of code to the output without tokenization.
+A related comment control is B<--code-skipping>, indicated with '#<<V' and
+'#>>V', which simply passes lines of code to the output without tokenization.
 This is useful for some extended syntaxes.  Another is
 B<--non-indenting-braces>, indicated by placing a side comment '#<<<' following
 a block brace, which prevents code within the marked braces from getting an extra level of indentation. This is useful if we want to put braces around code

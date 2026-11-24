@@ -32,7 +32,7 @@ of perltidy before installing the latest version.  These are:
     version of perltidy to use Makefile.PL for installation was 20020225, so
     if your previous installation is older than this, it is best to remove
     it, because the installation path may now be different.  There were up
-    to 3 files these older installations: the script `perltidy` and
+    to 3 files in these older installations: the script `perltidy` and
     possibly two man pages, `perltidy.1` and `perl2web.1`.  If you saved
     your Makefile, you can probably use `make uninstall`.  Otherwise, you
     can use a `locate` or `find` command to find and remove these files.
@@ -42,7 +42,7 @@ of perltidy before installing the latest version.  These are:
     If you switch from one installation method to another, the paths to the
     components of perltidy may change, so it is probably best to remove the older
     version before installing the new version.  If your older installation method
-    had an uninstall option (such as with RPM's and debian packages), use it.
+    had an uninstall option (such as with RPMs and Debian packages), use it.
     Otherwise, you can locate and remove the older files by hand.  There are two
     key files: `Tidy.pm` and `perltidy`.  In addition, there may be one or two
     man pages, something like `Perl::Tidy.3pm` and `perltidy.1p`.  You can use a
@@ -97,7 +97,7 @@ Two separate installation methods are possible.
 - After Installation
 
     After installation by either method, verify that the installation worked
-    and that the correct new version is being by entering:
+    and that the correct new version is being used by entering:
 
         perltidy -v
 
@@ -173,7 +173,7 @@ Two separate installation methods are possible.
 
     This installs perltidy and the man page perltidy.1. 
 
-    5\. Test the installation using
+    4\. Test the installation using
 
         perltidy -h
 
@@ -290,7 +290,7 @@ avoid losing unsaved data in case of trouble.
         $ perltidy -dpro
 
     A system `PERLTIDY` logical can be defined pointing to a file with a
-    minimal configuration,  and users can defined their own logical to use a
+    minimal configuration,  and users can define their own logical to use a
     personal `.perltidyrc` file.
 
         $ define /system perltidy perl_root:[utils]perltidy.rc

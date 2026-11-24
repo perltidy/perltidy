@@ -1,7 +1,7 @@
 =head1 Perltidy Style Key
 
 When perltidy was first developed, the main parameter choices were the number
-of indentation spaces and if the user liked cuddled else's.  As the number of
+of indentation spaces and if the user liked cuddled elses.  As the number of
 users has grown so has the number of parameters.  Now there are so many that it
 can be difficult for a new user to find a good initial set.  This document is
 one attempt to help with this problem, and some other suggestions are given at
@@ -243,8 +243,8 @@ But you may also use this more compressed style if you wish:
       { $headers = 0;
       }
 
-If you do not prefer this more compressed form, go to
-L<Opening Sub Braces>.
+If you do not prefer this more compressed form, skip ahead
+to L<Closing Block Brace Indentation>.
 
 Otherwise use parameter B<-bbvt=n>, where n=1 or n=2.  To decide,
 look at this snippet:
@@ -334,7 +334,7 @@ bracket, or curly brace) define the indentation, like this:
     );
 
 The first scheme is completely robust.  The second scheme often looks a little
-nicer, but be aware that deeply nested structures it can be spoiled if the line
+nicer, but be aware that in deeply nested structures it can be spoiled if the line
 length limit is exceeded.  Also, if there are comments or blank lines within a
 complex structure perltidy will temporarily fall back on the default
 indentation scheme.  You may want to try both on large sections of code to see
@@ -380,10 +380,10 @@ B<--weld-nested-containers>, or B<-wn>:
 
 The name of the parameter comes from the idea that the two opening and two
 closing tokens have been 'welded' together to act as a single unit. The
-indentation spaces of the contents has also been reduced by one level.
+indentation spaces of the contents have also been reduced by one level.
 
 This is a nice transformation because it is symmetric at the opening and
-closing, and leaves a sort of 'sandwich' structure 0which is still quite
+closing, and leaves a sort of 'sandwich' structure which is still quite
 readable.
 
 Some parameters available for asymmetric compressions, at just the opening
@@ -612,13 +612,13 @@ use B<-sct>.
 
 The B<-sct> flag is somewhat similar to the B<-vtc> flags, and in some cases it
 can give a similar result.  The difference is that the B<-vtc> flags try to
-avoid lines with leading opening tokens by "hiding" them at the end of a
+avoid lines with leading closing tokens by "hiding" them at the end of a
 previous line, whereas the B<-sct> flag merely tries to reduce the number of
 lines with isolated closing tokens by stacking multiple closing tokens
 together, but it does not try to hide them.
 
 The manual shows how all of these vertical tightness controls may be applied
-independently to each type of non-block opening and opening token.
+independently to each type of non-block opening and closing token.
 
 Also, note that B<--weld-nested-containers>, or B<-wn>, mentioned previously,
 operates like the combination of B<-sot> and B<-sct> and also reduces the
@@ -832,7 +832,7 @@ for a F<.perltidyrc> file containing these parameters:
 
 For further information see the perltidy documentation at
 L<Sourceforge|http://perltidy.sourceforge.net> or at
-L<metacpan|https://metacpan.org/pod/distribution/Perl-Tidy/bin/perltidy>.  or
+L<metacpan|https://metacpan.org/pod/distribution/Perl-Tidy/bin/perltidy>  or
 at L<GitHub|https://perltidy.github.io/perltidy/>
 
 The source code is maintained at
