@@ -1365,6 +1365,25 @@ EOM
         } @Arg_files;
     }
 
+    # With -opath, output files are named after the base name of the input
+    # files, so two input files with the same base name in different
+    # directories would have the same output files.  Stop before writing
+    # anything rather than silently overwrite the first results.
+    if ( defined( $rOpts->{'output-path'} ) && @Arg_files > 1 ) {
+        my %input_with_base_name;
+        foreach my $input_file (@Arg_files) {
+            next if ( ref($input_file) || $input_file eq '-' );
+            my ( $base, $path_uu ) = fileparse($input_file);
+            if ( my $other = $input_with_base_name{$base} ) {
+                Die(<<EOM);
+Input files '$other' and '$input_file' would have the same output files
+in the -opath directory; please format them separately
+EOM
+            }
+            $input_with_base_name{$base} = $input_file;
+        }
+    }
+
     # If requested, process in order of increasing file size
     # This can significantly reduce perl's virtual memory usage during testing.
     if ( @Arg_files > 1 && $rOpts->{'file-size-order'} ) {

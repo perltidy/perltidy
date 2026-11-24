@@ -1,5 +1,6 @@
 # Test that a file given twice under different names is formatted only
-# once with -b, so that its backup keeps the original.
+# once with -b, so that its backup keeps the original, and that -opath
+# refuses input files whose output files would have the same name.
 use strict;
 use warnings;
 use Cwd qw( getcwd );
@@ -7,7 +8,7 @@ use File::Temp qw( tempdir );
 use Test::More;
 use Perl::Tidy;
 
-plan tests => 3;
+plan tests => 6;
 
 my $cwd = getcwd();
 my $dir = tempdir( CLEANUP => 1 );
@@ -50,5 +51,18 @@ Perl::Tidy::perltidy(
 );
 ok( -e 'z.pl.tdy', 'without -b, z.pl ./z.pl: output written' );
 
+# -opath with two input files with the same base name
+mkdir('a') or die "cannot create 'a': $!\n";
+mkdir('b') or die "cannot create 'b': $!\n";
+write_file( 'a/x.pl', "my \$from_a=1;\n" );
+write_file( 'b/x.pl', "my \$from_b=2;\n" );
+my $err = Perl::Tidy::perltidy(
+    argv   => [ '-npro', '-opath=out', 'a/x.pl', 'b/x.pl' ],
+    stderr => \$stderr_string,
+);
+ok( $err, '-opath with the same base name twice: error' );
+like( $stderr_string, qr/would have the same output files/,
+    '-opath with the same base name twice: message' );
+ok( !-e 'out/x.pl.tdy', '-opath with the same base name twice: nothing written' );
 
 chdir($cwd) or die "cannot chdir back to '$cwd': $!\n";
