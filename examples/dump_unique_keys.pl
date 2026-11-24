@@ -26,7 +26,7 @@ sub main {
 Run perltidy --dump-unique-keys on multiple files
 Usage:
   $0 [ --warn-unique-keys-cutoff=N ] file1 file2 ...
-  $0 [ -wutc=N ] file1 file2 ...
+  $0 [ -wukc=N ] file1 file2 ...
   If no files are given, look for MANIFEST and use files lib/.../*.pm
   N is the maximum number of unique keys, per set of related keys, to show.
   The default value of N is 1. It may be increased to show more unused keys.
@@ -38,8 +38,6 @@ EOM
         if   ( substr( $str, 0, 1 ) eq '-' ) { push @args,  $str }
         else                                 { push @files, $str }
     }
-    my $argstr = join ' ', @args;
-
     if ( !@files ) {
         my $MANIFEST = "MANIFEST";
         if ( -e $MANIFEST && -f $MANIFEST ) {
@@ -64,15 +62,21 @@ EOM
     # Loop to run perltidy -duk on each file:
     # - capture standard output to a file for further processing
     # - any error messages go to the standard error output
+    # The list form of system is used, without a shell, so that file names
+    # (which may come from MANIFEST) are never interpreted by a shell.
+    open( my $fh_stdout, '>&', \*STDOUT ) or die "cannot dup STDOUT: $!\n";
+    if ( !open( STDOUT, '>>', $tmpfile ) ) {
+        die "cannot redirect STDOUT to $tmpfile: $!\n";
+    }
     my %seen;
     my $saw_error;
     foreach my $file (@files) {
         next if ( $seen{$file}++ );
         next if ( !-e $file || -z $file );
-        my $cmd = "perltidy -npro -duk $argstr $file >>$tmpfile -se";
-        my $err = system($cmd);
+        my $err = system( 'perltidy', '-npro', '-duk', @args, $file, '-se' );
         if ($err) { $saw_error++; warn "perltidy returned error for '$file'\n" }
     }
+    open( STDOUT, '>&', $fh_stdout ) or die "cannot restore STDOUT: $!\n";
 
     my $fh;
     if ( !open( $fh, '<', $tmpfile ) ) {
