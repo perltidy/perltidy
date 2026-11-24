@@ -41,8 +41,8 @@ with whitespace using whatever rules are specified, or defaults.  This happens
 in a series of operations which can be controlled with the parameters described
 in this document.
 
-Perltidy is a commandline frontend to the module Perl::Tidy.  For documentation
-describing how to call the Perl::Tidy module from other applications see the
+Perltidy is a command-line frontend to the module Perl::Tidy.  For documentation
+describing how to call the Perl::Tidy module from other applications, see the
 separate documentation for Perl::Tidy.  It is the file Perl::Tidy.pod in the source distribution.
 
 Many users will find enough information in L<"EXAMPLES"> to get
@@ -900,7 +900,7 @@ guessed indentation will be wrong.
 If the default method does not work correctly, or you want to change the
 starting level, use B<-sil=n>, to force the starting level to be n.
 
-=item B<List indentation> using B<--line-up-parentheses>, B<-lp> or B<--extended--line-up-parentheses> , B<-xlp>
+=item B<List indentation> using B<--line-up-parentheses>, B<-lp> or B<--extended-line-up-parentheses>, B<-xlp>
 
 These flags provide an alternative indentation method for list data.  The
 original flag for this is B<-lp>, but it has some limitations (explained below)
@@ -1144,7 +1144,7 @@ equivalent B<-cti=0>.  They are included for backwards compatibility.
 =item B<-icb>, B<--indent-closing-brace>
 
 The B<-icb> option gives one extra level of indentation to a brace which
-terminates a code block .  For example,
+terminates a code block.  For example,
 
         if ($task) {
             yyy();
@@ -2386,7 +2386,7 @@ single '#'.
 =item B<-osbc>, B<--outdent-static-block-comments>
 
 The command B<-osbc> will cause static block comments to be outdented by
-the number of B<--continuation-spaces=n>, if possible.
+the number of B<--continuation-indentation=n>, if possible.
 
 =back
 
@@ -2773,7 +2773,7 @@ separate parameter B<--cuddled-block-list>, described in a later section.
 Cuddling between a pair of code blocks requires that the closing brace of the
 first block start a new line.  If this block is entirely on one line in the
 input file, it is necessary to decide if it should be broken to allow cuddling.
-This decision is controlled by the flag B<--cuddled-break-options=n>
+This decision is controlled by the flag B<--cuddled-break-option=n>
 (B<-cbo=n>) discussed below.  The default
 and recommended value of B<-cbo=1> bases this decision on the first block in
 the chain.  If it spans multiple lines then cuddling is made and continues
@@ -2996,7 +2996,7 @@ B<Note>: The B<-bli> flag is similar to the B<-bl> flag, with the difference
 being
 that braces get indented.  But these two flags are implemented independently,
 and have different default settings for historical reasons.  If desired, a
-mixture of effects can be achieved if desired by turning them both on with
+mixture of effects can be achieved by turning them both on with
 different B<-list> settings.  In the event that both settings are selected for
 a certain block type, the B<-bli> style has priority.
 
@@ -4133,7 +4133,7 @@ should be followed by line breaks in the formatted output stream.
 
 The section L<"Adding and Deleting Commas"> describes additional controls for
 working with trailing commas. These can be combined with the
-B<-break-trailing-comma-types> parameter for additional control of list
+B<--break-at-trailing-comma-types> parameter for additional control of list
 formatting.
 
 =item B<-bocp=s>,  B<--break-open-compact-parens=s>
@@ -4975,7 +4975,7 @@ within code blocks, and ignore heredocs which are not in code blocks.
 
 This option prevents any of the B<--heredoc-> parameters from operating on
 heredocs whose tags match the regex pattern string B<s>. For example,
-B<-hds='^-'> prevents operations by all B<--heredoc-> parameters on tags with
+B<-htxp='^_'> prevents operations by all B<--heredoc-> parameters on tags with
 leading underscores, such as B<'_END'>.
 
 =item B<--heredoc-excess-length-option=n>, or B<-hxlo=n>
@@ -6221,7 +6221,7 @@ negative B<-novalign> is an alias for B<-nvc -nvsc -nvbc>.
 =item B<Controlling code alignment with --valign-code or -vc>
 
 The B<-vc> flag enables alignment of code symbols such as B<=>.  The default is B<-vc>.
-For detailed control of which symbols to align, see the B<-valign-exclude-list> parameter
+For detailed control of which symbols to align, see the B<--valign-exclusion-list> parameter
 below.
 
 =item B<Controlling side comment alignment with --valign-side-comments or -vsc>
@@ -6426,7 +6426,7 @@ with parameters B<-wtc=b -atc>.  See L<"Adding and Deleting Commas">.
 
 =item *
 
-This option has a control parameter B<--valign-signed-number-limit=N>, or
+This option has a control parameter B<--valign-signed-numbers-limit=N>, or
 B<-vsnl=N>. This value controls formatting of very long columns of numbers and
 should not normally need to be changed.  To see its purpose, consider a very
 long column of just unsigned numbers, say 1000 lines. If we add a single
@@ -6645,7 +6645,7 @@ section).
 
 =back
 
-B<--delete-side-comments-exclusion-pattern=s>, or B<-dscxp=s>, defines an optional string B<s> of leading characters which, if matched by a side comment, causes any B<-dsc> command not to delete that comment. The first character(s) must be B<'#'> or B<'\#'>. For example, the following commands tell perltidy to delete side comments except those beginning with two hash symbols:
+B<--delete-side-comments-exception-pattern=s>, or B<-dscxp=s>, defines an optional string B<s> of leading characters which, if matched by a side comment, causes any B<-dsc> command not to delete that comment. The first character(s) must be B<'#'> or B<'\#'>. For example, the following commands tell perltidy to delete side comments except those beginning with two hash symbols:
 
     perltidy -dsc -dscxp='\#\#' file.pl
 
@@ -7062,7 +7062,7 @@ By default the table lists subroutines with more than 20 C<code_lines>, but
 this can be changed with the following two parameters:
 
 B<--dump-block-minimum-lines=n>, or B<-dbl=n>, where B<n> is the minimum
-number of C<code_lines> to be included. The default is B<-n=20>.  Note that
+number of C<code_lines> to be included. The default is B<-dbl=20>.  Note that
 C<code_lines> is the number of lines excluding comments, blanks and pod.
 
 B<--dump-block-types=s>, or B<-dbt=s>, where string B<s> is a list of block
@@ -7992,9 +7992,9 @@ functions listed in the string B<s> occur in a file. For example,
 will format F<ifile> and issue a warning on the occurrences of the perl builtin
 keywords C<goto>, C<system>, and C<qx>, or a function named C<fileparse>.
 
-=item B<Use --warn-label-types=s>, or B<-wlu=s> to warn of selected label issues
+=item B<Use --warn-label-types=s>, or B<-wlt=s> to warn of selected label issues
 
-The parameter B<-wlu=s> provides some simple checks which can help screen for
+The parameter B<-wlt=s> provides some simple checks which can help screen for
 potential problems with statement labels.
 
 Statement labels are very useful for controlling program flow, but their use
@@ -8553,7 +8553,7 @@ F<somefile.tdy.tdy.tdy>.
 
 An exit value of 0, 1, or 2 is returned by perltidy to indicate the status of the result.
 
-A exit value of 0 indicates that perltidy ran to completion with no error messages.
+An exit value of 0 indicates that perltidy ran to completion with no error messages.
 
 A non-zero exit value indicates some kind of problem was detected.
 

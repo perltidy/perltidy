@@ -395,4 +395,4 @@ If you see ways to improve these notes, please let us know.
 
 A list of current bugs and issues can be found at the CPAN site [https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy](https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy)
 
-To report a new bug or problem, use the link on this page .  
+To report a new bug or problem, use the link on this page.

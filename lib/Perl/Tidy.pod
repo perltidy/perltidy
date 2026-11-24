@@ -170,7 +170,7 @@ debugging.
 
 The B<teefile> parameter allows the calling program to capture the tee stream.
 This stream is only created if requested with one of the 'tee' parameters,
-a B<--tee-pod> , B<--tee-block-comments>, B<--tee-side-commnts>, or B<--tee-all-comments>.
+a B<--tee-pod>, B<--tee-block-comments>, B<--tee-side-comments>, or B<--tee-all-comments>.
 
 =item B<debugfile>
 
@@ -252,7 +252,7 @@ B<filter_example.pl> in the perltidy distribution.
 
 An exit value of 0, 1, or 2 is returned by perltidy to indicate the status of the result.
 
-A exit value of 0 indicates that perltidy ran to completion with no error messages.
+An exit value of 0 indicates that perltidy ran to completion with no error messages.
 
 An exit value of 1 indicates that the process had to be terminated early due to
 errors in the input parameters.  This can happen for example if a parameter is
