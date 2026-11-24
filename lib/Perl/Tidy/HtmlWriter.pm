@@ -1281,9 +1281,12 @@ sub make_frame {
     # 2. - the contents (source code) itself
     # 3. - the frame which contains them
 
-    # get basenames for relative links
+    # get basenames for relative links; they come from the input file name,
+    # so they must be escaped before going into html attributes
     my ( $toc_basename, $toc_path_uu ) = fileparse($toc_filename);
     my ( $src_basename, $src_path_uu ) = fileparse($src_filename);
+    $toc_basename = escape_html($toc_basename);
+    $src_basename = escape_html($src_basename);
 
     # 1. Make the table of contents panel, with appropriate changes
     # to the anchor names
