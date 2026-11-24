@@ -353,11 +353,14 @@ sub stream_slurp {
     # handle a reference
     if ($ref) {
         if ( $ref eq 'ARRAY' ) {
-            my $buf = join( EMPTY_STRING, @{$filename} );
+
+            # undefined lines and strings are treated as empty ones
+            my $buf = join( EMPTY_STRING, grep { defined } @{$filename} );
             $rinput_string = \$buf;
         }
         elsif ( $ref eq 'SCALAR' ) {
-            $rinput_string = $filename;
+            my $buf = EMPTY_STRING;
+            $rinput_string = defined( ${$filename} ) ? $filename : \$buf;
         }
         else {
             if ( $ref->can('getline') ) {
@@ -2003,10 +2006,10 @@ sub get_decoded_string_buffer {
         if ( $decoder && ref($decoder) ) {
             $encoding_in = $decoder->name;
             if ( $encoding_in ne 'UTF-8' && $encoding_in ne 'utf8' ) {
-                $encoding_in = EMPTY_STRING;
                 $encoding_log_message .= <<EOM;
 Guessed encoding '$encoding_in' is not utf8; no encoding will be used
 EOM
+                $encoding_in = EMPTY_STRING;
             }
             else {
 

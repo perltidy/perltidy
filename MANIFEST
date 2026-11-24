@@ -94,6 +94,8 @@ t/snippets7.t
 t/snippets8.t
 t/snippets9.t
 t/test-eol.t
+t/test-guess-log.t
+t/test-undef-source.t
 t/test.t
 t/test_DEBUG.t
 t/testsa.t
