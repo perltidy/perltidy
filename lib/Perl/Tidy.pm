@@ -353,11 +353,14 @@ sub stream_slurp {
     # handle a reference
     if ($ref) {
         if ( $ref eq 'ARRAY' ) {
-            my $buf = join( EMPTY_STRING, @{$filename} );
+
+            # undefined lines and strings are treated as empty ones
+            my $buf = join( EMPTY_STRING, grep { defined } @{$filename} );
             $rinput_string = \$buf;
         }
         elsif ( $ref eq 'SCALAR' ) {
-            $rinput_string = $filename;
+            my $buf = EMPTY_STRING;
+            $rinput_string = defined( ${$filename} ) ? $filename : \$buf;
         }
         else {
             if ( $ref->can('getline') ) {
