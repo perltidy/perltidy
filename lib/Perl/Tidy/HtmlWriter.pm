@@ -734,12 +734,15 @@ EOM
 sub write_style_sheet_file {
 
     my $filename = shift;
-    my $fh       = IO::File->new("> $filename");
+
+    # Use streamhandle, which handles '-' for standard output, rather than
+    # a 2-argument open
+    my $fh = Perl::Tidy::streamhandle( $filename, 'w' );
     if ( !$fh ) {
         Perl::Tidy::Die("can't open $filename: $OS_ERROR\n");
     }
     write_style_sheet_data($fh);
-    if ( $fh->can('close') && $filename ne '-' && !ref($filename) ) {
+    if ( $filename ne '-' && !ref($filename) && $fh->can('close') ) {
         $fh->close()
           or
           Perl::Tidy::Warn("can't close style sheet '$filename' : $OS_ERROR\n");
@@ -1485,8 +1488,9 @@ PRE_END
 
     # use css linked to another file,
     if ( $rOpts->{'html-linked-style-sheet'} ) {
+        my $href = escape_html($css_linkname);
         $fh_css->print(
-            qq(<link rel="stylesheet" href="$css_linkname" type="text/css" />));
+            qq(<link rel="stylesheet" href="$href" type="text/css" />));
     }
 
     # or no css,
