@@ -1349,10 +1349,20 @@ EOM
 
     # Remove duplicate filenames.  Otherwise, for example if the user entered
     #     perltidy -b myfile.pl myfile.pl
-    # the backup version of the original would be lost.
+    # the backup version of the original would be lost.  With -b, the same
+    # file given under another name, such as './myfile.pl', or through a
+    # link, is also a duplicate: compare device and inode numbers, where the
+    # system provides them.
     if ( @Arg_files > 1 ) {
         my %seen = ();
-        @Arg_files = grep { !$seen{$_}++ } @Arg_files;
+        @Arg_files = grep {
+            my $key = $_;
+            if ($in_place_modify) {
+                my ( $dev, $ino ) = stat($_);
+                if ($ino) { $key = "$dev:$ino" }
+            }
+            !$seen{$key}++;
+        } @Arg_files;
     }
 
     # If requested, process in order of increasing file size
