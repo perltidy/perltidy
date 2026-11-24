@@ -3619,12 +3619,34 @@ EOM
 
 sub fileglob_to_re {
 
-    # modified (corrected) from version in find2perl
-    my $x = shift;
-    $x =~ s/([.\/^\$()])/\\$1/g;    # escape special characters
-    $x =~ s/\*/.*/g;                # '*' -> '.*'
-    $x =~ s/\?/./g;                 # '?' -> '.'
-    return "^$x\\z";                # match whole word
+    my ($glob) = @_;
+
+    # Convert a file glob into a regex matching a whole file name:
+    # - '*' matches any string, and '?' any single character;
+    # - '[...]' is a character class, negated by a leading '!' or '^';
+    # - every other character, including '{', '}' and an unmatched '[',
+    #   matches itself.
+    my $re = EMPTY_STRING;
+    while (
+        $glob =~ m{\G(?:
+                (\*)                          # $1 any string
+              | (\?)                          # $2 any character
+              | \[ ([!^]?) ( \]? [^\]]* ) \]  # $3 negation, $4 class
+              | (.)                           # $5 anything else
+            )}gcsx
+      )
+    {
+        if    ( defined($1) ) { $re .= '.*' }
+        elsif ( defined($2) ) { $re .= '.' }
+        elsif ( defined($4) ) {
+            my $negate = $3 ? '^' : EMPTY_STRING;
+            my $class  = $4;
+            $class =~ s/([\\\[\]^])/\\$1/g;
+            $re .= "[$negate$class]";
+        }
+        else { $re .= quotemeta($5) }
+    }
+    return "^$re\\z";
 } ## end sub fileglob_to_re
 
 sub make_logfile_header {
