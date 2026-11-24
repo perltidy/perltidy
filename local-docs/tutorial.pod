@@ -144,7 +144,7 @@ ahead and try it.
 =head2 Tabs or Spaces?
 
 With indentation, there is always a tab issue to resolve.  By default,
-perltidy will use leading ascii space characters instead of tabs.  The
+perltidy will use leading ASCII space characters instead of tabs.  The
 reason is that this will be displayed correctly by virtually all
 editors, and in the long run, will avoid maintenance problems.
 
@@ -208,8 +208,6 @@ to standard output, rather than create a F<.tdy> file, you can
 indicate this with the flag B<-st>, like this:
 
  perltidy somefile.pl -st >otherfile.pl
-
-If you just enter
 
 You can also control the name of the output file with the B<-o> flag,
 like this:
@@ -341,8 +339,8 @@ Here is what F<testfile.pl.ERR> contains:
 This shows how perltidy will, by default, write error messages to a file
 with the extension F<.ERR>, and it will write a note that it did so to
 the standard error device.  If you would prefer to have the error
-messages sent to standard output, instead of to a F<.ERR> file, use the
-B<-se> flag.
+messages sent to the standard error output, instead of to a F<.ERR> file,
+use the B<-se> flag.
 
 Almost every programmer would want to see error messages of this type,
 but there are a number of messages which, if reported, would be
@@ -398,7 +396,7 @@ long as the text you select has all braces balanced.
 For the B<emacs> editor, first mark a region and then pipe it through
 perltidy.  For example, to format an entire file, select it with C<C-x h>
 and then pipe it with C<M-1 M-|> and then C<perltidy>.  The numeric
-argument, C<M-1> causes the output from perltidy to replace the marked
+argument, C<M-1>, causes the output from perltidy to replace the marked
 text.  See "GNU Emacs Manual" for more information,
 http://www.gnu.org/manual/emacs-20.3/html_node/emacs_toc.html
 

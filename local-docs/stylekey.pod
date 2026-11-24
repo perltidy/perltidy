@@ -1,11 +1,11 @@
 =head1 Perltidy Style Key
 
 When perltidy was first developed, the main parameter choices were the number
-of indentation spaces and if the user liked cuddled elses.  As the number of
-users has grown so has the number of parameters.  Now there are so many that it
-can be difficult for a new user to find a good initial set.  This document is
-one attempt to help with this problem, and some other suggestions are given at
-the end.
+of indentation spaces and whether the user liked cuddled elses.  As the number
+of users has grown so has the number of parameters.  Now there are so many
+that it can be difficult for a new user to find a good initial set.  This
+document is one attempt to help with this problem, and some other suggestions
+are given at the end.
 
 Use this document to methodically find a starting set of perltidy parameters to
 approximate your style.  We will be working on just one aspect of formatting at
@@ -33,7 +33,7 @@ brackets are balanced.  For the default style, the number of lines required to
 make a balanced selection of code is generally less than for other styles.  For
 example, if a cuddled style is used, then an entire C<if-elsif-> chain must be
 selected for formatting rather than an individual C<elsif> block. This can be
-tedious and time consuming.
+tedious and time-consuming.
 
 =head2 Use as Filter?
 
@@ -322,7 +322,7 @@ indentation of every line.  Notice how the first 'undef' is indented 4
 spaces (one level) to the right, and how 'PrintError' is indented 4 more
 spaces (one more level) to the right.
 
-The alternate is to let the location of the opening paren (or square
+The alternative is to let the location of the opening paren (or square
 bracket, or curly brace) define the indentation, like this:
 
     $dbh = DBI->connect(
@@ -351,7 +351,7 @@ If you prefer the first (default) scheme, no parameter is needed.
 
 If you prefer the latter scheme, use B<--line-up-parentheses>, or B<-lp>.
 There is an alternative version of this option named
-B<--extended-line-up-parentheses>, or B<-xlp> which can also be used. For
+B<--extended-line-up-parentheses>, or B<-xlp>, which can also be used. For
 simplicity, the name B<-lp> will refer to either of these options in the
 following text.
 
@@ -470,7 +470,7 @@ non-blocks.  In the following examples, a closing parenthesis is shown, but
 these parameters apply to closing square brackets and non-block curly braces as
 well.
 
-The default behavior for parenthesized relatively large lists is to place the
+The default behavior for relatively large parenthesized lists is to place the
 closing paren on a separate new line.  The flag B<-cti=n> controls the amount
 of indentation of such a closing paren.
 
@@ -502,7 +502,7 @@ opening paren, if possible:
                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
                      );
 
-Another alternative, B<-cti=3>, indents a line with leading closing
+Another alternative, B<-cti=3>, indents a line with a leading closing
 paren one full indentation level:
 
     # perltidy -lp -cti=3
@@ -663,7 +663,8 @@ B<-bbt=n> you prefer:
 
 =head2 Spaces between function names and opening parens
 
-The default is not to place a space after a function call:
+The default is not to place a space between a function name and its opening
+paren:
 
   myfunc( $a, $b, $c );    # default
 

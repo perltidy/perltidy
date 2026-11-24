@@ -523,7 +523,7 @@ The default is not to do this (B<-nvmll>).
 =item B<-wc=n>, B<--whitespace-cycle=n>
 
 This flag also addresses problems with very deeply nested code and data
-structures.  When the nesting depth exceeds the value B<n> the leading
+structures.  When the nesting depth exceeds the value B<n>, the leading
 whitespace will be reduced and start at a depth of 1 again.  The result is that
 blocks of code will shift back to the left rather than moving arbitrarily far
 to the right.  This occurs cyclically to any depth.
@@ -557,7 +557,7 @@ here-documents, they will remain.
 
 =item B<-et=n>,   B<--entab-leading-whitespace>
 
-This flag causes each B<n> leading space characters produced by the
+This flag causes each group of B<n> leading space characters produced by the
 formatting process to be replaced by one tab character.  The
 formatting process itself works with space characters. The B<-et=n> parameter is applied
 as a last step, after formatting is complete, to convert leading spaces into tabs.
@@ -898,7 +898,7 @@ scheme is used in the input script and not in the current process then the
 guessed indentation will be wrong.
 
 If the default method does not work correctly, or you want to change the
-starting level, use B<-sil=n>, to force the starting level to be n.
+starting level, use B<-sil=n> to force the starting level to be n.
 
 =item B<List indentation> using B<--line-up-parentheses>, B<-lp> or B<--extended-line-up-parentheses>, B<-xlp>
 
@@ -921,7 +921,7 @@ this way:
     );
 
 The B<-lp> or B<-xlp> flags add extra indentation to cause the data to begin
-past the opening parentheses of a sub call or list, or opening square bracket
+past the opening parenthesis of a sub call or list, or opening square bracket
 of an anonymous array, or opening curly brace of an anonymous hash.  With this
 option, the above list would become:
 
@@ -1383,7 +1383,7 @@ This can be changed with
     # perltidy -mutt='qw'
     my $rlist = [ qw(alpha beta gamma) ];
 
-This tells perltidy to space a C<qw>list as if it were multiple tokens when the
+This tells perltidy to space a C<qw> list as if it were multiple tokens when the
 default tightness is used.
 
 The parameter B<s> may contain any of the following perl operators:
@@ -1853,8 +1853,8 @@ To illustrate, the following snippet is shown formatted in three ways:
     if ( seek(DATA, 0, 0) ) { ... }      # perltidy -pt=2 -kpit=0
 
 In the second case the -pt=2 parameter makes all of the parens tight. In the
-third case the -kpit=0 flag causes the space within the 'if' parens to have a
-space, since 'if' is one of the keywords to which the B<-kpit> flag applies by
+third case the -kpit=0 flag causes the 'if' parens to have spaces inside
+them, since 'if' is one of the keywords to which the B<-kpit> flag applies by
 default.  The remaining parens are still tight because of the B<-pt=2> parameter.
 
 The set of keywords to which this parameter applies is, by default:
@@ -1929,10 +1929,10 @@ B<-nlop>:
 
 =item B<Trimming whitespace around C<qw> quotes>
 
-B<-tqw> or B<--trim-qw> provide the default behavior of trimming
+B<-tqw> or B<--trim-qw> provides the default behavior of trimming
 spaces around multiline C<qw> quotes and indenting them appropriately.
 
-B<-ntqw> or B<--notrim-qw> cause leading and trailing whitespace around
+B<-ntqw> or B<--notrim-qw> causes leading and trailing whitespace around
 multiline C<qw> quotes to be left unchanged.  This option will not
 normally be necessary, but was added for testing purposes, because in
 some versions of perl, trimming C<qw> quotes changes the syntax tree.
@@ -2059,7 +2059,7 @@ follows a line with a side comment, or another hanging side comment, and
 (2) there is some leading whitespace on the line.
 To deactivate this feature, use B<-nhsc> or B<--nohanging-side-comments>.
 If block comments are preceded by a blank line, or have no leading
-whitespace, they will not be mistaken as hanging side comments.
+whitespace, they will not be mistaken for hanging side comments.
 
 =item B<Closing Side Comments>
 
@@ -2228,7 +2228,7 @@ space to the right of its closing brace.
 
 This parameter is available in case the default causes a conflict with other
 software, but it should not normally be used because it can complicate keeping
-code updated in the event that code formatted with different prefixes are
+code updated in the event that code formatted with different prefixes is
 mixed.  The problem is that in any formatting pass, the various B<-csc*>
 parameters are restricted to working with a single closing side comment prefix.
 So if code has closing side comments with differing prefixes, it will take
@@ -2386,7 +2386,7 @@ single '#'.
 =item B<-osbc>, B<--outdent-static-block-comments>
 
 The command B<-osbc> will cause static block comments to be outdented by
-the number of B<--continuation-indentation=n>, if possible.
+the number of spaces given by B<--continuation-indentation=n>, if possible.
 
 =back
 
@@ -2557,7 +2557,7 @@ ending marker for format skipping.  The default is equivalent to
 If perltidy encounters a format skipping B<end> comment before any format
 skipping B<begin> comment, then by default it will assume that format skipping
 begins with the first line of the file.  Use B<-ndfsfs>, or
-B<--nodetect-format-skipping-from-start> to avoid making this assumption.  In
+B<--nodetect-format-skipping-from-start>, to avoid making this assumption.  In
 that case, if the first format skipping marker in a file is an end marker, it
 will be ignored.
 
@@ -2669,7 +2669,7 @@ identifier is read from an ending marker.
 A command B<--line-range-tidy=n1:n2> is available to process just a selected
 range of lines of an input stream with perltidy.  This command is mainly of
 interest for programming interactive code editors.  When it is used, the entire
-input stream is read but just the selected range of lines of the input file are
+input stream is read but just the selected range of lines of the input file is
 processed by the perltidy tokenizer and formatter, and then the stream is
 reassembled for output. The selected lines need to contain a complete statement
 or balanced container.  Otherwise, a syntax error will occur and the code will
@@ -3020,7 +3020,7 @@ the B<-bli> flag but have no effect unless the B<-bli> flag is set.
 
 =item B<-bar>,    B<--opening-brace-always-on-right>
 
-The default style, B<-nbl> places the opening code block brace on a new
+The default style, B<-nbl>, places the opening code block brace on a new
 line if it does not fit on the same line as the opening keyword, like
 this:
 
@@ -3785,7 +3785,7 @@ For example:
         }
     );
 
-For detailed control of individual closing tokens the following
+For detailed control of individual opening tokens the following
 controls can be used:
 
   -sop  or --stack-opening-paren
@@ -3968,7 +3968,7 @@ within a comma-separated list of values is to insert a blank line,
 comment, or side-comment anywhere between the opening and closing
 parens (or braces or brackets).   This causes perltidy to skip
 over its list formatting logic.  (The reason is that any of
-these items put a constraint on line breaks, and perltidy
+these items puts a constraint on line breaks, and perltidy
 needs complete control over line breaks within a container to
 adjust a list layout).  For example, let us consider
 
@@ -4472,7 +4472,7 @@ the flag B<--add-trailing-commas>, or B<-atc>.  And perltidy only removes
 unwanted trailing commas if the flag B<--delete-trailing-commas>, or B<-dtc>, is
 set.
 
-Here are some example parameter combinations and their meanings
+Here are some example parameter combinations and their meanings:
 
  -wtc=0 -dtc   : delete all trailing commas
  -wtc=1 -atc   : add trailing commas to all lists
@@ -4510,7 +4510,7 @@ For example
     -wtc='(m [b'
 
 means that lists within parens should have multiline trailing commas, and that
-lists within square brackets have bare trailing commas. Since there is no
+lists within square brackets should have bare trailing commas. Since there is no
 specification for curly braces in this example, their trailing commas would
 remain unchanged.
 
@@ -4712,7 +4712,7 @@ added trailing comma.
 The parameter B<--add-lone-trailing-commas>, or B<-altc>, allows these commas to
 be added, provided that B<--add-trailing-commas> is also set. It is on by
 default.  Users of B<-wn> may want to turn it off with
-B<--noadd-lone-trailing-commas>, B<-naltc> to prevent such commas from being
+B<--noadd-lone-trailing-commas>, B<-naltc>, to prevent such commas from being
 added.
 
 If such commas do get added, then they can be removed to allow welding with the
@@ -5513,8 +5513,8 @@ This option was added for issue git #192.
 =item B<-blbs=n>,  B<--blank-lines-before-subs=n>
 
 The parameter B<-blbs=n> requests that at least B<n> blank lines precede a sub
-definition which does not follow a comment and which is more than one-line
-long.  The default is B<-blbs=1>.  B<BEGIN> and B<END> blocks are included.
+definition which does not follow a comment and which is more than one
+line long.  The default is B<-blbs=1>.  B<BEGIN> and B<END> blocks are included.
 
 The requested number of blank lines will be inserted regardless of the
 value of B<--maximum-consecutive-blank-lines=n> (B<-mbl=n>) with the exception
@@ -5612,7 +5612,7 @@ This parameter is a list of block type keywords to which the flag B<-blbc>
 should apply.  The section L<"Specifying Block Types"> explains how to list
 block types.
 
-=item B<Note on using the> B<-blao> and B<-blbc> options.
+=item B<Note on using the> B<-blao> and B<-blbc> options
 
 These blank line controls introduce a certain minimum number of blank lines in
 the text, but the final number of blank lines may be greater, depending on
@@ -5679,8 +5679,8 @@ opposite of the parameter B<-blanks-before-subs> described above.
 
 In fact, these parameters provide approximate inverses to all of the previously
 described blank line options. To simplify things, the block types to which the
-C<{> and C<}> operators apply are the same as the corresponding operator which
-adds blank lines, described above. The following table shows these
+C<{> and C<}> operators apply are the same as for the corresponding operator
+which adds blank lines, described above. The following table shows these
 relationships:
 
    kblx=   Inverse  Applies to block types
@@ -5708,7 +5708,7 @@ space-separated.
 =item *
 
 The comment deletion controls will keep at least one blank line between
-groups of comments, and between a side comment and following line comment.
+groups of comments, and between a side comment and a following line comment.
 
 =item *
 
@@ -5762,7 +5762,7 @@ In addition, the following abbreviations are available for simplified usage:
 
 B<-kgb> or B<--keyword-group-blanks> is short for B<-kgbb=2 -kgba=2 -kgbi>
 
-B<-nkgb> or B<--nokeyword-group-blanks>, is short for B<-kgbb=1 -kgba=1 -nkgbi>
+B<-nkgb> or B<--nokeyword-group-blanks> is short for B<-kgbb=1 -kgba=1 -nkgbi>
 
 Before describing the meaning of the parameters in detail let us look at an
 example which is formatted with default parameter settings.
@@ -6046,7 +6046,7 @@ new ones.  In other words, perltidy will try to follow the input file regarding
 broken and unbroken blocks.
 
 The main exception to this rule is that perltidy will attempt to form new
-one-line blocks following the keywords C<map>, C<eval>, and C<sort>, C<eval>,
+one-line blocks following the keywords C<sort>, C<map>, C<grep>, and C<eval>,
 because these code blocks are often small and most clearly displayed in a
 single line. This behavior can be controlled with the flag
 B<--one-line-block-exclusion-list> described below.
@@ -6303,7 +6303,7 @@ To exclude only the equals we could use:
 
 Notice in this last example that although only the equals alignment was
 excluded, the ternary alignments were also lost.  This happens because the
-vertical aligner sweeps from left-to-right and usually stops if an important
+vertical aligner sweeps from left to right and usually stops if an important
 alignment cannot be made for some reason.
 
 But also notice that side comments remain aligned because their alignment is
@@ -6507,7 +6507,7 @@ For example,
 will cause perltidy to treat the words 'method', 'fun', '_sub' and 'M4' the same as if they were 'sub'.  Note that if the alias words are separated by spaces then the string of words should be placed in quotes.
 
 Note that several other parameters accept a list of keywords, including 'sub' (see L<"Specifying Block Types">).
-You do not need to include any sub aliases in these lists. Just include keyword 'sub' if you wish, and all aliases are automatically included.
+You do not need to include any sub aliases in these lists. Just include the keyword 'sub' if you wish, and all aliases are automatically included.
 
 =item B<-gal=s>,   B<--grep-alias-list=s>
 
@@ -6549,13 +6549,13 @@ B<class>, B<method>, B<field>, and B<ADJUST> as defined for this feature.
 
 =item *
 
-B<--use-feature='noclass'>.  This tells perltidy B<not> to treat words B<class>, B<method>, B<field>, B<ADJUST> specially.
+B<--use-feature='noclass'>.  This tells perltidy B<not> to treat the words B<class>, B<method>, B<field>, and B<ADJUST> specially.
 
 =item *
 
 B<Neither of these> (B<--use-feature> not defined). This is the DEFAULT and
 recommended setting. In this case perltidy will try to automatically handle
-both the newer C<feature 'class'> syntax as well as some conflicting
+both the newer C<feature 'class'> syntax and some conflicting
 uses of some of these special words by existing modules.
 
 =back
@@ -6745,7 +6745,7 @@ A very helpful command is B<--dump-profile> or B<-dpro>.  It writes a
 list of all configuration filenames tested to standard output, and
 if a file is found, it dumps the content to standard output before
 exiting.  So, to find out where perltidy looks for its configuration
-files, and which one if any it selects, just enter
+files, and which one, if any, it selects, just enter
 
   perltidy -dpro
 
@@ -6797,7 +6797,7 @@ are preceded by the name of the alias (without leading dashes), like this:
         -opt2
         }
 
-where B<newword> is the abbreviation, and B<opt1>, etc, are existing parameters
+where B<newword> is the abbreviation, and B<opt1>, etc., are existing parameters
 I<or other abbreviations>.  The main syntax requirement is that the new
 abbreviation along with its opening curly brace must begin on a new line.
 Space before and after the curly braces is optional.
@@ -6857,18 +6857,18 @@ B<--dump-cuddled-block-list> or B<-dcbl> will dump to standard output the
 internal hash of cuddled block types created by a B<--cuddled-block-list> input
 string.
 
-B<--dump-defaults> or B<-ddf> will write the default option set to standard output and quit
+B<--dump-defaults> or B<-ddf> will write the default option set to standard output and quit.
 
 B<--dump-integer-option-range> or B<-dior> will write a list of comma-separated values. Each line contains the name of an integer option along with its minimum, maximum, and default values.
 
 B<--dump-profile> or B<-dpro>  will write the name of the current
 configuration file and its contents to standard output and quit.
 
-B<--dump-options> or B<-dop>  will write current option set to standard
+B<--dump-options> or B<-dop>  will write the current option set to standard
 output and quit.
 
 B<--dump-long-names> or B<-dln>  will write all command line long names (passed
-to Get_options) to standard output and quit.
+to GetOptions) to standard output and quit.
 
 B<--dump-short-names>  or B<-dsn> will write all command line short names
 to standard output and quit.
@@ -7180,10 +7180,10 @@ similar to the B<Perl::Critic> policy B<Variables::ProhibitReusedNames>.
 =item B<s: sigil change but reused bareword>
 
 These are variables which have the same bareword name but a different sigil
-(B<$>, B<@>, or B<%>) as another variable in the same scope.  For example, this
-occurs if variables B<$data> and B<%data> share the same scope. This can also
-be confusing for the reasons mentioned above and can be avoided by renaming
-one of the variables.
+(B<$>, B<@>, or B<%>) from another variable in the same scope.  For example,
+this occurs if variables B<$data> and B<%data> share the same scope. This can
+also be confusing for the reasons mentioned above and can be avoided by
+renaming one of the variables.
 
 =item B<p: package-crossing variables>
 
@@ -7267,7 +7267,7 @@ types of variables to be checked. For example:
    perltidy -wvt='s r' somefile.pl
 
 will process F<somefile.pl> normally but issue a warning if either of
-the issues B<s> or B<r>, described above, are encountered.
+the issues B<s> or B<r>, described above, is encountered.
 
 A companion flag, B<--warn-variable-exclusion-list=string>, or B<-wvxl=string>,
 can be used to skip warning checks for a list of variable names.  A leading
@@ -7337,8 +7337,8 @@ warnings. For example, unique keys in ALL CAPS are not reported for B<N=1>.
 
 The parameter B<--warn-unique-keys>, or B<-wuk>, can be used to produce a
 warning of a possible misspelled hash key during normal processing. It works
-like the previous B<-dump> version but writes to the standard error output
-if unique keys are found during normal formatting.
+like B<--dump-unique-keys> but writes to the standard error output if
+unique keys are found during normal formatting.
 
 For some scripts, this will produce unwanted warnings for a few keys, even
 though the filter described above attempts to avoid this. A way to avoid
@@ -7528,7 +7528,7 @@ should have their call arguments enclosed in parens.
 A less strict check for parens can be requested by placing the symbol B<+>
 after a keyword or function name in the list following B<-wcp>.  This means that
 a warning should only be issued if that word is followed without parens around
-more than one comma-separated terms.  For example,
+more than one comma-separated term.  For example,
 
    perltidy -wcp='return+'
 
@@ -7570,7 +7570,7 @@ removed, then C<||> must be changed to C<or>:
 Otherwise, the C<||> will operate on C<$infile> rather than the return value of
 C<open>.
 
-=item B<Use --dump-mismatched-args>, or B<-dma> to find function calls with args not matching sub declarations
+=item B<Use --dump-mismatched-args>, or B<-dma>, to find function calls with args not matching sub declarations
 
 The parameter B<--dump-mismatched-args>, or B<-dma>, causes perltidy to
 examine the definitions of subroutines in a file, and calls to those subs,
@@ -7671,9 +7671,9 @@ processed are checked. But note that a file may contain multiple packages.
 =item B<Use --warn-mismatched-args>, or B<-wma>, to produce a warning for function calls with
 args not matching sub declarations.
 
-This is similar to the B<-dump> parameter described above except that any
-mismatches are reported in the error file and otherwise formatting continues
-normally.  The basic usage is
+This is similar to the B<--dump-mismatched-args> parameter described above
+except that any mismatches are reported in the error file and otherwise
+formatting continues normally.  The basic usage is
 
     perltidy -wma somefile.pl
 
@@ -7811,9 +7811,9 @@ confusing code.
 
 =item B<Use --warn-mismatched-returns>, or B<-wmr>, to issue warnings when the number of requested values may disagree with sub return statements
 
-This is similar to the B<-dump> parameter described above except that any
-mismatches are reported in the error file and otherwise formatting continues
-normally.  The basic usage is
+This is similar to the B<--dump-mismatched-returns> parameter described
+above except that any mismatches are reported in the error file and
+otherwise formatting continues normally.  The basic usage is
 
     perltidy -wmr somefile.pl
 
@@ -7844,7 +7844,7 @@ trailing B<*> on a name may be used to indicate a partial string match.
 
 =back
 
-=item B<Use --dump-nested-ternaries>, or B<-dnt> to dump a list of nested ternaries.
+=item B<Use --dump-nested-ternaries>, or B<-dnt>, to dump a list of nested ternaries.
 
 Like other B<-dump-> commands, this writes to the standard output and then exits immediately,
 without doing any formatting. A ternary statement has the form
@@ -7870,8 +7870,9 @@ by these commands.
 
 =item B<Use --warn-nested-ternaries>, or B<-wnt>, to write a warning when a nested ternary is encountered.
 
-This is the same as the B<-dump> parameter described above except that any
-nested ternaries are reported in the error file and formatting continues normally.
+This is the same as the B<--dump-nested-ternaries> parameter described above
+except that any nested ternaries are reported in the error file and
+formatting continues normally.
 
 Additional comments on nested ternaries:
 
@@ -7981,7 +7982,7 @@ full module path would be included in the output.
 
 =back
 
-=item B<Use --warn-keyword-list=s>, or B<-wkl=s> to warn of the use of selected keywords or functions
+=item B<Use --warn-keyword-list=s>, or B<-wkl=s>, to warn of the use of selected keywords or functions
 
 This parameter is the B<--warn-> version of the previous B<--dump->
 parameters. It causes a warning to be issued if any of the builtin keywords or
@@ -7992,7 +7993,7 @@ functions listed in the string B<s> occur in a file. For example,
 will format F<ifile> and issue a warning on the occurrences of the perl builtin
 keywords C<goto>, C<system>, and C<qx>, or a function named C<fileparse>.
 
-=item B<Use --warn-label-types=s>, or B<-wlt=s> to warn of selected label issues
+=item B<Use --warn-label-types=s>, or B<-wlt=s>, to warn of selected label issues
 
 The parameter B<-wlt=s> provides some simple checks which can help screen for
 potential problems with statement labels.
@@ -8135,7 +8136,7 @@ have both code and documentation formatted in a single file.
 =item *
 
 Use B<-pod>, or B<--pod2html>, if the pod documentation should be formatted
-with a pod-to-html formatter. B<This is the Default>.  In this case, any code
+with a pod-to-html formatter. B<This is the default>.  In this case, any code
 sections are formatted by perltidy, and the results then merged.  The pod
 formatter which is used can be controlled with the parameter described in the
 next section.
@@ -8146,7 +8147,7 @@ the pod text in its original order (interleaved with code) otherwise.
 
 =back
 
-=item Use B<--use-pod-formatter=s>, or B<-upf=s> to select a preferred pod formatter
+=item Use B<--use-pod-formatter=s>, or B<-upf=s>, to select a preferred pod formatter
 
 Perltidy will by default search for a pod formatter in the following order:
 
@@ -8209,7 +8210,7 @@ documentation for more information.
 
 By default, a single html output file is produced.  This can be changed
 with the B<-frm> option, which creates a frame holding a table of
-contents in the left panel and the source code in the right side. This
+contents in the left panel and the source code in the right panel. This
 simplifies code browsing.  Assume, for example, that the input file is
 F<MyModule.pm>.  Then, for default file extension choices, these three
 files will be created:
@@ -8304,7 +8305,7 @@ corresponding abbreviation:
 
 A default set of colors has been defined, but they may be changed by providing
 values to any of the following parameters, where B<n> is either a 6 digit
-hex RGB color value or an ascii name for a color, such as 'red'.
+hex RGB color value or an ASCII name for a color, such as 'red'.
 
 To illustrate, the following command will produce an html
 file F<somefile.pl.html> with "aqua" keywords:
@@ -8446,8 +8447,8 @@ will be appended directly.
 
 For example, suppose the file is F<somefile.pl>.  For C<-bext=old>, a '.' is
 added to give F<somefile.pl.old>.  For C<-bext=.old>, no additional '.' is
-added, so again the backup file is F<somefile.pl.old>.  For C<-bext=~>, then no
-dot is added, and the backup file will be F<somefile.pl~>  .
+added, so again the backup file is F<somefile.pl.old>.  For C<-bext=~>, no dot
+is added, and the backup file will be F<somefile.pl~>  .
 
 =head1 SWITCHES WHICH MAY BE NEGATED
 

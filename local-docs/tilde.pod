@@ -111,7 +111,7 @@ followed by one of C<;>, C<)>, or C<}>,
 
 =item *
 
-and operator is preceded by C<=>, C<==>, or C<!=>,
+and the operator is preceded by C<=>, C<==>, or C<!=>,
 
 =item *
 

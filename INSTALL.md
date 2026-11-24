@@ -242,7 +242,7 @@ avoid losing unsaved data in case of trouble.
 
 - Links to VMS Utilities and Documentation
 
-    To install perltidy you will need the following utilities Perl, of
+    To install perltidy you will need the following utilities: Perl, of
     course, source with VMS goodies available from
     http://www.sidhe.org/vmsperl or binary available from the Compaq OpenVMS
     freeware CD.  To unpack the source either gunzip and vmstar available
@@ -267,25 +267,28 @@ avoid losing unsaved data in case of trouble.
 
 - Build and install perltidy under VMS:
 
-        $ set default [.perl-tidy-yyymmdd]
-        $ perl perltidy.pl
+        $ set default [.perl-tidy-yyyymmdd]
+        $ perl Makefile.PL
         $ mmk
         $ mmk test
         $ mmk install
 
 - Using Perltidy under VMS
 
-    Create a symbol. This should be put in a logon script, eg sylogin.com
+    Create a symbol. This should be put in a logon script, e.g. sylogin.com
 
         $ perltidy == "perl perl_root:[utils]perltidy."
 
     Default parameters can be placed in a `perltidyrc` file.  Perltidy
-    looks for one in the following places and uses the first found if the
-    logical `PERLTIDY` is a file and the file exists then that is used if the
-    logical `PERLTIDY` is a directory then look for a `.perltidyrc` file in the
-    directory look for a `.perltidyrc` file in the user's home directory
+    looks for one in the following places and uses the first found:
 
-    To see where the search is done and which `.perltidyrc` is used type
+    - if the logical `PERLTIDY` is a file and the file exists, then that is
+      used;
+    - if the logical `PERLTIDY` is a directory, then look for a `.perltidyrc`
+      file in the directory;
+    - look for a `.perltidyrc` file in the user's home directory.
+
+    To see where the search is done and which `.perltidyrc` is used, type
 
         $ perltidy -dpro
 
@@ -300,8 +303,8 @@ avoid losing unsaved data in case of trouble.
     If you have one of the magic incantations at the start of perl scripts,
     so that they can be invoked as a .com file, then you will need to use
     the **-x** parameter which causes perltidy to skip all lines until it
-    finds a hash bang line eg `#!perl -w`.  Since it is such a common
-    option this is probably a good thing to put in a `.perltidyrc` file.
+    finds a hash bang line, e.g. `#!perl -w`.  Since it is such a common
+    option, this is probably a good thing to put in a `.perltidyrc` file.
 
 - VMS File Extensions
 
@@ -376,8 +379,8 @@ follows:
     pod2html perltidy >perltidy.html
     
     cd lib/Perl
-    pod2text Tidy.pm >Tidy.txt
-    pod2html Tidy.pm >Tidy.html
+    pod2text Tidy.pod >Tidy.txt
+    pod2html Tidy.pod >Tidy.html
 
 After installation, the installation directory of files may be deleted. 
 
