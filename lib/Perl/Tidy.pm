@@ -2003,10 +2003,10 @@ sub get_decoded_string_buffer {
         if ( $decoder && ref($decoder) ) {
             $encoding_in = $decoder->name;
             if ( $encoding_in ne 'UTF-8' && $encoding_in ne 'utf8' ) {
-                $encoding_in = EMPTY_STRING;
                 $encoding_log_message .= <<EOM;
 Guessed encoding '$encoding_in' is not utf8; no encoding will be used
 EOM
+                $encoding_in = EMPTY_STRING;
             }
             else {
 
