@@ -5590,20 +5590,26 @@ sub find_file_upwards {
 
     # This implements the ... upward search for a file
 
-    $search_dir  =~ s{/+$}{};
+    # $search_dir is undefined if Cwd::realpath could not resolve it, for
+    # example because it does not exist
+    return if ( !defined($search_dir) );
+
+    $search_dir =~ s{/+$}{};
+    $search_dir = '/' if ( !length($search_dir) );
     $search_file =~ s{^/+}{};
 
     while (1) {
-        my $try_path = "$search_dir/$search_file";
+        my $try_path =
+          $search_dir eq '/' ? "/$search_file" : "$search_dir/$search_file";
         if ( -f $try_path ) {
             return $try_path;
         }
-        elsif ( $search_dir eq '/' ) {
-            return;
-        }
-        else {
-            $search_dir = dirname($search_dir);
-        }
+
+        # Stop at the root directory, which is its own parent: '/' on Unix,
+        # but also 'C:\' or 'C:/' on Windows
+        my $parent = dirname($search_dir);
+        return if ( $parent eq $search_dir );
+        $search_dir = $parent;
     } ## end while (1)
 
     # This return is for Perl-Critic.
