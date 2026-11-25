@@ -102,7 +102,7 @@ and may be a single space instead.  However, the value of a parameter
 must NOT be adjacent to the flag, like this B<-i3> (WRONG).  Also,
 flags must be input separately, never bundled together.
 
-=head2 Continuation Indentation.
+=head2 Continuation Indentation
 
 If you change the indentation spaces you will probably also need to
 change the continuation indentation spaces with the parameter B<-ci=n>.
@@ -144,7 +144,7 @@ ahead and try it.
 =head2 Tabs or Spaces?
 
 With indentation, there is always a tab issue to resolve.  By default,
-perltidy will use leading ascii space characters instead of tabs.  The
+perltidy will use leading ASCII space characters instead of tabs.  The
 reason is that this will be displayed correctly by virtually all
 editors, and in the long run, will avoid maintenance problems.
 
@@ -166,9 +166,9 @@ files at once, like this for example:
 
  perltidy *.pl
 
-and in this case, each of the output files will be have a name equal to
+and in this case, each of the output files will have a name equal to
 the input file with the extension F<.tdy> appended.  If you decide that
-the formatting is acceptable, you will want to backup your originals and
+the formatting is acceptable, you will want to back up your originals and
 then remove the F<.tdy> extensions from the reformatted files.  There is
 a powerful perl script called C<rename> that can be used for this
 purpose; if you don't have it, you can find it for example in B<The Perl
@@ -208,8 +208,6 @@ to standard output, rather than create a F<.tdy> file, you can
 indicate this with the flag B<-st>, like this:
 
  perltidy somefile.pl -st >otherfile.pl
-
-If you just enter
 
 You can also control the name of the output file with the B<-o> flag,
 like this:
@@ -341,8 +339,8 @@ Here is what F<testfile.pl.ERR> contains:
 This shows how perltidy will, by default, write error messages to a file
 with the extension F<.ERR>, and it will write a note that it did so to
 the standard error device.  If you would prefer to have the error
-messages sent to standard output, instead of to a F<.ERR> file, use the
-B<-se> flag.
+messages sent to the standard error output, instead of to a F<.ERR> file,
+use the B<-se> flag.
 
 Almost every programmer would want to see error messages of this type,
 but there are a number of messages which, if reported, would be
@@ -357,7 +355,7 @@ errors, but you can control this with input flags, as follows:
  -q    quiet! do not report either errors or warnings
 
 The default is generally a good choice, but it's not a bad idea to check
-programs with B<-w> occasionally, especially if your are looking for a
+programs with B<-w> occasionally, especially if you are looking for a
 bug.  For example, it will ask if you really want '=' instead of '=~' in
 this line:
 
@@ -367,12 +365,12 @@ This kind of error can otherwise be hard to find.
 
 =head2 Using Perltidy as a Filter on Selected Text from an Editor
 
-Most programmer's editors allow a selected group of lines to be passed
+Most programmers' editors allow a selected group of lines to be passed
 through an external filter.  Perltidy has been designed to work well as
 a filter, and it is well worthwhile learning the appropriate commands to
 do this with your editor.  This means that you can enter a few
 keystrokes and watch a block of text get reformatted.  If you are not
-doing this, you are missing out of a lot of fun!  You may want to supply
+doing this, you are missing out on a lot of fun!  You may want to supply
 the B<-q> flag to prevent error messages regarding incorrect syntax,
 since errors may be obvious in the indentation of the reformatted text.
 This is entirely optional, but if you do not use the B<-q> flag, you
@@ -398,13 +396,13 @@ long as the text you select has all braces balanced.
 For the B<emacs> editor, first mark a region and then pipe it through
 perltidy.  For example, to format an entire file, select it with C<C-x h>
 and then pipe it with C<M-1 M-|> and then C<perltidy>.  The numeric
-argument, C<M-1> causes the output from perltidy to replace the marked
+argument, C<M-1>, causes the output from perltidy to replace the marked
 text.  See "GNU Emacs Manual" for more information,
 http://www.gnu.org/manual/emacs-20.3/html_node/emacs_toc.html
 
 If you have difficulty with an editor, try the B<-st> flag, which will
 force perltidy to send output to standard output.  This might be needed,
-for example, if the editor passes text to perltidy as temporary filename
+for example, if the editor passes text to perltidy as a temporary filename
 instead of through the standard input.  If this works, you might put the
 B<-st> flag in your F<.perltidyrc> file.
 
@@ -461,8 +459,7 @@ tokens which successive lines have in common, such as the B<=> here:
 
 Vertical alignment is automatic unless it has been deactivated by one of its
 controls, but it always stops and tries to restart at blank lines. So a blank
-line can be inserted to stop an unwanted alignment.  So, for example, we can
-can insert a blank line to break the alignment in the above example like this:
+line can be inserted to stop an unwanted alignment.  So, for example, we can insert a blank line to break the alignment in the above example like this:
 
     my $self = shift;
 
@@ -482,12 +479,11 @@ lines to be skipped with special comments like this:
                 1, 4, 6, 4, 1,);
  #>>>
 
-A related comment control is B<--code-skipping>, indicated with '#<<V>. and
-'#>>V>', which simply passes lines of code to the output without tokenization.
+A related comment control is B<--code-skipping>, indicated with '#<<V' and
+'#>>V', which simply passes lines of code to the output without tokenization.
 This is useful for some extended syntaxes.  Another is
 B<--non-indenting-braces>, indicated by placing a side comment '#<<<' following
-a block brace, which prevents code within the marked braces from getting an
-extra level indentation. This is useful if we want to put braces around code
+a block brace, which prevents code within the marked braces from getting an extra level of indentation. This is useful if we want to put braces around code
 and want to minimize the changes in formatting.
 
 =head2 Finding Unused Variables

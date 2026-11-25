@@ -21,7 +21,7 @@ necessarily incorrect.
 =head2 Illustrative Snippets
 
 It isn't possible to be perfectly accurate with a warning of this
-nature, but it would be nice to avoid many false-alarms.  What I needed
+nature, but it would be nice to avoid many false alarms.  What I needed
 to implement this was a fairly simple rule which would just flag the
 most likely cases of a missing binding operator.  
 
@@ -111,7 +111,7 @@ followed by one of C<;>, C<)>, or C<}>,
 
 =item *
 
-and operator is preceded by C<=>, C<==>, or C<!=>,
+and the operator is preceded by C<=>, C<==>, or C<!=>,
 
 =item *
 

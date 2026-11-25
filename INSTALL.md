@@ -32,7 +32,7 @@ of perltidy before installing the latest version.  These are:
     version of perltidy to use Makefile.PL for installation was 20020225, so
     if your previous installation is older than this, it is best to remove
     it, because the installation path may now be different.  There were up
-    to 3 files these older installations: the script `perltidy` and
+    to 3 files in these older installations: the script `perltidy` and
     possibly two man pages, `perltidy.1` and `perl2web.1`.  If you saved
     your Makefile, you can probably use `make uninstall`.  Otherwise, you
     can use a `locate` or `find` command to find and remove these files.
@@ -42,7 +42,7 @@ of perltidy before installing the latest version.  These are:
     If you switch from one installation method to another, the paths to the
     components of perltidy may change, so it is probably best to remove the older
     version before installing the new version.  If your older installation method
-    had an uninstall option (such as with RPM's and debian packages), use it.
+    had an uninstall option (such as with RPMs and Debian packages), use it.
     Otherwise, you can locate and remove the older files by hand.  There are two
     key files: `Tidy.pm` and `perltidy`.  In addition, there may be one or two
     man pages, something like `Perl::Tidy.3pm` and `perltidy.1p`.  You can use a
@@ -97,7 +97,7 @@ Two separate installation methods are possible.
 - After Installation
 
     After installation by either method, verify that the installation worked
-    and that the correct new version is being by entering:
+    and that the correct new version is being used by entering:
 
         perltidy -v
 
@@ -173,7 +173,7 @@ Two separate installation methods are possible.
 
     This installs perltidy and the man page perltidy.1. 
 
-    5\. Test the installation using
+    4\. Test the installation using
 
         perltidy -h
 
@@ -242,7 +242,7 @@ avoid losing unsaved data in case of trouble.
 
 - Links to VMS Utilities and Documentation
 
-    To install perltidy you will need the following utilities Perl, of
+    To install perltidy you will need the following utilities: Perl, of
     course, source with VMS goodies available from
     http://www.sidhe.org/vmsperl or binary available from the Compaq OpenVMS
     freeware CD.  To unpack the source either gunzip and vmstar available
@@ -267,30 +267,33 @@ avoid losing unsaved data in case of trouble.
 
 - Build and install perltidy under VMS:
 
-        $ set default [.perl-tidy-yyymmdd]
-        $ perl perltidy.pl
+        $ set default [.perl-tidy-yyyymmdd]
+        $ perl Makefile.PL
         $ mmk
         $ mmk test
         $ mmk install
 
 - Using Perltidy under VMS
 
-    Create a symbol. This should be put in a logon script, eg sylogin.com
+    Create a symbol. This should be put in a logon script, e.g. sylogin.com
 
         $ perltidy == "perl perl_root:[utils]perltidy."
 
     Default parameters can be placed in a `perltidyrc` file.  Perltidy
-    looks for one in the following places and uses the first found if the
-    logical `PERLTIDY` is a file and the file exists then that is used if the
-    logical `PERLTIDY` is a directory then look for a `.perltidyrc` file in the
-    directory look for a `.perltidyrc` file in the user's home directory
+    looks for one in the following places and uses the first found:
 
-    To see where the search is done and which `.perltidyrc` is used type
+    - if the logical `PERLTIDY` is a file and the file exists, then that is
+      used;
+    - if the logical `PERLTIDY` is a directory, then look for a `.perltidyrc`
+      file in the directory;
+    - look for a `.perltidyrc` file in the user's home directory.
+
+    To see where the search is done and which `.perltidyrc` is used, type
 
         $ perltidy -dpro
 
     A system `PERLTIDY` logical can be defined pointing to a file with a
-    minimal configuration,  and users can defined their own logical to use a
+    minimal configuration,  and users can define their own logical to use a
     personal `.perltidyrc` file.
 
         $ define /system perltidy perl_root:[utils]perltidy.rc
@@ -300,8 +303,8 @@ avoid losing unsaved data in case of trouble.
     If you have one of the magic incantations at the start of perl scripts,
     so that they can be invoked as a .com file, then you will need to use
     the **-x** parameter which causes perltidy to skip all lines until it
-    finds a hash bang line eg `#!perl -w`.  Since it is such a common
-    option this is probably a good thing to put in a `.perltidyrc` file.
+    finds a hash bang line, e.g. `#!perl -w`.  Since it is such a common
+    option, this is probably a good thing to put in a `.perltidyrc` file.
 
 - VMS File Extensions
 
@@ -376,8 +379,8 @@ follows:
     pod2html perltidy >perltidy.html
     
     cd lib/Perl
-    pod2text Tidy.pm >Tidy.txt
-    pod2html Tidy.pm >Tidy.html
+    pod2text Tidy.pod >Tidy.txt
+    pod2html Tidy.pod >Tidy.html
 
 After installation, the installation directory of files may be deleted. 
 
@@ -395,4 +398,4 @@ If you see ways to improve these notes, please let us know.
 
 A list of current bugs and issues can be found at the CPAN site [https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy](https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy)
 
-To report a new bug or problem, use the link on this page .  
+To report a new bug or problem, use the link on this page.

@@ -38,7 +38,7 @@ For example, the perltidy script is basically just this:
 
 The call to B<perltidy> returns a scalar B<$error_flag> which is TRUE if an
 error caused premature termination, and FALSE if the process ran to normal
-completion.  Additional discuss of errors is contained below in the
+completion.  Additional discussion of errors is contained below in the
 L<ERROR HANDLING|"ERROR HANDLING"> section.
 
 The module accepts input and output streams by a variety of methods.
@@ -146,7 +146,7 @@ F<.perltidyrc> configuration file that would otherwise be used.
 =item B<errorfile>
 
 The B<errorfile> parameter allows the calling program to capture
-the stream that would otherwise go to either a .ERR file.  This
+the stream that would otherwise go to a .ERR file.  This
 stream contains warnings or errors related to the contents of one
 source file or stream.
 
@@ -154,7 +154,7 @@ The reason that this is different from the stderr stream is that when perltidy
 is called to process multiple files there will be up to one .ERR file created
 for each file and it would be very confusing if they were combined.
 
-However if perltidy is called to process just a single perl script then it may
+However, if perltidy is called to process just a single perl script then it may
 be more convenient to combine the B<errorfile> stream with the B<stderr>
 stream.  This can be done by setting the B<-se> parameter, in which case this
 parameter is ignored.
@@ -170,7 +170,7 @@ debugging.
 
 The B<teefile> parameter allows the calling program to capture the tee stream.
 This stream is only created if requested with one of the 'tee' parameters,
-a B<--tee-pod> , B<--tee-block-comments>, B<--tee-side-commnts>, or B<--tee-all-comments>.
+a B<--tee-pod>, B<--tee-block-comments>, B<--tee-side-comments>, or B<--tee-all-comments>.
 
 =item B<debugfile>
 
@@ -188,7 +188,7 @@ command line string.
 
 =item B<dump_options>
 
-If the B<dump_options> parameter is given, it must be the reference to a hash.
+If the B<dump_options> parameter is given, it must be a reference to a hash.
 In this case, the parameters contained in any perltidyrc configuration file
 will be placed in this hash and perltidy will return immediately.  This is
 equivalent to running perltidy with --dump-options, except that the parameters
@@ -205,11 +205,11 @@ Any combination of the B<dump_> parameters may be used together.
 This parameter is a string which can be used to control the parameters placed
 in the hash reference supplied by B<dump_options>.  The possible values are
 'perltidyrc' (default) and 'full'.  The 'full' parameter causes both the
-default options plus any options found in a perltidyrc file to be returned.
+default options and any options found in a perltidyrc file to be returned.
 
 =item B<dump_getopt_flags>
 
-If the B<dump_getopt_flags> parameter is given, it must be the reference to a
+If the B<dump_getopt_flags> parameter is given, it must be a reference to a
 hash.  This hash will receive all of the parameters that perltidy understands
 and flags that are passed to Getopt::Long.  This parameter may be
 used alone or with the B<dump_options> flag.  Perltidy will
@@ -218,14 +218,14 @@ F<perltidyrc_dump.pl> for example usage.
 
 =item B<dump_options_category>
 
-If the B<dump_options_category> parameter is given, it must be the reference to a
+If the B<dump_options_category> parameter is given, it must be a reference to a
 hash.  This hash will receive a hash with keys equal to all long parameter names
 and values equal to the title of the corresponding section of the perltidy manual.
 See the demo program F<perltidyrc_dump.pl> for example usage.
 
 =item B<dump_abbreviations>
 
-If the B<dump_abbreviations> parameter is given, it must be the reference to a
+If the B<dump_abbreviations> parameter is given, it must be a reference to a
 hash.  This hash will receive all abbreviations used by Perl::Tidy.  See the
 demo program F<perltidyrc_dump.pl> for example usage.
 
@@ -252,7 +252,7 @@ B<filter_example.pl> in the perltidy distribution.
 
 An exit value of 0, 1, or 2 is returned by perltidy to indicate the status of the result.
 
-A exit value of 0 indicates that perltidy ran to completion with no error messages.
+An exit value of 0 indicates that perltidy ran to completion with no error messages.
 
 An exit value of 1 indicates that the process had to be terminated early due to
 errors in the input parameters.  This can happen for example if a parameter is
@@ -326,7 +326,8 @@ code and error streams, and illustrates checking for errors.
   if ($stderr_string)    { print "<<STDERR>>\n$stderr_string\n" }
   if ($errorfile_string) { print "<<.ERR file>>\n$errorfile_string\n" }
 
-Additional examples are given in examples section of the perltidy distribution.
+Additional examples are given in the examples section of the perltidy
+distribution.
 
 =head1 Using the B<formatter> Callback Object
 
@@ -385,7 +386,7 @@ of other useful information.  This example uses these hash entries:
     END            - unidentified text following __END__
     ERROR          - we are in big trouble, probably not a perl script
 
-Most applications will be only interested in lines of type B<CODE>.  For
+Most applications will only be interested in lines of type B<CODE>.  For
 another example, let's write a program which checks for one of the
 so-called I<naughty matching variables> C<&`>, C<$&>, and C<$'>, which
 can slow down processing.  Here is a B<write_line>, from the example
@@ -457,7 +458,7 @@ where F<filename> is a short script of interest.  This will produce
 F<filename.DEBUG> with interleaved lines of text and their token types.
 The B<-D> flag has been in perltidy from the beginning for this purpose.
 If you want to see the code which creates this file, it is
-C<sub Perl::Tidy::Debugger::write_debug_entry>
+C<sub Perl::Tidy::Debugger::write_debug_entry>.
 
 =head1 EXPORT
 

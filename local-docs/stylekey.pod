@@ -1,11 +1,11 @@
 =head1 Perltidy Style Key
 
 When perltidy was first developed, the main parameter choices were the number
-of indentation spaces and if the user liked cuddled else's.  As the number of
-users has grown so has the number of parameters.  Now there are so many that it
-can be difficult for a new user to find a good initial set.  This document is
-one attempt to help with this problem, and some other suggestions are given at
-the end.
+of indentation spaces and whether the user liked cuddled elses.  As the number
+of users has grown so has the number of parameters.  Now there are so many
+that it can be difficult for a new user to find a good initial set.  This
+document is one attempt to help with this problem, and some other suggestions
+are given at the end.
 
 Use this document to methodically find a starting set of perltidy parameters to
 approximate your style.  We will be working on just one aspect of formatting at
@@ -33,7 +33,7 @@ brackets are balanced.  For the default style, the number of lines required to
 make a balanced selection of code is generally less than for other styles.  For
 example, if a cuddled style is used, then an entire C<if-elsif-> chain must be
 selected for formatting rather than an individual C<elsif> block. This can be
-tedious and time consuming.
+tedious and time-consuming.
 
 =head2 Use as Filter?
 
@@ -243,8 +243,8 @@ But you may also use this more compressed style if you wish:
       { $headers = 0;
       }
 
-If you do not prefer this more compressed form, go to
-L<Opening Sub Braces>.
+If you do not prefer this more compressed form, skip ahead
+to L<Closing Block Brace Indentation>.
 
 Otherwise use parameter B<-bbvt=n>, where n=1 or n=2.  To decide,
 look at this snippet:
@@ -322,7 +322,7 @@ indentation of every line.  Notice how the first 'undef' is indented 4
 spaces (one level) to the right, and how 'PrintError' is indented 4 more
 spaces (one more level) to the right.
 
-The alternate is to let the location of the opening paren (or square
+The alternative is to let the location of the opening paren (or square
 bracket, or curly brace) define the indentation, like this:
 
     $dbh = DBI->connect(
@@ -334,7 +334,7 @@ bracket, or curly brace) define the indentation, like this:
     );
 
 The first scheme is completely robust.  The second scheme often looks a little
-nicer, but be aware that deeply nested structures it can be spoiled if the line
+nicer, but be aware that in deeply nested structures it can be spoiled if the line
 length limit is exceeded.  Also, if there are comments or blank lines within a
 complex structure perltidy will temporarily fall back on the default
 indentation scheme.  You may want to try both on large sections of code to see
@@ -351,7 +351,7 @@ If you prefer the first (default) scheme, no parameter is needed.
 
 If you prefer the latter scheme, use B<--line-up-parentheses>, or B<-lp>.
 There is an alternative version of this option named
-B<--extended-line-up-parentheses>, or B<-xlp> which can also be used. For
+B<--extended-line-up-parentheses>, or B<-xlp>, which can also be used. For
 simplicity, the name B<-lp> will refer to either of these options in the
 following text.
 
@@ -380,10 +380,10 @@ B<--weld-nested-containers>, or B<-wn>:
 
 The name of the parameter comes from the idea that the two opening and two
 closing tokens have been 'welded' together to act as a single unit. The
-indentation spaces of the contents has also been reduced by one level.
+indentation spaces of the contents have also been reduced by one level.
 
 This is a nice transformation because it is symmetric at the opening and
-closing, and leaves a sort of 'sandwich' structure 0which is still quite
+closing, and leaves a sort of 'sandwich' structure which is still quite
 readable.
 
 Some parameters available for asymmetric compressions, at just the opening
@@ -470,7 +470,7 @@ non-blocks.  In the following examples, a closing parenthesis is shown, but
 these parameters apply to closing square brackets and non-block curly braces as
 well.
 
-The default behavior for parenthesized relatively large lists is to place the
+The default behavior for relatively large parenthesized lists is to place the
 closing paren on a separate new line.  The flag B<-cti=n> controls the amount
 of indentation of such a closing paren.
 
@@ -502,7 +502,7 @@ opening paren, if possible:
                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
                      );
 
-Another alternative, B<-cti=3>, indents a line with leading closing
+Another alternative, B<-cti=3>, indents a line with a leading closing
 paren one full indentation level:
 
     # perltidy -lp -cti=3
@@ -612,13 +612,13 @@ use B<-sct>.
 
 The B<-sct> flag is somewhat similar to the B<-vtc> flags, and in some cases it
 can give a similar result.  The difference is that the B<-vtc> flags try to
-avoid lines with leading opening tokens by "hiding" them at the end of a
+avoid lines with leading closing tokens by "hiding" them at the end of a
 previous line, whereas the B<-sct> flag merely tries to reduce the number of
 lines with isolated closing tokens by stacking multiple closing tokens
 together, but it does not try to hide them.
 
 The manual shows how all of these vertical tightness controls may be applied
-independently to each type of non-block opening and opening token.
+independently to each type of non-block opening and closing token.
 
 Also, note that B<--weld-nested-containers>, or B<-wn>, mentioned previously,
 operates like the combination of B<-sot> and B<-sct> and also reduces the
@@ -663,7 +663,8 @@ B<-bbt=n> you prefer:
 
 =head2 Spaces between function names and opening parens
 
-The default is not to place a space after a function call:
+The default is not to place a space between a function name and its opening
+paren:
 
   myfunc( $a, $b, $c );    # default
 
@@ -832,7 +833,7 @@ for a F<.perltidyrc> file containing these parameters:
 
 For further information see the perltidy documentation at
 L<Sourceforge|http://perltidy.sourceforge.net> or at
-L<metacpan|https://metacpan.org/pod/distribution/Perl-Tidy/bin/perltidy>.  or
+L<metacpan|https://metacpan.org/pod/distribution/Perl-Tidy/bin/perltidy>  or
 at L<GitHub|https://perltidy.github.io/perltidy/>
 
 The source code is maintained at
