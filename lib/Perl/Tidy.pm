@@ -6252,7 +6252,8 @@ sub read_config_file {
             # Cannot start new abbreviation unless old abbreviation is complete
             last if ($opening_brace_line);
 
-            if ( $body && $body =~ s/\}$// ) {
+            # A '}' just after an '=' is an option value, as in -kbb=}
+            if ( $body && $body =~ s/(?<!=)\}$// ) {
                 $is_abbreviation_end = 1;
             }
             else {
@@ -6280,7 +6281,8 @@ sub read_config_file {
         }
 
         # Look for abbreviation closing:    body }   or    }
-        elsif ( $line =~ /^(.*)?\}$/ ) {
+        # but not an option value ending in '}', as in -kbb=}
+        elsif ( $line =~ /^(.*)?(?<!=)\}$/ ) {
             $body = $1;
             if ($opening_brace_line) {
                 $opening_brace_line  = undef;

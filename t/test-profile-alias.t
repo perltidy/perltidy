@@ -1,12 +1,13 @@
 # Test that parameters which follow an abbreviation definition in a
-# perltidyrc file are not added to that abbreviation, and that redefining
-# an abbreviation reports the line number without Perl warnings.
+# perltidyrc file are not added to that abbreviation, that redefining an
+# abbreviation reports the line number without Perl warnings, and that an
+# option value ending in '}' is not taken as the end of an abbreviation.
 use strict;
 use warnings;
 use Test::More;
 use Perl::Tidy;
 
-plan tests => 6;
+plan tests => 9;
 
 my $source = "if (1) {\nmy \$x = 1;\n}\n";
 
@@ -53,3 +54,15 @@ like(
 );
 is( scalar( @{$rwarnings} ), 0, 'redefinition: no Perl warnings' )
   or diag( join( q{}, @{$rwarnings} ) );
+
+# An option value ending in '}' is not the end of an abbreviation
+foreach my $case (
+    [ 'value ending in } outside',     "-kbb=}\n-i=8\n" ],
+    [ 'value ending in } inside',      "zzq {\n-kbb=}\n}\n-i=8\n" ],
+    [ 'value ending in } on one line', "zzq { -kbb=} }\n-i=8\n" ],
+  )
+{
+    my ( $name, $perltidyrc ) = @{$case};
+    my $output = ( run_perltidy( $perltidyrc, q{} ) )[1];
+    is( $output, $indent8, $name );
+}
