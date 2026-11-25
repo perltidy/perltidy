@@ -5687,7 +5687,7 @@ sub expand_command_abbreviations {
             Warn(<<EOM);
 I'm tired. We seem to be in an infinite loop trying to expand aliases.
 Here are the raw options;
-(rraw_options)
+(@{$rraw_options})
 EOM
             my $num = @new_argv;
             if ( $num < 50 ) {
@@ -6239,6 +6239,9 @@ sub read_config_file {
 
         my $body = $line;
 
+        # set if this line ends an abbreviation definition
+        my $is_abbreviation_end;
+
         # Look for complete or partial abbreviation definition of the form
         #     name { body }   or  name {   or    name { body
         # See rules in perltidy's perldoc page
@@ -6249,7 +6252,13 @@ sub read_config_file {
             # Cannot start new abbreviation unless old abbreviation is complete
             last if ($opening_brace_line);
 
-            $opening_brace_line = $line_no unless ( $body && $body =~ s/\}$// );
+            # A '}' just after an '=' is an option value, as in -kbb=}
+            if ( $body && $body =~ s/(?<!=)\}$// ) {
+                $is_abbreviation_end = 1;
+            }
+            else {
+                $opening_brace_line = $line_no;
+            }
 
             # handle a new alias definition
             if ( $rexpansion->{$name} ) {
@@ -6257,7 +6266,7 @@ sub read_config_file {
                 my @names = sort keys %{$rexpansion};
                 $death_message =
                     "Here is a list of all installed aliases\n(@names)\n"
-                  . "Attempting to redefine alias ($name) in config file $config_file line $INPUT_LINE_NUMBER\n";
+                  . "Attempting to redefine alias ($name) in config file $config_file line $line_no\n";
                 last;
             }
             $rexpansion->{$name} = [];
@@ -6272,10 +6281,12 @@ sub read_config_file {
         }
 
         # Look for abbreviation closing:    body }   or    }
-        elsif ( $line =~ /^(.*)?\}$/ ) {
+        # but not an option value ending in '}', as in -kbb=}
+        elsif ( $line =~ /^(.*)?(?<!=)\}$/ ) {
             $body = $1;
             if ($opening_brace_line) {
-                $opening_brace_line = undef;
+                $opening_brace_line  = undef;
+                $is_abbreviation_end = 1;
             }
             else {
                 $death_message =
@@ -6310,6 +6321,9 @@ EOM
                 push @config_list, @{$rbody_parts};
             }
         }
+
+        # the parameters which follow an abbreviation are not part of it
+        $name = undef if ($is_abbreviation_end);
     }
 
     if ($opening_brace_line) {
