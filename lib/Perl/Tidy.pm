@@ -106,14 +106,14 @@ use File::Spec ();
 #    https://perldoc.perl.org/functions/stat
 use constant {
 
+    _dev_   => 0,    # device number of filesystem
+    _ino_   => 1,    # inode number
     _mode_  => 2,    # file mode  (type and permissions)
     _uid_   => 4,    # numeric user ID of file's owner
     _gid_   => 5,    # numeric group ID of file's owner
     _atime_ => 8,    # last access time in seconds since the epoch
     _mtime_ => 9,    # last modify time in seconds since the epoch
 
-##  _dev_     => 0,     # device number of filesystem
-##  _ino_     => 1,     # inode number
 ##  _nlink_   => 3,     # number of (hard) links to the file
 ##  _rdev_    => 6,     # the device identifier (special files only)
 ##  _size_    => 7,     # total size of file, in bytes
@@ -2553,9 +2553,20 @@ EOM
 
             $output_name = $output_file;
 
-            # do not overwrite input file with -o
-            if ( @input_file_stat && ( $output_file eq $input_file ) ) {
-                Die("Use 'perltidy -b $input_file' to modify in-place\n");
+            # do not overwrite input file with -o, even under another name,
+            # such as './myfile.pl', or through a link
+            if (@input_file_stat) {
+                my @output_file_stat = stat($output_file);
+                if (
+                    $output_file eq $input_file
+                    || (   @output_file_stat
+                        && $output_file_stat[_ino_]
+                        && $output_file_stat[_dev_] == $input_file_stat[_dev_]
+                        && $output_file_stat[_ino_] == $input_file_stat[_ino_] )
+                  )
+                {
+                    Die("Use 'perltidy -b $input_file' to modify in-place\n");
+                }
             }
         }
         elsif ( $rOpts->{'standard-output'} ) {
