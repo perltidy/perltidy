@@ -93,6 +93,7 @@ t/snippets6.t
 t/snippets7.t
 t/snippets8.t
 t/snippets9.t
+t/test-duplicate-files.t
 t/test-eol.t
 t/test.t
 t/test_DEBUG.t

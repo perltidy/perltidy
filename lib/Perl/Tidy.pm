@@ -106,14 +106,14 @@ use File::Spec ();
 #    https://perldoc.perl.org/functions/stat
 use constant {
 
+    _dev_   => 0,    # device number of filesystem
+    _ino_   => 1,    # inode number
     _mode_  => 2,    # file mode  (type and permissions)
     _uid_   => 4,    # numeric user ID of file's owner
     _gid_   => 5,    # numeric group ID of file's owner
     _atime_ => 8,    # last access time in seconds since the epoch
     _mtime_ => 9,    # last modify time in seconds since the epoch
 
-##  _dev_     => 0,     # device number of filesystem
-##  _ino_     => 1,     # inode number
 ##  _nlink_   => 3,     # number of (hard) links to the file
 ##  _rdev_    => 6,     # the device identifier (special files only)
 ##  _size_    => 7,     # total size of file, in bytes
@@ -1349,10 +1349,39 @@ EOM
 
     # Remove duplicate filenames.  Otherwise, for example if the user entered
     #     perltidy -b myfile.pl myfile.pl
-    # the backup version of the original would be lost.
+    # the backup version of the original would be lost.  With -b, the same
+    # file given under another name, such as './myfile.pl', or through a
+    # link, is also a duplicate: compare device and inode numbers, where the
+    # system provides them.
     if ( @Arg_files > 1 ) {
         my %seen = ();
-        @Arg_files = grep { !$seen{$_}++ } @Arg_files;
+        @Arg_files = grep {
+            my $key = $_;
+            if ($in_place_modify) {
+                my ( $dev, $ino ) = stat($_);
+                if ($ino) { $key = "$dev:$ino" }
+            }
+            !$seen{$key}++;
+        } @Arg_files;
+    }
+
+    # With -opath, output files are named after the base name of the input
+    # files, so two input files with the same base name in different
+    # directories would have the same output files.  Stop before writing
+    # anything rather than silently overwrite the first results.
+    if ( defined( $rOpts->{'output-path'} ) && @Arg_files > 1 ) {
+        my %input_with_base_name;
+        foreach my $input_file (@Arg_files) {
+            next if ( ref($input_file) || $input_file eq '-' );
+            my ( $base, $path_uu ) = fileparse($input_file);
+            if ( my $other = $input_with_base_name{$base} ) {
+                Die(<<EOM);
+Input files '$other' and '$input_file' would have the same output files
+in the -opath directory; please format them separately
+EOM
+            }
+            $input_with_base_name{$base} = $input_file;
+        }
     }
 
     # If requested, process in order of increasing file size
@@ -2524,9 +2553,20 @@ EOM
 
             $output_name = $output_file;
 
-            # do not overwrite input file with -o
-            if ( @input_file_stat && ( $output_file eq $input_file ) ) {
-                Die("Use 'perltidy -b $input_file' to modify in-place\n");
+            # do not overwrite input file with -o, even under another name,
+            # such as './myfile.pl', or through a link
+            if (@input_file_stat) {
+                my @output_file_stat = stat($output_file);
+                if (
+                    $output_file eq $input_file
+                    || (   @output_file_stat
+                        && $output_file_stat[_ino_]
+                        && $output_file_stat[_dev_] == $input_file_stat[_dev_]
+                        && $output_file_stat[_ino_] == $input_file_stat[_ino_] )
+                  )
+                {
+                    Die("Use 'perltidy -b $input_file' to modify in-place\n");
+                }
             }
         }
         elsif ( $rOpts->{'standard-output'} ) {
