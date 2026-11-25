@@ -1,11 +1,12 @@
 # Test that parameters which follow an abbreviation definition in a
-# perltidyrc file are not added to that abbreviation.
+# perltidyrc file are not added to that abbreviation, and that redefining
+# an abbreviation reports the line number without Perl warnings.
 use strict;
 use warnings;
 use Test::More;
 use Perl::Tidy;
 
-plan tests => 3;
+plan tests => 6;
 
 my $source = "if (1) {\nmy \$x = 1;\n}\n";
 
@@ -40,3 +41,15 @@ foreach my $case (
 my $output =
   ( run_perltidy( "keycheck { -wsk }\n-i=8\n", '-i=2 -keycheck' ) )[1];
 is( $output, $indent2, 'abbreviation does not include later parameters' );
+
+# Redefining an abbreviation
+my ( $err, undef, $stderr_string, $rwarnings ) =
+  run_perltidy( "zzq { -i=2 }\n\nzzq { -i=3 }\n", q{} );
+is( $err, 1, 'redefinition is an error' );
+like(
+    $stderr_string,
+    qr/redefine alias \(zzq\) in config file .* line 3$/m,
+    'redefinition message gives the line number'
+);
+is( scalar( @{$rwarnings} ), 0, 'redefinition: no Perl warnings' )
+  or diag( join( q{}, @{$rwarnings} ) );

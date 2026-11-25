@@ -5687,7 +5687,7 @@ sub expand_command_abbreviations {
             Warn(<<EOM);
 I'm tired. We seem to be in an infinite loop trying to expand aliases.
 Here are the raw options;
-(rraw_options)
+(@{$rraw_options})
 EOM
             my $num = @new_argv;
             if ( $num < 50 ) {
@@ -6265,7 +6265,7 @@ sub read_config_file {
                 my @names = sort keys %{$rexpansion};
                 $death_message =
                     "Here is a list of all installed aliases\n(@names)\n"
-                  . "Attempting to redefine alias ($name) in config file $config_file line $INPUT_LINE_NUMBER\n";
+                  . "Attempting to redefine alias ($name) in config file $config_file line $line_no\n";
                 last;
             }
             $rexpansion->{$name} = [];
